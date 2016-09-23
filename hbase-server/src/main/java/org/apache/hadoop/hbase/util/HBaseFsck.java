@@ -697,7 +697,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean setMasterInMaintenanceMode() throws IOException {
     RetryCounter retryCounter = createZNodeRetryCounterFactory.create();
     hbckEphemeralNodePath = ZKUtil.joinZNode(
-      ZooKeeperWatcher.masterMaintZNode,
+      zkw.znodePaths.masterMaintZNode,
       "hbck-" + Long.toString(EnvironmentEdgeManager.currentTime()));
     do {
       try {
@@ -3406,7 +3406,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private void unassignMetaReplica(HbckInfo hi) throws IOException, InterruptedException,
   KeeperException {
     undeployRegions(hi);
-    ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
+    ZKUtil.deleteNode(zkw, zkw.znodePaths.getZNodeForReplica(hi.metaEntry.getReplicaId()));
   }
 
   private void assignMetaReplica(int replicaId)

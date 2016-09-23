@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
@@ -28,31 +29,30 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestZooKeeperWatcher {
 
   @Test
   public void testIsClientReadable() throws ZooKeeperConnectionException, IOException {
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(HBaseConfiguration.create(),
-      "testIsClientReadable", null, false);
+        "testIsClientReadable", null, false);
 
-    assertTrue(watcher.isClientReadable(watcher.baseZNode));
-    assertTrue(watcher.isClientReadable(watcher.getZNodeForReplica(0)));
-    assertTrue(watcher.isClientReadable(watcher.getMasterAddressZNode()));
-    assertTrue(watcher.isClientReadable(watcher.clusterIdZNode));
-    assertTrue(watcher.isClientReadable(watcher.tableZNode));
-    assertTrue(watcher.isClientReadable(ZKUtil.joinZNode(watcher.tableZNode, "foo")));
-    assertTrue(watcher.isClientReadable(watcher.rsZNode));
+    assertTrue(watcher.isClientReadable(watcher.znodePaths.baseZNode));
+    assertTrue(watcher.isClientReadable(watcher.znodePaths.getZNodeForReplica(0)));
+    assertTrue(watcher.isClientReadable(watcher.znodePaths.masterAddressZNode));
+    assertTrue(watcher.isClientReadable(watcher.znodePaths.clusterIdZNode));
+    assertTrue(watcher.isClientReadable(watcher.znodePaths.tableZNode));
+    assertTrue(watcher.isClientReadable(ZKUtil.joinZNode(watcher.znodePaths.tableZNode, "foo")));
+    assertTrue(watcher.isClientReadable(watcher.znodePaths.rsZNode));
 
-
-    assertFalse(watcher.isClientReadable(watcher.tableLockZNode));
-    assertFalse(watcher.isClientReadable(watcher.balancerZNode));
-    assertFalse(watcher.isClientReadable(watcher.getRegionNormalizerZNode()));
-    assertFalse(watcher.isClientReadable(watcher.clusterStateZNode));
-    assertFalse(watcher.isClientReadable(watcher.drainingZNode));
-    assertFalse(watcher.isClientReadable(watcher.recoveringRegionsZNode));
-    assertFalse(watcher.isClientReadable(watcher.splitLogZNode));
-    assertFalse(watcher.isClientReadable(watcher.backupMasterAddressesZNode));
+    assertFalse(watcher.isClientReadable(watcher.znodePaths.tableLockZNode));
+    assertFalse(watcher.isClientReadable(watcher.znodePaths.balancerZNode));
+    assertFalse(watcher.isClientReadable(watcher.znodePaths.regionNormalizerZNode));
+    assertFalse(watcher.isClientReadable(watcher.znodePaths.clusterStateZNode));
+    assertFalse(watcher.isClientReadable(watcher.znodePaths.drainingZNode));
+    assertFalse(watcher.isClientReadable(watcher.znodePaths.recoveringRegionsZNode));
+    assertFalse(watcher.isClientReadable(watcher.znodePaths.splitLogZNode));
+    assertFalse(watcher.isClientReadable(watcher.znodePaths.backupMasterAddressesZNode));
 
     watcher.close();
   }

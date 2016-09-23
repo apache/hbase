@@ -188,16 +188,16 @@ public class TestSplitLogWorker {
     zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "split-log-worker-tests", null);
     ds = new DummyServer(zkw, conf);
-    ZKUtil.deleteChildrenRecursively(zkw, zkw.baseZNode);
-    ZKUtil.createAndFailSilent(zkw, zkw.baseZNode);
-    assertThat(ZKUtil.checkExists(zkw, zkw.baseZNode), not (is(-1)));
-    LOG.debug(zkw.baseZNode + " created");
-    ZKUtil.createAndFailSilent(zkw, zkw.splitLogZNode);
-    assertThat(ZKUtil.checkExists(zkw, zkw.splitLogZNode), not (is(-1)));
+    ZKUtil.deleteChildrenRecursively(zkw, zkw.znodePaths.baseZNode);
+    ZKUtil.createAndFailSilent(zkw, zkw.znodePaths.baseZNode);
+    assertThat(ZKUtil.checkExists(zkw, zkw.znodePaths.baseZNode), not (is(-1)));
+    LOG.debug(zkw.znodePaths.baseZNode + " created");
+    ZKUtil.createAndFailSilent(zkw, zkw.znodePaths.splitLogZNode);
+    assertThat(ZKUtil.checkExists(zkw, zkw.znodePaths.splitLogZNode), not (is(-1)));
 
-    LOG.debug(zkw.splitLogZNode + " created");
-    ZKUtil.createAndFailSilent(zkw, zkw.rsZNode);
-    assertThat(ZKUtil.checkExists(zkw, zkw.rsZNode), not (is(-1)));
+    LOG.debug(zkw.znodePaths.splitLogZNode + " created");
+    ZKUtil.createAndFailSilent(zkw, zkw.znodePaths.rsZNode);
+    assertThat(ZKUtil.checkExists(zkw, zkw.znodePaths.rsZNode), not (is(-1)));
 
     SplitLogCounters.resetCounters();
     executorService = new ExecutorService("TestSplitLogWorker");
@@ -416,7 +416,7 @@ public class TestSplitLogWorker {
     waitForCounter(SplitLogCounters.tot_wkr_preempt_task, 1, 2, WAIT_TIME);
     waitForCounter(SplitLogCounters.tot_wkr_task_acquired_rescan, 0, 1, WAIT_TIME);
 
-    List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.splitLogZNode);
+    List<String> nodes = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.splitLogZNode);
     LOG.debug(nodes);
     int num = 0;
     for (String node : nodes) {
@@ -424,7 +424,7 @@ public class TestSplitLogWorker {
       if (node.startsWith("RESCAN")) {
         String name = ZKSplitLog.getEncodedNodeName(zkw, node);
         String fn = ZKSplitLog.getFileName(name);
-        byte [] data = ZKUtil.getData(zkw, ZKUtil.joinZNode(zkw.splitLogZNode, fn));
+        byte [] data = ZKUtil.getData(zkw, ZKUtil.joinZNode(zkw.znodePaths.splitLogZNode, fn));
         slt = SplitLogTask.parseFrom(data);
         assertTrue(slt.toString(), slt.isDone(SRV));
       }
@@ -480,9 +480,9 @@ public class TestSplitLogWorker {
     RegionServerServices mockedRS = getRegionServer(RS);
 
     // create two RS nodes
-    String rsPath = ZKUtil.joinZNode(zkw.rsZNode, RS.getServerName());
+    String rsPath = ZKUtil.joinZNode(zkw.znodePaths.rsZNode, RS.getServerName());
     zkw.getRecoverableZooKeeper().create(rsPath, null, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-    rsPath = ZKUtil.joinZNode(zkw.rsZNode, RS2.getServerName());
+    rsPath = ZKUtil.joinZNode(zkw.znodePaths.rsZNode, RS2.getServerName());
     zkw.getRecoverableZooKeeper().create(rsPath, null, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
 
     for (int i = 0; i < maxTasks; i++) {

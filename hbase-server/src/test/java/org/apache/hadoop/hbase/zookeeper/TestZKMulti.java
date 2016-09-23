@@ -88,7 +88,7 @@ public class TestZKMulti {
     ZKUtil.multiOrSequential(zkw, new LinkedList<ZKUtilOp>(), false);
 
     // single create
-    String path = ZKUtil.joinZNode(zkw.baseZNode, "testSimpleMulti");
+    String path = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSimpleMulti");
     LinkedList<ZKUtilOp> singleCreate = new LinkedList<ZKUtilOp>();
     singleCreate.add(ZKUtilOp.createAndFailSilent(path, new byte[0]));
     ZKUtil.multiOrSequential(zkw, singleCreate, false);
@@ -110,12 +110,12 @@ public class TestZKMulti {
 
   @Test (timeout=60000)
   public void testComplexMulti() throws Exception {
-    String path1 = ZKUtil.joinZNode(zkw.baseZNode, "testComplexMulti1");
-    String path2 = ZKUtil.joinZNode(zkw.baseZNode, "testComplexMulti2");
-    String path3 = ZKUtil.joinZNode(zkw.baseZNode, "testComplexMulti3");
-    String path4 = ZKUtil.joinZNode(zkw.baseZNode, "testComplexMulti4");
-    String path5 = ZKUtil.joinZNode(zkw.baseZNode, "testComplexMulti5");
-    String path6 = ZKUtil.joinZNode(zkw.baseZNode, "testComplexMulti6");
+    String path1 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testComplexMulti1");
+    String path2 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testComplexMulti2");
+    String path3 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testComplexMulti3");
+    String path4 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testComplexMulti4");
+    String path5 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testComplexMulti5");
+    String path6 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testComplexMulti6");
     // create 4 nodes that we'll setData on or delete later
     LinkedList<ZKUtilOp> create4Nodes = new LinkedList<ZKUtilOp>();
     create4Nodes.add(ZKUtilOp.createAndFailSilent(path1, Bytes.toBytes(path1)));
@@ -154,7 +154,7 @@ public class TestZKMulti {
   public void testSingleFailure() throws Exception {
     // try to delete a node that doesn't exist
     boolean caughtNoNode = false;
-    String path = ZKUtil.joinZNode(zkw.baseZNode, "testSingleFailureZ");
+    String path = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSingleFailureZ");
     LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
     ops.add(ZKUtilOp.deleteNodeFailSilent(path));
     try {
@@ -191,9 +191,9 @@ public class TestZKMulti {
   @Test (timeout=60000)
   public void testSingleFailureInMulti() throws Exception {
     // try a multi where all but one operation succeeds
-    String pathA = ZKUtil.joinZNode(zkw.baseZNode, "testSingleFailureInMultiA");
-    String pathB = ZKUtil.joinZNode(zkw.baseZNode, "testSingleFailureInMultiB");
-    String pathC = ZKUtil.joinZNode(zkw.baseZNode, "testSingleFailureInMultiC");
+    String pathA = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSingleFailureInMultiA");
+    String pathB = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSingleFailureInMultiB");
+    String pathC = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testSingleFailureInMultiC");
     LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
     ops.add(ZKUtilOp.createAndFailSilent(pathA, Bytes.toBytes(pathA)));
     ops.add(ZKUtilOp.createAndFailSilent(pathB, Bytes.toBytes(pathB)));
@@ -213,17 +213,17 @@ public class TestZKMulti {
 
   @Test (timeout=60000)
   public void testMultiFailure() throws Exception {
-    String pathX = ZKUtil.joinZNode(zkw.baseZNode, "testMultiFailureX");
-    String pathY = ZKUtil.joinZNode(zkw.baseZNode, "testMultiFailureY");
-    String pathZ = ZKUtil.joinZNode(zkw.baseZNode, "testMultiFailureZ");
+    String pathX = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureX");
+    String pathY = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureY");
+    String pathZ = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureZ");
     // create X that we will use to fail create later
     LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();
     ops.add(ZKUtilOp.createAndFailSilent(pathX, Bytes.toBytes(pathX)));
     ZKUtil.multiOrSequential(zkw, ops, false);
 
     // fail one of each create ,setData, delete
-    String pathV = ZKUtil.joinZNode(zkw.baseZNode, "testMultiFailureV");
-    String pathW = ZKUtil.joinZNode(zkw.baseZNode, "testMultiFailureW");
+    String pathV = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureV");
+    String pathW = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "testMultiFailureW");
     ops = new LinkedList<ZKUtilOp>();
     ops.add(ZKUtilOp.createAndFailSilent(pathX, Bytes.toBytes(pathX))); // fail  -- already exists
     ops.add(ZKUtilOp.setData(pathY, Bytes.toBytes(pathY))); // fail -- doesn't exist
@@ -267,10 +267,10 @@ public class TestZKMulti {
 
   @Test (timeout=60000)
   public void testRunSequentialOnMultiFailure() throws Exception {
-    String path1 = ZKUtil.joinZNode(zkw.baseZNode, "runSequential1");
-    String path2 = ZKUtil.joinZNode(zkw.baseZNode, "runSequential2");
-    String path3 = ZKUtil.joinZNode(zkw.baseZNode, "runSequential3");
-    String path4 = ZKUtil.joinZNode(zkw.baseZNode, "runSequential4");
+    String path1 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "runSequential1");
+    String path2 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "runSequential2");
+    String path3 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "runSequential3");
+    String path4 = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "runSequential4");
 
     // create some nodes that we will use later
     LinkedList<ZKUtilOp> ops = new LinkedList<ZKUtilOp>();

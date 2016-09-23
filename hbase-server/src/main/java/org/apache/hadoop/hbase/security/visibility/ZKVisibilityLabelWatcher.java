@@ -53,8 +53,8 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
     String labelZnodeParent = conf.get(VISIBILITY_LABEL_ZK_PATH, DEFAULT_VISIBILITY_LABEL_NODE);
     String userAuthsZnodeParent = conf.get(VISIBILITY_USER_AUTHS_ZK_PATH,
         DEFAULT_VISIBILITY_USER_AUTHS_NODE);
-    this.labelZnode = ZKUtil.joinZNode(watcher.baseZNode, labelZnodeParent);
-    this.userAuthsZnode = ZKUtil.joinZNode(watcher.baseZNode, userAuthsZnodeParent);
+    this.labelZnode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, labelZnodeParent);
+    this.userAuthsZnode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, userAuthsZnodeParent);
   }
 
   public void start() throws KeeperException {

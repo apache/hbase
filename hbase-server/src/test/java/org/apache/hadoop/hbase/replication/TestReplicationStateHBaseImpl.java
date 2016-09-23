@@ -87,7 +87,7 @@ public class TestReplicationStateHBaseImpl {
     utility.startMiniCluster();
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
-    replicationZNode = ZKUtil.joinZNode(zkw.baseZNode, replicationZNodeName);
+    replicationZNode = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, replicationZNodeName);
   }
 
   @Before

@@ -50,7 +50,7 @@ public class ZKSplitLog {
    * @param filename log file name (only the basename)
    */
   public static String getEncodedNodeName(ZooKeeperWatcher zkw, String filename) {
-    return ZKUtil.joinZNode(zkw.splitLogZNode, encode(filename));
+    return ZKUtil.joinZNode(zkw.znodePaths.splitLogZNode, encode(filename));
   }
 
   public static String getFileName(String node) {
@@ -75,7 +75,7 @@ public class ZKSplitLog {
   }
 
   public static String getRescanNode(ZooKeeperWatcher zkw) {
-    return ZKUtil.joinZNode(zkw.splitLogZNode, "RESCAN");
+    return ZKUtil.joinZNode(zkw.znodePaths.splitLogZNode, "RESCAN");
   }
 
   /**
@@ -106,7 +106,7 @@ public class ZKSplitLog {
 
   public static boolean isTaskPath(ZooKeeperWatcher zkw, String path) {
     String dirname = path.substring(0, path.lastIndexOf('/'));
-    return dirname.equals(zkw.splitLogZNode);
+    return dirname.equals(zkw.znodePaths.splitLogZNode);
   }
 
   public static Path getSplitLogDir(Path rootdir, String tmpname) {
@@ -153,7 +153,7 @@ public class ZKSplitLog {
       isRegionMarkedRecoveringInZK(ZooKeeperWatcher zkw, String regionEncodedName)
           throws KeeperException {
     boolean result = false;
-    String nodePath = ZKUtil.joinZNode(zkw.recoveringRegionsZNode, regionEncodedName);
+    String nodePath = ZKUtil.joinZNode(zkw.znodePaths.recoveringRegionsZNode, regionEncodedName);
 
     byte[] node = ZKUtil.getDataAndWatch(zkw, nodePath);
     if (node != null) {
@@ -182,10 +182,10 @@ public class ZKSplitLog {
       if (regions == null) {
         // remove all children under /home/recovering-regions
         LOG.debug("Garbage collecting all recovering region znodes");
-        ZKUtil.deleteChildrenRecursively(watcher, watcher.recoveringRegionsZNode);
+        ZKUtil.deleteChildrenRecursively(watcher, watcher.znodePaths.recoveringRegionsZNode);
       } else {
         for (String curRegion : regions) {
-          String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, curRegion);
+          String nodePath = ZKUtil.joinZNode(watcher.znodePaths.recoveringRegionsZNode, curRegion);
           ZKUtil.deleteNodeRecursively(watcher, nodePath);
         }
       }
@@ -213,7 +213,7 @@ public class ZKSplitLog {
     // Therefore, in this mode we need to fetch last sequence Ids from ZK where we keep history of
     // last flushed sequence Id for each failed RS instance.
     RegionStoreSequenceIds result = null;
-    String nodePath = ZKUtil.joinZNode(zkw.recoveringRegionsZNode, encodedRegionName);
+    String nodePath = ZKUtil.joinZNode(zkw.znodePaths.recoveringRegionsZNode, encodedRegionName);
     nodePath = ZKUtil.joinZNode(nodePath, serverName);
     try {
       byte[] data;

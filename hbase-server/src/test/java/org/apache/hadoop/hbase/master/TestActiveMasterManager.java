@@ -72,8 +72,8 @@ public class TestActiveMasterManager {
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
-      ZKUtil.deleteNode(zk, zk.getMasterAddressZNode());
-      ZKUtil.deleteNode(zk, zk.clusterStateZNode);
+      ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.znodePaths.clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
@@ -114,8 +114,8 @@ public class TestActiveMasterManager {
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
-      ZKUtil.deleteNode(zk, zk.getMasterAddressZNode());
-      ZKUtil.deleteNode(zk, zk.clusterStateZNode);
+      ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.znodePaths.clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
@@ -160,11 +160,11 @@ public class TestActiveMasterManager {
     ms1.stop("stopping first server");
 
     // Use a listener to capture when the node is actually deleted
-    NodeDeletionListener listener = new NodeDeletionListener(zk, zk.getMasterAddressZNode());
+    NodeDeletionListener listener = new NodeDeletionListener(zk, zk.znodePaths.masterAddressZNode);
     zk.registerListener(listener);
 
     LOG.info("Deleting master node");
-    ZKUtil.deleteNode(zk, zk.getMasterAddressZNode());
+    ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
 
     // Wait for the node to be deleted
     LOG.info("Waiting for active master manager to be notified");
@@ -184,7 +184,7 @@ public class TestActiveMasterManager {
     assertTrue(t.isActiveMaster);
 
     LOG.info("Deleting master node");
-    ZKUtil.deleteNode(zk, zk.getMasterAddressZNode());
+    ZKUtil.deleteNode(zk, zk.znodePaths.masterAddressZNode);
   }
 
   /**

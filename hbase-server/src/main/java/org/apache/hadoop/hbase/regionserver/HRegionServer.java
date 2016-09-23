@@ -3225,7 +3225,7 @@ public class HRegionServer extends HasThread implements
   }
 
   private String getMyEphemeralNodePath() {
-    return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
+    return ZKUtil.joinZNode(this.zooKeeper.znodePaths.rsZNode, getServerName().toString());
   }
 
   private boolean isHealthCheckerConfigured() {
@@ -3267,7 +3267,7 @@ public class HRegionServer extends HasThread implements
 
     try {
       long lastRecordedFlushedSequenceId = -1;
-      String nodePath = ZKUtil.joinZNode(this.zooKeeper.recoveringRegionsZNode,
+      String nodePath = ZKUtil.joinZNode(this.zooKeeper.znodePaths.recoveringRegionsZNode,
         regionInfo.getEncodedName());
       // recovering-region level
       byte[] data;
@@ -3308,7 +3308,7 @@ public class HRegionServer extends HasThread implements
     String result = null;
     long maxZxid = 0;
     ZooKeeperWatcher zkw = this.getZooKeeper();
-    String nodePath = ZKUtil.joinZNode(zkw.recoveringRegionsZNode, encodedRegionName);
+    String nodePath = ZKUtil.joinZNode(zkw.znodePaths.recoveringRegionsZNode, encodedRegionName);
     List<String> failedServers = ZKUtil.listChildrenNoWatch(zkw, nodePath);
     if (failedServers == null || failedServers.isEmpty()) {
       return result;

@@ -232,15 +232,13 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    */
   public boolean checkIfBaseNodeAvailable() {
     try {
-      if (ZKUtil.checkExists(watcher, watcher.baseZNode) == -1) {
+      if (ZKUtil.checkExists(watcher, watcher.znodePaths.baseZNode) == -1) {
         return false;
       }
     } catch (KeeperException e) {
-      abortable
-          .abort(
-              "Exception while checking if basenode ("+watcher.baseZNode+
-                ") exists in ZooKeeper.",
-              e);
+      abortable.abort("Exception while checking if basenode (" + watcher.znodePaths.baseZNode
+          + ") exists in ZooKeeper.",
+        e);
     }
     return true;
   }

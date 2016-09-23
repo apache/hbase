@@ -46,15 +46,15 @@ public class SplitOrMergeTracker {
   public SplitOrMergeTracker(ZooKeeperWatcher watcher, Configuration conf,
                              Abortable abortable) {
     try {
-      if (ZKUtil.checkExists(watcher, watcher.getSwitchZNode()) < 0) {
-        ZKUtil.createAndFailSilent(watcher, watcher.getSwitchZNode());
+      if (ZKUtil.checkExists(watcher, watcher.znodePaths.switchZNode) < 0) {
+        ZKUtil.createAndFailSilent(watcher, watcher.znodePaths.switchZNode);
       }
     } catch (KeeperException e) {
       throw new RuntimeException(e);
     }
-    splitZnode = ZKUtil.joinZNode(watcher.getSwitchZNode(),
+    splitZnode = ZKUtil.joinZNode(watcher.znodePaths.switchZNode,
       conf.get("zookeeper.znode.switch.split", "split"));
-    mergeZnode = ZKUtil.joinZNode(watcher.getSwitchZNode(),
+    mergeZnode = ZKUtil.joinZNode(watcher.znodePaths.switchZNode,
       conf.get("zookeeper.znode.switch.merge", "merge"));
     splitStateTracker = new SwitchStateTracker(watcher, splitZnode, abortable);
     mergeStateTracker = new SwitchStateTracker(watcher, mergeZnode, abortable);

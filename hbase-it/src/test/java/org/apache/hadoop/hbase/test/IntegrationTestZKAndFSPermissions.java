@@ -140,7 +140,7 @@ public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, "IntegrationTestZnodeACLs", null);
     RecoverableZooKeeper zk = ZKUtil.connect(this.conf, watcher);
 
-    String baseZNode = watcher.baseZNode;
+    String baseZNode = watcher.znodePaths.baseZNode;
 
     LOG.info("");
     LOG.info("***********************************************************************************");

@@ -136,7 +136,7 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
     }
 
     private boolean refreshListIfRightPath(String path) {
-      if (!path.startsWith(this.watcher.rsZNode)) {
+      if (!path.startsWith(this.watcher.znodePaths.rsZNode)) {
         return false;
       }
       return refreshOtherRegionServersList();
@@ -242,7 +242,7 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
   private List<String> getRegisteredRegionServers() {
     List<String> result = null;
     try {
-      result = ZKUtil.listChildrenAndWatchThem(this.zookeeper, this.zookeeper.rsZNode);
+      result = ZKUtil.listChildrenAndWatchThem(this.zookeeper, this.zookeeper.znodePaths.rsZNode);
     } catch (KeeperException e) {
       this.abortable.abort("Get list of registered region servers", e);
     }

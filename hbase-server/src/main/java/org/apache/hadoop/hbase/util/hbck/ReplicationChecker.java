@@ -80,7 +80,7 @@ public class ReplicationChecker {
     }
 
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
-    String replicationZNode = ZKUtil.joinZNode(this.zkw.baseZNode, replicationZNodeName);
+    String replicationZNode = ZKUtil.joinZNode(this.zkw.znodePaths.baseZNode, replicationZNodeName);
     String hfileRefsZNodeName =
         conf.get(ReplicationStateZKBase.ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_KEY,
           ReplicationStateZKBase.ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_DEFAULT);

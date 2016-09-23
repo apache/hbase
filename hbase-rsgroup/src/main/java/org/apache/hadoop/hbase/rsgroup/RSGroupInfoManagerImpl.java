@@ -297,7 +297,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       groupList.addAll(rsGroupSerDe.retrieveGroupList(rsGroupTable));
     } else {
       LOG.debug("Refershing in Offline mode.");
-      String groupBasePath = ZKUtil.joinZNode(watcher.baseZNode, rsGroupZNode);
+      String groupBasePath = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, rsGroupZNode);
       groupList.addAll(rsGroupSerDe.retrieveGroupList(watcher, groupBasePath));
     }
 
@@ -411,7 +411,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
 
 
     try {
-      String groupBasePath = ZKUtil.joinZNode(watcher.baseZNode, rsGroupZNode);
+      String groupBasePath = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, rsGroupZNode);
       ZKUtil.createAndFailSilent(watcher, groupBasePath, ProtobufMagic.PB_MAGIC);
 
       List<ZKUtil.ZKUtilOp> zkOps = new ArrayList<ZKUtil.ZKUtilOp>(newGroupMap.size());
@@ -452,7 +452,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     try {
       LOG.debug("Reading online RS from zookeeper");
       List<ServerName> servers = new LinkedList<ServerName>();
-      for (String el: ZKUtil.listChildrenNoWatch(watcher, watcher.rsZNode)) {
+      for (String el: ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.rsZNode)) {
         servers.add(ServerName.parseServerName(el));
       }
       return servers;

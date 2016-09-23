@@ -54,7 +54,7 @@ public class ZKDataMigrator {
   public static Map<TableName, TableState.State> queryForTableStates(ZooKeeperWatcher zkw)
       throws KeeperException, InterruptedException {
     Map<TableName, TableState.State> rv = new HashMap<>();
-    List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
+    List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.tableZNode);
     if (children == null)
       return rv;
     for (String child: children) {
@@ -94,7 +94,7 @@ public class ZKDataMigrator {
   private static  ZooKeeperProtos.DeprecatedTableState.State getTableState(
       final ZooKeeperWatcher zkw, final TableName tableName)
       throws KeeperException, InterruptedException {
-    String znode = ZKUtil.joinZNode(zkw.tableZNode, tableName.getNameAsString());
+    String znode = ZKUtil.joinZNode(zkw.znodePaths.tableZNode, tableName.getNameAsString());
     byte [] data = ZKUtil.getData(zkw, znode);
     if (data == null || data.length <= 0) return null;
     try {

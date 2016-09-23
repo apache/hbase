@@ -92,7 +92,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
     // shut down, so that state is now irrelevant. This means that the shutdown
     // state must be set while we wait on the active master in order
     // to shutdown this master. See HBASE-8519.
-    if(path.equals(watcher.clusterStateZNode) && !master.isStopped()) {
+    if(path.equals(watcher.znodePaths.clusterStateZNode) && !master.isStopped()) {
       clusterShutDown.set(true);
     }
 
@@ -100,7 +100,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
   }
 
   void handle(final String path) {
-    if (path.equals(watcher.getMasterAddressZNode()) && !master.isStopped()) {
+    if (path.equals(watcher.znodePaths.masterAddressZNode) && !master.isStopped()) {
       handleMasterNodeChange();
     }
   }
@@ -122,7 +122,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
     // Watch the node and check if it exists.
     try {
       synchronized(clusterHasActiveMaster) {
-        if (ZKUtil.watchAndCheckExists(watcher, watcher.getMasterAddressZNode())) {
+        if (ZKUtil.watchAndCheckExists(watcher, watcher.znodePaths.masterAddressZNode)) {
           // A master node exists, there is an active master
           LOG.debug("A master is now available");
           clusterHasActiveMaster.set(true);
@@ -156,14 +156,14 @@ public class ActiveMasterManager extends ZooKeeperListener {
   boolean blockUntilBecomingActiveMaster(
       int checkInterval, MonitoredTask startupStatus) {
     String backupZNode = ZKUtil.joinZNode(
-      this.watcher.backupMasterAddressesZNode, this.sn.toString());
+      this.watcher.znodePaths.backupMasterAddressesZNode, this.sn.toString());
     while (!(master.isAborted() || master.isStopped())) {
       startupStatus.setStatus("Trying to register in ZK as active master");
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
       try {
         if (MasterAddressTracker.setMasterAddress(this.watcher,
-            this.watcher.getMasterAddressZNode(), this.sn, infoPort)) {
+            this.watcher.znodePaths.masterAddressZNode, this.sn, infoPort)) {
 
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now)
@@ -187,7 +187,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
 
         String msg;
         byte[] bytes =
-          ZKUtil.getDataAndWatch(this.watcher, this.watcher.getMasterAddressZNode());
+          ZKUtil.getDataAndWatch(this.watcher, this.watcher.znodePaths.masterAddressZNode);
         if (bytes == null) {
           msg = ("A master was detected, but went down before its address " +
             "could be read.  Attempting to become the next active master");
@@ -204,7 +204,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
             msg = ("Current master has this master's address, " +
               currentMaster + "; master was restarted? Deleting node.");
             // Hurry along the expiration of the znode.
-            ZKUtil.deleteNode(this.watcher, this.watcher.getMasterAddressZNode());
+            ZKUtil.deleteNode(this.watcher, this.watcher.znodePaths.masterAddressZNode);
 
             // We may have failed to delete the znode at the previous step, but
             //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
@@ -244,7 +244,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
    */
   boolean hasActiveMaster() {
     try {
-      if (ZKUtil.checkExists(watcher, watcher.getMasterAddressZNode()) >= 0) {
+      if (ZKUtil.checkExists(watcher, watcher.znodePaths.masterAddressZNode) >= 0) {
         return true;
       }
     }
@@ -270,7 +270,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
         LOG.warn("Failed get of master address: " + e.toString());
       }
       if (activeMaster != null &&  activeMaster.equals(this.sn)) {
-        ZKUtil.deleteNode(watcher, watcher.getMasterAddressZNode());
+        ZKUtil.deleteNode(watcher, watcher.znodePaths.masterAddressZNode);
         // We may have failed to delete the znode at the previous step, but
         //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
         ZNodeClearer.deleteMyEphemeralNodeOnDisk();

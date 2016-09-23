@@ -316,7 +316,7 @@ public abstract class TableLockManager {
       }
 
       private InterProcessLock createTableLock() {
-        String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode,
+        String tableLockZNode = ZKUtil.joinZNode(zkWatcher.znodePaths.tableLockZNode,
             tableName.getNameAsString());
 
         ZooKeeperProtos.TableLock data = ZooKeeperProtos.TableLock.newBuilder()
@@ -376,7 +376,7 @@ public abstract class TableLockManager {
 
     public void visitAllLocks(MetadataHandler handler) throws IOException {
       for (String tableName : getTableNames()) {
-        String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableName);
+        String tableLockZNode = ZKUtil.joinZNode(zkWatcher.znodePaths.tableLockZNode, tableName);
         ZKInterProcessReadWriteLock lock = new ZKInterProcessReadWriteLock(
             zkWatcher, tableLockZNode, null);
         lock.readLock(null).visitLocks(handler);
@@ -388,7 +388,7 @@ public abstract class TableLockManager {
 
       List<String> tableNames;
       try {
-        tableNames = ZKUtil.listChildrenNoWatch(zkWatcher, zkWatcher.tableLockZNode);
+        tableNames = ZKUtil.listChildrenNoWatch(zkWatcher, zkWatcher.znodePaths.tableLockZNode);
       } catch (KeeperException e) {
         LOG.error("Unexpected ZooKeeper error when listing children", e);
         throw new IOException("Unexpected ZooKeeper exception", e);
@@ -401,7 +401,7 @@ public abstract class TableLockManager {
       //get the table names
       try {
         for (String tableName : getTableNames()) {
-          String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableName);
+          String tableLockZNode = ZKUtil.joinZNode(zkWatcher.znodePaths.tableLockZNode, tableName);
           ZKInterProcessReadWriteLock lock = new ZKInterProcessReadWriteLock(
               zkWatcher, tableLockZNode, null);
           lock.writeLock(null).reapAllLocks();
@@ -418,7 +418,7 @@ public abstract class TableLockManager {
       //get the table names
       try {
         for (String tableName : getTableNames()) {
-          String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableName);
+          String tableLockZNode = ZKUtil.joinZNode(zkWatcher.znodePaths.tableLockZNode, tableName);
           ZKInterProcessReadWriteLock lock = new ZKInterProcessReadWriteLock(
               zkWatcher, tableLockZNode, null);
           lock.readLock(null).reapExpiredLocks(lockExpireTimeoutMs);
@@ -435,7 +435,7 @@ public abstract class TableLockManager {
     public void tableDeleted(TableName tableName) throws IOException {
       //table write lock from DeleteHandler is already released, just delete the parent znode
       String tableNameStr = tableName.getNameAsString();
-      String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableNameStr);
+      String tableLockZNode = ZKUtil.joinZNode(zkWatcher.znodePaths.tableLockZNode, tableNameStr);
       try {
         ZKUtil.deleteNode(zkWatcher, tableLockZNode);
       } catch (KeeperException ex) {

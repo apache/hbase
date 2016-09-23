@@ -70,7 +70,7 @@ public class TestHMasterRPCException {
 
     CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
     ZooKeeperWatcher watcher = testUtil.getZooKeeperWatcher();
-    ZKUtil.createWithParents(watcher, watcher.getMasterAddressZNode(), Bytes.toBytes("fake:123"));
+    ZKUtil.createWithParents(watcher, watcher.znodePaths.masterAddressZNode, Bytes.toBytes("fake:123"));
     master = new HMaster(conf, cp);
     rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
   }
@@ -107,7 +107,7 @@ public class TestHMasterRPCException {
         LOG.info("Expected exception: ", ie);
         if (!fakeZNodeDelete) {
           testUtil.getZooKeeperWatcher().getRecoverableZooKeeper()
-              .delete(testUtil.getZooKeeperWatcher().getMasterAddressZNode(), -1);
+              .delete(testUtil.getZooKeeperWatcher().znodePaths.masterAddressZNode, -1);
           fakeZNodeDelete = true;
         }
       }

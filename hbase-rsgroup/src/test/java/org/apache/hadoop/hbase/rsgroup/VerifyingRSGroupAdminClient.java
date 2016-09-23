@@ -122,7 +122,7 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdmin {
     Assert.assertEquals(Sets.newHashSet(groupMap.values()),
         Sets.newHashSet(wrapped.listRSGroups()));
     try {
-      String groupBasePath = ZKUtil.joinZNode(zkw.baseZNode, "rsgroup");
+      String groupBasePath = ZKUtil.joinZNode(zkw.znodePaths.baseZNode, "rsgroup");
       for(String znode: ZKUtil.listChildrenNoWatch(zkw, groupBasePath)) {
         byte[] data = ZKUtil.getData(zkw, ZKUtil.joinZNode(groupBasePath, znode));
         if(data.length > 0) {

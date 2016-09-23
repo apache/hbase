@@ -2128,7 +2128,7 @@ public class HBaseAdmin implements Admin {
          ZooKeeperKeepAliveConnection zkw = ((ConnectionImplementation) connection).
              getKeepAliveZooKeeperWatcher();) {
       // This is NASTY. FIX!!!! Dependent on internal implementation! TODO
-      zkw.getRecoverableZooKeeper().getZooKeeper().exists(zkw.baseZNode, false);
+      zkw.getRecoverableZooKeeper().getZooKeeper().exists(zkw.znodePaths.baseZNode, false);
       connection.isMasterRunning();
     } catch (IOException e) {
       throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);

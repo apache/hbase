@@ -103,7 +103,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    */
   @Override
   public void nodeChildrenChanged(String path) {
-    if (path.equals(watcher.splitLogZNode)) {
+    if (path.equals(watcher.znodePaths.splitLogZNode)) {
       if (LOG.isTraceEnabled()) LOG.trace("tasks arrived or departed on " + path);
       synchronized (taskReadyLock) {
         this.taskReadySeq.incrementAndGet();
@@ -335,7 +335,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
     int availableRSs = 1;
     try {
       List<String> regionServers =
-          ZKUtil.listChildrenNoWatch(watcher, watcher.rsZNode);
+          ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.rsZNode);
       availableRSs = Math.max(availableRSs, (regionServers == null) ? 0 : regionServers.size());
     } catch (KeeperException e) {
       // do nothing
@@ -411,7 +411,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       List<String> paths = null;
       paths = getTaskList();
       if (paths == null) {
-        LOG.warn("Could not get tasks, did someone remove " + watcher.splitLogZNode
+        LOG.warn("Could not get tasks, did someone remove " + watcher.znodePaths.splitLogZNode
             + " ... worker thread exiting.");
         return;
       }
@@ -429,7 +429,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
         // don't call ZKSplitLog.getNodeName() because that will lead to
         // double encoding of the path name
         if (this.calculateAvailableSplitters(numTasks) > 0) {
-          grabTask(ZKUtil.joinZNode(watcher.splitLogZNode, paths.get(idx)));
+          grabTask(ZKUtil.joinZNode(watcher.znodePaths.splitLogZNode, paths.get(idx)));
         } else {
           LOG.debug("Current region server " + server.getServerName() + " has "
               + this.tasksInProgress.get() + " tasks in progress and can't take more.");
@@ -453,7 +453,8 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
               int listSize = tmpCopy.size();
               for (int i = 0; i < listSize; i++) {
                 String region = tmpCopy.get(i);
-                String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
+                String nodePath = ZKUtil.joinZNode(watcher.znodePaths.recoveringRegionsZNode,
+                  region);
                 try {
                   if (ZKUtil.checkExists(watcher, nodePath) == -1) {
                     server.getExecutorService().submit(
@@ -486,16 +487,15 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
     // it will come out if worker thread exited.
     while (!shouldStop) {
       try {
-        childrenPaths =
-            ZKUtil.listChildrenAndWatchForNewChildren(watcher,
-              watcher.splitLogZNode);
+        childrenPaths = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
+          watcher.znodePaths.splitLogZNode);
         if (childrenPaths != null) {
           return childrenPaths;
         }
       } catch (KeeperException e) {
-        LOG.warn("Could not get children of znode " + watcher.splitLogZNode, e);
+        LOG.warn("Could not get children of znode " + watcher.znodePaths.splitLogZNode, e);
       }
-      LOG.debug("Retry listChildren of znode " + watcher.splitLogZNode
+      LOG.debug("Retry listChildren of znode " + watcher.znodePaths.splitLogZNode
           + " after sleep for " + sleepTime + "ms!");
       Thread.sleep(sleepTime);
     }
@@ -511,14 +511,14 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   public boolean isReady() throws InterruptedException {
     int result = -1;
     try {
-      result = ZKUtil.checkExists(watcher, watcher.splitLogZNode);
+      result = ZKUtil.checkExists(watcher, watcher.znodePaths.splitLogZNode);
     } catch (KeeperException e) {
       // ignore
-      LOG.warn("Exception when checking for " + watcher.splitLogZNode
+      LOG.warn("Exception when checking for " + watcher.znodePaths.splitLogZNode
           + " ... retrying", e);
     }
     if (result == -1) {
-      LOG.info(watcher.splitLogZNode
+      LOG.info(watcher.znodePaths.splitLogZNode
           + " znode does not exist, waiting for master to create");
       Thread.sleep(1000);
     }

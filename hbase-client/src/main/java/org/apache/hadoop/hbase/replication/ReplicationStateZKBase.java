@@ -87,7 +87,8 @@ public abstract class ReplicationStateZKBase {
     this.peerStateNodeName = conf.get("zookeeper.znode.replication.peers.state", "peer-state");
     this.tableCFsNodeName = conf.get("zookeeper.znode.replication.peers.tableCFs", "tableCFs");
     this.ourClusterKey = ZKConfig.getZooKeeperClusterKey(this.conf);
-    this.replicationZNode = ZKUtil.joinZNode(this.zookeeper.baseZNode, replicationZNodeName);
+    this.replicationZNode = ZKUtil.joinZNode(this.zookeeper.znodePaths.baseZNode,
+      replicationZNodeName);
     this.peersZNode = ZKUtil.joinZNode(replicationZNode, peersZNodeName);
     this.queuesZNode = ZKUtil.joinZNode(replicationZNode, queuesZNodeName);
     this.hfileRefsZNode = ZKUtil.joinZNode(replicationZNode, hfileRefsZNodeName);

@@ -200,7 +200,8 @@ public class SweepJob {
             JavaSerialization.class.getName() + "," + WritableSerialization.class.getName());
         conf.set(SWEEP_JOB_ID, id);
         conf.set(SWEEP_JOB_SERVERNAME, serverName.toString());
-        String tableLockNode = ZKUtil.joinZNode(zkw.tableLockZNode, lockName.getNameAsString());
+        String tableLockNode = ZKUtil.joinZNode(zkw.znodePaths.tableLockZNode,
+          lockName.getNameAsString());
         conf.set(SWEEP_JOB_TABLE_NODE, tableLockNode);
         job = prepareJob(tn, familyName, scan, conf);
         job.getConfiguration().set(TableInputFormat.SCAN_COLUMN_FAMILY, familyName);

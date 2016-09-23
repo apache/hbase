@@ -79,7 +79,7 @@ public class TestMobSweepMapper {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(configuration, "1", new DummyMobAbortable());
     TableName tn = TableName.valueOf("testSweepMapper");
     TableName lockName = MobUtils.getTableLockName(tn);
-    String znode = ZKUtil.joinZNode(zkw.tableLockZNode, lockName.getNameAsString());
+    String znode = ZKUtil.joinZNode(zkw.znodePaths.tableLockZNode, lockName.getNameAsString());
     configuration.set(SweepJob.SWEEP_JOB_ID, "1");
     configuration.set(SweepJob.SWEEP_JOB_TABLE_NODE, znode);
     ServerName serverName = SweepJob.getCurrentServerName(configuration);

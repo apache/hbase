@@ -52,7 +52,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
     super(watcher);
     this.secretManager = secretManager;
     String keyZNodeParent = conf.get("zookeeper.znode.tokenauth.parent", DEFAULT_ROOT_NODE);
-    this.baseKeyZNode = ZKUtil.joinZNode(watcher.baseZNode, keyZNodeParent);
+    this.baseKeyZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, keyZNodeParent);
     this.keysParentZNode = ZKUtil.joinZNode(baseKeyZNode, DEFAULT_KEYS_PARENT);
   }
 

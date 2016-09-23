@@ -62,10 +62,10 @@ public class ZKClusterId {
 
   public static String readClusterIdZNode(ZooKeeperWatcher watcher)
   throws KeeperException {
-    if (ZKUtil.checkExists(watcher, watcher.clusterIdZNode) != -1) {
+    if (ZKUtil.checkExists(watcher, watcher.znodePaths.clusterIdZNode) != -1) {
       byte [] data;
       try {
-        data = ZKUtil.getData(watcher, watcher.clusterIdZNode);
+        data = ZKUtil.getData(watcher, watcher.znodePaths.clusterIdZNode);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         return null;
@@ -83,7 +83,7 @@ public class ZKClusterId {
 
   public static void setClusterId(ZooKeeperWatcher watcher, ClusterId id)
       throws KeeperException {
-    ZKUtil.createSetData(watcher, watcher.clusterIdZNode, id.toByteArray());
+    ZKUtil.createSetData(watcher, watcher.znodePaths.clusterIdZNode, id.toByteArray());
   }
 
   /**

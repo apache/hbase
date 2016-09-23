@@ -19,10 +19,9 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -126,14 +125,14 @@ public class MasterMetaBootstrap {
     try {
       List<String> metaReplicaZnodes = zooKeeper.getMetaReplicaNodes();
       for (String metaReplicaZnode : metaReplicaZnodes) {
-        int replicaId = zooKeeper.getMetaReplicaIdFromZnode(metaReplicaZnode);
+        int replicaId = zooKeeper.znodePaths.getMetaReplicaIdFromZnode(metaReplicaZnode);
         if (replicaId >= numMetaReplicasConfigured) {
           RegionState r = MetaTableLocator.getMetaRegionState(zooKeeper, replicaId);
           LOG.info("Closing excess replica of meta region " + r.getRegion());
           // send a close and wait for a max of 30 seconds
           ServerManager.closeRegionSilentlyAndWait(master.getClusterConnection(),
               r.getServerName(), r.getRegion(), 30000);
-          ZKUtil.deleteNode(zooKeeper, zooKeeper.getZNodeForReplica(replicaId));
+          ZKUtil.deleteNode(zooKeeper, zooKeeper.znodePaths.getZNodeForReplica(replicaId));
         }
       }
     } catch (Exception ex) {
@@ -243,7 +242,7 @@ public class MasterMetaBootstrap {
   private Set<ServerName> getPreviouselyFailedMetaServersFromZK() throws KeeperException {
     final ZooKeeperWatcher zooKeeper = master.getZooKeeper();
     Set<ServerName> result = new HashSet<ServerName>();
-    String metaRecoveringZNode = ZKUtil.joinZNode(zooKeeper.recoveringRegionsZNode,
+    String metaRecoveringZNode = ZKUtil.joinZNode(zooKeeper.znodePaths.recoveringRegionsZNode,
       HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     List<String> regionFailedServers = ZKUtil.listChildrenNoWatch(zooKeeper, metaRecoveringZNode);
     if (regionFailedServers == null) return result;

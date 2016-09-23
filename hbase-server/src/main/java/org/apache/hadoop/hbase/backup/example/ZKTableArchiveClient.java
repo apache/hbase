@@ -149,7 +149,7 @@ public class ZKTableArchiveClient extends Configured {
    * @return get the znode for long-term archival of a table for
    */
   public static String getArchiveZNode(Configuration conf, ZooKeeperWatcher zooKeeper) {
-    return ZKUtil.joinZNode(zooKeeper.baseZNode, conf.get(ZOOKEEPER_ZNODE_HFILE_ARCHIVE_KEY,
-      TableHFileArchiveTracker.HFILE_ARCHIVE_ZNODE_PARENT));
+    return ZKUtil.joinZNode(zooKeeper.znodePaths.baseZNode, conf.get(
+      ZOOKEEPER_ZNODE_HFILE_ARCHIVE_KEY, TableHFileArchiveTracker.HFILE_ARCHIVE_ZNODE_PARENT));
   }
 }

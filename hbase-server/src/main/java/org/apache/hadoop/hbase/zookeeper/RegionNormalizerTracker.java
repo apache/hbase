@@ -37,7 +37,7 @@ public class RegionNormalizerTracker extends ZooKeeperNodeTracker {
 
   public RegionNormalizerTracker(ZooKeeperWatcher watcher,
                              Abortable abortable) {
-    super(watcher, watcher.getRegionNormalizerZNode(), abortable);
+    super(watcher, watcher.znodePaths.regionNormalizerZNode, abortable);
   }
 
   /**
@@ -64,11 +64,11 @@ public class RegionNormalizerTracker extends ZooKeeperNodeTracker {
   public void setNormalizerOn(boolean normalizerOn) throws KeeperException {
     byte [] upData = toByteArray(normalizerOn);
     try {
-      ZKUtil.setData(watcher, watcher.getRegionNormalizerZNode(), upData);
+      ZKUtil.setData(watcher, watcher.znodePaths.regionNormalizerZNode, upData);
     } catch(KeeperException.NoNodeException nne) {
-      ZKUtil.createAndWatch(watcher, watcher.getRegionNormalizerZNode(), upData);
+      ZKUtil.createAndWatch(watcher, watcher.znodePaths.regionNormalizerZNode, upData);
     }
-    super.nodeDataChanged(watcher.getRegionNormalizerZNode());
+    super.nodeDataChanged(watcher.znodePaths.regionNormalizerZNode);
   }
 
   private byte [] toByteArray(boolean isNormalizerOn) {

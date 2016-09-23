@@ -71,7 +71,7 @@ public class RegionServerTracker extends ZooKeeperListener {
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
     List<String> servers =
-      ZKUtil.listChildrenAndWatchThem(watcher, watcher.rsZNode);
+      ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.rsZNode);
     add(servers);
   }
 
@@ -83,7 +83,7 @@ public class RegionServerTracker extends ZooKeeperListener {
         if (regionServers.get(sn) == null) {
           RegionServerInfo.Builder rsInfoBuilder = RegionServerInfo.newBuilder();
           try {
-            String nodePath = ZKUtil.joinZNode(watcher.rsZNode, n);
+            String nodePath = ZKUtil.joinZNode(watcher.znodePaths.rsZNode, n);
             byte[] data = ZKUtil.getData(watcher, nodePath);
             if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
               int magicLen = ProtobufUtil.lengthOfPBMagic();
@@ -113,7 +113,7 @@ public class RegionServerTracker extends ZooKeeperListener {
 
   @Override
   public void nodeDeleted(String path) {
-    if (path.startsWith(watcher.rsZNode)) {
+    if (path.startsWith(watcher.znodePaths.rsZNode)) {
       String serverName = ZKUtil.getNodeName(path);
       LOG.info("RegionServer ephemeral node deleted, processing expiration [" +
         serverName + "]");
@@ -130,11 +130,11 @@ public class RegionServerTracker extends ZooKeeperListener {
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if (path.equals(watcher.rsZNode)
+    if (path.equals(watcher.znodePaths.rsZNode)
         && !server.isAborted() && !server.isStopped()) {
       try {
         List<String> servers =
-          ZKUtil.listChildrenAndWatchThem(watcher, watcher.rsZNode);
+          ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.rsZNode);
         add(servers);
       } catch (IOException e) {
         server.abort("Unexpected zk exception getting RS nodes", e);

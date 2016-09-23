@@ -88,7 +88,7 @@ public class TestRegionServerHostname {
         TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
         try {
           ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-          List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.rsZNode);
+          List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
           // there would be NUM_RS+1 children - one for the master
           assertTrue(servers.size() == NUM_RS+1);
           for (String server : servers) {

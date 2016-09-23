@@ -70,8 +70,8 @@ public class ZkAclReset extends Configured implements Tool {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "ZkAclReset", null);
     try {
       LOG.info((eraseAcls ? "Erase" : "Set") + " HBase ACLs for " +
-                zkw.getQuorum() + " " + zkw.getBaseZNode());
-      resetAcls(zkw, zkw.getBaseZNode(), eraseAcls);
+                zkw.getQuorum() + " " + zkw.znodePaths.baseZNode);
+      resetAcls(zkw, zkw.znodePaths.baseZNode, eraseAcls);
     } finally {
       zkw.close();
     }

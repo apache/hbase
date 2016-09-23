@@ -80,7 +80,7 @@ public class TestZKInterProcessReadWriteLock {
     TEST_UTIL.startMiniZKCluster();
     conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);
     ZooKeeperWatcher zkw = getZooKeeperWatcher("setup");
-    ZKUtil.createWithParents(zkw, zkw.tableLockZNode);
+    ZKUtil.createWithParents(zkw, zkw.znodePaths.tableLockZNode);
   }
 
   @AfterClass
@@ -226,7 +226,7 @@ public class TestZKInterProcessReadWriteLock {
       }
     };
     ZooKeeperWatcher zkWatcher = getZooKeeperWatcher(testName);
-    String znode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, testName);
+    String znode = ZKUtil.joinZNode(zkWatcher.znodePaths.tableLockZNode, testName);
 
     return new ZKInterProcessReadWriteLock(zkWatcher, znode, handler);
   }
@@ -334,7 +334,7 @@ public class TestZKInterProcessReadWriteLock {
     ZooKeeperWatcher zkWatcher1 = new ZooKeeperWatcher(conf, "testMultipleClients-1", null);
     ZooKeeperWatcher zkWatcher2 = new ZooKeeperWatcher(conf, "testMultipleClients-2", null);
 
-    String znode = ZKUtil.joinZNode(zkWatcher1.tableLockZNode, testName);
+    String znode = ZKUtil.joinZNode(zkWatcher1.znodePaths.tableLockZNode, testName);
 
     ZKInterProcessReadWriteLock clientLock1
       = new ZKInterProcessReadWriteLock(zkWatcher1, znode, null);

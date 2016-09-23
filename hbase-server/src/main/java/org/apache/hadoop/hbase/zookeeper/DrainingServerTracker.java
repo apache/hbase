@@ -69,7 +69,7 @@ public class DrainingServerTracker extends ZooKeeperListener {
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
     List<String> servers =
-      ZKUtil.listChildrenAndWatchThem(watcher, watcher.drainingZNode);
+      ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.drainingZNode);
     add(servers);
   }
 
@@ -96,7 +96,7 @@ public class DrainingServerTracker extends ZooKeeperListener {
 
   @Override
   public void nodeDeleted(final String path) {
-    if(path.startsWith(watcher.drainingZNode)) {
+    if(path.startsWith(watcher.znodePaths.drainingZNode)) {
       final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(path));
       LOG.info("Draining RS node deleted, removing from list [" +
           sn + "]");
@@ -106,10 +106,10 @@ public class DrainingServerTracker extends ZooKeeperListener {
 
   @Override
   public void nodeChildrenChanged(final String path) {
-    if(path.equals(watcher.drainingZNode)) {
+    if(path.equals(watcher.znodePaths.drainingZNode)) {
       try {
         final List<String> newNodes =
-          ZKUtil.listChildrenAndWatchThem(watcher, watcher.drainingZNode);
+          ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.drainingZNode);
         add(newNodes);
       } catch (KeeperException e) {
         abortable.abort("Unexpected zk exception getting RS nodes", e);

@@ -94,7 +94,7 @@ public class TestMetaShutdownHandler {
     // Delete the ephemeral node of the meta-carrying region server.
     // This is trigger the expire of this region server on the master.
     String rsEphemeralNodePath =
-        ZKUtil.joinZNode(master.getZooKeeper().rsZNode, metaServerName.toString());
+        ZKUtil.joinZNode(master.getZooKeeper().znodePaths.rsZNode, metaServerName.toString());
     ZKUtil.deleteNode(master.getZooKeeper(), rsEphemeralNodePath);
     // Wait for SSH to finish
     final ServerManager serverManager = master.getServerManager();

@@ -121,7 +121,7 @@ class ZooKeeperRegistry implements Registry {
     try {
       // We go to zk rather than to master to get count of regions to avoid
       // HTable having a Master dependency.  See HBase-2828
-      return ZKUtil.getNumberOfChildren(zkw, zkw.rsZNode);
+      return ZKUtil.getNumberOfChildren(zkw, zkw.znodePaths.rsZNode);
     } catch (KeeperException ke) {
       throw new IOException("Unexpected ZooKeeper exception", ke);
     } finally {

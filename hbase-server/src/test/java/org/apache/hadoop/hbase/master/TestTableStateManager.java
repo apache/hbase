@@ -68,7 +68,7 @@ public class TestTableStateManager {
   private void setTableStateInZK(ZooKeeperWatcher watcher, final TableName tableName,
       final ZooKeeperProtos.DeprecatedTableState.State state)
       throws KeeperException, IOException {
-    String znode = ZKUtil.joinZNode(watcher.tableZNode, tableName.getNameAsString());
+    String znode = ZKUtil.joinZNode(watcher.znodePaths.tableZNode, tableName.getNameAsString());
     if (ZKUtil.checkExists(watcher, znode) == -1) {
       ZKUtil.createAndFailSilent(watcher, znode);
     }

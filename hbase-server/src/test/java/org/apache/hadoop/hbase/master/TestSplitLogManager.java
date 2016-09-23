@@ -134,13 +134,13 @@ public class TestSplitLogManager {
         new ZooKeeperWatcher(conf, "split-log-manager-tests" + UUID.randomUUID().toString(), null);
     master = new DummyMasterServices(zkw, conf);
 
-    ZKUtil.deleteChildrenRecursively(zkw, zkw.baseZNode);
-    ZKUtil.createAndFailSilent(zkw, zkw.baseZNode);
-    assertTrue(ZKUtil.checkExists(zkw, zkw.baseZNode) != -1);
-    LOG.debug(zkw.baseZNode + " created");
-    ZKUtil.createAndFailSilent(zkw, zkw.splitLogZNode);
-    assertTrue(ZKUtil.checkExists(zkw, zkw.splitLogZNode) != -1);
-    LOG.debug(zkw.splitLogZNode + " created");
+    ZKUtil.deleteChildrenRecursively(zkw, zkw.znodePaths.baseZNode);
+    ZKUtil.createAndFailSilent(zkw, zkw.znodePaths.baseZNode);
+    assertTrue(ZKUtil.checkExists(zkw, zkw.znodePaths.baseZNode) != -1);
+    LOG.debug(zkw.znodePaths.baseZNode + " created");
+    ZKUtil.createAndFailSilent(zkw, zkw.znodePaths.splitLogZNode);
+    assertTrue(ZKUtil.checkExists(zkw, zkw.znodePaths.splitLogZNode) != -1);
+    LOG.debug(zkw.znodePaths.splitLogZNode + " created");
 
     resetCounters();
 
@@ -567,7 +567,7 @@ public class TestSplitLogManager {
     LOG.info("testRecoveryRegionRemovedFromZK");
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     String nodePath =
-        ZKUtil.joinZNode(zkw.recoveringRegionsZNode,
+        ZKUtil.joinZNode(zkw.znodePaths.recoveringRegionsZNode,
           HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     ZKUtil.createSetData(zkw, nodePath, ZKUtil.positionToByteArray(0L));
 
@@ -575,7 +575,7 @@ public class TestSplitLogManager {
     slm.removeStaleRecoveringRegions(null);
 
     List<String> recoveringRegions =
-        zkw.getRecoverableZooKeeper().getChildren(zkw.recoveringRegionsZNode, false);
+        zkw.getRecoverableZooKeeper().getChildren(zkw.znodePaths.recoveringRegionsZNode, false);
 
     assertTrue("Recovery regions isn't cleaned", recoveringRegions.isEmpty());
   }

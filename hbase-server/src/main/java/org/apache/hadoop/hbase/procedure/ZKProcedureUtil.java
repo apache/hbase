@@ -78,7 +78,7 @@ public abstract class ZKProcedureUtil
     // make sure we are listening for events
     watcher.registerListener(this);
     // setup paths for the zknodes used in procedures
-    this.baseZNode = ZKUtil.joinZNode(watcher.baseZNode, procDescription);
+    this.baseZNode = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, procDescription);
     acquiredZnode = ZKUtil.joinZNode(baseZNode, ACQUIRED_BARRIER_ZNODE_DEFAULT);
     reachedZnode = ZKUtil.joinZNode(baseZNode, REACHED_BARRIER_ZNODE_DEFAULT);
     abortZnode = ZKUtil.joinZNode(baseZNode, ABORT_ZNODE_DEFAULT);

@@ -131,7 +131,7 @@ public class TestMetaWithReplicas {
     for (int i = 1; i < 3; i++) {
       String secZnode = ZKUtil.joinZNode(baseZNode,
           conf.get("zookeeper.znode.metaserver", "meta-region-server") + "-" + i);
-      String str = zkw.getZNodeForReplica(i);
+      String str = zkw.znodePaths.getZNodeForReplica(i);
       assertTrue(str.equals(secZnode));
       // check that the data in the znode is parseable (this would also mean the znode exists)
       data = ZKUtil.getData(zkw, secZnode);
@@ -353,7 +353,7 @@ public class TestMetaWithReplicas {
     HBaseFsckRepair.closeRegionSilentlyAndWait(c,
         rl.getRegionLocation(2).getServerName(), rl.getRegionLocation(2).getRegionInfo());
     ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-    ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(2));
+    ZKUtil.deleteNode(zkw, zkw.znodePaths.getZNodeForReplica(2));
     // check that problem exists
     HBaseFsck hbck = doFsck(TEST_UTIL.getConfiguration(), false);
     assertErrors(hbck, new ERROR_CODE[]{ERROR_CODE.UNKNOWN,ERROR_CODE.NO_META_REGION});

@@ -114,7 +114,7 @@ public class TestMasterNoCluster {
         return false;
       }
     });
-    ZKUtil.deleteNodeRecursively(zkw, zkw.baseZNode);
+    ZKUtil.deleteNodeRecursively(zkw, zkw.znodePaths.baseZNode);
     zkw.close();
   }
 

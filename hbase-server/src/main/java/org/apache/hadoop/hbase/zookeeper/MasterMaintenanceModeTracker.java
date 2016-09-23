@@ -40,7 +40,7 @@ public class MasterMaintenanceModeTracker extends ZooKeeperListener {
   }
 
   private void update(String path) {
-    if (path.startsWith(ZooKeeperWatcher.masterMaintZNode)) {
+    if (path.startsWith(watcher.znodePaths.masterMaintZNode)) {
       update();
     }
   }
@@ -48,7 +48,7 @@ public class MasterMaintenanceModeTracker extends ZooKeeperListener {
   private void update() {
     try {
       List<String> children =
-          ZKUtil.listChildrenAndWatchForNewChildren(watcher, ZooKeeperWatcher.masterMaintZNode);
+          ZKUtil.listChildrenAndWatchForNewChildren(watcher, watcher.znodePaths.masterMaintZNode);
       hasChildren = (children != null && children.size() > 0);
     } catch (KeeperException e) {
       // Ignore the ZK keeper exception

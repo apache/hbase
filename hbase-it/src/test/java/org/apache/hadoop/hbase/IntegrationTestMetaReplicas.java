@@ -80,7 +80,7 @@ public class IntegrationTestMetaReplicas {
   }
 
   private static void waitUntilZnodeAvailable(int replicaId) throws Exception {
-    String znode = util.getZooKeeperWatcher().getZNodeForReplica(replicaId);
+    String znode = util.getZooKeeperWatcher().znodePaths.getZNodeForReplica(replicaId);
     int i = 0;
     while (i < 1000) {
       if (ZKUtil.checkExists(util.getZooKeeperWatcher(), znode) == -1) {
