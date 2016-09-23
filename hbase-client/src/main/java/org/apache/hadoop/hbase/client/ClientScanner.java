@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
+import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
@@ -428,7 +429,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
         if ((cause != null && cause instanceof NotServingRegionException) ||
             (cause != null && cause instanceof RegionServerStoppedException) ||
             e instanceof OutOfOrderScannerNextException ||
-            e instanceof UnknownScannerException ) {
+            e instanceof UnknownScannerException ||
+            e instanceof ScannerResetException) {
           // Pass. It is easier writing the if loop test as list of what is allowed rather than
           // as a list of what is not allowed... so if in here, it means we do not throw.
         } else {
