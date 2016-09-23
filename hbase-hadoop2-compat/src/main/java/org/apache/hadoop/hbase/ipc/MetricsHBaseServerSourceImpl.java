@@ -45,7 +45,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private final MutableFastCounter exceptionsOOO;
   private final MutableFastCounter exceptionsBusy;
   private final MutableFastCounter exceptionsUnknown;
-  private final MutableFastCounter exceptionsScannerReset;
   private final MutableFastCounter exceptionsSanity;
   private final MutableFastCounter exceptionsNSRE;
   private final MutableFastCounter exceptionsMoved;
@@ -79,8 +78,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         .newCounter(EXCEPTIONS_BUSY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsUnknown = this.getMetricsRegistry()
         .newCounter(EXCEPTIONS_UNKNOWN_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsScannerReset = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_SCANNER_RESET_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsSanity = this.getMetricsRegistry()
         .newCounter(EXCEPTIONS_SANITY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsMoved = this.getMetricsRegistry()
@@ -162,11 +159,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   @Override
   public void unknownScannerException() {
     exceptionsUnknown.incr();
-  }
-
-  @Override
-  public void scannerResetException() {
-    exceptionsScannerReset.incr();
   }
 
   @Override

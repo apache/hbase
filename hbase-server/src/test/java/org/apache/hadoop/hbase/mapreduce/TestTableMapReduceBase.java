@@ -126,7 +126,7 @@ public abstract class TestTableMapReduceBase {
 
     // Get the original value and reverse it
 
-    String originalValue = Bytes.toString(value.getValue(INPUT_FAMILY, INPUT_FAMILY));
+    String originalValue = Bytes.toString(value.getValue(INPUT_FAMILY, null));
     StringBuilder newValue = new StringBuilder(originalValue);
     newValue.reverse();
 

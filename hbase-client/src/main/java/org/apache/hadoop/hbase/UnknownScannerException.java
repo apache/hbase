@@ -45,8 +45,4 @@ public class UnknownScannerException extends DoNotRetryIOException {
   public UnknownScannerException(String s) {
     super(s);
   }
-
-  public UnknownScannerException(String s, Exception e) {
-    super(s, e);
-  }
 }
