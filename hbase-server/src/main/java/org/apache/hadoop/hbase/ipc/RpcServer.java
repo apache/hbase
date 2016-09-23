@@ -411,9 +411,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     protected synchronized void setSaslTokenResponse(ByteBuffer response) {
-      ByteBuffer[] responseBufs = new ByteBuffer[1];
-      responseBufs[0] = response;
-      this.response = new BufferChain(responseBufs);
+      this.response = new BufferChain(response);
     }
 
     protected synchronized void setResponse(Object m, final CellScanner cells,
@@ -460,20 +458,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
         Message header = headerBuilder.build();
         byte[] b = createHeaderAndMessageBytes(result, header, cellBlockSize);
-        ByteBuffer[] responseBufs = null;
-        int cellBlockBufferSize = 0;
-        if (cellBlock != null) {
-          cellBlockBufferSize = cellBlock.size();
-          responseBufs = new ByteBuffer[1 + cellBlockBufferSize];
-        } else {
-          responseBufs = new ByteBuffer[1];
-        }
-        responseBufs[0] = ByteBuffer.wrap(b);
-        if (cellBlock != null) {
-          for (int i = 0; i < cellBlockBufferSize; i++) {
-            responseBufs[i + 1] = cellBlock.get(i);
-          }
-        }
+        List<ByteBuffer> responseBufs = new ArrayList<ByteBuffer>(
+            (cellBlock == null ? 1 : cellBlock.size()) + 1);
+        responseBufs.add(ByteBuffer.wrap(b));
+        if (cellBlock != null) responseBufs.addAll(cellBlock);
         bc = new BufferChain(responseBufs);
         if (connection.useWrap) {
           bc = wrapWithSasl(bc);
@@ -567,10 +555,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             + " as call response.");
       }
 
-      ByteBuffer[] responseBufs = new ByteBuffer[2];
-      responseBufs[0] = ByteBuffer.wrap(Bytes.toBytes(token.length));
-      responseBufs[1] = ByteBuffer.wrap(token);
-      return new BufferChain(responseBufs);
+      ByteBuffer bbTokenLength = ByteBuffer.wrap(Bytes.toBytes(token.length));
+      ByteBuffer bbTokenBytes = ByteBuffer.wrap(token);
+      return new BufferChain(bbTokenLength, bbTokenBytes);
     }
 
     @Override
