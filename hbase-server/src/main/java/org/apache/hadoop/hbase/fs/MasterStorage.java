@@ -27,46 +27,40 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.legacy.LegacyMasterFileSystem;
 import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 
-import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.mob.MobUtils;
-
 @InterfaceAudience.Private
-public abstract class MasterFileSystem {
-  private static Log LOG = LogFactory.getLog(MasterFileSystem.class);
+public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
+  private static Log LOG = LogFactory.getLog(MasterStorage.class);
 
   // Persisted unique cluster ID
   private ClusterId clusterId;
 
 
   private Configuration conf;
-  private FileSystem fs;
-  private Path rootDir;
+  private FileSystem fs;  // TODO: definitely remove
+  private IDENTIFIER rootContainer;
 
-  protected MasterFileSystem(Configuration conf, FileSystem fs, Path rootDir) {
-    this.rootDir = rootDir;
+  protected MasterStorage(Configuration conf, FileSystem fs, IDENTIFIER rootContainer) {
+    this.rootContainer = rootContainer;
     this.conf = conf;
     this.fs = fs;
   }
 
   public Configuration getConfiguration() { return conf; }
-  public FileSystem getFileSystem() { return fs; }
-  public Path getRootDir() { return rootDir; }
+  public FileSystem getFileSystem() { return fs; }  // TODO: definitely remove
+  public IDENTIFIER getRootContainer() { return rootContainer; }
 
   // ==========================================================================
   //  PUBLIC Interfaces - Visitors
@@ -88,10 +82,10 @@ public abstract class MasterFileSystem {
   // ==========================================================================
   public abstract void createNamespace(NamespaceDescriptor nsDescriptor) throws IOException;
   public abstract void deleteNamespace(String namespaceName) throws IOException;
-  public abstract Collection<String> getNamespaces(FsContext ctx) throws IOException;
+  public abstract Collection<String> getNamespaces(StorageContext ctx) throws IOException;
 
   public Collection<String> getNamespaces() throws IOException {
-    return getNamespaces(FsContext.DATA);
+    return getNamespaces(StorageContext.DATA);
   }
   // should return or get a NamespaceDescriptor? how is that different from HTD?
 
@@ -100,39 +94,39 @@ public abstract class MasterFileSystem {
   // ==========================================================================
   public HTableDescriptor getTableDescriptor(TableName tableName)
       throws IOException {
-    return getTableDescriptor(FsContext.DATA, tableName);
+    return getTableDescriptor(StorageContext.DATA, tableName);
   }
 
   public boolean createTableDescriptor(HTableDescriptor tableDesc, boolean force)
       throws IOException {
-    return createTableDescriptor(FsContext.DATA, tableDesc, force);
+    return createTableDescriptor(StorageContext.DATA, tableDesc, force);
   }
 
   public void updateTableDescriptor(HTableDescriptor tableDesc) throws IOException {
-    updateTableDescriptor(FsContext.DATA, tableDesc);
+    updateTableDescriptor(StorageContext.DATA, tableDesc);
   }
 
-  public abstract HTableDescriptor getTableDescriptor(FsContext ctx, TableName tableName)
+  public abstract HTableDescriptor getTableDescriptor(StorageContext ctx, TableName tableName)
       throws IOException;
-  public abstract boolean createTableDescriptor(FsContext ctx, HTableDescriptor tableDesc,
-      boolean force) throws IOException;
-  public abstract void updateTableDescriptor(FsContext ctx, HTableDescriptor tableDesc)
+  public abstract boolean createTableDescriptor(StorageContext ctx, HTableDescriptor tableDesc,
+                                                boolean force) throws IOException;
+  public abstract void updateTableDescriptor(StorageContext ctx, HTableDescriptor tableDesc)
       throws IOException;
 
   // ==========================================================================
   //  PUBLIC Methods - Table related
   // ==========================================================================
   public void deleteTable(TableName tableName) throws IOException {
-    deleteTable(FsContext.DATA, tableName);
+    deleteTable(StorageContext.DATA, tableName);
   }
 
   public Collection<TableName> getTables(String namespace) throws IOException {
-    return getTables(FsContext.DATA, namespace);
+    return getTables(StorageContext.DATA, namespace);
   }
 
-  public abstract void deleteTable(FsContext ctx, TableName tableName) throws IOException;
+  public abstract void deleteTable(StorageContext ctx, TableName tableName) throws IOException;
 
-  public abstract Collection<TableName> getTables(FsContext ctx, String namespace)
+  public abstract Collection<TableName> getTables(StorageContext ctx, String namespace)
     throws IOException;
 
   public Collection<TableName> getTables() throws IOException {
@@ -151,14 +145,14 @@ public abstract class MasterFileSystem {
   }
 
   public Collection<HRegionInfo> getRegions(TableName tableName) throws IOException {
-    return getRegions(FsContext.DATA, tableName);
+    return getRegions(StorageContext.DATA, tableName);
   }
 
-  public abstract Collection<HRegionInfo> getRegions(FsContext ctx, TableName tableName)
+  public abstract Collection<HRegionInfo> getRegions(StorageContext ctx, TableName tableName)
     throws IOException;
 
   // TODO: Move in HRegionStorage
-  public void deleteFamilyFromFS(HRegionInfo regionInfo, byte[] familyName, boolean hasMob)
+  public void deleteFamilyFromStorage(HRegionInfo regionInfo, byte[] familyName, boolean hasMob)
       throws IOException {
     getRegionStorage(regionInfo).deleteFamily(Bytes.toString(familyName), hasMob);
   }
@@ -172,34 +166,34 @@ public abstract class MasterFileSystem {
   // ==========================================================================
   public void visitStoreFiles(StoreFileVisitor visitor)
       throws IOException {
-    visitStoreFiles(FsContext.DATA, visitor);
+    visitStoreFiles(StorageContext.DATA, visitor);
   }
 
   public void visitStoreFiles(String namespace, StoreFileVisitor visitor)
       throws IOException {
-    visitStoreFiles(FsContext.DATA, namespace, visitor);
+    visitStoreFiles(StorageContext.DATA, namespace, visitor);
   }
 
   public void visitStoreFiles(TableName table, StoreFileVisitor visitor)
       throws IOException {
-    visitStoreFiles(FsContext.DATA, table, visitor);
+    visitStoreFiles(StorageContext.DATA, table, visitor);
   }
 
-  public void visitStoreFiles(FsContext ctx, StoreFileVisitor visitor)
+  public void visitStoreFiles(StorageContext ctx, StoreFileVisitor visitor)
       throws IOException {
     for (String namespace: getNamespaces()) {
       visitStoreFiles(ctx, namespace, visitor);
     }
   }
 
-  public void visitStoreFiles(FsContext ctx, String namespace, StoreFileVisitor visitor)
+  public void visitStoreFiles(StorageContext ctx, String namespace, StoreFileVisitor visitor)
       throws IOException {
     for (TableName tableName: getTables(namespace)) {
       visitStoreFiles(ctx, tableName, visitor);
     }
   }
 
-  public void visitStoreFiles(FsContext ctx, TableName table, StoreFileVisitor visitor)
+  public void visitStoreFiles(StorageContext ctx, TableName table, StoreFileVisitor visitor)
       throws IOException {
     for (HRegionInfo hri: getRegions(ctx, table)) {
       RegionStorage.open(conf, hri, false).visitStoreFiles(visitor);
@@ -209,11 +203,9 @@ public abstract class MasterFileSystem {
   // ==========================================================================
   //  PUBLIC Methods - bootstrap
   // ==========================================================================
-  public abstract Path getTempDir();
+  public abstract IDENTIFIER getTempContainer();
 
-  public void logFileSystemState(Log log) throws IOException {
-    FSUtils.logFileSystemState(getFileSystem(), getRootDir(), LOG);
-  }
+  public abstract void logStorageState(Log log) throws IOException;
 
   /**
    * @return The unique identifier generated for this cluster
@@ -222,109 +214,58 @@ public abstract class MasterFileSystem {
     return clusterId;
   }
 
+  /**
+   * Bootstrap MasterStorage
+   * @throws IOException
+   */
   protected void bootstrap() throws IOException {
-    // check if the root directory exists
-    createInitialLayout(getRootDir(), conf, this.fs);
+    // Initialize
+    clusterId = startup();
+
+    // Make sure the meta region exists!
+    bootstrapMeta();
 
     // check if temp directory exists and clean it
     startupCleanup();
   }
 
+  protected abstract ClusterId startup() throws IOException;
   protected abstract void bootstrapMeta() throws IOException;
   protected abstract void startupCleanup() throws IOException;
-
-  /**
-   * Create initial layout in filesystem.
-   * <ol>
-   * <li>Check if the meta region exists and is readable, if not create it.
-   * Create hbase.version and the hbase:meta directory if not one.
-   * </li>
-   * <li>Create a log archive directory for RS to put archived logs</li>
-   * </ol>
-   * Idempotent.
-   */
-  private void createInitialLayout(final Path rd, final Configuration c, final FileSystem fs)
-      throws IOException {
-    // If FS is in safe mode wait till out of it.
-    FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
-
-    // Filesystem is good. Go ahead and check for hbase.rootdir.
-    try {
-      if (!fs.exists(rd)) {
-        fs.mkdirs(rd);
-        // DFS leaves safe mode with 0 DNs when there are 0 blocks.
-        // We used to handle this by checking the current DN count and waiting until
-        // it is nonzero. With security, the check for datanode count doesn't work --
-        // it is a privileged op. So instead we adopt the strategy of the jobtracker
-        // and simply retry file creation during bootstrap indefinitely. As soon as
-        // there is one datanode it will succeed. Permission problems should have
-        // already been caught by mkdirs above.
-        FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
-            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
-      } else {
-        if (!fs.isDirectory(rd)) {
-          throw new IllegalArgumentException(rd.toString() + " is not a directory");
-        }
-        // as above
-        FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
-            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
-      }
-    } catch (DeserializationException de) {
-      LOG.fatal("Please fix invalid configuration for " + HConstants.HBASE_DIR, de);
-      IOException ioe = new IOException();
-      ioe.initCause(de);
-      throw ioe;
-    } catch (IllegalArgumentException iae) {
-      LOG.fatal("Please fix invalid configuration for "
-        + HConstants.HBASE_DIR + " " + rd.toString(), iae);
-      throw iae;
-    }
-    // Make sure cluster ID exists
-    if (!FSUtils.checkClusterIdExists(fs, rd, c.getInt(
-        HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000))) {
-      FSUtils.setClusterId(fs, rd, new ClusterId(), c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
-    }
-    clusterId = FSUtils.getClusterId(fs, rd);
-
-    // Make sure the meta region exists!
-    bootstrapMeta();
-  }
 
   // ==========================================================================
   //  PUBLIC
   // ==========================================================================
-  public static MasterFileSystem open(Configuration conf, boolean bootstrap)
+  public static MasterStorage open(Configuration conf, boolean bootstrap)
       throws IOException {
-    return open(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf), bootstrap);
+    return open(conf, FSUtils.getRootDir(conf), bootstrap);
   }
 
-  public static MasterFileSystem open(Configuration conf, FileSystem fs,
-      Path rootDir, boolean bootstrap) throws IOException {
+  public static MasterStorage open(Configuration conf, Path rootDir, boolean bootstrap)
+      throws IOException {
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
-    fs = rootDir.getFileSystem(conf);
+    FileSystem fs = rootDir.getFileSystem(conf);
     FSUtils.setFsDefault(conf, new Path(fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
 
-    MasterFileSystem mfs = getInstance(conf, fs, rootDir);
+    MasterStorage ms = getInstance(conf, fs, rootDir);
     if (bootstrap) {
-      mfs.bootstrap();
+      ms.bootstrap();
     }
     HFileSystem.addLocationsOrderInterceptor(conf);
-    return mfs;
+    return ms;
   }
 
-  private static MasterFileSystem getInstance(Configuration conf, final FileSystem fs,
-      Path rootDir) throws IOException {
-    String fsType = conf.get("hbase.fs.layout.type", "legacy").toLowerCase();
-    switch (fsType) {
+  private static MasterStorage getInstance(Configuration conf, final FileSystem fs,
+                                           Path rootDir) throws IOException {
+    String storageType = conf.get("hbase.storage.type", "legacy").toLowerCase();
+    switch (storageType) {
       case "legacy":
-        return new LegacyMasterFileSystem(conf, fs, rootDir);
+        return new LegacyMasterFileSystem(conf, fs, new LegacyPathIdentifier(rootDir));
       default:
-        throw new IOException("Invalid filesystem type " + fsType);
+        throw new IOException("Invalid filesystem type " + storageType);
     }
   }
 }

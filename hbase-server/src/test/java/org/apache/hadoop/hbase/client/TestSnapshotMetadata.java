@@ -98,8 +98,8 @@ public class TestSnapshotMetadata {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
 
-    fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
+    rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
   }
 
   @AfterClass

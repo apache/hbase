@@ -145,7 +145,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     // take a snapshot of the enabled table
     String snapshotString = "offlineTableSnapshot";
@@ -160,7 +160,7 @@ public class TestFlushSnapshotFromClient {
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     SnapshotTestingUtils.confirmSnapshotValid(UTIL,
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM);
@@ -181,7 +181,7 @@ public class TestFlushSnapshotFromClient {
     UTIL.flush(TABLE_NAME);
 
     LOG.debug("FS state before snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     // take a snapshot of the enabled table
     String snapshotString = "skipFlushTableSnapshot";
@@ -196,7 +196,7 @@ public class TestFlushSnapshotFromClient {
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     SnapshotTestingUtils.confirmSnapshotValid(UTIL,
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM);
@@ -220,7 +220,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     // take a snapshot of the enabled table
     String snapshotString = "offlineTableSnapshot";
@@ -239,7 +239,7 @@ public class TestFlushSnapshotFromClient {
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     SnapshotTestingUtils.confirmSnapshotValid(UTIL,
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM);
@@ -289,7 +289,7 @@ public class TestFlushSnapshotFromClient {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     SnapshotTestingUtils.waitForSnapshotToComplete(master, snapshot, 200);
     LOG.info(" === Async Snapshot Completed ===");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     // make sure we get the snapshot
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot);
@@ -401,8 +401,8 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     String snapshotName = "flushSnapshotCreateListDestroy";
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
     SnapshotTestingUtils.createSnapshotAndValidate(admin, TABLE_NAME, Bytes.toString(TEST_FAM),
       snapshotName, rootDir, fs, true);
   }
@@ -492,7 +492,7 @@ public class TestFlushSnapshotFromClient {
     }
 
     // dump for debugging
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     List<SnapshotDescription> taken = admin.listSnapshots();
     int takenSize = taken.size();

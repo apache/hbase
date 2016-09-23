@@ -110,7 +110,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
 import org.apache.hadoop.hbase.fs.StorageIdentifier;
@@ -118,7 +118,6 @@ import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.fs.legacy.LegacyRegionStorage;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -130,7 +129,6 @@ import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
-import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
@@ -240,7 +238,7 @@ public class HBaseFsck extends Configured implements Closeable {
   // successful
   private final AtomicBoolean hbckLockCleanup = new AtomicBoolean(false);
 
-  private final MasterFileSystem mfs;
+  private final MasterStorage ms;
 
   /***********
    * Options
@@ -361,7 +359,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // Disable usage of meta replicas in hbck
     getConf().setBoolean(HConstants.USE_META_REPLICAS, false);
 
-    mfs = MasterFileSystem.open(getConf(), false);
+    ms = MasterStorage.open(getConf(), false);
 
     errors = getErrorReporter(getConf());
     this.executor = exec;
@@ -1095,14 +1093,14 @@ public class HBaseFsck extends Configured implements Closeable {
   private void offlineReferenceFileRepair() throws IOException {
     clearState();
     LOG.info("Validating mapping using HDFS state");
-    mfs.visitStoreFiles(new StoreFileVisitor() {
+    ms.visitStoreFiles(new StoreFileVisitor() {
       @Override
       public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
           throws IOException {
         if (errors != null) errors.progress();
         if (!storeFile.isReference()) return;
 
-        FileSystem fs = mfs.getFileSystem();
+        FileSystem fs = ms.getFileSystem();
         Path path = storeFile.getPath();
         Path referredToFile = StoreFileInfo.getReferredToFile(path);
         if (fs.exists(referredToFile)) return;  // good, expected

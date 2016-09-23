@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
@@ -54,7 +54,7 @@ public class TestSnapshotManager {
   MetricsMaster metrics = Mockito.mock(MetricsMaster.class);
   ProcedureCoordinator coordinator = Mockito.mock(ProcedureCoordinator.class);
   ExecutorService pool = Mockito.mock(ExecutorService.class);
-  MasterFileSystem mfs = Mockito.mock(MasterFileSystem.class);
+  MasterStorage mfs = Mockito.mock(MasterStorage.class);
   FileSystem fs;
   {
     try {
@@ -72,7 +72,7 @@ public class TestSnapshotManager {
       throws IOException, KeeperException {
     Mockito.reset(services);
     Mockito.when(services.getConfiguration()).thenReturn(conf);
-    Mockito.when(services.getMasterFileSystem()).thenReturn(mfs);
+    Mockito.when(services.getMasterStorage()).thenReturn(mfs);
     Mockito.when(mfs.getFileSystem()).thenReturn(fs);
     Mockito.when(mfs.getRootDir()).thenReturn(UTIL.getDataTestDir());
     return new SnapshotManager(services, metrics, coordinator, pool);

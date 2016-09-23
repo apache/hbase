@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,8 +42,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -262,11 +262,12 @@ public class DeleteTableProcedure
   protected static void deleteFromFs(final MasterProcedureEnv env,
       final TableName tableName, final List<HRegionInfo> regions,
       final boolean archive) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final FileSystem fs = mfs.getFileSystem();
-    final Path tempdir = mfs.getTempDir();
+    final MasterStorage ms = env.getMasterServices().getMasterStorage();
+    final FileSystem fs = ms.getFileSystem();
+    final Path tempdir = ((LegacyPathIdentifier)ms.getTempContainer()).path;
 
-    final Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
+    final Path tableDir = FSUtils.getTableDir(((LegacyPathIdentifier)ms.getRootContainer()).path,
+        tableName);
     final Path tempTableDir = FSUtils.getTableDir(tempdir, tableName);
 
     if (fs.exists(tableDir)) {
@@ -290,7 +291,8 @@ public class DeleteTableProcedure
           if (files != null && files.length > 0) {
             for (int i = 0; i < files.length; ++i) {
               if (!files[i].isDir()) continue;
-              HFileArchiver.archiveRegion(fs, mfs.getRootDir(), tempTableDir, files[i].getPath());
+              HFileArchiver.archiveRegion(fs, ((LegacyPathIdentifier) ms.getRootContainer()).path,
+                  tempTableDir, files[i].getPath());
             }
           }
           fs.delete(tempdir, true);
@@ -303,19 +305,20 @@ public class DeleteTableProcedure
     if (archive) {
       for (HRegionInfo hri : regions) {
         LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
-        HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
+        HFileArchiver.archiveRegion(fs, ((LegacyPathIdentifier) ms.getRootContainer()).path,
             tempTableDir, HRegion.getRegionDir(tempTableDir, hri.getEncodedName()));
       }
       LOG.debug("Table '" + tableName + "' archived!");
     }
 
     // Archive mob data
-    Path mobTableDir = FSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME),
-            tableName);
+    Path mobTableDir = FSUtils.getTableDir(new Path(((LegacyPathIdentifier) ms.getRootContainer())
+            .path, MobConstants.MOB_DIR_NAME), tableName);
     Path regionDir =
             new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
     if (fs.exists(regionDir)) {
-      HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
+      HFileArchiver.archiveRegion(fs, ((LegacyPathIdentifier) ms.getRootContainer()).path,
+          mobTableDir, regionDir);
     }
 
     // Delete table directory from FS (temp directory)

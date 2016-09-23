@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -162,7 +162,7 @@ public final class SnapshotTestingUtils {
   public static void confirmSnapshotValid(HBaseTestingUtility testUtil,
       HBaseProtos.SnapshotDescription snapshotDescriptor, TableName tableName, byte[] family)
       throws IOException {
-    MasterFileSystem mfs = testUtil.getHBaseCluster().getMaster().getMasterFileSystem();
+    MasterStorage mfs = testUtil.getHBaseCluster().getMaster().getMasterStorage();
     confirmSnapshotValid(snapshotDescriptor, tableName, family,
         mfs.getRootDir(), testUtil.getHBaseAdmin(), mfs.getFileSystem());
   }
@@ -424,7 +424,7 @@ public final class SnapshotTestingUtils {
    */
   public static ArrayList corruptSnapshot(final HBaseTestingUtility util, final String snapshotName)
       throws IOException {
-    final MasterFileSystem mfs = util.getHBaseCluster().getMaster().getMasterFileSystem();
+    final MasterStorage mfs = util.getHBaseCluster().getMaster().getMasterStorage();
     final FileSystem fs = mfs.getFileSystem();
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
@@ -854,7 +854,7 @@ public final class SnapshotTestingUtils {
   public static void deleteArchiveDirectory(final HBaseTestingUtility util)
       throws IOException {
     // Ensure the archiver to be empty
-    MasterFileSystem mfs = util.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    MasterStorage mfs = util.getMiniHBaseCluster().getMaster().getMasterStorage();
     Path archiveDir = new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
     mfs.getFileSystem().delete(archiveDir, true);
   }

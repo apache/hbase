@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.fs;
 
-public enum FsContext {
+public enum StorageContext {
   TEMP,
   DATA,
   ARCHIVE,

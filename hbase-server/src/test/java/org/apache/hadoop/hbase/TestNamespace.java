@@ -230,7 +230,7 @@ public class TestNamespace {
     TEST_UTIL.waitTableAvailable(desc.getTableName().getName(), 10000);
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     assertTrue(fs.exists(
-        new Path(master.getMasterFileSystem().getRootDir(),
+        new Path(master.getMasterStorage().getRootDir(),
             new Path(HConstants.BASE_NAMESPACE_DIR,
                 new Path(nsName, desc.getTableName().getQualifierAsString())))));
     assertEquals(1, admin.listTables().length);

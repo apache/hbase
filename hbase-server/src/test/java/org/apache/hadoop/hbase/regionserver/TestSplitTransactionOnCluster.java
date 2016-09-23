@@ -31,7 +31,6 @@ import java.io.InterruptedIOException;
 import java.util.Collection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,7 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -57,7 +55,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -93,8 +90,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
@@ -769,7 +764,7 @@ public class TestSplitTransactionOnCluster {
     try {
       // Precondition: we created a table with no data, no store files.
       printOutRegions(regionServer, "Initial regions: ");
-      cluster.getMaster().getMasterFileSystem().logFileSystemState(LOG);
+      cluster.getMaster().getMasterStorage().logStorageState(LOG);
       List<StoreFileInfo> storefiles = getStoreFiles(tableName);
       assertEquals("Expected nothing but found " + storefiles.toString(), storefiles.size(), 0);
 
@@ -793,7 +788,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(daughters.size() == 2);
 
       // check dirs
-      cluster.getMaster().getMasterFileSystem().logFileSystemState(LOG);
+      cluster.getMaster().getMasterStorage().logStorageState(LOG);
       List<StoreFileInfo> storefilesAfter = getStoreFiles(tableName);
       assertEquals("Expected nothing but found " + storefilesAfter.toString(),
           storefilesAfter.size(), 0);
@@ -949,7 +944,7 @@ public class TestSplitTransactionOnCluster {
       SplitTransactionImpl st = new SplitTransactionImpl(regions.get(0), Bytes.toBytes("r3"));
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
-      assertEquals(3, cluster.getMaster().getMasterFileSystem().getRegions(desc.getTableName()).size());
+      assertEquals(3, cluster.getMaster().getMasterStorage().getRegions(desc.getTableName()).size());
       cluster.startRegionServer();
       regionServer.kill();
       // Before we check deadServerInProgress, we should ensure server is dead at master side.
@@ -965,7 +960,7 @@ public class TestSplitTransactionOnCluster {
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
       assertEquals(am.getRegionStates().getRegionsInTransition().toString(), 0, am
           .getRegionStates().getRegionsInTransition().size());
-      assertEquals(1, cluster.getMaster().getMasterFileSystem().getRegions(desc.getTableName()).size());
+      assertEquals(1, cluster.getMaster().getMasterStorage().getRegions(desc.getTableName()).size());
     } finally {
       TESTING_UTIL.deleteTable(table);
     }
@@ -1364,7 +1359,7 @@ public class TestSplitTransactionOnCluster {
 
   private List<StoreFileInfo> getStoreFiles(TableName table) throws IOException {
     final ArrayList<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>();
-    cluster.getMaster().getMasterFileSystem().visitStoreFiles(table, new StoreFileVisitor() {
+    cluster.getMaster().getMasterStorage().visitStoreFiles(table, new StoreFileVisitor() {
       @Override
       public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
           throws IOException {

@@ -40,13 +40,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -73,13 +68,12 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage;
-import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -93,7 +87,6 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 
@@ -1088,12 +1081,12 @@ public abstract class FSUtils {
     int cfCountTotal = 0;
     int cfFragTotal = 0;
 
-    MasterFileSystem mfs = master.getMasterFileSystem();
-    for (TableName table: mfs.getTables()) {
+    MasterStorage<? extends StorageIdentifier> ms = master.getMasterStorage();
+    for (TableName table: ms.getTables()) {
       int cfCount = 0;
       int cfFrag = 0;
-      for (HRegionInfo hri: mfs.getRegions(table)) {
-        RegionStorage rfs = mfs.getRegionStorage(hri);
+      for (HRegionInfo hri: ms.getRegions(table)) {
+        RegionStorage rfs = ms.getRegionStorage(hri);
         final Collection<String> families = rfs.getFamilies();
         for (String family: families) {
           cfCount++;
@@ -1782,14 +1775,14 @@ public abstract class FSUtils {
       throws IOException {
     long startTime = EnvironmentEdgeManager.currentTime();
 
-    MasterFileSystem mfs = MasterFileSystem.open(conf, false);
+    MasterStorage<? extends StorageIdentifier> ms = MasterStorage.open(conf, false);
     Collection<HRegionInfo> hris;
     if (desiredTable != null) {
-      hris = mfs.getRegions(TableName.valueOf(desiredTable));
+      hris = ms.getRegions(TableName.valueOf(desiredTable));
     } else {
       hris = new ArrayList<HRegionInfo>();
-      for (TableName tableName: mfs.getTables()) {
-        hris.addAll(mfs.getRegions(tableName));
+      for (TableName tableName: ms.getTables()) {
+        hris.addAll(ms.getRegions(tableName));
       }
     }
 

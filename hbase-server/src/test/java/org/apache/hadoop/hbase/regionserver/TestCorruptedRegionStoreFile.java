@@ -35,15 +35,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.fs.FsContext;
+import org.apache.hadoop.hbase.fs.StorageContext;
 import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.TestTableName;
 
 import org.junit.After;
@@ -106,8 +103,8 @@ public class TestCorruptedRegionStoreFile {
 
     // get the store file paths
     storeFiles.clear();
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().visitStoreFiles(
-        FsContext.DATA, tableName, new StoreFileVisitor() {
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().visitStoreFiles(
+        StorageContext.DATA, tableName, new StoreFileVisitor() {
       public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
           throws IOException {
         storeFiles.add(storeFile.getPath());
@@ -190,11 +187,11 @@ public class TestCorruptedRegionStoreFile {
   //  Helpers
   // ==========================================================================
   private FileSystem getFileSystem() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
   }
 
   private Path getRootDir() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
   }
 
   private void evictHFileCache(final Path hfile) throws Exception {

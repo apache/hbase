@@ -89,8 +89,9 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
@@ -119,7 +120,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.Procedu
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
-import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -142,8 +142,6 @@ import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
-import org.apache.hadoop.hbase.replication.ReplicationFactory;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -164,7 +162,6 @@ import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterMaintenanceModeTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.SplitOrMergeTracker;
@@ -275,8 +272,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // Metrics for the HMaster
   final MetricsMaster metricsMaster;
-  // file system manager for the master FS operations
-  private MasterFileSystem fileSystemManager;
+  // storage manager for the master storage operations
+  private MasterStorage storageManager;
   private MasterWalManager walManager;
 
   // server manager to deal with region server info
@@ -682,7 +679,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
-    this.fileSystemManager = MasterFileSystem.open(conf, true);
+    this.storageManager = MasterStorage.open(conf, true);
     this.walManager = new MasterWalManager(this);
 
     // enable table descriptors cache
@@ -698,7 +695,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // publish cluster ID
     status.setStatus("Publishing Cluster ID in ZooKeeper");
-    ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
+    ZKClusterId.setClusterId(this.zooKeeper, storageManager.getClusterId());
     this.initLatch.countDown();
 
     this.serverManager = createServerManager(this);
@@ -922,8 +919,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
-  public MasterFileSystem getMasterFileSystem() {
-    return this.fileSystemManager;
+  public MasterStorage getMasterStorage() {
+    return this.storageManager;
   }
 
   @Override
@@ -976,7 +973,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     Map<String, Object> params = new HashMap<String, Object>();
     params.put(MASTER, this);
-    this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
+    this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterStorage()
         .getFileSystem(), archiveDir, params);
     getChoreService().scheduleChore(hfileCleaner);
     serviceStarted = true;
@@ -1030,10 +1027,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void startProcedureExecutor() throws IOException {
     final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
-    final Path logDir = new Path(fileSystemManager.getRootDir(),
+    final Path logDir = new Path(((LegacyPathIdentifier) storageManager.getRootContainer()).path,
         MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR);
 
-    procedureStore = new WALProcedureStore(conf, fileSystemManager.getFileSystem(), logDir,
+    procedureStore = new WALProcedureStore(conf, storageManager.getFileSystem(), logDir,
         new MasterProcedureEnv.WALStoreLeaseRecovery(this));
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
     procedureExecutor = new ProcedureExecutor(conf, procEnv, procedureStore,
@@ -2133,8 +2130,8 @@ public class HMaster extends HRegionServer implements MasterServices {
         }});
     }
 
-    String clusterId = fileSystemManager != null ?
-      fileSystemManager.getClusterId().toString() : null;
+    String clusterId = storageManager != null ?
+      storageManager.getClusterId().toString() : null;
     Set<RegionState> regionsInTransition = assignmentManager != null ?
       assignmentManager.getRegionStates().getRegionsInTransition() : null;
     String[] coprocessors = cpHost != null ? getMasterCoprocessors() : null;

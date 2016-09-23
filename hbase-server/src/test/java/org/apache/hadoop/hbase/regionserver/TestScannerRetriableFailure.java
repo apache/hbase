@@ -120,11 +120,11 @@ public class TestScannerRetriableFailure {
   //  Helpers
   // ==========================================================================
   private FileSystem getFileSystem() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
   }
 
   private Path getRootDir() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
   }
 
   public void loadTable(final Table table, int numRows) throws IOException {

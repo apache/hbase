@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -41,8 +40,10 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.fs.FsContext;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.StorageContext;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsRegions;
@@ -52,7 +53,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -308,13 +308,13 @@ public class CloneSnapshotProcedure
       throws IOException, InterruptedException {
     if (!getTableName().isSystemTable()) {
       // Check and update namespace quota
-      final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+      final MasterStorage ms = env.getMasterServices().getMasterStorage();
 
       SnapshotManifest manifest = SnapshotManifest.open(
         env.getMasterConfiguration(),
-        mfs.getFileSystem(),
-        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, mfs.getRootDir()),
-        snapshot);
+        ms.getFileSystem(),
+        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, ((LegacyPathIdentifier) ms
+            .getRootContainer()).path), snapshot);
 
       ProcedureSyncWait.getMasterQuotaManager(env)
         .checkNamespaceTableAndRegionQuota(getTableName(), manifest.getRegionManifestsMap().size());
@@ -358,9 +358,9 @@ public class CloneSnapshotProcedure
         final Path tableRootDir, final TableName tableName,
         final List<HRegionInfo> newRegions) throws IOException {
 
-        final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-        final FileSystem fs = mfs.getFileSystem();
-        final Path rootDir = mfs.getRootDir();
+        final MasterStorage ms = env.getMasterServices().getMasterStorage();
+        final FileSystem fs = ms.getFileSystem();
+        final StorageIdentifier rootContainer = ms.getRootContainer();
         final Configuration conf = env.getMasterConfiguration();
         final ForeignExceptionDispatcher monitorException = new ForeignExceptionDispatcher();
 
@@ -368,7 +368,8 @@ public class CloneSnapshotProcedure
 
         try {
           // 1. Execute the on-disk Clone
-          Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
+          Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot,
+              ((LegacyPathIdentifier) rootContainer).path);
           SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshot);
           RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
             conf, fs, manifest, hTableDescriptor, tableRootDir, monitorException, monitorStatus);
@@ -413,14 +414,14 @@ public class CloneSnapshotProcedure
     final HTableDescriptor hTableDescriptor,
     List<HRegionInfo> newRegions,
     final CreateHdfsRegions hdfsRegionHandler) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tempdir = mfs.getTempDir();
+    final MasterStorage ms = env.getMasterServices().getMasterStorage();
+    final Path tempdir = ((LegacyPathIdentifier)ms.getTempContainer()).path;
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     HTableDescriptor underConstruction = new HTableDescriptor(hTableDescriptor);
     final Path tempTableDir = FSUtils.getTableDir(tempdir, hTableDescriptor.getTableName());
-    mfs.createTableDescriptor(FsContext.TEMP, underConstruction, false);
+    ms.createTableDescriptor(StorageContext.TEMP, underConstruction, false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(

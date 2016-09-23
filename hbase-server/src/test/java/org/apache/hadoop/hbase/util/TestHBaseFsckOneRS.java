@@ -422,7 +422,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       htdDisabled.addFamily(new HColumnDescriptor(FAM));
 
       // Write the .tableinfo
-      cluster.getMaster().getMasterFileSystem().createTableDescriptor(
+      cluster.getMaster().getMasterStorage().createTableDescriptor(
         new TableDescriptor(htdDisabled), true);
       List<HRegionInfo> disabledRegions =
           TEST_UTIL.createMultiRegionsInMeta(conf, htdDisabled, SPLIT_KEYS);

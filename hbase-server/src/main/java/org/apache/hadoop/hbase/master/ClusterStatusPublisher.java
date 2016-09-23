@@ -163,7 +163,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
     // This could be extended in the future, for example if we want to send stuff like the
     //  hbase:meta server name.
     ClusterStatus cs = new ClusterStatus(VersionInfo.getVersion(),
-        master.getMasterFileSystem().getClusterId().toString(),
+        master.getMasterStorage().getClusterId().toString(),
         null,
         sns,
         master.getServerName(),

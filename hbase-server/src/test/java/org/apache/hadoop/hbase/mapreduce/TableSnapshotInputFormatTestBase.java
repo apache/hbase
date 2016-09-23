@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
@@ -63,7 +62,7 @@ public abstract class TableSnapshotInputFormatTestBase {
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_REGION_SERVERS, true);
-    rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 
@@ -127,7 +126,7 @@ public abstract class TableSnapshotInputFormatTestBase {
 
       testRestoreSnapshotDoesNotCreateBackRefLinksInit(tableName, snapshotName,tmpTableDir);
 
-      UTIL.getHBaseCluster().getMaster().getMasterFileSystem().visitStoreFiles(tableName,
+      UTIL.getHBaseCluster().getMaster().getMasterStorage().visitStoreFiles(tableName,
           new StoreFileVisitor() {
         @Override
         public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)

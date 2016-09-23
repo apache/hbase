@@ -27,10 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,8 +47,9 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
@@ -88,7 +86,6 @@ import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -188,8 +185,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       throws IOException, UnsupportedOperationException {
     this.master = master;
 
-    this.rootDir = master.getMasterFileSystem().getRootDir();
-    checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
+    this.rootDir = ((LegacyPathIdentifier) master.getMasterStorage().getRootContainer()).path;
+    checkSnapshotSupport(master.getConfiguration(), master.getMasterStorage());
 
     this.coordinator = coordinator;
     this.executorService = pool;
@@ -214,7 +211,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   private List<SnapshotDescription> getCompletedSnapshots(Path snapshotDir) throws IOException {
     List<SnapshotDescription> snapshotDescs = new ArrayList<SnapshotDescription>();
     // first create the snapshot root path and check to see if it exists
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    FileSystem fs = master.getMasterStorage().getFileSystem();
     if (snapshotDir == null) snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
 
     // if there are no snapshots, return an empty list
@@ -274,8 +271,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   void resetTempDir() throws IOException {
     // cleanup any existing snapshots.
     Path tmpdir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir);
-    if (master.getMasterFileSystem().getFileSystem().exists(tmpdir)) {
-      if (!master.getMasterFileSystem().getFileSystem().delete(tmpdir, true)) {
+    if (master.getMasterStorage().getFileSystem().exists(tmpdir)) {
+      if (!master.getMasterStorage().getFileSystem().delete(tmpdir, true)) {
         LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
       }
     }
@@ -295,7 +292,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     String snapshotName = snapshot.getName();
     // first create the snapshot description and check to see if it exists
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    FileSystem fs = master.getMasterStorage().getFileSystem();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     // Get snapshot info from file system. The one passed as parameter is a "fake" snapshotInfo with
     // just the "name" and it does not contains the "real" snapshot information
@@ -428,7 +425,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    */
   private synchronized void prepareToTakeSnapshot(SnapshotDescription snapshot)
       throws HBaseSnapshotException {
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    FileSystem fs = master.getMasterStorage().getFileSystem();
     Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
     TableName snapshotTable =
         TableName.valueOf(snapshot.getTable());
@@ -524,7 +521,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       // cleanup the working directory by trying to delete it from the fs.
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
       try {
-        if (!this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
+        if (!this.master.getMasterStorage().getFileSystem().delete(workingDir, true)) {
           LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
               ClientSnapshotDescriptionUtils.toString(snapshot));
         }
@@ -662,7 +659,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   private boolean isSnapshotCompleted(SnapshotDescription snapshot) throws IOException {
     try {
       final Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
-      FileSystem fs = master.getMasterFileSystem().getFileSystem();
+      FileSystem fs = master.getMasterStorage().getFileSystem();
       // check to see if the snapshot already exists
       return fs.exists(snapshotDir);
     } catch (IllegalArgumentException iae) {
@@ -765,7 +762,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       SnapshotDescription reqSnapshot,
       final long nonceGroup,
       final long nonce) throws IOException {
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    FileSystem fs = master.getMasterStorage().getFileSystem();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
 
     // check if the snapshot exists
@@ -1045,12 +1042,12 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * starting the master if there're snapshots present but the cleaners needed are missing.
    * Otherwise we can end up with snapshot data loss.
    * @param conf The {@link Configuration} object to use
-   * @param mfs The MasterFileSystem to use
+   * @param ms The MasterFileSystem to use
    * @throws IOException in case of file-system operation failure
    * @throws UnsupportedOperationException in case cleaners are missing and
    *         there're snapshot in the system
    */
-  private void checkSnapshotSupport(final Configuration conf, final MasterFileSystem mfs)
+  private void checkSnapshotSupport(final Configuration conf, final MasterStorage ms)
       throws IOException, UnsupportedOperationException {
     // Verify if snapshot is disabled by the user
     String enabled = conf.get(HBASE_SNAPSHOT_ENABLED);
@@ -1067,8 +1064,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     if (cleaners != null) Collections.addAll(logCleaners, cleaners);
 
     // check if an older version of snapshot directory was present
-    Path oldSnapshotDir = new Path(mfs.getRootDir(), HConstants.OLD_SNAPSHOT_DIR_NAME);
-    FileSystem fs = mfs.getFileSystem();
+    Path oldSnapshotDir = new Path(((LegacyPathIdentifier) ms.getRootContainer()).path, HConstants
+        .OLD_SNAPSHOT_DIR_NAME);
+    FileSystem fs = ms.getFileSystem();
     List<SnapshotDescription> ss = getCompletedSnapshots(new Path(rootDir, oldSnapshotDir));
     if (ss != null && !ss.isEmpty()) {
       LOG.error("Snapshots from an earlier release were found under: " + oldSnapshotDir);
@@ -1109,7 +1107,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // otherwise we end up with snapshot data loss.
     if (!snapshotEnabled) {
       LOG.info("Snapshot feature is not enabled, missing log and hfile cleaners.");
-      Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(mfs.getRootDir());
+      Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(((LegacyPathIdentifier) ms
+          .getRootContainer()).path);
       if (fs.exists(snapshotDir)) {
         FileStatus[] snapshots = FSUtils.listStatus(fs, snapshotDir,
           new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
@@ -1126,8 +1125,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       IOException, UnsupportedOperationException {
     this.master = master;
 
-    this.rootDir = master.getMasterFileSystem().getRootDir();
-    checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
+    this.rootDir = ((LegacyPathIdentifier) master.getMasterStorage().getRootContainer()).path;
+    checkSnapshotSupport(master.getConfiguration(), master.getMasterStorage());
 
     // get the configuration for the coordinator
     Configuration conf = master.getConfiguration();

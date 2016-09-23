@@ -102,7 +102,7 @@ public class TestSnapshotFromMaster {
     UTIL.startMiniCluster(NUM_RS);
     fs = UTIL.getDFSCluster().getFileSystem();
     master = UTIL.getMiniHBaseCluster().getMaster();
-    rootDir = master.getMasterFileSystem().getRootDir();
+    rootDir = master.getMasterStorage().getRootDir();
     archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
   }
 

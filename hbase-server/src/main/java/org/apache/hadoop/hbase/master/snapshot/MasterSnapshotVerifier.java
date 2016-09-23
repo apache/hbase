@@ -90,7 +90,7 @@ public final class MasterSnapshotVerifier {
    * @param rootDir root directory of the hbase installation.
    */
   public MasterSnapshotVerifier(MasterServices services, SnapshotDescription snapshot, Path rootDir) {
-    this.fs = services.getMasterFileSystem().getFileSystem();
+    this.fs = services.getMasterStorage().getFileSystem();
     this.services = services;
     this.snapshot = snapshot;
     this.rootDir = rootDir;

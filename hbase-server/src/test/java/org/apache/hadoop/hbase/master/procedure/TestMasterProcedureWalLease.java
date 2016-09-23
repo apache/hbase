@@ -108,7 +108,7 @@ public class TestMasterProcedureWalLease {
     Mockito.doReturn(firstMaster.getConfiguration()).when(backupMaster3).getConfiguration();
     Mockito.doReturn(true).when(backupMaster3).isActiveMaster();
     final WALProcedureStore backupStore3 = new WALProcedureStore(firstMaster.getConfiguration(),
-        firstMaster.getMasterFileSystem().getFileSystem(),
+        firstMaster.getMasterStorage().getFileSystem(),
         ((WALProcedureStore)masterStore).getLogDir(),
         new MasterProcedureEnv.WALStoreLeaseRecovery(backupMaster3));
     // Abort Latch for the test store
@@ -188,7 +188,7 @@ public class TestMasterProcedureWalLease {
     Mockito.doReturn(firstMaster.getConfiguration()).when(backupMaster3).getConfiguration();
     Mockito.doReturn(true).when(backupMaster3).isActiveMaster();
     final WALProcedureStore procStore2 = new WALProcedureStore(firstMaster.getConfiguration(),
-        firstMaster.getMasterFileSystem().getFileSystem(),
+        firstMaster.getMasterStorage().getFileSystem(),
         ((WALProcedureStore)procStore).getLogDir(),
         new MasterProcedureEnv.WALStoreLeaseRecovery(backupMaster3));
 

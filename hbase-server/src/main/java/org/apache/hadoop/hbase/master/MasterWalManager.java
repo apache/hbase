@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -79,7 +81,7 @@ public class MasterWalManager {
 
   // The Path to the old logs dir
   private final Path oldLogDir;
-  private final Path rootDir;
+  private final StorageIdentifier rootContainer;
 
   // create the split log lock
   private final Lock splitLogLock = new ReentrantLock();
@@ -90,20 +92,21 @@ public class MasterWalManager {
   private volatile boolean fsOk = true;
 
   public MasterWalManager(MasterServices services) throws IOException {
-    this(services.getConfiguration(), services.getMasterFileSystem().getFileSystem(),
-      services.getMasterFileSystem().getRootDir(), services);
+    this(services.getConfiguration(), services.getMasterStorage().getFileSystem(),
+      services.getMasterStorage().getRootContainer(), services);
   }
 
-  public MasterWalManager(Configuration conf, FileSystem fs, Path rootDir, MasterServices services)
-      throws IOException {
+  public MasterWalManager(Configuration conf, FileSystem fs, StorageIdentifier rootContainer,
+                          MasterServices services) throws IOException {
     this.fs = fs;
     this.conf = conf;
-    this.rootDir = rootDir;
+    this.rootContainer = rootContainer;
     this.services = services;
     this.splitLogManager = new SplitLogManager(services, conf);
     this.distributedLogReplay = this.splitLogManager.isLogReplaying();
 
-    this.oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    this.oldLogDir = new Path(((LegacyPathIdentifier) rootContainer).path, HConstants
+        .HREGION_OLDLOGDIR_NAME);
   }
 
   public void stop() {
@@ -156,7 +159,8 @@ public class MasterWalManager {
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 
     Set<ServerName> serverNames = new HashSet<ServerName>();
-    Path logsDirPath = new Path(this.rootDir, HConstants.HREGION_LOGDIR_NAME);
+    Path logsDirPath = new Path(((LegacyPathIdentifier) this.rootContainer).path, HConstants
+        .HREGION_LOGDIR_NAME);
 
     do {
       if (services.isStopped()) {
@@ -254,7 +258,7 @@ public class MasterWalManager {
     }
     try {
       for (ServerName serverName : serverNames) {
-        Path logDir = new Path(this.rootDir,
+        Path logDir = new Path(((LegacyPathIdentifier) this.rootContainer).path,
           AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
         Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
         // Rename the directory so a rogue RS doesn't create more WALs

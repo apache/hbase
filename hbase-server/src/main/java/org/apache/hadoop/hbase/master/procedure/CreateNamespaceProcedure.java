@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceState;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * The procedure to create a new namespace.
@@ -202,7 +201,7 @@ public class CreateNamespaceProcedure
   protected static void createDirectory(
       final MasterProcedureEnv env,
       final NamespaceDescriptor nsDescriptor) throws IOException {
-    env.getMasterServices().getMasterFileSystem().createNamespace(nsDescriptor);
+    env.getMasterServices().getMasterStorage().createNamespace(nsDescriptor);
   }
 
   /**

@@ -34,15 +34,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.fs.FsContext;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.StorageContext;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -52,7 +49,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 
 @InterfaceAudience.Private
-public class LegacyMasterFileSystem extends MasterFileSystem {
+public class LegacyMasterFileSystem extends MasterStorage<LegacyPathIdentifier> {
   private static final Log LOG = LogFactory.getLog(LegacyMasterFileSystem.class);
 
   private final Path sidelineDir;
@@ -82,18 +79,18 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
 
   private final boolean isSecurityEnabled;
 
-  public LegacyMasterFileSystem(Configuration conf, FileSystem fs, Path rootDir) {
+  public LegacyMasterFileSystem(Configuration conf, FileSystem fs, LegacyPathIdentifier rootDir) {
     super(conf, fs, rootDir);
 
     // base directories
-    this.sidelineDir = LegacyLayout.getSidelineDir(rootDir);
-    this.snapshotDir = LegacyLayout.getSnapshotDir(rootDir);
-    this.archiveDir = LegacyLayout.getArchiveDir(rootDir);
+    this.sidelineDir = LegacyLayout.getSidelineDir(rootDir.path);
+    this.snapshotDir = LegacyLayout.getSnapshotDir(rootDir.path);
+    this.archiveDir = LegacyLayout.getArchiveDir(rootDir.path);
     this.archiveDataDir = LegacyLayout.getDataDir(this.archiveDir);
-    this.dataDir = LegacyLayout.getDataDir(rootDir);
-    this.tmpDir = LegacyLayout.getTempDir(rootDir);
+    this.dataDir = LegacyLayout.getDataDir(rootDir.path);
+    this.tmpDir = LegacyLayout.getTempDir(rootDir.path);
     this.tmpDataDir = LegacyLayout.getDataDir(this.tmpDir);
-    this.bulkDir = LegacyLayout.getBulkDir(rootDir);
+    this.bulkDir = LegacyLayout.getBulkDir(rootDir.path);
 
     this.secureRootSubDirPerms = new FsPermission(conf.get("hbase.rootdir.perms", "700"));
     this.isSecurityEnabled = "kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication"));
@@ -103,12 +100,12 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   //  PUBLIC Methods - Namespace related
   // ==========================================================================
   public void createNamespace(NamespaceDescriptor nsDescriptor) throws IOException {
-    getFileSystem().mkdirs(getNamespaceDir(FsContext.DATA, nsDescriptor.getName()));
+    getFileSystem().mkdirs(getNamespaceDir(StorageContext.DATA, nsDescriptor.getName()));
   }
 
   public void deleteNamespace(String namespaceName) throws IOException {
     FileSystem fs = getFileSystem();
-    Path nsDir = getNamespaceDir(FsContext.DATA, namespaceName);
+    Path nsDir = getNamespaceDir(StorageContext.DATA, namespaceName);
 
     try {
       for (FileStatus status : fs.listStatus(nsDir)) {
@@ -125,7 +122,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
     }
   }
 
-  public Collection<String> getNamespaces(FsContext ctx) throws IOException {
+  public Collection<String> getNamespaces(StorageContext ctx) throws IOException {
     FileStatus[] stats = FSUtils.listStatus(getFileSystem(), getNamespaceDir(ctx));
     if (stats == null) return Collections.emptyList();
 
@@ -142,20 +139,20 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   //  PUBLIC Methods - Table Descriptor related
   // ==========================================================================s
   @Override
-  public boolean createTableDescriptor(FsContext ctx, HTableDescriptor tableDesc, boolean force)
+  public boolean createTableDescriptor(StorageContext ctx, HTableDescriptor tableDesc, boolean force)
       throws IOException {
     return LegacyTableDescriptor.createTableDescriptor(getFileSystem(),
       getTableDir(ctx, tableDesc.getTableName()), tableDesc, force);
   }
 
   @Override
-  public void updateTableDescriptor(FsContext ctx, HTableDescriptor tableDesc) throws IOException {
+  public void updateTableDescriptor(StorageContext ctx, HTableDescriptor tableDesc) throws IOException {
     LegacyTableDescriptor.updateTableDescriptor(getFileSystem(),
         getTableDir(ctx, tableDesc.getTableName()), tableDesc);
   }
 
   @Override
-  public HTableDescriptor getTableDescriptor(FsContext ctx, TableName tableName)
+  public HTableDescriptor getTableDescriptor(StorageContext ctx, TableName tableName)
       throws IOException {
     return LegacyTableDescriptor.getTableDescriptorFromFs(
         getFileSystem(), getTableDir(ctx, tableName));
@@ -165,7 +162,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   //  PUBLIC Methods - Table related
   // ==========================================================================
   @Override
-  public void deleteTable(FsContext ctx, TableName tableName) throws IOException {
+  public void deleteTable(StorageContext ctx, TableName tableName) throws IOException {
     Path tableDir = getTableDir(ctx, tableName);
     if (!FSUtils.deleteDirectory(getFileSystem(), tableDir)) {
       throw new IOException("Failed delete of " + tableName);
@@ -173,7 +170,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   }
 
   @Override
-  public Collection<TableName> getTables(FsContext ctx, String namespace)
+  public Collection<TableName> getTables(StorageContext ctx, String namespace)
       throws IOException {
     FileStatus[] stats = FSUtils.listStatus(getFileSystem(),
         getNamespaceDir(ctx, namespace), new FSUtils.UserTableDirFilter(getFileSystem()));
@@ -190,7 +187,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   //  PUBLIC Methods - Table Regions related
   // ==========================================================================
   @Override
-  public Collection<HRegionInfo> getRegions(FsContext ctx, TableName tableName)
+  public Collection<HRegionInfo> getRegions(StorageContext ctx, TableName tableName)
       throws IOException {
     FileStatus[] stats = FSUtils.listStatus(getFileSystem(),
         getTableDir(ctx, tableName), new FSUtils.RegionDirFilter(getFileSystem()));
@@ -215,10 +212,96 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   // ==========================================================================
   //  PROTECTED Methods - Bootstrap
   // ==========================================================================
+
+  /**
+   * Create initial layout in filesystem.
+   * <ol>
+   * <li>Check if the meta region exists and is readable, if not create it.
+   * Create hbase.version and the hbase:meta directory if not one.
+   * </li>
+   * <li>Create a log archive directory for RS to put archived logs</li>
+   * </ol>
+   * Idempotent.
+   * @throws IOException
+   */
+  @Override
+  protected ClusterId startup() throws IOException {
+    Configuration c = getConfiguration();
+    Path rc = ((LegacyPathIdentifier)getRootContainer()).path;
+    FileSystem fs = getFileSystem();
+
+    // If FS is in safe mode wait till out of it.
+    FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+
+    boolean isSecurityEnabled = "kerberos".equalsIgnoreCase(c.get("hbase.security.authentication"));
+    FsPermission rootDirPerms = new FsPermission(c.get("hbase.rootdir.perms", "700"));
+
+    // Filesystem is good. Go ahead and check for hbase.rootdir.
+    try {
+      if (!fs.exists(rc)) {
+        if (isSecurityEnabled) {
+          fs.mkdirs(rc, rootDirPerms);
+        } else {
+          fs.mkdirs(rc);
+        }
+        // DFS leaves safe mode with 0 DNs when there are 0 blocks.
+        // We used to handle this by checking the current DN count and waiting until
+        // it is nonzero. With security, the check for datanode count doesn't work --
+        // it is a privileged op. So instead we adopt the strategy of the jobtracker
+        // and simply retry file creation during bootstrap indefinitely. As soon as
+        // there is one datanode it will succeed. Permission problems should have
+        // already been caught by mkdirs above.
+        FSUtils.setVersion(fs, rc, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+            10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
+            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+      } else {
+        if (!fs.isDirectory(rc)) {
+          throw new IllegalArgumentException(rc.toString() + " is not a directory");
+        }
+        if (isSecurityEnabled && !rootDirPerms.equals(fs.getFileStatus(rc).getPermission())) {
+          // check whether the permission match
+          LOG.warn("Found rootdir permissions NOT matching expected \"hbase.rootdir.perms\" for "
+              + "rootdir=" + rc.toString() + " permissions=" + fs.getFileStatus(rc).getPermission()
+              + " and  \"hbase.rootdir.perms\" configured as "
+              + c.get("hbase.rootdir.perms", "700") + ". Automatically setting the permissions. You"
+              + " can change the permissions by setting \"hbase.rootdir.perms\" in hbase-site.xml "
+              + "and restarting the master");
+          fs.setPermission(rc, rootDirPerms);
+        }
+        // as above
+        FSUtils.checkVersion(fs, rc, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+            10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
+            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+      }
+    } catch (DeserializationException de) {
+      LOG.fatal("Please fix invalid configuration for " + HConstants.HBASE_DIR, de);
+      IOException ioe = new IOException();
+      ioe.initCause(de);
+      throw ioe;
+    } catch (IllegalArgumentException iae) {
+      LOG.fatal("Please fix invalid configuration for "
+          + HConstants.HBASE_DIR + " " + rc.toString(), iae);
+      throw iae;
+    }
+    // Make sure cluster ID exists
+    if (!FSUtils.checkClusterIdExists(fs, rc, c.getInt(
+        HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000))) {
+      FSUtils.setClusterId(fs, rc, new ClusterId(), c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10
+          * 1000));
+    }
+    return FSUtils.getClusterId(fs, rc);
+  }
+
+  @Override
+  public void logStorageState(Log log) throws IOException {
+    FSUtils.logFileSystemState(getFileSystem(), ((LegacyPathIdentifier)getRootContainer()).path,
+        LOG);
+  }
+
   @Override
   protected void bootstrapMeta() throws IOException {
     // TODO ask RegionStorage
-    if (!FSUtils.metaRegionExists(getFileSystem(), getRootDir())) {
+    if (!FSUtils.metaRegionExists(getFileSystem(), getRootContainer().path)) {
       bootstrapMeta(getConfiguration());
     }
 
@@ -254,7 +337,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   protected void startupCleanup() throws IOException {
     final FileSystem fs = getFileSystem();
     // Check the directories under rootdir.
-    checkTempDir(getTempDir(), getConfiguration(), fs);
+    checkTempDir(getTempContainer().path, getConfiguration(), getFileSystem());
     final String[] protectedSubDirs = new String[] {
         HConstants.BASE_NAMESPACE_DIR,
         HConstants.HFILE_ARCHIVE_DIRECTORY,
@@ -266,7 +349,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
         MobConstants.MOB_DIR_NAME
     };
     for (String subDir : protectedSubDirs) {
-      checkSubDir(new Path(getRootDir(), subDir));
+      checkSubDir(new Path(getRootContainer().path, subDir));
     }
 
     checkStagingDir();
@@ -274,17 +357,17 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
     // Handle the last few special files and set the final rootDir permissions
     // rootDir needs 'x' for all to support bulk load staging dir
     if (isSecurityEnabled) {
-      fs.setPermission(new Path(getRootDir(), HConstants.VERSION_FILE_NAME), secureRootFilePerms);
-      fs.setPermission(new Path(getRootDir(), HConstants.CLUSTER_ID_FILE_NAME), secureRootFilePerms);
+      fs.setPermission(new Path(getRootContainer().path, HConstants.VERSION_FILE_NAME), secureRootFilePerms);
+      fs.setPermission(new Path(getRootContainer().path, HConstants.CLUSTER_ID_FILE_NAME), secureRootFilePerms);
     }
-    FsPermission currentRootPerms = fs.getFileStatus(getRootDir()).getPermission();
+    FsPermission currentRootPerms = fs.getFileStatus(getRootContainer().path).getPermission();
     if (!currentRootPerms.getUserAction().implies(FsAction.EXECUTE)
         || !currentRootPerms.getGroupAction().implies(FsAction.EXECUTE)
         || !currentRootPerms.getOtherAction().implies(FsAction.EXECUTE)) {
       LOG.warn("rootdir permissions do not contain 'excute' for user, group or other. "
         + "Automatically adding 'excute' permission for all");
       fs.setPermission(
-        getRootDir(),
+        getRootContainer().path,
         new FsPermission(currentRootPerms.getUserAction().or(FsAction.EXECUTE), currentRootPerms
             .getGroupAction().or(FsAction.EXECUTE), currentRootPerms.getOtherAction().or(
           FsAction.EXECUTE)));
@@ -303,7 +386,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
       // if not the cleaner will take care of them.
       for (Path tabledir: FSUtils.getTableDirs(fs, tmpdir)) {
         for (Path regiondir: FSUtils.getRegionDirs(fs, tabledir)) {
-          HFileArchiver.archiveRegion(fs, getRootDir(), tabledir, regiondir);
+          HFileArchiver.archiveRegion(fs, getRootContainer().path, tabledir, regiondir);
         }
       }
       if (!fs.delete(tmpdir, true)) {
@@ -361,7 +444,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
    */
   private void checkStagingDir() throws IOException {
     final FileSystem fs = getFileSystem();
-    Path p = new Path(getRootDir(), HConstants.BULKLOAD_STAGING_DIR_NAME);
+    Path p = new Path(getRootContainer().path, HConstants.BULKLOAD_STAGING_DIR_NAME);
     try {
       if (!fs.exists(p)) {
         if (!fs.mkdirs(p, HiddenDirPerms)) {
@@ -380,27 +463,28 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   // ==========================================================================
   //  PROTECTED Methods - Path
   // ==========================================================================
-  protected Path getNamespaceDir(FsContext ctx) {
+  protected Path getNamespaceDir(StorageContext ctx) {
     return getBaseDirFromContext(ctx);
   }
 
-  protected Path getNamespaceDir(FsContext ctx, String namespace) {
+  protected Path getNamespaceDir(StorageContext ctx, String namespace) {
     return LegacyLayout.getNamespaceDir(getBaseDirFromContext(ctx), namespace);
   }
 
-  protected Path getTableDir(FsContext ctx, TableName table) {
+  protected Path getTableDir(StorageContext ctx, TableName table) {
     return LegacyLayout.getTableDir(getBaseDirFromContext(ctx), table);
   }
 
-  protected Path getRegionDir(FsContext ctx, TableName table, HRegionInfo hri) {
+  protected Path getRegionDir(StorageContext ctx, TableName table, HRegionInfo hri) {
     return LegacyLayout.getRegionDir(getTableDir(ctx, table), hri);
   }
 
-  public Path getTempDir() {
-    return tmpDir;
+  @Override
+  public LegacyPathIdentifier getTempContainer() {
+    return new LegacyPathIdentifier(tmpDir);
   }
 
-  protected Path getBaseDirFromContext(FsContext ctx) {
+  protected Path getBaseDirFromContext(StorageContext ctx) {
     switch (ctx) {
       case TEMP: return tmpDataDir;
       case DATA: return dataDir;

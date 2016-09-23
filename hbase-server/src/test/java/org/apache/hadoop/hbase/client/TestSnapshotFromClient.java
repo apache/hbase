@@ -221,10 +221,10 @@ public class TestSnapshotFromClient {
         SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
     LOG.debug("FS state after snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     SnapshotTestingUtils.confirmSnapshotValid(
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM,
@@ -291,10 +291,10 @@ public class TestSnapshotFromClient {
         SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
     LOG.debug("FS state after snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
 
     List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
     List<byte[]> nonEmptyCfs = Lists.newArrayList();

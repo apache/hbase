@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -121,8 +120,8 @@ public class TestSnapshotCloneIndependence {
 
   @Before
   public void setup() throws Exception {
-    fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
+    rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
 
     admin = UTIL.getHBaseAdmin();
     originalTableName = TableName.valueOf("test" + testName.getMethodName());

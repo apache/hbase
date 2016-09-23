@@ -207,7 +207,7 @@ public class TestRestoreFlushSnapshotFromClient {
   //  Helpers
   // ==========================================================================
   private void logFSTree() throws IOException {
-    UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem().logFileSystemState(LOG);
+    UTIL.getMiniHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
   }
 
   protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,

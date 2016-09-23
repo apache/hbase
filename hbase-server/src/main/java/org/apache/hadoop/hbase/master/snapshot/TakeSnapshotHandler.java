@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
@@ -107,8 +108,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.snapshotManager = snapshotManager;
     this.snapshotTable = TableName.valueOf(snapshot.getTable());
     this.conf = this.master.getConfiguration();
-    this.fs = this.master.getMasterFileSystem().getFileSystem();
-    this.rootDir = this.master.getMasterFileSystem().getRootDir();
+    this.fs = this.master.getMasterStorage().getFileSystem();
+    this.rootDir = ((LegacyPathIdentifier) this.master.getMasterStorage().getRootContainer()).path;
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     this.workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
     this.monitor = new ForeignExceptionDispatcher(snapshot.getName());

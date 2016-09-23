@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
@@ -68,9 +68,9 @@ public interface MasterServices extends Server {
   AssignmentManager getAssignmentManager();
 
   /**
-   * @return Master's filesystem {@link MasterFileSystem} utility class.
+   * @return Master's filesystem {@link MasterStorage} utility class.
    */
-  MasterFileSystem getMasterFileSystem();
+  MasterStorage getMasterStorage();
 
   /**
    * @return Master's WALs {@link MasterWalManager} utility class.

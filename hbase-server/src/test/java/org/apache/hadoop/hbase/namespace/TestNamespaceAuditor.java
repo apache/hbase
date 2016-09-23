@@ -63,7 +63,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormatBase;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -81,7 +81,6 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -189,7 +188,7 @@ public class TestNamespaceAuditor {
   @Test
   public void testValidQuotas() throws Exception {
     boolean exceptionCaught = false;
-    MasterFileSystem mfs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem();
+    MasterStorage mfs = UTIL.getHBaseCluster().getMaster().getMasterStorage();
     NamespaceDescriptor nspDesc =
         NamespaceDescriptor.create(prefix + "vq1")
             .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "hihdufh")

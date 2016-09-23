@@ -31,12 +31,10 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.BulkReOpen;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -62,7 +60,7 @@ public final class MasterDDLOperationHelper {
       List<HRegionInfo> regionInfoList,
       final byte[] familyName,
       boolean hasMob) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+    final MasterStorage ms = env.getMasterServices().getMasterStorage();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing family=" + Bytes.toString(familyName) + " from table=" + tableName);
     }
@@ -71,7 +69,7 @@ public final class MasterDDLOperationHelper {
     }
     for (HRegionInfo hri : regionInfoList) {
       // Delete the family directory in FS for all the regions one by one
-      mfs.deleteFamilyFromFS(hri, familyName, hasMob);
+      ms.deleteFamilyFromStorage(hri, familyName, hasMob);
     }
   }
 

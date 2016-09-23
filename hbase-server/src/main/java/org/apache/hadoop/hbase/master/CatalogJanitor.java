@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -207,7 +208,7 @@ public class CatalogJanitor extends ScheduledChore {
           + regionB.getRegionNameAsString()
           + " from fs because merged region no longer holds references");
       // TODO update HFileArchiver to use RegionStorage
-      FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
+      FileSystem fs = this.services.getMasterStorage().getFileSystem();
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
       MetaTableAccessor.deleteMergeQualifiers(services.getConnection(), mergedRegion);
@@ -353,7 +354,7 @@ public class CatalogJanitor extends ScheduledChore {
     if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
-      FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
+      FileSystem fs = this.services.getMasterStorage().getFileSystem();
       if (LOG.isTraceEnabled()) LOG.trace("Archiving parent region: " + parent);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
       MetaTableAccessor.deleteRegion(this.connection, parent);
@@ -389,8 +390,9 @@ public class CatalogJanitor extends ScheduledChore {
       return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
     }
 
-    FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
-    Path rootdir = this.services.getMasterFileSystem().getRootDir();
+    FileSystem fs = this.services.getMasterStorage().getFileSystem();
+    Path rootdir = ((LegacyPathIdentifier) this.services.getMasterStorage().getRootContainer())
+        .path;
     Path tabledir = FSUtils.getTableDir(rootdir, daughter.getTable());
 
     Path daughterRegionDir = new Path(tabledir, daughter.getEncodedName());

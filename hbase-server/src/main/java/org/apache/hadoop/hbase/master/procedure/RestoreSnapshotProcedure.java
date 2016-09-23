@@ -41,7 +41,8 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -333,12 +334,12 @@ public class RestoreSnapshotProcedure
 
     if (!getTableName().isSystemTable()) {
       // Table already exist. Check and update the region quota for this table namespace.
-      final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+      final MasterStorage ms = env.getMasterServices().getMasterStorage();
       SnapshotManifest manifest = SnapshotManifest.open(
         env.getMasterConfiguration(),
-        mfs.getFileSystem(),
-        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, mfs.getRootDir()),
-        snapshot);
+        ms.getFileSystem(),
+        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, ((LegacyPathIdentifier) ms
+            .getRootContainer()).path), snapshot);
       int snapshotRegionCount = manifest.getRegionManifestsMap().size();
       int tableRegionCount =
           ProcedureSyncWait.getMasterQuotaManager(env).getRegionCountOfTable(tableName);
@@ -365,9 +366,9 @@ public class RestoreSnapshotProcedure
    * @throws IOException
    **/
   private void restoreSnapshot(final MasterProcedureEnv env) throws IOException {
-    MasterFileSystem fileSystemManager = env.getMasterServices().getMasterFileSystem();
+    MasterStorage fileSystemManager = env.getMasterServices().getMasterStorage();
     FileSystem fs = fileSystemManager.getFileSystem();
-    Path rootDir = fileSystemManager.getRootDir();
+    Path rootDir = ((LegacyPathIdentifier) fileSystemManager.getRootContainer()).path;
     final ForeignExceptionDispatcher monitorException = new ForeignExceptionDispatcher();
 
     LOG.info("Starting restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot));

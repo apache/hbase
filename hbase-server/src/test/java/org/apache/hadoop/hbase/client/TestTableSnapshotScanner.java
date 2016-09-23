@@ -58,7 +58,7 @@ public class TestTableSnapshotScanner {
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_REGION_SERVERS, true);
-    rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 

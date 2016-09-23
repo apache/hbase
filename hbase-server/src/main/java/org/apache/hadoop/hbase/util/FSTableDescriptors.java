@@ -31,15 +31,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the
@@ -63,7 +62,7 @@ import org.apache.hadoop.hbase.fs.MasterFileSystem;
 public class FSTableDescriptors implements TableDescriptors {
   private static final Log LOG = LogFactory.getLog(FSTableDescriptors.class);
 
-  private final MasterFileSystem mfs;
+  private final MasterStorage<? extends StorageIdentifier> ms;
   private final boolean fsreadonly;
 
   private volatile boolean usecache;
@@ -103,17 +102,18 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   public FSTableDescriptors(final Configuration conf, final FileSystem fs,
       final Path rootdir, final boolean fsreadonly, final boolean usecache) throws IOException {
-    this(MasterFileSystem.open(conf, fs, rootdir, false), fsreadonly, usecache);
+    this(MasterStorage.open(conf, rootdir, false), fsreadonly, usecache);
   }
 
-  private FSTableDescriptors(final MasterFileSystem mfs, boolean fsreadonly, boolean usecache)
+  private FSTableDescriptors(final MasterStorage<? extends StorageIdentifier> ms, boolean
+      fsreadonly, boolean usecache)
       throws IOException {
     super();
-    this.mfs = mfs;
+    this.ms = ms;
     this.fsreadonly = fsreadonly;
     this.usecache = usecache;
 
-    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(mfs.getConfiguration());
+    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(ms.getConfiguration());
   }
 
   @Override
@@ -164,7 +164,7 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     HTableDescriptor tdmt = null;
     try {
-      tdmt = mfs.getTableDescriptor(tablename);
+      tdmt = ms.getTableDescriptor(tablename);
     } catch (NullPointerException e) {
       LOG.debug("Exception during readTableDecriptor. Current table name = " + tablename, e);
     } catch (TableInfoMissingException e) {
@@ -198,7 +198,7 @@ public class FSTableDescriptors implements TableDescriptors {
       LOG.debug("Fetching table descriptors from the filesystem.");
       boolean allvisited = true;
 
-      for (TableName table: mfs.getTables()) {
+      for (TableName table: ms.getTables()) {
         HTableDescriptor htd = null;
         try {
           htd = get(table);
@@ -239,7 +239,7 @@ public class FSTableDescriptors implements TableDescriptors {
   @Override
   public Map<String, HTableDescriptor> getByNamespace(String name) throws IOException {
     Map<String, HTableDescriptor> htds = new TreeMap<String, HTableDescriptor>();
-    for (TableName table: mfs.getTables(name)) {
+    for (TableName table: ms.getTables(name)) {
       HTableDescriptor htd = null;
       try {
         htd = get(table);
@@ -284,7 +284,7 @@ public class FSTableDescriptors implements TableDescriptors {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot remove a table descriptor - in read only mode");
     }
-    mfs.deleteTable(tablename); // for test only??
+    ms.deleteTable(tablename); // for test only??
     HTableDescriptor descriptor = this.cache.remove(tablename);
     return descriptor;
   }
@@ -299,7 +299,7 @@ public class FSTableDescriptors implements TableDescriptors {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot update a table descriptor - in read only mode");
     }
-    mfs.updateTableDescriptor(td);
+    ms.updateTableDescriptor(td);
     if (usecache) {
       this.cache.put(td.getTableName(), td);
     }
@@ -328,6 +328,6 @@ public class FSTableDescriptors implements TableDescriptors {
     }
 
     // forceCreation???
-    return mfs.createTableDescriptor(htd, forceCreation);
+    return ms.createTableDescriptor(htd, forceCreation);
   }
 }

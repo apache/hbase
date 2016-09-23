@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,11 +37,11 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.fs.FsContext;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.StorageContext;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
@@ -294,14 +293,14 @@ public class CreateTableProcedure
   protected static List<HRegionInfo> createFsLayout(final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor, List<HRegionInfo> newRegions,
       final CreateHdfsRegions hdfsRegionHandler) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tempdir = mfs.getTempDir();
+    final MasterStorage ms = env.getMasterServices().getMasterStorage();
+    final Path tempdir = ((LegacyPathIdentifier) ms.getTempContainer()).path;
 
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     HTableDescriptor underConstruction = new HTableDescriptor(hTableDescriptor);
     final Path tempTableDir = FSUtils.getTableDir(tempdir, hTableDescriptor.getTableName());
-    mfs.createTableDescriptor(FsContext.TEMP, underConstruction, false);
+    ms.createTableDescriptor(StorageContext.TEMP, underConstruction, false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir,
@@ -317,9 +316,10 @@ public class CreateTableProcedure
     final MasterProcedureEnv env,
     final HTableDescriptor hTableDescriptor,
     final Path tempTableDir) throws IOException {
-    final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    final Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), hTableDescriptor.getTableName());
-    FileSystem fs = mfs.getFileSystem();
+    final MasterStorage ms = env.getMasterServices().getMasterStorage();
+    final Path tableDir = FSUtils.getTableDir(((LegacyPathIdentifier)ms.getRootContainer()).path,
+        hTableDescriptor.getTableName());
+    FileSystem fs = ms.getFileSystem();
 
     if (!fs.delete(tableDir, true) && fs.exists(tableDir)) {
       throw new IOException("Couldn't delete " + tableDir);

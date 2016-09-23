@@ -103,7 +103,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public MasterFileSystem getMasterFileSystem() {
+  public MasterFileSystem getMasterStorage() {
     return null;
   }
 

@@ -124,8 +124,8 @@ public class MasterProcedureTestingUtility {
   public static void validateTableCreation(final HMaster master, final TableName tableName,
       final HRegionInfo[] regions, boolean hasFamilyDirs, String... family) throws IOException {
     // check filesystem
-    final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    final FileSystem fs = master.getMasterStorage().getFileSystem();
+    final Path tableDir = FSUtils.getTableDir(master.getMasterStorage().getRootDir(), tableName);
     assertTrue(fs.exists(tableDir));
     FSUtils.logFileSystemState(fs, tableDir, LOG);
     List<Path> allRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
@@ -167,8 +167,8 @@ public class MasterProcedureTestingUtility {
   public static void validateTableDeletion(
       final HMaster master, final TableName tableName) throws IOException {
     // check filesystem
-    final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    final FileSystem fs = master.getMasterStorage().getFileSystem();
+    final Path tableDir = FSUtils.getTableDir(master.getMasterStorage().getRootDir(), tableName);
     assertFalse(fs.exists(tableDir));
 
     // check meta
@@ -243,7 +243,7 @@ public class MasterProcedureTestingUtility {
     assertFalse(htd.hasFamily(deletedFamily.getBytes()));
 
     // verify fs
-    master.getMasterFileSystem().visitStoreFiles(tableName, new StoreFileVisitor() {
+    master.getMasterStorage().visitStoreFiles(tableName, new StoreFileVisitor() {
       @Override
       public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
           throws IOException {

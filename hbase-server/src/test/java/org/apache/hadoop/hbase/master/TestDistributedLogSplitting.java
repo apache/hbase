@@ -101,7 +101,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
@@ -217,7 +216,7 @@ public class TestDistributedLogSplitting {
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
     master.balanceSwitch(false);
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    FileSystem fs = master.getMasterStorage().getFileSystem();
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
 
@@ -867,7 +866,7 @@ public class TestDistributedLogSplitting {
       });
 
       int count = 0;
-      FileSystem fs = master.getMasterFileSystem().getFileSystem();
+      FileSystem fs = master.getMasterStorage().getFileSystem();
       Path rootdir = FSUtils.getRootDir(conf);
       Path tdir = FSUtils.getTableDir(rootdir, TableName.valueOf("disableTable"));
       for (HRegionInfo hri : regions) {
@@ -1005,7 +1004,7 @@ public class TestDistributedLogSplitting {
     startCluster(3);
     final int NUM_LOG_LINES = 10000;
     final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    FileSystem fs = master.getMasterStorage().getFileSystem();
 
     final List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     HRegionServer hrs = findRSToKill(false, "table");
@@ -1124,7 +1123,7 @@ public class TestDistributedLogSplitting {
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
     final SplitLogManager slm = master.getMasterWalManager().getSplitLogManager();
-    final FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    final FileSystem fs = master.getMasterStorage().getFileSystem();
     final Path logDir = new Path(FSUtils.getRootDir(conf), "x");
     fs.mkdirs(logDir);
     ExecutorService executor = null;
@@ -1442,7 +1441,7 @@ public class TestDistributedLogSplitting {
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     Table ht = installTable(zkw, "table", "family", 10);
     try {
-      FileSystem fs = master.getMasterFileSystem().getFileSystem();
+      FileSystem fs = master.getMasterStorage().getFileSystem();
       Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf("table"));
       List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
       long newSeqId = WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 1L, 1000L);

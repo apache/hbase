@@ -326,6 +326,6 @@ public class TestMasterFailoverWithProcedures {
   }
 
   private Path getRootDir() {
-    return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
   }
 }

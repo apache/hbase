@@ -26,8 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -58,7 +57,7 @@ public class TestMasterFileSystem {
   @Test
   public void testFsUriSetProperly() throws Exception {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MasterFileSystem fs = master.getMasterFileSystem();
+    MasterStorage fs = master.getMasterStorage();
     Path masterRoot = FSUtils.getRootDir(fs.getConfiguration());
     Path rootDir = FSUtils.getRootDir(fs.getFileSystem().getConf());
     // make sure the fs and the found root dir have the same scheme

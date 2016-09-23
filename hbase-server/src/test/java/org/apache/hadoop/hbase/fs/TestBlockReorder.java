@@ -280,7 +280,7 @@ public class TestBlockReorder {
             "/" + targetRs.getServerName().toString()).toUri().getPath();
 
     DistributedFileSystem mdfs = (DistributedFileSystem)
-        hbm.getMaster().getMasterFileSystem().getFileSystem();
+        hbm.getMaster().getMasterStorage().getFileSystem();
 
 
     int nbTest = 0;
