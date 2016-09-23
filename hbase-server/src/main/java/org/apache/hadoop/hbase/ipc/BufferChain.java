@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -35,22 +33,11 @@ class BufferChain {
   private int remaining = 0;
   private int bufferOffset = 0;
 
-  BufferChain(ByteBuffer ... buffers) {
-    // Some of the incoming buffers can be null
-    List<ByteBuffer> bbs = new ArrayList<ByteBuffer>(buffers.length);
-    for (ByteBuffer b : buffers) {
-      if (b == null) continue;
-      bbs.add(b);
-      this.remaining += b.remaining();
-    }
-    this.buffers = bbs.toArray(new ByteBuffer[bbs.size()]);
-  }
-
-  BufferChain(List<ByteBuffer> buffers) {
+  BufferChain(ByteBuffer[] buffers) {
     for (ByteBuffer b : buffers) {
       this.remaining += b.remaining();
     }
-    this.buffers = buffers.toArray(new ByteBuffer[buffers.size()]);
+    this.buffers = buffers;
   }
 
   /**
