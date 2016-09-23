@@ -98,6 +98,7 @@ public class TestMultithreadedTableMapper {
      * @param context
      * @throws IOException
      */
+    @Override
     public void map(ImmutableBytesWritable key, Result value,
         Context context)
             throws IOException, InterruptedException {
@@ -111,7 +112,7 @@ public class TestMultithreadedTableMapper {
             Bytes.toString(INPUT_FAMILY) + "'.");
       }
       // Get the original value and reverse it
-      String originalValue = Bytes.toString(value.getValue(INPUT_FAMILY, null));
+      String originalValue = Bytes.toString(value.getValue(INPUT_FAMILY, INPUT_FAMILY));
       StringBuilder newValue = new StringBuilder(originalValue);
       newValue.reverse();
       // Now set the value to be collected
