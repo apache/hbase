@@ -45,6 +45,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private final MutableCounterLong exceptionsOOO;
   private final MutableCounterLong exceptionsBusy;
   private final MutableCounterLong exceptionsUnknown;
+  private final MutableCounterLong exceptionsScannerReset;
   private final MutableCounterLong exceptionsSanity;
   private final MutableCounterLong exceptionsNSRE;
   private final MutableCounterLong exceptionsMoved;
@@ -77,6 +78,8 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         .newCounter(EXCEPTIONS_BUSY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsUnknown = this.getMetricsRegistry()
         .newCounter(EXCEPTIONS_UNKNOWN_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsScannerReset = this.getMetricsRegistry()
+        .newCounter(EXCEPTIONS_SCANNER_RESET_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsSanity = this.getMetricsRegistry()
         .newCounter(EXCEPTIONS_SANITY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsMoved = this.getMetricsRegistry()
@@ -156,6 +159,11 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   @Override
   public void unknownScannerException() {
     exceptionsUnknown.incr();
+  }
+
+  @Override
+  public void scannerResetException() {
+    exceptionsScannerReset.incr();
   }
 
   @Override

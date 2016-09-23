@@ -51,6 +51,7 @@ import org.junit.experimental.categories.Category;
 public class TestTableMapReduce extends TestTableMapReduceBase {
   private static final Log LOG = LogFactory.getLog(TestTableMapReduce.class);
 
+  @Override
   protected Log getLog() { return LOG; }
 
   /**
@@ -66,6 +67,7 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
      * @param context
      * @throws IOException
      */
+    @Override
     public void map(ImmutableBytesWritable key, Result value,
       Context context)
     throws IOException, InterruptedException {
@@ -80,7 +82,7 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
       }
 
       // Get the original value and reverse it
-      String originalValue = Bytes.toString(value.getValue(INPUT_FAMILY, null));
+      String originalValue = Bytes.toString(value.getValue(INPUT_FAMILY, INPUT_FAMILY));
       StringBuilder newValue = new StringBuilder(originalValue);
       newValue.reverse();
       // Now set the value to be collected
