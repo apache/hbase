@@ -172,7 +172,7 @@
             <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
                  I believe it is a failsafe bug, we may consider using surefire -->
             <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx${failsafe.Xmx} -XX:MaxPermSize=368m
+            <argLine>-enableassertions -Xmx${failsafe.Xmx} ${maxpermsize}
                 -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
                 -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
           </configuration>
