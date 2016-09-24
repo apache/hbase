@@ -1662,7 +1662,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public long getOldestHfileTs(boolean majorCompactioOnly) throws IOException {
+  public long getOldestHfileTs(boolean majorCompactionOnly) throws IOException {
     long result = Long.MAX_VALUE;
     for (Store store : getStores()) {
       Collection<StoreFile> storeFiles = store.getStorefiles();
@@ -1672,12 +1672,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (sfReader == null) continue;
         HFile.Reader reader = sfReader.getHFileReader();
         if (reader == null) continue;
-        if (majorCompactioOnly) {
+        if (majorCompactionOnly) {
           byte[] val = reader.loadFileInfo().get(StoreFile.MAJOR_COMPACTION_KEY);
-          if (val == null) continue;
-          if (val == null || !Bytes.toBoolean(val)) {
-            continue;
-          }
+          if (val == null || !Bytes.toBoolean(val)) continue;
         }
         result = Math.min(result, reader.getFileContext().getFileCreateTime());
       }

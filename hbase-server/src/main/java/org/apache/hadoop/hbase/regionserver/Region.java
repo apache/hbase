@@ -141,10 +141,10 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * This can be used to determine the last time all files of this region were major compacted.
-   * @param majorCompactioOnly Only consider HFile that are the result of major compaction
+   * @param majorCompactionOnly Only consider HFile that are the result of major compaction
    * @return the timestamp of the oldest HFile for all stores of this region
    */
-  long getOldestHfileTs(boolean majorCompactioOnly) throws IOException;
+  long getOldestHfileTs(boolean majorCompactionOnly) throws IOException;
 
   /**
    * @return map of column family names to max sequence id that was read from storage when this
