@@ -25,14 +25,19 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 
 @InterfaceAudience.Private
 public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable {
+
+  private static final Log LOG = LogFactory.getLog(MetricsRegionWrapperImpl.class);
 
   public static final int PERIOD = 45;
   public static final String UNKNOWN = "unknown";
@@ -133,6 +138,18 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   @Override
   public long getNumCompactionsCompleted() {
     return this.region.compactionsFinished.get();
+  }
+
+  @Override
+  public long getLastMajorCompactionAge() {
+    long lastMajorCompactionTs = 0L;
+    try {
+      lastMajorCompactionTs = this.region.getOldestHfileTs(true);
+    } catch (IOException ioe) {
+      LOG.error("Could not load HFile info ", ioe);
+    }
+    long now = EnvironmentEdgeManager.currentTime();
+    return now - lastMajorCompactionTs;
   }
 
   @Override

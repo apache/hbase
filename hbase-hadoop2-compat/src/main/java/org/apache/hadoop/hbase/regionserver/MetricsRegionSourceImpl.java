@@ -269,6 +269,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
           MetricsRegionSource.COMPACTIONS_FAILED_DESC),
           this.regionWrapper.getNumCompactionsFailed());
       mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.LAST_MAJOR_COMPACTION_AGE,
+              MetricsRegionSource.LAST_MAJOR_COMPACTION_DESC),
+          this.regionWrapper.getLastMajorCompactionAge());
+      mrb.addCounter(Interns.info(
               regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
               MetricsRegionSource.NUM_BYTES_COMPACTED_DESC),
           this.regionWrapper.getNumBytesCompacted());

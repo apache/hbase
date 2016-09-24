@@ -144,6 +144,11 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public long getLastMajorCompactionAge() {
+      return 0;
+    }
+
+    @Override
     public long getNumCompactionsCompleted() {
       return 0;
     }

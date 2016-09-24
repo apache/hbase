@@ -116,6 +116,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public long getLastMajorCompactionAge() {
+    return 0;
+  }
+
+  @Override
   public long getNumCompactionsFailed() {
     return 0;
   }

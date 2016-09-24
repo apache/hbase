@@ -101,6 +101,11 @@ public interface MetricsRegionWrapper {
   long getNumCompactionsCompleted();
 
   /**
+   *  @return Age of the last major compaction
+   */
+  long getLastMajorCompactionAge();
+
+  /**
    * Returns the total number of compactions that have been reported as failed on this region.
    * Note that a given compaction can be reported as both completed and failed if an exception
    * is thrown in the processing after {@code HRegion.compact()}.
