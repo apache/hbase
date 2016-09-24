@@ -631,7 +631,7 @@
                         <configuration>
                             <tagsToExclude>Integration-Test</tagsToExclude>
                             <argLine>
-                                -Xmx1536m -XX:MaxPermSize=512m -XX:ReservedCodeCacheSize=512m
+                                -Xmx1536m -XX:ReservedCodeCacheSize=512m
                             </argLine>
                             <parallel>false</parallel>
                         </configuration>

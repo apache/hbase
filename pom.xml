@@ -1262,10 +1262,10 @@
     <!--Mark our test runs with '-Dhbase.build.id' so we can identify a surefire test as ours in a process listing
      -->
     <hbase-surefire.argLine>-enableassertions -Dhbase.build.id=${build.id} -Xmx${surefire.Xmx}
-      -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true
     </hbase-surefire.argLine>
-    <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx} -XX:MaxPermSize=256m
+    <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
     </hbase-surefire.cygwin-argLine>
@@ -2754,7 +2754,7 @@
          or you can provide the license with -Dmaven.clover.licenseLocation=/path/to/license. Committers can find
          the license under https://svn.apache.org/repos/private/committers/donated-licenses/clover/
          The report will be generated under target/site/clover/index.html when you run
-         MAVEN_OPTS="-Xmx2048m -XX:MaxPermSize=512m" mvn clean package -Pclover site -->
+         MAVEN_OPTS="-Xmx2048m" mvn clean package -Pclover site -->
     <profile>
       <id>clover</id>
       <activation>
