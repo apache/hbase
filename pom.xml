@@ -1271,10 +1271,10 @@
     <surefire.Xmx>2800m</surefire.Xmx>
     <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
     <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx${surefire.Xmx}
-      -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      ${maxpermsize} -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true
     </hbase-surefire.argLine>
-    <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx} -XX:MaxPermSize=256m
+    <hbase-surefire.cygwin-argLine>-enableassertions -Xmx${surefire.cygwinXmx} ${maxpermsize}
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
     </hbase-surefire.cygwin-argLine>
@@ -1845,6 +1845,28 @@
         </pluginManagement>
       </build>
     </profile>
+
+    <!--In JDK 1.8 and newer the PermGem has been removed. -->
+    <!--These two profiles are to handle the differences between the before and after 1.8 -->
+    <profile>
+      <id>old-jdk</id>
+      <activation>
+        <jdk>(,1.8)</jdk>
+      </activation>
+      <properties>
+        <maxpermsize>-XX:MaxPermSize=512m</maxpermsize>
+      </properties>
+    </profile>
+    <profile>
+      <id>new-jdk</id>
+      <activation>
+        <jdk>[1.8,)</jdk>
+      </activation>
+      <properties>
+        <maxpermsize></maxpermsize>
+      </properties>
+    </profile>
+
     <profile>
       <id>jacoco</id>
       <activation>
@@ -2460,7 +2482,7 @@
          or you can provide the license with -Dmaven.clover.licenseLocation=/path/to/license. Committers can find
          the license under https://svn.apache.org/repos/private/committers/donated-licenses/clover/
          The report will be generated under target/site/clover/index.html when you run
-         MAVEN_OPTS="-Xmx2048m -XX:MaxPermSize=512m" mvn clean package -Pclover site -->
+         MAVEN_OPTS="-Xmx2048m ${maxpermsize}" mvn clean package -Pclover site -->
     <profile>
       <id>clover</id>
       <activation>
