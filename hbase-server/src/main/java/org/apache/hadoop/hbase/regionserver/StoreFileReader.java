@@ -236,9 +236,7 @@ public class StoreFileReader {
         if (columns != null && columns.size() == 1) {
           byte[] column = columns.first();
           // create the required fake key
-          Cell kvKey = KeyValueUtil.createFirstOnRow(row, 0, row.length,
-            HConstants.EMPTY_BYTE_ARRAY, 0, 0, column, 0,
-            column.length);
+          Cell kvKey = CellUtil.createFirstOnRow(row, HConstants.EMPTY_BYTE_ARRAY, column);
           return passesGeneralRowColBloomFilter(kvKey);
         }
 

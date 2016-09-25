@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -155,7 +156,7 @@ public class MemStoreWrapper {
     context.getCounter(SweepCounter.FILE_AFTER_MERGE_OR_CLEAN).increment(1);
     // write reference/fileName back to the store files of HBase.
     scanner = snapshot.getScanner();
-    scanner.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
+    scanner.seek(CellUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
     cell = null;
     Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
         Bytes.toBytes(this.table.getName().toString()));

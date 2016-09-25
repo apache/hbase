@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
@@ -348,7 +349,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
         file.open();
         try {
           scanner = file.getScanner();
-          scanner.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_BYTE_ARRAY));
+          scanner.seek(CellUtil.createFirstOnRow(HConstants.EMPTY_BYTE_ARRAY));
           Cell cell;
           while (null != (cell = scanner.next())) {
             if (kvs.contains(cell)) {

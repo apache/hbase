@@ -270,7 +270,7 @@ public abstract class AbstractMemStore implements MemStore {
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
-    Cell firstCell = KeyValueUtil.createFirstOnRow(
+    Cell firstCell = CellUtil.createFirstOnRow(
         cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
         cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
         cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());

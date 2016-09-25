@@ -1735,6 +1735,24 @@ public final class CellUtil {
     return new FirstOnRowCell(row, roffset, rlength);
   }
 
+  public static Cell createFirstOnRow(final byte[] row, final byte[] family, final byte[] col) {
+    return createFirstOnRow(row, 0, (short)row.length,
+        family, 0, (byte)family.length,
+        col, 0, col.length);
+  }
+
+  public static Cell createFirstOnRow(final byte[] row, int roffset, short rlength,
+                                      final byte[] family, int foffset, byte flength,
+                                      final byte[] col, int coffset, int clength) {
+    return new FirstOnRowColCell(row, roffset, rlength,
+        family, foffset, flength,
+        col, coffset, clength);
+  }
+
+  public static Cell createFirstOnRow(final byte[] row) {
+    return createFirstOnRow(row, 0, (short)row.length);
+  }
+
   /**
    * Create a Cell that is smaller than all other possible Cells for the given Cell's row.
    * The family length is considered to be 0
@@ -1822,6 +1840,10 @@ public final class CellUtil {
         ((ByteBufferedCell) cell).getRowPosition(), cell.getRowLength());
     }
     return new LastOnRowCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+  }
+
+  public static Cell createLastOnRow(final byte[] row) {
+    return new LastOnRowCell(row, 0, (short)row.length);
   }
 
   /**

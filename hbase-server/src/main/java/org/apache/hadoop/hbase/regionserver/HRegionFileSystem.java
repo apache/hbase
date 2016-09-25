@@ -30,6 +30,7 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -598,7 +599,7 @@ public class HRegionFileSystem {
       try {
         if (top) {
           //check if larger than last key.
-          KeyValue splitKey = KeyValueUtil.createFirstOnRow(splitRow);
+          Cell splitKey = CellUtil.createFirstOnRow(splitRow);
           Cell lastKey = f.getLastKey();
           // If lastKey is null means storefile is empty.
           if (lastKey == null) {
@@ -609,7 +610,7 @@ public class HRegionFileSystem {
           }
         } else {
           //check if smaller than first key
-          KeyValue splitKey = KeyValueUtil.createLastOnRow(splitRow);
+          Cell splitKey = CellUtil.createLastOnRow(splitRow);
           Cell firstKey = f.getFirstKey();
           // If firstKey is null means storefile is empty.
           if (firstKey == null) {
