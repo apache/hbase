@@ -22,6 +22,7 @@
 </%args>
 <%import>
         java.util.*;
+        org.apache.commons.lang.time.FastDateFormat;
         org.apache.hadoop.hbase.regionserver.HRegionServer;
         org.apache.hadoop.hbase.util.Bytes;
         org.apache.hadoop.hbase.HRegionInfo;
@@ -197,6 +198,7 @@
             <th>Num. Compacting KVs</th>
             <th>Num. Compacted KVs</th>
             <th>Compaction Progress</th>
+            <th>Last Major Compaction</th>
         </tr>
 
         <%for HRegionInfo r: onlineRegions %>
@@ -211,12 +213,19 @@
             }
             String displayName = HRegionInfo.getRegionNameAsStringForDisplay(r,
               regionServer.getConfiguration());
+            long lastMajorCompactionTs = load.getLastMajorCompactionTs();
+            String compactTime = "";
+            if (lastMajorCompactionTs > 0) {
+              FastDateFormat fdf = FastDateFormat.getInstance("yyyy-MM-dd HH:mm ZZ");
+              compactTime = fdf.format(lastMajorCompactionTs);
+            }
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
             <td><% load.getTotalCompactingKVs() %></td>
             <td><% load.getCurrentCompactedKVs() %></td>
             <td><% percentDone %></td>
+            <td><% compactTime %></td>
             </%if>
         </tr>
         </%for>
