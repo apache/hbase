@@ -53,11 +53,6 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public long getScannerOrder() {
-    return delegate.getScannerOrder();
-  }
-
-  @Override
   public void close() {
     delegate.close();
   }
@@ -70,6 +65,11 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   @Override
   public boolean requestSeek(Cell kv, boolean forward, boolean useBloom) throws IOException {
     return delegate.requestSeek(kv, forward, useBloom);
+  }
+
+  @Override
+  public long getSequenceID() {
+    return delegate.getSequenceID();
   }
 
   @Override
