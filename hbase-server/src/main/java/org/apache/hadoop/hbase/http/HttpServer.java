@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.http.jmx.JMXJsonServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.metrics.MetricsServlet;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -710,7 +709,17 @@ public class HttpServer implements FilterContainer {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
-    addServlet("metrics", "/metrics", MetricsServlet.class);
+
+    // Hadoop3 has moved completely to metrics2, and  dropped support for Metrics v1's
+    // MetricsServlet (see HADOOP-12504).  We'll using reflection to load if against hadoop2.
+    // Remove when we drop support for hbase on hadoop2.x.
+    try {
+      Class clz = Class.forName("org.apache.hadoop.metrics.MetricsServlet");
+      addServlet("metrics", "/metrics", clz);
+    } catch (Exception e) {
+      // do nothing
+    }
+
     addServlet("jmx", "/jmx", JMXJsonServlet.class);
     addServlet("conf", "/conf", ConfServlet.class);
   }

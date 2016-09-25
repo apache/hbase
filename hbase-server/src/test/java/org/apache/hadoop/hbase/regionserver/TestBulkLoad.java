@@ -273,7 +273,7 @@ public class TestBulkLoad {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(conf);
     // TODO We need a way to do this without creating files
     File hFileLocation = testFolder.newFile();
-    FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation));
+    FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);
       hFileFactory.withFileContext(new HFileContext());

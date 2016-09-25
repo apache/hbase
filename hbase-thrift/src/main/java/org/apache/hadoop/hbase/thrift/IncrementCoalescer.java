@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.metrics.util.MBeanUtil;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.thrift.TException;
 
 /**
@@ -171,7 +171,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
         new ThreadPoolExecutor(CORE_POOL_SIZE, CORE_POOL_SIZE, 50, TimeUnit.MILLISECONDS, queue,
             Threads.newDaemonThreadFactory("IncrementCoalescer"));
 
-    MBeanUtil.registerMBean("thrift", "Thrift", this);
+    MBeans.register("thrift", "Thrift", this);
   }
 
   public boolean queueIncrement(TIncrement inc) throws TException {

@@ -190,7 +190,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.metrics.util.MBeanUtil;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
@@ -1031,7 +1031,7 @@ public class HRegionServer extends HasThread implements
     }
     // Run shutdown.
     if (mxBean != null) {
-      MBeanUtil.unregisterMBean(mxBean);
+      MBeans.unregister(mxBean);
       mxBean = null;
     }
     if (this.leases != null) this.leases.closeAfterLeasesExpire();
