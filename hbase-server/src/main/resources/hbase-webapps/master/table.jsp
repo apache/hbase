@@ -72,6 +72,25 @@
   }
   String action = request.getParameter("action");
   String key = request.getParameter("key");
+  long totalStoreFileSizeMB = 0;
+
+  final String numRegionsParam = request.getParameter("numRegions");
+  // By default, the page render up to 10000 regions to improve the page load time
+  int numRegionsToRender = 10000;
+  if (numRegionsParam != null) {
+    // either 'all' or a number
+    if (numRegionsParam.equals("all")) {
+      numRegionsToRender = -1;
+    } else {
+      try {
+        numRegionsToRender = Integer.parseInt(numRegionsParam);
+      } catch (NumberFormatException ex) {
+        // ignore
+      }
+    }
+  }
+  int numRegions = 0;
+
 %>
 <!--[if IE]>
 <!DOCTYPE html>
@@ -301,6 +320,7 @@ if ( fqtn != null ) {
           totalSize += regionload.getStorefileSizeMB();
           totalStoreFileCount += regionload.getStorefiles();
           totalMemSize += regionload.getMemStoreSizeMB();
+          totalStoreFileSizeMB += regionload.getStorefileSizeMB();
         } else {
           RegionLoad load0 = new RegionLoad(ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
           regionsToLoad.put(regionInfo, load0);
@@ -506,7 +526,12 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
             });
     }
   }
-
+  numRegions = regions.size();
+  int numRegionsRendered = 0;
+  // render all regions
+  if (numRegionsToRender < 0) {
+    numRegionsToRender = numRegions;
+  }
   for (Map.Entry<HRegionInfo, RegionLoad> hriEntry : entryList) {
 	HRegionInfo regionInfo = hriEntry.getKey();
 	ServerName addr = regions.get(regionInfo);
@@ -542,6 +567,8 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
         }
       }
     }
+    if (numRegionsRendered < numRegionsToRender) {
+      numRegionsRendered++;
 %>
 <tr>
   <td><%= escapeXml(showWhole?Bytes.toStringBinary(regionInfo.getRegionName()):regionInfo.getEncodedName()) %></td>
@@ -575,7 +602,15 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   %>
 </tr>
 <% } %>
++<% } %>
 </table>
+<% if (numRegions > numRegionsRendered) {
+     String allRegionsUrl = "?name=" + fqtn + "&numRegions=all";
+%>
+  <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
+     only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
+     here</a> to see all regions.</p>
+<% } %>
 <h2>Regions by Region Server</h2>
 <%
 if (withReplica) {
@@ -615,6 +650,19 @@ if (withReplica) {
 } // end else
 %>
 
+<h2>Table Stats</h2>
+<table class="table table-striped">
+  <tr>
+    <th>Name</th>
+    <th>Value</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>Size</td>
+    <td><%= StringUtils.TraditionalBinaryPrefix.long2String(totalStoreFileSizeMB * 1024 * 1024, "B", 2)%></td>
+    <td>Total size of store files (in bytes)</td>
+  </tr>
+</table>
 
 <% if (!readOnly) { %>
 <p><hr/></p>
