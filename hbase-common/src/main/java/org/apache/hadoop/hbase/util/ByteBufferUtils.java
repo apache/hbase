@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -573,6 +574,10 @@ public final class ByteBufferUtils {
   }
 
   public static boolean equals(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
+    if ((l1 == 0) || (l2 == 0)) {
+      // both 0 length, return true, or else false
+      return l1 == l2;
+    }
     // Since we're often comparing adjacent sorted data,
     // it's usual to have equal arrays except for the very last byte
     // so check that first
@@ -627,6 +632,10 @@ public final class ByteBufferUtils {
   }
 
   public static boolean equals(ByteBuffer buf1, int o1, int l1, byte[] buf2, int o2, int l2) {
+    if ((l1 == 0) || (l2 == 0)) {
+      // both 0 length, return true, or else false
+      return l1 == l2;
+    }
     // Since we're often comparing adjacent sorted data,
     // it's usual to have equal arrays except for the very last byte
     // so check that first

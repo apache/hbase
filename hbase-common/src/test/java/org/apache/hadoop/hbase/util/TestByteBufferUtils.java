@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.WritableUtils;
@@ -396,6 +397,34 @@ public class TestByteBufferUtils {
     assertTrue(result > 0);
     result = ByteBufferUtils.compareTo(bb3, 0, bb3.remaining(), b3, 0, b3.length);
     assertTrue(result < 0);
+  }
+
+  @Test
+  public void testEquals() {
+    byte[] a = Bytes.toBytes("http://A");
+    ByteBuffer bb = ByteBuffer.wrap(a);
+
+    assertTrue(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0,
+        HConstants.EMPTY_BYTE_BUFFER, 0, 0));
+
+    assertFalse(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0, bb,
+        0, a.length));
+
+    assertFalse(ByteBufferUtils.equals(bb, 0, 0, HConstants.EMPTY_BYTE_BUFFER,
+        0, a.length));
+
+    assertTrue(ByteBufferUtils.equals(bb, 0, a.length, bb, 0, a.length));
+
+    assertTrue(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0,
+        HConstants.EMPTY_BYTE_ARRAY, 0, 0));
+
+    assertFalse(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0, a,
+        0, a.length));
+
+    assertFalse(ByteBufferUtils.equals(bb, 0, a.length,
+        HConstants.EMPTY_BYTE_ARRAY, 0, 0));
+
+    assertTrue(ByteBufferUtils.equals(bb, 0, a.length, a, 0, a.length));
   }
 
   private static void fillBB(ByteBuffer bb, byte b) {
