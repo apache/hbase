@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -52,6 +53,11 @@ public class CellSet implements NavigableSet<Cell>  {
 
   CellSet(final NavigableMap<Cell, Cell> m) {
     this.delegatee = m;
+  }
+
+  @VisibleForTesting
+  NavigableMap<Cell, Cell> getDelegatee() {
+    return delegatee;
   }
 
   public Cell ceiling(Cell e) {

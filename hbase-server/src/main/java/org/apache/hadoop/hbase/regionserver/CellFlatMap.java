@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NavigableMap;
 import java.util.Set;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 
 /**
@@ -42,7 +44,7 @@ import java.util.Set;
  */
 @InterfaceAudience.Private
 public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
-
+  private static final Log LOG = LogFactory.getLog(CellFlatMap.class);
   private final Comparator<? super Cell> comparator;
   protected int minCellIdx   = 0;   // the index of the minimal cell (for sub-sets)
   protected int maxCellIdx   = 0;   // the index of the cell after the maximal cell (for sub-sets)
@@ -88,8 +90,9 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
       if (compareRes == 0) {
         return mid;  // 0 means equals. We found the key
       }
-
-      if (compareRes < 0) {
+      // Key not found. Check the comparison results; reverse the meaning of
+      // the comparison in case the order is descending (using XOR)
+      if ((compareRes < 0) ^ descending) {
         // midCell is less than needle so we need to look at farther up
         begin = mid + 1;
       } else {
@@ -101,37 +104,37 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
     return (-1 * begin)-1;
   }
 
-  /* Get the index of the given anchor key for creating subsequent set.
-  ** It doesn't matter whether the given key exists in the set or not.
-  **
-  ** taking into consideration whether
-  ** the key should be inclusive or exclusive */
+  /**
+   * Get the index of the given anchor key for creating subsequent set.
+   * It doesn't matter whether the given key exists in the set or not.
+   * taking into consideration whether
+   * the key should be inclusive or exclusive.
+   */
   private int getValidIndex(Cell key, boolean inclusive, boolean tail) {
-    int index = find(key);
-    int result = -1;
+    final int index = find(key);
+    // get the valid (positive) insertion point from the output of the find() method
+    int insertionPoint = index < 0 ? ~index : index;
 
-    // if the key is found and to be included, for all possibilities, the answer is the found index
-    if (index >= 0 && inclusive) result = index;
-
-    // The compliment Operator (~) converts the returned insertion point to the real one
-    if (index<0) result = ~index;
-
-    if (tail && result==-1) {
-      if (index >= 0 && !inclusive)
-        result = (descending) ? index - 1 : index + 1;
-    } else if (result==-1) {
-      if (index >= 0 && !inclusive)
-        result = (descending) ? index + 1 : index - 1;
+    // correct the insertion point in case the given anchor key DOES EXIST in the set
+    if (index >= 0) {
+      if ( descending && !(tail ^ inclusive)) {
+        // for the descending case
+        // if anchor for head set (tail=false) AND anchor is not inclusive -> move the insertion pt
+        // if anchor for tail set (tail=true) AND the keys is inclusive -> move the insertion point
+        // because the end index of a set is the index of the cell after the maximal cell
+        insertionPoint += 1;
+      } else if ( !descending && (tail ^ inclusive)) {
+        // for the ascending case
+        // if anchor for head set (tail=false) AND anchor is inclusive -> move the insertion point
+        // because the end index of a set is the index of the cell after the maximal cell
+        // if anchor for tail set (tail=true) AND the keys is not inclusive -> move the insertion pt
+        insertionPoint += 1;
+      }
     }
-
-    if (result < minCellIdx || result > maxCellIdx) {
-      throw new IllegalArgumentException("Index " + result + " (initial index " + index + ") "
-          + " out of boundary, when looking for key " + key + ". The minCellIdx is " + minCellIdx
-          + " and the maxCellIdx is " + maxCellIdx + ". Finally, descending? " + descending
-          + " and was the key requested inclusively? " + inclusive);
-    }
-    return result;
-  }
+    // insert the insertion point into the valid range,
+    // as we may enlarge it too much in the above correction
+    return Math.min(Math.max(insertionPoint, minCellIdx), maxCellIdx);
+}
 
   @Override
   public Comparator<? super Cell> comparator() {
@@ -155,27 +158,31 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
                                                     boolean fromInclusive,
                                                     Cell toKey,
                                                     boolean toInclusive) {
-    int toIndex = getValidIndex(toKey, toInclusive, false);
-    int fromIndex = (getValidIndex(fromKey, fromInclusive, true));
-
-    if (fromIndex > toIndex) {
-      throw new IllegalArgumentException("Inconsistent range, when looking from "
-          + fromKey + " to " + toKey);
+    final int lessCellIndex = getValidIndex(fromKey, fromInclusive, true);
+    final int greaterCellIndex = getValidIndex(toKey, toInclusive, false);
+    if (descending) {
+      return createSubCellFlatMap(greaterCellIndex, lessCellIndex, descending);
+    } else {
+      return createSubCellFlatMap(lessCellIndex, greaterCellIndex, descending);
     }
-    return createSubCellFlatMap(fromIndex, toIndex+1, descending);
   }
 
   @Override
   public NavigableMap<Cell, Cell> headMap(Cell toKey, boolean inclusive) {
-    int index = getValidIndex(toKey, inclusive, false);
-    // "+1" because the max index is one after the true index
-    return createSubCellFlatMap(minCellIdx, index+1, descending);
+    if (descending) {
+      return createSubCellFlatMap(getValidIndex(toKey, inclusive, false), maxCellIdx, descending);
+    } else {
+      return createSubCellFlatMap(minCellIdx, getValidIndex(toKey, inclusive, false), descending);
+    }
   }
 
   @Override
   public NavigableMap<Cell, Cell> tailMap(Cell fromKey, boolean inclusive) {
-    int index = (getValidIndex(fromKey, inclusive, true));
-    return createSubCellFlatMap(index, maxCellIdx, descending);
+    if (descending) {
+      return createSubCellFlatMap(minCellIdx, getValidIndex(fromKey, inclusive, true), descending);
+    } else {
+      return createSubCellFlatMap(getValidIndex(fromKey, inclusive, true), maxCellIdx, descending);
+    }
   }
 
   @Override
@@ -403,7 +410,7 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
   private final class CellFlatMapCollection implements Collection<Cell> {
 
     @Override
-    public int size()         {
+    public int size() {
       return CellFlatMap.this.size();
     }
 
@@ -466,8 +473,5 @@ public abstract class CellFlatMap implements NavigableMap<Cell,Cell> {
     public boolean retainAll(Collection<?> collection) {
       throw new UnsupportedOperationException();
     }
-
-
   }
-
 }
