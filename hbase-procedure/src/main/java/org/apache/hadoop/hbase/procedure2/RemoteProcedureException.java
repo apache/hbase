@@ -65,14 +65,23 @@ public class RemoteProcedureException extends ProcedureException {
     return source;
   }
 
-  public IOException unwrapRemoteException() {
-    if (getCause() instanceof RemoteException) {
-      return ((RemoteException)getCause()).unwrapRemoteException();
+  public Exception unwrapRemoteException() {
+    final Throwable cause = getCause();
+    if (cause instanceof RemoteException) {
+      return ((RemoteException)cause).unwrapRemoteException();
     }
-    if (getCause() instanceof IOException) {
-      return (IOException)getCause();
+    if (cause instanceof Exception) {
+      return (Exception)cause;
     }
-    return new IOException(getCause());
+    return new Exception(cause);
+  }
+
+  public IOException unwrapRemoteIOException() {
+    final Exception cause = unwrapRemoteException();
+    if (cause instanceof IOException) {
+      return (IOException)cause;
+    }
+    return new IOException(cause);
   }
 
   @Override

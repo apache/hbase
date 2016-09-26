@@ -438,6 +438,7 @@ public class ProcedureExecutor<TEnvironment> {
       // some procedure may be started way before this stuff.
       for (int i = runnableList.size() - 1; i >= 0; --i) {
         Procedure proc = runnableList.get(i);
+        proc.afterReplay(getEnvironment());
         if (!proc.hasParent()) {
           sendProcedureLoadedNotification(proc.getProcId());
         }
@@ -857,9 +858,9 @@ public class ProcedureExecutor<TEnvironment> {
 
       // Execute the procedure
       assert proc.getState() == ProcedureState.RUNNABLE : proc;
-      if (proc.acquireLock(getEnvironment())) {
+      if (acquireLock(proc)) {
         execProcedure(procStack, proc);
-        proc.releaseLock(getEnvironment());
+        releaseLock(proc, false);
       } else {
         runnables.yield(proc);
       }
@@ -879,10 +880,32 @@ public class ProcedureExecutor<TEnvironment> {
         // Finalize the procedure state
         if (proc.getProcId() == rootProcId) {
           procedureFinished(proc);
+        } else {
+          execCompletionCleanup(proc);
         }
         break;
       }
     } while (procStack.isFailed());
+  }
+
+  private boolean acquireLock(final Procedure proc) {
+    final TEnvironment env = getEnvironment();
+    // hasLock() is used in conjunction with holdLock().
+    // This allows us to not rewrite or carry around the hasLock() flag
+    // for every procedure. the hasLock() have meaning only if holdLock() is true.
+    if (proc.holdLock(env) && proc.hasLock(env)) {
+      return true;
+    }
+    return proc.doAcquireLock(env);
+  }
+
+  private void releaseLock(final Procedure proc, final boolean force) {
+    final TEnvironment env = getEnvironment();
+    // for how the framework works, we know that we will always have the lock
+    // when we call releaseLock(), so we can avoid calling proc.hasLock()
+    if (force || !proc.holdLock(env)) {
+      proc.doReleaseLock(env);
+    }
   }
 
   private void timeoutLoop() {
@@ -921,15 +944,17 @@ public class ProcedureExecutor<TEnvironment> {
         continue;
       }
 
-      // The procedure received an "abort-timeout", call abort() and
-      // add the procedure back in the queue for rollback.
-      if (proc.setTimeoutFailure()) {
+      // The procedure received a timeout. if the procedure itself does not handle it,
+      // call abort() and add the procedure back in the queue for rollback.
+      if (proc.setTimeoutFailure(getEnvironment())) {
         long rootProcId = Procedure.getRootProcedureId(procedures, proc);
         RootProcedureState procStack = rollbackStack.get(rootProcId);
         procStack.abort();
         store.update(proc);
         runnables.addFront(proc);
         continue;
+      } else if (proc.getState() == ProcedureState.WAITING_TIMEOUT) {
+        waitingTimeout.add(proc);
       }
     }
   }
@@ -940,7 +965,7 @@ public class ProcedureExecutor<TEnvironment> {
    * finished to user, and the result will be the fatal exception.
    */
   private boolean executeRollback(final long rootProcId, final RootProcedureState procStack) {
-    Procedure rootProc = procedures.get(rootProcId);
+    final Procedure rootProc = procedures.get(rootProcId);
     RemoteProcedureException exception = rootProc.getException();
     if (exception == null) {
       exception = procStack.getException();
@@ -948,7 +973,7 @@ public class ProcedureExecutor<TEnvironment> {
       store.update(rootProc);
     }
 
-    List<Procedure> subprocStack = procStack.getSubproceduresStack();
+    final List<Procedure> subprocStack = procStack.getSubproceduresStack();
     assert subprocStack != null : "Called rollback with no steps executed rootProc=" + rootProc;
 
     int stackTail = subprocStack.size();
@@ -956,7 +981,7 @@ public class ProcedureExecutor<TEnvironment> {
     while (stackTail --> 0) {
       final Procedure proc = subprocStack.get(stackTail);
 
-      if (!reuseLock && !proc.acquireLock(getEnvironment())) {
+      if (!reuseLock && !acquireLock(proc)) {
         // can't take a lock on the procedure, add the root-proc back on the
         // queue waiting for the lock availability
         return false;
@@ -970,7 +995,7 @@ public class ProcedureExecutor<TEnvironment> {
       // we can avoid to lock/unlock each step
       reuseLock = stackTail > 0 && (subprocStack.get(stackTail - 1) == proc) && !abortRollback;
       if (!reuseLock) {
-        proc.releaseLock(getEnvironment());
+        releaseLock(proc, false);
       }
 
       // allows to kill the executor before something is stored to the wal.
@@ -984,6 +1009,10 @@ public class ProcedureExecutor<TEnvironment> {
       // if the procedure is kind enough to pass the slot to someone else, yield
       if (proc.isYieldAfterExecutionStep(getEnvironment())) {
         return false;
+      }
+
+      if (proc != rootProc) {
+        execCompletionCleanup(proc);
       }
     }
 
@@ -1302,14 +1331,22 @@ public class ProcedureExecutor<TEnvironment> {
     return Procedure.getRootProcedureId(procedures, proc);
   }
 
-  private void procedureFinished(final Procedure proc) {
-    // call the procedure completion cleanup handler
+  private void execCompletionCleanup(final Procedure proc) {
+    final TEnvironment env = getEnvironment();
+    if (proc.holdLock(env) && proc.hasLock(env)) {
+      releaseLock(proc, true);
+    }
     try {
-      proc.completionCleanup(getEnvironment());
+      proc.completionCleanup(env);
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
       LOG.error("CODE-BUG: uncatched runtime exception for procedure: " + proc, e);
     }
+  }
+
+  private void procedureFinished(final Procedure proc) {
+    // call the procedure completion cleanup handler
+    execCompletionCleanup(proc);
 
     // update the executor internal state maps
     ProcedureInfo procInfo = Procedure.createProcedureInfo(proc, proc.getNonceKey());

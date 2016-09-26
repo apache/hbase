@@ -82,7 +82,7 @@ public abstract class ProcedurePrepareLatch {
 
     protected void countDown(final Procedure proc) {
       if (proc.hasException()) {
-        exception = proc.getException().unwrapRemoteException();
+        exception = proc.getException().unwrapRemoteIOException();
       }
       latch.countDown();
     }

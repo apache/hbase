@@ -131,7 +131,9 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       subProcList = new ArrayList<Procedure>(subProcedure.length);
     }
     for (int i = 0; i < subProcedure.length; ++i) {
-      subProcList.add(subProcedure[i]);
+      Procedure proc = subProcedure[i];
+      if (!proc.hasOwner()) proc.setOwner(getOwner());
+      subProcList.add(proc);
     }
   }
 

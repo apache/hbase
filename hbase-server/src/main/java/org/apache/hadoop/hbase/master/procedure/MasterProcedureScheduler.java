@@ -297,7 +297,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       TableProcedureInterface iProcTable = (TableProcedureInterface)proc;
       boolean tableDeleted;
       if (proc.hasException()) {
-        IOException procEx = proc.getException().unwrapRemoteException();
+        Exception procEx = proc.getException().unwrapRemoteException();
         if (iProcTable.getTableOperationType() == TableOperationType.CREATE) {
           // create failed because the table already exist
           tableDeleted = !(procEx instanceof TableExistsException);

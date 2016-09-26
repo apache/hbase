@@ -164,12 +164,37 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
+   * Used to keep the procedure lock even when the procedure is yielding or suspended.
+   * @return true if the procedure should hold on the lock until completionCleanup()
+   */
+  protected boolean holdLock(final TEnvironment env) {
+    return false;
+  }
+
+  /**
+   * This is used in conjuction with holdLock(). If holdLock() is true
+   * the procedure executor will not call acquireLock() if hasLock() is true.
+   * @return true if the procedure has the lock, false otherwise.
+   */
+  protected boolean hasLock(final TEnvironment env) {
+    return false;
+  }
+
+  /**
    * Called when the procedure is loaded for replay.
    * The procedure implementor may use this method to perform some quick
    * operation before replay.
    * e.g. failing the procedure if the state on replay may be unknown.
    */
   protected void beforeReplay(final TEnvironment env) {
+    // no-op
+  }
+
+  /**
+   * Called when the procedure is ready to be added to the queue after
+   * the loading/replay operation.
+   */
+  protected void afterReplay(final TEnvironment env) {
     // no-op
   }
 
@@ -339,6 +364,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return state == ProcedureState.RUNNABLE;
   }
 
+  public synchronized boolean isInitializing() {
+    return state == ProcedureState.INITIALIZING;
+  }
+
   /**
    * @return true if the procedure has failed.
    *         true may mean failed but not yet rolledback or failed and rolledback.
@@ -479,8 +508,12 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     setFailure(source, new ProcedureAbortedException(msg));
   }
 
-  @InterfaceAudience.Private
-  protected synchronized boolean setTimeoutFailure() {
+  /**
+   * Called by the ProcedureExecutor when the timeout set by setTimeout() is expired.
+   * @return true to let the framework handle the timeout as abort,
+   *         false in case the procedure handled the timeout itself.
+   */
+  protected synchronized boolean setTimeoutFailure(final TEnvironment env) {
     if (state == ProcedureState.WAITING_TIMEOUT) {
       long timeDiff = EnvironmentEdgeManager.currentTime() - lastUpdate;
       setFailure("ProcedureExecutor", new TimeoutIOException(
@@ -549,6 +582,24 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
+   * Internal method called by the ProcedureExecutor that starts the
+   * user-level code acquireLock().
+   */
+  @InterfaceAudience.Private
+  protected boolean doAcquireLock(final TEnvironment env) {
+    return acquireLock(env);
+  }
+
+  /**
+   * Internal method called by the ProcedureExecutor that starts the
+   * user-level code releaseLock().
+   */
+  @InterfaceAudience.Private
+  protected void doReleaseLock(final TEnvironment env) {
+    releaseLock(env);
+  }
+
+  /**
    * Called on store load to initialize the Procedure internals after
    * the creation/deserialization.
    */
@@ -599,6 +650,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   @InterfaceAudience.Private
   protected synchronized boolean hasChildren() {
     return childrenLatch > 0;
+  }
+
+  protected synchronized int getChildrenLatch() {
+    return childrenLatch;
   }
 
   /**
