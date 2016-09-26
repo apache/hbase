@@ -91,6 +91,7 @@ public class TestCatalogJanitor {
     private final ClusterConnection connection;
     private final MasterFileSystem mfs;
     private final AssignmentManager asm;
+    private final ServerManager sm;
 
     MockMasterServices(final HBaseTestingUtility htu) throws IOException {
       super(htu.getConfiguration());
@@ -134,6 +135,7 @@ public class TestCatalogJanitor {
 
       this.mfs = new MasterFileSystem(this);
       this.asm = Mockito.mock(AssignmentManager.class);
+      this.sm = Mockito.mock(ServerManager.class);
     }
 
     @Override
@@ -154,6 +156,11 @@ public class TestCatalogJanitor {
     @Override
     public ServerName getServerName() {
       return ServerName.valueOf("mockserver.example.org", 1234, -1L);
+    }
+
+    @Override
+    public ServerManager getServerManager() {
+      return this.sm;
     }
 
     @Override
