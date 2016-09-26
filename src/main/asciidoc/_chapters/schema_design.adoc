@@ -1110,4 +1110,101 @@ If you don't have time to build it both ways and compare, my advice would be to 
 [[schema.ops]]
 == Operational and Performance Configuration Options
 
-See the Performance section <<perf.schema,perf.schema>> for more information operational and performance schema design options, such as Bloom Filters, Table-configured regionsizes, compression, and blocksizes.
+====  Tune HBase Server RPC Handling
+
+* Set `hbase.regionserver.handler.count` (in `hbase-site.xml`) to cores x spindles for concurrency.
+* Optionally, split the call queues into separate read and write queues for differentiated service. The parameter `hbase.ipc.server.callqueue.handler.factor` specifies the number of call queues:
+- `0` means a single shared queue
+- `1` means one queue for each handler.
+- A value between `0` and `1` allocates the number of queues proportionally to the number of handlers. For instance, a value of `.5` shares one queue between each two handlers.
+* Use `hbase.ipc.server.callqueue.read.ratio` (`hbase.ipc.server.callqueue.read.share` in 0.98) to split the call queues into read and write queues:
+- `0.5` means there will be the same number of read and write queues
+- `< 0.5` for more read than write
+- `> 0.5` for more write than read
+* Set `hbase.ipc.server.callqueue.scan.ratio` (HBase 1.0+)  to split read call queues into small-read and long-read queues:
+- 0.5 means that there will be the same number of short-read and long-read queues
+- `< 0.5` for more short-read
+- `> 0.5` for more long-read
+
+====  Disable Nagle for RPC
+
+Disable Nagle’s algorithm. Delayed ACKs can add up to ~200ms to RPC round trip time. Set the following parameters:
+
+* In Hadoop’s `core-site.xml`:
+- `ipc.server.tcpnodelay = true`
+- `ipc.client.tcpnodelay = true`
+* In HBase’s `hbase-site.xml`:
+- `hbase.ipc.client.tcpnodelay = true`
+- `hbase.ipc.server.tcpnodelay = true`
+
+====  Limit Server Failure Impact
+
+Detect regionserver failure as fast as reasonable. Set the following parameters:
+
+* In `hbase-site.xml`, set `zookeeper.session.timeout` to 30 seconds or less to bound failure detection (20-30 seconds is a good start).
+* Detect and avoid unhealthy or failed HDFS DataNodes: in `hdfs-site.xml` and `hbase-site.xml`, set the following parameters:
+- `dfs.namenode.avoid.read.stale.datanode = true`
+- `dfs.namenode.avoid.write.stale.datanode = true`
+
+====  Optimize on the Server Side for Low Latency
+
+* Skip the network for local blocks. In `hbase-site.xml`, set the following parameters:
+- `dfs.client.read.shortcircuit = true`
+- `dfs.client.read.shortcircuit.buffer.size = 131072` (Important to avoid OOME)
+* Ensure data locality. In `hbase-site.xml`, set `hbase.hstore.min.locality.to.skip.major.compact = 0.7` (Meaning that 0.7 \<= n \<= 1)
+* Make sure DataNodes have enough handlers for block transfers. In `hdfs-site`.xml``, set the following parameters:
+- `dfs.datanode.max.xcievers >= 8192`
+- `dfs.datanode.handler.count =` number of spindles
+
+===  JVM Tuning
+
+====  Tune JVM GC for low collection latencies
+
+* Use the CMS collector: `-XX:+UseConcMarkSweepGC`
+* Keep eden space as small as possible to minimize average collection time. Example:
+
+    -XX:CMSInitiatingOccupancyFraction=70
+
+* Optimize for low collection latency rather than throughput: `-Xmn512m`
+* Collect eden in parallel: `-XX:+UseParNewGC`
+*  Avoid collection under pressure: `-XX:+UseCMSInitiatingOccupancyOnly`
+* Limit per request scanner result sizing so everything fits into survivor space but doesn’t tenure. In `hbase-site.xml`, set `hbase.client.scanner.max.result.size` to 1/8th of eden space (with -`Xmn512m` this is ~51MB )
+* Set `max.result.size` x `handler.count` less than survivor space
+
+====  OS-Level Tuning
+
+* Turn transparent huge pages (THP) off:
+
+  echo never > /sys/kernel/mm/transparent_hugepage/enabled
+  echo never > /sys/kernel/mm/transparent_hugepage/defrag
+
+* Set `vm.swappiness = 0`
+* Set `vm.min_free_kbytes` to at least 1GB (8GB on larger memory systems)
+* Disable NUMA zone reclaim with `vm.zone_reclaim_mode = 0`
+
+==  Special Cases
+
+====  For applications where failing quickly is better than waiting
+
+*  In `hbase-site.xml` on the client side, set the following parameters:
+- Set `hbase.client.pause = 1000`
+- Set `hbase.client.retries.number = 3`
+- If you want to ride over splits and region moves, increase `hbase.client.retries.number` substantially (>= 20)
+- Set the RecoverableZookeeper retry count: `zookeeper.recovery.retry = 1` (no retry)
+* In `hbase-site.xml` on the server side, set the Zookeeper session timeout for detecting server failures: `zookeeper.session.timeout` <= 30 seconds (20-30 is good).
+
+====  For applications that can tolerate slightly out of date information
+
+**HBase timeline consistency (HBASE-10070) **
+With read replicas enabled, read-only copies of regions (replicas) are distributed over the cluster. One RegionServer services the default or primary replica, which is the only replica that can service writes. Other RegionServers serve the secondary replicas, follow the primary RegionServer, and only see committed updates. The secondary replicas are read-only, but can serve reads immediately while the primary is failing over, cutting read availability blips from seconds to milliseconds. Phoenix supports timeline consistency as of 4.4.0
+Tips:
+
+* Deploy HBase 1.0.0 or later.
+* Enable timeline consistent replicas on the server side.
+* Use one of the following methods to set timeline consistency:
+- Use `ALTER SESSION SET CONSISTENCY = 'TIMELINE’`
+- Set the connection property `Consistency` to `timeline` in the JDBC connect string
+
+=== More Information
+
+See the Performance section <<perf.schema,perf.schema>> for more information about operational and performance schema design options, such as Bloom Filters, Table-configured regionsizes, compression, and blocksizes.
