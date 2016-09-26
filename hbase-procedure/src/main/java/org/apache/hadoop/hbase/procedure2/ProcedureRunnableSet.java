@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
@@ -69,6 +71,7 @@ public interface ProcedureRunnableSet {
    * Returns the number of elements in this collection.
    * @return the number of elements in this collection.
    */
+  @VisibleForTesting
   int size();
 
   /**

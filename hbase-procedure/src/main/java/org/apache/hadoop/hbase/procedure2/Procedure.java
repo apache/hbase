@@ -908,4 +908,16 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
     return proc;
   }
+
+  /**
+   * @param a the first procedure to be compared.
+   * @param b the second procedure to be compared.
+   * @return true if the two procedures have the same parent
+   */
+  public static boolean haveSameParent(final Procedure a, final Procedure b) {
+    if (a.hasParent() && b.hasParent()) {
+      return a.getParentProcId() == b.getParentProcId();
+    }
+    return false;
+  }
 }

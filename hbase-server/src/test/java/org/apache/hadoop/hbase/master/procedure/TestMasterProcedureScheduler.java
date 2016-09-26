@@ -20,10 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,8 +34,8 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -51,7 +48,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({MasterTests.class, SmallTests.class})
 public class TestMasterProcedureScheduler {
   private static final Log LOG = LogFactory.getLog(TestMasterProcedureScheduler.class);
 
@@ -68,60 +65,6 @@ public class TestMasterProcedureScheduler {
   public void tearDown() throws IOException {
     assertEquals("proc-queue expected to be empty", 0, queue.size());
     queue.clear();
-  }
-
-  @Test
-  public void testConcurrentCreateDelete() throws Exception {
-    final MasterProcedureScheduler procQueue = queue;
-    final TableName table = TableName.valueOf("testtb");
-    final AtomicBoolean running = new AtomicBoolean(true);
-    final AtomicBoolean failure = new AtomicBoolean(false);
-    Thread createThread = new Thread() {
-      @Override
-      public void run() {
-        try {
-          TestTableProcedure proc = new TestTableProcedure(1, table,
-              TableProcedureInterface.TableOperationType.CREATE);
-          while (running.get() && !failure.get()) {
-            if (procQueue.tryAcquireTableExclusiveLock(proc, table)) {
-              procQueue.releaseTableExclusiveLock(proc, table);
-            }
-          }
-        } catch (Throwable e) {
-          LOG.error("create failed", e);
-          failure.set(true);
-        }
-      }
-    };
-
-    Thread deleteThread = new Thread() {
-      @Override
-      public void run() {
-        try {
-          TestTableProcedure proc = new TestTableProcedure(2, table,
-              TableProcedureInterface.TableOperationType.DELETE);
-          while (running.get() && !failure.get()) {
-            if (procQueue.tryAcquireTableExclusiveLock(proc, table)) {
-              procQueue.releaseTableExclusiveLock(proc, table);
-            }
-            procQueue.markTableAsDeleted(table);
-          }
-        } catch (Throwable e) {
-          LOG.error("delete failed", e);
-          failure.set(true);
-        }
-      }
-    };
-
-    createThread.start();
-    deleteThread.start();
-    for (int i = 0; i < 100 && running.get() && !failure.get(); ++i) {
-      Thread.sleep(100);
-    }
-    running.set(false);
-    createThread.join();
-    deleteThread.join();
-    assertEquals(false, failure.get());
   }
 
   /**
@@ -159,9 +102,11 @@ public class TestMasterProcedureScheduler {
     assertEquals(0, queue.size());
 
     for (int i = 1; i <= NUM_TABLES; ++i) {
-      TableName tableName = TableName.valueOf(String.format("test-%04d", i));
+      final TableName tableName = TableName.valueOf(String.format("test-%04d", i));
+      final TestTableProcedure dummyProc = new TestTableProcedure(100, tableName,
+        TableProcedureInterface.TableOperationType.DELETE);
       // complete the table deletion
-      assertTrue(queue.markTableAsDeleted(tableName));
+      assertTrue(queue.markTableAsDeleted(tableName, dummyProc));
     }
   }
 
@@ -173,11 +118,14 @@ public class TestMasterProcedureScheduler {
   public void testCreateDeleteTableOperationsWithWriteLock() throws Exception {
     TableName tableName = TableName.valueOf("testtb");
 
+    final TestTableProcedure dummyProc = new TestTableProcedure(100, tableName,
+        TableProcedureInterface.TableOperationType.DELETE);
+
     queue.addBack(new TestTableProcedure(1, tableName,
           TableProcedureInterface.TableOperationType.EDIT));
 
     // table can't be deleted because one item is in the queue
-    assertFalse(queue.markTableAsDeleted(tableName));
+    assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
 
     // fetch item and take a lock
     Procedure proc = queue.poll();
@@ -186,11 +134,11 @@ public class TestMasterProcedureScheduler {
     assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
     // table can't be deleted because we have the lock
     assertEquals(0, queue.size());
-    assertFalse(queue.markTableAsDeleted(tableName));
+    assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
     // release the xlock
     queue.releaseTableExclusiveLock(proc, tableName);
     // complete the table deletion
-    assertTrue(queue.markTableAsDeleted(tableName));
+    assertTrue(queue.markTableAsDeleted(tableName, proc));
   }
 
   /**
@@ -202,13 +150,16 @@ public class TestMasterProcedureScheduler {
     final TableName tableName = TableName.valueOf("testtb");
     final int nitems = 2;
 
+    final TestTableProcedure dummyProc = new TestTableProcedure(100, tableName,
+        TableProcedureInterface.TableOperationType.DELETE);
+
     for (int i = 1; i <= nitems; ++i) {
       queue.addBack(new TestTableProcedure(i, tableName,
             TableProcedureInterface.TableOperationType.READ));
     }
 
     // table can't be deleted because one item is in the queue
-    assertFalse(queue.markTableAsDeleted(tableName));
+    assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
 
     Procedure[] procs = new Procedure[nitems];
     for (int i = 0; i < nitems; ++i) {
@@ -218,12 +169,12 @@ public class TestMasterProcedureScheduler {
       // take the rlock
       assertTrue(queue.tryAcquireTableSharedLock(proc, tableName));
       // table can't be deleted because we have locks and/or items in the queue
-      assertFalse(queue.markTableAsDeleted(tableName));
+      assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
     }
 
     for (int i = 0; i < nitems; ++i) {
       // table can't be deleted because we have locks
-      assertFalse(queue.markTableAsDeleted(tableName));
+      assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
       // release the rlock
       queue.releaseTableSharedLock(procs[i], tableName);
     }
@@ -231,7 +182,7 @@ public class TestMasterProcedureScheduler {
     // there are no items and no lock in the queeu
     assertEquals(0, queue.size());
     // complete the table deletion
-    assertTrue(queue.markTableAsDeleted(tableName));
+    assertTrue(queue.markTableAsDeleted(tableName, dummyProc));
   }
 
   /**
@@ -299,7 +250,7 @@ public class TestMasterProcedureScheduler {
 
     // remove table queue
     assertEquals(0, queue.size());
-    assertTrue("queue should be deleted", queue.markTableAsDeleted(tableName));
+    assertTrue("queue should be deleted", queue.markTableAsDeleted(tableName, wrProc));
   }
 
   @Test
@@ -352,6 +303,32 @@ public class TestMasterProcedureScheduler {
     // we are now able to execute ns2
     procId = queue.poll().getProcId();
     assertEquals(4, procId);
+  }
+
+  @Test
+  public void testVerifyNamespaceXLock() throws Exception {
+    String nsName = "ns1";
+    TableName tableName = TableName.valueOf(nsName, "testtb");
+    queue.addBack(new TestNamespaceProcedure(1, nsName,
+          TableProcedureInterface.TableOperationType.CREATE));
+    queue.addBack(new TestTableProcedure(2, tableName,
+          TableProcedureInterface.TableOperationType.READ));
+
+    // Fetch the ns item and take the xlock
+    Procedure proc = queue.poll();
+    assertEquals(1, proc.getProcId());
+    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(proc, nsName));
+
+    // the table operation can't be executed because the ns is locked
+    assertEquals(null, queue.poll(0));
+
+    // release the ns lock
+    queue.releaseNamespaceExclusiveLock(proc, nsName);
+
+    proc = queue.poll();
+    assertEquals(2, proc.getProcId());
+    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
+    queue.releaseTableExclusiveLock(proc, tableName);
   }
 
   @Test
@@ -625,154 +602,80 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
   }
 
-  /**
-   * Verify that "write" operations for a single table are serialized,
-   * but different tables can be executed in parallel.
-   */
-  @Test(timeout=90000)
-  public void testConcurrentWriteOps() throws Exception {
-    final TestTableProcSet procSet = new TestTableProcSet(queue);
+  @Test
+  public void testParentXLockAndChildrenSharedLock() throws Exception {
+    final TableName tableName = TableName.valueOf("testParentXLockAndChildrenSharedLock");
+    final HRegionInfo[] regions = new HRegionInfo[] {
+      new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b")),
+      new HRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c")),
+      new HRegionInfo(tableName, Bytes.toBytes("c"), Bytes.toBytes("d")),
+    };
 
-    final int NUM_ITEMS = 10;
-    final int NUM_TABLES = 4;
-    final AtomicInteger opsCount = new AtomicInteger(0);
-    for (int i = 0; i < NUM_TABLES; ++i) {
-      TableName tableName = TableName.valueOf(String.format("testtb-%04d", i));
-      for (int j = 1; j < NUM_ITEMS; ++j) {
-        procSet.addBack(new TestTableProcedure(i * 100 + j, tableName,
-          TableProcedureInterface.TableOperationType.EDIT));
-        opsCount.incrementAndGet();
-      }
-    }
-    assertEquals(opsCount.get(), queue.size());
+    queue.addBack(new TestTableProcedure(1, tableName,
+        TableProcedureInterface.TableOperationType.CREATE));
 
-    final Thread[] threads = new Thread[NUM_TABLES * 2];
-    final HashSet<TableName> concurrentTables = new HashSet<TableName>();
-    final ArrayList<String> failures = new ArrayList<String>();
-    final AtomicInteger concurrentCount = new AtomicInteger(0);
-    for (int i = 0; i < threads.length; ++i) {
-      threads[i] = new Thread() {
-        @Override
-        public void run() {
-          while (opsCount.get() > 0) {
-            try {
-              Procedure proc = procSet.acquire();
-              if (proc == null) {
-                queue.signalAll();
-                if (opsCount.get() > 0) {
-                  continue;
-                }
-                break;
-              }
+    // fetch and acquire first xlock proc
+    Procedure parentProc = queue.poll();
+    assertEquals(1, parentProc.getProcId());
+    assertTrue(queue.tryAcquireTableExclusiveLock(parentProc, tableName));
 
-              TableName tableId = procSet.getTableName(proc);
-              synchronized (concurrentTables) {
-                assertTrue("unexpected concurrency on " + tableId, concurrentTables.add(tableId));
-              }
-              assertTrue(opsCount.decrementAndGet() >= 0);
-              try {
-                long procId = proc.getProcId();
-                int concurrent = concurrentCount.incrementAndGet();
-                assertTrue("inc-concurrent="+ concurrent +" 1 <= concurrent <= "+ NUM_TABLES,
-                  concurrent >= 1 && concurrent <= NUM_TABLES);
-                LOG.debug("[S] tableId="+ tableId +" procId="+ procId +" concurrent="+ concurrent);
-                Thread.sleep(2000);
-                concurrent = concurrentCount.decrementAndGet();
-                LOG.debug("[E] tableId="+ tableId +" procId="+ procId +" concurrent="+ concurrent);
-                assertTrue("dec-concurrent=" + concurrent, concurrent < NUM_TABLES);
-              } finally {
-                synchronized (concurrentTables) {
-                  assertTrue(concurrentTables.remove(tableId));
-                }
-                procSet.release(proc);
-              }
-            } catch (Throwable e) {
-              LOG.error("Failed " + e.getMessage(), e);
-              synchronized (failures) {
-                failures.add(e.getMessage());
-              }
-            } finally {
-              queue.signalAll();
-            }
-          }
-        }
-      };
-      threads[i].start();
+    // add child procedure
+    for (int i = 0; i < regions.length; ++i) {
+      queue.addFront(new TestRegionProcedure(1, 1 + i, tableName,
+          TableProcedureInterface.TableOperationType.ASSIGN, regions[i]));
     }
-    for (int i = 0; i < threads.length; ++i) {
-      threads[i].join();
-    }
-    assertTrue(failures.toString(), failures.isEmpty());
-    assertEquals(0, opsCount.get());
-    assertEquals(0, queue.size());
 
-    for (int i = 1; i <= NUM_TABLES; ++i) {
-      TableName table = TableName.valueOf(String.format("testtb-%04d", i));
-      assertTrue("queue should be deleted, table=" + table, queue.markTableAsDeleted(table));
+    // add another xlock procedure (no parent)
+    queue.addBack(new TestTableProcedure(100, tableName,
+        TableProcedureInterface.TableOperationType.EDIT));
+
+    // fetch and execute child
+    for (int i = 0; i < regions.length; ++i) {
+      final int regionIdx = regions.length - i - 1;
+      Procedure childProc = queue.poll();
+      LOG.debug("fetch children " + childProc);
+      assertEquals(1 + regionIdx, childProc.getProcId());
+      assertEquals(false, queue.waitRegion(childProc, regions[regionIdx]));
+      queue.wakeRegion(childProc, regions[regionIdx]);
     }
+
+    // nothing available, until xlock release
+    assertEquals(null, queue.poll(0));
+
+    // release xlock
+    queue.releaseTableExclusiveLock(parentProc, tableName);
+
+    // fetch the other xlock proc
+    Procedure proc = queue.poll();
+    assertEquals(100, proc.getProcId());
+    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
+    queue.releaseTableExclusiveLock(proc, tableName);
   }
 
-  public static class TestTableProcSet {
-    private final MasterProcedureScheduler queue;
+  @Test
+  public void testParentXLockAndChildrenXLock() throws Exception {
+    final TableName tableName = TableName.valueOf("testParentXLockAndChildrenXLock");
 
-    public TestTableProcSet(final MasterProcedureScheduler queue) {
-      this.queue = queue;
-    }
+    queue.addBack(new TestTableProcedure(1, tableName,
+        TableProcedureInterface.TableOperationType.EDIT));
 
-    public void addBack(Procedure proc) {
-      queue.addBack(proc);
-    }
+    // fetch and acquire first xlock proc
+    Procedure parentProc = queue.poll();
+    assertEquals(1, parentProc.getProcId());
+    assertTrue(queue.tryAcquireTableExclusiveLock(parentProc, tableName));
 
-    public void addFront(Procedure proc) {
-      queue.addFront(proc);
-    }
+    // add child procedure
+    queue.addFront(new TestTableProcedure(1, 2, tableName,
+      TableProcedureInterface.TableOperationType.EDIT));
 
-    public Procedure acquire() {
-      Procedure proc = null;
-      boolean avail = false;
-      while (!avail) {
-        proc = queue.poll();
-        if (proc == null) break;
-        switch (getTableOperationType(proc)) {
-          case CREATE:
-          case DELETE:
-          case EDIT:
-            avail = queue.tryAcquireTableExclusiveLock(proc, getTableName(proc));
-            break;
-          case READ:
-            avail = queue.tryAcquireTableSharedLock(proc, getTableName(proc));
-            break;
-          default:
-            throw new UnsupportedOperationException();
-        }
-        if (!avail) {
-          addFront(proc);
-          LOG.debug("yield procId=" + proc);
-        }
-      }
-      return proc;
-    }
+    // fetch the other xlock proc
+    Procedure proc = queue.poll();
+    assertEquals(2, proc.getProcId());
+    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
+    queue.releaseTableExclusiveLock(proc, tableName);
 
-    public void release(Procedure proc) {
-      switch (getTableOperationType(proc)) {
-        case CREATE:
-        case DELETE:
-        case EDIT:
-          queue.releaseTableExclusiveLock(proc, getTableName(proc));
-          break;
-        case READ:
-          queue.releaseTableSharedLock(proc, getTableName(proc));
-          break;
-      }
-    }
-
-    public TableName getTableName(Procedure proc) {
-      return ((TableProcedureInterface)proc).getTableName();
-    }
-
-    public TableProcedureInterface.TableOperationType getTableOperationType(Procedure proc) {
-      return ((TableProcedureInterface)proc).getTableOperationType();
-    }
+    // release xlock
+    queue.releaseTableExclusiveLock(parentProc, tableName);
   }
 
   public static class TestTableProcedure extends TestProcedure
@@ -813,6 +716,19 @@ public class TestMasterProcedureScheduler {
     }
   }
 
+  public static class TestTableProcedureWithEvent extends TestTableProcedure {
+    private final ProcedureEvent event;
+
+    public TestTableProcedureWithEvent(long procId, TableName tableName, TableOperationType opType) {
+      super(procId, tableName, opType);
+      event = new ProcedureEvent(tableName + " procId=" + procId);
+    }
+
+    public ProcedureEvent getEvent() {
+      return event;
+    }
+  }
+
   public static class TestRegionProcedure extends TestTableProcedure {
     private final HRegionInfo[] regionInfo;
 
@@ -839,7 +755,7 @@ public class TestMasterProcedureScheduler {
     public void toStringClassDetails(final StringBuilder sb) {
       sb.append(getClass().getSimpleName());
       sb.append(" (region=");
-      sb.append(getRegionInfo());
+      sb.append(Arrays.toString(getRegionInfo()));
       sb.append(")");
     }
   }

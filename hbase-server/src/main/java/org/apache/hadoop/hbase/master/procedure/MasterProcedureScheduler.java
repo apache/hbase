@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hbase.util.AvlUtil.AvlKeyComparator;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlIterableList;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlLinkedNode;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlTree;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlTreeIterator;
 
 /**
  * ProcedureRunnableSet for the Master Procedures.
@@ -78,7 +81,6 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
   private final FairQueue<ServerName> serverRunQueue = new FairQueue<ServerName>();
   private final FairQueue<TableName> tableRunQueue = new FairQueue<TableName>();
-  private int queueSize = 0;
 
   private final ServerQueue[] serverBuckets = new ServerQueue[128];
   private NamespaceQueue namespaceMap = null;
@@ -148,14 +150,14 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     if (proc.isSuspended()) return;
 
     queue.add(proc, addFront);
-    if (!(queue.isSuspended() || queue.hasExclusiveLock())) {
+    if (!(queue.isSuspended() ||
+        (queue.hasExclusiveLock() && !queue.isLockOwner(proc.getProcId())))) {
       // the queue is not suspended or removed from the fairq (run-queue)
       // because someone has an xlock on it.
       // so, if the queue is not-linked we should add it
       if (queue.size() == 1 && !AvlIterableList.isLinked(queue)) {
         fairq.add(queue);
       }
-      queueSize++;
     } else if (queue.hasParentLock(proc)) {
       assert addFront : "expected to add a child in the front";
       assert !queue.isSuspended() : "unexpected suspended state for the queue";
@@ -165,7 +167,6 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       if (!AvlIterableList.isLinked(queue)) {
         fairq.add(queue);
       }
-      queueSize++;
     }
   }
 
@@ -179,13 +180,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     Procedure pollResult = null;
     schedLock.lock();
     try {
-      if (queueSize == 0) {
+      if (!hasRunnables()) {
         if (waitNsec < 0) {
           schedWaitCond.await();
         } else {
           schedWaitCond.awaitNanos(waitNsec);
         }
-        if (queueSize == 0) {
+        if (!hasRunnables()) {
           return null;
         }
       }
@@ -209,6 +210,10 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     return pollResult;
   }
 
+  private boolean hasRunnables() {
+    return tableRunQueue.hasRunnables() || serverRunQueue.hasRunnables();
+  }
+
   private <T extends Comparable<T>> Procedure doPoll(final FairQueue<T> fairq) {
     final Queue<T> rq = fairq.poll();
     if (rq == null || !rq.isAvailable()) {
@@ -218,13 +223,12 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     assert !rq.isSuspended() : "rq=" + rq + " is suspended";
     final Procedure pollResult = rq.peek();
     final boolean xlockReq = rq.requireExclusiveLock(pollResult);
-    if (xlockReq && rq.isLocked() && !rq.hasParentLock(pollResult)) {
+    if (xlockReq && rq.isLocked() && !rq.hasLockAccess(pollResult)) {
       // someone is already holding the lock (e.g. shared lock). avoid a yield
       return null;
     }
 
     rq.poll();
-    this.queueSize--;
     if (rq.isEmpty() || xlockReq) {
       removeFromRunQueue(fairq, rq);
     } else if (rq.hasParentLock(pollResult)) {
@@ -232,7 +236,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       // check if the next procedure is still a child.
       // if not, remove the rq from the fairq and go back to the xlock state
       Procedure nextProc = rq.peek();
-      if (nextProc != null && nextProc.getParentProcId() != pollResult.getParentProcId()) {
+      if (nextProc != null && !Procedure.haveSameParent(nextProc, pollResult)) {
         removeFromRunQueue(fairq, rq);
       }
     }
@@ -255,7 +259,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       clear(tableMap, tableRunQueue, TABLE_QUEUE_KEY_COMPARATOR);
       tableMap = null;
 
-      assert queueSize == 0 : "expected queue size to be 0, got " + queueSize;
+      assert size() == 0 : "expected queue size to be 0, got " + size();
     } finally {
       schedLock.unlock();
     }
@@ -268,6 +272,14 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       assert !node.isSuspended() : "can't clear suspended " + node.getKey();
       treeMap = AvlTree.remove(treeMap, node.getKey(), comparator);
       removeFromRunQueue(fairq, node);
+    }
+  }
+
+  private void wakePollIfNeeded(final int waitingCount) {
+    if (waitingCount > 1) {
+      schedWaitCond.signalAll();
+    } else if (waitingCount > 0) {
+      schedWaitCond.signal();
     }
   }
 
@@ -285,14 +297,30 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   public int size() {
     schedLock.lock();
     try {
-      return queueSize;
+      int count = 0;
+
+      // Server queues
+      final AvlTreeIterator<ServerQueue> serverIter = new AvlTreeIterator<ServerQueue>();
+      for (int i = 0; i < serverBuckets.length; ++i) {
+        serverIter.seekFirst(serverBuckets[i]);
+        while (serverIter.hasNext()) {
+          count += serverIter.next().size();
+        }
+      }
+
+      // Table queues
+      final AvlTreeIterator<TableQueue> tableIter = new AvlTreeIterator<TableQueue>(tableMap);
+      while (tableIter.hasNext()) {
+        count += tableIter.next().size();
+      }
+      return count;
     } finally {
       schedLock.unlock();
     }
   }
 
   @Override
-  public void completionCleanup(Procedure proc) {
+  public void completionCleanup(final Procedure proc) {
     if (proc instanceof TableProcedureInterface) {
       TableProcedureInterface iProcTable = (TableProcedureInterface)proc;
       boolean tableDeleted;
@@ -310,7 +338,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         tableDeleted = (iProcTable.getTableOperationType() == TableOperationType.DELETE);
       }
       if (tableDeleted) {
-        markTableAsDeleted(iProcTable.getTableName());
+        markTableAsDeleted(iProcTable.getTableName(), proc);
         return;
       }
     } else {
@@ -323,14 +351,12 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     if (AvlIterableList.isLinked(queue)) return;
     if (!queue.isEmpty())  {
       fairq.add(queue);
-      queueSize += queue.size();
     }
   }
 
   private <T extends Comparable<T>> void removeFromRunQueue(FairQueue<T> fairq, Queue<T> queue) {
     if (!AvlIterableList.isLinked(queue)) return;
     fairq.remove(queue);
-    queueSize -= queue.size();
   }
 
   // ============================================================================
@@ -470,13 +496,8 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
 
       schedLock.lock();
       try {
-        popEventWaitingObjects(event);
-
-        if (queueSize > 1) {
-          schedWaitCond.signalAll();
-        } else if (queueSize > 0) {
-          schedWaitCond.signal();
-        }
+        final int waitingCount = popEventWaitingObjects(event);
+        wakePollIfNeeded(waitingCount);
       } finally {
         schedLock.unlock();
       }
@@ -493,6 +514,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     final boolean isTraceEnabled = LOG.isTraceEnabled();
     schedLock.lock();
     try {
+      int waitingCount = 0;
       for (int i = 0; i < count; ++i) {
         final ProcedureEvent event = events[i];
         synchronized (event) {
@@ -500,36 +522,36 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
           if (isTraceEnabled) {
             LOG.trace("Wake event " + event);
           }
-          popEventWaitingObjects(event);
+          waitingCount += popEventWaitingObjects(event);
         }
       }
-
-      if (queueSize > 1) {
-        schedWaitCond.signalAll();
-      } else if (queueSize > 0) {
-        schedWaitCond.signal();
-      }
+      wakePollIfNeeded(waitingCount);
     } finally {
       schedLock.unlock();
     }
   }
 
-  private void popEventWaitingObjects(final ProcedureEvent event) {
+  private int popEventWaitingObjects(final ProcedureEvent event) {
+    int count = 0;
     while (event.hasWaitingTables()) {
       final Queue<TableName> queue = event.popWaitingTable();
       queue.setSuspended(false);
       addToRunQueue(tableRunQueue, queue);
+      count += queue.size();
     }
     // TODO: This will change once we have the new AM
     while (event.hasWaitingServers()) {
       final Queue<ServerName> queue = event.popWaitingServer();
       queue.setSuspended(false);
       addToRunQueue(serverRunQueue, queue);
+      count += queue.size();
     }
 
     while (event.hasWaitingProcedures()) {
       wakeProcedure(event.popWaitingProcedure(false));
+      count++;
     }
+    return count;
   }
 
   private void suspendProcedure(final BaseProcedureEvent event, final Procedure procedure) {
@@ -823,8 +845,8 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       if (hasExclusiveLock()) {
         // if we have an exclusive lock already taken
         // only child of the lock owner can be executed
-        Procedure availProc = peek();
-        return availProc != null && hasParentLock(availProc);
+        final Procedure nextProc = peek();
+        return nextProc != null && hasLockAccess(nextProc);
       }
 
       // no xlock
@@ -1011,26 +1033,31 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     schedLock.lock();
     TableQueue queue = getTableQueue(table);
     if (!queue.getNamespaceQueue().trySharedLock()) {
+      schedLock.unlock();
       return false;
     }
 
-    if (!queue.tryExclusiveLock(procedure.getProcId())) {
+    if (!queue.tryExclusiveLock(procedure)) {
       queue.getNamespaceQueue().releaseSharedLock();
       schedLock.unlock();
       return false;
     }
 
     removeFromRunQueue(tableRunQueue, queue);
+    boolean hasParentLock = queue.hasParentLock(procedure);
     schedLock.unlock();
 
-    // Zk lock is expensive...
-    boolean hasXLock = queue.tryZkExclusiveLock(lockManager, procedure.toString());
-    if (!hasXLock) {
-      schedLock.lock();
-      queue.releaseExclusiveLock();
-      queue.getNamespaceQueue().releaseSharedLock();
-      addToRunQueue(tableRunQueue, queue);
-      schedLock.unlock();
+    boolean hasXLock = true;
+    if (!hasParentLock) {
+      // Zk lock is expensive...
+      hasXLock = queue.tryZkExclusiveLock(lockManager, procedure.toString());
+      if (!hasXLock) {
+        schedLock.lock();
+        if (!hasParentLock) queue.releaseExclusiveLock();
+        queue.getNamespaceQueue().releaseSharedLock();
+        addToRunQueue(tableRunQueue, queue);
+        schedLock.unlock();
+      }
     }
     return hasXLock;
   }
@@ -1041,15 +1068,16 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
    * @param table the name of the table that has the exclusive lock
    */
   public void releaseTableExclusiveLock(final Procedure procedure, final TableName table) {
-    schedLock.lock();
-    TableQueue queue = getTableQueue(table);
-    schedLock.unlock();
+    final TableQueue queue = getTableQueueWithLock(table);
+    final boolean hasParentLock = queue.hasParentLock(procedure);
 
-    // Zk lock is expensive...
-    queue.releaseZkExclusiveLock(lockManager);
+    if (!hasParentLock) {
+      // Zk lock is expensive...
+      queue.releaseZkExclusiveLock(lockManager);
+    }
 
     schedLock.lock();
-    queue.releaseExclusiveLock();
+    if (!hasParentLock) queue.releaseExclusiveLock();
     queue.getNamespaceQueue().releaseSharedLock();
     addToRunQueue(tableRunQueue, queue);
     schedLock.unlock();
@@ -1116,17 +1144,19 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
    * If there are new operations pending (e.g. a new create),
    * the remove will not be performed.
    * @param table the name of the table that should be marked as deleted
+   * @param procedure the procedure that is removing the table
    * @return true if deletion succeeded, false otherwise meaning that there are
    *     other new operations pending for that table (e.g. a new create).
    */
-  protected boolean markTableAsDeleted(final TableName table) {
+  @VisibleForTesting
+  protected boolean markTableAsDeleted(final TableName table, final Procedure procedure) {
     final ReentrantLock l = schedLock;
     l.lock();
     try {
       TableQueue queue = getTableQueue(table);
       if (queue == null) return true;
 
-      if (queue.isEmpty() && queue.tryExclusiveLock(0)) {
+      if (queue.isEmpty() && queue.tryExclusiveLock(procedure)) {
         // remove the table from the run-queue and the map
         if (AvlIterableList.isLinked(queue)) {
           tableRunQueue.remove(queue);
@@ -1256,11 +1286,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         wakeProcedure(nextProcs[i]);
       }
 
-      if (numProcs > 1) {
-        schedWaitCond.signalAll();
-      } else if (numProcs > 0) {
-        schedWaitCond.signal();
-      }
+      wakePollIfNeeded(numProcs);
 
       if (!procedure.hasParent()) {
         // release the table shared-lock.
@@ -1289,7 +1315,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       if (!tableQueue.trySharedLock()) return false;
 
       NamespaceQueue nsQueue = getNamespaceQueue(nsName);
-      boolean hasLock = nsQueue.tryExclusiveLock(procedure.getProcId());
+      boolean hasLock = nsQueue.tryExclusiveLock(procedure);
       if (!hasLock) {
         tableQueue.releaseSharedLock();
       }
@@ -1333,7 +1359,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     schedLock.lock();
     try {
       ServerQueue queue = getServerQueue(serverName);
-      if (queue.tryExclusiveLock(procedure.getProcId())) {
+      if (queue.tryExclusiveLock(procedure)) {
         removeFromRunQueue(serverRunQueue, queue);
         return true;
       }
@@ -1473,10 +1499,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return proc.hasParent() && isLockOwner(proc.getParentProcId());
     }
 
-    public synchronized boolean tryExclusiveLock(final long procIdOwner) {
-      assert procIdOwner != Long.MIN_VALUE;
-      if (isLocked() && !isLockOwner(procIdOwner)) return false;
-      exclusiveLockProcIdOwner = procIdOwner;
+    public synchronized boolean hasLockAccess(final Procedure proc) {
+      return isLockOwner(proc.getProcId()) || hasParentLock(proc);
+    }
+
+    public synchronized boolean tryExclusiveLock(final Procedure proc) {
+      if (isLocked()) return hasLockAccess(proc);
+      exclusiveLockProcIdOwner = proc.getProcId();
       return true;
     }
 
@@ -1564,6 +1593,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     private Queue<T> currentQueue = null;
     private Queue<T> queueHead = null;
     private int currentQuantum = 0;
+    private int size = 0;
 
     public FairQueue() {
       this(1);
@@ -1573,9 +1603,14 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       this.quantum = quantum;
     }
 
+    public boolean hasRunnables() {
+      return size > 0;
+    }
+
     public void add(Queue<T> queue) {
       queueHead = AvlIterableList.append(queueHead, queue);
       if (currentQueue == null) setNextQueue(queueHead);
+      size++;
     }
 
     public void remove(Queue<T> queue) {
@@ -1584,6 +1619,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       if (currentQueue == queue) {
         setNextQueue(queueHead != null ? nextQueue : null);
       }
+      size--;
     }
 
     public Queue<T> poll() {
