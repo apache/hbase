@@ -644,6 +644,21 @@ under the License.
     </project>
   </supplement>
   <supplement>
+    <project> <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-csv</artifactId>
+      <version>1.0</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+  <supplement>
     <project>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-math</artifactId>
@@ -703,6 +718,21 @@ under the License.
     <project>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-recipes</artifactId>
+
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-test</artifactId>
+      <version>2.7.1</version>
 
       <licenses>
         <license>
@@ -783,6 +813,21 @@ under the License.
       </licenses>
     </project>
   </supplement>
+  <supplement>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>org.apache.htrace</groupId>
+      <artifactId>htrace-core4</artifactId>
+      <version>4.0.1-incubating</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
   <!-- Used by Hadoop 2.6 -->
   <supplement>
     <project>
@@ -980,6 +1025,7 @@ under the License.
       </licenses>
     </project>
   </supplement>
+
 <!-- Ambiguous license names in server and not in client -->
   <supplement>
     <project>
@@ -1052,7 +1098,7 @@ under the License.
     </project>
   </supplement>
   <supplement>
-    <project>
+    <project> 
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
 
@@ -1082,6 +1128,143 @@ Copyright 2006 Envoi Solutions LLC
       </licenses>
     </project>
   </supplement>
+  <supplement>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>com.codahale.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <version>3.0.1</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>com.nimbusds</groupId>
+      <artifactId>nimbus-jose-jwt</artifactId>
+      <version>3.9</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>com.squareup.okhttp</groupId>
+      <artifactId>okhttp</artifactId>
+      <version>2.4.0</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>  <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>com.squareup.okio</groupId>
+      <artifactId>okio</artifactId>
+      <version>1.4.0</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>com.twitter</groupId>
+      <artifactId>hpack</artifactId>
+      <version>0.11.0</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>net.minidev</groupId>
+      <artifactId>json-smart</artifactId>
+      <version>1.1.1</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement> 
+
+  <supplement>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>de.ruedigermoeller</groupId>
+      <artifactId>fst</artifactId>
+      <version>2.24</version>
+      <!-- versions 2.17+ are ASFv2 though pom says LGPL 2.1 until 2.45+ -->
+      <!-- https://github.com/RuedigerMoeller/fast-serialization/blob/master/LICENSE.md -->
+      <!-- https://github.com/RuedigerMoeller/fast-serialization/commit/526dd4#diff-600376-->
+
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+  <supplement>
+    <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
+      <groupId>org.objenesis</groupId>
+      <artifactId>objenesis</artifactId>
+      <version>2.1</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+  <!-- xercesImpl is necessary when using -Dhadoop.profile=3.0 due to a bug in maven. (last tested with mvn 3.3.9)
+       See HBASE-16712 for more details.-->
+  <supplement>
+    <project>
+      <groupId>xerces</groupId>
+      <artifactId>xercesImpl</artifactId>
+      <version>2.9.1</version>
+      <licenses>
+        <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+
 <!-- Permissive licenses that need text in LICENSE -->
   <supplement>
     <project>
@@ -2047,4 +2230,43 @@ Copyright (c) 2007-2011 The JRuby project
       </licenses>
     </project>
   </supplement>
+
+  <supplement>
+    <project>
+      <groupId>net.jcip</groupId>
+      <artifactId>jcip-annotations</artifactId>
+      <version>1.0</version>
+      <organization>
+        <name>Brian Goetz and Tim Peierls</name>
+        <url>http://www.jcip.net</url>
+      </organization>
+      <licenses>
+        <license>
+          <name>Creative Commons Attribution License, Version 2.5</name>
+          <url>http://creativecommons.org/licenses/by/2.5</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>com.google.re2j</groupId>
+      <artifactId>re2j</artifactId>
+      <version>1.0</version>
+
+      <organization>
+        <name>The Go Authors</name>
+        <url>https://github.com/google/re2j</url>
+      </organization>
+      <licenses>
+        <license>
+          <name>BSD license</name> <!-- the Go license is BDS 3 clause verbatim -->
+          <url>https://github.com/google/re2j/blob/master/LICENSE</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
 </supplementalDataModels>

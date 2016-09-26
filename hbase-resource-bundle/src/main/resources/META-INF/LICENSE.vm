@@ -1561,7 +1561,9 @@ You can redistribute it and/or modify it under either the terms of the GPL
 ## Whitelist of licenses that it's safe to not aggregate as above.
 ## Note that this doesn't include ALv2 or the aforementioned aggregate
 ## license mentions.
-#set($non_aggregate_fine = [ 'Public Domain', 'New BSD license', 'BSD license', 'Mozilla Public License Version 2.0' ])
+##
+## See this FAQ link for justifications: https://www.apache.org/legal/resolved.html
+#set($non_aggregate_fine = [ 'Public Domain', 'New BSD license', 'BSD license', 'Mozilla Public License Version 2.0', 'Creative Commons Attribution License, Version 2.5', 'MPL 1.1'])
 ## include LICENSE sections for anything not under ASL2.0
 #foreach( ${dep} in ${projects} )
 ## if there are no licenses we'll fail the build later, so

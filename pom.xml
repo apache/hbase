@@ -1178,7 +1178,7 @@
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
     <hadoop-two.version>2.7.1</hadoop-two.version>
-    <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
+    <hadoop-three.version>3.0.0-alpha1</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
          They ought to match the values found in our default hadoop profile, which is
          currently "hadoop-2.0". See HBASE-15925 for more info. -->

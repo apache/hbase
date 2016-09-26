@@ -272,6 +272,29 @@ JRuby's licence.
 #if(${dep.artifactId.equals("jruby-complete")})
 #set($jruby=true)
 #end
+#if( ${dep.licenses.isEmpty()} )
+ERROR: This product includes ${dep.name} which has no licenses!
+Revert the change if invalid or if intentional add license info to supplemental-models.xml
+
+<groupId>${dep.groupId}</groupId>
+<artifactId>${dep.artifactId}</artifactId>
+<version>${dep.version}</version>
+
+maven central search
+g:${dep.groupId} AND a:${dep.artifactId} AND v:${dep.version}
+
+project website
+${dep.url}
+project source
+${dep.scm.url}
+
+
+
+## fail the template. If you're looking at the source NOTICE.vm
+## file based on a stacktrace or exception message, you need to find
+## the generated NOTICE file that has the actual dependency info printed.
+${dep.license[0]}
+#end
 #if( !(${dep.licenses[0].name.contains("BSD")} || ${dep.licenses[0].name.contains("MIT")}) )
 #if( !(${dep.licenses[0].name.equals("Public Domain")}) )
 #if( !(${dep.licenses[0].name.contains("Apache Software License, Version 2.0")}) )
