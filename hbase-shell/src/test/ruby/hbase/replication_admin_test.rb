@@ -62,47 +62,9 @@ module Hbase
       assert_raise(ArgumentError) do
         replication_admin.add_peer(@peer_id, ['test'])
       end
-    end
-
-    define_test "add_peer: single zk cluster key" do
-      cluster_key = "server1.cie.com:2181:/hbase"
-
-      replication_admin.add_peer(@peer_id, cluster_key)
-
-      assert_equal(1, replication_admin.list_peers.length)
-      assert(replication_admin.list_peers.key?(@peer_id))
-      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id))
-
-      # cleanup for future tests
-      replication_admin.remove_peer(@peer_id)
-    end
-
-    define_test "add_peer: multiple zk cluster key" do
-      cluster_key = "zk1,zk2,zk3:2182:/hbase-prod"
-
-      replication_admin.add_peer(@peer_id, cluster_key)
-
-      assert_equal(1, replication_admin.list_peers.length)
-      assert(replication_admin.list_peers.key?(@peer_id))
-      assert_equal(replication_admin.list_peers.fetch(@peer_id), cluster_key)
-
-      # cleanup for future tests
-      replication_admin.remove_peer(@peer_id)
-    end
-
-    define_test "add_peer: multiple zk cluster key and table_cfs" do
-      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
-      table_cfs_str = "table1;table2:cf1;table3:cf2,cf3"
-
-      replication_admin.add_peer(@peer_id, cluster_key, table_cfs_str)
-
-      assert_equal(1, replication_admin.list_peers.length)
-      assert(replication_admin.list_peers.key?(@peer_id))
-      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id))
-      assert_equal(table_cfs_str, replication_admin.show_peer_tableCFs(@peer_id))
-
-      # cleanup for future tests
-      replication_admin.remove_peer(@peer_id)
+      assert_raise(ArgumentError) do
+        replication_admin.add_peer(@peer_id, 'test')
+      end
     end
 
     define_test "add_peer: single zk cluster key - peer config" do
@@ -113,7 +75,7 @@ module Hbase
 
       assert_equal(1, replication_admin.list_peers.length)
       assert(replication_admin.list_peers.key?(@peer_id))
-      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id))
+      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id).get_cluster_key)
 
       # cleanup for future tests
       replication_admin.remove_peer(@peer_id)
@@ -127,7 +89,7 @@ module Hbase
 
       assert_equal(1, replication_admin.list_peers.length)
       assert(replication_admin.list_peers.key?(@peer_id))
-      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id))
+      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id).get_cluster_key)
 
       # cleanup for future tests
       replication_admin.remove_peer(@peer_id)
@@ -135,23 +97,35 @@ module Hbase
 
     define_test "add_peer: multiple zk cluster key and table_cfs - peer config" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
-      table_cfs = { "table1" => [], "table2" => ["cf1"], "table3" => ["cf1", "cf2"] }
-      #table_cfs_str = "default.table1;default.table3:cf1,cf2;default.table2:cf1"
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
 
       args = { CLUSTER_KEY => cluster_key, TABLE_CFS => table_cfs }
       replication_admin.add_peer(@peer_id, args)
 
-      assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(1, replication_admin.list_peers.length)
+      assert(replication_admin.list_peers.key?(@peer_id))
+      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id).get_cluster_key)
 
-      # Note: below assertion is dependent on the sort order of an unordered
-      # map and hence flaky depending on JVM
-      # Commenting out until HBASE-16274 is worked.
-      # assert_equal(table_cfs_str, command(:show_peer_tableCFs, @peer_id))
+      table_cfs_map = replication_admin.get_peer_config(@peer_id).getTableCFsMap()
+      assert_tablecfs_equal(table_cfs, table_cfs_map)
 
       # cleanup for future tests
       replication_admin.remove_peer(@peer_id)
+    end
+
+    def assert_tablecfs_equal(table_cfs, table_cfs_map)
+      assert_equal(table_cfs.length, table_cfs_map.length)
+      table_cfs_map.each{|key, value|
+        assert(table_cfs.has_key?(key.getNameAsString))
+        if table_cfs.fetch(key.getNameAsString).length == 0
+          assert_equal(nil, value)
+        else
+          assert_equal(table_cfs.fetch(key.getNameAsString).length, value.length)
+          value.each{|v|
+            assert(table_cfs.fetch(key.getNameAsString).include?(v))
+          }
+        end
+      }
     end
 
     define_test "add_peer: should fail when args is a hash and peer_tableCFs provided" do
@@ -162,6 +136,66 @@ module Hbase
         args = { CLUSTER_KEY => cluster_key }
         replication_admin.add_peer(@peer_id, args, table_cfs_str)
       end
+    end
+
+    define_test "set_peer_tableCFs: works with table-cfs map" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      args = { CLUSTER_KEY => cluster_key}
+      replication_admin.add_peer(@peer_id, args)
+
+      assert_equal(1, replication_admin.list_peers.length)
+      assert(replication_admin.list_peers.key?(@peer_id))
+      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id).get_cluster_key)
+
+      table_cfs = { "table1" => [], "table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
+      replication_admin.set_peer_tableCFs(@peer_id, table_cfs)
+      table_cfs_map = replication_admin.get_peer_config(@peer_id).getTableCFsMap()
+      assert_tablecfs_equal(table_cfs, table_cfs_map)
+
+      # cleanup for future tests
+      replication_admin.remove_peer(@peer_id)
+    end
+
+    define_test "append_peer_tableCFs: works with table-cfs map" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      args = { CLUSTER_KEY => cluster_key }
+      replication_admin.add_peer(@peer_id, args)
+
+      assert_equal(1, replication_admin.list_peers.length)
+      assert(replication_admin.list_peers.key?(@peer_id))
+      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id).get_cluster_key)
+
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"] }
+      replication_admin.append_peer_tableCFs(@peer_id, table_cfs)
+      table_cfs_map = replication_admin.get_peer_config(@peer_id).getTableCFsMap()
+      assert_tablecfs_equal(table_cfs, table_cfs_map)
+
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
+      replication_admin.append_peer_tableCFs(@peer_id, { "ns3:table3" => ["cf1", "cf2"] })
+      table_cfs_map = replication_admin.get_peer_config(@peer_id).getTableCFsMap()
+      assert_tablecfs_equal(table_cfs, table_cfs_map)
+
+      # cleanup for future tests
+      replication_admin.remove_peer(@peer_id)
+    end
+
+    define_test "remove_peer_tableCFs: works with table-cfs map" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
+      args = { CLUSTER_KEY => cluster_key, TABLE_CFS => table_cfs }
+      replication_admin.add_peer(@peer_id, args)
+
+      assert_equal(1, replication_admin.list_peers.length)
+      assert(replication_admin.list_peers.key?(@peer_id))
+      assert_equal(cluster_key, replication_admin.list_peers.fetch(@peer_id).get_cluster_key)
+
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"] }
+      replication_admin.remove_peer_tableCFs(@peer_id, { "ns3:table3" => ["cf1", "cf2"] })
+      table_cfs_map = replication_admin.get_peer_config(@peer_id).getTableCFsMap()
+      assert_tablecfs_equal(table_cfs, table_cfs_map)
+
+      # cleanup for future tests
+      replication_admin.remove_peer(@peer_id)
     end
 
     define_test "get_peer_config: works with simple clusterKey peer" do
@@ -180,8 +214,8 @@ module Hbase
       config_params = { "config1" => "value1", "config2" => "value2" }
       args = { CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => repl_impl,
                CONFIG => config_params }
-      command(:add_peer, @peer_id, args)
-      peer_config = command(:get_peer_config, @peer_id)
+      replication_admin.add_peer(@peer_id, args)
+      peer_config = replication_admin.get_peer_config(@peer_id)
       assert_equal(cluster_key, peer_config.get_cluster_key)
       assert_equal(repl_impl, peer_config.get_replication_endpoint_impl)
       assert_equal(2, peer_config.get_configuration.size)

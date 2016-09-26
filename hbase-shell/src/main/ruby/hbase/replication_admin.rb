@@ -39,11 +39,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Add a new peer cluster to replicate to
     def add_peer(id, args = {}, peer_tableCFs = nil)
-      # make add_peer backwards compatible to take in string for clusterKey and peer_tableCFs
-      if args.is_a?(String)
-        cluster_key = args
-        @replication_admin.addPeer(id, cluster_key, peer_tableCFs)
-      elsif args.is_a?(Hash)
+      if args.is_a?(Hash)
         unless peer_tableCFs.nil?
           raise(ArgumentError, "peer_tableCFs should be specified as TABLE_CFS in args")
         end
@@ -87,9 +83,18 @@ module Hbase
           }
         end
 
-        @replication_admin.add_peer(id, replication_peer_config, table_cfs)
+        unless table_cfs.nil?
+          # convert table_cfs to TableName
+          map = java.util.HashMap.new
+          table_cfs.each{|key, val|
+            map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
+          }
+          replication_peer_config.set_table_cfs_map(map)
+        end
+
+        @replication_admin.add_peer(id, replication_peer_config)
       else
-        raise(ArgumentError, "args must be either a String or Hash")
+        raise(ArgumentError, "args must be a Hash")
       end
     end
 
@@ -111,7 +116,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # List all peer clusters
     def list_peers
-      @replication_admin.listPeers
+      @replication_admin.listPeerConfigs
     end
 
     #----------------------------------------------------------------------------------------------
@@ -141,20 +146,42 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Set new tableCFs config for the specified peer
     def set_peer_tableCFs(id, tableCFs)
-      @replication_admin.setPeerTableCFs(id, tableCFs)
+      unless tableCFs.nil?
+        # convert tableCFs to TableName
+        map = java.util.HashMap.new
+        tableCFs.each{|key, val|
+          map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
+        }
+      end
+      @replication_admin.setPeerTableCFs(id, map)
     end
 
     #----------------------------------------------------------------------------------------------
     # Append a tableCFs config for the specified peer
     def append_peer_tableCFs(id, tableCFs)
-      @replication_admin.appendPeerTableCFs(id, tableCFs)
+      unless tableCFs.nil?
+        # convert tableCFs to TableName
+        map = java.util.HashMap.new
+        tableCFs.each{|key, val|
+          map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
+        }
+      end
+      @replication_admin.appendPeerTableCFs(id, map)
     end
 
     #----------------------------------------------------------------------------------------------
     # Remove some tableCFs from the tableCFs config of the specified peer
     def remove_peer_tableCFs(id, tableCFs)
-      @replication_admin.removePeerTableCFs(id, tableCFs)
+      unless tableCFs.nil?
+        # convert tableCFs to TableName
+        map = java.util.HashMap.new
+        tableCFs.each{|key, val|
+          map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
+        }
+      end
+      @replication_admin.removePeerTableCFs(id, map)
     end
+
     #----------------------------------------------------------------------------------------------
     # Enables a table's replication switch
     def enable_tablerep(table_name)

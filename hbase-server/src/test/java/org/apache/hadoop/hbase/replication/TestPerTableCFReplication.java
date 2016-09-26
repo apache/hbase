@@ -22,10 +22,14 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -183,13 +188,13 @@ public class TestPerTableCFReplication {
     Map<TableName, List<String>> tabCFsMap = null;
 
     // 1. null or empty string, result should be null
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig(null);
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig(null);
     assertEquals(null, tabCFsMap);
 
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig("");
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig("");
     assertEquals(null, tabCFsMap);
 
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig("   ");
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig("   ");
     assertEquals(null, tabCFsMap);
 
     TableName tab1 = TableName.valueOf("tab1");
@@ -197,20 +202,20 @@ public class TestPerTableCFReplication {
     TableName tab3 = TableName.valueOf("tab3");
 
     // 2. single table: "tab1" / "tab2:cf1" / "tab3:cf1,cf3"
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig("tab1");
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig("tab1");
     assertEquals(1, tabCFsMap.size()); // only one table
     assertTrue(tabCFsMap.containsKey(tab1));   // its table name is "tab1"
     assertFalse(tabCFsMap.containsKey(tab2));  // not other table
     assertEquals(null, tabCFsMap.get(tab1));   // null cf-list,
 
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig("tab2:cf1");
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig("tab2:cf1");
     assertEquals(1, tabCFsMap.size()); // only one table
     assertTrue(tabCFsMap.containsKey(tab2));   // its table name is "tab2"
     assertFalse(tabCFsMap.containsKey(tab1));  // not other table
     assertEquals(1, tabCFsMap.get(tab2).size());   // cf-list contains only 1 cf
     assertEquals("cf1", tabCFsMap.get(tab2).get(0));// the only cf is "cf1"
 
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig("tab3 : cf1 , cf3");
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig("tab3 : cf1 , cf3");
     assertEquals(1, tabCFsMap.size()); // only one table
     assertTrue(tabCFsMap.containsKey(tab3));   // its table name is "tab2"
     assertFalse(tabCFsMap.containsKey(tab1));  // not other table
@@ -219,7 +224,7 @@ public class TestPerTableCFReplication {
     assertTrue(tabCFsMap.get(tab3).contains("cf3"));// contains "cf3"
 
     // 3. multiple tables: "tab1 ; tab2:cf1 ; tab3:cf1,cf3"
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig("tab1 ; tab2:cf1 ; tab3:cf1,cf3");
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig("tab1 ; tab2:cf1 ; tab3:cf1,cf3");
     // 3.1 contains 3 tables : "tab1", "tab2" and "tab3"
     assertEquals(3, tabCFsMap.size());
     assertTrue(tabCFsMap.containsKey(tab1));
@@ -237,7 +242,7 @@ public class TestPerTableCFReplication {
 
     // 4. contiguous or additional ";"(table delimiter) or ","(cf delimiter) can be tolerated
     // still use the example of multiple tables: "tab1 ; tab2:cf1 ; tab3:cf1,cf3"
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig(
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig(
       "tab1 ; ; tab2:cf1 ; tab3:cf1,,cf3 ;");
     // 4.1 contains 3 tables : "tab1", "tab2" and "tab3"
     assertEquals(3, tabCFsMap.size());
@@ -256,7 +261,7 @@ public class TestPerTableCFReplication {
 
     // 5. invalid format "tab1:tt:cf1 ; tab2::cf1 ; tab3:cf1,cf3"
     //    "tab1:tt:cf1" and "tab2::cf1" are invalid and will be ignored totally
-    tabCFsMap = ReplicationAdmin.parseTableCFsFromConfig(
+    tabCFsMap = ReplicationSerDeHelper.parseTableCFsFromConfig(
       "tab1:tt:cf1 ; tab2::cf1 ; tab3:cf1,cf3");
     // 5.1 no "tab1" and "tab2", only "tab3"
     assertEquals(1, tabCFsMap.size()); // only one table
@@ -267,7 +272,100 @@ public class TestPerTableCFReplication {
     assertEquals(2, tabCFsMap.get(tab3).size());
     assertTrue(tabCFsMap.get(tab3).contains("cf1"));
     assertTrue(tabCFsMap.get(tab3).contains("cf3"));
- }
+  }
+
+  @Test
+  public void testTableCFsHelperConverter() {
+
+    ZooKeeperProtos.TableCF[] tableCFs = null;
+    Map<TableName, List<String>> tabCFsMap = null;
+
+    // 1. null or empty string, result should be null
+    assertNull(ReplicationSerDeHelper.convert(tabCFsMap));
+
+    tabCFsMap = new HashMap<TableName, List<String>>();
+    tableCFs = ReplicationSerDeHelper.convert(tabCFsMap);
+    assertEquals(0, tableCFs.length);
+
+    TableName tab1 = TableName.valueOf("tab1");
+    TableName tab2 = TableName.valueOf("tab2");
+    TableName tab3 = TableName.valueOf("tab3");
+
+    // 2. single table: "tab1" / "tab2:cf1" / "tab3:cf1,cf3"
+    tabCFsMap.clear();
+    tabCFsMap.put(tab1, null);
+    tableCFs = ReplicationSerDeHelper.convert(tabCFsMap);
+    assertEquals(1, tableCFs.length); // only one table
+    assertEquals(tab1.toString(),
+        tableCFs[0].getTableName().getQualifier().toStringUtf8());
+    assertEquals(0, tableCFs[0].getFamiliesCount());
+
+    tabCFsMap.clear();
+    tabCFsMap.put(tab2, new ArrayList<String>());
+    tabCFsMap.get(tab2).add("cf1");
+    tableCFs = ReplicationSerDeHelper.convert(tabCFsMap);
+    assertEquals(1, tableCFs.length); // only one table
+    assertEquals(tab2.toString(),
+        tableCFs[0].getTableName().getQualifier().toStringUtf8());
+    assertEquals(1, tableCFs[0].getFamiliesCount());
+    assertEquals("cf1", tableCFs[0].getFamilies(0).toStringUtf8());
+
+    tabCFsMap.clear();
+    tabCFsMap.put(tab3, new ArrayList<String>());
+    tabCFsMap.get(tab3).add("cf1");
+    tabCFsMap.get(tab3).add("cf3");
+    tableCFs = ReplicationSerDeHelper.convert(tabCFsMap);
+    assertEquals(1, tableCFs.length);
+    assertEquals(tab3.toString(),
+        tableCFs[0].getTableName().getQualifier().toStringUtf8());
+    assertEquals(2, tableCFs[0].getFamiliesCount());
+    assertEquals("cf1", tableCFs[0].getFamilies(0).toStringUtf8());
+    assertEquals("cf3", tableCFs[0].getFamilies(1).toStringUtf8());
+
+    tabCFsMap.clear();
+    tabCFsMap.put(tab1, null);
+    tabCFsMap.put(tab2, new ArrayList<String>());
+    tabCFsMap.get(tab2).add("cf1");
+    tabCFsMap.put(tab3, new ArrayList<String>());
+    tabCFsMap.get(tab3).add("cf1");
+    tabCFsMap.get(tab3).add("cf3");
+
+    tableCFs = ReplicationSerDeHelper.convert(tabCFsMap);
+    assertEquals(3, tableCFs.length);
+    assertNotNull(ReplicationSerDeHelper.getTableCF(tableCFs, tab1.toString()));
+    assertNotNull(ReplicationSerDeHelper.getTableCF(tableCFs, tab2.toString()));
+    assertNotNull(ReplicationSerDeHelper.getTableCF(tableCFs, tab3.toString()));
+
+    assertEquals(0,
+        ReplicationSerDeHelper.getTableCF(tableCFs, tab1.toString()).getFamiliesCount());
+
+    assertEquals(1,
+        ReplicationSerDeHelper.getTableCF(tableCFs, tab2.toString()).getFamiliesCount());
+    assertEquals("cf1",
+        ReplicationSerDeHelper.getTableCF(tableCFs, tab2.toString()).getFamilies(0).toStringUtf8());
+
+    assertEquals(2,
+        ReplicationSerDeHelper.getTableCF(tableCFs, tab3.toString()).getFamiliesCount());
+    assertEquals("cf1",
+        ReplicationSerDeHelper.getTableCF(tableCFs, tab3.toString()).getFamilies(0).toStringUtf8());
+    assertEquals("cf3",
+        ReplicationSerDeHelper.getTableCF(tableCFs, tab3.toString()).getFamilies(1).toStringUtf8());
+
+    tabCFsMap = ReplicationSerDeHelper.convert2Map(tableCFs);
+    assertEquals(3, tabCFsMap.size());
+    assertTrue(tabCFsMap.containsKey(tab1));
+    assertTrue(tabCFsMap.containsKey(tab2));
+    assertTrue(tabCFsMap.containsKey(tab3));
+    // 3.2 table "tab1" : null cf-list
+    assertEquals(null, tabCFsMap.get(tab1));
+    // 3.3 table "tab2" : cf-list contains a single cf "cf1"
+    assertEquals(1, tabCFsMap.get(tab2).size());
+    assertEquals("cf1", tabCFsMap.get(tab2).get(0));
+    // 3.4 table "tab3" : cf-list contains "cf1" and "cf3"
+    assertEquals(2, tabCFsMap.get(tab3).size());
+    assertTrue(tabCFsMap.get(tab3).contains("cf1"));
+    assertTrue(tabCFsMap.get(tab3).contains("cf3"));
+  }
 
   @Test(timeout=300000)
   public void testPerTableCFReplication() throws Exception {
@@ -304,8 +402,23 @@ public class TestPerTableCFReplication {
       Table htab3C = connection3.getTable(tabCName);
 
       // A. add cluster2/cluster3 as peers to cluster1
-      replicationAdmin.addPeer("2", utility2.getClusterKey(), "TC;TB:f1,f3");
-      replicationAdmin.addPeer("3", utility3.getClusterKey(), "TA;TB:f1,f2");
+      ReplicationPeerConfig rpc2 = new ReplicationPeerConfig();
+      rpc2.setClusterKey(utility2.getClusterKey());
+      Map<TableName, List<String>> tableCFs = new HashMap<>();
+      tableCFs.put(tabCName, null);
+      tableCFs.put(tabBName, new ArrayList<String>());
+      tableCFs.get(tabBName).add("f1");
+      tableCFs.get(tabBName).add("f3");
+      replicationAdmin.addPeer("2", rpc2, tableCFs);
+
+      ReplicationPeerConfig rpc3 = new ReplicationPeerConfig();
+      rpc3.setClusterKey(utility3.getClusterKey());
+      tableCFs.clear();
+      tableCFs.put(tabAName, null);
+      tableCFs.put(tabBName, new ArrayList<String>());
+      tableCFs.get(tabBName).add("f1");
+      tableCFs.get(tabBName).add("f2");
+      replicationAdmin.addPeer("3", rpc3, tableCFs);
 
       // A1. tableA can only replicated to cluster3
       putAndWaitWithFamily(row1, f1Name, htab1A, htab3A);
@@ -348,8 +461,20 @@ public class TestPerTableCFReplication {
       deleteAndWaitWithFamily(row1, f3Name, htab1C, htab2C);
 
       // B. change peers' replicable table-cf config
-      replicationAdmin.setPeerTableCFs("2", "TA:f1,f2; TC:f2,f3");
-      replicationAdmin.setPeerTableCFs("3", "TB; TC:f3");
+      tableCFs.clear();
+      tableCFs.put(tabAName, new ArrayList<String>());
+      tableCFs.get(tabAName).add("f1");
+      tableCFs.get(tabAName).add("f2");
+      tableCFs.put(tabCName, new ArrayList<String>());
+      tableCFs.get(tabCName).add("f2");
+      tableCFs.get(tabCName).add("f3");
+      replicationAdmin.setPeerTableCFs("2", tableCFs);
+
+      tableCFs.clear();
+      tableCFs.put(tabBName, null);
+      tableCFs.put(tabCName, new ArrayList<String>());
+      tableCFs.get(tabCName).add("f3");
+      replicationAdmin.setPeerTableCFs("3", tableCFs);
 
       // B1. cf 'f1' of tableA can only replicated to cluster2
       putAndWaitWithFamily(row2, f1Name, htab1A, htab2A);

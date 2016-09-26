@@ -26,7 +26,7 @@ Append a replicable table-cf config for the specified peer
 Examples:
 
   # append a table / table-cf to be replicable for a peer
-  hbase> append_peer_tableCFs '2', "table4:cfA,cfB"
+  hbase> append_peer_tableCFs '2',  { "ns1:table4" => ["cfA", "cfB"] }
 
 EOF
       end

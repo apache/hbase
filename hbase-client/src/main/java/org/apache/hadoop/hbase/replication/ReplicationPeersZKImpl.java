@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,15 +79,15 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
   // Map of peer clusters keyed by their id
   private Map<String, ReplicationPeerZKImpl> peerClusters;
-  private final String tableCFsNodeName;
   private final ReplicationQueuesClient queuesClient;
+  private Abortable abortable;
 
   private static final Log LOG = LogFactory.getLog(ReplicationPeersZKImpl.class);
 
   public ReplicationPeersZKImpl(final ZooKeeperWatcher zk, final Configuration conf,
       final ReplicationQueuesClient queuesClient, Abortable abortable) {
     super(zk, conf, abortable);
-    this.tableCFsNodeName = conf.get("zookeeper.znode.replication.peers.tableCFs", "tableCFs");
+    this.abortable = abortable;
     this.peerClusters = new ConcurrentHashMap<String, ReplicationPeerZKImpl>();
     this.queuesClient = queuesClient;
   }
@@ -104,7 +105,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public void addPeer(String id, ReplicationPeerConfig peerConfig, String tableCFs)
+  public void addPeer(String id, ReplicationPeerConfig peerConfig)
       throws ReplicationException {
     try {
       if (peerExists(id)) {
@@ -129,18 +130,15 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
 
       List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
-      ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(ZKUtil.joinZNode(this.peersZNode, id),
+      ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(getPeerNode(id),
         ReplicationSerDeHelper.toByteArray(peerConfig));
       // There is a race (if hbase.zookeeper.useMulti is false)
       // b/w PeerWatcher and ReplicationZookeeper#add method to create the
       // peer-state znode. This happens while adding a peer
       // The peer state data is set as "ENABLED" by default.
       ZKUtilOp op2 = ZKUtilOp.createAndFailSilent(getPeerStateNode(id), ENABLED_ZNODE_BYTES);
-      String tableCFsStr = (tableCFs == null) ? "" : tableCFs;
-      ZKUtilOp op3 = ZKUtilOp.createAndFailSilent(getTableCFsNode(id), Bytes.toBytes(tableCFsStr));
       listOfOps.add(op1);
       listOfOps.add(op2);
-      listOfOps.add(op3);
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
       // A peer is enabled by default
     } catch (KeeperException e) {
@@ -175,13 +173,17 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public String getPeerTableCFsConfig(String id) throws ReplicationException {
+  public Map<TableName, List<String>> getPeerTableCFsConfig(String id) throws ReplicationException {
     try {
       if (!peerExists(id)) {
         throw new IllegalArgumentException("peer " + id + " doesn't exist");
       }
       try {
-        return Bytes.toString(ZKUtil.getData(this.zookeeper, getTableCFsNode(id)));
+        ReplicationPeerConfig rpc = getReplicationPeerConfig(id);
+        if (rpc == null) {
+          throw new ReplicationException("Unable to get tableCFs of the peer with id=" + id);
+        }
+        return rpc.getTableCFsMap();
       } catch (Exception e) {
         throw new ReplicationException(e);
       }
@@ -191,20 +193,22 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public void setPeerTableCFsConfig(String id, String tableCFsStr) throws ReplicationException {
+  public void setPeerTableCFsConfig(String id,
+      Map<TableName, ? extends Collection<String>> tableCFs) throws ReplicationException {
     try {
       if (!peerExists(id)) {
         throw new IllegalArgumentException("Cannot set peer tableCFs because id=" + id
             + " does not exist.");
       }
-      String tableCFsZKNode = getTableCFsNode(id);
-      byte[] tableCFs = Bytes.toBytes(tableCFsStr);
-      if (ZKUtil.checkExists(this.zookeeper, tableCFsZKNode) != -1) {
-        ZKUtil.setData(this.zookeeper, tableCFsZKNode, tableCFs);
-      } else {
-        ZKUtil.createAndWatch(this.zookeeper, tableCFsZKNode, tableCFs);
+      ReplicationPeerConfig rpc = getReplicationPeerConfig(id);
+      if (rpc == null) {
+        throw new ReplicationException("Unable to get tableCFs of the peer with id=" + id);
       }
-      LOG.info("Peer tableCFs with id= " + id + " is now " + tableCFsStr);
+      rpc.setTableCFsMap(tableCFs);
+      ZKUtil.setData(this.zookeeper, getPeerNode(id),
+          ReplicationSerDeHelper.toByteArray(rpc));
+      LOG.info("Peer tableCFs with id= " + id + " is now "
+          + ReplicationSerDeHelper.convertToString(tableCFs));
     } catch (KeeperException e) {
       throw new ReplicationException("Unable to change tableCFs of the peer with id=" + id, e);
     }
@@ -289,7 +293,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   @Override
   public ReplicationPeerConfig getReplicationPeerConfig(String peerId)
       throws ReplicationException {
-    String znode = ZKUtil.joinZNode(this.peersZNode, peerId);
+    String znode = getPeerNode(peerId);
     byte[] data = null;
     try {
       data = ZKUtil.getData(this.zookeeper, znode);
@@ -458,14 +462,6 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     return true;
   }
 
-  private String getTableCFsNode(String id) {
-    return ZKUtil.joinZNode(this.peersZNode, ZKUtil.joinZNode(id, this.tableCFsNodeName));
-  }
-
-  private String getPeerStateNode(String id) {
-    return ZKUtil.joinZNode(this.peersZNode, ZKUtil.joinZNode(id, this.peerStateNodeName));
-  }
-
   /**
    * Update the state znode of a peer cluster.
    * @param id
@@ -506,18 +502,12 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
     Configuration peerConf = pair.getSecond();
 
-    ReplicationPeerZKImpl peer = new ReplicationPeerZKImpl(peerConf, peerId, pair.getFirst());
+    ReplicationPeerZKImpl peer = new ReplicationPeerZKImpl(zookeeper, peerConf, peerId,
+        pair.getFirst(), abortable);
     try {
-      peer.startStateTracker(this.zookeeper, this.getPeerStateNode(peerId));
+      peer.startStateTracker(getPeerStateNode(peerId));
     } catch (KeeperException e) {
       throw new ReplicationException("Error starting the peer state tracker for peerId=" +
-          peerId, e);
-    }
-
-    try {
-      peer.startTableCFsTracker(this.zookeeper, this.getTableCFsNode(peerId));
-    } catch (KeeperException e) {
-      throw new ReplicationException("Error starting the peer tableCFs tracker for peerId=" +
           peerId, e);
     }
 

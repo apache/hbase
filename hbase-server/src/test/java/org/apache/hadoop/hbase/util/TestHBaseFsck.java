@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl;
 import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
@@ -2260,7 +2261,9 @@ public class TestHBaseFsck {
     ReplicationAdmin replicationAdmin = new ReplicationAdmin(conf);
     Assert.assertEquals(0, replicationAdmin.getPeersCount());
     String zkPort =  conf.get(HConstants.ZOOKEEPER_CLIENT_PORT);
-    replicationAdmin.addPeer("1", "127.0.0.1:2181" + zkPort + ":/hbase");
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey("127.0.0.1:2181" + zkPort + ":/hbase");
+    replicationAdmin.addPeer("1", rpc);
     replicationAdmin.getPeersCount();
     Assert.assertEquals(1, replicationAdmin.getPeersCount());
 

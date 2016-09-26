@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -44,6 +46,7 @@ import com.google.common.collect.Lists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -92,11 +95,15 @@ public class TestReplicationAdmin {
    */
   @Test
   public void testAddRemovePeer() throws Exception {
+    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
+    rpc1.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc2 = new ReplicationPeerConfig();
+    rpc2.setClusterKey(KEY_SECOND);
     // Add a valid peer
-    admin.addPeer(ID_ONE, KEY_ONE);
+    admin.addPeer(ID_ONE, rpc1);
     // try adding the same (fails)
     try {
-      admin.addPeer(ID_ONE, KEY_ONE);
+      admin.addPeer(ID_ONE, rpc1);
     } catch (IllegalArgumentException iae) {
       // OK!
     }
@@ -111,7 +118,7 @@ public class TestReplicationAdmin {
     assertEquals(1, admin.getPeersCount());
     // Add a second since multi-slave is supported
     try {
-      admin.addPeer(ID_SECOND, KEY_SECOND);
+      admin.addPeer(ID_SECOND, rpc2);
     } catch (IllegalStateException iae) {
       fail();
     }
@@ -125,6 +132,10 @@ public class TestReplicationAdmin {
   
   @Test
   public void testAddPeerWithUnDeletedQueues() throws Exception {
+    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
+    rpc1.setClusterKey(KEY_ONE);
+    ReplicationPeerConfig rpc2 = new ReplicationPeerConfig();
+    rpc2.setClusterKey(KEY_SECOND);
     Configuration conf = TEST_UTIL.getConfiguration();
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "Test HBaseAdmin", null);
     ReplicationQueues repQueues =
@@ -134,7 +145,7 @@ public class TestReplicationAdmin {
     // add queue for ID_ONE
     repQueues.addLog(ID_ONE, "file1");
     try {
-      admin.addPeer(ID_ONE, KEY_ONE);
+      admin.addPeer(ID_ONE, rpc1);
       fail();
     } catch (ReplicationException e) {
       // OK!
@@ -145,7 +156,7 @@ public class TestReplicationAdmin {
     // add recovered queue for ID_ONE
     repQueues.addLog(ID_ONE + "-server2", "file1");
     try {
-      admin.addPeer(ID_ONE, KEY_ONE);
+      admin.addPeer(ID_ONE, rpc2);
       fail();
     } catch (ReplicationException e) {
       // OK!
@@ -182,7 +193,9 @@ public class TestReplicationAdmin {
    */
   @Test
   public void testEnableDisable() throws Exception {
-    admin.addPeer(ID_ONE, KEY_ONE);
+    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
+    rpc1.setClusterKey(KEY_ONE);
+    admin.addPeer(ID_ONE, rpc1);
     assertEquals(1, admin.getPeersCount());
     assertTrue(admin.getPeerState(ID_ONE));
     admin.disablePeer(ID_ONE);
@@ -197,100 +210,140 @@ public class TestReplicationAdmin {
   }
 
   @Test
-  public void testGetTableCfsStr() {
-    // opposite of TestPerTableCFReplication#testParseTableCFsFromConfig()
-
-    Map<TableName, List<String>> tabCFsMap = null;
-
-    // 1. null or empty string, result should be null
-    assertEquals(null, ReplicationAdmin.getTableCfsStr(tabCFsMap));
-
-
-    // 2. single table: "tab1" / "tab2:cf1" / "tab3:cf1,cf3"
-    tabCFsMap = new TreeMap<TableName, List<String>>();
-    tabCFsMap.put(TableName.valueOf("tab1"), null);   // its table name is "tab1"
-    assertEquals("tab1", ReplicationAdmin.getTableCfsStr(tabCFsMap));
-
-    tabCFsMap = new TreeMap<TableName, List<String>>();
-    tabCFsMap.put(TableName.valueOf("tab1"), Lists.newArrayList("cf1"));
-    assertEquals("tab1:cf1", ReplicationAdmin.getTableCfsStr(tabCFsMap));
-
-    tabCFsMap = new TreeMap<TableName, List<String>>();
-    tabCFsMap.put(TableName.valueOf("tab1"), Lists.newArrayList("cf1", "cf3"));
-    assertEquals("tab1:cf1,cf3", ReplicationAdmin.getTableCfsStr(tabCFsMap));
-
-    // 3. multiple tables: "tab1 ; tab2:cf1 ; tab3:cf1,cf3"
-    tabCFsMap = new TreeMap<TableName, List<String>>();
-    tabCFsMap.put(TableName.valueOf("tab1"), null);
-    tabCFsMap.put(TableName.valueOf("tab2"), Lists.newArrayList("cf1"));
-    tabCFsMap.put(TableName.valueOf("tab3"), Lists.newArrayList("cf1", "cf3"));
-    assertEquals("tab1;tab2:cf1;tab3:cf1,cf3", ReplicationAdmin.getTableCfsStr(tabCFsMap));
-  }
-
-  @Test
   public void testAppendPeerTableCFs() throws Exception {
-    // Add a valid peer
-    admin.addPeer(ID_ONE, KEY_ONE);
+    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
+    rpc1.setClusterKey(KEY_ONE);
+    TableName tab1 = TableName.valueOf("t1");
+    TableName tab2 = TableName.valueOf("t2");
+    TableName tab3 = TableName.valueOf("t3");
+    TableName tab4 = TableName.valueOf("t4");
 
-    admin.appendPeerTableCFs(ID_ONE, "t1");
-    assertEquals("t1", admin.getPeerTableCFs(ID_ONE));
+    // Add a valid peer
+    admin.addPeer(ID_ONE, rpc1);
+
+    Map<TableName, List<String>> tableCFs = new HashMap<>();
+
+    tableCFs.put(tab1, null);
+    admin.appendPeerTableCFs(ID_ONE, tableCFs);
+    Map<TableName, List<String>> result = admin.getPeerConfig(ID_ONE).getTableCFsMap();
+    assertEquals(1, result.size());
+    assertEquals(true, result.containsKey(tab1));
+    assertNull(result.get(tab1));
 
     // append table t2 to replication
-    admin.appendPeerTableCFs(ID_ONE, "t2");
-    String peerTablesOne = admin.getPeerTableCFs(ID_ONE);
-
-    // Different jdk's return different sort order for the tables. ( Not sure on why exactly )
-    //
-    // So instead of asserting that the string is exactly we
-    // assert that the string contains all tables and the needed separator.
-    assertTrue("Should contain t1", peerTablesOne.contains("t1"));
-    assertTrue("Should contain t2", peerTablesOne.contains("t2"));
-    assertTrue("Should contain ; as the seperator", peerTablesOne.contains(";"));
+    tableCFs.clear();
+    tableCFs.put(tab2, null);
+    admin.appendPeerTableCFs(ID_ONE, tableCFs);
+    result = admin.getPeerConfig(ID_ONE).getTableCFsMap();
+    assertEquals(2, result.size());
+    assertTrue("Should contain t1", result.containsKey(tab1));
+    assertTrue("Should contain t2", result.containsKey(tab2));
+    assertNull(result.get(tab1));
+    assertNull(result.get(tab2));
 
     // append table column family: f1 of t3 to replication
-    admin.appendPeerTableCFs(ID_ONE, "t3:f1");
-    String peerTablesTwo = admin.getPeerTableCFs(ID_ONE);
-    assertTrue("Should contain t1", peerTablesTwo.contains("t1"));
-    assertTrue("Should contain t2", peerTablesTwo.contains("t2"));
-    assertTrue("Should contain t3:f1", peerTablesTwo.contains("t3:f1"));
-    assertTrue("Should contain ; as the seperator", peerTablesTwo.contains(";"));
+    tableCFs.clear();
+    tableCFs.put(tab3, new ArrayList<String>());
+    tableCFs.get(tab3).add("f1");
+    admin.appendPeerTableCFs(ID_ONE, tableCFs);
+    result = admin.getPeerConfig(ID_ONE).getTableCFsMap();
+    assertEquals(3, result.size());
+    assertTrue("Should contain t1", result.containsKey(tab1));
+    assertTrue("Should contain t2", result.containsKey(tab2));
+    assertTrue("Should contain t3", result.containsKey(tab3));
+    assertNull(result.get(tab1));
+    assertNull(result.get(tab2));
+    assertEquals(1, result.get(tab3).size());
+    assertEquals("f1", result.get(tab3).get(0));
+
+    tableCFs.clear();
+    tableCFs.put(tab4, new ArrayList<String>());
+    tableCFs.get(tab4).add("f1");
+    tableCFs.get(tab4).add("f2");
+    admin.appendPeerTableCFs(ID_ONE, tableCFs);
+    result = admin.getPeerConfig(ID_ONE).getTableCFsMap();
+    assertEquals(4, result.size());
+    assertTrue("Should contain t1", result.containsKey(tab1));
+    assertTrue("Should contain t2", result.containsKey(tab2));
+    assertTrue("Should contain t3", result.containsKey(tab3));
+    assertTrue("Should contain t4", result.containsKey(tab4));
+    assertNull(result.get(tab1));
+    assertNull(result.get(tab2));
+    assertEquals(1, result.get(tab3).size());
+    assertEquals("f1", result.get(tab3).get(0));
+    assertEquals(2, result.get(tab4).size());
+    assertEquals("f1", result.get(tab4).get(0));
+    assertEquals("f2", result.get(tab4).get(1));
+
     admin.removePeer(ID_ONE);
   }
 
   @Test
   public void testRemovePeerTableCFs() throws Exception {
+    ReplicationPeerConfig rpc1 = new ReplicationPeerConfig();
+    rpc1.setClusterKey(KEY_ONE);
+    TableName tab1 = TableName.valueOf("t1");
+    TableName tab2 = TableName.valueOf("t2");
+    TableName tab3 = TableName.valueOf("t3");
     // Add a valid peer
-    admin.addPeer(ID_ONE, KEY_ONE);
+    admin.addPeer(ID_ONE, rpc1);
+    Map<TableName, List<String>> tableCFs = new HashMap<>();
     try {
-      admin.removePeerTableCFs(ID_ONE, "t3");
+      tableCFs.put(tab3, null);
+      admin.removePeerTableCFs(ID_ONE, tableCFs);
       assertTrue(false);
     } catch (ReplicationException e) {
     }
-    assertEquals("", admin.getPeerTableCFs(ID_ONE));
+    assertNull(admin.getPeerConfig(ID_ONE).getTableCFsMap());
 
-    admin.setPeerTableCFs(ID_ONE, "t1;t2:cf1");
+    tableCFs.clear();
+    tableCFs.put(tab1, null);
+    tableCFs.put(tab2, new ArrayList<String>());
+    tableCFs.get(tab2).add("cf1");
+    admin.setPeerTableCFs(ID_ONE, tableCFs);
     try {
-      admin.removePeerTableCFs(ID_ONE, "t3");
+      tableCFs.clear();
+      tableCFs.put(tab3, null);
+      admin.removePeerTableCFs(ID_ONE, tableCFs);
       assertTrue(false);
     } catch (ReplicationException e) {
     }
-    assertEquals("t1;t2:cf1", admin.getPeerTableCFs(ID_ONE));
+    Map<TableName, List<String>> result = admin.getPeerConfig(ID_ONE).getTableCFsMap();
+    assertEquals(2, result.size());
+    assertTrue("Should contain t1", result.containsKey(tab1));
+    assertTrue("Should contain t2", result.containsKey(tab2));
+    assertNull(result.get(tab1));
+    assertEquals(1, result.get(tab2).size());
+    assertEquals("cf1", result.get(tab2).get(0));
 
+    tableCFs.clear();
+    tableCFs.put(tab1, new ArrayList<String>());
+    tableCFs.get(tab1).add("f1");
     try {
-      admin.removePeerTableCFs(ID_ONE, "t1:f1");
+      admin.removePeerTableCFs(ID_ONE, tableCFs);
       assertTrue(false);
     } catch (ReplicationException e) {
     }
-    admin.removePeerTableCFs(ID_ONE, "t1");
-    assertEquals("t2:cf1", admin.getPeerTableCFs(ID_ONE));
+    tableCFs.clear();
+    tableCFs.put(tab1, null);
+    admin.removePeerTableCFs(ID_ONE, tableCFs);
+    result = admin.getPeerConfig(ID_ONE).getTableCFsMap();
+    assertEquals(1, result.size());
+    assertEquals(1, result.get(tab2).size());
+    assertEquals("cf1", result.get(tab2).get(0));
 
+    tableCFs.clear();
+    tableCFs.put(tab2, null);
     try {
-      admin.removePeerTableCFs(ID_ONE, "t2");
+      admin.removePeerTableCFs(ID_ONE, tableCFs);
       assertTrue(false);
     } catch (ReplicationException e) {
     }
-    admin.removePeerTableCFs(ID_ONE, "t2:cf1");
-    assertEquals("", admin.getPeerTableCFs(ID_ONE));
+    tableCFs.clear();
+    tableCFs.put(tab2, new ArrayList<String>());
+    tableCFs.get(tab2).add("cf1");
+    admin.removePeerTableCFs(ID_ONE, tableCFs);
+    assertNull(admin.getPeerConfig(ID_ONE).getTableCFsMap());
     admin.removePeer(ID_ONE);
   }
 }

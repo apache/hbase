@@ -143,6 +143,7 @@ import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
+import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -711,6 +712,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
+
+    // This is for backwards compatibility
+    // See HBASE-11393
+    status.setStatus("Update TableCFs node in ZNode");
+    TableCFsUpdater tableCFsUpdater = new TableCFsUpdater(zooKeeper,
+            conf, this.clusterConnection);
+    tableCFsUpdater.update();
 
     // initialize master side coprocessors before we start handling requests
     status.setStatus("Initializing master coprocessors");

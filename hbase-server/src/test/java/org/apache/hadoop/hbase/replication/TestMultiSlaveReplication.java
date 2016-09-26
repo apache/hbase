@@ -152,7 +152,9 @@ public class TestMultiSlaveReplication {
     Table htable3 = new HTable(conf3, tableName);
     htable3.setWriteBufferSize(1024);
 
-    admin1.addPeer("1", utility2.getClusterKey());
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(utility2.getClusterKey());
+    admin1.addPeer("1", rpc);
 
     // put "row" and wait 'til it got around, then delete
     putAndWait(row, famName, htable1, htable2);
@@ -168,7 +170,9 @@ public class TestMultiSlaveReplication {
     // after the log was rolled put a new row
     putAndWait(row3, famName, htable1, htable2);
 
-    admin1.addPeer("2", utility3.getClusterKey());
+    rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(utility3.getClusterKey());
+    admin1.addPeer("2", rpc);
 
     // put a row, check it was replicated to all clusters
     putAndWait(row1, famName, htable1, htable2, htable3);
