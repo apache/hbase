@@ -1675,7 +1675,7 @@ ${dep.scm.url}
 ## fail the template. If you're looking at the source LICENSE.vm
 ## file based on a stacktrace or exception message, you need to find
 ## the generated LICENSE file that has the actual dependency info printed.
-#set($empty = [])
+set($empty = [])
 ${empty[0]}
 #end
 #end

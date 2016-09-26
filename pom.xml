@@ -1787,6 +1787,28 @@
        <artifactId>kerb-simplekdc</artifactId>
        <version>${kerby.version}</version>
      </dependency>
+
+      <!--    add version here temporary -->
+      <dependency>
+        <groupId>org.avaje.metric</groupId>
+        <artifactId>avaje-metric-core</artifactId>
+        <version>4.4.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.googlecode.json-simple</groupId>
+        <artifactId>json-simple</artifactId>
+        <version>1.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>4.5.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.inject</groupId>
+        <artifactId>guice</artifactId>
+        <version>4.1.0</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <!-- Dependencies needed by subprojects -->
