@@ -573,9 +573,12 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return reader;
     }
 
-    protected int getCellBufSize() {
+    // From non encoded HFiles, we always read back KeyValue or its descendant.(Note: When HFile
+    // block is in DBB, it will be OffheapKV). So all parts of the Cell is in a contiguous
+    // array/buffer. How many bytes we should wrap to make the KV is what this method returns.
+    private int getKVBufSize() {
       int kvBufSize = KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen;
-      if (this.reader.getFileContext().isIncludesTags()) {
+      if (currTagsLen > 0) {
         kvBufSize += Bytes.SIZEOF_SHORT + currTagsLen;
       }
       return kvBufSize;
@@ -586,7 +589,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       this.returnBlocks(true);
     }
 
-    protected int getCurCellSize() {
+    // Returns the #bytes in HFile for the current cell. Used to skip these many bytes in current
+    // HFile block's buffer so as to position to the next cell.
+    private int getCurCellSerializedSize() {
       int curCellSize =  KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen
           + currMemstoreTSLen;
       if (this.reader.getFileContext().isIncludesTags()) {
@@ -934,7 +939,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         return null;
 
       Cell ret;
-      int cellBufSize = getCellBufSize();
+      int cellBufSize = getKVBufSize();
       long seqId = 0l;
       if (this.reader.shouldIncludeMemstoreTS()) {
         seqId = currMemstoreTS;
@@ -1015,7 +1020,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      */
     private void positionThisBlockBuffer() {
       try {
-        blockBuffer.skip(getCurCellSize());
+        blockBuffer.skip(getCurCellSerializedSize());
       } catch (IllegalArgumentException e) {
         LOG.error("Current pos = " + blockBuffer.position()
             + "; currKeyLen = " + currKeyLen + "; currValLen = "

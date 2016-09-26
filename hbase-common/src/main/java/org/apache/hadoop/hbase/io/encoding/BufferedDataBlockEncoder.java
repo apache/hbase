@@ -444,7 +444,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       out.write(keyOnlyBuffer);
       // Write value
       out.write(this.valueBuffer, this.valueOffset, this.valueLength);
-      if (withTags) {
+      if (withTags && this.tagsLength > 0) {
         // 2 bytes tags length followed by tags bytes
         // tags length is serialized with 2 bytes only(short way) even if the type is int.
         // As this is non -ve numbers, we save the sign bit. See HBASE-11437
@@ -667,7 +667,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       out.write(keyBuffer.array());
       // Write value
       ByteBufferUtils.copyBufferToStream(out, this.valueBuffer, this.valueOffset, this.valueLength);
-      if (withTags) {
+      if (withTags && this.tagsLength > 0) {
         // 2 bytes tags length followed by tags bytes
         // tags length is serialized with 2 bytes only(short way) even if the type is int.
         // As this is non -ve numbers, we save the sign bit. See HBASE-11437
