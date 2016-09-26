@@ -35,10 +35,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferSupportDataOutputStream;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
@@ -870,7 +870,7 @@ public class HFileBlock implements Cacheable {
      * part of onDiskBytesWithHeader. If data is uncompressed, then this
      * variable stores the checksum data for this block.
      */
-    private byte[] onDiskChecksum;
+    private byte[] onDiskChecksum = HConstants.EMPTY_BYTE_ARRAY;
 
     /**
      * Valid in the READY state. Contains the header and the uncompressed (but
@@ -1039,7 +1039,9 @@ public class HFileBlock implements Cacheable {
           onDiskBlockBytesWithHeader.length + numBytes,
           uncompressedBlockBytesWithHeader.length, onDiskBlockBytesWithHeader.length);
       }
-      onDiskChecksum = new byte[numBytes];
+      if (onDiskChecksum.length != numBytes) {
+        onDiskChecksum = new byte[numBytes];
+      }
       ChecksumUtil.generateChecksums(
           onDiskBlockBytesWithHeader, 0, onDiskBlockBytesWithHeader.length,
           onDiskChecksum, 0, fileContext.getChecksumType(), fileContext.getBytesPerChecksum());
