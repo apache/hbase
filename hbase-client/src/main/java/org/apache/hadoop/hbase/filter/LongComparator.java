@@ -32,18 +32,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class LongComparator extends ByteArrayComparable {
-    private Long longValue;
+  private long longValue;
 
-    public LongComparator(long value) {
-      super(Bytes.toBytes(value));
-      this.longValue = value;
-    }
+  public LongComparator(long value) {
+    super(Bytes.toBytes(value));
+    this.longValue = value;
+  }
 
-    @Override
-    public int compareTo(byte[] value, int offset, int length) {
-      Long that = Bytes.toLong(value, offset, length);
-      return this.longValue.compareTo(that);
-    }
+  @Override
+  public int compareTo(byte[] value, int offset, int length) {
+    long that = Bytes.toLong(value, offset, length);
+    return Long.compare(longValue, that);
+  }
 
     /**
      * @return The comparator serialized using pb
