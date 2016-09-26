@@ -104,7 +104,7 @@ public class TruncateTableHandler extends DeleteTableHandler {
 
       HRegionInfo[] newRegions;
       if (this.preserveSplits) {
-        newRegions = regions.toArray(new HRegionInfo[regions.size()]);
+        newRegions = recreateRegionInfo(regions);
         LOG.info("Truncate will preserve " + newRegions.length + " regions");
       } else {
         newRegions = new HRegionInfo[1];
@@ -142,5 +142,14 @@ public class TruncateTableHandler extends DeleteTableHandler {
       CreateTableHandler.removeEnablingTable(assignmentManager, tableName);
       throw e;
     }
+  }
+
+  private static HRegionInfo[] recreateRegionInfo(final List<HRegionInfo> regions) {
+    HRegionInfo[] newRegions = new HRegionInfo[regions.size()];
+    int index = 0;
+    for (HRegionInfo hri: regions) {
+      newRegions[index++] = new HRegionInfo(hri.getTable(), hri.getStartKey(), hri.getEndKey());
+    }
+    return newRegions;
   }
 }
