@@ -216,10 +216,12 @@ public class TestCatalogJanitor {
   class MockMasterServices implements MasterServices {
     private final MasterFileSystem mfs;
     private final AssignmentManager asm;
+    private final ServerManager sm;
 
     MockMasterServices(final Server server) throws IOException {
       this.mfs = new MasterFileSystem(server, this);
       this.asm = Mockito.mock(AssignmentManager.class);
+      this.sm = Mockito.mock(ServerManager.class);
     }
 
     @Override
@@ -289,7 +291,7 @@ public class TestCatalogJanitor {
 
     @Override
     public ServerManager getServerManager() {
-      return null;
+      return sm;
     }
 
     @Override
