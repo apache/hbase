@@ -134,6 +134,9 @@ public class DeleteTableHandler extends TableEventHandler {
 
       // 9. Clean up any remaining rows for this table
       cleanAnyRemainingRows();
+
+      // clean region references from the server manager
+      this.masterServices.getServerManager().removeRegions(regions);
     }
 
     if (cpHost != null) {

@@ -204,6 +204,8 @@ public class CatalogJanitor extends Chore {
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
       MetaEditor.deleteMergeQualifiers(server.getCatalogTracker(), mergedRegion);
+      services.getServerManager().removeRegion(regionA);
+      services.getServerManager().removeRegion(regionB);
       return true;
     }
     return false;
@@ -336,6 +338,7 @@ public class CatalogJanitor extends Chore {
       if (LOG.isTraceEnabled()) LOG.trace("Archiving parent region: " + parent);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
       MetaEditor.deleteRegion(this.server.getCatalogTracker(), parent);
+      services.getServerManager().removeRegion(parent);
       result = true;
     }
     return result;

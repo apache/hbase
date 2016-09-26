@@ -1058,4 +1058,21 @@ public class ServerManager {
       deadservers.cleanAllPreviousInstances(serverName);
     }
   }
+
+  /**
+   * Called by delete table and similar to notify the ServerManager that a region was removed.
+   */
+  public void removeRegion(final HRegionInfo regionInfo) {
+    final byte[] encodedName = regionInfo.getEncodedNameAsBytes();
+    flushedSequenceIdByRegion.remove(encodedName);
+  }
+
+  /**
+   * Called by delete table and similar to notify the ServerManager that a region was removed.
+   */
+  public void removeRegions(final List<HRegionInfo> regions) {
+    for (HRegionInfo hri: regions) {
+      removeRegion(hri);
+    }
+  }
 }
