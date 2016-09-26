@@ -379,6 +379,9 @@ public class DeleteTableProcedure
 
     // Clean any remaining rows for this table.
     cleanAnyRemainingRows(env, tableName);
+
+    // clean region references from the server manager
+    env.getMasterServices().getServerManager().removeRegions(regions);
   }
 
   protected static void deleteAssignmentState(final MasterProcedureEnv env,
