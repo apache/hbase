@@ -773,7 +773,7 @@ public class HFileBlock implements Cacheable {
      * part of onDiskBytesWithHeader. If data is uncompressed, then this
      * variable stores the checksum data for this block.
      */
-    private byte[] onDiskChecksum;
+    private byte[] onDiskChecksum = HConstants.EMPTY_BYTE_ARRAY;
 
     /**
      * Valid in the READY state. Contains the header and the uncompressed (but
@@ -918,7 +918,9 @@ public class HFileBlock implements Cacheable {
           onDiskBytesWithHeader.length + numBytes,
           uncompressedBytesWithHeader.length, onDiskBytesWithHeader.length);
 
-      onDiskChecksum = new byte[numBytes];
+      if (onDiskChecksum.length != numBytes) {
+        onDiskChecksum = new byte[numBytes];
+      }
       ChecksumUtil.generateChecksums(
           onDiskBytesWithHeader, 0, onDiskBytesWithHeader.length,
           onDiskChecksum, 0, fileContext.getChecksumType(), fileContext.getBytesPerChecksum());
