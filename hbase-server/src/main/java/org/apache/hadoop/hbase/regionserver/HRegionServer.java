@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import cn.enncloud.metric.DefaultEnnHBaseMetrics;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -520,6 +521,7 @@ public class HRegionServer extends HasThread implements
    */
   public HRegionServer(Configuration conf, CoordinatedStateManager csm)
       throws IOException {
+    DefaultEnnHBaseMetrics.startMetricsCollector(conf);
     this.fsOk = true;
     this.conf = conf;
     HFile.checkHFileVersion(this.conf);
