@@ -151,7 +151,9 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
         minTimestamp == null ? Long.MAX_VALUE : file.getMinimumTimestamp());
       int upperWindowIndex = Collections.binarySearch(boundaries,
         file.getMaximumTimestamp() == null ? Long.MAX_VALUE : file.getMaximumTimestamp());
-
+      // Handle boundary conditions and negative values of binarySearch
+      lowerWindowIndex = (lowerWindowIndex < 0) ? Math.abs(lowerWindowIndex + 2) : lowerWindowIndex;
+      upperWindowIndex = (upperWindowIndex < 0) ? Math.abs(upperWindowIndex + 2) : upperWindowIndex;
       if (lowerWindowIndex != upperWindowIndex) {
         LOG.debug("Major compaction triggered on store " + this + "; because file " 
           + file.getPath() + " has data with timestamps cross window boundaries"); 

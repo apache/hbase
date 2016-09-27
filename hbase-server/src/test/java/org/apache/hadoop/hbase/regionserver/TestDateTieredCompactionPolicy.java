@@ -235,6 +235,22 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
   }
 
   /**
+   * Major Compaction to check min max timestamp falling in the same window and also to check
+   * boundary condition in which case binary sort gives insertion point as length of the array
+   * @throws IOException
+   */
+  @Test
+  public void checkMinMaxTimestampSameBoundary() throws IOException {
+    long[] minTimestamps = new long[] { 0, 26, 50, 90, 98, 122, 145, 151, 158, 166 };
+    long[] maxTimestamps = new long[] { 12, 46, 70, 95, 100, 140, 148, 155, 162, 174 };
+    long[] sizes = new long[] { 0, 50, 51, 40, 41, 42, 33, 30, 31, 2 };
+
+    compactEquals(161, sfCreate(minTimestamps, maxTimestamps, sizes),
+      new long[] { 0, 50, 51, 40, 41, 42, 33, 30, 31, 2 },
+      new long[] { Long.MIN_VALUE, 24, 48, 72, 96, 120, 144, 150, 156 }, true, true);
+  }
+
+  /**
    * Major compaction with negative numbers
    * @throws IOException with error
    */
