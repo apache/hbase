@@ -512,7 +512,6 @@ public interface Region extends ConfigurationObserver {
    * pre/post processing of a given bulkload call
    */
   interface BulkLoadListener {
-
     /**
      * Called before an HFile is actually loaded
      * @param family family being loaded to
@@ -520,7 +519,8 @@ public interface Region extends ConfigurationObserver {
      * @return final path to be used for actual loading
      * @throws IOException
      */
-    String prepareBulkLoad(byte[] family, String srcPath) throws IOException;
+    String prepareBulkLoad(byte[] family, String srcPath, boolean copyFile)
+        throws IOException;
 
     /**
      * Called after a successful HFile load
@@ -552,6 +552,21 @@ public interface Region extends ConfigurationObserver {
    */
   boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
       BulkLoadListener bulkLoadListener) throws IOException;
+
+  /**
+   * Attempts to atomically load a group of hfiles.  This is critical for loading
+   * rows with multiple column families atomically.
+   *
+   * @param familyPaths List of Pair&lt;byte[] column family, String hfilePath&gt;
+   * @param assignSeqId
+   * @param bulkLoadListener Internal hooks enabling massaging/preparation of a
+   * file about to be bulk loaded
+   * @param copyFile always copy hfiles if true
+   * @return true if successful, false if failed recoverably
+   * @throws IOException if failed unrecoverably.
+   */
+  boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
+      BulkLoadListener bulkLoadListener, boolean copyFile) throws IOException;
 
   ///////////////////////////////////////////////////////////////////////////
   // Coprocessors

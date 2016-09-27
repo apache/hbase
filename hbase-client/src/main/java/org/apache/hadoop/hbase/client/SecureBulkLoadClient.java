@@ -113,9 +113,30 @@ public class SecureBulkLoadClient {
       final List<Pair<byte[], String>> familyPaths,
       final byte[] regionName, boolean assignSeqNum,
       final Token<?> userToken, final String bulkToken) throws IOException {
+    return secureBulkLoadHFiles(client, familyPaths, regionName, assignSeqNum, userToken, bulkToken,
+        false);
+  }
+
+  /**
+   * Securely bulk load a list of HFiles using client protocol.
+   *
+   * @param client
+   * @param familyPaths
+   * @param regionName
+   * @param assignSeqNum
+   * @param userToken
+   * @param bulkToken
+   * @param copyFiles
+   * @return true if all are loaded
+   * @throws IOException
+   */
+  public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
+      final List<Pair<byte[], String>> familyPaths,
+      final byte[] regionName, boolean assignSeqNum,
+      final Token<?> userToken, final String bulkToken, boolean copyFiles) throws IOException {
     BulkLoadHFileRequest request =
         RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum,
-          userToken, bulkToken);
+          userToken, bulkToken, copyFiles);
 
     try {
       BulkLoadHFileResponse response = client.bulkLoadHFile(null, request);

@@ -5422,6 +5422,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
       BulkLoadListener bulkLoadListener) throws IOException {
+    return bulkLoadHFiles(familyPaths, assignSeqId, bulkLoadListener, false);
+  }
+
+  @Override
+  public boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
+      BulkLoadListener bulkLoadListener, boolean copyFile) throws IOException {
     long seqId = -1;
     Map<byte[], List<Path>> storeFiles = new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
     Map<String, Long> storeFilesSizes = new HashMap<String, Long>();
@@ -5503,7 +5509,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         try {
           String finalPath = path;
           if (bulkLoadListener != null) {
-            finalPath = bulkLoadListener.prepareBulkLoad(familyName, path);
+            finalPath = bulkLoadListener.prepareBulkLoad(familyName, path, copyFile);
           }
           Path commitedStoreFile = store.bulkLoadHFile(finalPath, seqId);
 
