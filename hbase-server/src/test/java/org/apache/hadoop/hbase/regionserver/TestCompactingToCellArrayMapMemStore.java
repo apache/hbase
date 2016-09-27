@@ -22,12 +22,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -36,9 +33,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -281,13 +275,14 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
       Threads.sleep(10);
     }
     List<KeyValueScanner> scanners = memstore.getScanners(Long.MAX_VALUE);
-    MemStoreScanner scanner = new MemStoreScanner(CellComparator.COMPARATOR, scanners);
+    // seek
+    scanners.get(0).seek(KeyValue.LOWESTKEY);
     int count = 0;
-    while (scanner.next() != null) {
+    while (scanners.get(0).next() != null) {
       count++;
     }
     assertEquals("the count should be ", count, 150);
-    scanner.close();
+    scanners.get(0).close();
   }
 
   @Test
@@ -345,17 +340,4 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     }
     regionServicesForStores.addAndGetGlobalMemstoreSize(hmc.getActive().size() - size);//
   }
-
-  private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
-    long t = 1234;
-
-    @Override public long currentTime() {
-      return t;
-    }
-
-    public void setCurrentTimeMillis(long t) {
-      this.t = t;
-    }
-  }
-
 }

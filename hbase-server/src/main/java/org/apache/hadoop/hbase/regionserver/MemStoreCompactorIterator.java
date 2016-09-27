@@ -65,7 +65,7 @@ public class MemStoreCompactorIterator implements Iterator<Cell> {
       scanners.add(segment.getScanner(store.getSmallestReadPoint()));
     }
 
-    scanner = new MemStoreScanner(comparator, scanners, MemStoreScanner.Type.COMPACT_FORWARD);
+    scanner = new MemStoreScanner(comparator, scanners, true);
 
     // reinitialize the compacting scanner for each instance of iterator
     compactingScanner = createScanner(store, scanner);
@@ -101,7 +101,6 @@ public class MemStoreCompactorIterator implements Iterator<Cell> {
   public void close() {
     compactingScanner.close();
     compactingScanner = null;
-    scanner.close();
     scanner = null;
   }
 

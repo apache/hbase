@@ -67,11 +67,11 @@ public class SegmentScanner implements KeyValueScanner {
   protected SegmentScanner(Segment segment, long readPoint, long scannerOrder) {
     this.segment = segment;
     this.readPoint = readPoint;
+    //increase the reference count so the underlying structure will not be de-allocated
+    this.segment.incScannerCount();
     iter = segment.iterator();
     // the initialization of the current is required for working with heap of SegmentScanners
     current = getNext();
-    //increase the reference count so the underlying structure will not be de-allocated
-    this.segment.incScannerCount();
     this.scannerOrder = scannerOrder;
   }
 
