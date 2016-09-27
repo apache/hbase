@@ -194,6 +194,8 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
+import org.avaje.metric.CounterMetric;
+import org.avaje.metric.MetricManager;
 
 
 @SuppressWarnings("deprecation")
@@ -5623,6 +5625,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this(scan, additionalScanners, region, HConstants.NO_NONCE, HConstants.NO_NONCE);
     }
 
+    CounterMetric beforeReadPointSync = MetricManager.getCounterMetric(HRegion.class, "beforeRPTSync");
+    CounterMetric afterReadPointSync = MetricManager.getCounterMetric(HRegion.class, "afterRPTSync");
+
     RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
         long nonceGroup, long nonce) throws IOException {
       this.region = region;
@@ -5653,7 +5658,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // synchronize on scannerReadPoints so that nobody calculates
       // getSmallestReadPoint, before scannerReadPoints is updated.
       IsolationLevel isolationLevel = scan.getIsolationLevel();
+      beforeReadPointSync.markEvent();
       synchronized(scannerReadPoints) {
+        afterReadPointSync.markEvent();
         if (nonce == HConstants.NO_NONCE || rsServices == null
             || rsServices.getNonceManager() == null) {
           this.readPt = getReadPoint(isolationLevel);
