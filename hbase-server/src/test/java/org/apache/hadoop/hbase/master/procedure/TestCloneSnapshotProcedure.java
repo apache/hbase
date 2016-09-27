@@ -51,60 +51,19 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
-public class TestCloneSnapshotProcedure {
+public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestCloneSnapshotProcedure.class);
-
-  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   protected final byte[] CF = Bytes.toBytes("cf1");
 
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
-
   private static HBaseProtos.SnapshotDescription snapshot = null;
 
-  private static void setupConf(Configuration conf) {
-    conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
-  }
-
-  @BeforeClass
-  public static void setupCluster() throws Exception {
-    setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(1);
-  }
-
-  @AfterClass
-  public static void cleanupTest() throws Exception {
-    try {
-      UTIL.shutdownMiniCluster();
-    } catch (Exception e) {
-      LOG.warn("failure shutting down cluster", e);
-    }
-  }
-
-  @Before
-  public void setup() throws Exception {
-    resetProcExecutorTestingKillFlag();
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
-  }
-
   @After
+  @Override
   public void tearDown() throws Exception {
-    resetProcExecutorTestingKillFlag();
-    TableName[] tables = UTIL.getHBaseAdmin().listTableNames();
-    for (int i = 0; i < tables.length; ++i) {
-      UTIL.deleteTable(tables[i]);
-    }
+    super.tearDown();
     SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
     snapshot = null;
-  }
-
-  private void resetProcExecutorTestingKillFlag() {
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    assertTrue("expected executor to be running", procExec.isRunning());
   }
 
   private HBaseProtos.SnapshotDescription getSnapshot() throws Exception {
@@ -245,9 +204,5 @@ public class TestCloneSnapshotProcedure {
 
     MasterProcedureTestingUtility.validateTableDeletion(
       UTIL.getHBaseCluster().getMaster(), clonedTableName);
-  }
-
-  private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
-    return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
 }
