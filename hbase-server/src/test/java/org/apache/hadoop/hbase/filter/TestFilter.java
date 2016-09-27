@@ -1660,7 +1660,7 @@ public class TestFilter {
     int i = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
-      Arrays.sort(results.toArray(new KeyValue[results.size()]),
+      Arrays.sort(results.toArray(new Cell[results.size()]),
           CellComparator.COMPARATOR);
       LOG.info("counter=" + i + ", " + results);
       if (results.isEmpty()) break;
@@ -1682,7 +1682,7 @@ public class TestFilter {
     int i = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
-      Arrays.sort(results.toArray(new KeyValue[results.size()]),
+      Arrays.sort(results.toArray(new Cell[results.size()]),
           CellComparator.COMPARATOR);
       LOG.info("counter=" + i + ", " + results);
       if(results.isEmpty()) break;
@@ -1704,7 +1704,7 @@ public class TestFilter {
     int idx = 0;
     for (boolean done = true; done; row++) {
       done = scanner.next(results);
-      Arrays.sort(results.toArray(new KeyValue[results.size()]),
+      Arrays.sort(results.toArray(new Cell[results.size()]),
           CellComparator.COMPARATOR);
       if(results.isEmpty()) break;
       assertTrue("Scanned too many keys! Only expected " + kvs.length +
@@ -1735,7 +1735,7 @@ public class TestFilter {
     int idx = 0;
     for (boolean more = true; more; row++) {
       more = scanner.next(results);
-      Arrays.sort(results.toArray(new KeyValue[results.size()]),
+      Arrays.sort(results.toArray(new Cell[results.size()]),
           CellComparator.COMPARATOR);
       if(results.isEmpty()) break;
       assertTrue("Scanned too many keys! Only expected " + kvs.length +
