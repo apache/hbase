@@ -76,6 +76,7 @@ public class TestCompressionTest {
       nativeCodecTest("LZ4", null, "org.apache.hadoop.io.compress.Lz4Codec");
       nativeCodecTest("SNAPPY", "snappy", "org.apache.hadoop.io.compress.SnappyCodec");
       nativeCodecTest("BZIP2", "bzip2", "org.apache.hadoop.io.compress.BZip2Codec");
+      nativeCodecTest("ZSTD", "zstd", "org.apache.hadoop.io.compress.ZStandardCodec");
     } else {
       // Hadoop nativelib is not available
       LOG.debug("Native code not loaded");
@@ -83,6 +84,7 @@ public class TestCompressionTest {
       assertFalse(CompressionTest.testCompression("LZ4"));
       assertFalse(CompressionTest.testCompression("SNAPPY"));
       assertFalse(CompressionTest.testCompression("BZIP2"));
+      assertFalse(CompressionTest.testCompression("ZSTD"));
     }
   }
 
