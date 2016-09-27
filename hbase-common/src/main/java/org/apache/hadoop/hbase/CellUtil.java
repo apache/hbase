@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.Tag.TAG_LENGTH_SIZE;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -377,8 +378,7 @@ public final class CellUtil {
    * parts, refer to the original Cell.
    */
   @InterfaceAudience.Private
-  private static class TagRewriteCell implements Cell, SettableSequenceId, SettableTimestamp,
-      HeapSize {
+  private static class TagRewriteCell implements ExtendedCell {
     protected Cell cell;
     protected byte[] tags;
 
@@ -387,8 +387,7 @@ public final class CellUtil {
      * @param tags the tags bytes. The array suppose to contain the tags bytes alone.
      */
     public TagRewriteCell(Cell cell, byte[] tags) {
-      assert cell instanceof SettableSequenceId;
-      assert cell instanceof SettableTimestamp;
+      assert cell instanceof ExtendedCell;
       assert tags != null;
       this.cell = cell;
       this.tags = tags;
@@ -521,6 +520,28 @@ public final class CellUtil {
     public void setSequenceId(long seqId) throws IOException {
       // The incoming cell is supposed to be SettableSequenceId type.
       CellUtil.setSequenceId(cell, seqId);
+    }
+
+    @Override
+    public int write(OutputStream out, boolean withTags) throws IOException {
+      int len = ((ExtendedCell) this.cell).write(out, false);
+      if (withTags && this.tags != null) {
+        // Write the tagsLength 2 bytes
+        out.write((byte) (0xff & (this.tags.length >> 8)));
+        out.write((byte) (0xff & this.tags.length));
+        out.write(this.tags);
+        len += KeyValue.TAGS_LENGTH_SIZE + this.tags.length;
+      }
+      return len;
+    }
+
+    @Override
+    public int getSerializedSize(boolean withTags) {
+      int len = ((ExtendedCell) this.cell).getSerializedSize(false);
+      if (withTags && this.tags != null) {
+        len += KeyValue.TAGS_LENGTH_SIZE + this.tags.length;
+      }
+      return len;
     }
   }
 
@@ -1996,7 +2017,9 @@ public final class CellUtil {
    * These cells are used in reseeks/seeks to improve the read performance.
    * They are not real cells that are returned back to the clients
    */
-  private static abstract class EmptyByteBufferedCell extends ByteBufferedCell implements SettableSequenceId {
+  private static abstract class EmptyByteBufferedCell extends ByteBufferedCell
+      implements SettableSequenceId {
+
     @Override
     public void setSequenceId(long seqId) {
       // Fake cells don't need seqId, so leaving it as a noop.

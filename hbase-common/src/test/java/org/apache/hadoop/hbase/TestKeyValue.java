@@ -34,6 +34,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.assertNotEquals;
@@ -569,7 +570,9 @@ public class TestKeyValue extends TestCase {
     MockKeyValue mkvA2 = new MockKeyValue(kvA2);
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     DataOutputStream os = new DataOutputStream(byteArrayOutputStream);
+    ByteBufferUtils.putInt(os, KeyValueUtil.getSerializedSize(mkvA1, true));
     KeyValueUtil.oswrite(mkvA1, os, true);
+    ByteBufferUtils.putInt(os, KeyValueUtil.getSerializedSize(mkvA2, true));
     KeyValueUtil.oswrite(mkvA2, os, true);
     DataInputStream is = new DataInputStream(new ByteArrayInputStream(
         byteArrayOutputStream.toByteArray()));

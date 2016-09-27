@@ -594,10 +594,18 @@ public class KeyValueUtil {
     return new KeyValue(bytes, 0, length);
   }
 
+  public static int getSerializedSize(Cell cell, boolean withTags) {
+    if (cell instanceof ExtendedCell) {
+      return ((ExtendedCell) cell).getSerializedSize(withTags);
+    }
+    return length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
+        cell.getValueLength(), cell.getTagsLength(), withTags);
+  }
+
   public static void oswrite(final Cell cell, final OutputStream out, final boolean withTags)
       throws IOException {
-    if (cell instanceof Streamable) {
-      ((Streamable)cell).write(out, withTags);
+    if (cell instanceof ExtendedCell) {
+      ((ExtendedCell)cell).write(out, withTags);
     } else {
       short rlen = cell.getRowLength();
       byte flen = cell.getFamilyLength();
@@ -605,8 +613,6 @@ public class KeyValueUtil {
       int vlen = cell.getValueLength();
       int tlen = cell.getTagsLength();
 
-      // write total length
-      ByteBufferUtils.putInt(out, length(rlen, flen, qlen, vlen, tlen, withTags));
       // write key length
       ByteBufferUtils.putInt(out, keyLength(rlen, flen, qlen));
       // write value length

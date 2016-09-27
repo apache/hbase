@@ -24,8 +24,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 /**
  * Using this Interface one can mark a Cell as Sequence stampable. <br>
  * Note : Make sure to make Cell implementation of this type in server side.
+ * @deprecated as of 2.0 and will be removed in 3.0. Use {@link ExtendedCell} instead
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@Deprecated
 public interface SettableSequenceId {
 
   /**

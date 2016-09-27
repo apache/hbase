@@ -26,14 +26,12 @@ import org.apache.hadoop.hbase.ByteBufferedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SettableSequenceId;
-import org.apache.hadoop.hbase.Streamable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -280,8 +278,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
    */
   // We return this as a Cell to the upper layers of read flow and might try setting a new SeqId
   // there. So this has to be an instance of SettableSequenceId.
-  protected static class OnheapDecodedCell implements Cell, HeapSize, SettableSequenceId,
-      Streamable {
+  protected static class OnheapDecodedCell implements ExtendedCell {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
         + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
         + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.ARRAY));
@@ -429,15 +426,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public int write(OutputStream out) throws IOException {
-      return write(out, true);
-    }
-
-    @Override
     public int write(OutputStream out, boolean withTags) throws IOException {
-      int lenToWrite = KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength,
-          tagsLength, withTags);
-      ByteBufferUtils.putInt(out, lenToWrite);
+      int lenToWrite = getSerializedSize(withTags);
       ByteBufferUtils.putInt(out, keyOnlyBuffer.length);
       ByteBufferUtils.putInt(out, valueLength);
       // Write key
@@ -452,12 +442,29 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         out.write((byte) (0xff & this.tagsLength));
         out.write(this.tagsBuffer, this.tagsOffset, this.tagsLength);
       }
-      return lenToWrite + Bytes.SIZEOF_INT;
+      return lenToWrite;
+    }
+
+    @Override
+    public int getSerializedSize(boolean withTags) {
+      return KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength, tagsLength,
+          withTags);
+    }
+
+    @Override
+    public void setTimestamp(long ts) throws IOException {
+      // This is not used in actual flow. Throwing UnsupportedOperationException
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
+      // This is not used in actual flow. Throwing UnsupportedOperationException
+      throw new UnsupportedOperationException();
     }
   }
 
-  protected static class OffheapDecodedCell extends ByteBufferedCell implements HeapSize,
-      SettableSequenceId, Streamable {
+  protected static class OffheapDecodedCell extends ByteBufferedCell implements ExtendedCell {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
         + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
         + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.BYTE_BUFFER));
@@ -652,15 +659,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public int write(OutputStream out) throws IOException {
-      return write(out, true);
-    }
-
-    @Override
     public int write(OutputStream out, boolean withTags) throws IOException {
-      int lenToWrite = KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength,
-          tagsLength, withTags);
-      ByteBufferUtils.putInt(out, lenToWrite);
+      int lenToWrite = getSerializedSize(withTags);
       ByteBufferUtils.putInt(out, keyBuffer.capacity());
       ByteBufferUtils.putInt(out, valueLength);
       // Write key
@@ -675,7 +675,25 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         out.write((byte) (0xff & this.tagsLength));
         ByteBufferUtils.copyBufferToStream(out, this.tagsBuffer, this.tagsOffset, this.tagsLength);
       }
-      return lenToWrite + Bytes.SIZEOF_INT;
+      return lenToWrite;
+    }
+
+    @Override
+    public int getSerializedSize(boolean withTags) {
+      return KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength, tagsLength,
+          withTags);
+    }
+
+    @Override
+    public void setTimestamp(long ts) throws IOException {
+      // This is not used in actual flow. Throwing UnsupportedOperationException
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
+      // This is not used in actual flow. Throwing UnsupportedOperationException
+      throw new UnsupportedOperationException();
     }
   }
 

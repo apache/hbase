@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -339,6 +340,7 @@ public class WALCellCodec implements Codec {
     public void write(Cell cell) throws IOException {
       checkFlushed();
       // Make sure to write tags into WAL
+      ByteBufferUtils.putInt(this.out, KeyValueUtil.getSerializedSize(cell, true));
       KeyValueUtil.oswrite(cell, this.out, true);
     }
   }

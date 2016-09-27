@@ -22,7 +22,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -32,8 +31,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * memory.
  */
 @InterfaceAudience.Private
-public class OffheapKeyValue extends ByteBufferedCell
-  implements HeapSize, SettableSequenceId, Streamable {
+public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
 
   protected final ByteBuffer buf;
   protected final int offset;
@@ -241,25 +239,36 @@ public class OffheapKeyValue extends ByteBufferedCell
   }
 
   @Override
-  public int write(OutputStream out) throws IOException {
-    return write(out, true);
+  public int write(OutputStream out, boolean withTags) throws IOException {
+    int length = getSerializedSize(withTags);
+    ByteBufferUtils.copyBufferToStream(out, this.buf, this.offset, length);
+    return length;
   }
 
   @Override
-  public int write(OutputStream out, boolean withTags) throws IOException {
-    // In KeyValueUtil#oswrite we do a Cell serialization as KeyValue. Any
-    // changes doing here, pls check KeyValueUtil#oswrite also and do necessary changes.
-    int length = this.length;
-    if (hasTags && !withTags) {
-      length = keyLen + this.getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+  public int getSerializedSize(boolean withTags) {
+    if (withTags) {
+      return this.length;
     }
-    ByteBufferUtils.putInt(out, length);
-    ByteBufferUtils.copyBufferToStream(out, this.buf, this.offset, length);
-    return length + Bytes.SIZEOF_INT;
+    return this.keyLen + this.getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 
   @Override
   public String toString() {
     return CellUtil.toString(this, true);
+  }
+
+  @Override
+  public void setTimestamp(long ts) throws IOException {
+    // This Cell implementation is not yet used in write path.
+    // TODO when doing HBASE-15179
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
+    // This Cell implementation is not yet used in write path.
+    // TODO when doing HBASE-15179
+    throw new UnsupportedOperationException();
   }
 }

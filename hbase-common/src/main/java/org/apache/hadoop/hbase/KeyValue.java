@@ -38,7 +38,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -80,8 +79,7 @@ import com.google.common.annotations.VisibleForTesting;
  * length and actual tag bytes length.
  */
 @InterfaceAudience.Private
-public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
-    SettableTimestamp, Streamable {
+public class KeyValue implements ExtendedCell {
   private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<Tag>();
 
   private static final Log LOG = LogFactory.getLog(KeyValue.class);
@@ -2475,25 +2473,23 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
   @Deprecated
   public static long oswrite(final KeyValue kv, final OutputStream out, final boolean withTags)
       throws IOException {
-    return kv.write(out, withTags);
-  }
-
-  @Override
-  public int write(OutputStream out) throws IOException {
-    return write(out, true);
+    ByteBufferUtils.putInt(out, kv.getSerializedSize(withTags));
+    return kv.write(out, withTags) + Bytes.SIZEOF_INT;
   }
 
   @Override
   public int write(OutputStream out, boolean withTags) throws IOException {
-    // In KeyValueUtil#oswrite we do a Cell serialization as KeyValue. Any changes doing here, pls
-    // check KeyValueUtil#oswrite also and do necessary changes.
-    int length = this.length;
-    if (!withTags) {
-      length = this.getKeyLength() + this.getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE;
+    int len = getSerializedSize(withTags);
+    out.write(this.bytes, this.offset, len);
+    return len;
+  }
+
+  @Override
+  public int getSerializedSize(boolean withTags) {
+    if (withTags) {
+      return this.length;
     }
-    ByteBufferUtils.putInt(out, length);
-    out.write(this.bytes, this.offset, length);
-    return length + Bytes.SIZEOF_INT;
+    return this.getKeyLength() + this.getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 
   /**
@@ -2788,6 +2784,13 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     @Override
     public long heapSize() {
       return super.heapSize() + Bytes.SIZEOF_SHORT;
+    }
+
+    @Override
+    public int write(OutputStream out, boolean withTags) throws IOException {
+      // This type of Cell is used only to maintain some internal states. We never allow this type
+      // of Cell to be returned back over the RPC
+      throw new IllegalStateException("A reader should never return this type of a Cell");
     }
   }
 }

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 
 /**
  * Codec that does KeyValue version 1 serialization with serializing tags also.
@@ -61,6 +62,7 @@ public class KeyValueCodecWithTags implements Codec {
     public void write(Cell cell) throws IOException {
       checkFlushed();
       // Write tags
+      ByteBufferUtils.putInt(this.out, KeyValueUtil.getSerializedSize(cell, true));
       KeyValueUtil.oswrite(cell, out, true);
     }
   }
