@@ -2283,15 +2283,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
-  private CounterMetric inNum =
-      MetricManager.getCounterMetric(RSRpcServices.class, "RpcInNum");
-  private CounterMetric inBytes =
-      MetricManager.getCounterMetric(RSRpcServices.class, "RpcInBytes");
-  private CounterMetric outNum =
-      MetricManager.getCounterMetric(RSRpcServices.class, "RpcOutNum");
-  private CounterMetric outBytes =
-      MetricManager.getCounterMetric(RSRpcServices.class, "RpcOutBytes");
-
   /**
    * Execute multiple actions on a table: get, mutate, and/or execCoprocessor
    *
@@ -2307,8 +2298,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
-    inNum.markEvent();
-    inBytes.markEvents(request.getSerializedSize());
 
     // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
@@ -2412,8 +2401,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     responseBuilder.setRegionStatistics(builder);
     MultiResponse response = responseBuilder.build();
-    outNum.markEvent();
-    outBytes.markEvents(response.getSerializedSize());
     return response;
   }
 
