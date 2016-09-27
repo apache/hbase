@@ -1913,8 +1913,9 @@ public class HConnectionManager {
               @Override public void stop(String why) { isStopped = true;}
               @Override public boolean isStopped() {return isStopped;}
             };
-
-        return new DelayedClosing(hci, stoppable);
+        DelayedClosing delayedClosing = new DelayedClosing(hci, stoppable);
+        delayedClosing.start();
+        return delayedClosing;
       }
 
       protected void closeMasterProtocol(MasterServiceState protocolState) {
