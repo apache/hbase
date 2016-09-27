@@ -190,11 +190,15 @@ for url_max_build in expanded_urls:
             if is_bad:
                 test_to_build_ids[bad_test]['bad_count'] += 1
 
-    # Calculate flakyness % for each test.
+    # Calculate flakyness % and successful builds for each test. Also sort build ids.
     for bad_test in test_to_build_ids:
-        test_to_build_ids[bad_test]['flakyness'] = (
-            (test_to_build_ids[bad_test]['bad_count']) * 100.0 /
-            len(test_to_build_ids[bad_test]['all']))
+        test_result = test_to_build_ids[bad_test]
+        test_result['flakyness'] = test_result['bad_count'] * 100.0 / len(test_result['all'])
+        test_result['success'] = (test_result['all'].difference(
+            test_result['failed'].union(test_result['hanging'])))
+        for key in ['all', 'timeout', 'failed', 'hanging', 'success']:
+            test_result[key] = sorted(test_result[key])
+
 
     # Sort tests in descending order by flakyness.
     sorted_test_to_build_ids = OrderedDict(

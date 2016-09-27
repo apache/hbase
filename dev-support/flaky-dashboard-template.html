@@ -91,7 +91,7 @@
     {% set failed = result[test]['failed'] %}
     {% set timeout = result[test]['timeout'] %}
     {% set hanging = result[test]['hanging'] %}
-    {% set success = all.difference(failed).difference(hanging) %}
+    {% set success = result[test]['success'] %}
     <tr>
         <td>{{ test |e }}</td>
         {% set flakyness =
