@@ -2160,6 +2160,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return region.execService(execController, serviceCall);
   }
 
+
+  private CounterMetric singleGetInNum = MetricManager.getCounterMetric(RSRpcServices.class, "singleGetInNum");
+  private CounterMetric singleGetOutNum = MetricManager.getCounterMetric(RSRpcServices.class, "singleGetOutNum");
+
+  private CounterMetric singleGetInBytes = MetricManager.getCounterMetric(RSRpcServices.class, "singleGetInBytes");
+  private CounterMetric singleGetOutBytes = MetricManager.getCounterMetric(RSRpcServices.class, "singleGetOutBytes");
+
   /**
    * Get data from a table.
    *
@@ -2176,6 +2183,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       rpcGetRequestCount.increment();
+      singleGetInNum.markEvent();
+      singleGetInBytes.markEvents(request.getSerializedSize());
       Region region = getRegion(request.getRegion());
 
       GetResponse.Builder builder = GetResponse.newBuilder();
@@ -2224,7 +2233,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (r != null) {
         quota.addGetResult(r);
       }
-      return builder.build();
+      GetResponse response = builder.build();
+      singleGetOutNum.markEvent();
+      singleGetOutBytes.markEvents(response.getSerializedSize());
+      return response;
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
