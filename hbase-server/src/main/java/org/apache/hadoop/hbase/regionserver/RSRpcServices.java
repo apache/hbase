@@ -2694,6 +2694,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             rsh.incNextCallSeq();
           }
         }
+        boolean scannerClosed = false;
         try {
           // Remove lease while its being processed in server; protects against case
           // where processing of request takes > lease expiration time.
@@ -2907,6 +2908,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // fail this RPC and close the scanner while opening up another one from the start of
           // row that the client has last seen.
           closeScanner(region, scanner, scannerName, context);
+          // scanner is closed here
+          scannerClosed = true;
 
           // We closed the scanner already. Instead of throwing the IOException, and client
           // retrying with the same scannerId only to get USE on the next RPC, we directly throw
@@ -2920,15 +2923,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 + " scanner state for clients older than 1.3.", e);
           }
         } finally {
-          if (context != null) {
-            context.setCallBack(rsh.shippedCallback);
-          }
-          // Adding resets expiration time on lease.
-          if (scanners.containsKey(scannerName)) {
-            ttl = this.scannerLeaseTimeoutPeriod;
-            // When context != null, adding back the lease will be done in callback set above.
-            if (context == null) {
-              if (lease != null) regionServer.leases.addLease(lease);
+          // If the scanner is not closed, set the shipped callback
+          if (!scannerClosed) {
+            if (context != null) {
+              context.setCallBack(rsh.shippedCallback);
+            }
+
+            // Adding resets expiration time on lease.
+            if (scanners.containsKey(scannerName)) {
+              ttl = this.scannerLeaseTimeoutPeriod;
+              // When context != null, adding back the lease will be done in callback set above.
+              if (context == null) {
+                if (lease != null) regionServer.leases.addLease(lease);
+              }
             }
           }
         }

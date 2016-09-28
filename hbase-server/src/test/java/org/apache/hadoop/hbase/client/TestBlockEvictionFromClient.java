@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -1185,23 +1186,9 @@ public class TestBlockEvictionFromClient {
           usedBlocksFound = true;
         }
       }
-      assertTrue(usedBlocksFound);
-      // Sleep till the scan lease would expire? Can we reduce this value?
-      Thread.sleep(5100);
-      iterator = cache.iterator();
-      refCount = 0;
-      while (iterator.hasNext()) {
-        CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRefCount(cacheKey);
-        } else {
-          continue;
-        }
-        assertEquals(0, refCount);
-      }
+      assertFalse(usedBlocksFound);
+      // you should always see 0 ref count. since after HBASE-16604 we always recreate the scanner
+      assertEquals(0, refCount);
     } finally {
       if (table != null) {
         table.close();
