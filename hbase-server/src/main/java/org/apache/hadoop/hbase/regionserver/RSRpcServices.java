@@ -198,6 +198,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
 import org.avaje.metric.CounterMetric;
 import org.avaje.metric.MetricManager;
+import org.avaje.metric.TimedEvent;
+import org.avaje.metric.TimedMetric;
 
 /**
  * Implements the regionserver RPC services.
@@ -2167,6 +2169,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private CounterMetric singleGetInBytes = MetricManager.getCounterMetric(RSRpcServices.class, "singleGetInBytes");
   private CounterMetric singleGetOutBytes = MetricManager.getCounterMetric(RSRpcServices.class, "singleGetOutBytes");
 
+  private TimedMetric getTime = MetricManager.getTimedMetric(RSRpcServices.class, "singleGetRPCTime");
+
   /**
    * Get data from a table.
    *
@@ -2178,6 +2182,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public GetResponse get(final RpcController controller,
       final GetRequest request) throws ServiceException {
     long before = EnvironmentEdgeManager.currentTime();
+    TimedEvent getStart = getTime.startEvent();
     OperationQuota quota = null;
     try {
       checkOpen();
@@ -2236,8 +2241,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       GetResponse response = builder.build();
       singleGetOutNum.markEvent();
       singleGetOutBytes.markEvents(response.getSerializedSize());
+      getStart.endWithSuccess();
       return response;
     } catch (IOException ie) {
+      getStart.endWithError();
       throw new ServiceException(ie);
     } finally {
       if (regionServer.metricsRegionServer != null) {
@@ -2245,7 +2252,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       if (quota != null) {
         quota.close();
-      }
+      };
     }
   }
 
