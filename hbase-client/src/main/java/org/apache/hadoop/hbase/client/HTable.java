@@ -510,7 +510,7 @@ public class HTable implements Table {
     throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     AsyncRequestFuture ars = connection.getAsyncProcess().submitAll(
       pool, tableName, actions, callback, results);
-    ars.waitUntilDone();
+    //ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
     }

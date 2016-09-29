@@ -29,14 +29,15 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -66,6 +67,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -1395,7 +1397,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
           this.gets.clear();
         }
       } else {
-        updateValueSize(this.table.get(get));
+        this.table.batchCallback(Collections.singletonList(get),new Result[1], (Batch.Callback<Result>) (region, row, result) -> {
+          try {
+            updateValueSize(result);
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        });
       }
     }
 
