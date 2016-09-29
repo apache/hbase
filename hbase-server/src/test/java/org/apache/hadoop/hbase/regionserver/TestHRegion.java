@@ -3767,8 +3767,8 @@ public class TestHRegion {
 
     String method = "testFlushCacheWhileScanning";
     this.region = initHRegion(tableName, method, CONF, family);
+    FlushThread flushThread = new FlushThread();
     try {
-      FlushThread flushThread = new FlushThread();
       flushThread.start();
 
       Scan scan = new Scan();
@@ -3787,7 +3787,7 @@ public class TestHRegion {
         region.put(put);
 
         if (i != 0 && i % compactInterval == 0) {
-          // System.out.println("iteration = " + i);
+          LOG.debug("iteration = " + i+ " ts="+System.currentTimeMillis());
           region.compact(true);
         }
 
@@ -3806,15 +3806,20 @@ public class TestHRegion {
           if (!toggle) {
             flushThread.flush();
           }
-          assertEquals("i=" + i, expectedCount, res.size());
+          assertEquals("toggle="+toggle+"i=" + i + " ts="+System.currentTimeMillis(),
+              expectedCount, res.size());
           toggle = !toggle;
         }
       }
 
-      flushThread.done();
-      flushThread.join();
-      flushThread.checkNoError();
     } finally {
+      try {
+        flushThread.done();
+        flushThread.join();
+        flushThread.checkNoError();
+      } catch (InterruptedException ie) {
+        LOG.warn("Caught exception when joining with flushThread", ie);
+      }
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
@@ -3904,12 +3909,12 @@ public class TestHRegion {
 
     String method = "testWritesWhileScanning";
     this.region = initHRegion(tableName, method, CONF, families);
+    FlushThread flushThread = new FlushThread();
+    PutThread putThread = new PutThread(numRows, families, qualifiers);
     try {
-      PutThread putThread = new PutThread(numRows, families, qualifiers);
       putThread.start();
       putThread.waitForFirstPut();
 
-      FlushThread flushThread = new FlushThread();
       flushThread.start();
 
       Scan scan = new Scan(Bytes.toBytes("row0"), Bytes.toBytes("row1"));
@@ -3949,15 +3954,20 @@ public class TestHRegion {
 
       region.flush(true);
 
-      putThread.join();
-      putThread.checkNoError();
-
-      flushThread.done();
-      flushThread.join();
-      flushThread.checkNoError();
     } finally {
       try {
-        HBaseTestingUtility.closeRegionAndWAL(this.region);
+        flushThread.done();
+        flushThread.join();
+        flushThread.checkNoError();
+
+        putThread.join();
+        putThread.checkNoError();
+      } catch (InterruptedException ie) {
+        LOG.warn("Caught exception when joining with flushThread", ie);
+      }
+
+      try {
+          HBaseTestingUtility.closeRegionAndWAL(this.region);
       } catch (DroppedSnapshotException dse) {
         // We could get this on way out because we interrupt the background flusher and it could
         // fail anywhere causing a DSE over in the background flusher... only it is not properly
