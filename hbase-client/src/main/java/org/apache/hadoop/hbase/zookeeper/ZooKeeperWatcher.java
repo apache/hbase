@@ -485,9 +485,11 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public List<String> getMetaReplicaNodes() throws KeeperException {
     List<String> childrenOfBaseNode = ZKUtil.listChildrenNoWatch(this, baseZNode);
     List<String> metaReplicaNodes = new ArrayList<String>(2);
-    String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
-    for (String child : childrenOfBaseNode) {
-      if (child.startsWith(pattern)) metaReplicaNodes.add(child);
+    if (childrenOfBaseNode != null) {
+      String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
+      for (String child : childrenOfBaseNode) {
+        if (child.startsWith(pattern)) metaReplicaNodes.add(child);
+      }
     }
     return metaReplicaNodes;
   }
