@@ -3751,8 +3751,8 @@ public class TestHRegion {
 
     String method = "testFlushCacheWhileScanning";
     this.region = initHRegion(tableName, method, CONF, family);
+    FlushThread flushThread = new FlushThread();
     try {
-      FlushThread flushThread = new FlushThread();
       flushThread.start();
 
       Scan scan = new Scan();
@@ -3771,7 +3771,7 @@ public class TestHRegion {
         region.put(put);
 
         if (i != 0 && i % compactInterval == 0) {
-          // System.out.println("iteration = " + i);
+          LOG.debug("iteration = " + i+ " ts="+System.currentTimeMillis());
           region.compact(true);
         }
 
@@ -3790,15 +3790,20 @@ public class TestHRegion {
           if (!toggle) {
             flushThread.flush();
           }
-          assertEquals("i=" + i, expectedCount, res.size());
+          assertEquals("toggle="+toggle+"i=" + i + " ts="+System.currentTimeMillis(),
+              expectedCount, res.size());
           toggle = !toggle;
         }
       }
 
-      flushThread.done();
-      flushThread.join();
-      flushThread.checkNoError();
     } finally {
+      try {
+        flushThread.done();
+        flushThread.join();
+        flushThread.checkNoError();
+      } catch (InterruptedException ie) {
+        LOG.warn("Caught exception when joining with flushThread", ie);
+      }
       HRegion.closeHRegion(this.region);
       this.region = null;
     }
@@ -3888,12 +3893,12 @@ public class TestHRegion {
 
     String method = "testWritesWhileScanning";
     this.region = initHRegion(tableName, method, CONF, families);
+    FlushThread flushThread = new FlushThread();
+    PutThread putThread = new PutThread(numRows, families, qualifiers);
     try {
-      PutThread putThread = new PutThread(numRows, families, qualifiers);
       putThread.start();
       putThread.waitForFirstPut();
 
-      FlushThread flushThread = new FlushThread();
       flushThread.start();
 
       Scan scan = new Scan(Bytes.toBytes("row0"), Bytes.toBytes("row1"));
@@ -3928,18 +3933,21 @@ public class TestHRegion {
           prevTimestamp = timestamp;
         }
       }
-
       putThread.done();
-
       region.flush(true);
 
-      putThread.join();
-      putThread.checkNoError();
-
-      flushThread.done();
-      flushThread.join();
-      flushThread.checkNoError();
     } finally {
+      try {
+        flushThread.done();
+        flushThread.join();
+        flushThread.checkNoError();
+
+        putThread.join();
+        putThread.checkNoError();
+      } catch (InterruptedException ie) {
+        LOG.warn("Caught exception when joining with flushThread", ie);
+      }
+
       try {
         LOG.info("Before close: " + this.region.getMVCC());
         HRegion.closeHRegion(this.region);
