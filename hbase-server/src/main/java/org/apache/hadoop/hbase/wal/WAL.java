@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface WAL {
+public interface WAL extends AutoCloseable {
 
   /**
    * Registers WALActionsListener

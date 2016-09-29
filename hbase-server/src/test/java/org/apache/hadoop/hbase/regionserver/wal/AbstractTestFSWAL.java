@@ -72,7 +72,7 @@ import org.junit.rules.TestName;
 
 public abstract class AbstractTestFSWAL {
 
-  private static final Log LOG = LogFactory.getLog(AbstractTestFSWAL.class);
+  protected static final Log LOG = LogFactory.getLog(AbstractTestFSWAL.class);
 
   protected static Configuration CONF;
   protected static FileSystem FS;
