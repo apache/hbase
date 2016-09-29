@@ -327,7 +327,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (batchPool == null) {
       synchronized (this) {
         if (batchPool == null) {
-          int threads = conf.getInt("hbase.hconnection.threads.max", 256);
+          int threads = conf.getInt("hbase.hconnection.threads.max", 256*1024);
           this.batchPool = getThreadPool(threads, threads, "-shared", null);
           this.cleanupPool = true;
         }
