@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -38,6 +39,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.experimental.categories.Category;
@@ -114,6 +117,8 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
 
       // verify map-reduce results
       verify(table.getName());
+
+      verifyJobCountersAreEmitted(job);
     } catch (InterruptedException e) {
       throw new IOException(e);
     } catch (ClassNotFoundException e) {
@@ -126,4 +131,18 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
       }
     }
   }
+
+  /**
+   * Verify scan counters are emitted from the job
+   * @param job
+   * @throws IOException
+   */
+  private void verifyJobCountersAreEmitted(Job job) throws IOException {
+    Counters counters = job.getCounters();
+    Counter counter
+      = counters.findCounter(TableRecordReaderImpl.HBASE_COUNTER_GROUP_NAME, "RPC_CALLS");
+    assertNotNull("Unable to find Job counter for HBase scan metrics, RPC_CALLS", counter);
+    assertTrue("Counter value for RPC_CALLS should be larger than 0", counter.getValue() > 0);
+  }
+
 }
