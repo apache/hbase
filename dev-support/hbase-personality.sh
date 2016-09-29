@@ -53,7 +53,8 @@ function personality_globals
 
   # TODO use PATCH_BRANCH to select hadoop versions to use.
   # All supported Hadoop versions that we want to test the compilation with
-  HBASE_HADOOP_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.7.1"
+  HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.7.1"
+  HBASE_HADOOP3_VERSIONS="3.0.0-alpha1"
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
@@ -188,7 +189,7 @@ function hadoopcheck_rebuild
   big_console_header "Compiling against various Hadoop versions"
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  for hadoopver in ${HBASE_HADOOP_VERSIONS}; do
+  for hadoopver in ${HBASE_HADOOP2_VERSIONS}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
     echo_and_redirect "${logfile}" \
       "${MAVEN}" clean install \
@@ -201,11 +202,25 @@ function hadoopcheck_rebuild
     fi
   done
 
+  for hadoopver in ${HBASE_HADOOP3_VERSIONS}; do
+    logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    echo_and_redirect "${logfile}" \
+      "${MAVEN}" clean install \
+        -DskipTests -DHBasePatchProcess \
+        -Dhadoop-three.version="${hadoopver} \
+        -Dhadoop.profile=3.0"
+    count=$(${GREP} -c ERROR "${logfile}")
+    if [[ ${count} -gt 0 ]]; then
+      add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
+      ((result=result+1))
+    fi
+  done
+
   if [[ ${result} -gt 0 ]]; then
     return 1
   fi
 
-  add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${HBASE_HADOOP_VERSIONS}."
+  add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${HBASE_HADOOP2_VERSIONS} or ${HBASE_HADOOP3_VERSIONS}."
   return 0
 }
 
