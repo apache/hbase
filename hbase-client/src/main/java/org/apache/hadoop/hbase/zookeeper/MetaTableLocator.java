@@ -554,17 +554,20 @@ public class MetaTableLocator {
       final long timeout, Configuration conf)
           throws InterruptedException {
     int numReplicasConfigured = 1;
+
+    List<ServerName> servers = new ArrayList<ServerName>();
+    // Make the blocking call first so that we do the wait to know
+    // the znodes are all in place or timeout.
+    ServerName server = blockUntilAvailable(zkw, timeout);
+    if (server == null) return null;
+    servers.add(server);
+
     try {
       List<String> metaReplicaNodes = zkw.getMetaReplicaNodes();
       numReplicasConfigured = metaReplicaNodes.size();
     } catch (KeeperException e) {
       LOG.warn("Got ZK exception " + e);
     }
-    List<ServerName> servers = new ArrayList<ServerName>(numReplicasConfigured);
-    ServerName server = blockUntilAvailable(zkw, timeout);
-    if (server == null) return null;
-    servers.add(server);
-
     for (int replicaId = 1; replicaId < numReplicasConfigured; replicaId++) {
       // return all replica locations for the meta
       servers.add(getMetaRegionLocation(zkw, replicaId));
