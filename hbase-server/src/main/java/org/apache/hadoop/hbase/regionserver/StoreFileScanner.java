@@ -38,6 +38,11 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
+import org.avaje.metric.CounterMetric;
+import org.avaje.metric.MetricManager;
+import org.avaje.metric.TimedEvent;
+import org.avaje.metric.TimedMetric;
+import org.avaje.metric.core.TimedMetricFactory;
 
 /**
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
@@ -70,6 +75,17 @@ public class StoreFileScanner implements KeyValueScanner {
   // Order of this scanner relative to other scanners when duplicate key-value is found.
   // Higher values means scanner has newer data.
   private final long scannerOrder;
+
+  //add some metrics
+  static final CounterMetric seekAtOrAfterCount = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.seekAtOrAfter.count");
+  static final CounterMetric enforce_seek_Count= MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.enforceSeek.seek.count");
+  static final CounterMetric enforce_reseek_Count = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.enforceSeek.reseek.count");
+  //static final TimedMetric enforceSeekTime = MetricManager.getTimedMetric("StoreFileScanner.requestSeek.enforceSeek.Time");
+  static final CounterMetric enforceSeekCount = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.requestSeek.enforceSeek.count");
+  static final CounterMetric requestSeekCount = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.requestSeek.count");
+  static final CounterMetric seek_count = MetricManager.getCounterMetric("chokeqiang.StoreFileScaner.seek.count");
+  static final CounterMetric setCurrentCellCount = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.count");
+
 
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
@@ -175,15 +191,15 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   public boolean seek(Cell key) throws IOException {
+    seek_count.markEvent();
     if (seekCount != null) seekCount.increment();
-
     try {
       try {
         if(!seekAtOrAfter(hfs, key)) {
           this.cur = null;
           return false;
         }
-
+        setCurrentCellCount.markEvent();
         setCurrentCell(hfs.getCell());
 
         if (!hasMVCCInfo && this.reader.isBulkLoaded()) {
@@ -276,6 +292,7 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static boolean seekAtOrAfter(HFileScanner s, Cell k)
   throws IOException {
+    seekAtOrAfterCount.markEvent();
     int result = s.seekTo(k);
     if(result < 0) {
       if (result == HConstants.INDEX_KEY_MAGIC) {
@@ -296,6 +313,7 @@ public class StoreFileScanner implements KeyValueScanner {
   static boolean reseekAtOrAfter(HFileScanner s, Cell k)
   throws IOException {
     //This function is similar to seekAtOrAfter function
+
     int result = s.reseekTo(k);
     if (result <= 0) {
       if (result == HConstants.INDEX_KEY_MAGIC) {
@@ -340,6 +358,7 @@ public class StoreFileScanner implements KeyValueScanner {
   @Override
   public boolean requestSeek(Cell kv, boolean forward, boolean useBloom)
       throws IOException {
+    requestSeekCount.markEvent();
     if (kv.getFamilyLength() == 0) {
       useBloom = false;
     }
@@ -380,7 +399,10 @@ public class StoreFileScanner implements KeyValueScanner {
         // row/column, and we don't know exactly what they are, so we set the
         // seek key's timestamp to OLDEST_TIMESTAMP to skip the rest of this
         // row/column.
+      //  TimedEvent timedEvent = enforceSeekTime.startEvent();
+        enforceSeekCount.markEvent();
         enforceSeek();
+      //  timedEvent.endWithSuccess();
       }
       return cur != null;
     }
@@ -413,13 +435,18 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public void enforceSeek() throws IOException {
+
     if (realSeekDone)
       return;
 
     if (delayedReseek) {
+      enforce_reseek_Count.markEvent();
       reseek(delayedSeekKV);
+
     } else {
+      enforce_seek_Count.markEvent();
       seek(delayedSeekKV);
+
     }
   }
 

@@ -61,6 +61,8 @@ import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.avaje.metric.CounterMetric;
+import org.avaje.metric.MetricManager;
 
 /**
  * Implementation that can handle all hfile versions of {@link HFile.Reader}.
@@ -155,6 +157,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
   /** Minor versions starting with this number have faked index key */
   static final int MINOR_VERSION_WITH_FAKED_KEY = 3;
+
+
+  //add some metrics
+
 
   /**
    * Opens a HFile. You must load the index before you can use it by calling
@@ -495,6 +501,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects
     final ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
 
+    //add some metrics
+    static final CounterMetric getCellCount = MetricManager.getCounterMetric("chokeqiang.HFileScannerImpl.getCell.count");
+    static final CounterMetric seekToCount = MetricManager.getCounterMetric("chokeqiang.HFileScannerImpl.seekTo.count");
+    static final CounterMetric seekTo_loadBlock_count = MetricManager.getCounterMetric("chokeqiang.HFileScannerImpl.seekTo.loadBlockAndSeekToKey.count");
+    static final CounterMetric loadBlockCount = MetricManager.getCounterMetric("chokeqiang.HFileScannerImpl.loadBlockAndSeekToKey.count");
+    static final CounterMetric loadBlock_blockSeek_count = MetricManager.getCounterMetric("chokeqiang.HFileScannerImpl.loadBlockAndSeekToKey.bolckSeek.count");
+    static final CounterMetric blockSeekCount = MetricManager.getCounterMetric("chokeqiang.HFileScannerImpl.bolckSeek.count");
+
     /**
      * The next indexed key is to keep track of the indexed key of the next data block.
      * If the nextIndexedKey is HConstants.NO_NEXT_INDEXED_KEY, it means that the
@@ -700,6 +714,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      *         key)
      */
     protected int blockSeek(Cell key, boolean seekBefore) {
+      blockSeekCount.markEvent();
       int klen, vlen, tlen = 0;
       int lastKeyValueSize = -1;
       int offsetFromPos;
@@ -835,6 +850,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      * @throws IOException
      */
     public int seekTo(Cell key, boolean rewind) throws IOException {
+      seekToCount.markEvent();
       HFileBlockIndex.BlockIndexReader indexReader = reader.getDataBlockIndexReader();
       BlockWithScanInfo blockWithScanInfo = indexReader.loadDataBlockWithScanInfo(key, curBlock,
           cacheBlocks, pread, isCompaction, getEffectiveDataBlockEncoding());
@@ -843,6 +859,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // file.
         return -1;
       }
+      seekTo_loadBlock_count.markEvent();
       return loadBlockAndSeekToKey(blockWithScanInfo.getHFileBlock(),
           blockWithScanInfo.getNextIndexedKey(), rewind, key, false);
     }
@@ -930,6 +947,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     @Override
     public Cell getCell() {
+      getCellCount.markEvent();
       if (!isSeeked())
         return null;
 
@@ -1126,6 +1144,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, Cell nextIndexedKey,
         boolean rewind, Cell key, boolean seekBefore) throws IOException {
+      loadBlockCount.markEvent();
       if (this.curBlock == null
           || this.curBlock.getOffset() != seekToBlock.getOffset()) {
         updateCurrentBlock(seekToBlock);
@@ -1135,6 +1154,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
       // Update the nextIndexedKey
       this.nextIndexedKey = nextIndexedKey;
+      loadBlock_blockSeek_count.markEvent();
       return blockSeek(key, seekBefore);
     }
 

@@ -355,6 +355,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private volatile Optional<ConfigurationManager> configurationManager;
 
+
+  //add some metrics
+  static final CounterMetric getCount = MetricManager.getCounterMetric("chokeqiang.HRegion.get.count");
+  static final CounterMetric startGetScannerCount = MetricManager.getCounterMetric("chokeqiang.HRegion.get.startGetScanner.count");
+  static final CounterMetric startNextCount = MetricManager.getCounterMetric("chokeqiang.HRegion.get.startNext.count");
+  static final CounterMetric endNextCount = MetricManager.getCounterMetric("chokeqiang.HRegion.get.endNext.count");
+
+
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included in every
@@ -5615,6 +5623,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     private final ScannerContext defaultScannerContext;
     private final FilterWrapper filter;
 
+    //add some metrics
+    final CounterMetric initRegionScannerCount = MetricManager.getCounterMetric("chokeqiang.RegionScannerImpl.new.count");
+    final CounterMetric initRC_getStoreScanner = MetricManager.getCounterMetric("chokeqiang.RegionScannerImpl.new.getScanner.count");
+    final CounterMetric nextInternalCount = MetricManager.getCounterMetric("chokeqiang.RegionScannerImpl.nextInternal.count");
+    final CounterMetric startPopulateResultCount = MetricManager.getCounterMetric("chokeqiang.RegionScannerImpl.startPopulateRes.count");
+    final CounterMetric stopPopulateResultCount = MetricManager.getCounterMetric("chokeqiang.RegionScannerImpl.stopPopulateRes.count");
+
     @Override
     public HRegionInfo getRegionInfo() {
       return region.getRegionInfo();
@@ -5630,6 +5645,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
         long nonceGroup, long nonce) throws IOException {
+      initRegionScannerCount.markEvent();
+
       this.region = region;
       this.maxResultSize = scan.getMaxResultSize();
       if (scan.hasFilter()) {
@@ -5693,6 +5710,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           Store store = stores.get(entry.getKey());
           KeyValueScanner scanner;
           try {
+            initRC_getStoreScanner.markEvent();
             scanner = store.getScanner(scan, entry.getValue(), this.readPt);
           } catch (FileNotFoundException e) {
             throw handleFileNotFound(e);
@@ -5918,6 +5936,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     private boolean nextInternal(List<Cell> results, ScannerContext scannerContext)
         throws IOException {
+      nextInternalCount.markEvent();
       if (!results.isEmpty()) {
         throw new IllegalArgumentException("First parameter should be an empty list");
       }
@@ -6018,7 +6037,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           // Ok, we are good, let's try to get some results from the main heap.
+          startPopulateResultCount.markEvent();
           populateResult(results, this.storeHeap, scannerContext, current);
+          stopPopulateResultCount.markEvent();
 
           if (scannerContext.checkAnyLimitReached(LimitScope.BETWEEN_CELLS)) {
             if (hasFilterRow) {
@@ -6839,6 +6860,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public Result get(final Get get) throws IOException {
+    getCount.markEvent();
     prepareGet(get);
     List<Cell> results = get(get, true);
     boolean stale = this.getRegionInfo().getReplicaId() != 0;
@@ -6880,8 +6902,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     RegionScanner scanner = null;
     try {
+      startGetScannerCount.markEvent();
       scanner = getScanner(scan, null, nonceGroup, nonce);
+      startNextCount.markEvent();
       scanner.next(results);
+      endNextCount.markEvent();
     } finally {
       if (scanner != null)
         scanner.close();

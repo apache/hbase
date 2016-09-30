@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
+import org.avaje.metric.CounterMetric;
+import org.avaje.metric.MetricManager;
 
 /**
  * Implements a heap merge across any number of KeyValueScanners.
@@ -52,6 +54,11 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   // actual close.
   protected Set<KeyValueScanner> scannersForDelayedClose = new HashSet<KeyValueScanner>();
 
+  static final CounterMetric nextCount = MetricManager.getCounterMetric("chokeqiang.KeyValueHeap.next.count");
+  static final CounterMetric pollKvCount = MetricManager.getCounterMetric("chokeqiang.KeyValueHeap.next.pollRealKV.count");
+  static final CounterMetric enforceSeek = MetricManager.getCounterMetric("chokeqiang.KeyValueHeap.pollRealKV.enforceSeek.count");
+  static final CounterMetric startStoreScanner_next_count = MetricManager.getCounterMetric("chokeqiang.KeyValueHeap.next.startStoreScanner_next.count");
+  static final CounterMetric stopStoreScanner_next_count = MetricManager.getCounterMetric("chokeqiang.KeyValueHeap.next.stopStoreScanner_next.count");
   /**
    * The current sub-scanner, i.e. the one that contains the next key/value
    * to return to the client. This scanner is NOT included in {@link #heap}
@@ -146,11 +153,14 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+    nextCount.markEvent();
     if (this.current == null) {
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
+    startStoreScanner_next_count.markEvent();
     boolean moreCells = currentAsInternal.next(result, scannerContext);
+    stopStoreScanner_next_count.markEvent();
     Cell pee = this.current.peek();
 
     /*
@@ -168,6 +178,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
       this.heap.add(this.current);
     }
     this.current = null;
+    pollKvCount.markEvent();
     this.current = pollRealKV();
     if (this.current == null) {
       moreCells = scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -350,6 +361,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     while (kvScanner != null && !kvScanner.realSeekDone()) {
       if (kvScanner.peek() != null) {
         try {
+          enforceSeek.markEvent();
           kvScanner.enforceSeek();
         } catch (IOException ioe) {
           // Add the item to delayed close set in case it is leak from close

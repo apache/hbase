@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.regionserver.querymatcher.UserScanQueryMatcher;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.avaje.metric.CounterMetric;
+import org.avaje.metric.MetricManager;
 
 /**
  * Scanner scans both the memstore and the Store. Coalesce KeyValue stream
@@ -140,6 +142,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   protected final long readPt;
 
+  //add some metrics
+  static CounterMetric initStoreScannerCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.new.count");
+  static CounterMetric initSC_seekScannerCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.new.seekScanner.count");
+  static CounterMetric seekScannerCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.seekScanner.count");
+  static CounterMetric requestSeekCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.seekScanner.requestSeek.count");
+  static CounterMetric parallelSeekCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.seekScanner.parallelSeek.count");
+  static CounterMetric nextCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.next.count");
+
   // used by the injection framework to test race between StoreScanner construction and compaction
   enum StoreScannerCompactionRace {
     BEFORE_SEEK,
@@ -198,6 +208,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       long readPt)
   throws IOException {
     this(store, scan, scanInfo, columns, readPt, scan.getCacheBlocks());
+    initStoreScannerCount.markEvent();
     if (columns != null && scan.isRaw()) {
       throw new DoNotRetryIOException("Cannot specify any column for a raw scan");
     }
@@ -214,8 +225,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // key does not exist, then to the start of the next matching Row).
       // Always check bloom filter to optimize the top row seek for delete
       // family marker.
+
+      initSC_seekScannerCount.markEvent();
       seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery && lazySeekEnabledGlobally,
         parallelSeekEnabled);
+
 
       // set storeLimit
       this.storeLimit = scan.getMaxResultsPerColumnFamily();
@@ -370,8 +384,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // key does not exist, then to the start of the next matching Row).
     // Always check bloom filter to optimize the top row seek for delete
     // family marker.
+    seekScannerCount.markEvent();
     if (isLazy) {
       for (KeyValueScanner scanner : scanners) {
+        requestSeekCount.markEvent();
         scanner.requestSeek(seekKey, false, true);
       }
     } else {
@@ -389,6 +405,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           }
         }
       } else {
+        parallelSeekCount.markEvent();
         parallelSeek(scanners, seekKey);
       }
     }
@@ -507,6 +524,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    */
   @Override
   public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
+    nextCount.markEvent();
     if (scannerContext == null) {
       throw new IllegalArgumentException("Scanner context cannot be null");
     }
