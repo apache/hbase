@@ -2302,6 +2302,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
+  private CounterMetric multiInNum = MetricManager.getCounterMetric(RSRpcServices.class, "multiInNum");
+  private CounterMetric multiOutNum = MetricManager.getCounterMetric(RSRpcServices.class, "multiNum");
+
+  private TimedMetric multiTime = MetricManager.getTimedMetric(RSRpcServices.class, "multiRPCTime");
+
   /**
    * Execute multiple actions on a table: get, mutate, and/or execCoprocessor
    *
@@ -2325,7 +2330,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (controller != null) {
       controller.setCellScanner(null);
     }
-
+    multiInNum.markEvent();
+    TimedEvent timedEvent = multiTime.startEvent();
     long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
 
     // this will contain all the cells that we need to return. It's created later, if needed.
@@ -2420,6 +2426,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     responseBuilder.setRegionStatistics(builder);
     MultiResponse response = responseBuilder.build();
+    multiOutNum.markEvent();
+    timedEvent.endWithSuccess();
     return response;
   }
 

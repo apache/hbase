@@ -27,16 +27,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Random;
-import java.util.TreeMap;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -50,22 +41,8 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.BufferedMutator;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Consistency;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RowMutations;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -1054,7 +1031,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       updateValueSize(size);
     }
 
-    void updateValueSize(final int valueSize) {
+    synchronized void updateValueSize(final int valueSize) {
       if (!isRandomValueSize()) return;
       this.valueSizeHistogram.update(valueSize);
     }
@@ -1390,12 +1367,23 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.multiGet > 0) {
         this.gets.add(get);
         if (this.gets.size() == opts.multiGet) {
-          Result [] rs = this.table.get(this.gets);
-          updateValueSize(rs);
+          this.table.batchCallback(this.gets ,new Result[this.gets.size()], (Batch.Callback<Result>) (region, row, result) -> {
+            try {
+              updateValueSize(result);
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+          });
           this.gets.clear();
         }
       } else {
-        updateValueSize(this.table.get(get));
+        this.table.batchCallback(Collections.singletonList(get),new Result[1], (Batch.Callback<Result>) (region, row, result) -> {
+          try {
+            updateValueSize(result);
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        });
       }
     }
 
