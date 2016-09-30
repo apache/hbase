@@ -358,9 +358,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   //add some metrics
   static final CounterMetric getCount = MetricManager.getCounterMetric("chokeqiang.HRegion.get.count");
-  static final CounterMetric startGetScannerCount = MetricManager.getCounterMetric("choekqiang.HRegion.get.startGetScanner.count");
+  static final CounterMetric startGetScannerCount = MetricManager.getCounterMetric("chokeqiang.HRegion.get.startGetScanner.count");
   static final CounterMetric startNextCount = MetricManager.getCounterMetric("chokeqiang.HRegion.get.startNext.count");
-  static final CounterMetric endNextCount = MetricManager.getCounterMetric("chokeqiang.HRgion.get.endNext.count");
+  static final CounterMetric endNextCount = MetricManager.getCounterMetric("chokeqiang.HRegion.get.endNext.count");
 
 
   /**

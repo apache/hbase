@@ -148,6 +148,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   static CounterMetric seekScannerCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.seekScanner.count");
   static CounterMetric requestSeekCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.seekScanner.requestSeek.count");
   static CounterMetric parallelSeekCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.seekScanner.parallelSeek.count");
+  static CounterMetric nextCount = MetricManager.getCounterMetric("chokeqiang.StoreScanner.next.count");
 
   // used by the injection framework to test race between StoreScanner construction and compaction
   enum StoreScannerCompactionRace {
@@ -523,6 +524,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    */
   @Override
   public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
+    nextCount.markEvent();
     if (scannerContext == null) {
       throw new IllegalArgumentException("Scanner context cannot be null");
     }
