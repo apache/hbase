@@ -16,4 +16,4 @@ hbase-*/test
 patchprocess/
 dependency-reduced-pom.xml
 conf/*
-
+bin/*
