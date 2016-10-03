@@ -1,5 +1,6 @@
 HBase Change Log
 
+
 Release Notes - HBase - Version 1.2.3 09/12/2016
 
 ** Task
