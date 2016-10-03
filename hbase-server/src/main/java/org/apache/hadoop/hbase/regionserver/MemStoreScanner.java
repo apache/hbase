@@ -131,6 +131,9 @@ public class MemStoreScanner extends NonLazyKeyValueScanner {
    */
   @Override
   public Cell peek() {
+    if (closed) {
+      return null;
+    }
     if (this.heap != null) {
       return this.heap.peek();
     }
@@ -143,6 +146,9 @@ public class MemStoreScanner extends NonLazyKeyValueScanner {
    */
   @Override
   public Cell next() throws IOException {
+    if (closed) {
+      return null;
+    }
     if(this.heap != null) {
       // loop over till the next suitable value
       // take next value from the heap
@@ -167,6 +173,9 @@ public class MemStoreScanner extends NonLazyKeyValueScanner {
    */
   @Override
   public boolean seek(Cell cell) throws IOException {
+    if (closed) {
+      return false;
+    }
     initForwardKVHeapIfNeeded(comparator, scanners);
 
     if (cell == null) {
@@ -199,6 +208,9 @@ public class MemStoreScanner extends NonLazyKeyValueScanner {
     *
     *  TODO: The above comment copied from the original MemStoreScanner
     */
+    if (closed) {
+      return false;
+    }
     initForwardKVHeapIfNeeded(comparator, scanners);
     return heap.reseek(cell);
   }
@@ -241,6 +253,9 @@ public class MemStoreScanner extends NonLazyKeyValueScanner {
   public boolean backwardSeek(Cell cell) throws IOException {
     // The first time when this happens it sets the scanners to the seek key
     // passed by the incoming scan's start row
+    if (closed) {
+      return false;
+    }
     initReverseKVHeapIfNeeded(cell, comparator, scanners);
     return heap.backwardSeek(cell);
   }
@@ -253,6 +268,9 @@ public class MemStoreScanner extends NonLazyKeyValueScanner {
    */
   @Override
   public boolean seekToPreviousRow(Cell cell) throws IOException {
+    if (closed) {
+      return false;
+    }
     initReverseKVHeapIfNeeded(cell, comparator, scanners);
     if (heap.peek() == null) {
       restartBackwardHeap(cell);
@@ -262,6 +280,9 @@ public class MemStoreScanner extends NonLazyKeyValueScanner {
 
   @Override
   public boolean seekToLastRow() throws IOException {
+    if (closed) {
+      return false;
+    }
     return initReverseKVHeapIfNeeded(KeyValue.LOWESTKEY, comparator, scanners);
   }
 

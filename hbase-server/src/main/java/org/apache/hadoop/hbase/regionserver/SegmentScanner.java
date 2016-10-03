@@ -56,6 +56,9 @@ public class SegmentScanner implements KeyValueScanner {
   // last iterated KVs by seek (to restore the iterator state after reseek)
   private Cell last = null;
 
+  // flag to indicate if this scanner is closed
+  private boolean closed = false;
+
   protected SegmentScanner(Segment segment, long readPoint) {
     this(segment, readPoint, DEFAULT_SCANNER_ORDER);
   }
@@ -73,6 +76,10 @@ public class SegmentScanner implements KeyValueScanner {
     // the initialization of the current is required for working with heap of SegmentScanners
     current = getNext();
     this.scannerOrder = scannerOrder;
+    if (current == null) {
+      // nothing to fetch from this scanner
+      close();
+    }
   }
 
   /**
@@ -81,6 +88,9 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public Cell peek() {          // sanity check, the current should be always valid
+    if (closed) {
+      return null;
+    }
     if (current!=null && current.getSequenceId() > readPoint) {
       throw new RuntimeException("current is invalid: read point is "+readPoint+", " +
           "while current sequence id is " +current.getSequenceId());
@@ -94,6 +104,9 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public Cell next() throws IOException {
+    if (closed) {
+      return null;
+    }
     Cell oldCurrent = current;
     current = getNext();                  // update the currently observed Cell
     return oldCurrent;
@@ -106,6 +119,9 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean seek(Cell cell) throws IOException {
+    if (closed) {
+      return false;
+    }
     if(cell == null) {
       close();
       return false;
@@ -129,7 +145,9 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean reseek(Cell cell) throws IOException {
-
+    if (closed) {
+      return false;
+    }
     /*
     See HBASE-4195 & HBASE-3855 & HBASE-6591 for the background on this implementation.
     This code is executed concurrently with flush and puts, without locks.
@@ -155,6 +173,9 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean backwardSeek(Cell key) throws IOException {
+    if (closed) {
+      return false;
+    }
     seek(key);    // seek forward then go backward
     if (peek() == null || segment.compareRows(peek(), key) > 0) {
       return seekToPreviousRow(key);
@@ -172,6 +193,9 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean seekToPreviousRow(Cell cell) throws IOException {
+    if (closed) {
+      return false;
+    }
     boolean keepSeeking;
     Cell key = cell;
     do {
@@ -205,6 +229,9 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean seekToLastRow() throws IOException {
+    if (closed) {
+      return false;
+    }
     Cell higherCell = segment.isEmpty() ? null : segment.last();
     if (higherCell == null) {
       return false;
@@ -232,7 +259,11 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public void close() {
+    if (closed) {
+      return;
+    }
     getSegment().decScannerCount();
+    closed = true;
   }
 
   /**

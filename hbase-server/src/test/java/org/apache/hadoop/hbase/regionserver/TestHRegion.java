@@ -5902,6 +5902,64 @@ public class TestHRegion {
   }
 
   @Test
+  public void testReverseScanShouldNotScanMemstoreIfReadPtLesser() throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = { cf1 };
+    byte[] col = Bytes.toBytes("C");
+    String method = this.getName();
+    HBaseConfiguration conf = new HBaseConfiguration();
+    this.region = initHRegion(tableName, method, conf, families);
+    try {
+      // setup with one storefile and one memstore, to create scanner and get an earlier readPt
+      Put put = new Put(Bytes.toBytes("19996"));
+      put.addColumn(cf1, col, Bytes.toBytes("val"));
+      region.put(put);
+      Put put2 = new Put(Bytes.toBytes("19995"));
+      put2.addColumn(cf1, col, Bytes.toBytes("val"));
+      region.put(put2);
+      // create a reverse scan
+      Scan scan = new Scan(Bytes.toBytes("19996"));
+      scan.setReversed(true);
+      RegionScanner scanner = region.getScanner(scan);
+
+      // flush the cache. This will reset the store scanner
+      region.flushcache(true, true);
+
+      // create one memstore contains many rows will be skipped
+      // to check MemStoreScanner.seekToPreviousRow
+      for (int i = 10000; i < 20000; i++) {
+        Put p = new Put(Bytes.toBytes("" + i));
+        p.addColumn(cf1, col, Bytes.toBytes("" + i));
+        region.put(p);
+      }
+      List<Cell> currRow = new ArrayList<>();
+      boolean hasNext;
+      boolean assertDone = false;
+      do {
+        hasNext = scanner.next(currRow);
+        // With HBASE-15871, after the scanner is reset the memstore scanner should not be
+        // added here
+        if (!assertDone) {
+          StoreScanner current =
+              (StoreScanner) (((RegionScannerImpl) scanner).storeHeap).getCurrentForTesting();
+          List<KeyValueScanner> scanners = current.getAllScannersForTesting();
+          assertEquals("There should be only one scanner the store file scanner", 1,
+            scanners.size());
+          assertDone = true;
+        }
+      } while (hasNext);
+      assertEquals(2, currRow.size());
+      assertEquals("19996", Bytes.toString(currRow.get(0).getRowArray(),
+        currRow.get(0).getRowOffset(), currRow.get(0).getRowLength()));
+      assertEquals("19995", Bytes.toString(currRow.get(1).getRowArray(),
+        currRow.get(1).getRowOffset(), currRow.get(1).getRowLength()));
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+    }
+  }
+
+  @Test
   public void testSplitRegionWithReverseScan() throws IOException {
     TableName tableName = TableName.valueOf("testSplitRegionWithReverseScan");
     byte [] qualifier = Bytes.toBytes("qualifier");
