@@ -132,7 +132,7 @@ if [ -z "$JAVA_HOME" ]; then
 | Please download the latest Sun JDK from the Sun Java web site        |
 |     > http://www.oracle.com/technetwork/java/javase/downloads        |
 |                                                                      |
-| HBase requires Java 1.7 or later.                                    |
+| HBase requires Java 1.8 or later.                                    |
 +======================================================================+
 EOF
     exit 1

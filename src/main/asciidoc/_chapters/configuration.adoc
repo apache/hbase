@@ -729,7 +729,7 @@ The following lines in the _hbase-env.sh_ file show how to set the `JAVA_HOME` e
 
 ----
 # The java implementation to use.
-export JAVA_HOME=/usr/java/jdk1.7.0/
+export JAVA_HOME=/usr/java/jdk1.8.0/
 
 # The maximum amount of heap to use. Default is left to JVM default.
 export HBASE_HEAPSIZE=4G
