@@ -5324,7 +5324,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         result = null;
         // Clean up the counts just in case this was the thing keeping the context alive.
         rowLockContext.cleanUp();
-        throw new IOException("Timed out waiting for lock for row: " + rowKey);
+        throw new IOException("Timed out waiting for lock for row: " + rowKey + " in region "
+            + getRegionInfo().getEncodedName());
       }
       rowLockContext.setThreadName(Thread.currentThread().getName());
       return result;
