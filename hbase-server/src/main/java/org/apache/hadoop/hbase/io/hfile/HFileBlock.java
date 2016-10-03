@@ -300,11 +300,23 @@ public class HFileBlock implements Cacheable {
    * Copy constructor. Creates a shallow copy of {@code that}'s buffer.
    */
   private HFileBlock(HFileBlock that) {
+    this(that, false);
+  }
+
+  /**
+   * Copy constructor. Creates a shallow/deep copy of {@code that}'s buffer as per the boolean
+   * param.
+   */
+  private HFileBlock(HFileBlock that,boolean bufCopy) {
     this.blockType = that.blockType;
     this.onDiskSizeWithoutHeader = that.onDiskSizeWithoutHeader;
     this.uncompressedSizeWithoutHeader = that.uncompressedSizeWithoutHeader;
     this.prevBlockOffset = that.prevBlockOffset;
-    this.buf = that.buf.duplicate();
+    if (bufCopy) {
+      this.buf = new SingleByteBuff(ByteBuffer.wrap(that.buf.toBytes(0, that.buf.limit())));
+    } else {
+      this.buf = that.buf.duplicate();
+    }
     this.offset = that.offset;
     this.onDiskDataSizeWithHeader = that.onDiskDataSizeWithHeader;
     this.fileContext = that.fileContext;
@@ -2014,5 +2026,9 @@ public class HFileBlock implements Cacheable {
                    " checksumType " + ChecksumType.codeToType(cksumtype) +
                    " bytesPerChecksum " + bytesPerChecksum +
                    " onDiskDataSizeWithHeader " + onDiskDataSizeWithHeader;
+  }
+
+  public HFileBlock deepClone() {
+    return new HFileBlock(this, true);
   }
 }

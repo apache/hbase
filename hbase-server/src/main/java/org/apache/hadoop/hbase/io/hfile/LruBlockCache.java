@@ -479,6 +479,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
         // Promote this to L1.
         if (result != null && caching) {
+          if (result instanceof HFileBlock && ((HFileBlock) result).usesSharedMemory()) {
+            result = ((HFileBlock) result).deepClone();
+          }
           cacheBlock(cacheKey, result, /* inMemory = */ false, /* cacheData = */ true);
         }
         return result;
