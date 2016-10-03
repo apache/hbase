@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.2.3 08/29/2016
+Release Notes - HBase - Version 1.2.3 09/12/2016
 
 ** Task
      * [HBASE-16260] - Audit dependencies for Category-X
