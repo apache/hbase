@@ -1,6 +1,44 @@
 HBase Change Log
 
 
+Release Notes - HBase - Version 1.2.4 10/10/2016
+
+** Sub-task
+    * [HBASE-14734] - BindException when setting up MiniKdc
+    * [HBASE-15984] - Given failure to parse a given WAL that was closed cleanly, replay the WAL.
+    * [HBASE-16101] - Procedure v2 - Perf Tool for WAL
+    * [HBASE-16522] - Procedure v2 - Cache system user and avoid IOException
+
+** Bug
+    * [HBASE-16165] - Decrease RpcServer.callQueueSize before writeResponse causes OOM
+    * [HBASE-16294] - hbck reporting "No HDFS region dir found" for replicas
+    * [HBASE-16373] - precommit needs a dockerfile with hbase prereqs
+    * [HBASE-16375] - Mapreduce mini cluster using HBaseTestingUtility not setting correct resourcemanager and jobhistory webapp address of MapReduceTestingShim
+    * [HBASE-16460] - Can't rebuild the BucketAllocator's data structures when BucketCache uses FileIOEngine
+    * [HBASE-16527] - IOExceptions from DFS client still can cause CatalogJanitor to delete referenced files
+    * [HBASE-16528] - Procedure-V2: ServerCrashProcedure misses owner information
+    * [HBASE-16535] - Use regex to exclude generated classes for findbugs
+    * [HBASE-16538] - Version mismatch in HBaseConfiguration.checkDefaultsVersion
+    * [HBASE-16552] - MiniHBaseCluster#getServerWith() does not ignore stopped RSs
+    * [HBASE-16589] - Adjust log level for FATAL messages from HBaseReplicationEndpoint that are not fatal
+    * [HBASE-16604] - Scanner retries on IOException can cause the scans to miss data
+    * [HBASE-16613] - Return the unused ByteBuffer to BoundedByteBufferPool when no cell is retrieved from the CellScanner
+    * [HBASE-16649] - Truncate table with splits preserved can cause both data loss and truncated data appeared again
+    * [HBASE-16662] - Fix open POODLE vulnerabilities
+    * [HBASE-16678] - MapReduce jobs do not update counters from ScanMetrics
+    * [HBASE-16721] - Concurrency issue in WAL unflushed seqId tracking
+    * [HBASE-16732] - Avoid possible NPE in MetaTableLocator
+
+** Improvement
+    * [HBASE-15315] - Remove always set super user call as high priority
+    * [HBASE-16562] - ITBLL should fail to start if misconfigured
+    * [HBASE-16667] - Building with JDK 8: ignoring option MaxPermSize=256m
+
+** Task
+    * [HBASE-16340] - ensure no Xerces jars included
+    * [HBASE-16518] - Remove old .arcconfig file
+    * [HBASE-16748] - Release 1.2.4
+
 Release Notes - HBase - Version 1.2.3 09/12/2016
 
 ** Task
