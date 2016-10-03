@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.fs.legacy.LegacyMasterFileSystem;
+import org.apache.hadoop.hbase.fs.legacy.LegacyMasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
 import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -161,6 +161,24 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
     return RegionStorage.open(conf, regionInfo, false);
   }
 
+  /**
+   * Returns true if region exists on the Storage
+   * @param regionInfo
+   * @return true, if region exists on the storage
+   * @throws IOException
+   */
+  public boolean regionExists(HRegionInfo regionInfo) throws IOException {
+      RegionStorage regionStorage = getRegionStorage(regionInfo);
+      return regionStorage.exists();
+  }
+
+  /**
+   * Archives the specified region's storage artifacts (files, directories etc)
+   * @param regionInfo
+   * @throws IOException
+   */
+  public abstract void archiveRegion(HRegionInfo regionInfo) throws IOException;
+
   // ==========================================================================
   //  PUBLIC Methods - visitors
   // ==========================================================================
@@ -263,7 +281,7 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
     String storageType = conf.get("hbase.storage.type", "legacy").toLowerCase();
     switch (storageType) {
       case "legacy":
-        return new LegacyMasterFileSystem(conf, fs, new LegacyPathIdentifier(rootDir));
+        return new LegacyMasterStorage(conf, fs, new LegacyPathIdentifier(rootDir));
       default:
         throw new IOException("Invalid filesystem type " + storageType);
     }

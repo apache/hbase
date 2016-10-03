@@ -155,6 +155,13 @@ public abstract class RegionStorage<IDENTIFIER extends StorageIdentifier> {
   public HRegionInfo getRegionInfoForFS() { return hri; }
 
   /**
+   * If region exists on the Storage
+   * @return true, if region related artifacts (dirs, files) present on storage
+   * @throws IOException
+   */
+  public abstract boolean exists() throws IOException;
+
+  /**
    * Retrieve a referene to the backing storage associated with a particular family within this region.
    */
   public abstract IDENTIFIER getStoreContainer(final String familyName);

@@ -90,7 +90,7 @@ public class TestCatalogJanitor {
    */
   class MockMasterServices extends MockNoopMasterServices {
     private final ClusterConnection connection;
-    private final MasterStorage mfs;
+    private final MasterStorage ms;
     private final AssignmentManager asm;
     private final ServerManager sm;
 
@@ -134,7 +134,7 @@ public class TestCatalogJanitor {
       FSUtils.setRootDir(getConfiguration(), rootdir);
       Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
 
-      this.mfs = new MasterStorage(this);
+      this.ms = new MasterStorage(this);
       this.asm = Mockito.mock(AssignmentManager.class);
       this.sm = Mockito.mock(ServerManager.class);
     }
@@ -146,7 +146,7 @@ public class TestCatalogJanitor {
 
     @Override
     public MasterStorage getMasterStorage() {
-      return this.mfs;
+      return this.ms;
     }
 
     @Override
@@ -244,7 +244,7 @@ public class TestCatalogJanitor {
       // remove the parent.
       Result r = createResult(parent, splita, splitb);
       // Add a reference under splitA directory so we don't clear out the parent.
-      Path rootdir = services.getMasterStorage().getRootDir();
+      Path rootdir = services.getMasterStorage().getRootContainer();
       Path tabledir =
         FSUtils.getTableDir(rootdir, htd.getTableName());
       Path storedir = HStore.getStoreHomedir(tabledir, splita,

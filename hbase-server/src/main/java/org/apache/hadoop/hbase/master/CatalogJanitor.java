@@ -29,23 +29,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.fs.RegionStorage;
-import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
@@ -148,7 +142,7 @@ public class CatalogJanitor extends ScheduledChore {
     final boolean isTableSpecified = (tableName != null);
     // TODO: Only works with single hbase:meta region currently.  Fix.
     final AtomicInteger count = new AtomicInteger(0);
-    // Keep Map of found split parents.  There are candidates for cleanup.
+    // Keep Map of found split parents.  These are candidates for cleanup.
     // Use a comparator that has split parents come before its daughters.
     final Map<HRegionInfo, Result> splitParents =
       new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
@@ -197,26 +191,23 @@ public class CatalogJanitor extends ScheduledChore {
   boolean cleanMergeRegion(final HRegionInfo mergedRegion,
       final HRegionInfo regionA, final HRegionInfo regionB) throws IOException {
     HTableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
-    RegionStorage regionFs = null;
+    MasterStorage ms = this.services.getMasterStorage();
+
     try {
-      regionFs = RegionStorage.open(this.services.getConfiguration(), mergedRegion, false);
+      if (ms.getRegionStorage(mergedRegion).hasReferences(htd)) return false;
     } catch (IOException e) {
       LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
     }
-    if (regionFs == null || !regionFs.hasReferences(htd)) {
+
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Deleting region " + regionA.getRegionNameAsString() + " and "
           + regionB.getRegionNameAsString()
-          + " from fs because merged region no longer holds references");
-      // TODO update HFileArchiver to use RegionStorage
-      FileSystem fs = this.services.getMasterStorage().getFileSystem();
-      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
-      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
-      MetaTableAccessor.deleteMergeQualifiers(services.getConnection(), mergedRegion);
-      services.getServerManager().removeRegion(regionA);
-      services.getServerManager().removeRegion(regionB);
-      return true;
+          + " from storage because merged region no longer holds references");
     }
-    return false;
+    ms.archiveRegion(regionA);
+    ms.archiveRegion(regionB);
+    MetaTableAccessor.deleteMergeQualifiers(services.getConnection(), mergedRegion);
+    return true;
   }
 
   /**
@@ -352,11 +343,12 @@ public class CatalogJanitor extends ScheduledChore {
     Pair<Boolean, Boolean> a = checkDaughterInFs(parent, daughters.getFirst());
     Pair<Boolean, Boolean> b = checkDaughterInFs(parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
-      LOG.debug("Deleting region " + parent.getRegionNameAsString() +
-        " because daughter splits no longer hold references");
-      FileSystem fs = this.services.getMasterStorage().getFileSystem();
-      if (LOG.isTraceEnabled()) LOG.trace("Archiving parent region: " + parent);
-      HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Deleting region " + parent.getRegionNameAsString()
+            + " because daughter splits no longer hold references");
+      }
+      MasterStorage ms = this.services.getMasterStorage();
+      ms.archiveRegion(parent);
       MetaTableAccessor.deleteRegion(this.connection, parent);
       services.getServerManager().removeRegion(parent);
       result = true;
@@ -390,33 +382,21 @@ public class CatalogJanitor extends ScheduledChore {
       return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
     }
 
-    FileSystem fs = this.services.getMasterStorage().getFileSystem();
-    Path rootdir = ((LegacyPathIdentifier) this.services.getMasterStorage().getRootContainer())
-        .path;
-    Path tabledir = FSUtils.getTableDir(rootdir, daughter.getTable());
-
-    Path daughterRegionDir = new Path(tabledir, daughter.getEncodedName());
-
+    MasterStorage ms = this.services.getMasterStorage();
     try {
-      if (!FSUtils.isExists(fs, daughterRegionDir)) {
+      if (!ms.regionExists(daughter)) {
         return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
       }
     } catch (IOException ioe) {
       LOG.error("Error trying to determine if daughter region exists, " +
-               "assuming exists and has references", ioe);
+          "assuming exists and has references", ioe);
       return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
     }
 
     boolean references = false;
     try {
-      final RegionStorage regionFs = RegionStorage.open(this.services.getConfiguration(), daughter, false);
       final HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
-
-      for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
-        if ((references = regionFs.hasReferences(family.getNameAsString()))) {
-          break;
-        }
-      }
+      references = ms.getRegionStorage(daughter).hasReferences(parentDescriptor);
     } catch (IOException e) {
       LOG.error("Error trying to determine referenced files from : " + daughter.getEncodedName()
           + ", to: " + parent.getEncodedName() + " assuming has references", e);

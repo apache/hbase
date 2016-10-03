@@ -49,8 +49,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 
 @InterfaceAudience.Private
-public class LegacyMasterFileSystem extends MasterStorage<LegacyPathIdentifier> {
-  private static final Log LOG = LogFactory.getLog(LegacyMasterFileSystem.class);
+public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
+  private static final Log LOG = LogFactory.getLog(LegacyMasterStorage.class);
 
   private final Path sidelineDir;
   private final Path snapshotDir;
@@ -79,7 +79,7 @@ public class LegacyMasterFileSystem extends MasterStorage<LegacyPathIdentifier> 
 
   private final boolean isSecurityEnabled;
 
-  public LegacyMasterFileSystem(Configuration conf, FileSystem fs, LegacyPathIdentifier rootDir) {
+  public LegacyMasterStorage(Configuration conf, FileSystem fs, LegacyPathIdentifier rootDir) {
     super(conf, fs, rootDir);
 
     // base directories
@@ -207,6 +207,16 @@ public class LegacyMasterFileSystem extends MasterStorage<LegacyPathIdentifier> 
     } finally {
       in.close();
     }
+  }
+
+  /**
+   * Archives the specified region's storage artifacts (files, directories etc)
+   * @param regionInfo
+   * @throws IOException
+   */
+  @Override
+  public void archiveRegion(HRegionInfo regionInfo) throws IOException {
+    HFileArchiver.archiveRegion(getConfiguration(), getFileSystem(), regionInfo);
   }
 
   // ==========================================================================
