@@ -1914,7 +1914,7 @@ public class HConnectionManager {
               @Override public boolean isStopped() {return isStopped;}
             };
         DelayedClosing delayedClosing = new DelayedClosing(hci, stoppable);
-        delayedClosing.start();
+        Threads.setDaemonThreadRunning(delayedClosing.getThread());
         return delayedClosing;
       }
 
