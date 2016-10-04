@@ -184,13 +184,15 @@ WalObserver::
 <<cp_example,Examples>> provides working examples of observer coprocessors.
 
 
+
+[[cpeps]]
 === Endpoint Coprocessor
 
 Endpoint processors allow you to perform computation at the location of the data.
 See <<cp_analogies, Coprocessor Analogy>>. An example is the need to calculate a running
 average or summation for an entire table which spans hundreds of regions.
 
-In contract to observer coprocessors, where your code is run transparently, endpoint
+In contrast to observer coprocessors, where your code is run transparently, endpoint
 coprocessors must be explicitly invoked using the
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#coprocessorService%28java.lang.Class,%20byte%5B%5D,%20byte%5B%5D,%20org.apache.hadoop.hbase.client.coprocessor.Batch.Call%29[CoprocessorService()]
 method available in
@@ -207,6 +209,18 @@ See
 link:https://issues.apache.org/jira/browse/HBASE-5448[HBASE-5448]). To upgrade your
 HBase cluster from 0.94 or earlier to 0.96 or later, you need to reimplement your
 coprocessor.
+
+Coprocessor Endpoints should make no use of HBase internals and
+only avail of public APIs; ideally a CPEP should depend on Interfaces
+and data structures only. This is not always possible but beware
+that doing so makes the Endpoint brittle, liable to breakage as HBase
+internals evolve. HBase internal APIs annotated as private or evolving
+do not have to respect semantic versioning rules or general java rules on
+deprecation before removal. While generated protobuf files are
+absent the hbase audience annotations -- they are created by the
+protobuf protoc tool which knows nothing of how HBase works --
+they should be consided `@InterfaceAudience.Private` so are liable to
+change.
 
 <<cp_example,Examples>> provides working examples of endpoint coprocessors.
 

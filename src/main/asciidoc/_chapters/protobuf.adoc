@@ -73,23 +73,6 @@ CPEP Service. Going forward, after the release of hbase-2.0.0, this
 practice needs to whither. We'll make plain why in the later
 xref:shaded.protobuf[hbase-2.0.0] section.
 
-[[cpeps]]
-=== Coprocessor Endpoints (CPEPs)
-xref:cp:[Coprocessor Endpoints] are custom API a developer can
-add to HBase. Protobufs are used to describe the methods and arguments
-that comprise the new Service.
-Coprocessor Endpoints should make no use of HBase internals and
-only avail of public APIs; ideally a CPEP should depend on Interfaces
-and data structures only. This is not always possible but beware
-that doing so makes the Endpoint brittle, liable to breakage as HBase
-internals evolve. HBase internal APIs annotated as private or evolving
-do not have to respect semantic versioning rules or general java rules on
-deprecation before removal. While generated protobuf files are
-absent the hbase audience annotations -- they are created by the
-protobuf protoc tool which knows nothing of how HBase works --
-they should be consided `@InterfaceAudience.Private` so are liable to
-change.
-
 [[shaded.protobuf]]
 === hbase-2.0.0 and the shading of protobufs (HBASE-15638)
 
