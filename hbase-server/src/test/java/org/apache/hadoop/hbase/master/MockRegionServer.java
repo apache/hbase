@@ -119,8 +119,6 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
-import net.sf.ehcache.search.Results;
-
 /**
  * A mock RegionServer implementation.
  * Use this when you can't bend Mockito to your liking (e.g. return null result
@@ -137,7 +135,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   private final Random random = new Random();
 
   /**
-   * Map of regions to map of rows and {@link Results}.  Used as data source when
+   * Map of regions to map of rows and {@link Result}.  Used as data source when
    * {@link MockRegionServer#get(byte[], Get)} is called. Because we have a byte
    * key, need to use TreeMap and provide a Comparator.  Use
    * {@link #setGetResult(byte[], byte[], Result)} filling this map.
