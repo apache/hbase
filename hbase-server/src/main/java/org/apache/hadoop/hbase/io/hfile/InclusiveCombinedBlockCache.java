@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class InclusiveCombinedBlockCache extends CombinedBlockCache implements BlockCache {
-  public InclusiveCombinedBlockCache(FirstLevelBlockCache l1, BlockCache l2) {
+  public InclusiveCombinedBlockCache(LruBlockCache l1, BlockCache l2) {
     super(l1,l2);
   }
 
@@ -34,7 +34,7 @@ public class InclusiveCombinedBlockCache extends CombinedBlockCache implements B
     // On all external cache set ups the lru should have the l2 cache set as the victimHandler
     // Because of that all requests that miss inside of the lru block cache will be
     // tried in the l2 block cache.
-    return l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+    return lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
 
   /**
@@ -50,7 +50,7 @@ public class InclusiveCombinedBlockCache extends CombinedBlockCache implements B
                          final boolean cacheDataInL1) {
     // This is the inclusive part of the combined block cache.
     // Every block is placed into both block caches.
-    l1Cache.cacheBlock(cacheKey, buf, inMemory, true);
+    lruCache.cacheBlock(cacheKey, buf, inMemory, true);
 
     // This assumes that insertion into the L2 block cache is either async or very fast.
     l2Cache.cacheBlock(cacheKey, buf, inMemory, true);

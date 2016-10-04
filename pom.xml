@@ -1198,7 +1198,6 @@
     <httpclient.version>4.5.2</httpclient.version>
     <httpcore.version>4.4.4</httpcore.version>
     <metrics-core.version>3.1.2</metrics-core.version>
-    <caffeine.version>2.3.3</caffeine.version>
     <guava.version>12.0.1</guava.version>
     <jackson.version>1.9.13</jackson.version>
     <jasper.version>5.5.23</jasper.version>
@@ -1481,11 +1480,6 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.github.ben-manes.caffeine</groupId>
-        <artifactId>caffeine</artifactId>
-        <version>${caffeine.version}</version>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
