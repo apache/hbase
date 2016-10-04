@@ -329,7 +329,7 @@
                       <classifier>sources</classifier>
                       <type>jar</type>
                       <overWrite>true</overWrite>
-                      <outputDirectory>${default.sources.dir}</outputDirectory>
+                      <outputDirectory>${basedir}/src/main/java</outputDirectory>
                       <includes>**/*.java</includes>
                     </artifactItem>
                   </artifactItems>
