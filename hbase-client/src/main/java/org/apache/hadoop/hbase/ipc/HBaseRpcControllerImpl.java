@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.RpcCallback;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 
 import java.io.IOException;
 import java.util.ArrayList;

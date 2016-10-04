@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.junit.Test;
 
 import java.io.IOException;

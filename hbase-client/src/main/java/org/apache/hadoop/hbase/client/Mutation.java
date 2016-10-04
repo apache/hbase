@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,7 +42,9 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
+import org.apache.hadoop.hbase.security.access.AccessControlUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
@@ -332,8 +335,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @param expression
    */
   public Mutation setCellVisibility(CellVisibility expression) {
-    this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY, ProtobufUtil
-        .toCellVisibility(expression).toByteArray());
+    this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY,
+        toCellVisibility(expression).toByteArray());
     return this;
   }
 
@@ -344,7 +347,50 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   public CellVisibility getCellVisibility() throws DeserializationException {
     byte[] cellVisibilityBytes = this.getAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY);
     if (cellVisibilityBytes == null) return null;
-    return ProtobufUtil.toCellVisibility(cellVisibilityBytes);
+    return toCellVisibility(cellVisibilityBytes);
+  }
+
+  /**
+   * Create a protocol buffer CellVisibility based on a client CellVisibility.
+   *
+   * @param cellVisibility
+   * @return a protocol buffer CellVisibility
+   */
+  static ClientProtos.CellVisibility toCellVisibility(CellVisibility cellVisibility) {
+    ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
+    builder.setExpression(cellVisibility.getExpression());
+    return builder.build();
+  }
+
+  /**
+   * Convert a protocol buffer CellVisibility to a client CellVisibility
+   *
+   * @param proto
+   * @return the converted client CellVisibility
+   */
+  private static CellVisibility toCellVisibility(ClientProtos.CellVisibility proto) {
+    if (proto == null) return null;
+    return new CellVisibility(proto.getExpression());
+  }
+
+  /**
+   * Convert a protocol buffer CellVisibility bytes to a client CellVisibility
+   *
+   * @param protoBytes
+   * @return the converted client CellVisibility
+   * @throws DeserializationException
+   */
+  private static CellVisibility toCellVisibility(byte[] protoBytes) throws DeserializationException {
+    if (protoBytes == null) return null;
+    ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
+    ClientProtos.CellVisibility proto = null;
+    try {
+      ProtobufUtil.mergeFrom(builder, protoBytes);
+      proto = builder.build();
+    } catch (IOException e) {
+      throw new DeserializationException(e);
+    }
+    return toCellVisibility(proto);
   }
 
   /**
@@ -413,7 +459,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   public Mutation setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
-      ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
+      AccessControlUtil.toUsersAndPermissions(user, perms).toByteArray());
     return this;
   }
 
@@ -426,7 +472,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       permMap.put(entry.getKey(), entry.getValue());
     }
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
-      ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+      AccessControlUtil.toUsersAndPermissions(permMap).toByteArray());
     return this;
   }
 

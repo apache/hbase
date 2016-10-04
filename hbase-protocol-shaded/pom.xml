@@ -1,0 +1,347 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
+    /**
+     * Licensed to the Apache Software Foundation (ASF) under one
+     * or more contributor license agreements.  See the NOTICE file
+     * distributed with this work for additional information
+     * regarding copyright ownership.  The ASF licenses this file
+     * to you under the Apache License, Version 2.0 (the
+     * "License"); you may not use this file except in compliance
+     * with the License.  You may obtain a copy of the License at
+     *
+     *     http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS,
+     * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     * See the License for the specific language governing permissions and
+     * limitations under the License.
+     */
+    -->
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <artifactId>hbase</artifactId>
+    <groupId>org.apache.hbase</groupId>
+    <version>2.0.0-SNAPSHOT</version>
+    <relativePath>..</relativePath>
+  </parent>
+  <artifactId>hbase-protocol-shaded</artifactId>
+  <name>Apache HBase - Shaded Protocol</name>
+  <description>Shaded protobuf protocol classes used by HBase internally.</description>
+  <properties>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <!--Version of protobuf that hbase uses internally (we shade our pb)
+           -->
+    <internal.protobuf.version>3.1.0</internal.protobuf.version>
+    <!--The Default target dir-->
+    <classes.dir>${basedir}/target</classes.dir>
+    <!--The Default location for sources-->
+    <sources.dir>src/main/java</sources.dir>
+  </properties>
+  <build>
+    <!--I want to override these in profile so define them
+         with variables up here-->
+    <sourceDirectory>${sources.dir}</sourceDirectory>
+    <outputDirectory>${classes.dir}</outputDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven.assembly.version}</version>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <!-- Always skip the second part executions, since we only run simple unit tests in this module -->
+        <executions>
+          <execution>
+            <id>secondPartTestsExecution</id>
+            <phase>test</phase>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+    <pluginManagement>
+      <plugins>
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-maven-plugins</artifactId>
+                    <versionRange>[2.0.5-alpha,)</versionRange>
+                    <goals>
+                      <goal>protoc</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore/>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+  <dependencies>
+    <!--BE CAREFUL! Any dependency added here needs to be
+          excluded above in the shade plugin else the dependency
+          will get bundled-->
+    <!-- Intra-project dependencies -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-annotations</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>jdk.tools</groupId>
+          <artifactId>jdk.tools</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- General dependencies -->
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${internal.protobuf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+    </dependency>
+  </dependencies>
+  <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skip-protocol-shaded-tests</id>
+      <activation>
+        <property>
+          <name>skip-protocol-shaded-tests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+      </properties>
+    </profile>
+    <!--
+         Generate shaded classes using proto files and
+         the protobuf lib we depend on. Drops generated
+         files under src/main/java. Check in the generated
+         files so available at build time.  Run this
+          profile/step everytime you change proto
+         files or update the protobuf version. If you add a
+         proto, be sure to add it to the list below in the
+         hadoop-maven-plugin else we won't 'see' it.
+
+         The below first generates java files from protos.
+         We then compile the generated files and make a jar
+         file.  The jar file is then passed to the shade plugin
+         which makes a new fat jar that includes the protobuf
+         lib but with all relocated given the
+         org.apache.hadoop.hbase.shaded prefix. The shading
+         step as by-product produces a jar with relocated
+         java source files in it. This jar we then unpack over
+         the src/main/java directory and we're done.
+
+         User is expected to check in the changes if they look
+         good.
+
+         TODO: Patch the protobuf lib using maven-patch-plugin
+         with changes we need.
+      -->
+    <profile>
+      <id>generate-shaded-classes</id>
+      <activation>
+        <property>
+          <name>generate-shaded-classes</name>
+        </property>
+      </activation>
+      <properties>
+        <profile.id>generate-shaded-classes</profile.id>
+        <sources.dir>${project.build.directory}/protoc-generated-sources</sources.dir>
+        <classes.dir>${project.build.directory}/protoc-generated-classes</classes.dir>
+        <!--When the compile for this profile runs, make sure it makes jars that
+             can be related back to this shading profile. Give them a shading prefix.
+         -->
+        <jar.finalName>${profile.id}.${artifactId}-${project.version}</jar.finalName>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
+            <configuration>
+              <protocVersion>${internal.protobuf.version}</protocVersion>
+            </configuration>
+            <executions>
+              <execution>
+                <id>compile-protoc</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>protoc</goal>
+                </goals>
+                <configuration>
+                  <imports>
+                    <param>${basedir}/src/main/protobuf</param>
+                  </imports>
+                  <source>
+                    <directory>${basedir}/src/main/protobuf</directory>
+                    <!-- Unfortunately, Hadoop plugin does not support *.proto.
+                             We have to individually list every proto file here -->
+                    <includes>
+                      <include>Admin.proto</include>
+                      <include>Cell.proto</include>
+                      <include>Client.proto</include>
+                      <include>ClusterId.proto</include>
+                      <include>ClusterStatus.proto</include>
+                      <include>Comparator.proto</include>
+                      <include>Encryption.proto</include>
+                      <include>ErrorHandling.proto</include>
+                      <include>FS.proto</include>
+                      <include>Filter.proto</include>
+                      <include>HBase.proto</include>
+                      <include>HFile.proto</include>
+                      <include>LoadBalancer.proto</include>
+                      <include>MapReduce.proto</include>
+                      <include>Master.proto</include>
+                      <include>MasterProcedure.proto</include>
+                      <include>Procedure.proto</include>
+                      <include>Quota.proto</include>
+                      <include>RPC.proto</include>
+                      <include>RegionNormalizer.proto</include>
+                      <include>RegionServerStatus.proto</include>
+                      <include>Snapshot.proto</include>
+                      <include>Tracing.proto</include>
+                      <include>WAL.proto</include>
+                      <include>ZooKeeper.proto</include>
+                      <include>TestProcedure.proto</include>
+                      <include>test.proto</include>
+                      <include>test_rpc_service.proto</include>
+                    </includes>
+                  </source>
+                  <output>${sources.dir}</output>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>3.0.2</version>
+            <configuration>
+              <finalName>${jar.finalName}</finalName>                   
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>2.4.3</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <shadeSourcesContent>true</shadeSourcesContent>
+                  <createSourcesJar>true</createSourcesJar>
+                  <relocations>
+                    <relocation>
+                      <pattern>com.google.protobuf</pattern>
+                      <shadedPattern>org.apache.hadoop.hbase.shaded.com.google.protobuf</shadedPattern>
+                    </relocation>
+                  </relocations>
+                  <!-- What I got when I did a mvn dependency:list for this
+                   module. Exclude all but the protobuf
+                [INFO]    commons-logging:commons-logging:jar:1.2:compile
+                [INFO]    com.github.stephenc.findbugs:findbugs-annotations:jar:1.3.9-1:compile
+                [INFO]    log4j:log4j:jar:1.2.17:compile
+                [INFO]    com.google.protobuf:protobuf-java:jar:2.5.0:compile
+                [INFO]    org.hamcrest:hamcrest-core:jar:1.3:test
+                [INFO]    org.mockito:mockito-all:jar:1.10.8:test
+                [INFO]    junit:junit:jar:4.12:compile
+                [INFO]    org.apache.hbase:hbase-annotations:jar:2.0.0-SNAPSHOT:compile
+
+                  The list below must exlude all of the above except protobuf.
+              -->
+                  <artifactSet>
+                    <excludes>
+                      <exclude>commons-logging:commons-logging</exclude>
+                      <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
+                      <exclude>log4j:log4j</exclude>
+                      <exclude>org.hamcrest:hamcrest-core</exclude>
+                      <exclude>org.mockito:mockito-all</exclude>
+                      <exclude>junit:junit</exclude>
+                      <exclude>org.apache.hbase:hbase-annotations</exclude>
+                    </excludes>
+                  </artifactSet>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!--Now unpack the shaded jar made above so the shaded classes
+             are available to subsequent modules-->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.10</version>
+            <executions>
+              <execution>
+                <id>unpack</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>${project.groupId}</groupId>
+                      <artifactId>${project.artifactId}</artifactId>
+                      <version>${project.version}</version>
+                      <classifier>sources</classifier>
+                      <type>jar</type>
+                      <overWrite>true</overWrite>
+                      <outputDirectory>${default.sources.dir}</outputDirectory>
+                      <includes>**/*.java</includes>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!--Patch the files here!!!
+               Use maven-patch-plugin
+               -->
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

@@ -256,7 +256,7 @@ When calling out to registered observers, the framework executes their callbacks
 sorted order of their priority. +
 Ties are broken arbitrarily.
 
-. Put your code HBase's classpath. One easy way to do this is to drop the jar
+. Put your code on HBase's classpath. One easy way to do this is to drop the jar
   (containing you code and all the dependencies) into the `lib/` directory in the
   HBase installation.
 
@@ -324,10 +324,9 @@ it in HDFS. +
 https://issues.apache.org/jira/browse/HBASE-14548[HBASE-14548] allows a directory containing the jars
 or some wildcards to be specified, such as: hdfs://<namenode>:<port>/user/<hadoop-user>/ or
 hdfs://<namenode>:<port>/user/<hadoop-user>/*.jar. Please note that if a directory is specified,
-all jar files(.jar) directly in the directory are added,
-but it does not search files in the subtree rooted in the directory.
-And do not contain any wildcard if you would like to specify a directory.
-This enhancement applies to the ways of using the JAVA API as well.
+all jar files(.jar) in the directory are added. It does not search for files in sub-directories.
+Do not use a wildcard if you would like to specify a directory. This enhancement applies to the
+usage via the JAVA API as well.
 * Class name: The full class name of the Coprocessor.
 * Priority: An integer. The framework will determine the execution sequence of all configured
 observers registered at the same hook using priorities. This field can be left blank. In that

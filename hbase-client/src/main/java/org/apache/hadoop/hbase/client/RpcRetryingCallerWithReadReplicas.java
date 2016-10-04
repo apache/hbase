@@ -20,31 +20,27 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 
@@ -90,21 +86,14 @@ public class RpcRetryingCallerWithReadReplicas {
    * - we need to stop retrying when the call is completed
    * - we can be interrupted
    */
-  class ReplicaRegionServerCallable extends RegionServerCallable<Result> implements Cancellable {
+  class ReplicaRegionServerCallable extends CancellableRegionServerCallable<Result> {
     final int id;
-    private final HBaseRpcController controller;
-
     public ReplicaRegionServerCallable(int id, HRegionLocation location) {
-      super(RpcRetryingCallerWithReadReplicas.this.cConnection, rpcControllerFactory,
-          RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow());
+      super(RpcRetryingCallerWithReadReplicas.this.cConnection,
+          RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow(),
+          rpcControllerFactory.newController());
       this.id = id;
       this.location = location;
-      this.controller = rpcControllerFactory.newController();
-    }
-
-    @Override
-    public void cancel() {
-      controller.startCancel();
     }
 
     /**
@@ -113,13 +102,12 @@ public class RpcRetryingCallerWithReadReplicas {
      * - set the location to the right region, depending on the replica.
      */
     @Override
+    // TODO: Very like the super class implemenation. Can we shrink this down?
     public void prepare(final boolean reload) throws IOException {
-      if (controller.isCanceled()) return;
-
+      if (getRpcController().isCanceled()) return;
       if (Thread.interrupted()) {
         throw new InterruptedIOException();
       }
-
       if (reload || location == null) {
         RegionLocations rl = getRegionLocations(false, id, cConnection, tableName, get.getRow());
         location = id < rl.size() ? rl.getRegionLocation(id) : null;
@@ -131,35 +119,27 @@ public class RpcRetryingCallerWithReadReplicas {
         throw new HBaseIOException("There is no location for replica id #" + id);
       }
 
-      ServerName dest = location.getServerName();
-
-      setStub(cConnection.getClient(dest));
+      setStubByServiceName(this.location.getServerName());
     }
 
-    private void initRpcController() {
-      controller.reset();
-      controller.setCallTimeout(callTimeout);
-      controller.setPriority(tableName);
-    }
     @Override
+    // TODO: Very like the super class implemenation. Can we shrink this down?
     protected Result rpcCall() throws Exception {
-      if (controller.isCanceled()) return null;
+      if (getRpcController().isCanceled()) return null;
       if (Thread.interrupted()) {
         throw new InterruptedIOException();
       }
       byte[] reg = location.getRegionInfo().getRegionName();
       ClientProtos.GetRequest request = RequestConverter.buildGetRequest(reg, get);
-      initRpcController();
-      ClientProtos.GetResponse response = getStub().get(controller, request);
+      HBaseRpcController hrc = (HBaseRpcController)getRpcController();
+      hrc.reset();
+      hrc.setCallTimeout(callTimeout);
+      hrc.setPriority(tableName);
+      ClientProtos.GetResponse response = getStub().get(hrc, request);
       if (response == null) {
         return null;
       }
-      return ProtobufUtil.toResult(response.getResult(), controller.cellScanner());
-    }
-
-    @Override
-    public boolean isCancelled() {
-      return controller.isCanceled();
+      return ProtobufUtil.toResult(response.getResult(), hrc.cellScanner());
     }
   }
 

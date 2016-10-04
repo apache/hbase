@@ -35,8 +35,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -94,15 +94,15 @@ public final class EncryptionUtil {
     if (cipher.getIvLength() > 0) {
       iv = new byte[cipher.getIvLength()];
       RNG.nextBytes(iv);
-      builder.setIv(ByteStringer.wrap(iv));
+      builder.setIv(UnsafeByteOperations.unsafeWrap(iv));
     }
     byte[] keyBytes = key.getEncoded();
     builder.setLength(keyBytes.length);
-    builder.setHash(ByteStringer.wrap(Encryption.hash128(keyBytes)));
+    builder.setHash(UnsafeByteOperations.unsafeWrap(Encryption.hash128(keyBytes)));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject,
       conf, cipher, iv);
-    builder.setData(ByteStringer.wrap(out.toByteArray()));
+    builder.setData(UnsafeByteOperations.unsafeWrap(out.toByteArray()));
     // Build and return the protobuf message
     out.reset();
     builder.build().writeDelimitedTo(out);

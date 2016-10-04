@@ -21,8 +21,8 @@ import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
@@ -360,7 +359,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+          AccessControlUtil.grant(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
         } finally {
           acl.close();
           connection.close();
@@ -377,7 +376,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
+          AccessControlUtil.grant(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
             TEST_NAMESPACE, Action.READ);
         }
         return null;
@@ -394,7 +393,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+          AccessControlUtil.revoke(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
         } finally {
           acl.close();
           connection.close();
@@ -413,7 +412,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
+          AccessControlUtil.revoke(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
             TEST_NAMESPACE, Action.READ);
         } finally {
           acl.close();
@@ -432,7 +431,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.getUserPermissions(null, protocol, Bytes.toBytes(TEST_NAMESPACE));
+          AccessControlUtil.getUserPermissions(null, protocol, Bytes.toBytes(TEST_NAMESPACE));
         } finally {
           acl.close();
           connection.close();

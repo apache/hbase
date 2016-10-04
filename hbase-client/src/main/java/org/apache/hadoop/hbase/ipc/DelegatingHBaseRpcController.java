@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.RpcCallback;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 
 import java.io.IOException;
 
@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Simple delegating controller for use with the {@link RpcControllerFactory} to help override
- * standard behavior of a {@link HBaseRpcController}.
+ * standard behavior of a {@link HBaseRpcController}. Used testing.
  */
 @InterfaceAudience.Private
 public class DelegatingHBaseRpcController implements HBaseRpcController {

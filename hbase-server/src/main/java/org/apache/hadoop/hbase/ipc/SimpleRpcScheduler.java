@@ -51,6 +51,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       "hbase.ipc.server.callqueue.scan.ratio";
   public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
       "hbase.ipc.server.callqueue.handler.factor";
+  static final String CODEL_FASTPATH_BALANCED_Q = "CodelFPBQ.default";
 
   /**
    * The default, 'fifo', has the least friction but is dumb.
@@ -225,7 +226,7 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
             conf, abortable, BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
       } else if (isCodelQueueType(callQueueType)) {
         callExecutor =
-          new FastPathBalancedQueueRpcExecutor("CodelFPBQ.default", handlerCount, numCallQueues,
+          new BalancedQueueRpcExecutor(CODEL_FASTPATH_BALANCED_Q, handlerCount, numCallQueues,
             conf, abortable, AdaptiveLifoCoDelCallQueue.class, maxQueueLength,
             codelTargetDelay, codelInterval, codelLifoThreshold,
             numGeneralCallsDropped, numLifoModeSwitches);

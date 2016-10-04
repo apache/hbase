@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.regionserver.AnnotationReadingPriorityFunction;
 import org.apache.hadoop.hbase.security.User;
 

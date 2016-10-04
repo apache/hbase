@@ -33,11 +33,11 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.util.ByteArrayHashKey;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HashKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
@@ -873,10 +873,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
     builder.setRegionId(info.getRegionId());
     if (info.getStartKey() != null) {
-      builder.setStartKey(ByteStringer.wrap(info.getStartKey()));
+      builder.setStartKey(UnsafeByteOperations.unsafeWrap(info.getStartKey()));
     }
     if (info.getEndKey() != null) {
-      builder.setEndKey(ByteStringer.wrap(info.getEndKey()));
+      builder.setEndKey(UnsafeByteOperations.unsafeWrap(info.getEndKey()));
     }
     builder.setOffline(info.isOffline());
     builder.setSplit(info.isSplit());

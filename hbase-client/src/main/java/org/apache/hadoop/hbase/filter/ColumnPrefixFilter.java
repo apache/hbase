@@ -28,13 +28,13 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -112,7 +112,7 @@ public class ColumnPrefixFilter extends FilterBase {
   public byte [] toByteArray() {
     FilterProtos.ColumnPrefixFilter.Builder builder =
       FilterProtos.ColumnPrefixFilter.newBuilder();
-    if (this.prefix != null) builder.setPrefix(ByteStringer.wrap(this.prefix));
+    if (this.prefix != null) builder.setPrefix(UnsafeByteOperations.unsafeWrap(this.prefix));
     return builder.build().toByteArray();
   }
 

@@ -140,7 +140,7 @@ public class TestChildProcedures {
     assertTrue("expected completed proc", procExecutor.isFinished(procId));
     ProcedureInfo result = procExecutor.getResult(procId);
     assertEquals(true, result.isFailed());
-    LOG.info(result.getExceptionFullMessage());
+    LOG.info(result.getException().getMessage());
   }
 
   public static class TestRootProcedure extends SequentialProcedure<TestProcEnv> {

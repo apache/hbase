@@ -62,7 +62,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 @InterfaceAudience.Private
 public class CellModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
-  
+
   @JsonProperty("column")
   @XmlAttribute
   private byte[] column;
@@ -133,7 +133,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     this.timestamp = timestamp;
     this.value = value;
   }
-  
+
   /**
    * @return the column
    */

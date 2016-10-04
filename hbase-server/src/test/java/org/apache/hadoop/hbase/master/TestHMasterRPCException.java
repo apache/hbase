@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -47,9 +47,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestHMasterRPCException {
@@ -100,7 +99,7 @@ public class TestHMasterRPCException {
             .getIsMasterRunning());
         return;
       } catch (ServiceException ex) {
-        IOException ie = ProtobufUtil.getRemoteException(ex);
+        IOException ie = ProtobufUtil.handleRemoteException(ex);
         // No SocketTimeoutException here. RpcServer is already started after the construction of
         // HMaster.
         assertTrue(ie.getMessage().startsWith(

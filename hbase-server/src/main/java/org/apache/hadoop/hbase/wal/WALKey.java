@@ -37,9 +37,10 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FamilyScope;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.ScopeType;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
 // imports for things that haven't moved from regionserver.wal yet.
@@ -50,7 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 
 /**
  * A Key for an entry in the WAL.
@@ -645,13 +646,12 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     this.encodedRegionName = encodedRegionName;
   }
 
-  public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.Builder getBuilder(
+  public WALProtos.WALKey.Builder getBuilder(
       WALCellCodec.ByteStringCompressor compressor) throws IOException {
-    org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.Builder builder =
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.newBuilder();
+    WALProtos.WALKey.Builder builder = WALProtos.WALKey.newBuilder();
     if (compressionContext == null) {
-      builder.setEncodedRegionName(ByteStringer.wrap(this.encodedRegionName));
-      builder.setTableName(ByteStringer.wrap(this.tablename.getName()));
+      builder.setEncodedRegionName(ByteString.copyFrom(this.encodedRegionName));
+      builder.setTableName(ByteString.copyFrom(this.tablename.getName()));
     } else {
       builder.setEncodedRegionName(compressor.compress(this.encodedRegionName,
           compressionContext.regionDict));
@@ -677,7 +677,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     }
     if (replicationScope != null) {
       for (Map.Entry<byte[], Integer> e : replicationScope.entrySet()) {
-        ByteString family = (compressionContext == null) ? ByteStringer.wrap(e.getKey())
+        ByteString family = (compressionContext == null) ? ByteString.copyFrom(e.getKey())
             : compressor.compress(e.getKey(), compressionContext.familyDict);
         builder.addScopes(FamilyScope.newBuilder()
             .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));
@@ -686,7 +686,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     return builder;
   }
 
-  public void readFieldsFromPb(org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey walKey,
+  public void readFieldsFromPb(WALProtos.WALKey walKey,
                                WALCellCodec.ByteStringUncompressor uncompressor)
       throws IOException {
     if (this.compressionContext != null) {

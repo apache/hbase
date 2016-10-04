@@ -34,7 +34,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 
 /**
  * The request processing logic, which is usually executed in thread pools provided by an

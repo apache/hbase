@@ -92,7 +92,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProcedureProtos;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProcedureProtos;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -105,8 +105,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -1194,8 +1194,8 @@ public class TestAccessController extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
-            Action.READ);
+          AccessControlUtil.grant(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY,
+              null, Action.READ);
         }
         return null;
       }
@@ -1209,7 +1209,7 @@ public class TestAccessController extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
+          AccessControlUtil.revoke(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
             Action.READ);
         }
         return null;
@@ -1224,7 +1224,7 @@ public class TestAccessController extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getName());
           AccessControlService.BlockingInterface protocol =
               AccessControlService.newBlockingStub(service);
-          ProtobufUtil.getUserPermissions(null, protocol, TEST_TABLE);
+          AccessControlUtil.getUserPermissions(null, protocol, TEST_TABLE);
         }
         return null;
       }
@@ -1238,7 +1238,7 @@ public class TestAccessController extends SecureTestUtil {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.getUserPermissions(null, protocol);
+          AccessControlUtil.getUserPermissions(null, protocol);
         }
         return null;
       }
@@ -1649,7 +1649,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
+        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1676,7 +1676,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
+        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1700,7 +1700,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
+        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1720,7 +1720,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
+        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1740,7 +1740,7 @@ public class TestAccessController extends SecureTestUtil {
         BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
         AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-        perms = ProtobufUtil.getUserPermissions(null, protocol, tableName);
+        perms = AccessControlUtil.getUserPermissions(null, protocol, tableName);
       } finally {
         acl.close();
       }
@@ -1763,7 +1763,7 @@ public class TestAccessController extends SecureTestUtil {
       BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
-      perms = ProtobufUtil.getUserPermissions(null, protocol);
+      perms = AccessControlUtil.getUserPermissions(null, protocol);
     } finally {
       acl.close();
     }

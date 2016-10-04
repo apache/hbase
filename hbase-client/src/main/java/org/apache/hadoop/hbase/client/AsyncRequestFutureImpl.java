@@ -33,8 +33,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Trace;
@@ -1284,7 +1284,6 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private MultiServerCallable<Row> createCallable(final ServerName server,
                                                     TableName tableName, final MultiAction<Row> multi) {
     return new MultiServerCallable<Row>(asyncProcess.connection, tableName, server,
-        asyncProcess.rpcFactory, multi);
+        multi, asyncProcess.rpcFactory.newController());
   }
-
 }

@@ -29,20 +29,18 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.ProcedureUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
 
 /**
  * Base Procedure class responsible to handle the Procedure Metadata
@@ -774,22 +772,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
-   * Helper to create the ProcedureInfo from Procedure.
-   */
-  @InterfaceAudience.Private
-  public static ProcedureInfo createProcedureInfo(final Procedure proc, final NonceKey nonceKey) {
-    RemoteProcedureException exception = proc.hasException() ? proc.getException() : null;
-    return new ProcedureInfo(proc.getProcId(), proc.toStringClass(), proc.getOwner(),
-        ProcedureUtil.convertToProcedureState(proc.getState()),
-        proc.hasParent() ? proc.getParentProcId() : -1, nonceKey,
-        exception != null
-            ? new ProcedureUtil.ForeignExceptionMsg(
-                RemoteProcedureException.toProto(exception.getSource(), exception.getCause()))
-            : null,
-        proc.getLastUpdate(), proc.getStartTime(), proc.getResult());
-  }
-
-  /**
    * Helper to convert the procedure to protobuf.
    * Used by ProcedureStore implementations.
    */
@@ -833,7 +815,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
     byte[] result = proc.getResult();
     if (result != null) {
-      builder.setResult(ByteStringer.wrap(result));
+      builder.setResult(ByteString.copyFrom(result));
     }
 
     ByteString.Output stateStream = ByteString.newOutput();

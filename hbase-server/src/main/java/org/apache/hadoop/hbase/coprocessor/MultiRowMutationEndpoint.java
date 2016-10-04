@@ -31,11 +31,11 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.WrongRegionException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
@@ -115,7 +115,7 @@ CoprocessorService, Coprocessor {
       long nonce = request.hasNonce() ? request.getNonce() : HConstants.NO_NONCE;
       env.getRegion().mutateRowsWithLocks(mutations, rowsToLock, nonceGroup, nonce);
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(response);
   }

@@ -183,5 +183,4 @@ public class RSGroupInfo {
     result = 31 * result + name.hashCode();
     return result;
   }
-
 }

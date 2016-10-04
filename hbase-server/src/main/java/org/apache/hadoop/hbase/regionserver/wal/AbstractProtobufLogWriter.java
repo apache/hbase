@@ -41,11 +41,11 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -112,7 +112,7 @@ public abstract class AbstractProtobufLogWriter {
       byte[] keyBytes = new byte[cipher.getKeyLength()];
       rng.nextBytes(keyBytes);
       Key key = new SecretKeySpec(keyBytes, cipher.getName());
-      builder.setEncryptionKey(ByteStringer.wrap(EncryptionUtil.wrapKey(conf,
+      builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(EncryptionUtil.wrapKey(conf,
           conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
               conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
                   User.getCurrent().getShortName())),

@@ -22,14 +22,14 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestServerLoad {

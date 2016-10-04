@@ -40,19 +40,19 @@ import org.apache.hadoop.hbase.rest.protobuf.generated.CellSetMessage.CellSet;
 /**
  * Representation of a grouping of cells. May contain cells from more than
  * one row. Encapsulates RowModel and CellModel models.
- * 
+ *
  * <pre>
  * &lt;complexType name="CellSet"&gt;
  *   &lt;sequence&gt;
- *     &lt;element name="row" type="tns:Row" maxOccurs="unbounded" 
+ *     &lt;element name="row" type="tns:Row" maxOccurs="unbounded"
  *       minOccurs="1"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
  * &lt;/complexType&gt;
- * 
+ *
  * &lt;complexType name="Row"&gt;
  *   &lt;sequence&gt;
  *     &lt;element name="key" type="base64Binary"&gt;&lt;/element&gt;
- *     &lt;element name="cell" type="tns:Cell" 
+ *     &lt;element name="cell" type="tns:Cell"
  *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
  * &lt;/complexType&gt;
@@ -80,13 +80,13 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   @XmlElement(name="Row")
   private List<RowModel> rows;
 
-  /**  
+  /**
    * Constructor
    */
   public CellSetModel() {
     this.rows = new ArrayList<RowModel>();
   }
-  
+
   /**
    * @param rows the rows
    */
@@ -94,7 +94,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
     super();
     this.rows = rows;
   }
-  
+
   /**
    * Add a row to this cell set
    * @param row the row

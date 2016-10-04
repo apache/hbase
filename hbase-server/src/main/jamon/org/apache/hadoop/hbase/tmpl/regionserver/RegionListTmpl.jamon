@@ -28,9 +28,9 @@
         org.apache.hadoop.hbase.regionserver.Region;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.HBaseConfiguration;
-        org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
-        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
+        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
         org.apache.hadoop.hbase.client.RegionReplicaUtil;
         org.apache.hadoop.hbase.regionserver.MetricsRegionWrapper;
         org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;

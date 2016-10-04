@@ -26,14 +26,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
-import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -207,7 +207,7 @@ public class FixedFileTrailer {
       .setComparatorClassName(comparatorClassName)
       .setCompressionCodec(compressionCodec.ordinal());
     if (encryptionKey != null) {
-      builder.setEncryptionKey(ByteStringer.wrap(encryptionKey));
+      builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(encryptionKey));
     }
     // We need this extra copy unfortunately to determine the final size of the
     // delimited output, see use of baos.size() below.

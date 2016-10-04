@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -94,7 +94,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
       response = ExampleProtos.CountResponse.newBuilder()
           .setCount(count).build();
     } catch (IOException ioe) {
-      ResponseConverter.setControllerException(controller, ioe);
+      CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
         try {
@@ -129,7 +129,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
       response = ExampleProtos.CountResponse.newBuilder()
           .setCount(count).build();
     } catch (IOException ioe) {
-      ResponseConverter.setControllerException(controller, ioe);
+      CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
         try {

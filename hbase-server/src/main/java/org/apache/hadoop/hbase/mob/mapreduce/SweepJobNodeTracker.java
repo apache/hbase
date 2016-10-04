@@ -24,8 +24,8 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.TableLock;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;

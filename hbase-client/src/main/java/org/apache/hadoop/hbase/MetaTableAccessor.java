@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ServiceException;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -36,8 +33,6 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -51,6 +46,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -60,12 +56,21 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+
+import com.google.common.annotations.VisibleForTesting;
+
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * Read/write operations on region and assignment information store in
@@ -1677,7 +1682,7 @@ public class MetaTableAccessor {
       } else {
         mutations = new Mutation[] { putOfMerged, deleteA, deleteB };
       }
-      multiMutate(meta, tableRow, mutations);
+      multiMutate(connection, meta, tableRow, mutations);
     } finally {
       meta.close();
     }
@@ -1732,7 +1737,7 @@ public class MetaTableAccessor {
         mutations = new Mutation[]{putParent, putA, putB};
       }
       byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
-      multiMutate(meta, tableRow, mutations);
+      multiMutate(connection, meta, tableRow, mutations);
     } finally {
       meta.close();
     }
@@ -1777,37 +1782,74 @@ public class MetaTableAccessor {
     LOG.info("Deleted table " + table + " state from META");
   }
 
+  private static void multiMutate(Connection connection, Table table, byte[] row,
+      Mutation... mutations)
+  throws IOException {
+    multiMutate(connection, table, row, Arrays.asList(mutations));
+  }
+
   /**
-   * Performs an atomic multi-Mutate operation against the given table.
+   * Performs an atomic multi-mutate operation against the given table.
    */
-  private static void multiMutate(Table table, byte[] row, Mutation... mutations)
-      throws IOException {
-    CoprocessorRpcChannel channel = table.coprocessorService(row);
-    MultiRowMutationProtos.MutateRowsRequest.Builder mmrBuilder
-      = MultiRowMutationProtos.MutateRowsRequest.newBuilder();
+  // Used by the RSGroup Coprocessor Endpoint. It had a copy/paste of the below. Need to reveal
+  // this facility for CPEP use or at least those CPEPs that are on their way to becoming part of
+  // core as is the intent for RSGroup eventually.
+  public static void multiMutate(Connection connection, final Table table, byte[] row,
+      final List<Mutation> mutations)
+  throws IOException {
     if (METALOG.isDebugEnabled()) {
       METALOG.debug(mutationsToString(mutations));
     }
-    for (Mutation mutation : mutations) {
-      if (mutation instanceof Put) {
-        mmrBuilder.addMutationRequest(ProtobufUtil.toMutation(
-          ClientProtos.MutationProto.MutationType.PUT, mutation));
-      } else if (mutation instanceof Delete) {
-        mmrBuilder.addMutationRequest(ProtobufUtil.toMutation(
-          ClientProtos.MutationProto.MutationType.DELETE, mutation));
-      } else {
-        throw new DoNotRetryIOException("multi in MetaEditor doesn't support "
-          + mutation.getClass().getName());
+    // TODO: Need rollback!!!!
+    // TODO: Need Retry!!!
+    // TODO: What for a timeout? Default write timeout? GET FROM HTABLE?
+    // TODO: Review when we come through with ProcedureV2.
+    RegionServerCallable<MutateRowsResponse,
+        MultiRowMutationProtos.MultiRowMutationService.BlockingInterface> callable =
+        new RegionServerCallable<MutateRowsResponse,
+          MultiRowMutationProtos.MultiRowMutationService.BlockingInterface>(
+              connection, table.getName(), row, null/*RpcController not used in this CPEP!*/) {
+      @Override
+      protected MutateRowsResponse rpcCall() throws Exception {
+        final MutateRowsRequest.Builder builder = MutateRowsRequest.newBuilder();
+        for (Mutation mutation : mutations) {
+          if (mutation instanceof Put) {
+            builder.addMutationRequest(ProtobufUtil.toMutation(
+              ClientProtos.MutationProto.MutationType.PUT, mutation));
+          } else if (mutation instanceof Delete) {
+            builder.addMutationRequest(ProtobufUtil.toMutation(
+              ClientProtos.MutationProto.MutationType.DELETE, mutation));
+          } else {
+            throw new DoNotRetryIOException("multi in MetaEditor doesn't support "
+              + mutation.getClass().getName());
+          }
+        }
+        // The call to #prepare that ran before this invocation will have populated HRegionLocation.
+        HRegionLocation hrl = getLocation();
+        RegionSpecifier region = ProtobufUtil.buildRegionSpecifier(
+            RegionSpecifierType.REGION_NAME, hrl.getRegionInfo().getRegionName());
+        builder.setRegion(region);
+        // The rpcController here is awkward. The Coprocessor Endpoint wants an instance of a
+        // com.google.protobuf but we are going over an rpc that is all shaded protobuf so it
+        // wants a org.apache.h.h.shaded.com.google.protobuf.RpcController. Set up a factory
+        // that makes com.google.protobuf.RpcController and then copy into it configs.
+        return getStub().mutateRows(null, builder.build());
       }
-    }
 
-    MultiRowMutationProtos.MultiRowMutationService.BlockingInterface service =
-      MultiRowMutationProtos.MultiRowMutationService.newBlockingStub(channel);
-    try {
-      service.mutateRows(null, mmrBuilder.build());
-    } catch (ServiceException ex) {
-      ProtobufUtil.toIOException(ex);
-    }
+      @Override
+      // Called on the end of the super.prepare call. Set the stub.
+      protected void setStubByServiceName(ServerName serviceName/*Ignored*/) throws IOException {
+        CoprocessorRpcChannel channel = table.coprocessorService(getRow());
+        setStub(MultiRowMutationProtos.MultiRowMutationService.newBlockingStub(channel));
+      }
+    };
+    int writeTimeout = connection.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
+        connection.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    // The region location should be cached in connection. Call prepare so this callable picks
+    // up the region location (see super.prepare method).
+    callable.prepare(false);
+    callable.call(writeTimeout);
   }
 
   /**
@@ -2026,16 +2068,6 @@ public class MetaTableAccessor {
     return p;
   }
 
-  private static String mutationsToString(Mutation ... mutations) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    String prefix = "";
-    for (Mutation mutation : mutations) {
-      sb.append(prefix).append(mutationToString(mutation));
-      prefix = ", ";
-    }
-    return sb.toString();
-  }
-
   private static String mutationsToString(List<? extends Mutation> mutations) throws IOException {
     StringBuilder sb = new StringBuilder();
     String prefix = "";
@@ -2169,5 +2201,4 @@ public class MetaTableAccessor {
     }
     return null;
   }
-
 }

@@ -88,8 +88,8 @@ public class CoprocessorHConnection extends ConnectionImplementation {
   }
 
   @Override
-  public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService.BlockingInterface
-      getClient(ServerName serverName) throws IOException {
+  public org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.
+    ClientService.BlockingInterface getClient(ServerName serverName) throws IOException {
     // client is trying to reach off-server, so we can't do anything special
     if (!this.serverName.equals(serverName)) {
       return super.getClient(serverName);

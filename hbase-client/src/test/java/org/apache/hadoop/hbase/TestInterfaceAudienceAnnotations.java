@@ -76,6 +76,14 @@ public class TestInterfaceAudienceAnnotations {
     }
   }
 
+  class ShadedProtobufClassFilter implements ClassFinder.ClassFilter {
+    @Override
+    public boolean isCandidateClass(Class<?> c) {
+      return c.getPackage().getName().
+          contains("org.apache.hadoop.hbase.shaded.com.google.protobuf");
+    }
+  }
+
   /** Selects classes with one of the {@link InterfaceAudience} annotation in their class
    * declaration.
    */
@@ -273,6 +281,7 @@ public class TestInterfaceAudienceAnnotations {
       new And(new PublicClassFilter(),
               new Not(new TestClassFilter()),
               new Not(new GeneratedClassFilter()),
+              new Not(new ShadedProtobufClassFilter()),
               new Not(new IsInterfaceStabilityClassFilter()),
               new Not(new InterfaceAudienceAnnotatedClassFilter()),
               new Not(new CloverInstrumentationFilter()))
@@ -312,6 +321,7 @@ public class TestInterfaceAudienceAnnotations {
       new And(new PublicClassFilter(),
               new Not(new TestClassFilter()),
               new Not(new GeneratedClassFilter()),
+              new Not(new ShadedProtobufClassFilter()),
               new InterfaceAudiencePublicAnnotatedClassFilter(),
               new Not(new IsInterfaceStabilityClassFilter()),
               new Not(new InterfaceStabilityAnnotatedClassFilter()))
@@ -355,6 +365,7 @@ public class TestInterfaceAudienceAnnotations {
             new Not((FileNameFilter) new TestFileNameFilter()),
             new And(new PublicClassFilter(), new Not(new TestClassFilter()),
                 new Not(new GeneratedClassFilter()),
+                new Not(new ShadedProtobufClassFilter()),
                 new InterfaceAudiencePublicAnnotatedClassFilter()));
     Set<Class<?>> classes = classFinder.findClasses(false);
     return classes;

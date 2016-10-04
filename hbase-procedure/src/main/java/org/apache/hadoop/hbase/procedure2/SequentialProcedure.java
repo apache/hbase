@@ -24,7 +24,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.SequentialProcedureData;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.SequentialProcedureData;
 
 /**
  * A SequentialProcedure describes one step in a procedure chain.

@@ -167,11 +167,11 @@
                       <source>
                         <directory>${basedir}/src/main/protobuf</directory>
                         <!-- Unfortunately, Hadoop plugin does not support *.proto.
-                             We have to individually list every proto file here -->
+                             We have to individually list every proto file here -se-protocol/src/main/protobuf//AccessControl.proto
+                             -->
                         <includes>
                           <include>AccessControl.proto</include>
                           <include>Admin.proto</include>
-                          <include>Aggregate.proto</include>
                           <include>Authentication.proto</include>
                           <include>Cell.proto</include>
                           <include>Client.proto</include>
@@ -186,44 +186,20 @@
                           <include>HFile.proto</include>
                           <include>LoadBalancer.proto</include>
                           <include>MapReduce.proto</include>
-                          <include>Master.proto</include>
-                          <include>MasterProcedure.proto</include>
                           <include>MultiRowMutation.proto</include>
-                          <include>Procedure.proto</include>
                           <include>Quota.proto</include>
                           <include>RPC.proto</include>
-                          <include>RSGroup.proto</include>
-                          <include>RSGroupAdmin.proto</include>
-                          <include>RegionNormalizer.proto</include>
-                          <include>RegionServerStatus.proto</include>
                           <include>RowProcessor.proto</include>
-                          <include>SecureBulkLoad.proto</include>
                           <include>Snapshot.proto</include>
+                          <!--These two test proto files are in shaded and non-shaded form
+                               used both sides testing-->
+                          <include>test.proto</include>
+                          <include>test_rpc_service.proto</include>
                           <include>Tracing.proto</include>
                           <include>VisibilityLabels.proto</include>
                           <include>WAL.proto</include>
                           <include>ZooKeeper.proto</include>
-                          <include>SparkFilter.proto</include>
-                          <include>ColumnAggregationNullResponseProtocol.proto</include>
-                          <include>ColumnAggregationProtocol.proto</include>
-                          <include>ColumnAggregationWithErrorsProtocol.proto</include>
-                          <include>DummyRegionServerEndpoint.proto</include>
-                          <include>IncrementCounterProcessor.proto</include>
                           <include>PingProtocol.proto</include>
-                          <include>TestProcedure.proto</include>
-                          <include>test.proto</include>
-                          <include>test_rpc_service.proto</include>
-                          <include>CellMessage.proto</include>
-                          <include>CellSetMessage.proto</include>
-                          <include>ColumnSchemaMessage.proto</include>
-                          <include>NamespacePropertiesMessage.proto</include>
-                          <include>NamespacesMessage.proto</include>
-                          <include>ScannerMessage.proto</include>
-                          <include>StorageClusterStatusMessage.proto</include>
-                          <include>TableInfoMessage.proto</include>
-                          <include>TableListMessage.proto</include>
-                          <include>TableSchemaMessage.proto</include>
-                          <include>VersionMessage.proto</include>
                         </includes>
                       </source>
                       <!--<output>${project.build.directory}/generated-sources/java</output>-->

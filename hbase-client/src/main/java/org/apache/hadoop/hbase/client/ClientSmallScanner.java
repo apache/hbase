@@ -32,10 +32,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -207,7 +207,7 @@ public class ClientSmallScanner extends ClientSimpleScanner {
 
     @Override
     public ScannerCallable getScannerCallableForReplica(int id) {
-      return new SmallScannerCallable((ClusterConnection)connection, tableName, getScan(),
+      return new SmallScannerCallable((ClusterConnection)getConnection(), getTableName(), getScan(),
           scanMetrics, rpcControllerFactory, getCaching(), id);
     }
   }

@@ -32,21 +32,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.ByteString;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestHRegionInfo {
@@ -246,11 +245,11 @@ public class TestHRegionInfo {
     // test convert RegionInfo without replicaId
     RegionInfo info = RegionInfo.newBuilder()
       .setTableName(HBaseProtos.TableName.newBuilder()
-        .setQualifier(ByteString.copyFrom(tableName.getQualifier()))
-        .setNamespace(ByteString.copyFrom(tableName.getNamespace()))
+        .setQualifier(UnsafeByteOperations.unsafeWrap(tableName.getQualifier()))
+        .setNamespace(UnsafeByteOperations.unsafeWrap(tableName.getNamespace()))
         .build())
-      .setStartKey(ByteString.copyFrom(startKey))
-      .setEndKey(ByteString.copyFrom(endKey))
+      .setStartKey(UnsafeByteOperations.unsafeWrap(startKey))
+      .setEndKey(UnsafeByteOperations.unsafeWrap(endKey))
       .setSplit(split)
       .setRegionId(regionId)
       .build();

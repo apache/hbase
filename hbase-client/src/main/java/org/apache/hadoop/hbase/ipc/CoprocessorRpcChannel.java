@@ -30,5 +30,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface CoprocessorRpcChannel extends RpcChannel, BlockingRpcChannel {
-}
+public interface CoprocessorRpcChannel extends RpcChannel, BlockingRpcChannel {}
+// This Interface is part of our public, client-facing API!!!
+// This belongs in client package but it is exposed in our public API so we cannot relocate.

@@ -1,0 +1,300 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package hbase.pb;
+
+option java_package = "org.apache.hadoop.hbase.shaded.protobuf.generated";
+option java_outer_classname = "MasterProcedureProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "HBase.proto";
+import "RPC.proto";
+
+// ============================================================================
+//  WARNING - Compatibility rules
+// ============================================================================
+// This .proto contains the data serialized by the master procedures.
+// Each procedure has some state stored to know, which step were executed
+// and what were the parameters or data created by the previous steps.
+// new code should be able to handle the old format or at least fail cleanly
+// triggering a rollback/cleanup.
+//
+// Procedures that are inheriting from a StateMachineProcedure have an enum:
+//  - Do not change the number of the 'State' enums.
+//    doing so, will cause executing the wrong 'step' on the pending
+//    procedures when they will be replayed.
+//  - Do not remove items from the enum, new code must be able to handle
+//    all the previous 'steps'. There may be pending procedure ready to be
+//    recovered replayed. alternative you can make sure that not-known state
+//    will result in a failure that will rollback the already executed steps.
+// ============================================================================
+
+enum CreateTableState {
+  CREATE_TABLE_PRE_OPERATION = 1;
+  CREATE_TABLE_WRITE_FS_LAYOUT = 2;
+  CREATE_TABLE_ADD_TO_META = 3;
+  CREATE_TABLE_ASSIGN_REGIONS = 4;
+  CREATE_TABLE_UPDATE_DESC_CACHE = 5;
+  CREATE_TABLE_POST_OPERATION = 6;
+}
+
+message CreateTableStateData {
+  required UserInformation user_info = 1;
+  required TableSchema table_schema = 2;
+  repeated RegionInfo region_info = 3;
+}
+
+enum ModifyTableState {
+  MODIFY_TABLE_PREPARE = 1;
+  MODIFY_TABLE_PRE_OPERATION = 2;
+  MODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR = 3;
+  MODIFY_TABLE_REMOVE_REPLICA_COLUMN = 4;
+  MODIFY_TABLE_DELETE_FS_LAYOUT = 5;
+  MODIFY_TABLE_POST_OPERATION = 6;
+  MODIFY_TABLE_REOPEN_ALL_REGIONS = 7;
+}
+
+message ModifyTableStateData {
+  required UserInformation user_info = 1;
+  optional TableSchema unmodified_table_schema = 2;
+  required TableSchema modified_table_schema = 3;
+  required bool delete_column_family_in_modify = 4;
+}
+
+enum TruncateTableState {
+  TRUNCATE_TABLE_PRE_OPERATION = 1;
+  TRUNCATE_TABLE_REMOVE_FROM_META = 2;
+  TRUNCATE_TABLE_CLEAR_FS_LAYOUT = 3;
+  TRUNCATE_TABLE_CREATE_FS_LAYOUT = 4;
+  TRUNCATE_TABLE_ADD_TO_META = 5;
+  TRUNCATE_TABLE_ASSIGN_REGIONS = 6;
+  TRUNCATE_TABLE_POST_OPERATION = 7;
+}
+
+message TruncateTableStateData {
+  required UserInformation user_info = 1;
+  required bool preserve_splits = 2;
+  optional TableName table_name = 3;
+  optional TableSchema table_schema = 4;
+  repeated RegionInfo region_info = 5;
+}
+
+enum DeleteTableState {
+  DELETE_TABLE_PRE_OPERATION = 1;
+  DELETE_TABLE_REMOVE_FROM_META = 2;
+  DELETE_TABLE_CLEAR_FS_LAYOUT = 3;
+  DELETE_TABLE_UPDATE_DESC_CACHE = 4;
+  DELETE_TABLE_UNASSIGN_REGIONS = 5;
+  DELETE_TABLE_POST_OPERATION = 6;
+}
+
+message DeleteTableStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  repeated RegionInfo region_info = 3;
+}
+
+enum CreateNamespaceState {
+  CREATE_NAMESPACE_PREPARE = 1;
+  CREATE_NAMESPACE_CREATE_DIRECTORY = 2;
+  CREATE_NAMESPACE_INSERT_INTO_NS_TABLE = 3;
+  CREATE_NAMESPACE_UPDATE_ZK = 4;
+  CREATE_NAMESPACE_SET_NAMESPACE_QUOTA = 5;
+}
+
+message CreateNamespaceStateData {
+  required NamespaceDescriptor namespace_descriptor = 1;
+}
+
+enum ModifyNamespaceState {
+  MODIFY_NAMESPACE_PREPARE = 1;
+  MODIFY_NAMESPACE_UPDATE_NS_TABLE = 2;
+  MODIFY_NAMESPACE_UPDATE_ZK = 3;
+}
+
+message ModifyNamespaceStateData {
+  required NamespaceDescriptor namespace_descriptor = 1;
+  optional NamespaceDescriptor unmodified_namespace_descriptor = 2;
+}
+
+enum DeleteNamespaceState {
+  DELETE_NAMESPACE_PREPARE = 1;
+  DELETE_NAMESPACE_DELETE_FROM_NS_TABLE = 2;
+  DELETE_NAMESPACE_REMOVE_FROM_ZK = 3;
+  DELETE_NAMESPACE_DELETE_DIRECTORIES = 4;
+  DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA = 5;
+}
+
+message DeleteNamespaceStateData {
+  required string namespace_name = 1;
+  optional NamespaceDescriptor namespace_descriptor = 2;
+}
+
+enum AddColumnFamilyState {
+  ADD_COLUMN_FAMILY_PREPARE = 1;
+  ADD_COLUMN_FAMILY_PRE_OPERATION = 2;
+  ADD_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR = 3;
+  ADD_COLUMN_FAMILY_POST_OPERATION = 4;
+  ADD_COLUMN_FAMILY_REOPEN_ALL_REGIONS = 5;
+}
+
+message AddColumnFamilyStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  required ColumnFamilySchema columnfamily_schema = 3;
+  optional TableSchema unmodified_table_schema = 4;
+}
+
+enum ModifyColumnFamilyState {
+  MODIFY_COLUMN_FAMILY_PREPARE = 1;
+  MODIFY_COLUMN_FAMILY_PRE_OPERATION = 2;
+  MODIFY_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR = 3;
+  MODIFY_COLUMN_FAMILY_POST_OPERATION = 4;
+  MODIFY_COLUMN_FAMILY_REOPEN_ALL_REGIONS = 5;
+}
+
+message ModifyColumnFamilyStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  required ColumnFamilySchema columnfamily_schema = 3;
+  optional TableSchema unmodified_table_schema = 4;
+}
+
+enum DeleteColumnFamilyState {
+  DELETE_COLUMN_FAMILY_PREPARE = 1;
+  DELETE_COLUMN_FAMILY_PRE_OPERATION = 2;
+  DELETE_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR = 3;
+  DELETE_COLUMN_FAMILY_DELETE_FS_LAYOUT = 4;
+  DELETE_COLUMN_FAMILY_POST_OPERATION = 5;
+  DELETE_COLUMN_FAMILY_REOPEN_ALL_REGIONS = 6;
+}
+
+message DeleteColumnFamilyStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  required bytes columnfamily_name = 3;
+  optional TableSchema unmodified_table_schema = 4;
+}
+
+enum EnableTableState {
+  ENABLE_TABLE_PREPARE = 1;
+  ENABLE_TABLE_PRE_OPERATION = 2;
+  ENABLE_TABLE_SET_ENABLING_TABLE_STATE = 3;
+  ENABLE_TABLE_MARK_REGIONS_ONLINE = 4;
+  ENABLE_TABLE_SET_ENABLED_TABLE_STATE = 5;
+  ENABLE_TABLE_POST_OPERATION = 6;
+}
+
+message EnableTableStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  required bool skip_table_state_check = 3;
+}
+
+enum DisableTableState {
+  DISABLE_TABLE_PREPARE = 1;
+  DISABLE_TABLE_PRE_OPERATION = 2;
+  DISABLE_TABLE_SET_DISABLING_TABLE_STATE = 3;
+  DISABLE_TABLE_MARK_REGIONS_OFFLINE = 4;
+  DISABLE_TABLE_SET_DISABLED_TABLE_STATE = 5;
+  DISABLE_TABLE_POST_OPERATION = 6;
+}
+
+message DisableTableStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  required bool skip_table_state_check = 3;
+}
+
+message RestoreParentToChildRegionsPair {
+  required string parent_region_name = 1;
+  required string child1_region_name = 2;
+  required string child2_region_name = 3;
+}
+
+enum CloneSnapshotState {
+  CLONE_SNAPSHOT_PRE_OPERATION = 1;
+  CLONE_SNAPSHOT_WRITE_FS_LAYOUT = 2;
+  CLONE_SNAPSHOT_ADD_TO_META = 3;
+  CLONE_SNAPSHOT_ASSIGN_REGIONS = 4;
+  CLONE_SNAPSHOT_UPDATE_DESC_CACHE = 5;
+  CLONE_SNAPSHOT_POST_OPERATION = 6;
+}
+
+message CloneSnapshotStateData {
+  required UserInformation user_info = 1;
+  required SnapshotDescription snapshot = 2;
+  required TableSchema table_schema = 3;
+  repeated RegionInfo region_info = 4;
+  repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 5;
+}
+
+enum RestoreSnapshotState {
+  RESTORE_SNAPSHOT_PRE_OPERATION = 1;
+  RESTORE_SNAPSHOT_UPDATE_TABLE_DESCRIPTOR = 2;
+  RESTORE_SNAPSHOT_WRITE_FS_LAYOUT = 3;
+  RESTORE_SNAPSHOT_UPDATE_META = 4;
+}
+
+message RestoreSnapshotStateData {
+  required UserInformation user_info = 1;
+  required SnapshotDescription snapshot = 2;
+  required TableSchema modified_table_schema = 3;
+  repeated RegionInfo region_info_for_restore = 4;
+  repeated RegionInfo region_info_for_remove = 5;
+  repeated RegionInfo region_info_for_add = 6;
+  repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 7;
+}
+
+enum DispatchMergingRegionsState {
+  DISPATCH_MERGING_REGIONS_PREPARE = 1;
+  DISPATCH_MERGING_REGIONS_PRE_OPERATION = 2;
+  DISPATCH_MERGING_REGIONS_MOVE_REGION_TO_SAME_RS = 3;
+  DISPATCH_MERGING_REGIONS_DO_MERGE_IN_RS = 4;
+  DISPATCH_MERGING_REGIONS_POST_OPERATION = 5;
+}
+
+message DispatchMergingRegionsStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  repeated RegionInfo region_info = 3;
+  optional bool forcible = 4;
+}
+
+message ServerCrashStateData {
+  required ServerName server_name = 1;
+  optional bool distributed_log_replay = 2;
+  repeated RegionInfo regions_on_crashed_server = 3;
+  repeated RegionInfo regions_assigned = 4;
+  optional bool carrying_meta = 5;
+  optional bool should_split_wal = 6 [default = true];
+}
+
+enum ServerCrashState {
+  SERVER_CRASH_START = 1;
+  SERVER_CRASH_PROCESS_META = 2;
+  SERVER_CRASH_GET_REGIONS = 3;
+  SERVER_CRASH_NO_SPLIT_LOGS = 4;
+  SERVER_CRASH_SPLIT_LOGS = 5;
+  SERVER_CRASH_PREPARE_LOG_REPLAY = 6;
+  // Removed SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;
+  SERVER_CRASH_ASSIGN = 8;
+  SERVER_CRASH_WAIT_ON_ASSIGN = 9;
+  SERVER_CRASH_FINISH = 100;
+}

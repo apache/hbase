@@ -343,6 +343,56 @@
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
     </profile>
+        <profile>
+          <id>compile-protobuf</id>
+          <activation>
+            <property>
+              <name>compile-protobuf</name>
+            </property>
+          </activation>
+          <build>
+            <plugins>
+              <plugin>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-maven-plugins</artifactId>
+                <executions>
+                  <execution>
+                    <id>compile-protoc</id>
+                    <phase>generate-sources</phase>
+                    <goals>
+                      <goal>protoc</goal>
+                    </goals>
+                    <configuration>
+                      <imports>
+                        <param>${basedir}/src/main/protobuf</param>
+                      </imports>
+                      <source>
+                        <directory>${basedir}/src/main/protobuf</directory>
+                        <!-- Unfortunately, Hadoop plugin does not support *.proto.
+                             We have to individually list every proto file here -->
+                        <includes>
+                          <include>CellMessage.proto</include>
+                          <include>CellSetMessage.proto</include>
+                          <include>ColumnSchemaMessage.proto</include>
+                          <include>NamespacePropertiesMessage.proto</include>
+                          <include>NamespacesMessage.proto</include>
+                          <include>ScannerMessage.proto</include>
+                          <include>StorageClusterStatusMessage.proto</include>
+                          <include>TableInfoMessage.proto</include>
+                          <include>TableListMessage.proto</include>
+                          <include>TableSchemaMessage.proto</include>
+                          <include>VersionMessage.proto</include>
+                        </includes>
+                      </source>
+                      <!--<output>${project.build.directory}/generated-sources/java</output>-->
+                     <output>${basedir}/src/main/java/</output>
+                    </configuration>
+                  </execution>
+                </executions>
+              </plugin>
+            </plugins>
+          </build>
+        </profile>
     <!-- Hadoop-specific dependencies -->
     <!-- profile for building against Hadoop 2.0.x
          This is the default.

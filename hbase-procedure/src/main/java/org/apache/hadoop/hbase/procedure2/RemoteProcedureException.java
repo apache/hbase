@@ -22,10 +22,8 @@ import java.io.IOException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A RemoteProcedureException is an exception from another thread or process.
@@ -106,8 +104,7 @@ public class RemoteProcedureException extends ProcedureException {
    * @return the ForeignExcpetion instance
    * @throws InvalidProtocolBufferException if there was deserialization problem this is thrown.
    */
-  public static RemoteProcedureException deserialize(byte[] bytes)
-      throws InvalidProtocolBufferException {
+  public static RemoteProcedureException deserialize(byte[] bytes) throws IOException {
     return fromProto(ForeignExceptionMessage.parseFrom(bytes));
   }
 

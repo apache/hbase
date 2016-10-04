@@ -25,13 +25,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
-
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Manages the location of the current active Master for the RegionServer.
@@ -125,7 +124,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    */
   public ServerName getMasterAddress(final boolean refresh) {
     try {
-      return ServerName.parseFrom(super.getData(refresh));
+      return ProtobufUtil.parseServerNameFrom(super.getData(refresh));
     } catch (DeserializationException e) {
       LOG.warn("Failed parse", e);
       return null;
@@ -155,7 +154,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
       throw new IOException("Can't get master address from ZooKeeper; znode data == null");
     }
     try {
-      return ServerName.parseFrom(data);
+      return ProtobufUtil.parseServerNameFrom(data);
     } catch (DeserializationException e) {
       KeeperException ke = new KeeperException.DataInconsistencyException();
       ke.initCause(e);
@@ -266,7 +265,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
     try {
       Stat stat = new Stat();
       byte[] data = ZKUtil.getDataNoWatch(zkw, zkw.getMasterAddressZNode(), stat);
-      ServerName sn = ServerName.parseFrom(data);
+      ServerName sn = ProtobufUtil.parseServerNameFrom(data);
       if (sn != null && content.equals(sn.toString())) {
         return (ZKUtil.deleteNode(zkw, zkw.getMasterAddressZNode(), stat.getVersion()));
       }

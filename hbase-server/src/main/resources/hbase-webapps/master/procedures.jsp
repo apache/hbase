@@ -126,7 +126,7 @@
         <td><%= escapeXml(procInfo.getProcName()) %></a></td>
         <td><%= new Date(procInfo.getStartTime()) %></a></td>
         <td><%= new Date(procInfo.getLastUpdate()) %></a></td>
-        <td><%= escapeXml(procInfo.isFailed() ? procInfo.getExceptionMessage() : "") %></a></td>
+        <td><%= escapeXml(procInfo.isFailed() ? procInfo.getException().getMessage() : "") %></a></td>
       </tr>
     <% } %>
   </table>

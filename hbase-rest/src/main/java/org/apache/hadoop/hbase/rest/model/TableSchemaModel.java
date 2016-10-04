@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,11 +49,11 @@ import org.codehaus.jackson.annotate.JsonIgnore;
 
 /**
  * A representation of HBase table descriptors.
- * 
+ *
  * <pre>
  * &lt;complexType name="TableSchema"&gt;
  *   &lt;sequence&gt;
- *     &lt;element name="column" type="tns:ColumnSchema" 
+ *     &lt;element name="column" type="tns:ColumnSchema"
  *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
  *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
@@ -70,13 +70,13 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   private static final QName READONLY = new QName(HTableDescriptor.READONLY);
   private static final QName TTL = new QName(HColumnDescriptor.TTL);
   private static final QName VERSIONS = new QName(HConstants.VERSIONS);
-  private static final QName COMPRESSION = 
+  private static final QName COMPRESSION =
     new QName(HColumnDescriptor.COMPRESSION);
 
   private String name;
   private Map<QName,Object> attrs = new LinkedHashMap<QName,Object>();
   private List<ColumnSchemaModel> columns = new ArrayList<ColumnSchemaModel>();
-  
+
   /**
    * Default constructor.
    */
@@ -90,7 +90,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     setName(htd.getTableName().getNameAsString());
     for (Map.Entry<Bytes, Bytes> e:
         htd.getValues().entrySet()) {
-      addAttribute(Bytes.toString(e.getKey().get()), 
+      addAttribute(Bytes.toString(e.getKey().get()),
         Bytes.toString(e.getValue().get()));
     }
     for (HColumnDescriptor hcd: htd.getFamilies()) {
@@ -267,7 +267,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setName(name);
     for (Map.Entry<QName, Object> e: attrs.entrySet()) {
-      TableSchema.Attribute.Builder attrBuilder = 
+      TableSchema.Attribute.Builder attrBuilder =
         TableSchema.Attribute.newBuilder();
       attrBuilder.setName(e.getKey().getLocalPart());
       attrBuilder.setValue(e.getValue().toString());
@@ -278,7 +278,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
       ColumnSchema.Builder familyBuilder = ColumnSchema.newBuilder();
       familyBuilder.setName(family.getName());
       for (Map.Entry<QName, Object> e: familyAttrs.entrySet()) {
-        ColumnSchema.Attribute.Builder attrBuilder = 
+        ColumnSchema.Attribute.Builder attrBuilder =
           ColumnSchema.Attribute.newBuilder();
         attrBuilder.setName(e.getKey().getLocalPart());
         attrBuilder.setValue(e.getValue().toString());
@@ -302,7 +302,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) 
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     TableSchema.Builder builder = TableSchema.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);

@@ -17,11 +17,14 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 
 /**
  * This class is used to unify HTable calls with AsyncProcess Framework. HTable can use
@@ -29,13 +32,13 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
  * RegionServerCallable and implements Cancellable.
  */
 @InterfaceAudience.Private
-abstract class CancellableRegionServerCallable<T> extends RegionServerCallable<T> implements
-Cancellable {
+abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<T> implements
+    Cancellable {
   private final RetryingTimeTracker tracker = new RetryingTimeTracker();
 
   CancellableRegionServerCallable(Connection connection, TableName tableName, byte[] row,
-      RpcControllerFactory rpcControllerFactory) {
-    super(connection, rpcControllerFactory, tableName, row);
+      RpcController rpcController) {
+    super(connection, tableName, row, rpcController);
   }
 
   /* Override so can mess with the callTimeout.
@@ -44,6 +47,10 @@ Cancellable {
    */
   @Override
   public T call(int callTimeout) throws IOException {
+    if (isCancelled()) return null;
+    if (Thread.interrupted()) {
+      throw new InterruptedIOException();
+    }
     // It is expected (it seems) that tracker.start can be called multiple times (on each trip
     // through the call when retrying). Also, we can call start and no need of a stop.
     this.tracker.start();
@@ -55,6 +62,20 @@ Cancellable {
   }
 
   @Override
+  public void prepare(boolean reload) throws IOException {
+    if (isCancelled()) return;
+    if (Thread.interrupted()) {
+      throw new InterruptedIOException();
+    }
+    super.prepare(reload);
+  }
+
+  @Override
+  protected void setStubByServiceName(ServerName serviceName) throws IOException {
+    setStub(getConnection().getClient(serviceName));
+  }
+
+  @Override
   public void cancel() {
     getRpcController().startCancel();
   }
@@ -62,5 +83,33 @@ Cancellable {
   @Override
   public boolean isCancelled() {
     return getRpcController().isCanceled();
+  }
+
+  protected ClientProtos.MultiResponse doMulti(ClientProtos.MultiRequest request)
+  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+    return getStub().multi(getRpcController(), request);
+  }
+
+  protected ClientProtos.ScanResponse doScan(ClientProtos.ScanRequest request)
+  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+    return getStub().scan(getRpcController(), request);
+  }
+
+  protected ClientProtos.PrepareBulkLoadResponse doPrepareBulkLoad(
+      ClientProtos.PrepareBulkLoadRequest request)
+  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+    return getStub().prepareBulkLoad(getRpcController(), request);
+  }
+
+  protected ClientProtos.BulkLoadHFileResponse doBulkLoadHFile(
+      ClientProtos.BulkLoadHFileRequest request)
+  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+    return getStub().bulkLoadHFile(getRpcController(), request);
+  }
+
+  protected ClientProtos.CleanupBulkLoadResponse doCleanupBulkLoad(
+      ClientProtos.CleanupBulkLoadRequest request)
+  throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+    return getStub().cleanupBulkLoad(getRpcController(), request);
   }
 }

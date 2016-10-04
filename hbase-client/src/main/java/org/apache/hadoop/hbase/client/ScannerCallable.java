@@ -42,11 +42,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
@@ -57,7 +57,7 @@ import org.apache.hadoop.net.DNS;
  * {@link RpcRetryingCaller} so fails are retried.
  */
 @InterfaceAudience.Private
-public class ScannerCallable extends RegionServerCallable<Result[]> {
+public class ScannerCallable extends ClientServiceCallable<Result[]> {
   public static final String LOG_SCANNER_LATENCY_CUTOFF
     = "hbase.client.log.scanner.latency.cutoff";
   public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
@@ -119,7 +119,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    */
   public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
-    super(connection, rpcControllerFactory, tableName, scan.getStartRow());
+    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController());
     this.id = id;
     this.scan = scan;
     this.scanMetrics = scanMetrics;
@@ -429,7 +429,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   }
 
   public ScannerCallable getScannerCallableForReplica(int id) {
-    ScannerCallable s = new ScannerCallable(this.getConnection(), this.tableName,
+    ScannerCallable s = new ScannerCallable(this.getConnection(), getTableName(),
         this.getScan(), this.scanMetrics, this.rpcControllerFactory, id);
     s.setCaching(this.caching);
     return s;

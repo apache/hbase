@@ -142,7 +142,7 @@ public class SecureTestUtil {
   throws IOException {
     CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
     for (Permission p : perms) {
-      request.addPermission(ProtobufUtil.toPermission(p));
+      request.addPermission(AccessControlUtil.toPermission(p));
     }
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       try (Table acl = connection.getTable(table)) {
@@ -371,7 +371,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(null, protocol, user, actions);
+            AccessControlUtil.grant(null, protocol, user, actions);
           }
         }
         return null;
@@ -394,7 +394,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.revoke(null, protocol, user, actions);
+            AccessControlUtil.revoke(null, protocol, user, actions);
           }
         }
         return null;
@@ -417,7 +417,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(null, protocol, user, namespace, actions);
+            AccessControlUtil.grant(null, protocol, user, namespace, actions);
           }
         }
         return null;
@@ -482,7 +482,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.revoke(null, protocol, user, namespace, actions);
+            AccessControlUtil.revoke(null, protocol, user, namespace, actions);
           }
         }
         return null;
@@ -506,7 +506,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(null, protocol, user, table, family, qualifier, actions);
+            AccessControlUtil.grant(null, protocol, user, table, family, qualifier, actions);
           }
         }
         return null;
@@ -572,7 +572,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.revoke(null, protocol, user, table, family, qualifier, actions);
+            AccessControlUtil.revoke(null, protocol, user, table, family, qualifier, actions);
           }
         }
         return null;
@@ -740,7 +740,7 @@ public class SecureTestUtil {
           .setType(AccessControlProtos.Permission.Type.Global)
           .setGlobalPermission(
               AccessControlProtos.GlobalPermission.newBuilder()
-                  .addAction(ProtobufUtil.toPermissionAction(a)).build()));
+                  .addAction(AccessControlUtil.toPermissionAction(a)).build()));
     }
     try(Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
         Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
@@ -768,7 +768,7 @@ public class SecureTestUtil {
       Permission... perms) throws IOException {
     CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
     for (Permission p : perms) {
-      request.addPermission(ProtobufUtil.toPermission(p));
+      request.addPermission(AccessControlUtil.toPermission(p));
     }
 
     try(Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());

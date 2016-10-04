@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import com.google.common.net.HostAndPort;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
@@ -57,7 +55,6 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -85,19 +82,19 @@ import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -127,6 +124,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.net.HostAndPort;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -2207,7 +2205,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void grant(RpcController controller,
                     AccessControlProtos.GrantRequest request,
                     RpcCallback<AccessControlProtos.GrantResponse> done) {
-    final UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
+    final UserPermission perm = AccessControlUtil.toUserPermission(request.getUserPermission());
     AccessControlProtos.GrantResponse response = null;
     try {
       // verify it's only running at .acl.
@@ -2250,7 +2248,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       response = AccessControlProtos.GrantResponse.getDefaultInstance();
     } catch (IOException ioe) {
       // pass exception back up
-      ResponseConverter.setControllerException(controller, ioe);
+      CoprocessorRpcUtils.setControllerException(controller, ioe);
     }
     done.run(response);
   }
@@ -2259,7 +2257,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void revoke(RpcController controller,
                      AccessControlProtos.RevokeRequest request,
                      RpcCallback<AccessControlProtos.RevokeResponse> done) {
-    final UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
+    final UserPermission perm = AccessControlUtil.toUserPermission(request.getUserPermission());
     AccessControlProtos.RevokeResponse response = null;
     try {
       // only allowed to be called on _acl_ region
@@ -2302,7 +2300,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       response = AccessControlProtos.RevokeResponse.getDefaultInstance();
     } catch (IOException ioe) {
       // pass exception back up
-      ResponseConverter.setControllerException(controller, ioe);
+      CoprocessorRpcUtils.setControllerException(controller, ioe);
     }
     done.run(response);
   }
@@ -2357,14 +2355,14 @@ public class AccessController extends BaseMasterAndRegionObserver
                 Action.values()));
           }
         }
-        response = ResponseConverter.buildGetUserPermissionsResponse(perms);
+        response = AccessControlUtil.buildGetUserPermissionsResponse(perms);
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
             + "can only execute at " + AccessControlLists.ACL_TABLE_NAME + " table.");
       }
     } catch (IOException ioe) {
       // pass exception back up
-      ResponseConverter.setControllerException(controller, ioe);
+      CoprocessorRpcUtils.setControllerException(controller, ioe);
     }
     done.run(response);
   }
@@ -2375,7 +2373,7 @@ public class AccessController extends BaseMasterAndRegionObserver
                                RpcCallback<AccessControlProtos.CheckPermissionsResponse> done) {
     Permission[] permissions = new Permission[request.getPermissionCount()];
     for (int i=0; i < request.getPermissionCount(); i++) {
-      permissions[i] = ProtobufUtil.toPermission(request.getPermission(i));
+      permissions[i] = AccessControlUtil.toPermission(request.getPermission(i));
     }
     AccessControlProtos.CheckPermissionsResponse response = null;
     try {
@@ -2442,7 +2440,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       }
       response = AccessControlProtos.CheckPermissionsResponse.getDefaultInstance();
     } catch (IOException ioe) {
-      ResponseConverter.setControllerException(controller, ioe);
+      CoprocessorRpcUtils.setControllerException(controller, ioe);
     }
     done.run(response);
   }

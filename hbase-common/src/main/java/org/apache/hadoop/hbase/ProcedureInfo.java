@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.util.StringUtils;
 
@@ -40,7 +39,7 @@ public class ProcedureInfo implements Cloneable {
   private final ProcedureState procState;
   private final long parentId;
   private final NonceKey nonceKey;
-  private final ProcedureUtil.ForeignExceptionMsg exception;
+  private final IOException exception;
   private final long lastUpdate;
   private final long startTime;
   private final byte[] result;
@@ -55,7 +54,7 @@ public class ProcedureInfo implements Cloneable {
       final ProcedureState procState,
       final long parentId,
       final NonceKey nonceKey,
-      final ProcedureUtil.ForeignExceptionMsg exception,
+      final IOException exception,
       final long lastUpdate,
       final long startTime,
       final byte[] result) {
@@ -107,7 +106,7 @@ public class ProcedureInfo implements Cloneable {
 
     if (isFailed()) {
       sb.append(", exception=\"");
-      sb.append(getExceptionMessage());
+      sb.append(this.exception.getMessage());
       sb.append("\"");
     }
     sb.append(")");
@@ -152,29 +151,15 @@ public class ProcedureInfo implements Cloneable {
 
   public IOException getException() {
     if (isFailed()) {
-      return ForeignExceptionUtil.toIOException(exception.getForeignExchangeMessage());
+      return this.exception;
     }
     return null;
   }
 
-  @InterfaceAudience.Private
-  public ProcedureUtil.ForeignExceptionMsg getForeignExceptionMessage() {
-    return exception;
-  }
-
-  public String getExceptionCause() {
-    assert isFailed();
-    return exception.getForeignExchangeMessage().getGenericException().getClassName();
-  }
-
-  public String getExceptionMessage() {
-    assert isFailed();
-    return exception.getForeignExchangeMessage().getGenericException().getMessage();
-  }
-
   public String getExceptionFullMessage() {
     assert isFailed();
-    return getExceptionCause() + " - " + getExceptionMessage();
+    final IOException e = getException();
+    return e.getCause() + " - " + e.getMessage();
   }
 
   public boolean hasResultData() {

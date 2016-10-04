@@ -20,20 +20,16 @@ package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
@@ -41,6 +37,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 /**
  * Provides a service for obtaining authentication tokens via the
@@ -126,9 +126,9 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
 
       Token<AuthenticationTokenIdentifier> token =
           secretManager.generateToken(currentUser.getName());
-      response.setToken(ProtobufUtil.toToken(token)).build();
+      response.setToken(TokenUtil.toToken(token)).build();
     } catch (IOException ioe) {
-      ResponseConverter.setControllerException(controller, ioe);
+      CoprocessorRpcUtils.setControllerException(controller, ioe);
     }
     done.run(response.build());
   }

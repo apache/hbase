@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -177,7 +177,7 @@ public class TestProcedureExecution {
     LOG.info(state);
     ProcedureInfo result = procExecutor.getResult(rootId);
     assertTrue(state.toString(), result.isFailed());
-    LOG.info(result.getExceptionFullMessage());
+    LOG.info(result.getException().getMessage());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
     assertTrue("expected TestProcedureException, got " + cause,
       cause instanceof TestProcedureException);
@@ -221,7 +221,7 @@ public class TestProcedureExecution {
 
     ProcedureInfo result = procExecutor.getResult(procId);
     assertTrue("expected a failure", result.isFailed());
-    LOG.info(result.getExceptionFullMessage());
+    LOG.info(result.getException().getMessage());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
     assertTrue("expected TestProcedureException, got " + cause,
       cause instanceof TestProcedureException);

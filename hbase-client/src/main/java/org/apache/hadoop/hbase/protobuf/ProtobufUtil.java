@@ -17,57 +17,33 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
-import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier
-.RegionSpecifierType.REGION_NAME;
-
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -75,112 +51,41 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionLoadStats;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
-import org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
-import org.apache.hadoop.hbase.quotas.QuotaScope;
-import org.apache.hadoop.hbase.quotas.QuotaType;
-import org.apache.hadoop.hbase.quotas.ThrottleType;
-import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
-import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
-import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.Permission;
-import org.apache.hadoop.hbase.security.access.TablePermission;
-import org.apache.hadoop.hbase.security.access.UserPermission;
-import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
-import org.apache.hadoop.hbase.security.visibility.Authorizations;
-import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
-import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.token.Token;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -194,12 +99,18 @@ import com.google.protobuf.TextFormat;
 
 /**
  * Protobufs utility.
+ * NOTE: This class OVERLAPS ProtobufUtil in the subpackage 'shaded'. The latter is used
+ * internally and has more methods. This Class is for Coprocessor Endpoints only though they
+ * should not be using this private class. It should not be depended upon. Most methods here
+ * are COPIED from the shaded ProtobufUtils with only difference being they refer to non-shaded
+ * protobufs.
+ * @see ProtobufUtil
  */
+// TODO: Generate this class from the shaded version.
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
   value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", justification="None. Address sometime.")
-@InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
+@InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class.
 public final class ProtobufUtil {
-
   private ProtobufUtil() {
   }
 
@@ -213,6 +124,7 @@ public final class ProtobufUtil {
    * Many results are simple: no cell, exists true or false. To save on object creations,
    *  we reuse them across calls.
    */
+  // TODO: PICK THESE UP FROM THE SHADED PROTOBUF.
   private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
   final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
@@ -349,7 +261,8 @@ public final class ProtobufUtil {
 
   private static IOException makeIOExceptionOfException(Exception e) {
     Throwable t = e;
-    if (e instanceof ServiceException) {
+    if (e instanceof ServiceException ||
+        e instanceof org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException) {
       t = e.getCause();
     }
     if (ExceptionUtil.isInterrupt(t)) {
@@ -404,36 +317,6 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Get HTableDescriptor[] from GetTableDescriptorsResponse protobuf
-   *
-   * @param proto the GetTableDescriptorsResponse
-   * @return HTableDescriptor[]
-   */
-  public static HTableDescriptor[] getHTableDescriptorArray(GetTableDescriptorsResponse proto) {
-    if (proto == null) return null;
-
-    HTableDescriptor[] ret = new HTableDescriptor[proto.getTableSchemaCount()];
-    for (int i = 0; i < proto.getTableSchemaCount(); ++i) {
-      ret[i] = convertToHTableDesc(proto.getTableSchema(i));
-    }
-    return ret;
-  }
-
-  /**
-   * get the split keys in form "byte [][]" from a CreateTableRequest proto
-   *
-   * @param proto the CreateTableRequest
-   * @return the split keys
-   */
-  public static byte [][] getSplitKeysArray(final CreateTableRequest proto) {
-    byte [][] splitKeys = new byte[proto.getSplitKeysCount()][];
-    for (int i = 0; i < proto.getSplitKeysCount(); ++i) {
-      splitKeys[i] = proto.getSplitKeys(i).toByteArray();
-    }
-    return splitKeys;
-  }
-
-  /**
    * Convert a protobuf Durability into a client Durability
    */
   public static Durability toDurability(
@@ -482,8 +365,7 @@ public final class ProtobufUtil {
    * @return the converted client Get
    * @throws IOException
    */
-  public static Get toGet(
-      final ClientProtos.Get proto) throws IOException {
+  public static Get toGet(final ClientProtos.Get proto) throws IOException {
     if (proto == null) return null;
     byte[] row = proto.getRow().toByteArray();
     Get get = new Get(row);
@@ -960,7 +842,7 @@ public final class ProtobufUtil {
     scanBuilder.setMaxVersions(scan.getMaxVersions());
     for (Entry<byte[], TimeRange> cftr : scan.getColumnFamilyTimeRange().entrySet()) {
       HBaseProtos.ColumnFamilyTimeRange.Builder b = HBaseProtos.ColumnFamilyTimeRange.newBuilder();
-      b.setColumnFamily(ByteString.copyFrom(cftr.getKey()));
+      b.setColumnFamily(ByteStringer.wrap(cftr.getKey()));
       b.setTimeRange(timeRangeToProto(cftr.getValue()));
       scanBuilder.addCfTimeRange(b);
     }
@@ -1131,7 +1013,7 @@ public final class ProtobufUtil {
     }
     for (Entry<byte[], TimeRange> cftr : get.getColumnFamilyTimeRange().entrySet()) {
       HBaseProtos.ColumnFamilyTimeRange.Builder b = HBaseProtos.ColumnFamilyTimeRange.newBuilder();
-      b.setColumnFamily(ByteString.copyFrom(cftr.getKey()));
+      b.setColumnFamily(ByteStringer.wrap(cftr.getKey()));
       b.setTimeRange(timeRangeToProto(cftr.getValue()));
       builder.addCfTimeRange(b);
     }
@@ -1647,62 +1529,6 @@ public final class ProtobufUtil {
 
 // Start helpers for Client
 
-  public static CoprocessorServiceResponse execService(final RpcController controller,
-      final ClientService.BlockingInterface client, final CoprocessorServiceCall call,
-      final byte[] regionName) throws IOException {
-    CoprocessorServiceRequest request = CoprocessorServiceRequest.newBuilder()
-        .setCall(call).setRegion(
-            RequestConverter.buildRegionSpecifier(REGION_NAME, regionName)).build();
-    try {
-      CoprocessorServiceResponse response =
-          client.execService(controller, request);
-      return response;
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  public static CoprocessorServiceResponse execService(final RpcController controller,
-      final MasterService.BlockingInterface client, final CoprocessorServiceCall call)
-      throws IOException {
-    CoprocessorServiceRequest request = CoprocessorServiceRequest.newBuilder()
-        .setCall(call).setRegion(
-           RequestConverter.buildRegionSpecifier(REGION_NAME, HConstants.EMPTY_BYTE_ARRAY)).build();
-    try {
-      CoprocessorServiceResponse response =
-          client.execMasterService(controller, request);
-      return response;
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  /**
-   * Make a region server endpoint call
-   * @param client
-   * @param call
-   * @return CoprocessorServiceResponse
-   * @throws IOException
-   */
-  public static CoprocessorServiceResponse execRegionServerService(
-      final RpcController controller, final ClientService.BlockingInterface client,
-      final CoprocessorServiceCall call)
-      throws IOException {
-    CoprocessorServiceRequest request =
-        CoprocessorServiceRequest
-            .newBuilder()
-            .setCall(call)
-            .setRegion(
-              RequestConverter.buildRegionSpecifier(REGION_NAME, HConstants.EMPTY_BYTE_ARRAY))
-            .build();
-    try {
-      CoprocessorServiceResponse response = client.execRegionServerService(controller, request);
-      return response;
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
   @SuppressWarnings("unchecked")
   public static <T extends Service> T newServiceStub(Class<T> service, RpcChannel channel)
       throws Exception {
@@ -1714,164 +1540,13 @@ public final class ProtobufUtil {
 // Start helpers for Admin
 
   /**
-   * A helper to retrieve region info given a region name
-   * using admin protocol.
-   *
-   * @param admin
-   * @param regionName
-   * @return the retrieved region info
-   * @throws IOException
-   */
-  public static HRegionInfo getRegionInfo(final RpcController controller,
-      final AdminService.BlockingInterface admin, final byte[] regionName) throws IOException {
-    try {
-      GetRegionInfoRequest request =
-        RequestConverter.buildGetRegionInfoRequest(regionName);
-      GetRegionInfoResponse response =
-        admin.getRegionInfo(controller, request);
-      return HRegionInfo.convert(response.getRegionInfo());
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  /**
-   * A helper to close a region given a region name
-   * using admin protocol.
-   *
-   * @param admin
-   * @param regionName
-   * @throws IOException
-   */
-  public static void closeRegion(final RpcController controller,
-      final AdminService.BlockingInterface admin, final ServerName server, final byte[] regionName)
-          throws IOException {
-    CloseRegionRequest closeRegionRequest =
-      RequestConverter.buildCloseRegionRequest(server, regionName);
-    try {
-      admin.closeRegion(controller, closeRegionRequest);
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  /**
-   * A helper to close a region given a region name
-   * using admin protocol.
-   *
-   * @param admin
-   * @param regionName
-   * @return true if the region is closed
-   * @throws IOException
-   */
-  public static boolean closeRegion(final RpcController controller,
-      final AdminService.BlockingInterface admin,
-      final ServerName server, final byte[] regionName,
-      final ServerName destinationServer) throws IOException {
-    CloseRegionRequest closeRegionRequest =
-      RequestConverter.buildCloseRegionRequest(server,
-        regionName, destinationServer);
-    try {
-      CloseRegionResponse response = admin.closeRegion(controller, closeRegionRequest);
-      return ResponseConverter.isClosed(response);
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
-
-  /**
-   * A helper to warmup a region given a region name
-   * using admin protocol
-   *
-   * @param admin
-   * @param regionInfo
-   *
-   */
-  public static void warmupRegion(final RpcController controller,
-      final AdminService.BlockingInterface admin, final HRegionInfo regionInfo) throws IOException {
-
-    try {
-      WarmupRegionRequest warmupRegionRequest =
-           RequestConverter.buildWarmupRegionRequest(regionInfo);
-
-      admin.warmupRegion(controller, warmupRegionRequest);
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
-  }
-
-  /**
-   * A helper to open a region using admin protocol.
-   * @param admin
-   * @param region
-   * @throws IOException
-   */
-  public static void openRegion(final RpcController controller,
-      final AdminService.BlockingInterface admin, ServerName server, final HRegionInfo region)
-          throws IOException {
-    OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(server, region, null, null);
-    try {
-      admin.openRegion(controller, request);
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    }
-  }
-
-  /**
-   * A helper to get the all the online regions on a region
-   * server using admin protocol.
-   *
-   * @param admin
-   * @return a list of online region info
-   * @throws IOException
-   */
-  public static List<HRegionInfo> getOnlineRegions(final AdminService.BlockingInterface admin)
-      throws IOException {
-    return getOnlineRegions(null, admin);
-  }
-
-  /**
-   * A helper to get the all the online regions on a region
-   * server using admin protocol.
-   * @return a list of online region info
-   */
-  public static List<HRegionInfo> getOnlineRegions(final RpcController controller,
-      final AdminService.BlockingInterface admin)
-  throws IOException {
-    GetOnlineRegionRequest request = RequestConverter.buildGetOnlineRegionRequest();
-    GetOnlineRegionResponse response = null;
-    try {
-      response = admin.getOnlineRegion(controller, request);
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-    return getRegionInfos(response);
-  }
-
-  /**
-   * Get the list of region info from a GetOnlineRegionResponse
-   *
-   * @param proto the GetOnlineRegionResponse
-   * @return the list of region info or null if <code>proto</code> is null
-   */
-  static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
-    if (proto == null) return null;
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
-    for (RegionInfo regionInfo: proto.getRegionInfoList()) {
-      regionInfos.add(HRegionInfo.convert(regionInfo));
-    }
-    return regionInfos;
-  }
-
-  /**
    * A helper to get the info of a region server using admin protocol.
    * @return the server name
    */
   public static ServerInfo getServerInfo(final RpcController controller,
       final AdminService.BlockingInterface admin)
   throws IOException {
-    GetServerInfoRequest request = RequestConverter.buildGetServerInfoRequest();
+    GetServerInfoRequest request = buildGetServerInfoRequest();
     try {
       GetServerInfoResponse response = admin.getServerInfo(controller, request);
       return response.getServerInfo();
@@ -1880,660 +1555,20 @@ public final class ProtobufUtil {
     }
   }
 
+
   /**
-   * A helper to get the list of files of a column family
-   * on a given region using admin protocol.
+   * @see {@link #buildGetServerInfoRequest()}
+   */
+  private static GetServerInfoRequest GET_SERVER_INFO_REQUEST =
+    GetServerInfoRequest.newBuilder().build();
+
+  /**
+   * Create a new GetServerInfoRequest
    *
-   * @return the list of store files
+   * @return a GetServerInfoRequest
    */
-  public static List<String> getStoreFiles(final AdminService.BlockingInterface admin,
-      final byte[] regionName, final byte[] family)
-  throws IOException {
-    return getStoreFiles(null, admin, regionName, family);
-  }
-
-  /**
-   * A helper to get the list of files of a column family
-   * on a given region using admin protocol.
-   *
-   * @return the list of store files
-   */
-  public static List<String> getStoreFiles(final RpcController controller,
-      final AdminService.BlockingInterface admin, final byte[] regionName, final byte[] family)
-  throws IOException {
-    GetStoreFileRequest request =
-      RequestConverter.buildGetStoreFileRequest(regionName, family);
-    try {
-      GetStoreFileResponse response = admin.getStoreFile(controller, request);
-      return response.getStoreFileList();
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    }
-  }
-
-  /**
-   * A helper to split a region using admin protocol.
-   *
-   * @param admin
-   * @param hri
-   * @param splitPoint
-   * @throws IOException
-   */
-  public static void split(final RpcController controller,
-      final AdminService.BlockingInterface admin, final HRegionInfo hri, byte[] splitPoint)
-          throws IOException {
-    SplitRegionRequest request =
-      RequestConverter.buildSplitRegionRequest(hri.getRegionName(), splitPoint);
-    try {
-      admin.splitRegion(controller, request);
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    }
-  }
-
-  /**
-   * A helper to merge regions using admin protocol. Send request to
-   * regionserver.
-   * @param admin
-   * @param region_a
-   * @param region_b
-   * @param forcible true if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @param user effective user
-   * @throws IOException
-   */
-  public static void mergeRegions(final RpcController controller,
-      final AdminService.BlockingInterface admin,
-      final HRegionInfo region_a, final HRegionInfo region_b,
-      final boolean forcible, final User user) throws IOException {
-    final MergeRegionsRequest request = RequestConverter.buildMergeRegionsRequest(
-        region_a.getRegionName(), region_b.getRegionName(),forcible);
-    if (user != null) {
-      try {
-        user.runAs(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            admin.mergeRegions(controller, request);
-            return null;
-          }
-        });
-      } catch (InterruptedException ie) {
-        InterruptedIOException iioe = new InterruptedIOException();
-        iioe.initCause(ie);
-        throw iioe;
-      }
-    } else {
-      try {
-        admin.mergeRegions(controller, request);
-      } catch (ServiceException se) {
-        throw ProtobufUtil.getRemoteException(se);
-      }
-    }
-  }
-
-// End helpers for Admin
-
-  /*
-   * Get the total (read + write) requests from a RegionLoad pb
-   * @param rl - RegionLoad pb
-   * @return total (read + write) requests
-   */
-  public static long getTotalRequestsCount(RegionLoad rl) {
-    if (rl == null) {
-      return 0;
-    }
-
-    return rl.getReadRequestsCount() + rl.getWriteRequestsCount();
-  }
-
-
-  /**
-   * @param m Message to get delimited pb serialization of (with pb magic prefix)
-   */
-  public static byte [] toDelimitedByteArray(final Message m) throws IOException {
-    // Allocate arbitrary big size so we avoid resizing.
-    ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);
-    baos.write(ProtobufMagic.PB_MAGIC);
-    m.writeDelimitedTo(baos);
-    return baos.toByteArray();
-  }
-
-  /**
-   * Converts a Permission proto to a client Permission object.
-   *
-   * @param proto the protobuf Permission
-   * @return the converted Permission
-   */
-  public static Permission toPermission(AccessControlProtos.Permission proto) {
-    if (proto.getType() != AccessControlProtos.Permission.Type.Global) {
-      return toTablePermission(proto);
-    } else {
-      List<Permission.Action> actions = toPermissionActions(
-        proto.getGlobalPermission().getActionList());
-      return new Permission(actions.toArray(new Permission.Action[actions.size()]));
-    }
-  }
-
-  /**
-   * Converts a Permission proto to a client TablePermission object.
-   *
-   * @param proto the protobuf Permission
-   * @return the converted TablePermission
-   */
-  public static TablePermission toTablePermission(AccessControlProtos.Permission proto) {
-    if(proto.getType() == AccessControlProtos.Permission.Type.Global) {
-      AccessControlProtos.GlobalPermission perm = proto.getGlobalPermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
-
-      return new TablePermission(null, null, null,
-          actions.toArray(new Permission.Action[actions.size()]));
-    }
-    if(proto.getType() == AccessControlProtos.Permission.Type.Namespace) {
-      AccessControlProtos.NamespacePermission perm = proto.getNamespacePermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
-
-      if(!proto.hasNamespacePermission()) {
-        throw new IllegalStateException("Namespace must not be empty in NamespacePermission");
-      }
-      String namespace = perm.getNamespaceName().toStringUtf8();
-      return new TablePermission(namespace, actions.toArray(new Permission.Action[actions.size()]));
-    }
-    if(proto.getType() == AccessControlProtos.Permission.Type.Table) {
-      AccessControlProtos.TablePermission perm = proto.getTablePermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
-
-      byte[] qualifier = null;
-      byte[] family = null;
-      TableName table = null;
-
-      if (!perm.hasTableName()) {
-        throw new IllegalStateException("TableName cannot be empty");
-      }
-      table = ProtobufUtil.toTableName(perm.getTableName());
-
-      if (perm.hasFamily()) family = perm.getFamily().toByteArray();
-      if (perm.hasQualifier()) qualifier = perm.getQualifier().toByteArray();
-
-      return new TablePermission(table, family, qualifier,
-          actions.toArray(new Permission.Action[actions.size()]));
-    }
-    throw new IllegalStateException("Unrecognize Perm Type: "+proto.getType());
-  }
-
-  /**
-   * Convert a client Permission to a Permission proto
-   *
-   * @param perm the client Permission
-   * @return the protobuf Permission
-   */
-  public static AccessControlProtos.Permission toPermission(Permission perm) {
-    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
-    if (perm instanceof TablePermission) {
-      TablePermission tablePerm = (TablePermission)perm;
-      if(tablePerm.hasNamespace()) {
-        ret.setType(AccessControlProtos.Permission.Type.Namespace);
-
-        AccessControlProtos.NamespacePermission.Builder builder =
-            AccessControlProtos.NamespacePermission.newBuilder();
-        builder.setNamespaceName(ByteString.copyFromUtf8(tablePerm.getNamespace()));
-        Permission.Action[] actions = perm.getActions();
-        if (actions != null) {
-          for (Permission.Action a : actions) {
-            builder.addAction(toPermissionAction(a));
-          }
-        }
-        ret.setNamespacePermission(builder);
-        return ret.build();
-      } else if (tablePerm.hasTable()) {
-        ret.setType(AccessControlProtos.Permission.Type.Table);
-
-        AccessControlProtos.TablePermission.Builder builder =
-            AccessControlProtos.TablePermission.newBuilder();
-        builder.setTableName(ProtobufUtil.toProtoTableName(tablePerm.getTableName()));
-        if (tablePerm.hasFamily()) {
-          builder.setFamily(ByteStringer.wrap(tablePerm.getFamily()));
-        }
-        if (tablePerm.hasQualifier()) {
-          builder.setQualifier(ByteStringer.wrap(tablePerm.getQualifier()));
-        }
-        Permission.Action actions[] = perm.getActions();
-        if (actions != null) {
-          for (Permission.Action a : actions) {
-            builder.addAction(toPermissionAction(a));
-          }
-        }
-        ret.setTablePermission(builder);
-        return ret.build();
-      }
-    }
-
-    ret.setType(AccessControlProtos.Permission.Type.Global);
-
-    AccessControlProtos.GlobalPermission.Builder builder =
-        AccessControlProtos.GlobalPermission.newBuilder();
-    Permission.Action actions[] = perm.getActions();
-    if (actions != null) {
-      for (Permission.Action a: actions) {
-        builder.addAction(toPermissionAction(a));
-      }
-    }
-    ret.setGlobalPermission(builder);
-    return ret.build();
-  }
-
-  /**
-   * Converts a list of Permission.Action proto to a list of client Permission.Action objects.
-   *
-   * @param protoActions the list of protobuf Actions
-   * @return the converted list of Actions
-   */
-  public static List<Permission.Action> toPermissionActions(
-      List<AccessControlProtos.Permission.Action> protoActions) {
-    List<Permission.Action> actions = new ArrayList<Permission.Action>(protoActions.size());
-    for (AccessControlProtos.Permission.Action a : protoActions) {
-      actions.add(toPermissionAction(a));
-    }
-    return actions;
-  }
-
-  /**
-   * Converts a Permission.Action proto to a client Permission.Action object.
-   *
-   * @param action the protobuf Action
-   * @return the converted Action
-   */
-  public static Permission.Action toPermissionAction(
-      AccessControlProtos.Permission.Action action) {
-    switch (action) {
-      case READ:
-        return Permission.Action.READ;
-      case WRITE:
-        return Permission.Action.WRITE;
-      case EXEC:
-        return Permission.Action.EXEC;
-      case CREATE:
-        return Permission.Action.CREATE;
-      case ADMIN:
-        return Permission.Action.ADMIN;
-    }
-    throw new IllegalArgumentException("Unknown action value "+action.name());
-  }
-
-  /**
-   * Convert a client Permission.Action to a Permission.Action proto
-   *
-   * @param action the client Action
-   * @return the protobuf Action
-   */
-  public static AccessControlProtos.Permission.Action toPermissionAction(
-      Permission.Action action) {
-    switch (action) {
-      case READ:
-        return AccessControlProtos.Permission.Action.READ;
-      case WRITE:
-        return AccessControlProtos.Permission.Action.WRITE;
-      case EXEC:
-        return AccessControlProtos.Permission.Action.EXEC;
-      case CREATE:
-        return AccessControlProtos.Permission.Action.CREATE;
-      case ADMIN:
-        return AccessControlProtos.Permission.Action.ADMIN;
-    }
-    throw new IllegalArgumentException("Unknown action value "+action.name());
-  }
-
-  /**
-   * Convert a client user permission to a user permission proto
-   *
-   * @param perm the client UserPermission
-   * @return the protobuf UserPermission
-   */
-  public static AccessControlProtos.UserPermission toUserPermission(UserPermission perm) {
-    return AccessControlProtos.UserPermission.newBuilder()
-        .setUser(ByteStringer.wrap(perm.getUser()))
-        .setPermission(toPermission(perm))
-        .build();
-  }
-
-  /**
-   * Converts a user permission proto to a client user permission object.
-   *
-   * @param proto the protobuf UserPermission
-   * @return the converted UserPermission
-   */
-  public static UserPermission toUserPermission(AccessControlProtos.UserPermission proto) {
-    return new UserPermission(proto.getUser().toByteArray(),
-        toTablePermission(proto.getPermission()));
-  }
-
-  /**
-   * Convert a ListMultimap&lt;String, TablePermission&gt; where key is username
-   * to a protobuf UserPermission
-   *
-   * @param perm the list of user and table permissions
-   * @return the protobuf UserTablePermissions
-   */
-  public static AccessControlProtos.UsersAndPermissions toUserTablePermissions(
-      ListMultimap<String, TablePermission> perm) {
-    AccessControlProtos.UsersAndPermissions.Builder builder =
-                  AccessControlProtos.UsersAndPermissions.newBuilder();
-    for (Map.Entry<String, Collection<TablePermission>> entry : perm.asMap().entrySet()) {
-      AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
-                  AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
-      userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
-      for (TablePermission tablePerm: entry.getValue()) {
-        userPermBuilder.addPermissions(toPermission(tablePerm));
-      }
-      builder.addUserPermissions(userPermBuilder.build());
-    }
-    return builder.build();
-  }
-
-  /**
-   * A utility used to grant a user global permissions.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @param userShortName the short name of the user to grant permissions
-   * @param actions the permissions to be granted
-   * @throws ServiceException
-   */
-  public static void grant(RpcController controller,
-      AccessControlService.BlockingInterface protocol, String userShortName,
-      Permission.Action... actions) throws ServiceException {
-    List<AccessControlProtos.Permission.Action> permActions =
-        Lists.newArrayListWithCapacity(actions.length);
-    for (Permission.Action a : actions) {
-      permActions.add(ProtobufUtil.toPermissionAction(a));
-    }
-    AccessControlProtos.GrantRequest request = RequestConverter.
-      buildGrantRequest(userShortName, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
-    protocol.grant(controller, request);
-  }
-
-  /**
-   * A utility used to grant a user table permissions. The permissions will
-   * be for a table table/column family/qualifier.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @param userShortName the short name of the user to grant permissions
-   * @param tableName optional table name
-   * @param f optional column family
-   * @param q optional qualifier
-   * @param actions the permissions to be granted
-   * @throws ServiceException
-   */
-  public static void grant(RpcController controller,
-      AccessControlService.BlockingInterface protocol, String userShortName, TableName tableName,
-      byte[] f, byte[] q, Permission.Action... actions) throws ServiceException {
-    List<AccessControlProtos.Permission.Action> permActions =
-        Lists.newArrayListWithCapacity(actions.length);
-    for (Permission.Action a : actions) {
-      permActions.add(ProtobufUtil.toPermissionAction(a));
-    }
-    AccessControlProtos.GrantRequest request = RequestConverter.
-      buildGrantRequest(userShortName, tableName, f, q, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
-    protocol.grant(controller, request);
-  }
-
-  /**
-   * A utility used to grant a user namespace permissions.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @param namespace the short name of the user to grant permissions
-   * @param actions the permissions to be granted
-   * @throws ServiceException
-   */
-  public static void grant(RpcController controller,
-      AccessControlService.BlockingInterface protocol, String userShortName, String namespace,
-      Permission.Action... actions) throws ServiceException {
-    List<AccessControlProtos.Permission.Action> permActions =
-        Lists.newArrayListWithCapacity(actions.length);
-    for (Permission.Action a : actions) {
-      permActions.add(ProtobufUtil.toPermissionAction(a));
-    }
-    AccessControlProtos.GrantRequest request = RequestConverter.
-      buildGrantRequest(userShortName, namespace, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
-    protocol.grant(controller, request);
-  }
-
-  /**
-   * A utility used to revoke a user's global permissions.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @param userShortName the short name of the user to revoke permissions
-   * @param actions the permissions to be revoked
-   * @throws ServiceException
-   */
-  public static void revoke(RpcController controller,
-      AccessControlService.BlockingInterface protocol, String userShortName,
-      Permission.Action... actions) throws ServiceException {
-    List<AccessControlProtos.Permission.Action> permActions =
-        Lists.newArrayListWithCapacity(actions.length);
-    for (Permission.Action a : actions) {
-      permActions.add(ProtobufUtil.toPermissionAction(a));
-    }
-    AccessControlProtos.RevokeRequest request = RequestConverter.
-      buildRevokeRequest(userShortName, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
-    protocol.revoke(controller, request);
-  }
-
-  /**
-   * A utility used to revoke a user's table permissions. The permissions will
-   * be for a table/column family/qualifier.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @param userShortName the short name of the user to revoke permissions
-   * @param tableName optional table name
-   * @param f optional column family
-   * @param q optional qualifier
-   * @param actions the permissions to be revoked
-   * @throws ServiceException
-   */
-  public static void revoke(RpcController controller,
-      AccessControlService.BlockingInterface protocol, String userShortName, TableName tableName,
-      byte[] f, byte[] q, Permission.Action... actions) throws ServiceException {
-    List<AccessControlProtos.Permission.Action> permActions =
-        Lists.newArrayListWithCapacity(actions.length);
-    for (Permission.Action a : actions) {
-      permActions.add(ProtobufUtil.toPermissionAction(a));
-    }
-    AccessControlProtos.RevokeRequest request = RequestConverter.
-      buildRevokeRequest(userShortName, tableName, f, q, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
-    protocol.revoke(controller, request);
-  }
-
-  /**
-   * A utility used to revoke a user's namespace permissions.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @param userShortName the short name of the user to revoke permissions
-   * @param namespace optional table name
-   * @param actions the permissions to be revoked
-   * @throws ServiceException
-   */
-  public static void revoke(RpcController controller,
-      AccessControlService.BlockingInterface protocol, String userShortName, String namespace,
-      Permission.Action... actions) throws ServiceException {
-    List<AccessControlProtos.Permission.Action> permActions =
-        Lists.newArrayListWithCapacity(actions.length);
-    for (Permission.Action a : actions) {
-      permActions.add(ProtobufUtil.toPermissionAction(a));
-    }
-    AccessControlProtos.RevokeRequest request = RequestConverter.
-      buildRevokeRequest(userShortName, namespace, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
-    protocol.revoke(controller, request);
-  }
-
-  /**
-   * A utility used to get user's global permissions.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @throws ServiceException
-   */
-  public static List<UserPermission> getUserPermissions(RpcController controller,
-      AccessControlService.BlockingInterface protocol) throws ServiceException {
-    AccessControlProtos.GetUserPermissionsRequest.Builder builder =
-      AccessControlProtos.GetUserPermissionsRequest.newBuilder();
-    builder.setType(AccessControlProtos.Permission.Type.Global);
-    AccessControlProtos.GetUserPermissionsRequest request = builder.build();
-    AccessControlProtos.GetUserPermissionsResponse response =
-      protocol.getUserPermissions(controller, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
-    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
-      perms.add(ProtobufUtil.toUserPermission(perm));
-    }
-    return perms;
-  }
-
-  /**
-   * A utility used to get user table permissions.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @param t optional table name
-   * @throws ServiceException
-   */
-  public static List<UserPermission> getUserPermissions(RpcController controller,
-      AccessControlService.BlockingInterface protocol,
-      TableName t) throws ServiceException {
-    AccessControlProtos.GetUserPermissionsRequest.Builder builder =
-      AccessControlProtos.GetUserPermissionsRequest.newBuilder();
-    if (t != null) {
-      builder.setTableName(ProtobufUtil.toProtoTableName(t));
-    }
-    builder.setType(AccessControlProtos.Permission.Type.Table);
-    AccessControlProtos.GetUserPermissionsRequest request = builder.build();
-    AccessControlProtos.GetUserPermissionsResponse response =
-      protocol.getUserPermissions(controller, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
-    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
-      perms.add(ProtobufUtil.toUserPermission(perm));
-    }
-    return perms;
-  }
-
-  /**
-   * A utility used to get permissions for selected namespace.
-   * <p>
-   * It's also called by the shell, in case you want to find references.
-   *
-   * @param protocol the AccessControlService protocol proxy
-   * @param namespace name of the namespace
-   * @throws ServiceException
-   */
-  public static List<UserPermission> getUserPermissions(RpcController controller,
-      AccessControlService.BlockingInterface protocol,
-      byte[] namespace) throws ServiceException {
-    AccessControlProtos.GetUserPermissionsRequest.Builder builder =
-      AccessControlProtos.GetUserPermissionsRequest.newBuilder();
-    if (namespace != null) {
-      builder.setNamespaceName(ByteStringer.wrap(namespace));
-    }
-    builder.setType(AccessControlProtos.Permission.Type.Namespace);
-    AccessControlProtos.GetUserPermissionsRequest request = builder.build();
-    AccessControlProtos.GetUserPermissionsResponse response =
-      protocol.getUserPermissions(controller, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
-    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
-      perms.add(ProtobufUtil.toUserPermission(perm));
-    }
-    return perms;
-  }
-
-  /**
-   * Convert a protobuf UserTablePermissions to a
-   * ListMultimap&lt;String, TablePermission&gt; where key is username.
-   *
-   * @param proto the protobuf UserPermission
-   * @return the converted UserPermission
-   */
-  public static ListMultimap<String, TablePermission> toUserTablePermissions(
-      AccessControlProtos.UsersAndPermissions proto) {
-    ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
-    AccessControlProtos.UsersAndPermissions.UserPermissions userPerm;
-
-    for (int i = 0; i < proto.getUserPermissionsCount(); i++) {
-      userPerm = proto.getUserPermissions(i);
-      for (int j = 0; j < userPerm.getPermissionsCount(); j++) {
-        TablePermission tablePerm = toTablePermission(userPerm.getPermissions(j));
-        perms.put(userPerm.getUser().toStringUtf8(), tablePerm);
-      }
-    }
-
-    return perms;
-  }
-
-  /**
-   * Converts a Token instance (with embedded identifier) to the protobuf representation.
-   *
-   * @param token the Token instance to copy
-   * @return the protobuf Token message
-   */
-  public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
-    AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
-    builder.setIdentifier(ByteStringer.wrap(token.getIdentifier()));
-    builder.setPassword(ByteStringer.wrap(token.getPassword()));
-    if (token.getService() != null) {
-      builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
-    }
-    return builder.build();
-  }
-
-  /**
-   * Converts a protobuf Token message back into a Token instance.
-   *
-   * @param proto the protobuf Token message
-   * @return the Token instance
-   */
-  public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
-    return new Token<AuthenticationTokenIdentifier>(
-        proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
-        proto.hasPassword() ? proto.getPassword().toByteArray() : null,
-        AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,
-        proto.hasService() ? new Text(proto.getService().toStringUtf8()) : null);
-  }
-
-  /**
-   * Find the HRegion encoded name based on a region specifier
-   *
-   * @param regionSpecifier the region specifier
-   * @return the corresponding region's encoded name
-   * @throws DoNotRetryIOException if the specifier type is unsupported
-   */
-  public static String getRegionEncodedName(
-      final RegionSpecifier regionSpecifier) throws DoNotRetryIOException {
-    ByteString value = regionSpecifier.getValue();
-    RegionSpecifierType type = regionSpecifier.getType();
-    switch (type) {
-      case REGION_NAME:
-        return HRegionInfo.encodeRegionName(value.toByteArray());
-      case ENCODED_REGION_NAME:
-        return value.toStringUtf8();
-      default:
-        throw new DoNotRetryIOException(
-          "Unsupported region specifier type: " + type);
-    }
+  public static GetServerInfoRequest buildGetServerInfoRequest() {
+    return GET_SERVER_INFO_REQUEST;
   }
 
   public static ScanMetrics toScanMetrics(final byte[] bytes) {
@@ -2553,20 +1588,6 @@ public final class ProtobufUtil {
       }
     }
     return scanMetrics;
-  }
-
-  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics) {
-    MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
-    Map<String, Long> metrics = scanMetrics.getMetricsMap();
-    for (Entry<String, Long> e : metrics.entrySet()) {
-      HBaseProtos.NameInt64Pair nameInt64Pair =
-          HBaseProtos.NameInt64Pair.newBuilder()
-              .setName(e.getKey())
-              .setValue(e.getValue())
-              .build();
-      builder.addMetrics(nameInt64Pair);
-    }
-    return builder.build();
   }
 
   /**
@@ -2614,207 +1635,6 @@ public final class ProtobufUtil {
       cell.getValue().toByteArray());
   }
 
-  public static HBaseProtos.NamespaceDescriptor toProtoNamespaceDescriptor(NamespaceDescriptor ns) {
-    HBaseProtos.NamespaceDescriptor.Builder b =
-        HBaseProtos.NamespaceDescriptor.newBuilder()
-            .setName(ByteString.copyFromUtf8(ns.getName()));
-    for(Map.Entry<String, String> entry: ns.getConfiguration().entrySet()) {
-      b.addConfiguration(HBaseProtos.NameStringPair.newBuilder()
-          .setName(entry.getKey())
-          .setValue(entry.getValue()));
-    }
-    return b.build();
-  }
-
-  public static NamespaceDescriptor toNamespaceDescriptor(
-      HBaseProtos.NamespaceDescriptor desc) throws IOException {
-    NamespaceDescriptor.Builder b =
-      NamespaceDescriptor.create(desc.getName().toStringUtf8());
-    for(HBaseProtos.NameStringPair prop : desc.getConfigurationList()) {
-      b.addConfiguration(prop.getName(), prop.getValue());
-    }
-    return b.build();
-  }
-
-  /**
-   * Get an instance of the argument type declared in a class's signature. The
-   * argument type is assumed to be a PB Message subclass, and the instance is
-   * created using parseFrom method on the passed ByteString.
-   * @param runtimeClass the runtime type of the class
-   * @param position the position of the argument in the class declaration
-   * @param b the ByteString which should be parsed to get the instance created
-   * @return the instance
-   * @throws IOException
-   */
-  @SuppressWarnings("unchecked")
-  public static <T extends Message>
-  T getParsedGenericInstance(Class<?> runtimeClass, int position, ByteString b)
-      throws IOException {
-    Type type = runtimeClass.getGenericSuperclass();
-    Type argType = ((ParameterizedType)type).getActualTypeArguments()[position];
-    Class<T> classType = (Class<T>)argType;
-    T inst;
-    try {
-      Method m = classType.getMethod("parseFrom", ByteString.class);
-      inst = (T)m.invoke(null, b);
-      return inst;
-    } catch (SecurityException e) {
-      throw new IOException(e);
-    } catch (NoSuchMethodException e) {
-      throw new IOException(e);
-    } catch (IllegalArgumentException e) {
-      throw new IOException(e);
-    } catch (InvocationTargetException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
-      throw new IOException(e);
-    }
-  }
-
-  public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] family,
-      List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
-    return toCompactionDescriptor(info, null, family, inputPaths, outputPaths, storeDir);
-  }
-
-  public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] regionName,
-      byte[] family, List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
-    // compaction descriptor contains relative paths.
-    // input / output paths are relative to the store dir
-    // store dir is relative to region dir
-    CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
-        .setTableName(ByteStringer.wrap(info.getTable().toBytes()))
-        .setEncodedRegionName(ByteStringer.wrap(
-          regionName == null ? info.getEncodedNameAsBytes() : regionName))
-        .setFamilyName(ByteStringer.wrap(family))
-        .setStoreHomeDir(storeDir.getName()); //make relative
-    for (Path inputPath : inputPaths) {
-      builder.addCompactionInput(inputPath.getName()); //relative path
-    }
-    for (Path outputPath : outputPaths) {
-      builder.addCompactionOutput(outputPath.getName());
-    }
-    builder.setRegionName(ByteStringer.wrap(info.getRegionName()));
-    return builder.build();
-  }
-
-  public static FlushDescriptor toFlushDescriptor(FlushAction action, HRegionInfo hri,
-      long flushSeqId, Map<byte[], List<Path>> committedFiles) {
-    FlushDescriptor.Builder desc = FlushDescriptor.newBuilder()
-        .setAction(action)
-        .setEncodedRegionName(ByteStringer.wrap(hri.getEncodedNameAsBytes()))
-        .setRegionName(ByteStringer.wrap(hri.getRegionName()))
-        .setFlushSequenceNumber(flushSeqId)
-        .setTableName(ByteStringer.wrap(hri.getTable().getName()));
-
-    for (Map.Entry<byte[], List<Path>> entry : committedFiles.entrySet()) {
-      WALProtos.FlushDescriptor.StoreFlushDescriptor.Builder builder =
-          WALProtos.FlushDescriptor.StoreFlushDescriptor.newBuilder()
-          .setFamilyName(ByteStringer.wrap(entry.getKey()))
-          .setStoreHomeDir(Bytes.toString(entry.getKey())); //relative to region
-      if (entry.getValue() != null) {
-        for (Path path : entry.getValue()) {
-          builder.addFlushOutput(path.getName());
-        }
-      }
-      desc.addStoreFlushes(builder);
-    }
-    return desc.build();
-  }
-
-  public static RegionEventDescriptor toRegionEventDescriptor(
-      EventType eventType, HRegionInfo hri, long seqId, ServerName server,
-      Map<byte[], List<Path>> storeFiles) {
-    final byte[] tableNameAsBytes = hri.getTable().getName();
-    final byte[] encodedNameAsBytes = hri.getEncodedNameAsBytes();
-    final byte[] regionNameAsBytes = hri.getRegionName();
-    return toRegionEventDescriptor(eventType,
-        tableNameAsBytes,
-        encodedNameAsBytes,
-        regionNameAsBytes,
-        seqId,
-
-        server,
-        storeFiles);
-  }
-
-  public static RegionEventDescriptor toRegionEventDescriptor(EventType eventType,
-                                                              byte[] tableNameAsBytes,
-                                                              byte[] encodedNameAsBytes,
-                                                              byte[] regionNameAsBytes,
-                                                               long seqId,
-
-                                                              ServerName server,
-                                                              Map<byte[], List<Path>> storeFiles) {
-    RegionEventDescriptor.Builder desc = RegionEventDescriptor.newBuilder()
-        .setEventType(eventType)
-        .setTableName(ByteStringer.wrap(tableNameAsBytes))
-        .setEncodedRegionName(ByteStringer.wrap(encodedNameAsBytes))
-        .setRegionName(ByteStringer.wrap(regionNameAsBytes))
-        .setLogSequenceNumber(seqId)
-        .setServer(toServerName(server));
-
-    for (Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
-      StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
-          .setFamilyName(ByteStringer.wrap(entry.getKey()))
-          .setStoreHomeDir(Bytes.toString(entry.getKey()));
-      for (Path path : entry.getValue()) {
-        builder.addStoreFile(path.getName());
-      }
-
-      desc.addStores(builder);
-    }
-    return desc.build();
-  }
-
-  /**
-   * Return short version of Message toString'd, shorter than TextFormat#shortDebugString.
-   * Tries to NOT print out data both because it can be big but also so we do not have data in our
-   * logs. Use judiciously.
-   * @param m
-   * @return toString of passed <code>m</code>
-   */
-  public static String getShortTextFormat(Message m) {
-    if (m == null) return "null";
-    if (m instanceof ScanRequest) {
-      // This should be small and safe to output.  No data.
-      return TextFormat.shortDebugString(m);
-    } else if (m instanceof RegionServerReportRequest) {
-      // Print a short message only, just the servername and the requests, not the full load.
-      RegionServerReportRequest r = (RegionServerReportRequest)m;
-      return "server " + TextFormat.shortDebugString(r.getServer()) +
-        " load { numberOfRequests: " + r.getLoad().getNumberOfRequests() + " }";
-    } else if (m instanceof RegionServerStartupRequest) {
-      // Should be small enough.
-      return TextFormat.shortDebugString(m);
-    } else if (m instanceof MutationProto) {
-      return toShortString((MutationProto)m);
-    } else if (m instanceof GetRequest) {
-      GetRequest r = (GetRequest) m;
-      return "region= " + getStringForByteString(r.getRegion().getValue()) +
-          ", row=" + getStringForByteString(r.getGet().getRow());
-    } else if (m instanceof ClientProtos.MultiRequest) {
-      ClientProtos.MultiRequest r = (ClientProtos.MultiRequest) m;
-      // Get first set of Actions.
-      ClientProtos.RegionAction actions = r.getRegionActionList().get(0);
-      String row = actions.getActionCount() <= 0? "":
-        getStringForByteString(actions.getAction(0).hasGet()?
-          actions.getAction(0).getGet().getRow():
-          actions.getAction(0).getMutation().getRow());
-      return "region= " + getStringForByteString(actions.getRegion().getValue()) +
-          ", for " + r.getRegionActionCount() +
-          " actions and 1st row key=" + row;
-    } else if (m instanceof ClientProtos.MutateRequest) {
-      ClientProtos.MutateRequest r = (ClientProtos.MutateRequest) m;
-      return "region= " + getStringForByteString(r.getRegion().getValue()) +
-          ", row=" + getStringForByteString(r.getMutation().getRow());
-    }
-    return "TODO: " + m.getClass().toString();
-  }
-
-  private static String getStringForByteString(ByteString bs) {
-    return Bytes.toStringBinary(bs.toByteArray());
-  }
-
   /**
    * Print out some subset of a MutationProto rather than all of it and its data
    * @param proto Protobuf to print out
@@ -2834,392 +1654,6 @@ public final class ProtobufUtil {
     return HBaseProtos.TableName.newBuilder()
         .setNamespace(ByteStringer.wrap(tableName.getNamespace()))
         .setQualifier(ByteStringer.wrap(tableName.getQualifier())).build();
-  }
-
-  public static TableName[] getTableNameArray(List<HBaseProtos.TableName> tableNamesList) {
-    if (tableNamesList == null) {
-      return new TableName[0];
-    }
-    TableName[] tableNames = new TableName[tableNamesList.size()];
-    for (int i = 0; i < tableNamesList.size(); i++) {
-      tableNames[i] = toTableName(tableNamesList.get(i));
-    }
-    return tableNames;
-  }
-
-  /**
-   * Convert a protocol buffer CellVisibility to a client CellVisibility
-   *
-   * @param proto
-   * @return the converted client CellVisibility
-   */
-  public static CellVisibility toCellVisibility(ClientProtos.CellVisibility proto) {
-    if (proto == null) return null;
-    return new CellVisibility(proto.getExpression());
-  }
-
-  /**
-   * Convert a protocol buffer CellVisibility bytes to a client CellVisibility
-   *
-   * @param protoBytes
-   * @return the converted client CellVisibility
-   * @throws DeserializationException
-   */
-  public static CellVisibility toCellVisibility(byte[] protoBytes) throws DeserializationException {
-    if (protoBytes == null) return null;
-    ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
-    ClientProtos.CellVisibility proto = null;
-    try {
-      ProtobufUtil.mergeFrom(builder, protoBytes);
-      proto = builder.build();
-    } catch (IOException e) {
-      throw new DeserializationException(e);
-    }
-    return toCellVisibility(proto);
-  }
-
-  /**
-   * Create a protocol buffer CellVisibility based on a client CellVisibility.
-   *
-   * @param cellVisibility
-   * @return a protocol buffer CellVisibility
-   */
-  public static ClientProtos.CellVisibility toCellVisibility(CellVisibility cellVisibility) {
-    ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
-    builder.setExpression(cellVisibility.getExpression());
-    return builder.build();
-  }
-
-  /**
-   * Convert a protocol buffer Authorizations to a client Authorizations
-   *
-   * @param proto
-   * @return the converted client Authorizations
-   */
-  public static Authorizations toAuthorizations(ClientProtos.Authorizations proto) {
-    if (proto == null) return null;
-    return new Authorizations(proto.getLabelList());
-  }
-
-  /**
-   * Convert a protocol buffer Authorizations bytes to a client Authorizations
-   *
-   * @param protoBytes
-   * @return the converted client Authorizations
-   * @throws DeserializationException
-   */
-  public static Authorizations toAuthorizations(byte[] protoBytes) throws DeserializationException {
-    if (protoBytes == null) return null;
-    ClientProtos.Authorizations.Builder builder = ClientProtos.Authorizations.newBuilder();
-    ClientProtos.Authorizations proto = null;
-    try {
-      ProtobufUtil.mergeFrom(builder, protoBytes);
-      proto = builder.build();
-    } catch (IOException e) {
-      throw new DeserializationException(e);
-    }
-    return toAuthorizations(proto);
-  }
-
-  /**
-   * Create a protocol buffer Authorizations based on a client Authorizations.
-   *
-   * @param authorizations
-   * @return a protocol buffer Authorizations
-   */
-  public static ClientProtos.Authorizations toAuthorizations(Authorizations authorizations) {
-    ClientProtos.Authorizations.Builder builder = ClientProtos.Authorizations.newBuilder();
-    for (String label : authorizations.getLabels()) {
-      builder.addLabel(label);
-    }
-    return builder.build();
-  }
-
-  public static AccessControlProtos.UsersAndPermissions toUsersAndPermissions(String user,
-      Permission perms) {
-    return AccessControlProtos.UsersAndPermissions.newBuilder()
-      .addUserPermissions(AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder()
-        .setUser(ByteString.copyFromUtf8(user))
-        .addPermissions(toPermission(perms))
-        .build())
-      .build();
-  }
-
-  public static AccessControlProtos.UsersAndPermissions toUsersAndPermissions(
-      ListMultimap<String, Permission> perms) {
-    AccessControlProtos.UsersAndPermissions.Builder builder =
-        AccessControlProtos.UsersAndPermissions.newBuilder();
-    for (Map.Entry<String, Collection<Permission>> entry : perms.asMap().entrySet()) {
-      AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
-        AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
-      userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
-      for (Permission perm: entry.getValue()) {
-        userPermBuilder.addPermissions(toPermission(perm));
-      }
-      builder.addUserPermissions(userPermBuilder.build());
-    }
-    return builder.build();
-  }
-
-  public static ListMultimap<String, Permission> toUsersAndPermissions(
-      AccessControlProtos.UsersAndPermissions proto) {
-    ListMultimap<String, Permission> result = ArrayListMultimap.create();
-    for (AccessControlProtos.UsersAndPermissions.UserPermissions userPerms:
-        proto.getUserPermissionsList()) {
-      String user = userPerms.getUser().toStringUtf8();
-      for (AccessControlProtos.Permission perm: userPerms.getPermissionsList()) {
-        result.put(user, toPermission(perm));
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Convert a protocol buffer TimeUnit to a client TimeUnit
-   *
-   * @param proto
-   * @return the converted client TimeUnit
-   */
-  public static TimeUnit toTimeUnit(final HBaseProtos.TimeUnit proto) {
-    switch (proto) {
-      case NANOSECONDS:  return TimeUnit.NANOSECONDS;
-      case MICROSECONDS: return TimeUnit.MICROSECONDS;
-      case MILLISECONDS: return TimeUnit.MILLISECONDS;
-      case SECONDS:      return TimeUnit.SECONDS;
-      case MINUTES:      return TimeUnit.MINUTES;
-      case HOURS:        return TimeUnit.HOURS;
-      case DAYS:         return TimeUnit.DAYS;
-    }
-    throw new RuntimeException("Invalid TimeUnit " + proto);
-  }
-
-  /**
-   * Convert a client TimeUnit to a protocol buffer TimeUnit
-   *
-   * @param timeUnit
-   * @return the converted protocol buffer TimeUnit
-   */
-  public static HBaseProtos.TimeUnit toProtoTimeUnit(final TimeUnit timeUnit) {
-    switch (timeUnit) {
-      case NANOSECONDS:  return HBaseProtos.TimeUnit.NANOSECONDS;
-      case MICROSECONDS: return HBaseProtos.TimeUnit.MICROSECONDS;
-      case MILLISECONDS: return HBaseProtos.TimeUnit.MILLISECONDS;
-      case SECONDS:      return HBaseProtos.TimeUnit.SECONDS;
-      case MINUTES:      return HBaseProtos.TimeUnit.MINUTES;
-      case HOURS:        return HBaseProtos.TimeUnit.HOURS;
-      case DAYS:         return HBaseProtos.TimeUnit.DAYS;
-    }
-    throw new RuntimeException("Invalid TimeUnit " + timeUnit);
-  }
-
-  /**
-   * Convert a protocol buffer ThrottleType to a client ThrottleType
-   *
-   * @param proto
-   * @return the converted client ThrottleType
-   */
-  public static ThrottleType toThrottleType(final QuotaProtos.ThrottleType proto) {
-    switch (proto) {
-      case REQUEST_NUMBER: return ThrottleType.REQUEST_NUMBER;
-      case REQUEST_SIZE:   return ThrottleType.REQUEST_SIZE;
-      case WRITE_NUMBER:   return ThrottleType.WRITE_NUMBER;
-      case WRITE_SIZE:     return ThrottleType.WRITE_SIZE;
-      case READ_NUMBER:    return ThrottleType.READ_NUMBER;
-      case READ_SIZE:      return ThrottleType.READ_SIZE;
-    }
-    throw new RuntimeException("Invalid ThrottleType " + proto);
-  }
-
-  /**
-   * Convert a client ThrottleType to a protocol buffer ThrottleType
-   *
-   * @param type
-   * @return the converted protocol buffer ThrottleType
-   */
-  public static QuotaProtos.ThrottleType toProtoThrottleType(final ThrottleType type) {
-    switch (type) {
-      case REQUEST_NUMBER: return QuotaProtos.ThrottleType.REQUEST_NUMBER;
-      case REQUEST_SIZE:   return QuotaProtos.ThrottleType.REQUEST_SIZE;
-      case WRITE_NUMBER:   return QuotaProtos.ThrottleType.WRITE_NUMBER;
-      case WRITE_SIZE:     return QuotaProtos.ThrottleType.WRITE_SIZE;
-      case READ_NUMBER:    return QuotaProtos.ThrottleType.READ_NUMBER;
-      case READ_SIZE:      return QuotaProtos.ThrottleType.READ_SIZE;
-    }
-    throw new RuntimeException("Invalid ThrottleType " + type);
-  }
-
-  /**
-   * Convert a protocol buffer QuotaScope to a client QuotaScope
-   *
-   * @param proto
-   * @return the converted client QuotaScope
-   */
-  public static QuotaScope toQuotaScope(final QuotaProtos.QuotaScope proto) {
-    switch (proto) {
-      case CLUSTER: return QuotaScope.CLUSTER;
-      case MACHINE: return QuotaScope.MACHINE;
-    }
-    throw new RuntimeException("Invalid QuotaScope " + proto);
-  }
-
-  /**
-   * Convert a client QuotaScope to a protocol buffer QuotaScope
-   *
-   * @param scope
-   * @return the converted protocol buffer QuotaScope
-   */
-  public static QuotaProtos.QuotaScope toProtoQuotaScope(final QuotaScope scope) {
-    switch (scope) {
-      case CLUSTER: return QuotaProtos.QuotaScope.CLUSTER;
-      case MACHINE: return QuotaProtos.QuotaScope.MACHINE;
-    }
-    throw new RuntimeException("Invalid QuotaScope " + scope);
-  }
-
-  /**
-   * Convert a protocol buffer QuotaType to a client QuotaType
-   *
-   * @param proto
-   * @return the converted client QuotaType
-   */
-  public static QuotaType toQuotaScope(final QuotaProtos.QuotaType proto) {
-    switch (proto) {
-      case THROTTLE: return QuotaType.THROTTLE;
-    }
-    throw new RuntimeException("Invalid QuotaType " + proto);
-  }
-
-  /**
-   * Convert a client QuotaType to a protocol buffer QuotaType
-   *
-   * @param type
-   * @return the converted protocol buffer QuotaType
-   */
-  public static QuotaProtos.QuotaType toProtoQuotaScope(final QuotaType type) {
-    switch (type) {
-      case THROTTLE: return QuotaProtos.QuotaType.THROTTLE;
-    }
-    throw new RuntimeException("Invalid QuotaType " + type);
-  }
-
-  /**
-   * Build a protocol buffer TimedQuota
-   *
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
-   * @param scope the quota scope
-   * @return the protocol buffer TimedQuota
-   */
-  public static QuotaProtos.TimedQuota toTimedQuota(final long limit, final TimeUnit timeUnit,
-      final QuotaScope scope) {
-    return QuotaProtos.TimedQuota.newBuilder()
-            .setSoftLimit(limit)
-            .setTimeUnit(toProtoTimeUnit(timeUnit))
-            .setScope(toProtoQuotaScope(scope))
-            .build();
-  }
-
-  /**
-   * Generates a marker for the WAL so that we propagate the notion of a bulk region load
-   * throughout the WAL.
-   *
-   * @param tableName         The tableName into which the bulk load is being imported into.
-   * @param encodedRegionName Encoded region name of the region which is being bulk loaded.
-   * @param storeFiles        A set of store files of a column family are bulk loaded.
-   * @param storeFilesSize  Map of store files and their lengths
-   * @param bulkloadSeqId     sequence ID (by a force flush) used to create bulk load hfile
-   *                          name
-   * @return The WAL log marker for bulk loads.
-   */
-  public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
-      ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles,
-      Map<String, Long> storeFilesSize, long bulkloadSeqId) {
-    BulkLoadDescriptor.Builder desc =
-        BulkLoadDescriptor.newBuilder()
-        .setTableName(ProtobufUtil.toProtoTableName(tableName))
-        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
-
-    for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
-      WALProtos.StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
-          .setFamilyName(ByteStringer.wrap(entry.getKey()))
-          .setStoreHomeDir(Bytes.toString(entry.getKey())); // relative to region
-      for (Path path : entry.getValue()) {
-        String name = path.getName();
-        builder.addStoreFile(name);
-        Long size = storeFilesSize.get(name) == null ? (Long) 0L : storeFilesSize.get(name);
-        builder.setStoreFileSizeBytes(size);
-      }
-      desc.addStores(builder);
-    }
-
-    return desc.build();
-  }
-
-  /**
-   * This version of protobuf's mergeDelimitedFrom avoid the hard-coded 64MB limit for decoding
-   * buffers
-   * @param builder current message builder
-   * @param in Inputsream with delimited protobuf data
-   * @throws IOException
-   */
-  public static void mergeDelimitedFrom(Message.Builder builder, InputStream in)
-    throws IOException {
-    // This used to be builder.mergeDelimitedFrom(in);
-    // but is replaced to allow us to bump the protobuf size limit.
-    final int firstByte = in.read();
-    if (firstByte != -1) {
-      final int size = CodedInputStream.readRawVarint32(firstByte, in);
-      final InputStream limitedInput = new LimitInputStream(in, size);
-      final CodedInputStream codedInput = CodedInputStream.newInstance(limitedInput);
-      codedInput.setSizeLimit(size);
-      builder.mergeFrom(codedInput);
-      codedInput.checkLastTagWas(0);
-    }
-  }
-
-  /**
-   * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding
-   * buffers where the message size is known
-   * @param builder current message builder
-   * @param in InputStream containing protobuf data
-   * @param size known size of protobuf data
-   * @throws IOException
-   */
-  public static void mergeFrom(Message.Builder builder, InputStream in, int size)
-      throws IOException {
-    final CodedInputStream codedInput = CodedInputStream.newInstance(in);
-    codedInput.setSizeLimit(size);
-    builder.mergeFrom(codedInput);
-    codedInput.checkLastTagWas(0);
-  }
-
-  /**
-   * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding
-   * buffers where the message size is not known
-   * @param builder current message builder
-   * @param in InputStream containing protobuf data
-   * @throws IOException
-   */
-  public static void mergeFrom(Message.Builder builder, InputStream in)
-      throws IOException {
-    final CodedInputStream codedInput = CodedInputStream.newInstance(in);
-    codedInput.setSizeLimit(Integer.MAX_VALUE);
-    builder.mergeFrom(codedInput);
-    codedInput.checkLastTagWas(0);
-  }
-
-  /**
-   * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding
-   * buffers when working with ByteStrings
-   * @param builder current message builder
-   * @param bs ByteString containing the
-   * @throws IOException
-   */
-  public static void mergeFrom(Message.Builder builder, ByteString bs) throws IOException {
-    final CodedInputStream codedInput = bs.newCodedInput();
-    codedInput.setSizeLimit(bs.size());
-    builder.mergeFrom(codedInput);
-    codedInput.checkLastTagWas(0);
   }
 
   /**
@@ -3253,80 +1687,6 @@ public final class ProtobufUtil {
     codedInput.checkLastTagWas(0);
   }
 
-  public static void mergeFrom(Message.Builder builder, CodedInputStream codedInput, int length)
-      throws IOException {
-    codedInput.resetSizeCounter();
-    int prevLimit = codedInput.setSizeLimit(length);
-
-    int limit = codedInput.pushLimit(length);
-    builder.mergeFrom(codedInput);
-    codedInput.popLimit(limit);
-
-    codedInput.checkLastTagWas(0);
-    codedInput.setSizeLimit(prevLimit);
-  }
-
-  public static ReplicationLoadSink toReplicationLoadSink(
-      ClusterStatusProtos.ReplicationLoadSink cls) {
-    return new ReplicationLoadSink(cls.getAgeOfLastAppliedOp(), cls.getTimeStampsOfLastAppliedOp());
-  }
-
-  public static ReplicationLoadSource toReplicationLoadSource(
-      ClusterStatusProtos.ReplicationLoadSource cls) {
-    return new ReplicationLoadSource(cls.getPeerID(), cls.getAgeOfLastShippedOp(),
-        cls.getSizeOfLogQueue(), cls.getTimeStampOfLastShippedOp(), cls.getReplicationLag());
-  }
-
-  public static List<ReplicationLoadSource> toReplicationLoadSourceList(
-      List<ClusterStatusProtos.ReplicationLoadSource> clsList) {
-    ArrayList<ReplicationLoadSource> rlsList = new ArrayList<ReplicationLoadSource>();
-    for (ClusterStatusProtos.ReplicationLoadSource cls : clsList) {
-      rlsList.add(toReplicationLoadSource(cls));
-    }
-    return rlsList;
-  }
-
-  /**
-   * Get a protocol buffer VersionInfo
-   *
-   * @return the converted protocol buffer VersionInfo
-   */
-  public static HBaseProtos.VersionInfo getVersionInfo() {
-    HBaseProtos.VersionInfo.Builder builder = HBaseProtos.VersionInfo.newBuilder();
-    String version = VersionInfo.getVersion();
-    builder.setVersion(version);
-    String[] components = version.split("\\.");
-    if (components != null && components.length > 2) {
-      builder.setVersionMajor(Integer.parseInt(components[0]));
-      builder.setVersionMinor(Integer.parseInt(components[1]));
-    }
-    builder.setUrl(VersionInfo.getUrl());
-    builder.setRevision(VersionInfo.getRevision());
-    builder.setUser(VersionInfo.getUser());
-    builder.setDate(VersionInfo.getDate());
-    builder.setSrcChecksum(VersionInfo.getSrcChecksum());
-    return builder.build();
-  }
-
-  /**
-   * Convert SecurityCapabilitiesResponse.Capability to SecurityCapability
-   * @param capabilities capabilities returned in the SecurityCapabilitiesResponse message
-   * @return the converted list of SecurityCapability elements
-   */
-  public static List<SecurityCapability> toSecurityCapabilityList(
-      List<MasterProtos.SecurityCapabilitiesResponse.Capability> capabilities) {
-    List<SecurityCapability> scList = new ArrayList<>(capabilities.size());
-    for (MasterProtos.SecurityCapabilitiesResponse.Capability c: capabilities) {
-      try {
-        scList.add(SecurityCapability.valueOf(c.getNumber()));
-      } catch (IllegalArgumentException e) {
-        // Unknown capability, just ignore it. We don't understand the new capability
-        // but don't care since by definition we cannot take advantage of it.
-      }
-    }
-    return scList;
-  }
-
   private static HBaseProtos.TimeRange.Builder timeRangeToProto(TimeRange timeRange) {
     HBaseProtos.TimeRange.Builder timeRangeBuilder =
         HBaseProtos.TimeRange.newBuilder();
@@ -3347,140 +1707,6 @@ public final class ProtobufUtil {
     return new TimeRange(minStamp, maxStamp);
   }
 
-  public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
-    RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
-    for(HBaseProtos.ServerName el: proto.getServersList()) {
-      RSGroupInfo.addServer(HostAndPort.fromParts(el.getHostName(), el.getPort()));
-    }
-    for(HBaseProtos.TableName pTableName: proto.getTablesList()) {
-      RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
-    }
-    return RSGroupInfo;
-  }
-
-  public static RSGroupProtos.RSGroupInfo toProtoGroupInfo(RSGroupInfo pojo) {
-    List<HBaseProtos.TableName> tables =
-        new ArrayList<HBaseProtos.TableName>(pojo.getTables().size());
-    for(TableName arg: pojo.getTables()) {
-      tables.add(ProtobufUtil.toProtoTableName(arg));
-    }
-    List<HBaseProtos.ServerName> hostports =
-        new ArrayList<HBaseProtos.ServerName>(pojo.getServers().size());
-    for(HostAndPort el: pojo.getServers()) {
-      hostports.add(HBaseProtos.ServerName.newBuilder()
-          .setHostName(el.getHostText())
-          .setPort(el.getPort())
-          .build());
-    }
-    return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName())
-        .addAllServers(hostports)
-        .addAllTables(tables).build();
-  }
-
-  /**
-   * Converts an HColumnDescriptor to ColumnFamilySchema
-   * @param hcd the HColummnDescriptor
-   * @return Convert this instance to a the pb column family type
-   */
-  public static ColumnFamilySchema convertToColumnFamilySchema(HColumnDescriptor hcd) {
-    ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
-    builder.setName(ByteStringer.wrap(hcd.getName()));
-    for (Map.Entry<Bytes, Bytes> e : hcd.getValues().entrySet()) {
-      BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
-      aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
-      aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));
-      builder.addAttributes(aBuilder.build());
-    }
-    for (Map.Entry<String, String> e : hcd.getConfiguration().entrySet()) {
-      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
-      aBuilder.setName(e.getKey());
-      aBuilder.setValue(e.getValue());
-      builder.addConfiguration(aBuilder.build());
-    }
-    return builder.build();
-  }
-
-  /**
-   * Converts a ColumnFamilySchema to HColumnDescriptor
-   * @param cfs the ColumnFamilySchema
-   * @return An {@link HColumnDescriptor} made from the passed in <code>cfs</code>
-   */
-  public static HColumnDescriptor convertToHColumnDesc(final ColumnFamilySchema cfs) {
-    // Use the empty constructor so we preserve the initial values set on construction for things
-    // like maxVersion.  Otherwise, we pick up wrong values on deserialization which makes for
-    // unrelated-looking test failures that are hard to trace back to here.
-    HColumnDescriptor hcd = new HColumnDescriptor(cfs.getName().toByteArray());
-    for (BytesBytesPair a: cfs.getAttributesList()) {
-      hcd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
-    }
-    for (NameStringPair a: cfs.getConfigurationList()) {
-      hcd.setConfiguration(a.getName(), a.getValue());
-    }
-    return hcd;
-  }
-
-  /**
-   * Converts an HTableDescriptor to TableSchema
-   * @param htd the HTableDescriptor
-   * @return Convert the current {@link HTableDescriptor} into a pb TableSchema instance.
-   */
-  public static TableSchema convertToTableSchema(HTableDescriptor htd) {
-    TableSchema.Builder builder = TableSchema.newBuilder();
-    builder.setTableName(toProtoTableName(htd.getTableName()));
-    for (Map.Entry<Bytes, Bytes> e : htd.getValues().entrySet()) {
-      BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
-      aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
-      aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));
-      builder.addAttributes(aBuilder.build());
-    }
-    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
-      builder.addColumnFamilies(convertToColumnFamilySchema(hcd));
-    }
-    for (Map.Entry<String, String> e : htd.getConfiguration().entrySet()) {
-      NameStringPair.Builder aBuilder = NameStringPair.newBuilder();
-      aBuilder.setName(e.getKey());
-      aBuilder.setValue(e.getValue());
-      builder.addConfiguration(aBuilder.build());
-    }
-    return builder.build();
-  }
-
-  /**
-   * Converts a TableSchema to HTableDescriptor
-   * @param ts A pb TableSchema instance.
-   * @return An {@link HTableDescriptor} made from the passed in pb <code>ts</code>.
-   */
-  public static HTableDescriptor convertToHTableDesc(final TableSchema ts) {
-    List<ColumnFamilySchema> list = ts.getColumnFamiliesList();
-    HColumnDescriptor [] hcds = new HColumnDescriptor[list.size()];
-    int index = 0;
-    for (ColumnFamilySchema cfs: list) {
-      hcds[index++] = ProtobufUtil.convertToHColumnDesc(cfs);
-    }
-    HTableDescriptor htd = new HTableDescriptor(ProtobufUtil.toTableName(ts.getTableName()));
-    for (HColumnDescriptor hcd : hcds) {
-      htd.addFamily(hcd);
-    }
-    for (BytesBytesPair a: ts.getAttributesList()) {
-      htd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
-    }
-    for (NameStringPair a: ts.getConfigurationList()) {
-      htd.setConfiguration(a.getName(), a.getValue());
-    }
-    return htd;
-  }
-
-  /**
-   * Creates {@link CompactionState} from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState}
-   * state
-   * @param state the protobuf CompactionState
-   * @return CompactionState
-   */
-  public static CompactionState createCompactionState(GetRegionInfoResponse.CompactionState state) {
-    return CompactionState.valueOf(state.toString());
-  }
-
   /**
    * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
    * from {@link SnapshotType}
@@ -3493,209 +1719,61 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Creates {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type}
-   * from the type of SnapshotDescription string
-   * @param snapshotDesc string representing the snapshot description type
-   * @return the protobuf SnapshotDescription type
-   */
-  public static HBaseProtos.SnapshotDescription.Type
-      createProtosSnapShotDescType(String snapshotDesc) {
-    return HBaseProtos.SnapshotDescription.Type.valueOf(snapshotDesc.toUpperCase(Locale.ROOT));
-  }
-
-  /**
-   * Creates {@link SnapshotType} from the type of
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
-   * @param type the snapshot description type
-   * @return the protobuf SnapshotDescription type
-   */
-  public static SnapshotType createSnapshotType(HBaseProtos.SnapshotDescription.Type type) {
-    return SnapshotType.valueOf(type.toString());
-  }
-
-  /**
-   * Convert from {@link SnapshotDescription} to
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription}
-   * @param snapshotDesc the POJO SnapshotDescription
-   * @return the protobuf SnapshotDescription
-   */
-  public static HBaseProtos.SnapshotDescription
-      createHBaseProtosSnapshotDesc(SnapshotDescription snapshotDesc) {
-    HBaseProtos.SnapshotDescription.Builder builder = HBaseProtos.SnapshotDescription.newBuilder();
-    if (snapshotDesc.getTable() != null) {
-      builder.setTable(snapshotDesc.getTable());
-    }
-    if (snapshotDesc.getName() != null) {
-      builder.setName(snapshotDesc.getName());
-    }
-    if (snapshotDesc.getOwner() != null) {
-      builder.setOwner(snapshotDesc.getOwner());
-    }
-    if (snapshotDesc.getCreationTime() != -1L) {
-      builder.setCreationTime(snapshotDesc.getCreationTime());
-    }
-    if (snapshotDesc.getVersion() != -1) {
-      builder.setVersion(snapshotDesc.getVersion());
-    }
-    builder.setType(ProtobufUtil.createProtosSnapShotDescType(snapshotDesc.getType()));
-    HBaseProtos.SnapshotDescription snapshot = builder.build();
-    return snapshot;
-  }
-
-  /**
-   * Convert from
-   * {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} to
-   * {@link SnapshotDescription}
-   * @param snapshotDesc the protobuf SnapshotDescription
-   * @return the POJO SnapshotDescription
-   */
-  public static SnapshotDescription
-      createSnapshotDesc(HBaseProtos.SnapshotDescription snapshotDesc) {
-    return new SnapshotDescription(snapshotDesc.getName(), snapshotDesc.getTable(),
-        createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
-        snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
-  }
-
-  /**
-   * Convert a protobuf ClusterStatus to a ClusterStatus
+   * Convert a byte array to a protocol buffer RegionSpecifier
    *
-   * @param proto the protobuf ClusterStatus
-   * @return the converted ClusterStatus
+   * @param type the region specifier type
+   * @param value the region specifier byte array value
+   * @return a protocol buffer RegionSpecifier
    */
-  public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
-
-    Map<ServerName, ServerLoad> servers = null;
-    servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
-    for (LiveServerInfo lsi : proto.getLiveServersList()) {
-      servers.put(ProtobufUtil.toServerName(
-          lsi.getServer()), new ServerLoad(lsi.getServerLoad()));
-    }
-
-    Collection<ServerName> deadServers = null;
-    deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
-    for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
-      deadServers.add(ProtobufUtil.toServerName(sn));
-    }
-
-    Collection<ServerName> backupMasters = null;
-    backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
-    for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
-      backupMasters.add(ProtobufUtil.toServerName(sn));
-    }
-
-    Set<RegionState> rit = null;
-    rit = new HashSet<RegionState>(proto.getRegionsInTransitionList().size());
-    for (RegionInTransition region : proto.getRegionsInTransitionList()) {
-      RegionState value = RegionState.convert(region.getRegionState());
-      rit.add(value);
-    }
-
-    String[] masterCoprocessors = null;
-    final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
-    masterCoprocessors = new String[numMasterCoprocessors];
-    for (int i = 0; i < numMasterCoprocessors; i++) {
-      masterCoprocessors[i] = proto.getMasterCoprocessors(i).getName();
-    }
-
-    return new ClusterStatus(proto.getHbaseVersion().getVersion(),
-      ClusterId.convert(proto.getClusterId()).toString(),servers,deadServers,
-      ProtobufUtil.toServerName(proto.getMaster()),backupMasters,rit,masterCoprocessors,
-      proto.getBalancerOn());
+  public static RegionSpecifier buildRegionSpecifier(
+      final RegionSpecifierType type, final byte[] value) {
+    RegionSpecifier.Builder regionBuilder = RegionSpecifier.newBuilder();
+    regionBuilder.setValue(ByteStringer.wrap(value));
+    regionBuilder.setType(type);
+    return regionBuilder.build();
   }
 
   /**
-   * Convert a ClusterStatus to a protobuf ClusterStatus
-   *
-   * @return the protobuf ClusterStatus
+   * Get a ServerName from the passed in data bytes.
+   * @param data Data with a serialize server name in it; can handle the old style
+   * servername where servername was host and port.  Works too with data that
+   * begins w/ the pb 'PBUF' magic and that is then followed by a protobuf that
+   * has a serialized {@link ServerName} in it.
+   * @return Returns null if <code>data</code> is null else converts passed data
+   * to a ServerName instance.
+   * @throws DeserializationException 
    */
-  public static ClusterStatusProtos.ClusterStatus convert(ClusterStatus status) {
-    ClusterStatusProtos.ClusterStatus.Builder builder =
-        ClusterStatusProtos.ClusterStatus.newBuilder();
-    builder
-        .setHbaseVersion(HBaseVersionFileContent.newBuilder().setVersion(status.getHBaseVersion()));
-
-    if (status.getServers() != null) {
-      for (ServerName serverName : status.getServers()) {
-        LiveServerInfo.Builder lsi =
-            LiveServerInfo.newBuilder().setServer(ProtobufUtil.toServerName(serverName));
-        status.getLoad(serverName);
-        lsi.setServerLoad(status.getLoad(serverName).obtainServerLoadPB());
-        builder.addLiveServers(lsi.build());
+  public static ServerName toServerName(final byte [] data) throws DeserializationException {
+    if (data == null || data.length <= 0) return null;
+    if (ProtobufMagic.isPBMagicPrefix(data)) {
+      int prefixLen = ProtobufMagic.lengthOfPBMagic();
+      try {
+        ZooKeeperProtos.Master rss =
+          ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn =
+            rss.getMaster();
+        return ServerName.valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (/*InvalidProtocolBufferException*/IOException e) {
+        // A failed parse of the znode is pretty catastrophic. Rather than loop
+        // retrying hoping the bad bytes will changes, and rather than change
+        // the signature on this method to add an IOE which will send ripples all
+        // over the code base, throw a RuntimeException.  This should "never" happen.
+        // Fail fast if it does.
+        throw new DeserializationException(e);
       }
     }
-
-    if (status.getDeadServerNames() != null) {
-      for (ServerName deadServer : status.getDeadServerNames()) {
-        builder.addDeadServers(ProtobufUtil.toServerName(deadServer));
-      }
+    // The str returned could be old style -- pre hbase-1502 -- which was
+    // hostname and port seperated by a colon rather than hostname, port and
+    // startcode delimited by a ','.
+    String str = Bytes.toString(data);
+    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
+    if (index != -1) {
+      // Presume its ServerName serialized with versioned bytes.
+      return ServerName.parseVersionedServerName(data);
     }
-
-    if (status.getRegionsInTransition() != null) {
-      for (RegionState rit : status.getRegionsInTransition()) {
-        ClusterStatusProtos.RegionState rs = rit.convert();
-        RegionSpecifier.Builder spec =
-            RegionSpecifier.newBuilder().setType(RegionSpecifierType.REGION_NAME);
-        spec.setValue(ByteStringer.wrap(rit.getRegion().getRegionName()));
-
-        RegionInTransition pbRIT =
-            RegionInTransition.newBuilder().setSpec(spec.build()).setRegionState(rs).build();
-        builder.addRegionsInTransition(pbRIT);
-      }
-    }
-
-    if (status.getClusterId() != null) {
-      builder.setClusterId(new ClusterId(status.getClusterId()).convert());
-    }
-
-    if (status.getMasterCoprocessors() != null) {
-      for (String coprocessor : status.getMasterCoprocessors()) {
-        builder.addMasterCoprocessors(HBaseProtos.Coprocessor.newBuilder().setName(coprocessor));
-      }
-    }
-
-    if (status.getMaster() != null) {
-      builder.setMaster(ProtobufUtil.toServerName(status.getMaster()));
-    }
-
-    if (status.getBackupMasters() != null) {
-      for (ServerName backup : status.getBackupMasters()) {
-        builder.addBackupMasters(ProtobufUtil.toServerName(backup));
-      }
-    }
-
-    if (status.getBalancerOn() != null) {
-      builder.setBalancerOn(status.getBalancerOn());
-    }
-
-    return builder.build();
-  }
-
-  public static RegionLoadStats createRegionLoadStats(ClientProtos.RegionLoadStats stats) {
-    return new RegionLoadStats(stats.getMemstoreLoad(), stats.getHeapOccupancy(),
-        stats.getCompactionPressure());
-  }
-
-  /**
-   * @param msg
-   * @return A String version of the passed in <code>msg</code>
-   */
-  public static String toText(Message msg) {
-    return TextFormat.shortDebugString(msg);
-  }
-
-  public static byte [] toBytes(ByteString bs) {
-    return bs.toByteArray();
-  }
-
-  /**
-   * Contain ServiceException inside here. Take a callable that is doing our pb rpc and run it.
-   * @throws IOException
-   */
-  public static <T> T call(Callable<T> callable) throws IOException {
-    try {
-      return callable.call();
-    } catch (Exception e) {
-      throw ProtobufUtil.handleRemoteException(e);
-    }
+    // Presume it a hostname:port format.
+    String hostname = Addressing.parseHostname(str);
+    int port = Addressing.parsePort(str);
+    return ServerName.valueOf(hostname, port, -1L);
   }
 }

@@ -27,9 +27,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 
-import com.google.common.collect.Lists;
-import com.google.protobuf.ServiceException;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -52,8 +49,8 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -71,6 +68,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
+
+import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 
 @RunWith(Parameterized.class)
 @Category({ SecurityTests.class, SmallTests.class })
@@ -214,7 +214,7 @@ public class TestSecureIPC {
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
 
     RpcServerInterface rpcServer = new RpcServer(null, "AbstractTestSecureIPC",
-        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)), isa,
+        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)), isa,
         serverConf, new FifoRpcScheduler(serverConf, 1));
     rpcServer.start();
     try (RpcClient rpcClient = RpcClientFactory.createClient(clientConf,
@@ -262,7 +262,7 @@ public class TestSecureIPC {
               .getMessage();
           assertEquals(input, result);
         }
-      } catch (ServiceException e) {
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e) {
         throw new RuntimeException(e);
       }
     }

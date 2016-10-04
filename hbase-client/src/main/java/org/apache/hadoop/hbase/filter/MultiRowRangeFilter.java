@@ -28,11 +28,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Filter to support scan multiple row key ranges. It can construct the row key ranges from the
@@ -151,10 +150,10 @@ public class MultiRowRangeFilter extends FilterBase {
       if (range != null) {
         FilterProtos.RowRange.Builder rangebuilder = FilterProtos.RowRange.newBuilder();
         if (range.startRow != null)
-          rangebuilder.setStartRow(ByteStringer.wrap(range.startRow));
+          rangebuilder.setStartRow(UnsafeByteOperations.unsafeWrap(range.startRow));
         rangebuilder.setStartRowInclusive(range.startRowInclusive);
         if (range.stopRow != null)
-          rangebuilder.setStopRow(ByteStringer.wrap(range.stopRow));
+          rangebuilder.setStopRow(UnsafeByteOperations.unsafeWrap(range.stopRow));
         rangebuilder.setStopRowInclusive(range.stopRowInclusive);
         range.isScan = Bytes.equals(range.startRow, range.stopRow) ? 1 : 0;
         builder.addRowRangeList(rangebuilder.build());

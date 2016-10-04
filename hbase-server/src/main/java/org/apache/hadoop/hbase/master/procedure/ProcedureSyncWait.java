@@ -36,12 +36,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -82,9 +81,7 @@ public final class ProcedureSyncWait {
     if (result != null) {
       if (result.isFailed()) {
         // If the procedure fails, we should always have an exception captured. Throw it.
-        throw RemoteProcedureException.fromProto(
-          result.getForeignExceptionMessage().getForeignExchangeMessage())
-            .unwrapRemoteIOException();
+        throw result.getException();
       }
       return result.getResult();
     } else {

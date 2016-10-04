@@ -26,7 +26,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
  * Keeps track of live procedures.
@@ -278,7 +278,7 @@ public class ProcedureStoreTracker {
 
     /**
      * Convert to
-     * {@link org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode}
+     * org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode
      * protobuf.
      */
     public ProcedureProtos.ProcedureStoreTracker.TrackerNode convert() {
@@ -768,7 +768,7 @@ public class ProcedureStoreTracker {
 
   /**
    * Builds
-   * {@link org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker}
+   * org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker
    * protocol buffer from current state.
    */
   public ProcedureProtos.ProcedureStoreTracker toProto() throws IOException {

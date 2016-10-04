@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 
 /**
  * Implementations make an rpc call against a RegionService via a protobuf Service.
@@ -46,10 +46,9 @@ public abstract class NoncedRegionServerCallable<T> extends CancellableRegionSer
    * @param tableName Table name to which <code>row</code> belongs.
    * @param row The row we want in <code>tableName</code>.
    */
-  public NoncedRegionServerCallable(Connection connection,
-                                    RpcControllerFactory rpcControllerFactory,
-                                    TableName tableName, byte [] row) {
-    super(connection, tableName, row, rpcControllerFactory);
+  public NoncedRegionServerCallable(Connection connection, TableName tableName, byte [] row,
+      HBaseRpcController rpcController) {
+    super(connection, tableName, row, rpcController);
     this.nonce = getConnection().getNonceGenerator().newNonce();
   }
 

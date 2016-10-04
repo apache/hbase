@@ -22,13 +22,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 
 /**
  * Codec that just writes out Cell as a protobuf Cell Message.  Does not write the mvcc stamp.
@@ -47,15 +47,16 @@ public class MessageCodec implements Codec {
       CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
       // This copies bytes from Cell to ByteString.  I don't see anyway around the copy.
       // ByteString is final.
-      builder.setRow(ByteStringer.wrap(cell.getRowArray(), cell.getRowOffset(),
+      builder.setRow(UnsafeByteOperations.unsafeWrap(cell.getRowArray(), cell.getRowOffset(),
           cell.getRowLength()));
-      builder.setFamily(ByteStringer.wrap(cell.getFamilyArray(), cell.getFamilyOffset(),
+      builder.setFamily(UnsafeByteOperations.unsafeWrap(cell.getFamilyArray(),
+          cell.getFamilyOffset(),
           cell.getFamilyLength()));
-      builder.setQualifier(ByteStringer.wrap(cell.getQualifierArray(),
+      builder.setQualifier(UnsafeByteOperations.unsafeWrap(cell.getQualifierArray(),
           cell.getQualifierOffset(), cell.getQualifierLength()));
       builder.setTimestamp(cell.getTimestamp());
       builder.setCellType(CellProtos.CellType.valueOf(cell.getTypeByte()));
-      builder.setValue(ByteStringer.wrap(cell.getValueArray(), cell.getValueOffset(),
+      builder.setValue(UnsafeByteOperations.unsafeWrap(cell.getValueArray(), cell.getValueOffset(),
           cell.getValueLength()));
       CellProtos.Cell pbcell = builder.build();
       pbcell.writeDelimitedTo(this.out);

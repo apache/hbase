@@ -22,12 +22,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Test that we correctly serialize exceptions from a remote source
@@ -38,10 +38,10 @@ public class TestForeignExceptionSerialization {
 
   /**
    * Verify that we get back similar stack trace information before an after serialization.
-   * @throws InvalidProtocolBufferException
+   * @throws IOException 
    */
   @Test
-  public void testSimpleException() throws InvalidProtocolBufferException {
+  public void testSimpleException() throws IOException {
     String data = "some bytes";
     ForeignException in = new ForeignException("SRC", new IllegalArgumentException(data));
     // check that we get the data back out
@@ -61,10 +61,10 @@ public class TestForeignExceptionSerialization {
   /**
    * Compare that a generic exception's stack trace has the same stack trace elements after
    * serialization and deserialization
-   * @throws InvalidProtocolBufferException
+   * @throws IOException 
    */
   @Test
-  public void testRemoteFromLocal() throws InvalidProtocolBufferException {
+  public void testRemoteFromLocal() throws IOException {
     String errorMsg = "some message";
     Exception generic = new Exception(errorMsg);
     generic.printStackTrace();

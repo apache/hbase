@@ -1,11 +1,12 @@
-These are the protobuf definition files used by hbase. ALL protobuf proto files
-must live in this module whether test or spark or coprocessor endpoint protos
-because we are being careful about what we expose of protobuf to downstreamers;
-we are shading our version of protobuf so we can freely change it as needed.
+These are the protobuf definition files used by hbase Coprocessor Endpoints.
+HBase core uses protos found at hbase-protocol-shaded/src/main/protos. The
+protos here are also in hbase-module-shaded though they are not exactly
+the same files (they generate into different location; where to generate
+to is part of the .proto file). Consider whether any changes made belong
+both here and over in hbase-module-shaded.
 
-The produced java classes are generated into
-src/main/java/org/apache/hadoop/hbase/protobuf/generated
-and then checked in.  The reasoning is that they change infrequently.
+The produced java classes are generated and then checked in. The reasoning
+is that they change infrequently and it saves generating anew on each build.
 
 To regenerate the classes after making definition file changes, ensure first that
 the protobuf protoc tool is in your $PATH. You may need to download it and build

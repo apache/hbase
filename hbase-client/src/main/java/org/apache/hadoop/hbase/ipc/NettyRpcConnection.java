@@ -22,7 +22,7 @@ import static org.apache.hadoop.hbase.ipc.CallEvent.Type.TIMEOUT;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 
-import com.google.protobuf.RpcCallback;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -52,7 +52,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
@@ -247,12 +247,12 @@ class NettyRpcConnection extends RpcConnection {
   }
 
   @Override
-  public synchronized void sendRequest(final Call call, HBaseRpcController pcrc)
+  public synchronized void sendRequest(final Call call, HBaseRpcController hrc)
       throws IOException {
     if (reloginInProgress) {
       throw new IOException("Can not send request because relogin is in progress.");
     }
-    pcrc.notifyOnCancel(new RpcCallback<Object>() {
+    hrc.notifyOnCancel(new RpcCallback<Object>() {
 
       @Override
       public void run(Object parameter) {

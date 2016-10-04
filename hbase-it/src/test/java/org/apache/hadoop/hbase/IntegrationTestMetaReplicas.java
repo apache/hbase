@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TestMetaWithReplicas;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -66,7 +67,7 @@ public class IntegrationTestMetaReplicas {
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
-    ServerName.parseFrom(data);
+    ProtobufUtil.toServerName(data);
     waitUntilZnodeAvailable(1);
     waitUntilZnodeAvailable(2);
   }

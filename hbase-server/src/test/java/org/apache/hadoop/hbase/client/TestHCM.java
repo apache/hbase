@@ -535,9 +535,9 @@ public class TestHCM {
     long baseTime = 100;
     TableName tableName = TableName.valueOf("HCM-testCallableSleep");
     TEST_UTIL.createTable(tableName, FAM_NAM);
-    RegionServerCallable<Object> regionServerCallable = new RegionServerCallable<Object>(
-        TEST_UTIL.getConnection(), new RpcControllerFactory(TEST_UTIL.getConfiguration()),
-        tableName, ROW) {
+    ClientServiceCallable<Object> regionServerCallable = new ClientServiceCallable<Object>(
+        TEST_UTIL.getConnection(), tableName, ROW,
+        new RpcControllerFactory(TEST_UTIL.getConfiguration()).newController()) {
       @Override
       protected Object rpcCall() throws Exception {
         return null;

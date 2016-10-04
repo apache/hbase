@@ -27,12 +27,12 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * A filter, based on the ColumnCountGetFilter, takes two arguments: limit and offset.
@@ -172,7 +172,7 @@ public class ColumnPaginationFilter extends FilterBase {
       builder.setOffset(this.offset);
     }
     if (this.columnOffset != null) {
-      builder.setColumnOffset(ByteStringer.wrap(this.columnOffset));
+      builder.setColumnOffset(UnsafeByteOperations.unsafeWrap(this.columnOffset));
     }
     return builder.build().toByteArray();
   }

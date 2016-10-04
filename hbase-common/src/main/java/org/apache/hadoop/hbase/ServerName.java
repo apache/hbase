@@ -18,10 +18,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.net.HostAndPort;
-import com.google.common.net.InetAddresses;
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,11 +26,11 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.net.HostAndPort;
+import com.google.common.net.InetAddresses;
 
 /**
  * Instance of an HBase ServerName.
@@ -368,48 +364,5 @@ import org.apache.hadoop.hbase.util.Bytes;
   public static boolean isFullServerName(final String str){
     if (str == null ||str.isEmpty()) return false;
     return SERVERNAME_PATTERN.matcher(str).matches();
-  }
-
-  /**
-   * Get a ServerName from the passed in data bytes.
-   * @param data Data with a serialize server name in it; can handle the old style
-   * servername where servername was host and port.  Works too with data that
-   * begins w/ the pb 'PBUF' magic and that is then followed by a protobuf that
-   * has a serialized {@link ServerName} in it.
-   * @return Returns null if <code>data</code> is null else converts passed data
-   * to a ServerName instance.
-   * @throws DeserializationException 
-   */
-  public static ServerName parseFrom(final byte [] data) throws DeserializationException {
-    if (data == null || data.length <= 0) return null;
-    if (ProtobufMagic.isPBMagicPrefix(data)) {
-      int prefixLen = ProtobufMagic.lengthOfPBMagic();
-      try {
-        ZooKeeperProtos.Master rss =
-          ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
-        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn = rss.getMaster();
-        return valueOf(sn.getHostName(), sn.getPort(), sn.getStartCode());
-      } catch (InvalidProtocolBufferException e) {
-        // A failed parse of the znode is pretty catastrophic. Rather than loop
-        // retrying hoping the bad bytes will changes, and rather than change
-        // the signature on this method to add an IOE which will send ripples all
-        // over the code base, throw a RuntimeException.  This should "never" happen.
-        // Fail fast if it does.
-        throw new DeserializationException(e);
-      }
-    }
-    // The str returned could be old style -- pre hbase-1502 -- which was
-    // hostname and port seperated by a colon rather than hostname, port and
-    // startcode delimited by a ','.
-    String str = Bytes.toString(data);
-    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
-    if (index != -1) {
-      // Presume its ServerName serialized with versioned bytes.
-      return ServerName.parseVersionedServerName(data);
-    }
-    // Presume it a hostname:port format.
-    String hostname = Addressing.parseHostname(str);
-    int port = Addressing.parsePort(str);
-    return valueOf(hostname, port, -1L);
   }
 }

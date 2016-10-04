@@ -117,7 +117,7 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdmin {
               result.getValue(
                   RSGroupInfoManager.META_FAMILY_BYTES,
                   RSGroupInfoManager.META_QUALIFIER_BYTES));
-      groupMap.put(proto.getName(), ProtobufUtil.toGroupInfo(proto));
+      groupMap.put(proto.getName(), RSGroupSerDe.toGroupInfo(proto));
     }
     Assert.assertEquals(Sets.newHashSet(groupMap.values()),
         Sets.newHashSet(wrapped.listRSGroups()));
@@ -129,7 +129,7 @@ public class VerifyingRSGroupAdminClient extends RSGroupAdmin {
           ProtobufUtil.expectPBMagicPrefix(data);
           ByteArrayInputStream bis = new ByteArrayInputStream(
               data, ProtobufUtil.lengthOfPBMagic(), data.length);
-          zList.add(ProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
+          zList.add(RSGroupSerDe.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
         }
       }
       Assert.assertEquals(zList.size(), groupMap.size());

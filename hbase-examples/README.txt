@@ -62,3 +62,7 @@ Example code.
       2. Execute {make}.
       3. Execute {./DemoClient}.
 
+Also includes example coprocessor endpoint examples. The protobuf files are at src/main/protobuf.
+See hbase-protocol README.txt for how to generate the example RowCountService Coprocessor
+Endpoint and Aggregator examples.
+

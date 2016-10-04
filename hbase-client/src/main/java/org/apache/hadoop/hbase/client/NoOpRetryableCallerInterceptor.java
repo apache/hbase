@@ -25,9 +25,9 @@ import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 
 /**
  * Class that acts as a NoOpInterceptor. This class is used in case the
- * {@link RetryingCallerInterceptor} was not configured correctly or an
- * {@link RetryingCallerInterceptor} was never configured in the first place.
- * 
+ * RetryingCallerInterceptor was not configured correctly or an
+ * RetryingCallerInterceptor was never configured in the first place.
+ *
  */
 @InterfaceAudience.Private
 class NoOpRetryableCallerInterceptor extends RetryingCallerInterceptor {

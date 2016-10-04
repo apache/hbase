@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -193,7 +194,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
         } else {
           ServerName currentMaster;
           try {
-            currentMaster = ServerName.parseFrom(bytes);
+            currentMaster = ProtobufUtil.parseServerNameFrom(bytes);
           } catch (DeserializationException e) {
             LOG.warn("Failed parse", e);
             // Hopefully next time around we won't fail the parse.  Dangerous.

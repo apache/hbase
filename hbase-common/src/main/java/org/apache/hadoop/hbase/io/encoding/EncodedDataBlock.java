@@ -162,6 +162,8 @@ public class EncodedDataBlock {
    * @return Size of compressed data in bytes.
    * @throws IOException
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
+       justification="No sure what findbugs wants but looks to me like no NPE")
   public static int getCompressedSize(Algorithm algo, Compressor compressor,
       byte[] inputBuffer, int offset, int length) throws IOException {
 
@@ -186,7 +188,7 @@ public class EncodedDataBlock {
     } finally {
       nullOutputStream.close();
       compressedStream.close();
-      if (compressingStream != null) compressingStream.close();
+      compressingStream.close();
     }
   }
 

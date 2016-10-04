@@ -43,9 +43,9 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RackManager;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FavoredNodes;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.FavoredNodes;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -157,10 +157,9 @@ public class FavoredNodeAssignmentHelper {
   /**
    * @param favoredNodes The PB'ed bytes of favored nodes
    * @return the array of {@link ServerName} for the byte array of favored nodes.
-   * @throws InvalidProtocolBufferException
+   * @throws IOException
    */
-  public static ServerName[] getFavoredNodesList(byte[] favoredNodes)
-      throws InvalidProtocolBufferException {
+  public static ServerName[] getFavoredNodesList(byte[] favoredNodes) throws IOException {
     FavoredNodes f = FavoredNodes.parseFrom(favoredNodes);
     List<HBaseProtos.ServerName> protoNodes = f.getFavoredNodeList();
     ServerName[] servers = new ServerName[protoNodes.size()];

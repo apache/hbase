@@ -28,17 +28,14 @@ class NoOpRetryingInterceptorContext extends RetryingCallerInterceptorContext {
   }
 
   @Override
-  public RetryingCallerInterceptorContext prepare(
-      RetryingCallableBase callable) {
+  public RetryingCallerInterceptorContext prepare(RetryingCallable<?> callable) {
     // Do Nothing
     return this;
   }
 
   @Override
-  public RetryingCallerInterceptorContext prepare(
-      RetryingCallableBase callable, int tries) {
+  public RetryingCallerInterceptorContext prepare(RetryingCallable<?> callable, int tries) {
     // Do Nothing
     return this;
   }
-
 }

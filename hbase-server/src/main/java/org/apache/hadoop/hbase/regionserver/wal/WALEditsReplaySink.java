@@ -36,15 +36,15 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -177,12 +177,13 @@ public class WALEditsReplaySink {
    * Callable that handles the <code>replay</code> method call going against a single regionserver
    * @param <R>
    */
-  class ReplayServerCallable<R> extends RegionServerCallable<ReplicateWALEntryResponse> {
+  class ReplayServerCallable<R> extends ClientServiceCallable<ReplicateWALEntryResponse> {
     private List<Entry> entries;
 
     ReplayServerCallable(final Connection connection, RpcControllerFactory rpcControllerFactory,
         final TableName tableName, final HRegionLocation regionLoc, final List<Entry> entries) {
-      super(connection, rpcControllerFactory, tableName, null);
+      super(connection, tableName, HConstants.EMPTY_BYTE_ARRAY,
+          rpcControllerFactory.newController());
       this.entries = entries;
       setLocation(regionLoc);
     }

@@ -34,9 +34,9 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -105,7 +105,8 @@ public class TestWALFiltering {
 
   @Test
   public void testFlushedSequenceIdsSentToHMaster()
-  throws IOException, InterruptedException, ServiceException {
+  throws IOException, InterruptedException,
+  org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException, ServiceException {
     SortedMap<byte[], Long> allFlushedSequenceIds =
         new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < NUM_RS; ++i) {
@@ -141,7 +142,8 @@ public class TestWALFiltering {
   }
 
   private void flushAllRegions(int rsId)
-  throws ServiceException, IOException {
+  throws ServiceException,
+  org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException, IOException {
     HRegionServer hrs = getRegionServer(rsId);
     for (byte[] regionName : getRegionsByServer(rsId)) {
       FlushRegionRequest request =

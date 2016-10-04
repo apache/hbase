@@ -23,9 +23,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -56,13 +54,6 @@ public abstract class ByteArrayComparable implements Comparable<byte[]> {
    * @return The comparator serialized using pb
    */
   public abstract byte [] toByteArray();
-
-  ComparatorProtos.ByteArrayComparable convert() {
-    ComparatorProtos.ByteArrayComparable.Builder builder =
-      ComparatorProtos.ByteArrayComparable.newBuilder();
-    if (value != null) builder.setValue(ByteStringer.wrap(value));
-    return builder.build();
-  }
 
   /**
    * @param pbBytes A pb serialized {@link ByteArrayComparable} instance

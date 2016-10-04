@@ -44,10 +44,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -422,7 +422,7 @@ public class TestMasterFailover {
     cluster.waitForMasterToStop(activeMaster.getServerName(), 30000);
     log("Master has aborted");
 
-    rs.getRSRpcServices().closeRegion(null, RequestConverter.buildCloseRegionRequest(
+    rs.getRSRpcServices().closeRegion(null, ProtobufUtil.buildCloseRegionRequest(
       rs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()));
 
     // Start up a new master

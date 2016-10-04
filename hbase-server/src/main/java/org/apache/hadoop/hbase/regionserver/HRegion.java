@@ -19,20 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.TextFormat;
-
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -143,22 +129,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.StoreFlushDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
@@ -171,9 +141,26 @@ import org.apache.hadoop.hbase.regionserver.wal.ReplayHLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor.StoreFlushDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -194,6 +181,13 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
 
 
 @SuppressWarnings("deprecation")
@@ -259,7 +253,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Bytes.BYTES_RAWCOMPARATOR);
 
   // TODO: account for each registered handler in HeapSize computation
-  private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
+  private Map<String, com.google.protobuf.Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   private final AtomicLong memstoreSize = new AtomicLong(0);
   private final RegionServicesForStores regionServicesForStores = new RegionServicesForStores(this);
@@ -5560,7 +5554,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         try {
           WALProtos.BulkLoadDescriptor loadDescriptor =
               ProtobufUtil.toBulkLoadDescriptor(this.getRegionInfo().getTable(),
-                ByteStringer.wrap(this.getRegionInfo().getEncodedNameAsBytes()), storeFiles,
+                  UnsafeByteOperations.unsafeWrap(this.getRegionInfo().getEncodedNameAsBytes()),
+                  storeFiles,
                 storeFilesSizes, seqId);
           WALUtil.writeBulkLoadMarkerAndSync(this.wal, this.getReplicationScope(), getRegionInfo(),
               loadDescriptor, mvcc);
@@ -7636,11 +7631,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public boolean registerService(Service instance) {
+  public boolean registerService(com.google.protobuf.Service instance) {
     /*
      * No stacking of instances is allowed for a single service name
      */
-    Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
+    com.google.protobuf.Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
     String serviceName = CoprocessorRpcUtils.getServiceName(serviceDesc);
     if (coprocessorServiceHandlers.containsKey(serviceName)) {
       LOG.error("Coprocessor service " + serviceName +
@@ -7659,38 +7654,39 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public Message execService(RpcController controller, CoprocessorServiceCall call)
-      throws IOException {
+  public com.google.protobuf.Message execService(com.google.protobuf.RpcController controller,
+      CoprocessorServiceCall call)
+  throws IOException {
     String serviceName = call.getServiceName();
+    com.google.protobuf.Service service = coprocessorServiceHandlers.get(serviceName);
+    if (service == null) {
+      throw new UnknownProtocolException(null, "No registered coprocessor service found for " +
+          serviceName + " in region " + Bytes.toStringBinary(getRegionInfo().getRegionName()));
+    }
+    com.google.protobuf.Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
+
     String methodName = call.getMethodName();
-    if (!coprocessorServiceHandlers.containsKey(serviceName)) {
-      throw new UnknownProtocolException(null,
-          "No registered coprocessor service found for name "+serviceName+
-          " in region "+Bytes.toStringBinary(getRegionInfo().getRegionName()));
-    }
+    com.google.protobuf.Descriptors.MethodDescriptor methodDesc =
+        CoprocessorRpcUtils.getMethodDescriptor(methodName, serviceDesc);
 
-    Service service = coprocessorServiceHandlers.get(serviceName);
-    Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
-    Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
-    if (methodDesc == null) {
-      throw new UnknownProtocolException(service.getClass(),
-          "Unknown method "+methodName+" called on service "+serviceName+
-              " in region "+Bytes.toStringBinary(getRegionInfo().getRegionName()));
-    }
+    com.google.protobuf.Message.Builder builder =
+        service.getRequestPrototype(methodDesc).newBuilderForType();
 
-    Message.Builder builder = service.getRequestPrototype(methodDesc).newBuilderForType();
-    ProtobufUtil.mergeFrom(builder, call.getRequest());
-    Message request = builder.build();
+    org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builder,
+        call.getRequest().toByteArray());
+    com.google.protobuf.Message request =
+        CoprocessorRpcUtils.getRequest(service, methodDesc, call.getRequest());
 
     if (coprocessorHost != null) {
       request = coprocessorHost.preEndpointInvocation(service, methodName, request);
     }
 
-    final Message.Builder responseBuilder =
+    final com.google.protobuf.Message.Builder responseBuilder =
         service.getResponsePrototype(methodDesc).newBuilderForType();
-    service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
+    service.callMethod(methodDesc, controller, request,
+        new com.google.protobuf.RpcCallback<com.google.protobuf.Message>() {
       @Override
-      public void run(Message message) {
+      public void run(com.google.protobuf.Message message) {
         if (message != null) {
           responseBuilder.mergeFrom(message);
         }
@@ -7700,8 +7696,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (coprocessorHost != null) {
       coprocessorHost.postEndpointInvocation(service, methodName, request, responseBuilder);
     }
-
-    IOException exception = ResponseConverter.getControllerException(controller);
+    IOException exception =
+        org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils.getControllerException(controller);
     if (exception != null) {
       throw exception;
     }

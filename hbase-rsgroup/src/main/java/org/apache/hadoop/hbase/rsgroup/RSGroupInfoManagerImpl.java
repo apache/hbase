@@ -74,8 +74,8 @@ import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
@@ -367,7 +367,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
 
     // populate puts
     for(RSGroupInfo RSGroupInfo : newGroupMap.values()) {
-      RSGroupProtos.RSGroupInfo proto = ProtobufUtil.toProtoGroupInfo(RSGroupInfo);
+      RSGroupProtos.RSGroupInfo proto = RSGroupSerDe.toProtoGroupInfo(RSGroupInfo);
       Put p = new Put(Bytes.toBytes(RSGroupInfo.getName()));
       p.addColumn(META_FAMILY_BYTES,
           META_QUALIFIER_BYTES,
@@ -425,7 +425,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
 
       for(RSGroupInfo RSGroupInfo : newGroupMap.values()) {
         String znode = ZKUtil.joinZNode(groupBasePath, RSGroupInfo.getName());
-        RSGroupProtos.RSGroupInfo proto = ProtobufUtil.toProtoGroupInfo(RSGroupInfo);
+        RSGroupProtos.RSGroupInfo proto = RSGroupSerDe.toProtoGroupInfo(RSGroupInfo);
         LOG.debug("Updating znode: "+znode);
         ZKUtil.createAndFailSilent(watcher, znode);
         zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
@@ -732,11 +732,14 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       = MultiRowMutationProtos.MutateRowsRequest.newBuilder();
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
-        mmrBuilder.addMutationRequest(ProtobufUtil.toMutation(
-          ClientProtos.MutationProto.MutationType.PUT, mutation));
+        mmrBuilder.addMutationRequest(org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType.PUT,
+            mutation));
       } else if (mutation instanceof Delete) {
-        mmrBuilder.addMutationRequest(ProtobufUtil.toMutation(
-          ClientProtos.MutationProto.MutationType.DELETE, mutation));
+        mmrBuilder.addMutationRequest(
+            org.apache.hadoop.hbase.protobuf.ProtobufUtil.toMutation(
+                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.
+                  MutationType.DELETE, mutation));
       } else {
         throw new DoNotRetryIOException("multiMutate doesn't support "
           + mutation.getClass().getName());

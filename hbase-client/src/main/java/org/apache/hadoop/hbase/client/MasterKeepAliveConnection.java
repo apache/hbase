@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
 /**
  * A KeepAlive connection is not physically closed immediately after the close,

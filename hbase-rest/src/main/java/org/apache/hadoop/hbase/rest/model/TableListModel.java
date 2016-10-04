@@ -28,8 +28,8 @@ import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList;
 
 /**
@@ -55,7 +55,7 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   public void add(TableModel table) {
     tables.add(table);
   }
-  
+
   /**
    * @param index the index
    * @return the table model

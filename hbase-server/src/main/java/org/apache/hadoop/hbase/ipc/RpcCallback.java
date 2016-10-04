@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface RpcCallback {
-
   /**
    * Called at the end of an Rpc Call {@link RpcCallContext}
    */

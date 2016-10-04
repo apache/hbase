@@ -103,23 +103,23 @@ public class ReversedScannerCallable extends ScannerCallable {
       if (locateStartRow == null) {
         // Just locate the region with the row
         RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,
-            getConnection(), tableName, row);
+            getConnection(), getTableName(), getRow());
         this.location = id < rl.size() ? rl.getRegionLocation(id) : null;
         if (this.location == null) {
           throw new IOException("Failed to find location, tableName="
-              + tableName + ", row=" + Bytes.toStringBinary(row) + ", reload="
+              + getTableName() + ", row=" + Bytes.toStringBinary(getRow()) + ", reload="
               + reload);
         }
       } else {
         // Need to locate the regions with the range, and the target location is
         // the last one which is the previous region of last region scanner
         List<HRegionLocation> locatedRegions = locateRegionsInRange(
-            locateStartRow, row, reload);
+            locateStartRow, getRow(), reload);
         if (locatedRegions.isEmpty()) {
           throw new DoNotRetryIOException(
               "Does hbase:meta exist hole? Couldn't get regions for the range from "
                   + Bytes.toStringBinary(locateStartRow) + " to "
-                  + Bytes.toStringBinary(row));
+                  + Bytes.toStringBinary(getRow()));
         }
         this.location = locatedRegions.get(locatedRegions.size() - 1);
       }
@@ -159,7 +159,7 @@ public class ReversedScannerCallable extends ScannerCallable {
     byte[] currentKey = startKey;
     do {
       RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,
-          getConnection(), tableName, currentKey);
+          getConnection(), getTableName(), currentKey);
       HRegionLocation regionLocation = id < rl.size() ? rl.getRegionLocation(id) : null;
       if (regionLocation != null && regionLocation.getRegionInfo().containsRow(currentKey)) {
         regionList.add(regionLocation);
@@ -176,7 +176,7 @@ public class ReversedScannerCallable extends ScannerCallable {
 
   @Override
   public ScannerCallable getScannerCallableForReplica(int id) {
-    ReversedScannerCallable r = new ReversedScannerCallable(getConnection(), this.tableName,
+    ReversedScannerCallable r = new ReversedScannerCallable(getConnection(), getTableName(),
         this.getScan(), this.scanMetrics, this.locateStartRow, rpcControllerFactory, id);
     r.setCaching(this.getCaching());
     return r;

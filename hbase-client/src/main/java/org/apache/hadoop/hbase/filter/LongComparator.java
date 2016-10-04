@@ -20,14 +20,16 @@ package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A long comparator which numerical compares against the specified byte array
@@ -61,7 +63,7 @@ public class LongComparator extends ByteArrayComparable {
     public byte [] toByteArray() {
         ComparatorProtos.LongComparator.Builder builder =
                 ComparatorProtos.LongComparator.newBuilder();
-        builder.setComparable(super.convert());
+        builder.setComparable(ProtobufUtil.toByteArrayComparable(this.value));
         return builder.build().toByteArray();
     }
 

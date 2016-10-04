@@ -23,11 +23,10 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
-import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage;
-import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A ForeignException is an exception from another thread or process.
@@ -161,8 +160,10 @@ public class ForeignException extends IOException {
    * @param bytes
    * @return the ForeignExcpetion instance
    * @throws InvalidProtocolBufferException if there was deserialization problem this is thrown.
+   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException 
    */
-  public static ForeignException deserialize(byte[] bytes) throws InvalidProtocolBufferException {
+  public static ForeignException deserialize(byte[] bytes)
+  throws IOException {
     // figure out the data we need to pass
     ForeignExceptionMessage eem = ForeignExceptionMessage.parseFrom(bytes);
     GenericExceptionMessage gem = eem.getGenericException();

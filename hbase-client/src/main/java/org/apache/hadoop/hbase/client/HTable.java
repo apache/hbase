@@ -49,17 +49,17 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
+import org.apache.hadoop.hbase.client.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -421,17 +421,16 @@ public class HTable implements Table {
     }
 
     if (get.getConsistency() == Consistency.STRONG) {
-      // Good old call.
       final Get configuredGet = get;
-      RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
-          this.rpcControllerFactory, getName(), get.getRow()) {
+      ClientServiceCallable<Result> callable = new ClientServiceCallable<Result>(this.connection, getName(),
+          get.getRow(), this.rpcControllerFactory.newController()) {
         @Override
         protected Result rpcCall() throws Exception {
           ClientProtos.GetRequest request = RequestConverter.buildGetRequest(
               getLocation().getRegionInfo().getRegionName(), configuredGet);
-          ClientProtos.GetResponse response = getStub().get(getRpcController(), request);
-          if (response == null) return null;
-          return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+          ClientProtos.GetResponse response = doGet(request);
+          return response == null? null:
+            ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
         }
       };
       return rpcCallerFactory.<Result>newCaller(readRpcTimeout).callWithRetries(callable,
@@ -524,12 +523,12 @@ public class HTable implements Table {
   throws IOException {
     CancellableRegionServerCallable<SingleResponse> callable =
         new CancellableRegionServerCallable<SingleResponse>(
-            connection, getName(), delete.getRow(), this.rpcControllerFactory) {
+            connection, getName(), delete.getRow(), this.rpcControllerFactory.newController()) {
       @Override
       protected SingleResponse rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildMutateRequest(
           getLocation().getRegionInfo().getRegionName(), delete);
-        MutateResponse response = getStub().mutate(getRpcController(), request);
+        MutateResponse response = doMutate(request);
         return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
       }
     };
@@ -594,7 +593,7 @@ public class HTable implements Table {
   public void mutateRow(final RowMutations rm) throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
       new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
-          rpcControllerFactory) {
+          rpcControllerFactory.newController()) {
       @Override
       protected MultiResponse rpcCall() throws Exception {
         RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
@@ -602,7 +601,7 @@ public class HTable implements Table {
         regionMutationBuilder.setAtomic(true);
         MultiRequest request =
             MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
-        ClientProtos.MultiResponse response = getStub().multi(getRpcController(), request);
+        ClientProtos.MultiResponse response = doMulti(request);
         ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
         if (res.hasException()) {
           Throwable ex = ProtobufUtil.toException(res.getException());
@@ -635,17 +634,17 @@ public class HTable implements Table {
   public Result append(final Append append) throws IOException {
     checkHasFamilies(append);
     NoncedRegionServerCallable<Result> callable =
-        new NoncedRegionServerCallable<Result>(this.connection, this.rpcControllerFactory,
-            getName(), append.getRow()) {
-          @Override
-          protected Result rpcCall() throws Exception {
-            MutateRequest request = RequestConverter.buildMutateRequest(
-              getLocation().getRegionInfo().getRegionName(), append, getNonceGroup(), getNonce());
-            MutateResponse response = getStub().mutate(getRpcController(), request);
-            if (!response.hasResult()) return null;
-            return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
-          }
-        };
+        new NoncedRegionServerCallable<Result>(this.connection, getName(), append.getRow(),
+            this.rpcControllerFactory.newController()) {
+      @Override
+      protected Result rpcCall() throws Exception {
+        MutateRequest request = RequestConverter.buildMutateRequest(
+          getLocation().getRegionInfo().getRegionName(), append, getNonceGroup(), getNonce());
+        MutateResponse response = doMutate(request);
+        if (!response.hasResult()) return null;
+        return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+      }
+    };
     return rpcCallerFactory.<Result> newCaller(this.writeRpcTimeout).
         callWithRetries(callable, this.operationTimeout);
   }
@@ -657,16 +656,16 @@ public class HTable implements Table {
   public Result increment(final Increment increment) throws IOException {
     checkHasFamilies(increment);
     NoncedRegionServerCallable<Result> callable =
-      new NoncedRegionServerCallable<Result>(this.connection,
-      this.rpcControllerFactory, getName(), increment.getRow()) {
-        @Override
-        protected Result rpcCall() throws Exception {
-          MutateRequest request = RequestConverter.buildMutateRequest(
-            getLocation().getRegionInfo().getRegionName(), increment, getNonceGroup(), getNonce());
-          MutateResponse response = getStub().mutate(getRpcController(), request);
-          // Should this check for null like append does?
-          return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
-        }
+        new NoncedRegionServerCallable<Result>(this.connection, getName(), increment.getRow(),
+            this.rpcControllerFactory.newController()) {
+      @Override
+      protected Result rpcCall() throws Exception {
+        MutateRequest request = RequestConverter.buildMutateRequest(
+          getLocation().getRegionInfo().getRegionName(), increment, getNonceGroup(), getNonce());
+        MutateResponse response = doMutate(request);
+        // Should this check for null like append does?
+        return ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+      }
     };
     return rpcCallerFactory.<Result> newCaller(writeRpcTimeout).callWithRetries(callable,
         this.operationTimeout);
@@ -703,14 +702,14 @@ public class HTable implements Table {
     }
 
     NoncedRegionServerCallable<Long> callable =
-        new NoncedRegionServerCallable<Long>(this.connection, this.rpcControllerFactory, getName(),
-            row) {
+        new NoncedRegionServerCallable<Long>(this.connection, getName(), row,
+            this.rpcControllerFactory.newController()) {
       @Override
       protected Long rpcCall() throws Exception {
         MutateRequest request = RequestConverter.buildIncrementRequest(
-            getLocation().getRegionInfo().getRegionName(), row, family,
-            qualifier, amount, durability, getNonceGroup(), getNonce());
-        MutateResponse response = getStub().mutate(getRpcController(), request);
+          getLocation().getRegionInfo().getRegionName(), row, family,
+          qualifier, amount, durability, getNonceGroup(), getNonce());
+        MutateResponse response = doMutate(request);
         Result result = ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
         return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
       }
@@ -727,7 +726,19 @@ public class HTable implements Table {
       final byte [] family, final byte [] qualifier, final byte [] value,
       final Put put)
   throws IOException {
-    return checkAndPut(row, family, qualifier, CompareOp.EQUAL, value, put);
+    ClientServiceCallable<Boolean> callable = new ClientServiceCallable<Boolean>(this.connection, getName(), row,
+        this.rpcControllerFactory.newController()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        MutateRequest request = RequestConverter.buildMutateRequest(
+          getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+          new BinaryComparator(value), CompareType.EQUAL, put);
+        MutateResponse response = doMutate(request);
+        return Boolean.valueOf(response.getProcessed());
+      }
+    };
+    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
+        callWithRetries(callable, this.operationTimeout);
   }
 
   /**
@@ -738,16 +749,16 @@ public class HTable implements Table {
       final byte [] qualifier, final CompareOp compareOp, final byte [] value,
       final Put put)
   throws IOException {
-    RegionServerCallable<Boolean> callable =
-        new RegionServerCallable<Boolean>(this.connection, this.rpcControllerFactory,
-            getName(), row) {
+    ClientServiceCallable<Boolean> callable =
+        new ClientServiceCallable<Boolean>(this.connection, getName(), row,
+            this.rpcControllerFactory.newController()) {
       @Override
       protected Boolean rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(compareOp.name());
         MutateRequest request = RequestConverter.buildMutateRequest(
           getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
           new BinaryComparator(value), compareType, put);
-        MutateResponse response = getStub().mutate(getRpcController(), request);
+        MutateResponse response = doMutate(request);
         return Boolean.valueOf(response.getProcessed());
       }
     };
@@ -762,7 +773,19 @@ public class HTable implements Table {
   public boolean checkAndDelete(final byte [] row, final byte [] family, final byte [] qualifier,
       final byte [] value, final Delete delete)
   throws IOException {
-    return checkAndDelete(row, family, qualifier, CompareOp.EQUAL, value, delete);
+    ClientServiceCallable<Boolean> callable = new ClientServiceCallable<Boolean>(this.connection, getName(), row,
+        this.rpcControllerFactory.newController()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        MutateRequest request = RequestConverter.buildMutateRequest(
+          getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+          new BinaryComparator(value), CompareType.EQUAL, delete);
+        MutateResponse response = doMutate(request);
+        return Boolean.valueOf(response.getProcessed());
+      }
+    };
+    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
+        callWithRetries(callable, this.operationTimeout);
   }
 
   /**
@@ -775,14 +798,14 @@ public class HTable implements Table {
   throws IOException {
     CancellableRegionServerCallable<SingleResponse> callable =
         new CancellableRegionServerCallable<SingleResponse>(
-            this.connection, getName(), row, this.rpcControllerFactory) {
+            this.connection, getName(), row, this.rpcControllerFactory.newController()) {
       @Override
       protected SingleResponse rpcCall() throws Exception {
         CompareType compareType = CompareType.valueOf(compareOp.name());
         MutateRequest request = RequestConverter.buildMutateRequest(
           getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
           new BinaryComparator(value), compareType, delete);
-        MutateResponse response = getStub().mutate(getRpcController(), request);
+        MutateResponse response = doMutate(request);
         return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
       }
     };
@@ -808,14 +831,14 @@ public class HTable implements Table {
     throws IOException {
     CancellableRegionServerCallable<MultiResponse> callable =
       new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
-        rpcControllerFactory) {
+        rpcControllerFactory.newController()) {
         @Override
         protected MultiResponse rpcCall() throws Exception {
           CompareType compareType = CompareType.valueOf(compareOp.name());
           MultiRequest request = RequestConverter.buildMutateRequest(
             getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
             new BinaryComparator(value), compareType, rm);
-          ClientProtos.MultiResponse response = getStub().multi(getRpcController(), request);
+          ClientProtos.MultiResponse response = doMulti(request);
           ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
           if (res.hasException()) {
             Throwable ex = ProtobufUtil.toException(res.getException());
@@ -1044,10 +1067,8 @@ public class HTable implements Table {
   public <T extends Service, R> void coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
       final Batch.Callback<R> callback) throws ServiceException, Throwable {
-
     // get regions covered by the row range
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
-
     Map<byte[],Future<R>> futures =
         new TreeMap<byte[],Future<R>>(Bytes.BYTES_COMPARATOR);
     for (final byte[] r : keys) {
@@ -1056,7 +1077,8 @@ public class HTable implements Table {
       Future<R> future = pool.submit(new Callable<R>() {
         @Override
         public R call() throws Exception {
-          T instance = ProtobufUtil.newServiceStub(service, channel);
+          T instance =
+              org.apache.hadoop.hbase.protobuf.ProtobufUtil.newServiceStub(service, channel);
           R result = callable.call(instance);
           byte[] region = channel.getLastRegion();
           if (callback != null) {
@@ -1184,7 +1206,8 @@ public class HTable implements Table {
       return;
     }
 
-    List<RegionCoprocessorServiceExec> execs = new ArrayList<RegionCoprocessorServiceExec>();
+    List<RegionCoprocessorServiceExec> execs =
+        new ArrayList<RegionCoprocessorServiceExec>(keys.size());
     final Map<byte[], RegionCoprocessorServiceExec> execsByRow =
         new TreeMap<byte[], RegionCoprocessorServiceExec>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < keys.size(); i++) {
@@ -1221,7 +1244,8 @@ public class HTable implements Table {
             }
             try {
               Message.Builder builder = responsePrototype.newBuilderForType();
-              ProtobufUtil.mergeFrom(builder, serviceResult.getValue().getValue());
+              org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builder,
+                  serviceResult.getValue().getValue().toByteArray());
               callback.update(region, row, (R) builder.build());
             } catch (IOException e) {
               LOG.error("Unexpected response type from endpoint " + methodDescriptor.getFullName(),

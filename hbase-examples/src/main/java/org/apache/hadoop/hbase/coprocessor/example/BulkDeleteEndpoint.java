@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.Bu
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.Builder;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteService;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -171,7 +171,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
     } catch (IOException ioe) {
       LOG.error(ioe);
       // Call ServerRpcController#getFailedOn() to retrieve this IOException at client side.
-      ResponseConverter.setControllerException(controller, ioe);
+      CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
         try {

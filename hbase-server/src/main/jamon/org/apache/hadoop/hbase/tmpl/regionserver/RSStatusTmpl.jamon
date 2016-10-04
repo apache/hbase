@@ -29,8 +29,8 @@ org.apache.hadoop.hbase.regionserver.HRegionServer;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
-org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
+org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
 org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
 <%doc>If json AND bcn is NOT an empty string presume it a block cache view request.</%doc>

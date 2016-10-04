@@ -35,12 +35,12 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo;
 
 /**
- * Representation of a list of table regions. 
- * 
+ * Representation of a list of table regions.
+ *
  * <pre>
  * &lt;complexType name="TableInfo"&gt;
  *   &lt;sequence&gt;
- *     &lt;element name="region" type="tns:TableRegion" 
+ *     &lt;element name="region" type="tns:TableRegion"
  *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
  *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
@@ -144,13 +144,13 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message) 
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     TableInfo.Builder builder = TableInfo.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);
     setName(builder.getName());
     for (TableInfo.Region region: builder.getRegionsList()) {
-      add(new TableRegionModel(builder.getName(), region.getId(), 
+      add(new TableRegionModel(builder.getName(), region.getId(),
           region.getStartKey().toByteArray(),
           region.getEndKey().toByteArray(),
           region.getLocation()));

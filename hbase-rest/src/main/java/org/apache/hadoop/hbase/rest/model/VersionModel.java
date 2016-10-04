@@ -27,9 +27,9 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
@@ -61,7 +61,7 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
    * Default constructor. Do not use.
    */
   public VersionModel() {}
-  
+
   /**
    * Constructor
    * @param context the servlet context

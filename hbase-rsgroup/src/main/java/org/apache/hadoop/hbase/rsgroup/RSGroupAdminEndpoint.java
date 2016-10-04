@@ -50,15 +50,15 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
@@ -141,11 +141,11 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
           GetRSGroupInfoResponse.newBuilder();
       RSGroupInfo RSGroupInfo = groupAdminServer.getRSGroupInfo(request.getRSGroupName());
       if(RSGroupInfo != null) {
-        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(RSGroupInfo));
+        builder.setRSGroupInfo(RSGroupSerDe.toProtoGroupInfo(RSGroupInfo));
       }
       response = builder.build();
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(response);
   }
@@ -163,10 +163,10 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       if (RSGroupInfo == null) {
         response = builder.build();
       } else {
-        response = builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(RSGroupInfo)).build();
+        response = builder.setRSGroupInfo(RSGroupSerDe.toProtoGroupInfo(RSGroupInfo)).build();
       }
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(response);
   }
@@ -186,7 +186,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       groupAdminServer.moveServers(hostPorts, request.getTargetGroup());
       response = builder.build();
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(response);
   }
@@ -206,7 +206,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       groupAdminServer.moveTables(tables, request.getTargetGroup());
       response = builder.build();
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(response);
   }
@@ -222,7 +222,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       groupAdminServer.addRSGroup(request.getRSGroupName());
       response = builder.build();
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(response);
   }
@@ -238,7 +238,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       groupAdminServer.removeRSGroup(request.getRSGroupName());
       response = builder.build();
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(response);
   }
@@ -251,7 +251,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
     try {
       builder.setBalanceRan(groupAdminServer.balanceRSGroup(request.getRSGroupName()));
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
       builder.setBalanceRan(false);
     }
     done.run(builder.build());
@@ -266,11 +266,11 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
       ListRSGroupInfosResponse.Builder builder =
           ListRSGroupInfosResponse.newBuilder();
       for(RSGroupInfo RSGroupInfo : groupAdminServer.listRSGroups()) {
-        builder.addRSGroupInfo(ProtobufUtil.toProtoGroupInfo(RSGroupInfo));
+        builder.addRSGroupInfo(RSGroupSerDe.toProtoGroupInfo(RSGroupInfo));
       }
       response = builder.build();
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(response);
   }
@@ -285,10 +285,10 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
           HostAndPort.fromParts(request.getServer().getHostName(), request.getServer().getPort());
       RSGroupInfo RSGroupInfo = groupAdminServer.getRSGroupOfServer(hp);
       if (RSGroupInfo != null) {
-        builder.setRSGroupInfo(ProtobufUtil.toProtoGroupInfo(RSGroupInfo));
+        builder.setRSGroupInfo(RSGroupSerDe.toProtoGroupInfo(RSGroupInfo));
       }
     } catch (IOException e) {
-      ResponseConverter.setControllerException(controller, e);
+      CoprocessorRpcUtils.setControllerException(controller, e);
     }
     done.run(builder.build());
   }

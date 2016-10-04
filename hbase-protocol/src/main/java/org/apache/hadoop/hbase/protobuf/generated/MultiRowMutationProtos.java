@@ -731,6 +731,20 @@ public final class MultiRowMutationProtos {
      * <code>optional uint64 nonce = 3;</code>
      */
     long getNonce();
+
+    // optional .hbase.pb.RegionSpecifier region = 4;
+    /**
+     * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+     */
+    boolean hasRegion();
+    /**
+     * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion();
+    /**
+     * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.MutateRowsRequest}
@@ -799,6 +813,19 @@ public final class MultiRowMutationProtos {
             case 24: {
               bitField0_ |= 0x00000002;
               nonce_ = input.readUInt64();
+              break;
+            }
+            case 34: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000004) == 0x00000004)) {
+                subBuilder = region_.toBuilder();
+              }
+              region_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(region_);
+                region_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000004;
               break;
             }
           }
@@ -912,10 +939,33 @@ public final class MultiRowMutationProtos {
       return nonce_;
     }
 
+    // optional .hbase.pb.RegionSpecifier region = 4;
+    public static final int REGION_FIELD_NUMBER = 4;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier region_;
+    /**
+     * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+     */
+    public boolean hasRegion() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion() {
+      return region_;
+    }
+    /**
+     * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder() {
+      return region_;
+    }
+
     private void initFields() {
       mutationRequest_ = java.util.Collections.emptyList();
       nonceGroup_ = 0L;
       nonce_ = 0L;
+      region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -924,6 +974,12 @@ public final class MultiRowMutationProtos {
 
       for (int i = 0; i < getMutationRequestCount(); i++) {
         if (!getMutationRequest(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      if (hasRegion()) {
+        if (!getRegion().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -943,6 +999,9 @@ public final class MultiRowMutationProtos {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt64(3, nonce_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeMessage(4, region_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -964,6 +1023,10 @@ public final class MultiRowMutationProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(3, nonce_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, region_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1000,6 +1063,11 @@ public final class MultiRowMutationProtos {
         result = result && (getNonce()
             == other.getNonce());
       }
+      result = result && (hasRegion() == other.hasRegion());
+      if (hasRegion()) {
+        result = result && getRegion()
+            .equals(other.getRegion());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1024,6 +1092,10 @@ public final class MultiRowMutationProtos {
       if (hasNonce()) {
         hash = (37 * hash) + NONCE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getNonce());
+      }
+      if (hasRegion()) {
+        hash = (37 * hash) + REGION_FIELD_NUMBER;
+        hash = (53 * hash) + getRegion().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1127,6 +1199,7 @@ public final class MultiRowMutationProtos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getMutationRequestFieldBuilder();
+          getRegionFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1145,6 +1218,12 @@ public final class MultiRowMutationProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         nonce_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000004);
+        if (regionBuilder_ == null) {
+          region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+        } else {
+          regionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -1190,6 +1269,14 @@ public final class MultiRowMutationProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.nonce_ = nonce_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        if (regionBuilder_ == null) {
+          result.region_ = region_;
+        } else {
+          result.region_ = regionBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1238,6 +1325,9 @@ public final class MultiRowMutationProtos {
         if (other.hasNonce()) {
           setNonce(other.getNonce());
         }
+        if (other.hasRegion()) {
+          mergeRegion(other.getRegion());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -1245,6 +1335,12 @@ public final class MultiRowMutationProtos {
       public final boolean isInitialized() {
         for (int i = 0; i < getMutationRequestCount(); i++) {
           if (!getMutationRequest(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        if (hasRegion()) {
+          if (!getRegion().isInitialized()) {
             
             return false;
           }
@@ -1575,6 +1671,123 @@ public final class MultiRowMutationProtos {
         nonce_ = 0L;
         onChanged();
         return this;
+      }
+
+      // optional .hbase.pb.RegionSpecifier region = 4;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionBuilder_;
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      public boolean hasRegion() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion() {
+        if (regionBuilder_ == null) {
+          return region_;
+        } else {
+          return regionBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      public Builder setRegion(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
+        if (regionBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          region_ = value;
+          onChanged();
+        } else {
+          regionBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      public Builder setRegion(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder builderForValue) {
+        if (regionBuilder_ == null) {
+          region_ = builderForValue.build();
+          onChanged();
+        } else {
+          regionBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      public Builder mergeRegion(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
+        if (regionBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              region_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance()) {
+            region_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder(region_).mergeFrom(value).buildPartial();
+          } else {
+            region_ = value;
+          }
+          onChanged();
+        } else {
+          regionBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      public Builder clearRegion() {
+        if (regionBuilder_ == null) {
+          region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+          onChanged();
+        } else {
+          regionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder getRegionBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getRegionFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder() {
+        if (regionBuilder_ != null) {
+          return regionBuilder_.getMessageOrBuilder();
+        } else {
+          return region_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.RegionSpecifier region = 4;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          getRegionFieldBuilder() {
+        if (regionBuilder_ == null) {
+          regionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>(
+                  region_,
+                  getParentForChildren(),
+                  isClean());
+          region_ = null;
+        }
+        return regionBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.MutateRowsRequest)
@@ -2188,16 +2401,18 @@ public final class MultiRowMutationProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\026MultiRowMutation.proto\022\010hbase.pb\032\014Clie" +
-      "nt.proto\"\"\n MultiRowMutationProcessorReq" +
-      "uest\"#\n!MultiRowMutationProcessorRespons" +
-      "e\"j\n\021MutateRowsRequest\0221\n\020mutation_reque" +
-      "st\030\001 \003(\0132\027.hbase.pb.MutationProto\022\023\n\013non" +
-      "ce_group\030\002 \001(\004\022\r\n\005nonce\030\003 \001(\004\"\024\n\022MutateR" +
-      "owsResponse2b\n\027MultiRowMutationService\022G" +
-      "\n\nMutateRows\022\033.hbase.pb.MutateRowsReques" +
-      "t\032\034.hbase.pb.MutateRowsResponseBL\n*org.a" +
-      "pache.hadoop.hbase.protobuf.generatedB\026M",
-      "ultiRowMutationProtosH\001\210\001\001\240\001\001"
+      "nt.proto\032\013HBase.proto\"\"\n MultiRowMutatio" +
+      "nProcessorRequest\"#\n!MultiRowMutationPro" +
+      "cessorResponse\"\225\001\n\021MutateRowsRequest\0221\n\020" +
+      "mutation_request\030\001 \003(\0132\027.hbase.pb.Mutati" +
+      "onProto\022\023\n\013nonce_group\030\002 \001(\004\022\r\n\005nonce\030\003 " +
+      "\001(\004\022)\n\006region\030\004 \001(\0132\031.hbase.pb.RegionSpe" +
+      "cifier\"\024\n\022MutateRowsResponse2b\n\027MultiRow" +
+      "MutationService\022G\n\nMutateRows\022\033.hbase.pb" +
+      ".MutateRowsRequest\032\034.hbase.pb.MutateRows",
+      "ResponseBL\n*org.apache.hadoop.hbase.prot" +
+      "obuf.generatedB\026MultiRowMutationProtosH\001" +
+      "\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2221,7 +2436,7 @@ public final class MultiRowMutationProtos {
           internal_static_hbase_pb_MutateRowsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MutateRowsRequest_descriptor,
-              new java.lang.String[] { "MutationRequest", "NonceGroup", "Nonce", });
+              new java.lang.String[] { "MutationRequest", "NonceGroup", "Nonce", "Region", });
           internal_static_hbase_pb_MutateRowsResponse_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_hbase_pb_MutateRowsResponse_fieldAccessorTable = new
@@ -2235,6 +2450,7 @@ public final class MultiRowMutationProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
   }
 

@@ -64,10 +64,10 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.client.Table;
@@ -920,8 +920,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         famPaths.add(Pair.newPair(lqi.family, lqi.hfilePath.toString()));
       }
     }
-    final RegionServerCallable<Boolean> svrCallable = new RegionServerCallable<Boolean>(conn,
-        rpcControllerFactory, tableName, first) {
+    final ClientServiceCallable<Boolean> svrCallable = new ClientServiceCallable<Boolean>(conn,
+        tableName, first, rpcControllerFactory.newController()) {
       @Override
       protected Boolean rpcCall() throws Exception {
         SecureBulkLoadClient secureClient = null;

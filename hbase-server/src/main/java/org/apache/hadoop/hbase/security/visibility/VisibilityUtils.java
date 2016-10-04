@@ -65,6 +65,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import com.google.protobuf.ByteString;
+
 /**
  * Utility method to support visibility
  */
@@ -93,7 +95,7 @@ public class VisibilityUtils {
     VisibilityLabelsRequest.Builder visReqBuilder = VisibilityLabelsRequest.newBuilder();
     for (Entry<String, Integer> entry : existingLabels.entrySet()) {
       VisibilityLabel.Builder visLabBuilder = VisibilityLabel.newBuilder();
-      visLabBuilder.setLabel(ByteStringer.wrap(Bytes.toBytes(entry.getKey())));
+      visLabBuilder.setLabel(ByteString.copyFrom(Bytes.toBytes(entry.getKey())));
       visLabBuilder.setOrdinal(entry.getValue());
       visReqBuilder.addVisLabel(visLabBuilder.build());
     }
@@ -109,7 +111,7 @@ public class VisibilityUtils {
     MultiUserAuthorizations.Builder builder = MultiUserAuthorizations.newBuilder();
     for (Entry<String, List<Integer>> entry : userAuths.entrySet()) {
       UserAuthorizations.Builder userAuthsBuilder = UserAuthorizations.newBuilder();
-      userAuthsBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(entry.getKey())));
+      userAuthsBuilder.setUser(ByteString.copyFrom(Bytes.toBytes(entry.getKey())));
       for (Integer label : entry.getValue()) {
         userAuthsBuilder.addAuth(label);
       }

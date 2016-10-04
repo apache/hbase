@@ -23,11 +23,11 @@ import java.lang.reflect.Method;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorService;
@@ -77,7 +77,7 @@ extends RowProcessorService implements CoprocessorService, Coprocessor {
       b.setRowProcessorResult(result.toByteString());
       resultProto = b.build();
     } catch (Exception e) {
-      ResponseConverter.setControllerException(controller, new IOException(e));
+      CoprocessorRpcUtils.setControllerException(controller, new IOException(e));
     }
     done.run(resultProto);
   }

@@ -85,7 +85,7 @@ import com.sun.jersey.api.json.JSONUnmarshaller;
 
 /**
  * A representation of Scanner parameters.
- * 
+ *
  * <pre>
  * &lt;complexType name="Scanner"&gt;
  *   &lt;sequence&gt;
@@ -119,10 +119,10 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private int caching = -1;
   private List<String> labels = new ArrayList<String>();
   private boolean cacheBlocks = true;
-  
+
   @XmlRootElement
   static class FilterModel {
-    
+
     @XmlRootElement
     static class ByteArrayComparableModel {
       @XmlAttribute public String type;
@@ -135,7 +135,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         BitComparator,
         NullComparator,
         RegexStringComparator,
-        SubstringComparator    
+        SubstringComparator
       }
 
       public ByteArrayComparableModel() { }
@@ -241,12 +241,12 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       SkipFilter,
       TimestampsFilter,
       ValueFilter,
-      WhileMatchFilter    
+      WhileMatchFilter
     }
 
     public FilterModel() { }
-    
-    public FilterModel(Filter filter) { 
+
+    public FilterModel(Filter filter) {
       String typeName = filter.getClass().getSimpleName();
       FilterType type = FilterType.valueOf(typeName);
       this.type = typeName;
@@ -289,7 +289,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         case KeyOnlyFilter:
           break;
         case InclusiveStopFilter:
-          this.value = 
+          this.value =
             Base64.encodeBytes(((InclusiveStopFilter)filter).getStopRowKey());
           break;
         case MultipleColumnPrefixFilter:
@@ -316,7 +316,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         case RowFilter:
         case ValueFilter:
           this.op = ((CompareFilter)filter).getOperator().toString();
-          this.comparator = 
+          this.comparator =
             new ByteArrayComparableModel(
               ((CompareFilter)filter).getComparator());
           break;
@@ -332,7 +332,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
             this.qualifier = Base64.encodeBytes(qualifier);
           }
           this.op = scvf.getOperator().toString();
-          this.comparator = 
+          this.comparator =
             new ByteArrayComparableModel(scvf.getComparator());
           if (scvf.getFilterIfMissing()) {
             this.ifMissing = true;
@@ -488,7 +488,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   /**
    * @param filter the filter
    * @return the JSON representation of the filter
-   * @throws Exception 
+   * @throws Exception
    */
   public static String stringifyFilter(final Filter filter) throws Exception {
     JSONJAXBContext context =
@@ -504,7 +504,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
   /**
    * @param scan the scan specification
-   * @throws Exception 
+   * @throws Exception
    */
   public static ScannerModel fromScan(Scan scan) throws Exception {
     ScannerModel model = new ScannerModel();
@@ -582,7 +582,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
-   * Constructor 
+   * Constructor
    * @param startRow the start key of the row-range
    * @param endRow the end key of the row-range
    * @param columns the columns to scan
@@ -614,7 +614,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   public void addColumn(byte[] column) {
     columns.add(column);
   }
-  
+
   /**
    * Add a visibility label to the scan
    */
@@ -658,7 +658,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   public List<byte[]> getColumns() {
     return columns;
   }
-  
+
   @XmlElement(name="labels")
   public List<String> getLabels() {
     return labels;

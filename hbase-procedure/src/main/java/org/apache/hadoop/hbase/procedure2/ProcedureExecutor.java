@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue.TimeoutRetriever;
-import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -593,7 +593,7 @@ public class ProcedureExecutor<TEnvironment> {
     List<ProcedureInfo> procedureLists =
         new ArrayList<ProcedureInfo>(procedures.size() + completed.size());
     for (java.util.Map.Entry<Long, Procedure> p: procedures.entrySet()) {
-      procedureLists.add(Procedure.createProcedureInfo(p.getValue(), null));
+      procedureLists.add(ProcedureUtil.createProcedureInfo(p.getValue()));
     }
     for (java.util.Map.Entry<Long, ProcedureInfo> e: completed.entrySet()) {
       // Note: The procedure could show up twice in the list with different state, as
@@ -1349,7 +1349,7 @@ public class ProcedureExecutor<TEnvironment> {
     execCompletionCleanup(proc);
 
     // update the executor internal state maps
-    ProcedureInfo procInfo = Procedure.createProcedureInfo(proc, proc.getNonceKey());
+    ProcedureInfo procInfo = ProcedureUtil.createProcedureInfo(proc, proc.getNonceKey());
     if (!proc.shouldWaitClientAck(getEnvironment())) {
       procInfo.setClientAckTime(0);
     }

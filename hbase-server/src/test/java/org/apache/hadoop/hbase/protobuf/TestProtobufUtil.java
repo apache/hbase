@@ -22,9 +22,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -39,6 +36,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -55,12 +54,12 @@ public class TestProtobufUtil {
     NameBytesPair.Builder builder = NameBytesPair.newBuilder();
     final String omg = "OMG!!!";
     builder.setName("java.io.IOException");
-    builder.setValue(ByteStringer.wrap(Bytes.toBytes(omg)));
+    builder.setValue(ByteString.copyFrom(Bytes.toBytes(omg)));
     Throwable t = ProtobufUtil.toException(builder.build());
     assertEquals(omg, t.getMessage());
     builder.clear();
     builder.setName("org.apache.hadoop.ipc.RemoteException");
-    builder.setValue(ByteStringer.wrap(Bytes.toBytes(omg)));
+    builder.setValue(ByteString.copyFrom(Bytes.toBytes(omg)));
     t = ProtobufUtil.toException(builder.build());
     assertEquals(omg, t.getMessage());
   }
@@ -200,10 +199,10 @@ public class TestProtobufUtil {
     valueBuilder.setFamily(ByteString.copyFromUtf8("f1"));
     QualifierValue.Builder qualifierBuilder = QualifierValue.newBuilder();
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c1"));
-    qualifierBuilder.setValue(ByteStringer.wrap(Bytes.toBytes(11L)));
+    qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(11L)));
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     qualifierBuilder.setQualifier(ByteString.copyFromUtf8("c2"));
-    qualifierBuilder.setValue(ByteStringer.wrap(Bytes.toBytes(22L)));
+    qualifierBuilder.setValue(ByteString.copyFrom(Bytes.toBytes(22L)));
     valueBuilder.addQualifierValue(qualifierBuilder.build());
     mutateBuilder.addColumnValue(valueBuilder.build());
 

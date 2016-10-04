@@ -22,10 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
-import com.google.protobuf.ServiceException;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,11 +53,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -72,6 +68,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 
 @Category(LargeTests.class)
 public class TestEndToEndSplitTransaction {
@@ -165,12 +164,12 @@ public class TestEndToEndSplitTransaction {
       try {
         server.getRSRpcServices().scan(
           new HBaseRpcControllerImpl(), scanRequest);
-      } catch (ServiceException se) {
-        throw ProtobufUtil.getRemoteException(se);
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e) {
+        throw ProtobufUtil.handleRemoteException(e);
       }
     } catch (IOException e) {
       return false;
-    } catch (ServiceException e) {
+    } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException e1) {
       return false;
     }
     return true;

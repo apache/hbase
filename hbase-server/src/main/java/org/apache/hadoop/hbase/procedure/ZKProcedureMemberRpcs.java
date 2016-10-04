@@ -25,13 +25,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * ZooKeeper based controller for a procedure member.
@@ -331,7 +329,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
           data = Arrays.copyOfRange(data, ProtobufUtil.lengthOfPBMagic(), data.length);
           ee = ForeignException.deserialize(data);
         }
-      } catch (InvalidProtocolBufferException e) {
+      } catch (IOException e) {
         LOG.warn("Got an error notification for op:" + opName
             + " but we can't read the information. Killing the procedure.");
         // we got a remote exception, but we can't describe it so just return exn from here

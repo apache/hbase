@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -126,7 +127,7 @@ public class TestMetaWithReplicas {
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
-    ServerName.parseFrom(data);
+    ProtobufUtil.toServerName(data);
     for (int i = 1; i < 3; i++) {
       String secZnode = ZKUtil.joinZNode(baseZNode,
           conf.get("zookeeper.znode.metaserver", "meta-region-server") + "-" + i);
@@ -134,7 +135,7 @@ public class TestMetaWithReplicas {
       assertTrue(str.equals(secZnode));
       // check that the data in the znode is parseable (this would also mean the znode exists)
       data = ZKUtil.getData(zkw, secZnode);
-      ServerName.parseFrom(data);
+      ProtobufUtil.toServerName(data);
     }
   }
 
@@ -161,7 +162,7 @@ public class TestMetaWithReplicas {
     String primaryMetaZnode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
-    ServerName primary = ServerName.parseFrom(data);
+    ServerName primary = ProtobufUtil.toServerName(data);
 
     TableName TABLE = TableName.valueOf("testShutdownHandling");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
@@ -390,7 +391,7 @@ public class TestMetaWithReplicas {
         conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
-    ServerName currentServer = ServerName.parseFrom(data);
+    ServerName currentServer = ProtobufUtil.toServerName(data);
     Collection<ServerName> liveServers = TEST_UTIL.getHBaseAdmin().getClusterStatus().getServers();
     ServerName moveToServer = null;
     for (ServerName s : liveServers) {
@@ -408,7 +409,7 @@ public class TestMetaWithReplicas {
     do {
       Thread.sleep(10);
       data = ZKUtil.getData(zkw, primaryMetaZnode);
-      currentServer = ServerName.parseFrom(data);
+      currentServer = ProtobufUtil.toServerName(data);
       i++;
     } while (!moveToServer.equals(currentServer) && i < 1000); //wait for 10 seconds overall
     assert(i != 1000);

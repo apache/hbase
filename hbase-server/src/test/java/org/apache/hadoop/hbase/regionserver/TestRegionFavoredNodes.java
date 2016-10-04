@@ -116,12 +116,13 @@ public class TestRegionFavoredNodes {
       HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(i);
       List<Region> regions = server.getOnlineRegions(TABLE_NAME);
       for (Region region : regions) {
-        List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName>favoredNodes =
-            new ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName>(3);
+        List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>favoredNodes =
+            new ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.
+            ServerName>(3);
         String encodedRegionName = region.getRegionInfo().getEncodedName();
         for (int j = 0; j < FAVORED_NODES_NUM; j++) {
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder b =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder b =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.newBuilder();
           b.setHostName(nodes[(i + j) % REGION_SERVERS].getAddress().getHostAddress());
           b.setPort(nodes[(i + j) % REGION_SERVERS].getPort());
           b.setStartCode(-1);

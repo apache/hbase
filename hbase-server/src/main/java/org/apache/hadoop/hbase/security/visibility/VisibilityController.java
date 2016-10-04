@@ -75,9 +75,10 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
@@ -105,6 +106,7 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
@@ -801,8 +803,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
               i++;
             if (status.getOperationStatusCode() != SUCCESS) {
               RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
-              failureResultBuilder.setException(ResponseConverter
-                  .buildException(new DoNotRetryIOException(status.getExceptionMsg())));
+              failureResultBuilder.setException(buildException(new DoNotRetryIOException(
+                  status.getExceptionMsg())));
               response.setResult(i, failureResultBuilder.build());
             }
             i++;
@@ -823,7 +825,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   private void setExceptionResults(int size, IOException e,
       VisibilityLabelsResponse.Builder response) {
     RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
-    failureResultBuilder.setException(ResponseConverter.buildException(e));
+    failureResultBuilder.setException(buildException(e));
     RegionActionResult failureResult = failureResultBuilder.build();
     for (int i = 0; i < size; i++) {
       response.addResult(i, failureResult);
@@ -858,8 +860,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
             response.addResult(successResult);
           } else {
             RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
-            failureResultBuilder.setException(ResponseConverter
-                .buildException(new DoNotRetryIOException(status.getExceptionMsg())));
+            failureResultBuilder.setException(buildException(new DoNotRetryIOException(
+                status.getExceptionMsg())));
             response.addResult(failureResultBuilder.build());
           }
         }
@@ -932,14 +934,14 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         logResult(true, "getAuths", "Get authorizations for user allowed", user, null, null);
       } catch (AccessDeniedException e) {
         logResult(false, "getAuths", e.getMessage(), user, null, null);
-        ResponseConverter.setControllerException(controller, e);
+        CoprocessorRpcUtils.setControllerException(controller, e);
       } catch (IOException e) {
-        ResponseConverter.setControllerException(controller, e);
+        CoprocessorRpcUtils.setControllerException(controller, e);
       }
       response.setUser(request.getUser());
       if (labels != null) {
         for (String label : labels) {
-          response.addAuth(ByteStringer.wrap(Bytes.toBytes(label)));
+          response.addAuth(ByteString.copyFrom(Bytes.toBytes(label)));
         }
       }
     }
@@ -982,8 +984,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
             response.addResult(successResult);
           } else {
             RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
-            failureResultBuilder.setException(ResponseConverter
-                .buildException(new DoNotRetryIOException(status.getExceptionMsg())));
+            failureResultBuilder.setException(buildException(new DoNotRetryIOException(
+                status.getExceptionMsg())));
             response.addResult(failureResultBuilder.build());
           }
         }
@@ -1021,13 +1023,13 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         logResult(false, "listLabels", "Listing labels allowed", null, null, regex);
       } catch (AccessDeniedException e) {
         logResult(false, "listLabels", e.getMessage(), null, null, regex);
-        ResponseConverter.setControllerException(controller, e);
+        CoprocessorRpcUtils.setControllerException(controller, e);
       } catch (IOException e) {
-        ResponseConverter.setControllerException(controller, e);
+        CoprocessorRpcUtils.setControllerException(controller, e);
       }
       if (labels != null && !labels.isEmpty()) {
         for (String label : labels) {
-          response.addLabel(ByteStringer.wrap(Bytes.toBytes(label)));
+          response.addLabel(ByteString.copyFrom(Bytes.toBytes(label)));
         }
       }
     }
@@ -1105,5 +1107,18 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         ObserverContext<RegionServerCoprocessorEnvironment> ctx, ReplicationEndpoint endpoint) {
       return new VisibilityReplicationEndpoint(endpoint, visibilityLabelService);
     }
+  }
+
+  /**
+   * @param t
+   * @return NameValuePair of the exception name to stringified version os exception.
+   */
+  // Copied from ResponseConverter and made private. Only used in here.
+  private static NameBytesPair buildException(final Throwable t) {
+    NameBytesPair.Builder parameterBuilder = NameBytesPair.newBuilder();
+    parameterBuilder.setName(t.getClass().getName());
+    parameterBuilder.setValue(
+      ByteString.copyFromUtf8(StringUtils.stringifyException(t)));
+    return parameterBuilder.build();
   }
 }

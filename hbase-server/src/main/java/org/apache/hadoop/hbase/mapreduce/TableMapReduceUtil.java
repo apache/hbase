@@ -18,8 +18,21 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.codahale.metrics.MetricRegistry;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,8 +49,8 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.TokenUtil;
@@ -49,20 +62,7 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import com.codahale.metrics.MetricRegistry;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -575,14 +575,7 @@ public class TableMapReduceUtil {
    */
   public static Scan convertStringToScan(String base64) throws IOException {
     byte [] decoded = Base64.decode(base64);
-    ClientProtos.Scan scan;
-    try {
-      scan = ClientProtos.Scan.parseFrom(decoded);
-    } catch (InvalidProtocolBufferException ipbe) {
-      throw new IOException(ipbe);
-    }
-
-    return ProtobufUtil.toScan(scan);
+    return ProtobufUtil.toScan(ClientProtos.Scan.parseFrom(decoded));
   }
 
   /**

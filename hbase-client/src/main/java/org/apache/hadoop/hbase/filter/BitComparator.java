@@ -24,9 +24,10 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A bit comparator which performs the specified bitwise operation on each of the bytes
@@ -72,7 +73,7 @@ public class BitComparator extends ByteArrayComparable {
   public byte [] toByteArray() {
     ComparatorProtos.BitComparator.Builder builder =
       ComparatorProtos.BitComparator.newBuilder();
-    builder.setComparable(super.convert());
+    builder.setComparable(ProtobufUtil.toByteArrayComparable(this.value));
     ComparatorProtos.BitComparator.BitwiseOp bitwiseOpPb =
       ComparatorProtos.BitComparator.BitwiseOp.valueOf(bitOperator.name());
     builder.setBitwiseOp(bitwiseOpPb);

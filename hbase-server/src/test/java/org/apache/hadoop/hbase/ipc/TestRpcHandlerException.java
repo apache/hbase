@@ -21,21 +21,22 @@ import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.mockito.Mockito.mock;
 
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 
 @Category({ RPCTests.class, SmallTests.class })
 public class TestRpcHandlerException {
@@ -50,7 +51,7 @@ public class TestRpcHandlerException {
 
     TestRpcServer(RpcScheduler scheduler) throws IOException {
       super(null, "testRpcServer",
-          Lists.newArrayList(new BlockingServiceAndInterface(SERVICE, null)),
+          Lists.newArrayList(new BlockingServiceAndInterface((BlockingService) SERVICE, null)),
           new InetSocketAddress("localhost", 0), CONF, scheduler);
     }
   }

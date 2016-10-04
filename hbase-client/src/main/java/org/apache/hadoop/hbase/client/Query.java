@@ -25,11 +25,12 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
+import org.apache.hadoop.hbase.security.access.AccessControlUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -96,7 +97,7 @@ public abstract class Query extends OperationWithAttributes {
    */
   public Query setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
-      ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
+      AccessControlUtil.toUsersAndPermissions(user, perms).toByteArray());
     return this;
   }
 
@@ -109,7 +110,7 @@ public abstract class Query extends OperationWithAttributes {
       permMap.put(entry.getKey(), entry.getValue());
     }
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
-      ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+        AccessControlUtil.toUsersAndPermissions(permMap).toByteArray());
     return this;
   }
 

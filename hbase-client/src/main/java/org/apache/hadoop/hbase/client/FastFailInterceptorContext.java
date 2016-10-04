@@ -22,8 +22,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
-class FastFailInterceptorContext extends
-    RetryingCallerInterceptorContext {
+class FastFailInterceptorContext extends RetryingCallerInterceptorContext {
 
   // The variable that indicates whether we were able to connect with the server
   // in the last run
@@ -118,13 +117,13 @@ class FastFailInterceptorContext extends
     tries = 0;
   }
 
-  public FastFailInterceptorContext prepare(RetryingCallableBase callable) {
+  public FastFailInterceptorContext prepare(RetryingCallable<?> callable) {
     return prepare(callable, 0);
   }
 
-  public FastFailInterceptorContext prepare(RetryingCallableBase callable, int tries) {
+  public FastFailInterceptorContext prepare(RetryingCallable<?> callable, int tries) {
     if (callable instanceof RegionServerCallable) {
-      RegionServerCallable<?> retryingCallable = (RegionServerCallable<?>) callable;
+      RegionServerCallable<?, ?> retryingCallable = (RegionServerCallable<?, ?>) callable;
       server = retryingCallable.getLocation().getServerName();
     }
     this.tries = tries;

@@ -151,7 +151,8 @@ public static void beforeClass() throws Exception {
 }
 
 private static void createLabels() throws IOException, InterruptedException {
-  PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+  PrivilegedExceptionAction<VisibilityLabelsResponse> action =
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
     public VisibilityLabelsResponse run() throws Exception {
       String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
       try (Connection conn = ConnectionFactory.createConnection(conf)) {

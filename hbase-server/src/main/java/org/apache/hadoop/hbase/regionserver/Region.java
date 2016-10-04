@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -48,10 +44,13 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Service;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Regions store data for a certain region of a table.  It stores all columns
@@ -588,13 +587,14 @@ public interface Region extends ConfigurationObserver {
    *     occurs during the invocation
    * @see org.apache.hadoop.hbase.regionserver.Region#registerService(com.google.protobuf.Service)
    */
-  Message execService(RpcController controller, CoprocessorServiceCall call) throws IOException;
+  com.google.protobuf.Message execService(com.google.protobuf.RpcController controller,
+      CoprocessorServiceCall call)
+  throws IOException;
 
   /**
    * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to
-   * be available for handling
-   * {@link Region#execService(com.google.protobuf.RpcController,
-   *    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall)}} calls.
+   * be available for handling Region#execService(com.google.protobuf.RpcController,
+   *    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall) calls.
    *
    * <p>
    * Only a single instance may be registered per region for a given {@link Service} subclass (the
@@ -606,7 +606,7 @@ public interface Region extends ConfigurationObserver {
    * @return {@code true} if the registration was successful, {@code false}
    * otherwise
    */
-  boolean registerService(Service instance);
+  boolean registerService(com.google.protobuf.Service instance);
 
   ///////////////////////////////////////////////////////////////////////////
   // RowMutation processor support

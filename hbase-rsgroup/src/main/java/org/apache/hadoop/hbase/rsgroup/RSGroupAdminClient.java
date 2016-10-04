@@ -64,11 +64,11 @@ class RSGroupAdminClient extends RSGroupAdmin {
             RSGroupAdminProtos.GetRSGroupInfoRequest.newBuilder()
                 .setRSGroupName(groupName).build());
       if(resp.hasRSGroupInfo()) {
-        return ProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
+        return RSGroupSerDe.toGroupInfo(resp.getRSGroupInfo());
       }
       return null;
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
@@ -81,11 +81,11 @@ class RSGroupAdminClient extends RSGroupAdmin {
     try {
       GetRSGroupInfoOfTableResponse resp = proxy.getRSGroupInfoOfTable(null, request);
       if (resp.hasRSGroupInfo()) {
-        return ProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
+        return RSGroupSerDe.toGroupInfo(resp.getRSGroupInfo());
       }
       return null;
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
@@ -106,7 +106,7 @@ class RSGroupAdminClient extends RSGroupAdmin {
     try {
       proxy.moveServers(null, request);
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
@@ -121,7 +121,7 @@ class RSGroupAdminClient extends RSGroupAdmin {
     try {
       proxy.moveTables(null, builder.build());
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
@@ -133,7 +133,7 @@ class RSGroupAdminClient extends RSGroupAdmin {
     try {
       proxy.addRSGroup(null, request);
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
@@ -145,7 +145,7 @@ class RSGroupAdminClient extends RSGroupAdmin {
     try {
       proxy.removeRSGroup(null, request);
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
@@ -158,7 +158,7 @@ class RSGroupAdminClient extends RSGroupAdmin {
     try {
       return proxy.balanceRSGroup(null, request).getBalanceRan();
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
@@ -170,11 +170,11 @@ class RSGroupAdminClient extends RSGroupAdmin {
               RSGroupAdminProtos.ListRSGroupInfosRequest.newBuilder().build()).getRSGroupInfoList();
       List<RSGroupInfo> result = new ArrayList<RSGroupInfo>(resp.size());
       for(RSGroupProtos.RSGroupInfo entry: resp) {
-        result.add(ProtobufUtil.toGroupInfo(entry));
+        result.add(RSGroupSerDe.toGroupInfo(entry));
       }
       return result;
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 
@@ -190,11 +190,11 @@ class RSGroupAdminClient extends RSGroupAdmin {
     try {
       GetRSGroupInfoOfServerResponse resp = proxy.getRSGroupInfoOfServer(null, request);
       if (resp.hasRSGroupInfo()) {
-        return ProtobufUtil.toGroupInfo(resp.getRSGroupInfo());
+        return RSGroupSerDe.toGroupInfo(resp.getRSGroupInfo());
       }
       return null;
     } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
+      throw ProtobufUtil.handleRemoteException(e);
     }
   }
 

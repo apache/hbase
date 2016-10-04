@@ -337,9 +337,9 @@ public class TestReplicaWithCluster {
     table = conn.getTable(hdt.getTableName());
     final String bulkToken =
         new SecureBulkLoadClient(HTU.getConfiguration(), table).prepareBulkLoad(conn);
-    RegionServerCallable<Void> callable = new RegionServerCallable<Void>(conn,
-        new RpcControllerFactory(HTU.getConfiguration()), hdt.getTableName(),
-        TestHRegionServerBulkLoad.rowkey(0)) {
+    ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn,
+        hdt.getTableName(), TestHRegionServerBulkLoad.rowkey(0),
+        new RpcControllerFactory(HTU.getConfiguration()).newController()) {
       @Override
       protected Void rpcCall() throws Exception {
         LOG.debug("Going to connect to server " + getLocation() + " for row "

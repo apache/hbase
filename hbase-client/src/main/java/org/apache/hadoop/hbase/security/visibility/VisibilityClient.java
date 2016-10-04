@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
-import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
@@ -43,9 +43,9 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -128,8 +128,8 @@ public class VisibilityClient {
       Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable =
           new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback =
-                new BlockingRpcCallback<VisibilityLabelsResponse>();
+            CoprocessorRpcUtils.BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback =
+                new CoprocessorRpcUtils.BlockingRpcCallback<VisibilityLabelsResponse>();
 
             public VisibilityLabelsResponse call(VisibilityLabelsService service)
                 throws IOException {
@@ -137,7 +137,7 @@ public class VisibilityClient {
               for (String label : labels) {
                 if (label.length() > 0) {
                   VisibilityLabel.Builder newBuilder = VisibilityLabel.newBuilder();
-                  newBuilder.setLabel(ByteStringer.wrap(Bytes.toBytes(label)));
+                  newBuilder.setLabel(ByteString.copyFrom(Bytes.toBytes(label)));
                   builder.addVisLabel(newBuilder.build());
                 }
               }
@@ -210,15 +210,15 @@ public class VisibilityClient {
   public static GetAuthsResponse getAuths(Connection connection, final String user)
       throws Throwable {
       try (Table table = connection.getTable(LABELS_TABLE_NAME)) {
-        Batch.Call<VisibilityLabelsService, GetAuthsResponse> callable = 
+        Batch.Call<VisibilityLabelsService, GetAuthsResponse> callable =
             new Batch.Call<VisibilityLabelsService, GetAuthsResponse>() {
           ServerRpcController controller = new ServerRpcController();
-          BlockingRpcCallback<GetAuthsResponse> rpcCallback = 
-              new BlockingRpcCallback<GetAuthsResponse>();
+          CoprocessorRpcUtils.BlockingRpcCallback<GetAuthsResponse> rpcCallback =
+              new CoprocessorRpcUtils.BlockingRpcCallback<GetAuthsResponse>();
 
           public GetAuthsResponse call(VisibilityLabelsService service) throws IOException {
             GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
-            getAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
+            getAuthReqBuilder.setUser(ByteString.copyFrom(Bytes.toBytes(user)));
             service.getAuths(controller, getAuthReqBuilder.build(), rpcCallback);
             GetAuthsResponse response = rpcCallback.get();
             if (controller.failedOnException()) {
@@ -266,8 +266,8 @@ public class VisibilityClient {
       Batch.Call<VisibilityLabelsService, ListLabelsResponse> callable =
           new Batch.Call<VisibilityLabelsService, ListLabelsResponse>() {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<ListLabelsResponse> rpcCallback =
-                new BlockingRpcCallback<ListLabelsResponse>();
+            CoprocessorRpcUtils.BlockingRpcCallback<ListLabelsResponse> rpcCallback =
+                new CoprocessorRpcUtils.BlockingRpcCallback<ListLabelsResponse>();
 
             public ListLabelsResponse call(VisibilityLabelsService service) throws IOException {
               ListLabelsRequest.Builder listAuthLabelsReqBuilder = ListLabelsRequest.newBuilder();
@@ -335,18 +335,18 @@ public class VisibilityClient {
           throws IOException, ServiceException, Throwable {
 
       try (Table table = connection.getTable(LABELS_TABLE_NAME)) {
-        Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
+        Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable =
             new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
           ServerRpcController controller = new ServerRpcController();
-          BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback = 
-              new BlockingRpcCallback<VisibilityLabelsResponse>();
+          CoprocessorRpcUtils.BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback =
+              new CoprocessorRpcUtils.BlockingRpcCallback<VisibilityLabelsResponse>();
 
           public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
             SetAuthsRequest.Builder setAuthReqBuilder = SetAuthsRequest.newBuilder();
-            setAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
+            setAuthReqBuilder.setUser(ByteString.copyFrom(Bytes.toBytes(user)));
             for (String auth : auths) {
               if (auth.length() > 0) {
-                setAuthReqBuilder.addAuth(ByteStringer.wrap(Bytes.toBytes(auth)));
+                setAuthReqBuilder.addAuth((ByteString.copyFromUtf8(auth)));
               }
             }
             if (setOrClear) {

@@ -49,8 +49,7 @@ abstract class RetryingCallerInterceptorContext {
    * @return A new {@link RetryingCallerInterceptorContext} object that can be
    *         used for use in the current retrying call
    */
-  public abstract RetryingCallerInterceptorContext prepare(
-      RetryingCallableBase callable);
+  public abstract RetryingCallerInterceptorContext prepare(RetryingCallable<?> callable);
 
   /**
    * Telescopic extension that takes which of the many retries we are currently
@@ -64,6 +63,5 @@ abstract class RetryingCallerInterceptorContext {
    * @return A new context object that can be used for use in the current
    *         retrying call
    */
-  public abstract RetryingCallerInterceptorContext prepare(
-      RetryingCallableBase callable, int tries);
+  public abstract RetryingCallerInterceptorContext prepare(RetryingCallable<?> callable, int tries);
 }

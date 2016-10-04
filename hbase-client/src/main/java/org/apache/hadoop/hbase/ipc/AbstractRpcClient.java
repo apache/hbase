@@ -26,14 +26,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcChannel;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 
 import io.netty.util.HashedWheelTimer;
 
@@ -402,7 +401,6 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
     Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
         hrc.getCallTimeout(), hrc.getPriority(), new RpcCallback<Call>() {
-
           @Override
           public void run(Call call) {
             counter.decrementAndGet();
@@ -450,6 +448,26 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
         }
       }
     }
+  }
+  /**
+   * Configure an hbase rpccontroller
+   * @param controller to configure
+   * @param channelOperationTimeout timeout for operation
+   * @return configured controller
+   */
+  static HBaseRpcController configureHBaseRpcController(
+      RpcController controller, int channelOperationTimeout) {
+    HBaseRpcController hrc;
+    if (controller != null && controller instanceof HBaseRpcController) {
+      hrc = (HBaseRpcController) controller;
+      if (!hrc.hasCallTimeout()) {
+        hrc.setCallTimeout(channelOperationTimeout);
+      }
+    } else {
+      hrc = new HBaseRpcControllerImpl();
+      hrc.setCallTimeout(channelOperationTimeout);
+    }
+    return hrc;
   }
 
   protected abstract void closeInternal();
@@ -553,7 +571,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   /**
    * Async rpc channel that goes via hbase rpc.
    */
-  public static class RpcChannelImplementation extends AbstractRpcChannel implements RpcChannel {
+  public static class RpcChannelImplementation extends AbstractRpcChannel implements
+      RpcChannel {
 
     protected RpcChannelImplementation(AbstractRpcClient<?> rpcClient, InetSocketAddress addr,
         User ticket, int rpcTimeout) throws UnknownHostException {
@@ -561,8 +580,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     }
 
     @Override
-    public void callMethod(MethodDescriptor md, RpcController controller, Message param,
-        Message returnType, RpcCallback<Message> done) {
+    public void callMethod(Descriptors.MethodDescriptor md, RpcController controller,
+        Message param, Message returnType, RpcCallback<Message> done) {
       // This method does not throw any exceptions, so the caller must provide a
       // HBaseRpcController which is used to pass the exceptions.
       this.rpcClient.callMethod(md,

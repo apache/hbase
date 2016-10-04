@@ -22,19 +22,16 @@ import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlocking
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import com.google.common.collect.Lists;
-import com.google.protobuf.ServiceException;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.log4j.Level;
@@ -43,6 +40,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
 
 /**
  * Test for testing protocol buffer based RPC mechanism. This test depends on test.proto definition
@@ -82,7 +81,8 @@ public class TestProtoBufRpc {
     server.stop();
   }
 
-  @Test
+  @Test (expected=org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException.class
+      /*Thrown when we call stub.error*/)
   public void testProtoBufRpc() throws Exception {
     RpcClient rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
@@ -96,12 +96,8 @@ public class TestProtoBufRpc {
       EchoResponseProto echoResponse = stub.echo(null, echoRequest);
       assertEquals(echoResponse.getMessage(), "hello");
 
-      // Test error method - error should be thrown as RemoteException
-      try {
-        stub.error(null, emptyRequest);
-        fail("Expected exception is not thrown");
-      } catch (ServiceException e) {
-      }
+      stub.error(null, emptyRequest);
+      fail("Expected exception is not thrown");
     } finally {
       rpcClient.close();
     }

@@ -29,15 +29,15 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
-import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp}
@@ -74,7 +74,7 @@ public class SingleColumnValueFilter extends FilterBase {
   protected byte [] columnFamily;
   protected byte [] columnQualifier;
   protected CompareOp compareOp;
-  protected ByteArrayComparable comparator;
+  protected org.apache.hadoop.hbase.filter.ByteArrayComparable comparator;
   protected boolean foundColumn = false;
   protected boolean matchedColumn = false;
   protected boolean filterIfMissing = false;
@@ -96,7 +96,7 @@ public class SingleColumnValueFilter extends FilterBase {
    */
   public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final byte[] value) {
-    this(family, qualifier, compareOp, new BinaryComparator(value));
+    this(family, qualifier, compareOp, new org.apache.hadoop.hbase.filter.BinaryComparator(value));
   }
 
   /**
@@ -114,7 +114,8 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param comparator Comparator to use.
    */
   public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final ByteArrayComparable comparator) {
+      final CompareOp compareOp,
+      final org.apache.hadoop.hbase.filter.ByteArrayComparable comparator) {
     this.columnFamily = family;
     this.columnQualifier = qualifier;
     this.compareOp = compareOp;
@@ -131,7 +132,8 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param latestVersionOnly
    */
   protected SingleColumnValueFilter(final byte[] family, final byte[] qualifier,
-      final CompareOp compareOp, ByteArrayComparable comparator, final boolean filterIfMissing,
+      final CompareOp compareOp, org.apache.hadoop.hbase.filter.ByteArrayComparable comparator,
+      final boolean filterIfMissing,
       final boolean latestVersionOnly) {
     this(family, qualifier, compareOp, comparator);
     this.filterIfMissing = filterIfMissing;
@@ -148,7 +150,7 @@ public class SingleColumnValueFilter extends FilterBase {
   /**
    * @return the comparator
    */
-  public ByteArrayComparable getComparator() {
+  public org.apache.hadoop.hbase.filter.ByteArrayComparable getComparator() {
     return comparator;
   }
 
@@ -277,7 +279,7 @@ public class SingleColumnValueFilter extends FilterBase {
     byte [] family = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
     byte [] qualifier = ParseFilter.removeQuotesFromByteArray(filterArguments.get(1));
     CompareOp compareOp = ParseFilter.createCompareOp(filterArguments.get(2));
-    ByteArrayComparable comparator = ParseFilter.createComparator(
+    org.apache.hadoop.hbase.filter.ByteArrayComparable comparator = ParseFilter.createComparator(
       ParseFilter.removeQuotesFromByteArray(filterArguments.get(3)));
 
     if (comparator instanceof RegexStringComparator ||
@@ -305,10 +307,10 @@ public class SingleColumnValueFilter extends FilterBase {
     FilterProtos.SingleColumnValueFilter.Builder builder =
       FilterProtos.SingleColumnValueFilter.newBuilder();
     if (this.columnFamily != null) {
-      builder.setColumnFamily(ByteStringer.wrap(this.columnFamily));
+      builder.setColumnFamily(UnsafeByteOperations.unsafeWrap(this.columnFamily));
     }
     if (this.columnQualifier != null) {
-      builder.setColumnQualifier(ByteStringer.wrap(this.columnQualifier));
+      builder.setColumnQualifier(UnsafeByteOperations.unsafeWrap(this.columnQualifier));
     }
     HBaseProtos.CompareType compareOp = CompareType.valueOf(this.compareOp.name());
     builder.setCompareOp(compareOp);
@@ -343,7 +345,7 @@ public class SingleColumnValueFilter extends FilterBase {
 
     final CompareOp compareOp =
       CompareOp.valueOf(proto.getCompareOp().name());
-    final ByteArrayComparable comparator;
+    final org.apache.hadoop.hbase.filter.ByteArrayComparable comparator;
     try {
       comparator = ProtobufUtil.toComparator(proto.getComparator());
     } catch (IOException ioe) {

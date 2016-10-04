@@ -27,11 +27,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.NettyRpcClient;
+import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.NettyRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
-import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest;
@@ -67,7 +67,7 @@ public class TestGenerateDelegationToken extends SecureTestCluster {
       try {
         service.getAuthenticationToken(null, GetAuthenticationTokenRequest.getDefaultInstance());
       } catch (ServiceException e) {
-        AccessDeniedException exc = (AccessDeniedException) ProtobufUtil.getRemoteException(e);
+        AccessDeniedException exc = (AccessDeniedException) ProtobufUtil.handleRemoteException(e);
         assertTrue(exc.getMessage().contains(
           "Token generation only allowed for Kerberos authenticated clients"));
       }

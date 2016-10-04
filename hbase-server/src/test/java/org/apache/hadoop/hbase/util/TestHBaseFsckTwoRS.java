@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -409,7 +410,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
 
     Result res = scanner.next();
     ServerName currServer =
-        ServerName.parseFrom(res.getValue(HConstants.CATALOG_FAMILY,
+        ProtobufUtil.parseServerNameFrom(res.getValue(HConstants.CATALOG_FAMILY,
             HConstants.SERVER_QUALIFIER));
     long startCode = Bytes.toLong(res.getValue(HConstants.CATALOG_FAMILY,
         HConstants.STARTCODE_QUALIFIER));

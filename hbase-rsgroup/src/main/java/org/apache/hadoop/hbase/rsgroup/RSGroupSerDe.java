@@ -21,18 +21,22 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import com.google.common.collect.Lists;
+import com.google.common.net.HostAndPort;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -44,9 +48,7 @@ import org.apache.zookeeper.KeeperException;
 public class RSGroupSerDe {
   private static final Log LOG = LogFactory.getLog(RSGroupSerDe.class);
 
-  public RSGroupSerDe() {
-
-  }
+  public RSGroupSerDe() {super();}
 
   public List<RSGroupInfo> retrieveGroupList(Table groupTable) throws IOException {
     List<RSGroupInfo> RSGroupInfoList = Lists.newArrayList();
@@ -56,7 +58,7 @@ public class RSGroupSerDe {
               result.getValue(
                   RSGroupInfoManager.META_FAMILY_BYTES,
                   RSGroupInfoManager.META_QUALIFIER_BYTES));
-      RSGroupInfoList.add(ProtobufUtil.toGroupInfo(proto));
+      RSGroupInfoList.add(toGroupInfo(proto));
     }
     return RSGroupInfoList;
   }
@@ -73,7 +75,7 @@ public class RSGroupSerDe {
             ProtobufUtil.expectPBMagicPrefix(data);
             ByteArrayInputStream bis = new ByteArrayInputStream(
                 data, ProtobufUtil.lengthOfPBMagic(), data.length);
-            RSGroupInfoList.add(ProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
+            RSGroupInfoList.add(toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
           }
         }
         LOG.debug("Read ZK GroupInfo count:" + RSGroupInfoList.size());
@@ -86,5 +88,36 @@ public class RSGroupSerDe {
       throw new IOException("Failed to read rsGroupZNode",e);
     }
     return RSGroupInfoList;
+  }
+
+
+  public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
+    RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
+    for(HBaseProtos.ServerName el: proto.getServersList()) {
+      RSGroupInfo.addServer(HostAndPort.fromParts(el.getHostName(), el.getPort()));
+    }
+    for(HBaseProtos.TableName pTableName: proto.getTablesList()) {
+      RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
+    }
+    return RSGroupInfo;
+  }
+
+  public static RSGroupProtos.RSGroupInfo toProtoGroupInfo(RSGroupInfo pojo) {
+    List<HBaseProtos.TableName> tables =
+        new ArrayList<HBaseProtos.TableName>(pojo.getTables().size());
+    for(TableName arg: pojo.getTables()) {
+      tables.add(ProtobufUtil.toProtoTableName(arg));
+    }
+    List<HBaseProtos.ServerName> hostports =
+        new ArrayList<HBaseProtos.ServerName>(pojo.getServers().size());
+    for(HostAndPort el: pojo.getServers()) {
+      hostports.add(HBaseProtos.ServerName.newBuilder()
+          .setHostName(el.getHostText())
+          .setPort(el.getPort())
+          .build());
+    }
+    return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName())
+        .addAllServers(hostports)
+        .addAllTables(tables).build();
   }
 }

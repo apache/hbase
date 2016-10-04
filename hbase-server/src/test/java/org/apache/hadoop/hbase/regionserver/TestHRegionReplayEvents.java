@@ -35,9 +35,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -67,16 +64,17 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.StoreFlushDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescriptor.StoreFlushDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
@@ -99,6 +97,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
+import com.google.common.collect.Lists;
 
 /**
  * Tests of HRegion methods for replaying flush, compaction, region open, etc events for secondary
@@ -1133,11 +1133,13 @@ public class TestHRegionReplayEvents {
     putDataByReplay(secondaryRegion, 0, 10, cq, families);
     secondaryRegion.replayWALFlushStartMarker(FlushDescriptor.newBuilder().
       setFlushSequenceNumber(10)
-      .setTableName(ByteString.copyFrom(primaryRegion.getTableDesc().getTableName().getName()))
+      .setTableName(UnsafeByteOperations.unsafeWrap(
+          primaryRegion.getTableDesc().getTableName().getName()))
       .setAction(FlushAction.START_FLUSH)
       .setEncodedRegionName(
-        ByteString.copyFrom(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
-      .setRegionName(ByteString.copyFrom(primaryRegion.getRegionInfo().getRegionName()))
+          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+      .setRegionName(UnsafeByteOperations.unsafeWrap(
+          primaryRegion.getRegionInfo().getRegionName()))
       .build());
 
     verify(walSecondary, times(0)).append((HRegionInfo)any(),
@@ -1541,13 +1543,14 @@ public class TestHRegionReplayEvents {
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALFlushCommitMarker(FlushDescriptor.newBuilder().
       setFlushSequenceNumber(Long.MAX_VALUE)
-      .setTableName(ByteString.copyFrom(primaryRegion.getTableDesc().getTableName().getName()))
+      .setTableName(UnsafeByteOperations.unsafeWrap(primaryRegion.getTableDesc().getTableName().getName()))
       .setAction(FlushAction.COMMIT_FLUSH)
       .setEncodedRegionName(
-        ByteString.copyFrom(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
-      .setRegionName(ByteString.copyFrom(primaryRegion.getRegionInfo().getRegionName()))
+          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+      .setRegionName(UnsafeByteOperations.unsafeWrap(
+          primaryRegion.getRegionInfo().getRegionName()))
       .addStoreFlushes(StoreFlushDescriptor.newBuilder()
-        .setFamilyName(ByteString.copyFrom(families[0]))
+        .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
         .setStoreHomeDir("/store_home_dir")
         .addFlushOutput("/foo/baz/bar")
         .build())
@@ -1559,14 +1562,15 @@ public class TestHRegionReplayEvents {
     // tests replaying compaction marker, but the compaction output file has already been compacted
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALCompactionMarker(CompactionDescriptor.newBuilder()
-      .setTableName(ByteString.copyFrom(primaryRegion.getTableDesc().getTableName().getName()))
+      .setTableName(UnsafeByteOperations.unsafeWrap(
+          primaryRegion.getTableDesc().getTableName().getName()))
       .setEncodedRegionName(
-        ByteString.copyFrom(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
-      .setFamilyName(ByteString.copyFrom(families[0]))
+          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+      .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
       .addCompactionInput("/foo")
       .addCompactionOutput("/bar")
       .setStoreHomeDir("/store_home_dir")
-      .setRegionName(ByteString.copyFrom(primaryRegion.getRegionInfo().getRegionName()))
+      .setRegionName(UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getRegionName()))
       .build()
       , true, true, Long.MAX_VALUE);
   }
@@ -1576,15 +1580,16 @@ public class TestHRegionReplayEvents {
     // tests replaying region open event marker, but the region files have already been compacted
     // from primary and also deleted from the archive directory
     secondaryRegion.replayWALRegionEventMarker(RegionEventDescriptor.newBuilder()
-      .setTableName(ByteString.copyFrom(primaryRegion.getTableDesc().getTableName().getName()))
+      .setTableName(UnsafeByteOperations.unsafeWrap(
+          primaryRegion.getTableDesc().getTableName().getName()))
       .setEncodedRegionName(
-        ByteString.copyFrom(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
-      .setRegionName(ByteString.copyFrom(primaryRegion.getRegionInfo().getRegionName()))
+          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+      .setRegionName(UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getRegionName()))
       .setEventType(EventType.REGION_OPEN)
       .setServer(ProtobufUtil.toServerName(ServerName.valueOf("foo", 1, 1)))
       .setLogSequenceNumber(Long.MAX_VALUE)
       .addStores(StoreDescriptor.newBuilder()
-        .setFamilyName(ByteString.copyFrom(families[0]))
+        .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
         .setStoreHomeDir("/store_home_dir")
         .addStoreFile("/foo")
         .build())
@@ -1598,10 +1603,10 @@ public class TestHRegionReplayEvents {
     secondaryRegion.replayWALBulkLoadEventMarker(BulkLoadDescriptor.newBuilder()
       .setTableName(ProtobufUtil.toProtoTableName(primaryRegion.getTableDesc().getTableName()))
       .setEncodedRegionName(
-        ByteString.copyFrom(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
+          UnsafeByteOperations.unsafeWrap(primaryRegion.getRegionInfo().getEncodedNameAsBytes()))
       .setBulkloadSeqNum(Long.MAX_VALUE)
       .addStores(StoreDescriptor.newBuilder()
-        .setFamilyName(ByteString.copyFrom(families[0]))
+        .setFamilyName(UnsafeByteOperations.unsafeWrap(families[0]))
         .setStoreHomeDir("/store_home_dir")
         .addStoreFile("/foo")
         .build())
