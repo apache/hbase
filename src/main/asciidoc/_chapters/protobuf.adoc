@@ -158,7 +158,7 @@ of the generated protobuf class
 in hbase-protocol and another generated instance that is the same in all
 regards except its protobuf references are to the internal shaded
 version at `org.apache.hadoop.hbase.shaded.protobuf.generated.ServerName`
-(not the 'shaded' addition in the middle of the package name).
+(note the 'shaded' addition in the middle of the package name).
 
 If you extend a proto in `hbase-protocol-shaded` for  internal use,
 consider extending it also in
