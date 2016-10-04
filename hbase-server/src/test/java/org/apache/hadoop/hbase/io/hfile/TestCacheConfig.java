@@ -37,12 +37,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
@@ -328,7 +328,7 @@ public class TestCacheConfig {
     BlockCache [] bcs = cbc.getBlockCaches();
     assertTrue(bcs[0] instanceof LruBlockCache);
     LruBlockCache lbc = (LruBlockCache)bcs[0];
-    assertEquals(CacheConfig.getLruCacheSize(this.conf,
+    assertEquals(CacheConfig.getFirstLevelCacheSize(this.conf,
         ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()), lbc.getMaxSize());
     assertTrue(bcs[1] instanceof BucketCache);
     BucketCache bc = (BucketCache)bcs[1];
@@ -347,7 +347,7 @@ public class TestCacheConfig {
     // from L1 happens, it does not fail because L2 can't take the eviction because block too big.
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.001f);
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    long lruExpectedSize = CacheConfig.getLruCacheSize(this.conf, mu.getMax());
+    long lruExpectedSize = CacheConfig.getFirstLevelCacheSize(this.conf, mu.getMax());
     final int bcSize = 100;
     long bcExpectedSize = 100 * 1024 * 1024; // MB.
     assertTrue(lruExpectedSize < bcExpectedSize);

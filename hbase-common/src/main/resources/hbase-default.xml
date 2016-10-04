@@ -807,6 +807,11 @@ possible configurations would overwhelm and obscure the important.
       The default thread pool size if parallel-seeking feature enabled.</description>
   </property>
   <property>
+    <name>hfile.block.cache.policy</name>
+    <value>LRU</value>
+    <description>The eviction policy for the L1 block cache (LRU or TinyLFU).</description>
+  </property>
+  <property>
     <name>hfile.block.cache.size</name>
     <value>0.4</value>
     <description>Percentage of maximum heap (-Xmx setting) to allocate to block cache

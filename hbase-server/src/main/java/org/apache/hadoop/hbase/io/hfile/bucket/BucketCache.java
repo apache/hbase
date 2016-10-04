@@ -88,11 +88,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  *
  * <p>BucketCache can be used as mainly a block cache (see
  * {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}), combined with
- * LruBlockCache to decrease CMS GC and heap fragmentation.
+ * a BlockCache to decrease CMS GC and heap fragmentation.
  *
  * <p>It also can be used as a secondary cache (e.g. using a file on ssd/fusionio to store
- * blocks) to enlarge cache space via
- * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache#setVictimCache}
+ * blocks) to enlarge cache space via a victim cache.
  */
 @InterfaceAudience.Private
 public class BucketCache implements BlockCache, HeapSize {

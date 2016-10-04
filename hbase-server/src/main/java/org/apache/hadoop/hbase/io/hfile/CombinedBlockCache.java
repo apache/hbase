@@ -30,24 +30,24 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * CombinedBlockCache is an abstraction layer that combines
- * {@link LruBlockCache} and {@link BucketCache}. The smaller lruCache is used
+ * {@link FirstLevelBlockCache} and {@link BucketCache}. The smaller lruCache is used
  * to cache bloom blocks and index blocks.  The larger l2Cache is used to
  * cache data blocks. {@link #getBlock(BlockCacheKey, boolean, boolean, boolean)} reads
- * first from the smaller lruCache before looking for the block in the l2Cache.  Blocks evicted
- * from lruCache are put into the bucket cache. 
+ * first from the smaller l1Cache before looking for the block in the l2Cache.  Blocks evicted
+ * from l1Cache are put into the bucket cache.
  * Metrics are the combined size and hits and misses of both caches.
- * 
+ *
  */
 @InterfaceAudience.Private
 public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
-  protected final LruBlockCache lruCache;
+  protected final FirstLevelBlockCache l1Cache;
   protected final BlockCache l2Cache;
   protected final CombinedCacheStats combinedCacheStats;
 
-  public CombinedBlockCache(LruBlockCache lruCache, BlockCache l2Cache) {
-    this.lruCache = lruCache;
+  public CombinedBlockCache(FirstLevelBlockCache l1Cache, BlockCache l2Cache) {
+    this.l1Cache = l1Cache;
     this.l2Cache = l2Cache;
-    this.combinedCacheStats = new CombinedCacheStats(lruCache.getStats(),
+    this.combinedCacheStats = new CombinedCacheStats(l1Cache.getStats(),
         l2Cache.getStats());
   }
 
@@ -57,7 +57,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     if (l2Cache instanceof HeapSize) {
       l2size = ((HeapSize) l2Cache).heapSize();
     }
-    return lruCache.heapSize() + l2size;
+    return l1Cache.heapSize() + l2size;
   }
 
   @Override
@@ -65,7 +65,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
       final boolean cacheDataInL1) {
     boolean metaBlock = buf.getBlockType().getCategory() != BlockCategory.DATA;
     if (metaBlock || cacheDataInL1) {
-      lruCache.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
+      l1Cache.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
     } else {
       l2Cache.cacheBlock(cacheKey, buf, inMemory, false);
     }
@@ -81,19 +81,19 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
       boolean repeat, boolean updateCacheMetrics) {
     // TODO: is there a hole here, or just awkwardness since in the lruCache getBlock
     // we end up calling l2Cache.getBlock.
-    return lruCache.containsBlock(cacheKey)?
-        lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
+    return l1Cache.containsBlock(cacheKey)?
+        l1Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics):
         l2Cache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
 
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
-    return lruCache.evictBlock(cacheKey) || l2Cache.evictBlock(cacheKey);
+    return l1Cache.evictBlock(cacheKey) || l2Cache.evictBlock(cacheKey);
   }
 
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    return lruCache.evictBlocksByHfileName(hfileName)
+    return l1Cache.evictBlocksByHfileName(hfileName)
         + l2Cache.evictBlocksByHfileName(hfileName);
   }
 
@@ -104,28 +104,28 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public void shutdown() {
-    lruCache.shutdown();
+    l1Cache.shutdown();
     l2Cache.shutdown();
   }
 
   @Override
   public long size() {
-    return lruCache.size() + l2Cache.size();
+    return l1Cache.size() + l2Cache.size();
   }
 
   @Override
   public long getFreeSize() {
-    return lruCache.getFreeSize() + l2Cache.getFreeSize();
+    return l1Cache.getFreeSize() + l2Cache.getFreeSize();
   }
 
   @Override
   public long getCurrentSize() {
-    return lruCache.getCurrentSize() + l2Cache.getCurrentSize();
+    return l1Cache.getCurrentSize() + l2Cache.getCurrentSize();
   }
 
   @Override
   public long getBlockCount() {
-    return lruCache.getBlockCount() + l2Cache.getBlockCount();
+    return l1Cache.getBlockCount() + l2Cache.getBlockCount();
   }
 
   public static class CombinedCacheStats extends CacheStats {
@@ -310,7 +310,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
       lruCacheStats.rollMetricsPeriod();
       bucketCacheStats.rollMetricsPeriod();
     }
-    
+
     @Override
     public long getFailedInserts() {
       return lruCacheStats.getFailedInserts() + bucketCacheStats.getFailedInserts();
@@ -321,13 +321,13 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
       return lruCacheStats.getSumHitCountsPastNPeriods()
           + bucketCacheStats.getSumHitCountsPastNPeriods();
     }
-    
+
     @Override
     public long getSumRequestCountsPastNPeriods() {
       return lruCacheStats.getSumRequestCountsPastNPeriods()
           + bucketCacheStats.getSumRequestCountsPastNPeriods();
     }
-    
+
     @Override
     public long getSumHitCachingCountsPastNPeriods() {
       return lruCacheStats.getSumHitCachingCountsPastNPeriods()
@@ -348,12 +348,12 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public BlockCache[] getBlockCaches() {
-    return new BlockCache [] {this.lruCache, this.l2Cache};
+    return new BlockCache [] {this.l1Cache, this.l2Cache};
   }
 
   @Override
   public void setMaxSize(long size) {
-    this.lruCache.setMaxSize(size);
+    this.l1Cache.setMaxSize(size);
   }
 
   @Override
