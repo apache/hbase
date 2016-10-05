@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.LongUtils;
 
 /**
  * A long comparator which numerical compares against the specified byte array
@@ -42,7 +43,7 @@ public class LongComparator extends ByteArrayComparable {
   @Override
   public int compareTo(byte[] value, int offset, int length) {
     long that = Bytes.toLong(value, offset, length);
-    return Long.compare(longValue, that);
+    return LongUtils.compare(longValue, that);
   }
 
     /**
