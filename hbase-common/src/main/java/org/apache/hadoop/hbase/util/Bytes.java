@@ -28,7 +28,6 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -66,13 +65,6 @@ import com.google.protobuf.ByteString;
     value="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
     justification="It has been like this forever")
 public class Bytes implements Comparable<Bytes> {
-  //HConstants.UTF8_ENCODING should be updated if this changed
-  /** When we encode strings, we always specify UTF8 encoding */
-  private static final String UTF8_ENCODING = "UTF-8";
-
-  //HConstants.UTF8_CHARSET should be updated if this changed
-  /** When we encode strings, we always specify UTF8 encoding */
-  private static final Charset UTF8_CHARSET = Charset.forName(UTF8_ENCODING);
 
   // Using the charset canonical name for String/byte[] conversions is much
   // more efficient due to use of cached encoders/decoders.
@@ -193,7 +185,9 @@ public class Bytes implements Comparable<Bytes> {
   /**
    * Copy bytes from ByteString instance.
    * @param byteString copy from
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
+  @Deprecated
   public Bytes(final ByteString byteString) {
     this(byteString.toByteArray());
   }
@@ -259,6 +253,10 @@ public class Bytes implements Comparable<Bytes> {
     return this.offset;
   }
 
+  /**
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   */
+  @Deprecated
   public ByteString toByteString() {
     return ByteString.copyFrom(this.bytes, this.offset, this.length);
   }
