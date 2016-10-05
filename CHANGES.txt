@@ -1,5 +1,27 @@
 HBase Change Log
 
+Release 0.98.23 - 10/11/2016
+
+** Sub-task
+    * [HBASE-15984] - Given failure to parse a given WAL that was closed cleanly, replay the WAL.
+
+** Bug
+    * [HBASE-11354] - HConnectionImplementation#DelayedClosing does not start
+    * [HBASE-15983] - Replication improperly discards data from end-of-wal in some cases.
+    * [HBASE-16165] - Decrease RpcServer.callQueueSize before writeResponse causes OOM
+    * [HBASE-16373] - precommit needs a dockerfile with hbase prereqs
+    * [HBASE-16576] - Shell add_peer doesn't allow setting cluster_key for custom endpoints
+    * [HBASE-16589] - Adjust log level for FATAL messages from HBaseReplicationEndpoint that are not fatal
+    * [HBASE-16649] - Truncate table with splits preserved can cause both data loss and truncated data appeared again
+    * [HBASE-16660] - ArrayIndexOutOfBounds during the majorCompactionCheck in DateTieredCompaction
+    * [HBASE-16662] - Fix open POODLE vulnerabilities
+
+** Improvement
+    * [HBASE-16562] - ITBLL should fail to start if misconfigured
+    * [HBASE-16694] - Reduce garbage for onDiskChecksum in HFileBlock
+    * [HBASE-16705] - Eliminate long to Long auto boxing in LongComparator
+
+
 Release 0.98.22 - 9/9/2016
 
 ** Sub-task
