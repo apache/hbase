@@ -346,15 +346,16 @@ public class HFileBlock implements Cacheable {
     final int uncompressedSizeWithoutHeader =
         buf.getInt(Header.UNCOMPRESSED_SIZE_WITHOUT_HEADER_INDEX);
     final long prevBlockOffset = buf.getLong(Header.PREV_BLOCK_OFFSET_INDEX);
-    byte checksumType = buf.get(Header.CHECKSUM_TYPE_INDEX);
-    int bytesPerChecksum = buf.getInt(Header.BYTES_PER_CHECKSUM_INDEX);
-    int onDiskDataSizeWithHeader = buf.getInt(Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
     // This constructor is called when we deserialize a block from cache and when we read a block in
     // from the fs. fileCache is null when deserialized from cache so need to make up one.
     HFileContextBuilder fileContextBuilder = fileContext != null?
         new HFileContextBuilder(fileContext): new HFileContextBuilder();
     fileContextBuilder.withHBaseCheckSum(usesHBaseChecksum);
+    int onDiskDataSizeWithHeader;
     if (usesHBaseChecksum) {
+      byte checksumType = buf.get(Header.CHECKSUM_TYPE_INDEX);
+      int bytesPerChecksum = buf.getInt(Header.BYTES_PER_CHECKSUM_INDEX);
+      onDiskDataSizeWithHeader = buf.getInt(Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
       // Use the checksum type and bytes per checksum from header, not from filecontext.
       fileContextBuilder.withChecksumType(ChecksumType.codeToType(checksumType));
       fileContextBuilder.withBytesPerCheckSum(bytesPerChecksum);
@@ -393,11 +394,12 @@ public class HFileBlock implements Cacheable {
   /**
    * Parse total ondisk size including header and checksum.
    * @param headerBuf Header ByteBuffer. Presumed exact size of header.
+   * @param verifyChecksum true if checksum verification is in use.
    * @return Size of the block with header included.
    */
-  private static int getOnDiskSizeWithHeader(final ByteBuffer headerBuf) {
-    // Set hbase checksum to true always calling headerSize.
-    return headerBuf.getInt(Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX) + headerSize(true);
+  private static int getOnDiskSizeWithHeader(final ByteBuffer headerBuf, boolean verifyChecksum) {
+    return headerBuf.getInt(Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX) +
+      headerSize(verifyChecksum);
   }
 
   /**
@@ -1656,10 +1658,10 @@ public class HFileBlock implements Cacheable {
      * @throws IOException
      */
     private void verifyOnDiskSizeMatchesHeader(final int passedIn, final ByteBuffer headerBuf,
-        final long offset)
+        final long offset, boolean verifyChecksum)
     throws IOException {
       // Assert size provided aligns with what is in the header
-      int fromHeader = getOnDiskSizeWithHeader(headerBuf);
+      int fromHeader = getOnDiskSizeWithHeader(headerBuf, verifyChecksum);
       if (passedIn != fromHeader) {
         throw new IOException("Passed in onDiskSizeWithHeader=" + passedIn + " != " + fromHeader +
             ", offset=" + offset + ", fileContext=" + this.fileContext);
@@ -1700,7 +1702,8 @@ public class HFileBlock implements Cacheable {
           readAtOffset(is, headerBuf.array(), headerBuf.arrayOffset(), hdrSize, false,
               offset, pread);
         }
-        onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf);
+        onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf,
+          this.fileContext.isUseHBaseChecksum());
       }
 
       int preReadHeaderSize = headerBuf == null? 0 : hdrSize;
@@ -1721,7 +1724,8 @@ public class HFileBlock implements Cacheable {
 
       // Do a few checks before we go instantiate HFileBlock.
       assert onDiskSizeWithHeader > this.hdrSize;
-      verifyOnDiskSizeMatchesHeader(onDiskSizeWithHeader, headerBuf, offset);
+      verifyOnDiskSizeMatchesHeader(onDiskSizeWithHeader, headerBuf, offset,
+        this.fileContext.isUseHBaseChecksum());
       ByteBuffer onDiskBlockByteBuffer = ByteBuffer.wrap(onDiskBlock, 0, onDiskSizeWithHeader);
       // Verify checksum of the data before using it for building HFileBlock.
       if (verifyChecksum &&
