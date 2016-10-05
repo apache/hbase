@@ -6573,7 +6573,7 @@ public class TestHRegion {
    * HBASE-16429 Make sure no stuck if roll writer when ring buffer is filled with appends
    * @throws IOException if IO error occurred during test
    */
-  @Test(timeout = 60000)
+  @Test
   public void testWritesWhileRollWriter() throws IOException {
     int testCount = 10;
     int numRows = 1024;
