@@ -55,6 +55,19 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     private BufferedMutator m_mutator;
     private Connection conn;
 
+
+    /**
+     * Instantiate a TableRecordWriter with the HBase HClient for writing.
+     *
+     * @deprecated Please use {@code #TableRecordWriter(JobConf)}  This version does not clean up
+     * connections and will leak connections (removed in 2.0)
+     */
+    @Deprecated
+    public TableRecordWriter(final BufferedMutator mutator) throws IOException {
+      this.m_mutator = mutator;
+      this.conn = null;
+    }
+
     /**
      * Instantiate a TableRecordWriter with a BufferedMutator for batch writing.
      */

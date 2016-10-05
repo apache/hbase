@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -34,6 +35,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * A cluster registry that stores to zookeeper.
  */
+@InterfaceAudience.Private
 class ZooKeeperRegistry implements Registry {
   private static final Log LOG = LogFactory.getLog(ZooKeeperRegistry.class);
   // Needs an instance of hci to function.  Set after construct this instance.
@@ -50,7 +52,6 @@ class ZooKeeperRegistry implements Registry {
   @Override
   public RegionLocations getMetaRegionLocation() throws IOException {
     ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
-
     try {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Looking up meta region location in ZK," + " connection=" + this);
@@ -92,7 +93,7 @@ class ZooKeeperRegistry implements Registry {
   private String clusterId = null;
 
   @Override
-  public String getClusterId() throws IOException  {
+  public String getClusterId() {
     if (this.clusterId != null) return this.clusterId;
     // No synchronized here, worse case we will retrieve it twice, that's
     //  not an issue.
@@ -105,10 +106,8 @@ class ZooKeeperRegistry implements Registry {
       }
     } catch (KeeperException e) {
       LOG.warn("Can't retrieve clusterId from ZooKeeper", e);
-      throw new IOException("ZooKeeperException ", e);
     } catch (IOException e) {
       LOG.warn("Can't retrieve clusterId from ZooKeeper", e);
-      throw e;
     } finally {
       if (zkw != null) zkw.close();
     }

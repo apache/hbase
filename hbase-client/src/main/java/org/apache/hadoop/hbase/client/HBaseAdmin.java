@@ -2112,10 +2112,12 @@ public class HBaseAdmin implements Admin {
   /**
    * Is HBase available? Throw an exception if not.
    * @param conf system configuration
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper]
+   * @throws MasterNotRunningException if the master is not running.
+   * @throws ZooKeeperConnectionException if unable to connect to zookeeper.
+   * // TODO do not expose ZKConnectionException.
    */
   public static void available(final Configuration conf)
-  throws ZooKeeperConnectionException, InterruptedIOException {
+  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     // We set it to make it fail as soon as possible if HBase is not available
     copyOfConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
@@ -2124,19 +2126,29 @@ public class HBaseAdmin implements Admin {
     // Check ZK first.
     // If the connection exists, we may have a connection to ZK that does not work anymore
     try (ClusterConnection connection =
-             (ClusterConnection) ConnectionFactory.createConnection(copyOfConf);
-         ZooKeeperKeepAliveConnection zkw = ((ConnectionImplementation) connection).
-             getKeepAliveZooKeeperWatcher();) {
-      // This is NASTY. FIX!!!! Dependent on internal implementation! TODO
-      zkw.getRecoverableZooKeeper().getZooKeeper().exists(zkw.znodePaths.baseZNode, false);
+        (ClusterConnection) ConnectionFactory.createConnection(copyOfConf)) {
+      // Check ZK first.
+      // If the connection exists, we may have a connection to ZK that does not work anymore
+      ZooKeeperKeepAliveConnection zkw = null;
+      try {
+        // This is NASTY. FIX!!!! Dependent on internal implementation! TODO
+        zkw = ((ConnectionImplementation) connection)
+            .getKeepAliveZooKeeperWatcher();
+          zkw.getRecoverableZooKeeper().getZooKeeper().exists(zkw.znodePaths.baseZNode, false);
+      } catch (IOException e) {
+        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException)
+            new InterruptedIOException("Can't connect to ZooKeeper").initCause(e);
+      } catch (KeeperException e){
+        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+      } finally {
+        if (zkw != null) {
+          zkw.close();
+        }
+      }
+      // can throw MasterNotRunningException
       connection.isMasterRunning();
-    } catch (IOException e) {
-      throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)
-          new InterruptedIOException("Can't connect to ZooKeeper").initCause(e);
-    } catch (KeeperException e) {
-      throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
     }
   }
 

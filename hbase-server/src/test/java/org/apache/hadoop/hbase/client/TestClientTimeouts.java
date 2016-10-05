@@ -33,8 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.BlockingRpcClient;
@@ -103,9 +103,9 @@ public class TestClientTimeouts {
           // run some admin commands
           HBaseAdmin.available(conf);
           admin.setBalancerRunning(false, false);
-        } catch (ZooKeeperConnectionException ex) {
+        } catch (MasterNotRunningException ex) {
           // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
-          // a ZooKeeperConnectionException.  It's a bug if we get other exceptions.
+          // a MasterNotRunningException.  It's a bug if we get other exceptions.
           lastFailed = true;
         } finally {
           if(admin != null) {
