@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ByteString;
@@ -137,7 +138,7 @@ public class VisibilityClient {
               for (String label : labels) {
                 if (label.length() > 0) {
                   VisibilityLabel.Builder newBuilder = VisibilityLabel.newBuilder();
-                  newBuilder.setLabel(ByteString.copyFrom(Bytes.toBytes(label)));
+                  newBuilder.setLabel(ByteStringer.wrap(Bytes.toBytes(label)));
                   builder.addVisLabel(newBuilder.build());
                 }
               }
@@ -218,7 +219,7 @@ public class VisibilityClient {
 
           public GetAuthsResponse call(VisibilityLabelsService service) throws IOException {
             GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
-            getAuthReqBuilder.setUser(ByteString.copyFrom(Bytes.toBytes(user)));
+            getAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
             service.getAuths(controller, getAuthReqBuilder.build(), rpcCallback);
             GetAuthsResponse response = rpcCallback.get();
             if (controller.failedOnException()) {
@@ -343,7 +344,7 @@ public class VisibilityClient {
 
           public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
             SetAuthsRequest.Builder setAuthReqBuilder = SetAuthsRequest.newBuilder();
-            setAuthReqBuilder.setUser(ByteString.copyFrom(Bytes.toBytes(user)));
+            setAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
             for (String auth : auths) {
               if (auth.length() > 0) {
                 setAuthReqBuilder.addAuth((ByteString.copyFromUtf8(auth)));

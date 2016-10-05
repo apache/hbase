@@ -941,7 +941,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       response.setUser(request.getUser());
       if (labels != null) {
         for (String label : labels) {
-          response.addAuth(ByteString.copyFrom(Bytes.toBytes(label)));
+          response.addAuth(ByteStringer.wrap(Bytes.toBytes(label)));
         }
       }
     }
@@ -1029,7 +1029,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       }
       if (labels != null && !labels.isEmpty()) {
         for (String label : labels) {
-          response.addLabel(ByteString.copyFrom(Bytes.toBytes(label)));
+          response.addLabel(ByteStringer.wrap(Bytes.toBytes(label)));
         }
       }
     }

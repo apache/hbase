@@ -25,7 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 
 import io.netty.buffer.ByteBuf;
@@ -78,6 +77,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -754,7 +754,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
           .newBuilder();
       builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
       if (payload != null) {
-        builder.setPayload(ByteString.copyFrom(payload));
+        builder.setPayload(ByteStringer.wrap(payload));
       }
       if (options != null) {
         CIPHER_OPTION_HELPER.addCipherOptions(builder, options);

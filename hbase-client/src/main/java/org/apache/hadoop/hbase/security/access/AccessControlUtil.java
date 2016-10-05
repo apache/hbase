@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
+import org.apache.hadoop.hbase.util.ByteStringer;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -66,10 +67,10 @@ public class AccessControlUtil {
     permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
 
     if (family != null) {
-      permissionBuilder.setFamily(ByteString.copyFrom(family));
+      permissionBuilder.setFamily(ByteStringer.wrap(family));
     }
     if (qualifier != null) {
-      permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
+      permissionBuilder.setQualifier(ByteStringer.wrap(qualifier));
     }
     ret.setType(AccessControlProtos.Permission.Type.Table)
        .setTablePermission(permissionBuilder);
@@ -328,10 +329,10 @@ public class AccessControlUtil {
             AccessControlProtos.TablePermission.newBuilder();
         builder.setTableName(ProtobufUtil.toProtoTableName(tablePerm.getTableName()));
         if (tablePerm.hasFamily()) {
-          builder.setFamily(ByteString.copyFrom(tablePerm.getFamily()));
+          builder.setFamily(ByteStringer.wrap(tablePerm.getFamily()));
         }
         if (tablePerm.hasQualifier()) {
-          builder.setQualifier(ByteString.copyFrom(tablePerm.getQualifier()));
+          builder.setQualifier(ByteStringer.wrap(tablePerm.getQualifier()));
         }
         Permission.Action actions[] = perm.getActions();
         if (actions != null) {
@@ -427,7 +428,7 @@ public class AccessControlUtil {
    */
   public static AccessControlProtos.UserPermission toUserPermission(UserPermission perm) {
     return AccessControlProtos.UserPermission.newBuilder()
-        .setUser(ByteString.copyFrom(perm.getUser()))
+        .setUser(ByteStringer.wrap(perm.getUser()))
         .setPermission(toPermission(perm))
         .build();
   }
@@ -691,7 +692,7 @@ public class AccessControlUtil {
     AccessControlProtos.GetUserPermissionsRequest.Builder builder =
         AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     if (namespace != null) {
-      builder.setNamespaceName(ByteString.copyFrom(namespace));
+      builder.setNamespaceName(ByteStringer.wrap(namespace));
     }
     builder.setType(AccessControlProtos.Permission.Type.Namespace);
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
@@ -749,10 +750,10 @@ public class AccessControlUtil {
       permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
     if (family != null) {
-      permissionBuilder.setFamily(ByteString.copyFrom(family));
+      permissionBuilder.setFamily(ByteStringer.wrap(family));
     }
     if (qualifier != null) {
-      permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
+      permissionBuilder.setQualifier(ByteStringer.wrap(qualifier));
     }
     ret.setType(AccessControlProtos.Permission.Type.Table)
     .setTablePermission(permissionBuilder);
