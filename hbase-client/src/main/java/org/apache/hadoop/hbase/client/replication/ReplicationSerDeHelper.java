@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client.replication;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
@@ -300,8 +301,8 @@ public final class ReplicationSerDeHelper {
 
     for (Map.Entry<byte[], byte[]> entry : peerConfig.getPeerData().entrySet()) {
       builder.addData(HBaseProtos.BytesBytesPair.newBuilder()
-          .setFirst(ByteString.copyFrom(entry.getKey()))
-          .setSecond(ByteString.copyFrom(entry.getValue()))
+          .setFirst(UnsafeByteOperations.unsafeWrap(entry.getKey()))
+          .setSecond(UnsafeByteOperations.unsafeWrap(entry.getValue()))
           .build());
     }
 

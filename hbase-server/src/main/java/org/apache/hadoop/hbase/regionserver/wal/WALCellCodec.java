@@ -140,12 +140,16 @@ public class WALCellCodec implements Codec {
   //       an array of dictionaries.
   static class BaosAndCompressor extends ByteArrayOutputStream implements ByteStringCompressor {
     public ByteString toByteString() {
+      // We need this copy to create the ByteString as the byte[] 'buf' is not immutable. We reuse
+      // them.
       return ByteString.copyFrom(this.buf, 0, this.count);
     }
 
     @Override
     public ByteString compress(byte[] data, Dictionary dict) throws IOException {
       writeCompressed(data, dict);
+      // We need this copy to create the ByteString as the byte[] 'buf' is not immutable. We reuse
+      // them.
       ByteString result = ByteString.copyFrom(this.buf, 0, this.count);
       reset(); // Only resets the count - we reuse the byte array.
       return result;

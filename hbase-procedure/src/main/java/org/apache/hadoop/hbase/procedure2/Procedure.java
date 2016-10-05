@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 
@@ -815,7 +815,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
     byte[] result = proc.getResult();
     if (result != null) {
-      builder.setResult(ByteString.copyFrom(result));
+      builder.setResult(UnsafeByteOperations.unsafeWrap(result));
     }
 
     ByteString.Output stateStream = ByteString.newOutput();

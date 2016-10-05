@@ -82,6 +82,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * The ServerManager class manages info about region servers.
@@ -475,7 +476,7 @@ public class ServerManager {
     if (storeFlushedSequenceId != null) {
       for (Map.Entry<byte[], Long> entry : storeFlushedSequenceId.entrySet()) {
         builder.addStoreSequenceId(StoreSequenceId.newBuilder()
-            .setFamilyName(ByteString.copyFrom(entry.getKey()))
+            .setFamilyName(UnsafeByteOperations.unsafeWrap(entry.getKey()))
             .setSequenceId(entry.getValue().longValue()).build());
       }
     }

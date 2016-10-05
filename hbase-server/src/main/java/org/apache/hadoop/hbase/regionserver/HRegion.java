@@ -141,7 +141,6 @@ import org.apache.hadoop.hbase.regionserver.wal.ReplayHLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -1741,8 +1740,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // give us a sequence id that is for sure flushed. We want edit replay to start after this
       // sequence id in this region. If NO_SEQNUM, use the regions maximum flush id.
       long csid = (earliest == HConstants.NO_SEQNUM)? lastFlushOpSeqIdLocal: earliest - 1;
-      regionLoadBldr.addStoreCompleteSequenceId(StoreSequenceId.
-        newBuilder().setFamilyName(ByteString.copyFrom(familyName)).setSequenceId(csid).build());
+      regionLoadBldr.addStoreCompleteSequenceId(StoreSequenceId.newBuilder()
+          .setFamilyName(UnsafeByteOperations.unsafeWrap(familyName)).setSequenceId(csid).build());
     }
     return regionLoadBldr.setCompleteSequenceId(getMaxFlushedSeqId());
   }

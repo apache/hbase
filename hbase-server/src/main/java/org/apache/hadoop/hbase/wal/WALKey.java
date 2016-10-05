@@ -46,12 +46,12 @@ import org.apache.hadoop.hbase.regionserver.SequenceId;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * A Key for an entry in the WAL.
@@ -650,8 +650,8 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
       WALCellCodec.ByteStringCompressor compressor) throws IOException {
     WALProtos.WALKey.Builder builder = WALProtos.WALKey.newBuilder();
     if (compressionContext == null) {
-      builder.setEncodedRegionName(ByteString.copyFrom(this.encodedRegionName));
-      builder.setTableName(ByteString.copyFrom(this.tablename.getName()));
+      builder.setEncodedRegionName(UnsafeByteOperations.unsafeWrap(this.encodedRegionName));
+      builder.setTableName(UnsafeByteOperations.unsafeWrap(this.tablename.getName()));
     } else {
       builder.setEncodedRegionName(compressor.compress(this.encodedRegionName,
           compressionContext.regionDict));
@@ -677,7 +677,8 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     }
     if (replicationScope != null) {
       for (Map.Entry<byte[], Integer> e : replicationScope.entrySet()) {
-        ByteString family = (compressionContext == null) ? ByteString.copyFrom(e.getKey())
+        ByteString family = (compressionContext == null)
+            ? UnsafeByteOperations.unsafeWrap(e.getKey())
             : compressor.compress(e.getKey(), compressionContext.familyDict);
         builder.addScopes(FamilyScope.newBuilder()
             .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));

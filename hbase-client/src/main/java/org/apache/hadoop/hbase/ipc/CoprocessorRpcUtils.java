@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -97,13 +98,13 @@ public final class CoprocessorRpcUtils {
   private static CoprocessorServiceCall getCoprocessorServiceCall(
       final Descriptors.MethodDescriptor method, final Message request, final byte [] row) {
     return CoprocessorServiceCall.newBuilder()
-    .setRow(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFrom(row))
+    .setRow(org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.unsafeWrap(row))
     .setServiceName(CoprocessorRpcUtils.getServiceName(method.getService()))
     .setMethodName(method.getName())
     // TODO!!!!! Come back here after!!!!! This is a double copy of the request if I read
     // it right copying from non-shaded to shaded version!!!!!! FIXXXXX!!!!!
-    .setRequest(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.
-          copyFrom(request.toByteArray())).build();
+    .setRequest(org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.
+        unsafeWrap(request.toByteArray())).build();
   }
 
   public static MethodDescriptor getMethodDescriptor(final String methodName,

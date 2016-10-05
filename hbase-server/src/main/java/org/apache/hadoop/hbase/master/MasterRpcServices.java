@@ -652,7 +652,7 @@ public class MasterRpcServices extends RSRpcServices
       ExecProcedureResponse.Builder builder = ExecProcedureResponse.newBuilder();
       // set return data if available
       if (data != null) {
-        builder.setReturnData(ByteString.copyFrom(data));
+        builder.setReturnData(UnsafeByteOperations.unsafeWrap(data));
       }
       return builder.build();
     } catch (IOException e) {

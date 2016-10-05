@@ -615,7 +615,7 @@ public final class RequestConverter {
         RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) row;
         // DUMB COPY!!! FIX!!! Done to copy from c.g.p.ByteString to shaded ByteString.
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value =
-         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFrom(
+         org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.unsafeWrap(
              exec.getRequest().toByteArray());
         regionActionBuilder.addAction(actionBuilder.setServiceCall(
             ClientProtos.CoprocessorServiceCall.newBuilder()
@@ -698,7 +698,7 @@ public final class RequestConverter {
         RegionCoprocessorServiceExec exec = (RegionCoprocessorServiceExec) row;
         // DUMB COPY!!! FIX!!! Done to copy from c.g.p.ByteString to shaded ByteString.
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value =
-         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFrom(
+         org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.unsafeWrap(
              exec.getRequest().toByteArray());
         builder.addAction(actionBuilder.setServiceCall(
             ClientProtos.CoprocessorServiceCall.newBuilder()

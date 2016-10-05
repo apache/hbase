@@ -80,7 +80,6 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -193,13 +192,12 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * Implements the regionserver RPC services.
@@ -361,10 +359,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     private void incNextCallSeq() {
       nextCallSeq.incrementAndGet();
-    }
-
-    private void rollbackNextCallSeq() {
-      nextCallSeq.decrementAndGet();
     }
   }
 
@@ -789,7 +783,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                   serviceResultBuilder.getValueBuilder()
                     .setName(result.getClass().getName())
                     // TODO: Copy!!!
-                    .setValue(ByteString.copyFrom(result.toByteArray()))));
+                    .setValue(UnsafeByteOperations.unsafeWrap(result.toByteArray()))));
           } catch (IOException ioe) {
             rpcServer.getMetrics().exception(ioe);
             resultOrExceptionBuilder.setException(ResponseConverter.buildException(ioe));
