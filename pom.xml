@@ -1047,7 +1047,7 @@
           <dependency>
             <groupId>org.asciidoctor</groupId>
             <artifactId>asciidoctorj-pdf</artifactId>
-            <version>1.5.0-alpha.6</version>
+            <version>1.5.0-alpha.11</version>
           </dependency>
         </dependencies>
         <configuration>
@@ -1057,6 +1057,8 @@
           <sourceHighlighter>coderay</sourceHighlighter>
           <attributes>
             <docVersion>${project.version}</docVersion>
+            <sourcedir>${project.build.sourceDirectory}</sourcedir>
+            <pdfmarks/>
           </attributes>
         </configuration>
         <executions>
@@ -1219,7 +1221,7 @@
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <checkstyle.version>6.18</checkstyle.version>
     <javadoc.version>2.10.3</javadoc.version>
-    <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
+    <asciidoctor.plugin.version>1.5.3</asciidoctor.plugin.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
