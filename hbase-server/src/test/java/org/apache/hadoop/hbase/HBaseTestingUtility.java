@@ -2219,13 +2219,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     for (byte[] family: families) {
       scan.addFamily(family);
     }
-    ResultScanner results = table.getScanner(scan);
-    int count = 0;
-    for (@SuppressWarnings("unused") Result res : results) {
-      count++;
-    }
-    results.close();
-    return count;
+    return countRows(table, scan);
   }
 
   /**
@@ -2238,6 +2232,32 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     } finally {
       table.close();
     }
+  }
+
+  public int countRows(final Region region) throws IOException {
+    return countRows(region, new Scan());
+  }
+
+  public int countRows(final Region region, final Scan scan) throws IOException {
+    InternalScanner scanner = region.getScanner(scan);
+    try {
+      return countRows(scanner);
+    } finally {
+      scanner.close();
+    }
+  }
+
+  public int countRows(final InternalScanner scanner) throws IOException {
+    // Do not retrieve the mob data when scanning
+    int scannedCount = 0;
+    List<Cell> results = new ArrayList<Cell>();
+    boolean hasMore = true;
+    while (hasMore) {
+      hasMore = scanner.next(results);
+      scannedCount += results.size();
+      results.clear();
+    }
+    return scannedCount;
   }
 
   /**

@@ -296,28 +296,16 @@ public class BaseTestHBaseFsck {
    * Counts the number of rows to verify data loss or non-dataloss.
    */
   int countRows() throws IOException {
-     Scan s = new Scan();
-     ResultScanner rs = tbl.getScanner(s);
-     int i = 0;
-     while(rs.next() !=null) {
-       i++;
-     }
-     return i;
+     return TEST_UTIL.countRows(tbl);
   }
 
   /**
    * Counts the number of rows to verify data loss or non-dataloss.
    */
   int countRows(byte[] start, byte[] end) throws IOException {
-    Scan s = new Scan(start, end);
-    ResultScanner rs = tbl.getScanner(s);
-    int i = 0;
-    while (rs.next() != null) {
-      i++;
-    }
-    return i;
+    return TEST_UTIL.countRows(tbl, new Scan(start, end));
   }
-  
+
   /**
    * delete table in preparation for next test
    *

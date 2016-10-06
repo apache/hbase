@@ -504,7 +504,7 @@ public class TestFromClientSide {
     byte [] endKey = regions.get(0).getRegionInfo().getEndKey();
     // Count rows with a filter that stops us before passed 'endKey'.
     // Should be count of rows in first region.
-    int endKeyCount = countRows(t, createScanWithRowFilter(endKey));
+    int endKeyCount = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey));
     assertTrue(endKeyCount < rowCount);
 
     // How do I know I did not got to second region?  Thats tough.  Can't really
@@ -516,29 +516,29 @@ public class TestFromClientSide {
     // New test.  Make it so scan goes into next region by one and then two.
     // Make sure count comes out right.
     byte [] key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] + 1)};
-    int plusOneCount = countRows(t, createScanWithRowFilter(key));
+    int plusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
     assertEquals(endKeyCount + 1, plusOneCount);
     key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] + 2)};
-    int plusTwoCount = countRows(t, createScanWithRowFilter(key));
+    int plusTwoCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
     assertEquals(endKeyCount + 2, plusTwoCount);
 
     // New test.  Make it so I scan one less than endkey.
     key = new byte [] {endKey[0], endKey[1], (byte)(endKey[2] - 1)};
-    int minusOneCount = countRows(t, createScanWithRowFilter(key));
+    int minusOneCount = TEST_UTIL.countRows(t, createScanWithRowFilter(key));
     assertEquals(endKeyCount - 1, minusOneCount);
     // For above test... study logs.  Make sure we do "Finished with scanning.."
     // in first region and that we do not fall into the next region.
 
     key = new byte [] {'a', 'a', 'a'};
-    int countBBB = countRows(t,
+    int countBBB = TEST_UTIL.countRows(t,
       createScanWithRowFilter(key, null, CompareFilter.CompareOp.EQUAL));
     assertEquals(1, countBBB);
 
-    int countGreater = countRows(t, createScanWithRowFilter(endKey, null,
+    int countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, null,
       CompareFilter.CompareOp.GREATER_OR_EQUAL));
     // Because started at start of table.
     assertEquals(0, countGreater);
-    countGreater = countRows(t, createScanWithRowFilter(endKey, endKey,
+    countGreater = TEST_UTIL.countRows(t, createScanWithRowFilter(endKey, endKey,
       CompareFilter.CompareOp.GREATER_OR_EQUAL));
     assertEquals(rowCount - endKeyCount, countGreater);
   }
@@ -602,7 +602,7 @@ public class TestFromClientSide {
     try (Table t = TEST_UTIL.getConnection().getTable(name)) {
       int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
       TEST_UTIL.getAdmin().flush(name);
-      int actualRowCount = countRows(t, new Scan().addColumn(FAMILY, FAMILY));
+      int actualRowCount = TEST_UTIL.countRows(t, new Scan().addColumn(FAMILY, FAMILY));
       assertEquals(rowCount, actualRowCount);
     }
     assertTrue(ExceptionInReseekRegionObserver.reqCount.get() > 0);
@@ -635,28 +635,9 @@ public class TestFromClientSide {
     return s;
   }
 
-  /*
-   * @param t
-   * @param s
-   * @return Count of rows in table.
-   * @throws IOException
-   */
-  private int countRows(final Table t, final Scan s)
-  throws IOException {
-    // Assert all rows in table.
-    ResultScanner scanner = t.getScanner(s);
-    int count = 0;
-    for (Result result: scanner) {
-      count++;
-      assertTrue(result.size() > 0);
-      // LOG.info("Count=" + count + ", row=" + Bytes.toString(result.getRow()));
-    }
-    return count;
-  }
-
   private void assertRowCount(final Table t, final int expected)
   throws IOException {
-    assertEquals(expected, countRows(t, new Scan()));
+    assertEquals(expected, TEST_UTIL.countRows(t, new Scan()));
   }
 
   /*

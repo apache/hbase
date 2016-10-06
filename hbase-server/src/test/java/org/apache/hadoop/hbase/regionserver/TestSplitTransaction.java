@@ -80,10 +80,10 @@ public class TestSplitTransaction {
   private static final byte [] ENDROW = new byte [] {'{', '{', '{'};
   private static final byte [] GOOD_SPLIT_ROW = new byte [] {'d', 'd', 'd'};
   private static final byte [] CF = HConstants.CATALOG_FAMILY;
-  
+
   private static boolean preRollBackCalled = false;
   private static boolean postRollBackCalled = false;
-  
+
   @Before public void setup() throws IOException {
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, CustomObserver.class.getName());
@@ -91,7 +91,7 @@ public class TestSplitTransaction {
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
     FSUtils.setRootDir(walConf, this.testdir);
     this.wals = new WALFactory(walConf, null, this.getClass().getName());
-    
+
     this.parent = createRegion(this.testdir, this.wals);
     RegionCoprocessorHost host = new RegionCoprocessorHost(this.parent, null, TEST_UTIL.getConfiguration());
     this.parent.setCoprocessorHost(host);
@@ -113,7 +113,7 @@ public class TestSplitTransaction {
   @Test public void testFailAfterPONR() throws IOException, KeeperException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
     assertTrue(rowcount > 0);
-    int parentRowCount = countRows(this.parent);
+    int parentRowCount = TEST_UTIL.countRows(this.parent);
     assertEquals(rowcount, parentRowCount);
 
     // Start transaction.
@@ -229,7 +229,7 @@ public class TestSplitTransaction {
   @Test public void testWholesomeSplit() throws IOException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF, true);
     assertTrue(rowcount > 0);
-    int parentRowCount = countRows(this.parent);
+    int parentRowCount = TEST_UTIL.countRows(this.parent);
     assertEquals(rowcount, parentRowCount);
 
     // Pretend region's blocks are not in the cache, used for
@@ -263,7 +263,7 @@ public class TestSplitTransaction {
     int daughtersRowCount = 0;
     for (Region openRegion: daughters) {
       try {
-        int count = countRows(openRegion);
+        int count = TEST_UTIL.countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
         daughtersRowCount += count;
       } finally {
@@ -279,7 +279,7 @@ public class TestSplitTransaction {
   public void testCountReferencesFailsSplit() throws IOException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
     assertTrue(rowcount > 0);
-    int parentRowCount = countRows(this.parent);
+    int parentRowCount = TEST_UTIL.countRows(this.parent);
     assertEquals(rowcount, parentRowCount);
 
     // Start transaction.
@@ -307,7 +307,7 @@ public class TestSplitTransaction {
   @Test public void testRollback() throws IOException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
     assertTrue(rowcount > 0);
-    int parentRowCount = countRows(this.parent);
+    int parentRowCount = TEST_UTIL.countRows(this.parent);
     assertEquals(rowcount, parentRowCount);
 
     // Start transaction.
@@ -332,7 +332,7 @@ public class TestSplitTransaction {
     assertTrue(spiedUponSt.rollback(null, null));
 
     // Assert I can scan parent.
-    int parentRowCount2 = countRows(this.parent);
+    int parentRowCount2 = TEST_UTIL.countRows(this.parent);
     assertEquals(parentRowCount, parentRowCount2);
 
     // Assert rollback cleaned up stuff in fs
@@ -347,7 +347,7 @@ public class TestSplitTransaction {
     int daughtersRowCount = 0;
     for (Region openRegion: daughters) {
       try {
-        int count = countRows(openRegion);
+        int count = TEST_UTIL.countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
         daughtersRowCount += count;
       } finally {
@@ -359,7 +359,7 @@ public class TestSplitTransaction {
     assertTrue(!this.parent.lock.writeLock().isHeldByCurrentThread());
     assertTrue("Rollback hooks should be called.", wasRollBackHookCalled());
   }
-  
+
   private boolean wasRollBackHookCalled(){
     return (preRollBackCalled && postRollBackCalled);
   }
@@ -370,22 +370,6 @@ public class TestSplitTransaction {
   @SuppressWarnings("serial")
   private class MockedFailedDaughterCreation extends IOException {}
   private class MockedFailedDaughterOpen extends IOException {}
-
-  private int countRows(final Region r) throws IOException {
-    int rowcount = 0;
-    InternalScanner scanner = r.getScanner(new Scan());
-    try {
-      List<Cell> kvs = new ArrayList<Cell>();
-      boolean hasNext = true;
-      while (hasNext) {
-        hasNext = scanner.next(kvs);
-        if (!kvs.isEmpty()) rowcount++;
-      }
-    } finally {
-      scanner.close();
-    }
-    return rowcount;
-  }
 
   HRegion createRegion(final Path testdir, final WALFactory wals)
   throws IOException {
@@ -402,14 +386,14 @@ public class TestSplitTransaction {
       wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()),
       TEST_UTIL.getConfiguration());
   }
-  
+
   public static class CustomObserver extends BaseRegionObserver{
     @Override
     public void preRollBackSplit(
         ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
       preRollBackCalled = true;
     }
-    
+
     @Override
     public void postRollBackSplit(
         ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {

@@ -244,8 +244,8 @@ public class TestRegionMergeTransaction {
     final int rowCountOfRegionA = loadRegion(this.region_a, CF, true);
     final int rowCountOfRegionB = loadRegion(this.region_b, CF, true);
     assertTrue(rowCountOfRegionA > 0 && rowCountOfRegionB > 0);
-    assertEquals(rowCountOfRegionA, countRows(this.region_a));
-    assertEquals(rowCountOfRegionB, countRows(this.region_b));
+    assertEquals(rowCountOfRegionA, TEST_UTIL.countRows(this.region_a));
+    assertEquals(rowCountOfRegionB, TEST_UTIL.countRows(this.region_b));
 
     // Start transaction.
     RegionMergeTransactionImpl mt = prepareOnGoodRegions();
@@ -272,7 +272,7 @@ public class TestRegionMergeTransaction {
         mergedRegion.getRegionInfo().getEndKey()));
     // Count rows. merged region are already open
     try {
-      int mergedRegionRowCount = countRows(mergedRegion);
+      int mergedRegionRowCount = TEST_UTIL.countRows(mergedRegion);
       assertEquals((rowCountOfRegionA + rowCountOfRegionB),
           mergedRegionRowCount);
     } finally {
@@ -288,8 +288,8 @@ public class TestRegionMergeTransaction {
     final int rowCountOfRegionA = loadRegion(this.region_a, CF, true);
     final int rowCountOfRegionB = loadRegion(this.region_b, CF, true);
     assertTrue(rowCountOfRegionA > 0 && rowCountOfRegionB > 0);
-    assertEquals(rowCountOfRegionA, countRows(this.region_a));
-    assertEquals(rowCountOfRegionB, countRows(this.region_b));
+    assertEquals(rowCountOfRegionA, TEST_UTIL.countRows(this.region_a));
+    assertEquals(rowCountOfRegionB, TEST_UTIL.countRows(this.region_b));
 
     // Start transaction.
     RegionMergeTransactionImpl mt = prepareOnGoodRegions();
@@ -314,9 +314,9 @@ public class TestRegionMergeTransaction {
     assertTrue(mt.rollback(null, null));
 
     // Assert I can scan region_a and region_b.
-    int rowCountOfRegionA2 = countRows(this.region_a);
+    int rowCountOfRegionA2 = TEST_UTIL.countRows(this.region_a);
     assertEquals(rowCountOfRegionA, rowCountOfRegionA2);
-    int rowCountOfRegionB2 = countRows(this.region_b);
+    int rowCountOfRegionB2 = TEST_UTIL.countRows(this.region_b);
     assertEquals(rowCountOfRegionB, rowCountOfRegionB2);
 
     // Assert rollback cleaned up stuff in fs
@@ -332,7 +332,7 @@ public class TestRegionMergeTransaction {
     // Count rows. daughters are already open
     // Count rows. merged region are already open
     try {
-      int mergedRegionRowCount = countRows(mergedRegion);
+      int mergedRegionRowCount = TEST_UTIL.countRows(mergedRegion);
       assertEquals((rowCountOfRegionA + rowCountOfRegionB),
           mergedRegionRowCount);
     } finally {
@@ -348,8 +348,8 @@ public class TestRegionMergeTransaction {
     final int rowCountOfRegionA = loadRegion(this.region_a, CF, true);
     final int rowCountOfRegionB = loadRegion(this.region_b, CF, true);
     assertTrue(rowCountOfRegionA > 0 && rowCountOfRegionB > 0);
-    assertEquals(rowCountOfRegionA, countRows(this.region_a));
-    assertEquals(rowCountOfRegionB, countRows(this.region_b));
+    assertEquals(rowCountOfRegionA, TEST_UTIL.countRows(this.region_a));
+    assertEquals(rowCountOfRegionB, TEST_UTIL.countRows(this.region_b));
 
     // Start transaction.
     RegionMergeTransactionImpl mt = prepareOnGoodRegions();
@@ -446,23 +446,6 @@ public class TestRegionMergeTransaction {
     return HRegion.openHRegion(testdir, hri, htd,
       wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()),
       TEST_UTIL.getConfiguration());
-  }
-
-  private int countRows(final HRegion r) throws IOException {
-    int rowcount = 0;
-    InternalScanner scanner = r.getScanner(new Scan());
-    try {
-      List<Cell> kvs = new ArrayList<Cell>();
-      boolean hasNext = true;
-      while (hasNext) {
-        hasNext = scanner.next(kvs);
-        if (!kvs.isEmpty())
-          rowcount++;
-      }
-    } finally {
-      scanner.close();
-    }
-    return rowcount;
   }
 
   /**

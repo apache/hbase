@@ -132,7 +132,7 @@ public class TestMobStoreCompaction {
     }
     assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
     assertEquals("Before compaction: mob file count", 0, countMobFiles());
-    assertEquals("Before compaction: rows", compactionThreshold, countRows());
+    assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("Before compaction: mob rows", 0, countMobRows());
 
     region.compactStores();
@@ -140,7 +140,7 @@ public class TestMobStoreCompaction {
     assertEquals("After compaction: store files", 1, countStoreFiles());
     assertEquals("After compaction: mob file count", 0, countMobFiles());
     assertEquals("After compaction: referenced mob file count", 0, countReferencedMobFiles());
-    assertEquals("After compaction: rows", compactionThreshold, countRows());
+    assertEquals("After compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("After compaction: mob rows", 0, countMobRows());
   }
 
@@ -159,7 +159,7 @@ public class TestMobStoreCompaction {
     }
     assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
     assertEquals("Before compaction: mob file count", compactionThreshold, countMobFiles());
-    assertEquals("Before compaction: rows", compactionThreshold, countRows());
+    assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("Before compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("Before compaction: number of mob cells", compactionThreshold,
         countMobCellsInMetadata());
@@ -171,7 +171,7 @@ public class TestMobStoreCompaction {
     assertEquals("After compaction: store files", 1, countStoreFiles());
     assertEquals("After compaction: mob file count", compactionThreshold, countMobFiles());
     assertEquals("After compaction: referenced mob file count", 0, countReferencedMobFiles());
-    assertEquals("After compaction: rows", compactionThreshold, countRows());
+    assertEquals("After compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("After compaction: mob rows", 0, countMobRows());
   }
 
@@ -200,7 +200,7 @@ public class TestMobStoreCompaction {
     assertTrue("Bulkload result:", result);
     assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
     assertEquals("Before compaction: mob file count", 0, countMobFiles());
-    assertEquals("Before compaction: rows", compactionThreshold, countRows());
+    assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("Before compaction: mob rows", 0, countMobRows());
     assertEquals("Before compaction: referenced mob file count", 0, countReferencedMobFiles());
 
@@ -208,7 +208,7 @@ public class TestMobStoreCompaction {
 
     assertEquals("After compaction: store files", 1, countStoreFiles());
     assertEquals("After compaction: mob file count:", 1, countMobFiles());
-    assertEquals("After compaction: rows", compactionThreshold, countRows());
+    assertEquals("After compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("After compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("After compaction: referenced mob file count", 1, countReferencedMobFiles());
     assertEquals("After compaction: number of mob cells", compactionThreshold,
@@ -230,7 +230,7 @@ public class TestMobStoreCompaction {
     }
     assertEquals("Before compaction: store files", numHfiles, countStoreFiles());
     assertEquals("Before compaction: mob file count", numHfiles, countMobFiles());
-    assertEquals("Before compaction: rows", numHfiles, countRows());
+    assertEquals("Before compaction: rows", numHfiles, UTIL.countRows(region));
     assertEquals("Before compaction: mob rows", numHfiles, countMobRows());
     assertEquals("Before compaction: number of mob cells", numHfiles, countMobCellsInMetadata());
     // now let's delete some cells that contain mobs
@@ -351,29 +351,6 @@ public class TestMobStoreCompaction {
     return scannedCount;
   }
 
-  private int countRows() throws IOException {
-    Scan scan = new Scan();
-    InternalScanner scanner = region.getScanner(scan);
-    try {
-      return countRows(scanner);
-    } finally {
-      scanner.close();
-    }
-  }
-
-  private int countRows(InternalScanner scanner) throws IOException {
-    // Do not retrieve the mob data when scanning
-    int scannedCount = 0;
-    List<Cell> results = new ArrayList<Cell>();
-    boolean hasMore = true;
-    while (hasMore) {
-      hasMore = scanner.next(results);
-      scannedCount += results.size();
-      results.clear();
-    }
-    return scannedCount;
-  }
-
   private byte[] makeDummyData(int size) {
     byte[] dummyData = new byte[size];
     new Random().nextBytes(dummyData);
@@ -448,7 +425,7 @@ public class TestMobStoreCompaction {
       StoreScanner scanner = new StoreScanner(scan, scanInfo, ScanType.COMPACT_DROP_DELETES, null,
           scanners, 0L, HConstants.LATEST_TIMESTAMP);
       try {
-        size += countRows(scanner);
+        size += UTIL.countRows(scanner);
       } finally {
         scanner.close();
       }
