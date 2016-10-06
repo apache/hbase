@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
@@ -991,6 +992,15 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public void shipped() throws IOException {
+    if (prevCell != null) {
+      // Do the copy here so that in case the prevCell ref is pointing to the previous
+      // blocks we can safely release those blocks.
+      // This applies to blocks that are got from Bucket cache, L1 cache and the blocks
+      // fetched from HDFS. Copying this would ensure that we let go the references to these
+      // blocks so that they can be GCed safely(in case of bucket cache)
+      prevCell = KeyValueUtil.toNewKeyCell(this.prevCell);
+    }
+    matcher.beforeShipped();
     for (KeyValueHeap h : this.heapsForDelayedClose) {
       h.close();// There wont be further fetch of Cells from these scanners. Just close.
     }

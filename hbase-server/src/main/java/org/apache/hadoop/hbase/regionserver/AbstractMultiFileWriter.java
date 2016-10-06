@@ -26,13 +26,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.compactions.Compactor.CellSink;
+import org.apache.hadoop.hbase.regionserver.CellSink;
 
 /**
  * Base class for cell sink that separates the provided cells into multiple files.
  */
 @InterfaceAudience.Private
-public abstract class AbstractMultiFileWriter implements CellSink {
+public abstract class AbstractMultiFileWriter implements CellSink, ShipperListener {
 
   private static final Log LOG = LogFactory.getLog(AbstractMultiFileWriter.class);
 
@@ -115,5 +115,14 @@ public abstract class AbstractMultiFileWriter implements CellSink {
    * append extra metadata to the writer.
    */
   protected void preCloseWriter(StoreFileWriter writer) throws IOException {
+  }
+
+  @Override
+  public void beforeShipped() throws IOException {
+    if (this.writers() != null) {
+      for (StoreFileWriter writer : writers()) {
+        writer.beforeShipped();
+      }
+    }
   }
 }

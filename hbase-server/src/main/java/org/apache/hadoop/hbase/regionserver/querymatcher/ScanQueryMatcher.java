@@ -31,10 +31,11 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -42,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A query matcher that is specifically designed for the scan case.
  */
 @InterfaceAudience.Private
-public abstract class ScanQueryMatcher {
+public abstract class ScanQueryMatcher implements ShipperListener {
 
   /**
    * {@link #match} return codes. These instruct the scanner moving through memstores and StoreFiles
@@ -333,6 +334,16 @@ public abstract class ScanQueryMatcher {
    * Delegate to {@link Filter#getNextCellHint(Cell)}. If no filter, return {@code null}.
    */
   public abstract Cell getNextKeyHint(Cell cell) throws IOException;
+
+  @Override
+  public void beforeShipped() throws IOException {
+    if (this.currentRow != null) {
+      this.currentRow = CellUtil.createFirstOnRow(CellUtil.copyRow(this.currentRow));
+    }
+    if (columns != null) {
+      columns.beforeShipped();
+    }
+  }
 
   protected static DeleteTracker instantiateDeleteTracker(RegionCoprocessorHost host)
       throws IOException {

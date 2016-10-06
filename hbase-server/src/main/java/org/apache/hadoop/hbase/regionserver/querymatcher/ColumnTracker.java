@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 
 /**
@@ -50,7 +51,7 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchC
  * This class is NOT thread-safe as queries are never multi-threaded
  */
 @InterfaceAudience.Private
-public interface ColumnTracker {
+public interface ColumnTracker extends ShipperListener {
 
   /**
    * Checks if the column is present in the list of requested columns by returning the match code

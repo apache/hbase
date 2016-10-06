@@ -97,7 +97,7 @@ public class KeyValueUtil {
   }
 
 
-  /**************** copy key only *********************/
+  /**************** copy the cell to create a new keyvalue *********************/
 
   public static KeyValue copyToNewKeyValue(final Cell cell) {
     byte[] bytes = copyToNewByteArray(cell);
@@ -116,6 +116,21 @@ public class KeyValueUtil {
     appendKeyTo(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
     return buffer;
+  }
+
+  /**
+   * Copies the key to a new KeyValue
+   * @param cell
+   * @return the KeyValue that consists only the key part of the incoming cell
+   */
+  public static KeyValue toNewKeyCell(final Cell cell) {
+    byte[] bytes = new byte[keyLength(cell)];
+    appendKeyTo(cell, bytes, 0);
+    KeyValue kv = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
+    // Set the seq id. The new key cell could be used in comparisons so it
+    // is important that it uses the seqid also. If not the comparsion would fail
+    kv.setSequenceId(cell.getSequenceId());
+    return kv;
   }
 
   public static byte[] copyToNewByteArray(final Cell cell) {

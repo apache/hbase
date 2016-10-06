@@ -19,12 +19,17 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+@Category({ SmallTests.class, ClientTests.class })
 public class TestPut {
   @Test
   public void testCopyConstructor() {

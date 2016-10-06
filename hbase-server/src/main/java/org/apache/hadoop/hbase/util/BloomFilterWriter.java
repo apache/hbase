@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.CellSink;
+import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -28,7 +30,7 @@ import org.apache.hadoop.io.Writable;
  * resulting Bloom filter as a sequence of bytes.
  */
 @InterfaceAudience.Private
-public interface BloomFilterWriter extends BloomFilterBase {
+public interface BloomFilterWriter extends BloomFilterBase, CellSink, ShipperListener {
 
   /** Compact the Bloom filter before writing metadata &amp; data to disk. */
   void compactBloom();
@@ -48,8 +50,8 @@ public interface BloomFilterWriter extends BloomFilterBase {
   Writable getDataWriter();
 
   /**
-   * Add the specified binary to the bloom filter.
-   * @param cell the cell data to be added to the bloom
+   * Returns the previous cell written by this writer
+   * @return the previous cell
    */
-  void add(Cell cell);
+  Cell getPrevCell();
 }

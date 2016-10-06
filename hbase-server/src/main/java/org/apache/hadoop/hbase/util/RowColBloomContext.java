@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -32,14 +33,14 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 @InterfaceAudience.Private
 public class RowColBloomContext extends BloomContext {
 
-  public RowColBloomContext(BloomFilterWriter generalBloomFilterWriter) {
-    super(generalBloomFilterWriter);
+  public RowColBloomContext(BloomFilterWriter generalBloomFilterWriter, CellComparator comparator) {
+    super(generalBloomFilterWriter, comparator);
   }
 
   @Override
   public void addLastBloomKey(Writer writer) throws IOException {
-    if (this.lastCell != null) {
-      Cell firstOnRow = CellUtil.createFirstOnRowCol(this.lastCell);
+    if (this.getLastCell() != null) {
+      Cell firstOnRow = CellUtil.createFirstOnRowCol(this.getLastCell());
       // This copy happens only once when the writer is closed
       byte[] key = CellUtil.getCellKeySerializedAsKeyValueKey(firstOnRow);
       writer.appendFileInfo(StoreFile.LAST_BLOOM_KEY, key);
@@ -48,8 +49,8 @@ public class RowColBloomContext extends BloomContext {
 
   @Override
   protected boolean isNewKey(Cell cell) {
-    if (this.lastCell != null) {
-      return !CellUtil.matchingRowColumn(cell, this.lastCell);
+    if (this.getLastCell() != null) {
+      return !CellUtil.matchingRowColumn(cell, this.getLastCell());
     }
     return true;
   }

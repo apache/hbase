@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.BloomContext;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -51,7 +50,7 @@ import com.google.common.base.Preconditions;
  * local because it is an implementation detail of the HBase regionserver.
  */
 @InterfaceAudience.Private
-public class StoreFileWriter implements Compactor.CellSink {
+public class StoreFileWriter implements CellSink, ShipperListener {
   private static final Log LOG = LogFactory.getLog(StoreFileWriter.class.getName());
 
   private final BloomFilterWriter generalBloomFilterWriter;
@@ -120,6 +119,7 @@ public class StoreFileWriter implements Compactor.CellSink {
     // it no longer writable.
     this.timeRangeTrackerSet = trt != null;
     this.timeRangeTracker = this.timeRangeTrackerSet? trt: new TimeRangeTracker();
+    // TODO : Change all writers to be specifically created for compaction context
     writer = HFile.getWriterFactory(conf, cacheConf)
         .withPath(fs, path)
         .withComparator(comparator)
@@ -140,10 +140,10 @@ public class StoreFileWriter implements Compactor.CellSink {
       // init bloom context
       switch (bloomType) {
       case ROW:
-        bloomContext = new RowBloomContext(generalBloomFilterWriter);
+        bloomContext = new RowBloomContext(generalBloomFilterWriter, comparator);
         break;
       case ROWCOL:
-        bloomContext = new RowColBloomContext(generalBloomFilterWriter);
+        bloomContext = new RowColBloomContext(generalBloomFilterWriter, comparator);
         break;
       default:
         throw new IOException(
@@ -160,7 +160,7 @@ public class StoreFileWriter implements Compactor.CellSink {
       this.deleteFamilyBloomFilterWriter = BloomFilterFactory
           .createDeleteBloomAtWrite(conf, cacheConf,
               (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
-      deleteFamilyBloomContext = new RowBloomContext(deleteFamilyBloomFilterWriter);
+      deleteFamilyBloomContext = new RowBloomContext(deleteFamilyBloomFilterWriter, comparator);
     } else {
       deleteFamilyBloomFilterWriter = null;
     }
@@ -251,11 +251,25 @@ public class StoreFileWriter implements Compactor.CellSink {
     }
   }
 
+  @Override
   public void append(final Cell cell) throws IOException {
     appendGeneralBloomfilter(cell);
     appendDeleteFamilyBloomFilter(cell);
     writer.append(cell);
     trackTimestamps(cell);
+  }
+
+  @Override
+  public void beforeShipped() throws IOException {
+    // For now these writer will always be of type ShipperListener true.
+    // TODO : Change all writers to be specifically created for compaction context
+    writer.beforeShipped();
+    if (generalBloomFilterWriter != null) {
+      generalBloomFilterWriter.beforeShipped();
+    }
+    if (deleteFamilyBloomFilterWriter != null) {
+      deleteFamilyBloomFilterWriter.beforeShipped();
+    }
   }
 
   public Path getPath() {

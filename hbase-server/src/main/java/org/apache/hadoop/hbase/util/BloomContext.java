@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 
@@ -30,17 +31,16 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 @InterfaceAudience.Private
 public abstract class BloomContext {
 
-  // TODO : Avoid holding references to lastCell
-  protected Cell lastCell;
-
   protected BloomFilterWriter bloomFilterWriter;
+  protected CellComparator comparator;
 
-  public BloomContext(BloomFilterWriter bloomFilterWriter) {
+  public BloomContext(BloomFilterWriter bloomFilterWriter, CellComparator comparator) {
     this.bloomFilterWriter = bloomFilterWriter;
+    this.comparator = comparator;
   }
 
   public Cell getLastCell() {
-    return this.lastCell;
+    return this.bloomFilterWriter.getPrevCell();
   }
 
   /**
@@ -51,8 +51,17 @@ public abstract class BloomContext {
   public void writeBloom(Cell cell) throws IOException {
     // only add to the bloom filter on a new, unique key
     if (isNewKey(cell)) {
-      bloomFilterWriter.add(cell);
-      this.lastCell = cell;
+      sanityCheck(cell);
+      bloomFilterWriter.append(cell);
+    }
+  }
+
+  private void sanityCheck(Cell cell) throws IOException {
+    if (this.getLastCell() != null) {
+      if (comparator.compare(cell, this.getLastCell()) <= 0) {
+        throw new IOException("Added a key not lexically larger than" + " previous. Current cell = "
+            + cell + ", prevCell = " + this.getLastCell());
+      }
     }
   }
 

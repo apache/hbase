@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterChunk;
@@ -60,6 +60,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
   /** The size of individual Bloom filter chunks to create */
   private int chunkByteSize;
+  /** The prev Cell that was processed  */
+  private Cell prevCell;
 
   /** A Bloom filter chunk enqueued for writing */
   private static class ReadyChunk {
@@ -159,7 +161,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   }
 
   @Override
-  public void add(Cell cell) {
+  public void append(Cell cell) throws IOException {
     if (cell == null)
       throw new NullPointerException();
 
@@ -181,7 +183,20 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     }
 
     chunk.add(cell);
+    this.prevCell = cell;
     ++totalKeyCount;
+  }
+
+  @Override
+  public void beforeShipped() throws IOException {
+    if (this.prevCell != null) {
+      this.prevCell = KeyValueUtil.toNewKeyCell(this.prevCell);
+    }
+  }
+
+  @Override
+  public Cell getPrevCell() {
+    return this.prevCell;
   }
 
   private void allocateNewChunk() {

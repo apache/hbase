@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,26 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.exceptions;
-
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import static org.junit.Assert.*;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-@SuppressWarnings("ThrowableInstanceNeverThrown")
-@Category({ SmallTests.class, ClientTests.class })
-public class TestClientExceptionsUtil {
+/**
+ * Implementors of this interface are the ones who needs to do some action when the
+ * {@link Shipper#shipped()} is called
+ */
+@InterfaceAudience.Private
+public interface ShipperListener {
 
-  @Test
-  public void testFindException() throws Exception {
-    IOException ioe = new IOException("Tesst");
-    ServiceException se = new ServiceException(ioe);
-    assertEquals(ioe, ClientExceptionsUtil.findException(se));
-  }
+  /**
+   * The action that needs to be performed before {@link Shipper#shipped()} is performed
+   * @throws IOException
+   */
+  void beforeShipped() throws IOException;
 }

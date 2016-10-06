@@ -248,4 +248,9 @@ public class ExplicitColumnTracker implements ColumnTracker {
   public boolean isDone(long timestamp) {
     return minVersions <= 0 && isExpired(timestamp);
   }
+
+  @Override
+  public void beforeShipped() throws IOException {
+    // do nothing
+  }
 }

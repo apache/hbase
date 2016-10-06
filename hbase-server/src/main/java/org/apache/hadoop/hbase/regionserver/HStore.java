@@ -971,6 +971,8 @@ public class HStore implements Store {
    * @param includesTag - includesTag or not
    * @return Writer for a new StoreFile in the tmp dir.
    */
+  // TODO : allow the Writer factory to create Writers of ShipperListener type only in case of
+  // compaction
   @Override
   public StoreFileWriter createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
       boolean isCompaction, boolean includeMVCCReadpoint, boolean includesTag,

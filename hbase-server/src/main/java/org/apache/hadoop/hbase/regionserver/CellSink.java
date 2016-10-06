@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,39 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.BloomFilterWriter;
 
 /**
- * Handles ROW bloom related context. It works with both ByteBufferedCell and byte[] backed cells
+ * A sink of cells that allows appending cells to the Writers that implement it.
+ * {@link org.apache.hadoop.hbase.io.hfile.HFile.Writer},
+ * {@link StoreFileWriter}, {@link AbstractMultiFileWriter},
+ * {@link BloomFilterWriter} are some implementors of this.
  */
 @InterfaceAudience.Private
-public class RowBloomContext extends BloomContext {
-
-  public RowBloomContext(BloomFilterWriter bloomFilterWriter, CellComparator comparator) {
-    super(bloomFilterWriter, comparator);
-  }
-
-  public void addLastBloomKey(Writer writer) throws IOException {
-    if (this.getLastCell() != null) {
-      byte[] key = CellUtil.copyRow(this.getLastCell());
-      writer.appendFileInfo(StoreFile.LAST_BLOOM_KEY, key);
-    }
-  }
-
-  @Override
-  protected boolean isNewKey(Cell cell) {
-    if (this.getLastCell() != null) {
-      return !CellUtil.matchingRows(cell, this.getLastCell());
-    }
-    return true;
-  }
+public interface CellSink {
+  /**
+   * Append the given cell
+   * @param cell the cell to be added
+   * @throws IOException
+   */
+  void append(Cell cell) throws IOException;
 }
