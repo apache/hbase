@@ -52,7 +52,7 @@
             <version>${surefire.version}</version>
             <configuration>
                 <!-- Have to set the groups here because we only do
-    split tests in this package, so groups on live in this module -->
+                    split tests in this package, so groups on live in this module -->
                 <groups>${surefire.firstPartGroups}</groups>
             </configuration>
         </plugin>

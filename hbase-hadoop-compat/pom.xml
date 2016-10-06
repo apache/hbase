@@ -52,23 +52,6 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-            <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <!-- Always skip the second part executions, since we only run
-          simple unit tests in this module -->
-                <executions>
-                    <execution>
-                        <id>secondPartTestsExecution</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         <!-- Make a jar and put the sources in the jar -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
