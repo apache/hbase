@@ -59,4 +59,11 @@ public interface ExtendedCell extends Cell, SettableSequenceId, SettableTimestam
    */
   // TODO remove the boolean param once HBASE-16706 is done.
   int getSerializedSize(boolean withTags);
+
+  /**
+   * Write the given Cell into the given buf's offset.
+   * @param buf The buffer where to write the Cell.
+   * @param offset The offset within buffer, to write the Cell.
+   */
+  void write(byte[] buf, int offset);
 }

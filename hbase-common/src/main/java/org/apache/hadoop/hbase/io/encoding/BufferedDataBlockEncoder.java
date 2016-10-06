@@ -452,6 +452,12 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
+    public void write(byte[] buf, int offset) {
+      // This is not used in actual flow. Throwing UnsupportedOperationException
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void setTimestamp(long ts) throws IOException {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
@@ -692,6 +698,12 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
     @Override
     public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
+      // This is not used in actual flow. Throwing UnsupportedOperationException
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void write(byte[] buf, int offset) {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
     }

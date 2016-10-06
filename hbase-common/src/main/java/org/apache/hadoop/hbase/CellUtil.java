@@ -543,6 +543,15 @@ public final class CellUtil {
       }
       return len;
     }
+
+    @Override
+    public void write(byte[] buf, int offset) {
+      offset = KeyValueUtil.appendToByteArray(this.cell, buf, offset, false);
+      int tagsLen = this.tags.length;
+      assert tagsLen > 0;
+      offset = Bytes.putAsShort(buf, offset, tagsLen);
+      System.arraycopy(this.tags, 0, buf, offset, tagsLen);
+    }
   }
 
   /**

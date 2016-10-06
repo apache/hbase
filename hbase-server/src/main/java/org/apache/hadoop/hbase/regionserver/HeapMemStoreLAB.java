@@ -26,11 +26,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.MemStoreChunkPool.PooledChunk;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.util.ByteRange;
-import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -106,37 +106,31 @@ public class HeapMemStoreLAB implements MemStoreLAB {
       MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
   }
 
-  /**
-   * Allocate a slice of the given length.
-   *
-   * If the size is larger than the maximum size specified for this
-   * allocator, returns null.
-   */
   @Override
-  public ByteRange allocateBytes(int size) {
+  public Cell copyCellInto(Cell cell) {
+    int size = KeyValueUtil.length(cell);
     Preconditions.checkArgument(size >= 0, "negative size");
-
     // Callers should satisfy large allocations directly from JVM since they
     // don't cause fragmentation as badly.
     if (size > maxAlloc) {
       return null;
     }
-
+    Chunk c = null;
+    int allocOffset = 0;
     while (true) {
-      Chunk c = getOrMakeChunk();
-
+      c = getOrMakeChunk();
       // Try to allocate from this chunk
-      int allocOffset = c.alloc(size);
+      allocOffset = c.alloc(size);
       if (allocOffset != -1) {
         // We succeeded - this is the common case - small alloc
         // from a big buffer
-        return new SimpleMutableByteRange(c.getData(), allocOffset, size);
+        break;
       }
-
       // not enough space!
       // try to retire this chunk
       tryRetireChunk(c);
     }
+    return KeyValueUtil.copyCellTo(cell, c.getData(), allocOffset);
   }
 
   /**

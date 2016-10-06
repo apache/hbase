@@ -27,12 +27,15 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
@@ -44,6 +47,10 @@ import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestMemStoreLAB {
+
+  private static final byte[] rk = Bytes.toBytes("r1");
+  private static final byte[] cf = Bytes.toBytes("f");
+  private static final byte[] q = Bytes.toBytes("q");
 
   /**
    * Test a bunch of random allocations
@@ -58,16 +65,17 @@ public class TestMemStoreLAB {
     // should be reasonable for unit test and also cover wraparound
     // behavior
     for (int i = 0; i < 100000; i++) {
-      int size = rand.nextInt(1000);
-      ByteRange alloc = mslab.allocateBytes(size);
-      
-      if (alloc.getBytes() != lastBuffer) {
+      int valSize = rand.nextInt(1000);
+      KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
+      int size = KeyValueUtil.length(kv);
+      KeyValue newKv = (KeyValue) mslab.copyCellInto(kv);
+      if (newKv.getBuffer() != lastBuffer) {
         expectedOff = 0;
-        lastBuffer = alloc.getBytes();
+        lastBuffer = newKv.getBuffer();
       }
-      assertEquals(expectedOff, alloc.getOffset());
+      assertEquals(expectedOff, newKv.getOffset());
       assertTrue("Allocation overruns buffer",
-          alloc.getOffset() + size <= alloc.getBytes().length);
+          newKv.getOffset() + size <= newKv.getBuffer().length);
       expectedOff += size;
     }
   }
@@ -75,10 +83,10 @@ public class TestMemStoreLAB {
   @Test
   public void testLABLargeAllocation() {
     MemStoreLAB mslab = new HeapMemStoreLAB();
-    ByteRange alloc = mslab.allocateBytes(2*1024*1024);
-    assertNull("2MB allocation shouldn't be satisfied by LAB.",
-      alloc);
-  } 
+    KeyValue kv = new KeyValue(rk, cf, q, new byte[2 * 1024 * 1024]);
+    Cell newCell = mslab.copyCellInto(kv);
+    assertNull("2MB allocation shouldn't be satisfied by LAB.", newCell);
+  }
 
   /**
    * Test allocation from lots of threads, making sure the results don't
@@ -103,10 +111,12 @@ public class TestMemStoreLAB {
         private Random r = new Random();
         @Override
         public void doAnAction() throws Exception {
-          int size = r.nextInt(1000);
-          ByteRange alloc = mslab.allocateBytes(size);
+          int valSize = r.nextInt(1000);
+          KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
+          int size = KeyValueUtil.length(kv);
+          KeyValue newKv = (KeyValue) mslab.copyCellInto(kv);
           totalAllocated.addAndGet(size);
-          allocsByThisThread.add(new AllocRecord(alloc, size));
+          allocsByThisThread.add(new AllocRecord(newKv.getBuffer(), newKv.getOffset(), size));
         }
       };
       ctx.addThread(t);
@@ -129,12 +139,12 @@ public class TestMemStoreLAB {
       if (rec.size == 0) continue;
       
       Map<Integer, AllocRecord> mapForThisByteArray =
-        mapsByChunk.get(rec.alloc.getBytes());
+        mapsByChunk.get(rec.alloc);
       if (mapForThisByteArray == null) {
         mapForThisByteArray = Maps.newTreeMap();
-        mapsByChunk.put(rec.alloc.getBytes(), mapForThisByteArray);
+        mapsByChunk.put(rec.alloc, mapForThisByteArray);
       }
-      AllocRecord oldVal = mapForThisByteArray.put(rec.alloc.getOffset(), rec);
+      AllocRecord oldVal = mapForThisByteArray.put(rec.offset, rec);
       assertNull("Already had an entry " + oldVal + " for allocation " + rec,
           oldVal);
     }
@@ -144,9 +154,9 @@ public class TestMemStoreLAB {
     for (Map<Integer, AllocRecord> allocsInChunk : mapsByChunk.values()) {
       int expectedOff = 0;
       for (AllocRecord alloc : allocsInChunk.values()) {
-        assertEquals(expectedOff, alloc.alloc.getOffset());
+        assertEquals(expectedOff, alloc.offset);
         assertTrue("Allocation overruns buffer",
-            alloc.alloc.getOffset() + alloc.size <= alloc.alloc.getBytes().length);
+            alloc.offset + alloc.size <= alloc.alloc.length);
         expectedOff += alloc.size;
       }
     }
@@ -173,8 +183,10 @@ public class TestMemStoreLAB {
     mslab = new HeapMemStoreLAB(conf);
     // launch multiple threads to trigger frequent chunk retirement
     List<Thread> threads = new ArrayList<Thread>();
+    final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
+        new byte[HeapMemStoreLAB.MAX_ALLOC_DEFAULT - 24]);
     for (int i = 0; i < 10; i++) {
-      threads.add(getChunkQueueTestThread(mslab, "testLABChunkQueue-" + i));
+      threads.add(getChunkQueueTestThread(mslab, "testLABChunkQueue-" + i, kv));
     }
     for (Thread thread : threads) {
       thread.start();
@@ -202,7 +214,8 @@ public class TestMemStoreLAB {
         + " after mslab closed but actually: " + queueLength, queueLength == 0);
   }
 
-  private Thread getChunkQueueTestThread(final HeapMemStoreLAB mslab, String threadName) {
+  private Thread getChunkQueueTestThread(final HeapMemStoreLAB mslab, String threadName,
+      Cell cellToCopyInto) {
     Thread thread = new Thread() {
       boolean stopped = false;
 
@@ -210,7 +223,7 @@ public class TestMemStoreLAB {
       public void run() {
         while (!stopped) {
           // keep triggering chunk retirement
-          mslab.allocateBytes(HeapMemStoreLAB.MAX_ALLOC_DEFAULT - 1);
+          mslab.copyCellInto(cellToCopyInto);
         }
       }
 
@@ -225,28 +238,29 @@ public class TestMemStoreLAB {
   }
 
   private static class AllocRecord implements Comparable<AllocRecord>{
-    private final ByteRange alloc;
+    private final byte[] alloc;
+    private final int offset;
     private final int size;
-    public AllocRecord(ByteRange alloc, int size) {
+
+    public AllocRecord(byte[] alloc, int offset, int size) {
       super();
       this.alloc = alloc;
+      this.offset = offset;
       this.size = size;
     }
 
     @Override
     public int compareTo(AllocRecord e) {
-      if (alloc.getBytes() != e.alloc.getBytes()) {
+      if (alloc != e.alloc) {
         throw new RuntimeException("Can only compare within a particular array");
       }
-      return Ints.compare(alloc.getOffset(), e.alloc.getOffset());
+      return Ints.compare(this.offset, e.offset);
     }
     
     @Override
     public String toString() {
-      return "AllocRecord(offset=" + alloc.getOffset() + ", size=" + size + ")";
+      return "AllocRecord(offset=" + this.offset + ", size=" + size + ")";
     }
-    
   }
-
 }
 

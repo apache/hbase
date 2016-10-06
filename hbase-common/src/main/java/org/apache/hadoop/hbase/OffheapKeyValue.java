@@ -254,6 +254,11 @@ public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
   }
 
   @Override
+  public void write(byte[] buf, int offset) {
+    ByteBufferUtils.copyFromBufferToArray(buf, this.buf, this.offset, offset, this.length);
+  }
+
+  @Override
   public String toString() {
     return CellUtil.toString(this, true);
   }

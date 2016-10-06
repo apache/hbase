@@ -2492,6 +2492,11 @@ public class KeyValue implements ExtendedCell {
     return this.getKeyLength() + this.getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 
+  @Override
+  public void write(byte[] buf, int offset) {
+    System.arraycopy(this.bytes, this.offset, buf, offset, this.length);
+  }
+
   /**
    * Comparator that compares row component only of a KeyValue.
    */
