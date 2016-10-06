@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
@@ -107,10 +106,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -5290,151 +5287,6 @@ public class TestFromClientSide {
     }
 
     table.close();
-  }
-
-  @Test
-  public void testIllegalTableDescriptor() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testIllegalTableDescriptor"));
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
-
-    // create table with 0 families
-    checkTableIsIllegal(htd);
-    htd.addFamily(hcd);
-    checkTableIsLegal(htd);
-
-    htd.setMaxFileSize(1024); // 1K
-    checkTableIsIllegal(htd);
-    htd.setMaxFileSize(0);
-    checkTableIsIllegal(htd);
-    htd.setMaxFileSize(1024 * 1024 * 1024); // 1G
-    checkTableIsLegal(htd);
-
-    htd.setMemStoreFlushSize(1024);
-    checkTableIsIllegal(htd);
-    htd.setMemStoreFlushSize(0);
-    checkTableIsIllegal(htd);
-    htd.setMemStoreFlushSize(128 * 1024 * 1024); // 128M
-    checkTableIsLegal(htd);
-
-    htd.setRegionSplitPolicyClassName("nonexisting.foo.class");
-    checkTableIsIllegal(htd);
-    htd.setRegionSplitPolicyClassName(null);
-    checkTableIsLegal(htd);
-
-    hcd.setBlocksize(0);
-    checkTableIsIllegal(htd);
-    hcd.setBlocksize(1024 * 1024 * 128); // 128M
-    checkTableIsIllegal(htd);
-    hcd.setBlocksize(1024);
-    checkTableIsLegal(htd);
-
-    hcd.setTimeToLive(0);
-    checkTableIsIllegal(htd);
-    hcd.setTimeToLive(-1);
-    checkTableIsIllegal(htd);
-    hcd.setTimeToLive(1);
-    checkTableIsLegal(htd);
-
-    hcd.setMinVersions(-1);
-    checkTableIsIllegal(htd);
-    hcd.setMinVersions(3);
-    try {
-      hcd.setMaxVersions(2);
-      fail();
-    } catch (IllegalArgumentException ex) {
-      // expected
-      hcd.setMaxVersions(10);
-    }
-    checkTableIsLegal(htd);
-
-    // HBASE-13776 Setting illegal versions for HColumnDescriptor
-    //  does not throw IllegalArgumentException
-    // finally, minVersions must be less than or equal to maxVersions
-    hcd.setMaxVersions(4);
-    hcd.setMinVersions(5);
-    checkTableIsIllegal(htd);
-    hcd.setMinVersions(3);
-
-    hcd.setScope(-1);
-    checkTableIsIllegal(htd);
-    hcd.setScope(0);
-    checkTableIsLegal(htd);
-
-    try {
-      hcd.setDFSReplication((short) -1);
-      fail("Illegal value for setDFSReplication did not throw");
-    } catch (IllegalArgumentException e) {
-      // pass
-    }
-    // set an illegal DFS replication value by hand
-    hcd.setValue(HColumnDescriptor.DFS_REPLICATION, "-1");
-    checkTableIsIllegal(htd);
-    try {
-      hcd.setDFSReplication((short) -1);
-      fail("Should throw exception if an illegal value is explicitly being set");
-    } catch (IllegalArgumentException e) {
-      // pass
-    }
-
-    // check the conf settings to disable sanity checks
-    htd.setMemStoreFlushSize(0);
-
-    // Check that logs warn on invalid table but allow it.
-    ListAppender listAppender = new ListAppender();
-    Logger log = Logger.getLogger(HMaster.class);
-    log.addAppender(listAppender);
-    log.setLevel(Level.WARN);
-
-    htd.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
-    checkTableIsLegal(htd);
-
-    assertFalse(listAppender.getMessages().isEmpty());
-    assertTrue(listAppender.getMessages().get(0).startsWith("MEMSTORE_FLUSHSIZE for table "
-        + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
-        + "cause very frequent flushing."));
-
-    log.removeAppender(listAppender);
-  }
-
-  private static class ListAppender extends AppenderSkeleton {
-    private final List<String> messages = new ArrayList<String>();
-
-    @Override
-    protected void append(LoggingEvent event) {
-      messages.add(event.getMessage().toString());
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    public boolean requiresLayout() {
-      return false;
-    }
-
-    public List<String> getMessages() {
-      return messages;
-    }
-  }
-
-  private void checkTableIsLegal(HTableDescriptor htd) throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
-    admin.createTable(htd);
-    assertTrue(admin.tableExists(htd.getTableName()));
-    admin.disableTable(htd.getTableName());
-    admin.deleteTable(htd.getTableName());
-  }
-
-  private void checkTableIsIllegal(HTableDescriptor htd) throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
-    try {
-      admin.createTable(htd);
-      fail();
-    } catch(Exception ex) {
-      // should throw ex
-    }
-    assertFalse(admin.tableExists(htd.getTableName()));
   }
 
   @Test
