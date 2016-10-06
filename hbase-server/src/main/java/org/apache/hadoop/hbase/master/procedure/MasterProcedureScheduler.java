@@ -586,6 +586,14 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       }
       return proc;
     }
+
+    @VisibleForTesting
+    protected synchronized int size() {
+      if (waitingProcedures != null) {
+        return waitingProcedures.size();
+      }
+      return 0;
+    }
   }
 
   public static class ProcedureEvent extends BaseProcedureEvent {
@@ -645,6 +653,18 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         throw new UnsupportedOperationException();
       }
       return description;
+    }
+
+    @VisibleForTesting
+    protected synchronized int size() {
+      int count = super.size();
+      if (waitingTables != null) {
+        count += waitingTables.size();
+      }
+      if (waitingServers != null) {
+        count += waitingServers.size();
+      }
+      return count;
     }
 
     @Override

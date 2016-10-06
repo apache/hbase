@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -62,14 +64,15 @@ public class TestMasterProcedureEvents {
   private static long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
-    conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 8);
+    conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
   }
 
   @BeforeClass
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(3);
+    UTIL.startMiniCluster(2);
+    UTIL.waitUntilNoRegionsInTransition();
   }
 
   @AfterClass
@@ -81,47 +84,37 @@ public class TestMasterProcedureEvents {
     }
   }
 
-  @Test
+  @After
+  public void tearDown() throws Exception {
+    for (HTableDescriptor htd: UTIL.getHBaseAdmin().listTables()) {
+      LOG.info("Tear down, remove table=" + htd.getTableName());
+      UTIL.deleteTable(htd.getTableName());
+    }
+  }
+
+  @Test(timeout = 30000)
   public void testMasterInitializedEvent() throws Exception {
     TableName tableName = TableName.valueOf("testMasterInitializedEvent");
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureQueue();
 
     HRegionInfo hri = new HRegionInfo(tableName);
     HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor("f");
-    htd.addFamily(hcd);
+    htd.addFamily(new HColumnDescriptor("f"));
 
     while (!master.isInitialized()) Thread.sleep(250);
     master.setInitialized(false); // fake it, set back later
 
-    CreateTableProcedure proc = new CreateTableProcedure(
-      procExec.getEnvironment(), htd, new HRegionInfo[] { hri });
-
-    long pollCalls = procSched.getPollCalls();
-    long nullPollCalls = procSched.getNullPollCalls();
-
-    long procId = procExec.submitProcedure(proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
-    for (int i = 0; i < 10; ++i) {
-      Thread.sleep(100);
-      assertEquals(pollCalls + 1, procSched.getPollCalls());
-      assertEquals(nullPollCalls, procSched.getNullPollCalls());
-    }
-
-    master.setInitialized(true);
-    ProcedureTestingUtility.waitProcedure(procExec, procId);
-
-    assertEquals(pollCalls + 2, procSched.getPollCalls());
-    assertEquals(nullPollCalls, procSched.getNullPollCalls());
+    // check event wait/wake
+    testProcedureEventWaitWake(master, master.getInitializedEvent(),
+      new CreateTableProcedure(procExec.getEnvironment(), htd, new HRegionInfo[] { hri }));
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testServerCrashProcedureEvent() throws Exception {
     TableName tableName = TableName.valueOf("testServerCrashProcedureEventTb");
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureQueue();
 
     while (!master.isServerCrashProcessingEnabled() || !master.isInitialized() ||
         master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
@@ -135,9 +128,6 @@ public class TestMasterProcedureEvents {
     }
 
     master.setServerCrashProcessingEnabled(false);  // fake it, set back later
-
-    long pollCalls = procSched.getPollCalls();
-    long nullPollCalls = procSched.getNullPollCalls();
 
     // Kill a server. Master will notice but do nothing other than add it to list of dead servers.
     HRegionServer hrs = getServerWithRegions();
@@ -153,24 +143,52 @@ public class TestMasterProcedureEvents {
     // Do some of the master processing of dead servers so when SCP runs, it has expected 'state'.
     master.getServerManager().moveFromOnelineToDeadServers(hrs.getServerName());
 
-    long procId = procExec.submitProcedure(
+    // check event wait/wake
+    testProcedureEventWaitWake(master, master.getServerCrashProcessingEnabledEvent(),
       new ServerCrashProcedure(procExec.getEnvironment(), hrs.getServerName(), true, carryingMeta));
+  }
 
-    for (int i = 0; i < 10; ++i) {
-      Thread.sleep(100);
-      assertEquals(pollCalls + 1, procSched.getPollCalls());
-      assertEquals(nullPollCalls, procSched.getNullPollCalls());
-    }
+  private void testProcedureEventWaitWake(final HMaster master, final ProcedureEvent event,
+      final Procedure proc) throws Exception {
+    final ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
+    final MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureQueue();
 
-    // Now, reenable processing else we can't get a lock on the ServerCrashProcedure.
-    master.setServerCrashProcessingEnabled(true);
+    final long startPollCalls = procSched.getPollCalls();
+    final long startNullPollCalls = procSched.getNullPollCalls();
+
+    // check that nothing is in the event queue
+    LOG.debug("checking " + event);
+    assertEquals(false, event.isReady());
+    assertEquals(0, event.size());
+
+    // submit the procedure
+    LOG.debug("submit " + proc);
+    long procId = procExec.submitProcedure(proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
+
+    // wait until the event is in the queue (proc executed and got into suspended state)
+    LOG.debug("wait procedure suspended on " + event);
+    while (event.size() < 1) Thread.sleep(25);
+
+    // check that the proc is in the event queue
+    LOG.debug("checking " + event + " size=" + event.size());
+    assertEquals(false, event.isReady());
+    assertEquals(1, event.size());
+
+    // wake the event
+    LOG.debug("wake " + event);
+    procSched.wakeEvent(event);
+    assertEquals(true, event.isReady());
+
+    // wait until proc completes
+    LOG.debug("waiting " + proc);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
-    LOG.debug("server crash processing poll calls: " + procSched.getPollCalls());
-    assertTrue(procSched.getPollCalls() >= (pollCalls + 2));
-    assertEquals(nullPollCalls, procSched.getNullPollCalls());
-
-    UTIL.deleteTable(tableName);
+    // check that nothing is in the event queue and the event is not suspended
+    assertEquals(true, event.isReady());
+    assertEquals(0, event.size());
+    LOG.debug("completed execution of " + proc +
+      " pollCalls=" + (procSched.getPollCalls() - startPollCalls) +
+      " nullPollCalls=" + (procSched.getNullPollCalls() - startNullPollCalls));
   }
 
   private HRegionServer getServerWithRegions() {
