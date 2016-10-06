@@ -104,7 +104,7 @@ public class TestExportSnapshotNoCluster {
     TableName tableName = builder.getTableDescriptor().getTableName();
     TestExportSnapshot.testExportFileSystemState(TEST_UTIL.getConfiguration(),
       tableName, snapshotName, snapshotName, snapshotFilesCount,
-      testDir, getDestinationDir(), false, null);
+      testDir, getDestinationDir(), false, null, true);
   }
 
   private Path getDestinationDir() {
