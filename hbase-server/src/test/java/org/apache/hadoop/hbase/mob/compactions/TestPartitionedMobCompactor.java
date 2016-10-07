@@ -53,8 +53,10 @@ import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.C
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -79,6 +81,9 @@ public class TestPartitionedMobCompactor {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    // Inject our customized DistributedFileSystem
+    TEST_UTIL.getConfiguration().setClass("fs.hdfs.impl", FaultyDistributedFileSystem.class,
+        DistributedFileSystem.class);
     TEST_UTIL.startMiniCluster(1);
     pool = createThreadPool();
   }
@@ -159,6 +164,51 @@ public class TestPartitionedMobCompactor {
     String tableName = "testCompactDelFilesWithSmallBatchSize";
     testCompactDelFilesAtBatchSize(tableName, 4, 2);
   }
+
+  @Test
+  public void testCompactFilesWithDstDirFull() throws Exception {
+    String tableName = "testCompactFilesWithDstDirFull";
+    fs = FileSystem.get(conf);
+    FaultyDistributedFileSystem faultyFs = (FaultyDistributedFileSystem)fs;
+    Path testDir = FSUtils.getRootDir(conf);
+    Path mobTestDir = new Path(testDir, MobConstants.MOB_DIR_NAME);
+    basePath = new Path(new Path(mobTestDir, tableName), family);
+
+    try {
+      int count = 2;
+      // create 2 mob files.
+      createStoreFiles(basePath, family, qf, count, Type.Put, true);
+      listFiles();
+
+      TableName tName = TableName.valueOf(tableName);
+      MobCompactor compactor = new PartitionedMobCompactor(conf, faultyFs, tName, hcd, pool);
+      faultyFs.setThrowException(true);
+      try {
+        compactor.compact(allFiles, true);
+      } catch (IOException e) {
+        System.out.println("Expected exception, ignore");
+      }
+
+      // Verify that all the files in tmp directory are cleaned up
+      Path tempPath = new Path(MobUtils.getMobHome(conf), MobConstants.TEMP_DIR_NAME);
+      FileStatus[] ls = faultyFs.listStatus(tempPath);
+
+      // Only .bulkload under this directory
+      assertTrue(ls.length == 1);
+      assertTrue(MobConstants.BULKLOAD_DIR_NAME.equalsIgnoreCase(ls[0].getPath().getName()));
+
+      Path bulkloadPath = new Path(tempPath, new Path(MobConstants.BULKLOAD_DIR_NAME, new Path(
+          tName.getNamespaceAsString(), tName.getQualifierAsString())));
+
+      // Nothing in bulkLoad directory
+      FileStatus[] lsBulkload = faultyFs.listStatus(bulkloadPath);
+      assertTrue(lsBulkload.length == 0);
+
+    } finally {
+      faultyFs.setThrowException(false);
+    }
+  }
+
 
   private void testCompactDelFilesAtBatchSize(String tableName, int batchSize,
       int delfileMaxCount)  throws Exception {
@@ -289,17 +339,30 @@ public class TestPartitionedMobCompactor {
    */
   private void createStoreFiles(Path basePath, String family, String qualifier, int count,
       Type type) throws IOException {
+    createStoreFiles(basePath, family, qualifier, count, type, false);
+  }
+
+  private void createStoreFiles(Path basePath, String family, String qualifier, int count,
+      Type type, boolean sameStartKey) throws IOException {
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     String startKey = "row_";
     MobFileName mobFileName = null;
     for (int i = 0; i < count; i++) {
-      byte[] startRow = Bytes.toBytes(startKey + i) ;
+      byte[] startRow;
+      if (sameStartKey) {
+        // When creating multiple files under one partition, suffix needs to be different.
+        startRow = Bytes.toBytes(startKey);
+        mobSuffix = UUID.randomUUID().toString().replaceAll("-", "");
+        delSuffix = UUID.randomUUID().toString().replaceAll("-", "") + "_del";
+      } else {
+        startRow = Bytes.toBytes(startKey + i);
+      }
       if(type.equals(Type.Delete)) {
         mobFileName = MobFileName.create(startRow, MobUtils.formatDate(
             new Date()), delSuffix);
       }
       if(type.equals(Type.Put)){
-        mobFileName = MobFileName.create(Bytes.toBytes(startKey + i), MobUtils.formatDate(
+        mobFileName = MobFileName.create(startRow, MobUtils.formatDate(
             new Date()), mobSuffix);
       }
       StoreFileWriter mobFileWriter = new StoreFileWriter.Builder(conf, cacheConf, fs)
@@ -393,5 +456,28 @@ public class TestPartitionedMobCompactor {
     conf.setInt(MobConstants.MOB_DELFILE_MAX_COUNT, MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
     conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE,
       MobConstants.DEFAULT_MOB_COMPACTION_BATCH_SIZE);
+  }
+
+  /**
+   * The customized Distributed File System Implementation
+   */
+  static class FaultyDistributedFileSystem extends DistributedFileSystem {
+    private volatile boolean throwException = false;
+
+    public FaultyDistributedFileSystem() {
+      super();
+    }
+
+    public void setThrowException(boolean throwException) {
+      this.throwException = throwException;
+    }
+
+    @Override
+    public boolean rename(Path src, Path dst) throws IOException {
+      if (throwException) {
+        throw new IOException("No more files allowed");
+      }
+      return super.rename(src, dst);
+    }
   }
 }
