@@ -1,60 +1,48 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.1.7 10/14/2016
 
-Release Notes - HBase - Version 1.1.7 09/26/2016
 ** Sub-task
+    * [HBASE-15308] - Flakey TestSplitWalDataLoss on branch-1.1
+    * [HBASE-15984] - Given failure to parse a given WAL that was closed cleanly, replay the WAL.
     * [HBASE-16522] - Procedure v2 - Cache system user and avoid IOException
-    * [HBASE-16518] - Remove old .arcconfig file
-    * [HBASE-16340] - ensure no Xerces jars included
-    * [HBASE-16260] - Audit dependencies for Category-X
 
 ** Bug
-    * [HBASE-16662]	- Fix open POODLE vulnerabilities
-    * [HBASE-16604] - Scanner retries on IOException can cause the scans to miss
-                      data
-    * [HBASE-16589] - Adjust log level for FATAL messages from
-                      HBaseReplicationEndpoint that are not fatal
-    * [HBASE-16552] - MiniHBaseCluster#getServerWith() does not ignore stopped
-                      RSs
-    * [HBASE-16538] - Version mismatch in HBaseConfiguration.checkDefaultsVersion
+    * [HBASE-14223] - Meta WALs are not cleared if meta region was closed and RS aborts
+    * [HBASE-14391] - Empty regionserver WAL will never be deleted although the coresponding regionserver has been stale
+    * [HBASE-14610] - IntegrationTestRpcClient from HBASE-14535 is failing with Async RPC client
+    * [HBASE-16117] - Fix Connection leak in mapred.TableOutputFormat 
+    * [HBASE-16165] - Decrease RpcServer.callQueueSize before writeResponse causes OOM
+    * [HBASE-16294] - hbck reporting "No HDFS region dir found" for replicas
+    * [HBASE-16373] - precommit needs a dockerfile with hbase prereqs
+    * [HBASE-16375] - Mapreduce mini cluster using HBaseTestingUtility not setting correct resourcemanager and jobhistory webapp address of MapReduceTestingShim  
+    * [HBASE-16460] - Can't rebuild the BucketAllocator's data structures when BucketCache uses FileIOEngine
+    * [HBASE-16527] - IOExceptions from DFS client still can cause CatalogJanitor to delete referenced files
     * [HBASE-16535] - Use regex to exclude generated classes for findbugs
-    * [HBASE-16527] - IOExceptions from DFS client still can cause CatalogJanitor
-                      to delete referenced files
-    * [HBASE-16460]	- Can't rebuild the BucketAllocator's data structures when
-                      BucketCache uses FileIOEngine
-    * [HBASE-16375]	- Mapreduce mini cluster using HBaseTestingUtility not
-                      setting correct resourcemanager and jobhistory webapp
-                      address of MapReduceTestingShim
-    * [HBASE-16294]	- hbck reporting "No HDFS region dir found" for replicas
-    * [HBASE-16165] - Decrease RpcServer.callQueueSize before writeResponse
-                      causes OOM
+    * [HBASE-16538] - Version mismatch in HBaseConfiguration.checkDefaultsVersion
+    * [HBASE-16552] - MiniHBaseCluster#getServerWith() does not ignore stopped RSs
+    * [HBASE-16589] - Adjust log level for FATAL messages from HBaseReplicationEndpoint that are not fatal
+    * [HBASE-16604] - Scanner retries on IOException can cause the scans to miss data 
+    * [HBASE-16649] - Truncate table with splits preserved can cause both data loss and truncated data appeared again
+    * [HBASE-16662] - Fix open POODLE vulnerabilities
 
 ** Improvement
-    * [HBASE-16562]	- ITBLL should fail to start if misconfigured
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    * [HBASE-15580] - Tag coprocessor limitedprivate scope to StoreFile.Reader
+    * [HBASE-16562] - ITBLL should fail to start if misconfigured
 
 ** Task
-    * [HBASE-15729] - Remove old JDiff wrapper scripts in dev-support
-    * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
-    * [HBASE-16073] - update compatibility_checker for jacc dropping comma sep args
-    * [HBASE-16154] - bring non-master branches up to date wrt check_compatibility script
-    * [HBASE-16376] - Document implicit side-effects on partial results when calling Scan#setBatch(int)
-    * [HBASE-16467] - Move AbstractHBaseTool to hbase-common
+    * [HBASE-15033] - Backport test-patch.sh and zombie-detector.sh from master to branch-1.1
+    * [HBASE-15185] - Fix jdk8 javadoc warnings for branch-1.1
+    * [HBASE-16260] - Audit dependencies for Category-X
+    * [HBASE-16340] - ensure no Xerces jars included
+    * [HBASE-16518] - Remove old .arcconfig file
+
+** Test
+    * [HBASE-13587] - TestSnapshotCloneIndependence.testOnlineSnapshotDeleteIndependent is flakey
+    * [HBASE-13603] - Write test asserting desired priority of RS->Master RPCs
+
+** Umbrella
+    * [HBASE-15168] - Zombie stomping branch-1.1 edition
 
 
 Release Notes - HBase - Version 1.1.6 09/05/2016
