@@ -57,19 +57,94 @@ Release Notes - HBase - Version 1.1.7 09/26/2016
     * [HBASE-16467] - Move AbstractHBaseTool to hbase-common
 
 
+Release Notes - HBase - Version 1.1.6 09/05/2016
 
+** Sub-task
+    * [HBASE-15878] - Deprecate doBulkLoad(Path hfofDir, final HTable table)  in branch-1 (even though its 'late')
+    * [HBASE-16056] - Procedure v2 - fix master crash for FileNotFound
+    * [HBASE-16189] - [Rolling Upgrade] 2.0 hfiles cannot be opened by 1.x servers
+    * [HBASE-16194] - Should count in MSLAB chunk allocation into heap size change when adding duplicate cells
+    * [HBASE-16195] - Should not add chunk into chunkQueue if not using chunk pool in HeapMemStoreLAB
+    * [HBASE-16317] - revert all ESAPI changes
+    * [HBASE-16318] - fail build if license isn't in whitelist
+    * [HBASE-16321] - Ensure findbugs jsr305 jar isn't present
+    * [HBASE-16452] - Procedure v2 - Make ProcedureWALPrettyPrinter extend Tool
+
+** Bug
+    * [HBASE-11625] - Reading datablock throws "Invalid HFile block magic" and can not switch to hdfs checksum 
+    * [HBASE-15615] - Wrong sleep time when RegionServerCallable need retry
+    * [HBASE-15635] - Mean age of Blocks in cache (seconds) on webUI should be greater than zero
+    * [HBASE-15698] - Increment TimeRange not serialized to server
+    * [HBASE-15801] - Upgrade checkstyle for all branches
+    * [HBASE-15811] - Batch Get after batch Put does not fetch all Cells
+    * [HBASE-15824] - LocalHBaseCluster gets bind exception in master info port
+    * [HBASE-15850] - Localize the configuration change in testCheckTableLocks to reduce flakiness of TestHBaseFsck test suite 
+    * [HBASE-15852] - Backport HBASE-15125 'HBaseFsck's adoptHdfsOrphan function creates region with wrong end key boundary' to Apache HBase 1.1
+    * [HBASE-15856] - Cached Connection instances can wind up with addresses never resolved
+    * [HBASE-15873] - ACL for snapshot restore / clone is not enforced
+    * [HBASE-15880] - RpcClientImpl#tracedWriteRequest incorrectly closes HTrace span
+    * [HBASE-15925] - compat-module maven variable not evaluated
+    * [HBASE-15954] - REST server should log requests with TRACE instead of DEBUG
+    * [HBASE-15955] - Disable action in CatalogJanitor#setEnabled should wait for active cleanup scan to finish
+    * [HBASE-15957] - RpcClientImpl.close never ends in some circumstances
+    * [HBASE-15975] - logic in TestHTableDescriptor#testAddCoprocessorWithSpecStr is wrong
+    * [HBASE-15976] - RegionServerMetricsWrapperRunnable will be failure  when disable blockcache.
+    * [HBASE-16012] - Major compaction can't work due to obsolete scanner read point in RegionServer
+    * [HBASE-16016] - AssignmentManager#waitForAssignment could have unexpected negative deadline
+    * [HBASE-16032] - Possible memory leak in StoreScanner
+    * [HBASE-16093] - Splits failed before creating daughter regions leave meta inconsistent
+    * [HBASE-16129] - check_compatibility.sh is broken when using Java API Compliance Checker v1.7
+    * [HBASE-16132] - Scan does not return all the result when regionserver is busy
+    * [HBASE-16135] - PeerClusterZnode under rs of removed peer may never be deleted
+    * [HBASE-16144] - Replication queue's lock will live forever if RS acquiring the lock has died prematurely
+    * [HBASE-16190] - IntegrationTestDDLMasterFailover failed with IllegalArgumentException: n must be positive
+    * [HBASE-16201] - NPE in RpcServer causing intermittent UT failure of TestMasterReplication#testHFileCyclicReplication
+    * [HBASE-16207] - can't restore snapshot without "Admin" permission
+    * [HBASE-16237] - Blocks for hbase:meta table are not cached in L1 cache
+    * [HBASE-16238] - It's useless to catch SESSIONEXPIRED exception and retry in RecoverableZooKeeper
+    * [HBASE-16270] - Handle duplicate clearing of snapshot in region replicas
+    * [HBASE-16272] - Overflow in ServerName's compareTo method
+    * [HBASE-16281] - TestMasterReplication is flaky
+    * [HBASE-16288] - HFile intermediate block level indexes might recurse forever creating multi TB files
+    * [HBASE-16289] - AsyncProcess stuck messages need to print region/server
+    * [HBASE-16296] - Reverse scan performance degrades when using filter lists
+    * [HBASE-16315] - RegionSizeCalculator prints region names as binary without escapes
+    * [HBASE-16319] - Fix TestCacheOnWrite after HBASE-16288
+    * [HBASE-16350] - Undo server abort from HBASE-14968
+    * [HBASE-16360] - TableMapReduceUtil addHBaseDependencyJars has the wrong class name for PrefixTreeCodec
+    * [HBASE-16368] - test*WhenRegionMove in TestPartialResultsFromClientSide is flaky
+    * [HBASE-16420] - Fix source incompatibility of Table interface
+    * [HBASE-16429] - FSHLog: deadlock if rollWriter called when ring buffer filled with appends
+    * [HBASE-16464] - archive folder grows bigger and bigger due to corrupt snapshot under tmp dir
+    * [HBASE-16471] - Region Server metrics context will be wrong when machine hostname contain "master" word
+
+** Improvement
+    * [HBASE-13532] - Make UnknownScannerException logging less scary
+    * [HBASE-14345] - Consolidate printUsage in IntegrationTestLoadAndVerify
+    * [HBASE-15119] - Include git SHA in check_compatibility reports
+    * [HBASE-15837] - Memstore size accounting is wrong if postBatchMutate() throws exception
+    * [HBASE-15854] - Log the cause of SASL connection failures
+    * [HBASE-15931] - Add log for long-running tasks in AsyncProcess
+    * [HBASE-16124] - Make check_compatibility.sh less verbose when building HBase
+    * [HBASE-16140] - bump owasp.esapi from 2.1.0 to 2.1.0.1
+    * [HBASE-16241] - Allow specification of annotations to use when running check_compatibility.sh
+    * [HBASE-16256] - Purpose of EnvironmentEdge, EnvironmentEdgeManager
+    * [HBASE-16266] - Do not throw ScannerTimeoutException when catch UnknownScannerException
+    * [HBASE-16379] - [replication] Minor improvement to replication/copy_tables_desc.rb
+
+** Task
+    * [HBASE-15729] - Remove old JDiff wrapper scripts in dev-support
+    * [HBASE-15895] - remove unmaintained jenkins build analysis tool.
+    * [HBASE-16073] - update compatibility_checker for jacc dropping comma sep args
+    * [HBASE-16154] - bring non-master branches up to date wrt check_compatibility script
+    * [HBASE-16376] - Document implicit side-effects on partial results when calling Scan#setBatch(int)
+    * [HBASE-16467] - Move AbstractHBaseTool to hbase-common
 
 
 Release Notes - HBase - Version 1.1.5 05/08/2016
 
 ** Sub-task
     * [HBASE-15479] - No more garbage or beware of autoboxing
-
-
-
-
-
-
 
 ** Bug
     * [HBASE-13627] - Terminating RS results in redundant CLOSE RPC
