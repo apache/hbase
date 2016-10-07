@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -149,6 +150,19 @@ public class HStore implements Store {
    *   - completing a compaction
    */
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  /**
+   * Lock specific to archiving compacted store files.  This avoids races around
+   * the combination of retrieving the list of compacted files and moving them to
+   * the archive directory.  Since this is usually a background process (other than
+   * on close), we don't want to handle this with the store write lock, which would
+   * block readers and degrade performance.
+   *
+   * Locked by:
+   *   - CompactedHFilesDispatchHandler via closeAndArchiveCompactedFiles()
+   *   - close()
+   */
+  final ReentrantLock archiveLock = new ReentrantLock();
+
   private final boolean verifyBulkLoads;
 
   private ScanInfo scanInfo;
@@ -835,6 +849,7 @@ public class HStore implements Store {
 
   @Override
   public ImmutableCollection<StoreFile> close() throws IOException {
+    this.archiveLock.lock();
     this.lock.writeLock().lock();
     try {
       // Clear so metrics doesn't find them.
@@ -890,6 +905,7 @@ public class HStore implements Store {
       return result;
     } finally {
       this.lock.writeLock().unlock();
+      this.archiveLock.unlock();
     }
   }
 
@@ -2641,26 +2657,32 @@ public class HStore implements Store {
   }
 
   @Override
-  public void closeAndArchiveCompactedFiles() throws IOException {
-    lock.readLock().lock();
-    Collection<StoreFile> copyCompactedfiles = null;
+  public synchronized void closeAndArchiveCompactedFiles() throws IOException {
+    // ensure other threads do not attempt to archive the same files on close()
+    archiveLock.lock();
     try {
-      Collection<StoreFile> compactedfiles =
-          this.getStoreEngine().getStoreFileManager().getCompactedfiles();
-      if (compactedfiles != null && compactedfiles.size() != 0) {
-        // Do a copy under read lock
-        copyCompactedfiles = new ArrayList<StoreFile>(compactedfiles);
-      } else {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("No compacted files to archive");
-          return;
+      lock.readLock().lock();
+      Collection<StoreFile> copyCompactedfiles = null;
+      try {
+        Collection<StoreFile> compactedfiles =
+            this.getStoreEngine().getStoreFileManager().getCompactedfiles();
+        if (compactedfiles != null && compactedfiles.size() != 0) {
+          // Do a copy under read lock
+          copyCompactedfiles = new ArrayList<StoreFile>(compactedfiles);
+        } else {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("No compacted files to archive");
+            return;
+          }
         }
+      } finally {
+        lock.readLock().unlock();
+      }
+      if (copyCompactedfiles != null && !copyCompactedfiles.isEmpty()) {
+        removeCompactedfiles(copyCompactedfiles);
       }
     } finally {
-      lock.readLock().unlock();
-    }
-    if (copyCompactedfiles != null && !copyCompactedfiles.isEmpty()) {
-      removeCompactedfiles(copyCompactedfiles);
+      archiveLock.unlock();
     }
   }
 
