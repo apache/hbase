@@ -27,8 +27,10 @@ import org.apache.hadoop.hbase.coprocessor.*;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMIServerSocketFactory;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 
 import javax.management.MBeanServer;
@@ -36,8 +38,6 @@ import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.management.remote.rmi.RMIConnectorServer;
-import javax.rmi.ssl.SslRMIClientSocketFactory;
-import javax.rmi.ssl.SslRMIServerSocketFactory;
 
 /**
  * Pluggable JMX Agent for HBase(to fix the 2 random TCP ports issue
@@ -55,6 +55,7 @@ public class JMXListener implements Coprocessor {
   public static final int defRegionserverRMIRegistryPort = 10102;
 
   private JMXConnectorServer jmxCS = null;
+  private Registry rmiRegistry = null;
 
   public static JMXServiceURL buildJMXServiceURL(int rmiRegistryPort,
       int rmiConnectorPort) throws IOException {
@@ -122,7 +123,7 @@ public class JMXListener implements Coprocessor {
     }
 
     // Create the RMI registry
-    LocateRegistry.createRegistry(rmiRegistryPort);
+    rmiRegistry = LocateRegistry.createRegistry(rmiRegistryPort);
     // Retrieve the PlatformMBeanServer.
     MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
 
@@ -136,6 +137,10 @@ public class JMXListener implements Coprocessor {
       LOG.info("ConnectorServer started!");
     } catch (IOException e) {
       LOG.error("fail to start connector server!", e);
+      // deregister the RMI registry
+      if (rmiRegistry != null) {
+        UnicastRemoteObject.unexportObject(rmiRegistry, true);
+      }
     }
 
   }
@@ -145,6 +150,10 @@ public class JMXListener implements Coprocessor {
       jmxCS.stop();
       LOG.info("ConnectorServer stopped!");
       jmxCS = null;
+    }
+    // deregister the RMI registry
+    if (rmiRegistry != null) {
+      UnicastRemoteObject.unexportObject(rmiRegistry, true);
     }
   }
 
