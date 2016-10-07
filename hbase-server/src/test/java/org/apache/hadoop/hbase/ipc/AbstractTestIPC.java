@@ -300,15 +300,18 @@ public abstract class AbstractTestIPC {
   @Test
   public void testRpcMaxRequestSize() throws IOException, InterruptedException {
     Configuration conf = new Configuration(CONF);
-    conf.setInt(RpcServer.MAX_REQUEST_SIZE, 100);
+    conf.setInt(RpcServer.MAX_REQUEST_SIZE, 1000);
     RpcServer rpcServer = new TestRpcServer(conf);
     AbstractRpcClient client = createRpcClient(conf);
     try {
       rpcServer.start();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
-      // set total RPC size bigger than 100 bytes
-      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello.hello.hello.hello."
-          + "hello.hello.hello.hello.hello.hello.hello.hello.hello.hello.hello.hello").build();
+      StringBuilder message = new StringBuilder(1200);
+      for (int i = 0; i < 200; i++) {
+        message.append("hello.");
+      }
+      // set total RPC size bigger than 1000 bytes
+      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message.toString()).build();
       InetSocketAddress address = rpcServer.getListenerAddress();
       if (address == null) {
         throw new IOException("Listener channel is closed");
@@ -319,8 +322,10 @@ public abstract class AbstractTestIPC {
           md.getOutputType().toProto(), User.getCurrent(), address,
           new MetricsConnection.CallStats());
         fail("RPC should have failed because it exceeds max request size");
-      } catch(IOException ex) {
-        // pass
+      } catch(IOException e) {
+        LOG.info("Caught expected exception: " + e);
+        assertTrue(e.toString(),
+            StringUtils.stringifyException(e).contains("RequestTooBigException"));
       }
     } finally {
       rpcServer.stop();
