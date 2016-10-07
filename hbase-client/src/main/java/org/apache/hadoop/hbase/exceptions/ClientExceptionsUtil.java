@@ -63,7 +63,7 @@ public final class ClientExceptionsUtil {
         || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException
         || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
         || cur instanceof CallQueueTooBigException || cur instanceof CallDroppedException
-        || cur instanceof NotServingRegionException);
+        || cur instanceof NotServingRegionException || cur instanceof RequestTooBigException);
   }
 
 
