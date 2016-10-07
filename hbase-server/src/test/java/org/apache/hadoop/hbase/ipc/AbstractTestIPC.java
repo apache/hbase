@@ -204,13 +204,13 @@ public abstract class AbstractTestIPC {
   @Test
   public void testRpcMaxRequestSize() throws IOException, ServiceException {
     Configuration conf = new Configuration(CONF);
-    conf.setInt(RpcServer.MAX_REQUEST_SIZE, 100);
+    conf.setInt(RpcServer.MAX_REQUEST_SIZE, 1000);
     RpcServer rpcServer = new TestRpcServer(conf);
     try (AbstractRpcClient<?> client = createRpcClient(conf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
-      StringBuilder message = new StringBuilder(120);
-      for (int i = 0; i < 20; i++) {
+      StringBuilder message = new StringBuilder(1200);
+      for (int i = 0; i < 200; i++) {
         message.append("hello.");
       }
       // set total RPC size bigger than 100 bytes
@@ -220,8 +220,9 @@ public abstract class AbstractTestIPC {
         param);
       fail("RPC should have failed because it exceeds max request size");
     } catch (ServiceException e) {
-      LOG.info("Caught expected exception: " + e.toString());
-      // the rpc server just close the connection so we can not get the detail message.
+      LOG.info("Caught expected exception: " + e);
+      assertTrue(e.toString(),
+          StringUtils.stringifyException(e).contains("RequestTooBigException"));
     } finally {
       rpcServer.stop();
     }

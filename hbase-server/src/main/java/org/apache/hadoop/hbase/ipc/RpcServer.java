@@ -26,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -85,6 +86,7 @@ import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
@@ -257,6 +259,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   protected HBaseRPCErrorHandler errorHandler = null;
 
   static final String MAX_REQUEST_SIZE = "hbase.ipc.max.request.size";
+  private static final RequestTooBigException REQUEST_TOO_BIG_EXCEPTION =
+      new RequestTooBigException();
+
   private static final String WARN_RESPONSE_TIME = "hbase.ipc.warn.response.time";
   private static final String WARN_RESPONSE_SIZE = "hbase.ipc.warn.response.size";
 
@@ -1621,9 +1626,47 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
 
         if (dataLength > maxRequestSize) {
-          throw new DoNotRetryIOException("RPC data length of " + dataLength + " received from "
-              + getHostAddress() + " is greater than max allowed " + maxRequestSize + ". Set \""
-              + MAX_REQUEST_SIZE + "\" on server to override this limit (not recommended)");
+          String msg = "RPC data length of " + dataLength + " received from "
+              + getHostAddress() + " is greater than max allowed "
+              + maxRequestSize + ". Set \"" + MAX_REQUEST_SIZE
+              + "\" on server to override this limit (not recommended)";
+          LOG.warn(msg);
+
+          if (connectionHeaderRead && connectionPreambleRead) {
+            incRpcCount();
+            // Construct InputStream for the non-blocking SocketChannel
+            // We need the InputStream because we want to read only the request header
+            // instead of the whole rpc.
+            ByteBuffer buf = ByteBuffer.allocate(1);
+            InputStream is = new InputStream() {
+              @Override
+              public int read() throws IOException {
+                channelRead(channel, buf);
+                buf.flip();
+                int x = buf.get();
+                buf.flip();
+                return x;
+              }
+            };
+            CodedInputStream cis = CodedInputStream.newInstance(is);
+            int headerSize = cis.readRawVarint32();
+            Message.Builder builder = RequestHeader.newBuilder();
+            ProtobufUtil.mergeFrom(builder, cis, headerSize);
+            RequestHeader header = (RequestHeader) builder.build();
+
+            // Notify the client about the offending request
+            Call reqTooBig = new Call(header.getCallId(), this.service, null, null, null,
+                null, this, responder, 0, null, this.addr,0);
+            metrics.exception(REQUEST_TOO_BIG_EXCEPTION);
+            setupResponse(null, reqTooBig, REQUEST_TOO_BIG_EXCEPTION, msg);
+            // We are going to close the connection, make sure we process the response
+            // before that. In rare case when this fails, we still close the connection.
+            responseWriteLock.lock();
+            responder.processResponse(reqTooBig);
+            responseWriteLock.unlock();
+          }
+          // Close the connection
+          return -1;
         }
 
         data = ByteBuffer.allocate(dataLength);
