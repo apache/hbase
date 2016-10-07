@@ -3256,8 +3256,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (batchOp.retCodeDetails[i].getOperationStatusCode() != OperationStatusCode.NOT_RUN) {
           continue;
         }
-        addedSize += applyFamilyMapToMemstore(familyMaps[i], replay,
+        // We need to update the sequence id for following reasons.
+        // 1) If the op is in replay mode, FSWALEntry#stampRegionSequenceId won't stamp sequence id.
+        // 2) If no WAL, FSWALEntry won't be used
+        boolean updateSeqId = replay || batchOp.getMutation(i).getDurability() == Durability.SKIP_WAL;
+        if (updateSeqId) {
+          this.updateSequenceId(familyMaps[i].values(),
             replay? batchOp.getReplaySequenceId(): writeEntry.getWriteNumber());
+        }
+        addedSize += applyFamilyMapToMemstore(familyMaps[i]);
       }
 
       // STEP 6. Complete mvcc.
@@ -3673,6 +3680,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  private void updateSequenceId(final Iterable<List<Cell>> cellItr, final long sequenceId)
+      throws IOException {
+    for (List<Cell> cells: cellItr) {
+      if (cells == null) return;
+      for (Cell cell : cells) {
+        CellUtil.setSequenceId(cell, sequenceId);
+      }
+    }
+  }
+
   @Override
   public void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
       throws IOException {
@@ -3783,15 +3800,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param familyMap Map of Cells by family
    * @return the additional memory usage of the memstore caused by the new entries.
    */
-  private long applyFamilyMapToMemstore(Map<byte[], List<Cell>> familyMap, boolean replay,
-      long sequenceId)
+  private long applyFamilyMapToMemstore(Map<byte[], List<Cell>> familyMap)
   throws IOException {
     long size = 0;
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
       byte[] family = e.getKey();
       List<Cell> cells = e.getValue();
       assert cells instanceof RandomAccess;
-      size += applyToMemstore(getStore(family), cells, false, replay, sequenceId);
+      size += applyToMemstore(getStore(family), cells, false);
     }
     return size;
   }
@@ -3803,34 +3819,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return Memstore change in size on insert of these Cells.
    * @see #applyToMemstore(Store, Cell, long)
    */
-  private long applyToMemstore(final Store store, final List<Cell> cells,
-      final boolean delta, boolean replay, long sequenceId)
+  private long applyToMemstore(final Store store, final List<Cell> cells, final boolean delta)
   throws IOException {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemstore!!!!
-    long size = 0;
     boolean upsert = delta && store.getFamily().getMaxVersions() == 1;
-    int count = cells.size();
     if (upsert) {
-      size += store.upsert(cells, getSmallestReadPoint());
+      return store.upsert(cells, getSmallestReadPoint());
     } else {
-      for (int i = 0; i < count; i++) {
-        Cell cell = cells.get(i);
-        // TODO: This looks wrong.. checking for sequenceid of zero is expensive!!!!! St.Ack
-        // When is it zero anyways? When replay? Then just rely on that flag.
-        if (cell.getSequenceId() == 0 || replay) {
-          CellUtil.setSequenceId(cell, sequenceId);
-        }
-        size += store.add(cell);
-      }
+      return store.add(cells);
     }
-    return size;
   }
 
   /**
    * @return Memstore change in size on insert of these Cells.
    * @see #applyToMemstore(Store, List, boolean, boolean, long)
    */
-  private long applyToMemstore(final Store store, final Cell cell, long sequenceId)
+  private long applyToMemstore(final Store store, final Cell cell)
   throws IOException {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemstore!!!!
     if (store == null) {
@@ -7045,7 +7049,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 CellUtil.setSequenceId(cell, sequenceId);
               }
               Store store = getStore(cell);
-              addedSize += applyToMemstore(store, cell, sequenceId);
+              addedSize += applyToMemstore(store, cell);
             }
           }
           // STEP 8. Complete mvcc.
@@ -7231,12 +7235,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // transaction.
           recordMutationWithoutWal(mutation.getFamilyCellMap());
           writeEntry = mvcc.begin();
+          updateSequenceId(forMemStore.values(), writeEntry.getWriteNumber());
         }
         // Now write to MemStore. Do it a column family at a time.
-        long sequenceId = writeEntry.getWriteNumber();
         for (Map.Entry<Store, List<Cell>> e: forMemStore.entrySet()) {
-          accumulatedResultSize +=
-              applyToMemstore(e.getKey(), e.getValue(), true, false, sequenceId);
+          accumulatedResultSize += applyToMemstore(e.getKey(), e.getValue(), true);
         }
         mvcc.completeAndWait(writeEntry);
         if (rsServices != null && rsServices.getNonceManager() != null) {

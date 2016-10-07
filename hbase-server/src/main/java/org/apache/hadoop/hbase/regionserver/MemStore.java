@@ -74,6 +74,13 @@ public interface MemStore extends HeapSize {
   long add(final Cell cell);
 
   /**
+   * Write the updates
+   * @param cells
+   * @return approximate size of the passed cell.
+   */
+  long add(Iterable<Cell> cells);
+
+  /**
    * @return Oldest timestamp of all the Cells in the MemStore
    */
   long timeOfOldestEdit();

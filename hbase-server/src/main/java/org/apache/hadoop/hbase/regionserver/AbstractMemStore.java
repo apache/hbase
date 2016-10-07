@@ -97,6 +97,15 @@ public abstract class AbstractMemStore implements MemStore {
    */
   public abstract void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent);
 
+  @Override
+  public long add(Iterable<Cell> cells) {
+    long size = 0;
+    for (Cell cell : cells) {
+      size += add(cell);
+    }
+    return size;
+  }
+  
   /**
    * Write an update
    * @param cell the cell to be added

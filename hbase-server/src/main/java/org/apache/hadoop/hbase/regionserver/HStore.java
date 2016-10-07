@@ -635,6 +635,16 @@ public class HStore implements Store {
   }
 
   @Override
+  public long add(final Iterable<Cell> cells) {
+    lock.readLock().lock();
+    try {
+      return memstore.add(cells);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  @Override
   public long timeOfOldestEdit() {
     return memstore.timeOfOldestEdit();
   }
