@@ -753,7 +753,9 @@ public class MasterCoprocessorHost
   }
 
   public void preShutdown() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    // While stopping the cluster all coprocessors method should be executed first then the
+    // coprocessor should be cleaned up.
+    execShutdown(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -768,7 +770,9 @@ public class MasterCoprocessorHost
   }
 
   public void preStopMaster() throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+    // While stopping master all coprocessors method should be executed first then the coprocessor
+    // environment should be cleaned up.
+    execShutdown(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
@@ -1154,4 +1158,52 @@ public class MasterCoprocessorHost
     }
     return bypass;
   }
+
+  /**
+   * Master coprocessor classes can be configured in any order, based on that priority is set and
+   * chained in a sorted order. For preStopMaster()/preShutdown(), coprocessor methods are invoked
+   * in call() and environment is shutdown in postEnvCall(). <br>
+   * Need to execute all coprocessor methods first then postEnvCall(), otherwise some coprocessors
+   * may remain shutdown if any exception occurs during next coprocessor execution which prevent
+   * Master stop or cluster shutdown. (Refer:
+   * <a href="https://issues.apache.org/jira/browse/HBASE-16663">HBASE-16663</a>
+   * @param ctx CoprocessorOperation
+   * @return true if bypaas coprocessor execution, false if not.
+   * @throws IOException
+   */
+  private boolean execShutdown(final CoprocessorOperation ctx) throws IOException {
+    if (ctx == null) return false;
+    boolean bypass = false;
+    List<MasterEnvironment> envs = coprocessors.get();
+    int envsSize = envs.size();
+    // Iterate the coprocessors and execute CoprocessorOperation's call()
+    for (int i = 0; i < envsSize; i++) {
+      MasterEnvironment env = envs.get(i);
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx.prepare(env);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ctx.call((MasterObserver) env.getInstance(), ctx);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+
+    // Iterate the coprocessors and execute CoprocessorOperation's postEnvCall()
+    for (int i = 0; i < envsSize; i++) {
+      MasterEnvironment env = envs.get(i);
+      ctx.postEnvCall(env);
+    }
+    return bypass;
+  }
+
 }
