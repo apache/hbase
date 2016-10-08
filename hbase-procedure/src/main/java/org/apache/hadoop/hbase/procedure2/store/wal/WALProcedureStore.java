@@ -122,6 +122,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private final AtomicBoolean inSync = new AtomicBoolean(false);
   private final AtomicLong totalSynced = new AtomicLong(0);
   private final AtomicLong lastRollTs = new AtomicLong(0);
+  private final AtomicLong syncId = new AtomicLong(0);
 
   private LinkedTransferQueue<ByteSlot> slotsCache = null;
   private Set<ProcedureWALFile> corruptedLogs = null;
@@ -226,15 +227,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   @Override
-  public void stop(boolean abort) {
+  public void stop(final boolean abort) {
     if (!setRunning(false)) {
       return;
     }
 
-    LOG.info("Stopping the WAL Procedure Store");
+    LOG.info("Stopping the WAL Procedure Store, isAbort=" + abort +
+      (isSyncAborted() ? " (self aborting)" : ""));
     sendStopSignal();
-
-    if (!abort) {
+    if (!isSyncAborted()) {
       try {
         while (syncThread.isAlive()) {
           sendStopSignal();
@@ -525,6 +526,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         }
       }
 
+      final long pushSyncId = syncId.get();
       updateStoreTracker(type, procId, subProcIds);
       slots[slotIndex++] = slot;
       logId = flushLogId;
@@ -540,7 +542,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
         slotCond.signal();
       }
 
-      syncCond.await();
+      while (pushSyncId == syncId.get() && isRunning()) {
+        syncCond.await();
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       sendAbortProcessSignal();
@@ -642,13 +646,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
           totalSyncedToStore = totalSynced.addAndGet(slotSize);
           slotIndex = 0;
           inSync.set(false);
+          syncId.incrementAndGet();
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          sendAbortProcessSignal();
           syncException.compareAndSet(null, e);
+          sendAbortProcessSignal();
           throw e;
         } catch (Throwable t) {
           syncException.compareAndSet(null, t);
+          sendAbortProcessSignal();
           throw t;
         } finally {
           syncCond.signalAll();
@@ -679,13 +685,12 @@ public class WALProcedureStore extends ProcedureStoreBase {
       } catch (Throwable e) {
         LOG.warn("unable to sync slots, retry=" + retry);
         if (++retry >= maxRetriesBeforeRoll) {
-          if (logRolled >= maxSyncFailureRoll) {
+          if (logRolled >= maxSyncFailureRoll && isRunning()) {
             LOG.error("Sync slots after log roll failed, abort.", e);
-            sendAbortProcessSignal();
             throw e;
           }
 
-          if (!rollWriterOrDie()) {
+          if (!rollWriterWithRetries()) {
             throw e;
           }
 
@@ -720,8 +725,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return totalSynced;
   }
 
-  private boolean rollWriterOrDie() {
-    for (int i = 0; i < rollRetries; ++i) {
+  private boolean rollWriterWithRetries() {
+    for (int i = 0; i < rollRetries && isRunning(); ++i) {
       if (i > 0) Threads.sleepWithoutInterrupt(waitBeforeRoll * i);
 
       try {
@@ -733,8 +738,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       }
     }
     LOG.fatal("Unable to roll the log");
-    sendAbortProcessSignal();
-    throw new RuntimeException("unable to roll the log");
+    return false;
   }
 
   private boolean tryRollWriter() {
@@ -777,7 +781,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  @VisibleForTesting void removeInactiveLogsForTesting() throws Exception {
+  @VisibleForTesting
+  protected void removeInactiveLogsForTesting() throws Exception {
     lock.lock();
     try {
       removeInactiveLogs();
@@ -812,6 +817,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   private boolean rollWriter() throws IOException {
+    if (!isRunning()) return false;
+
     // Create new state-log
     if (!rollWriter(flushLogId + 1)) {
       LOG.warn("someone else has already created log " + flushLogId);
@@ -1043,6 +1050,10 @@ public class WALProcedureStore extends ProcedureStoreBase {
       for (int i = 0; i < logFiles.length; ++i) {
         final Path logPath = logFiles[i].getPath();
         leaseRecovery.recoverFileLease(fs, logPath);
+        if (!isRunning()) {
+          throw new IOException("wal aborting");
+        }
+
         maxLogId = Math.max(maxLogId, getLogIdFromName(logPath.getName()));
         ProcedureWALFile log = initOldLog(logFiles[i]);
         if (log != null) {
@@ -1061,7 +1072,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
    * it using entries in the log.
    */
   private void initTrackerFromOldLogs() {
-    if (logs.isEmpty()) return;
+    if (logs.isEmpty() || !isRunning()) return;
     ProcedureWALFile log = logs.getLast();
     if (!log.getTracker().isPartial()) {
       storeTracker.resetTo(log.getTracker());

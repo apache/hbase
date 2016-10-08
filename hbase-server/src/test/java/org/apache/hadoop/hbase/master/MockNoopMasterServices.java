@@ -180,6 +180,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public boolean isStopping() {
+    return stopped;
+  }
+
+  @Override
   public boolean isStopped() {
     return stopped;
   }

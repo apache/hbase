@@ -374,4 +374,9 @@ public interface MasterServices extends Server {
    * @return load balancer
    */
   public LoadBalancer getLoadBalancer();
+
+  /**
+   * @return True if this master is stopping.
+   */
+  boolean isStopping();
 }

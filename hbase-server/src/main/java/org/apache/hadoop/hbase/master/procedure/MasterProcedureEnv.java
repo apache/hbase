@@ -61,9 +61,14 @@ public class MasterProcedureEnv {
         @Override
         public boolean progress() {
           LOG.debug("Recover Procedure Store log lease: " + path);
-          return master.isActiveMaster();
+          return isRunning();
         }
       });
+    }
+
+    private boolean isRunning() {
+      return master.isActiveMaster() && !master.isStopped() &&
+        !master.isStopping() && !master.isAborted();
     }
   }
 

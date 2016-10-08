@@ -398,6 +398,7 @@ public class MasterProcedureTestingUtility {
     //   restart executor/store
     //   rollback step N - save on store
     InjectAbortOnLoadListener abortListener = new InjectAbortOnLoadListener(procExec);
+    abortListener.addProcId(procId);
     procExec.registerListener(abortListener);
     try {
       for (int i = 0; !procExec.isFinished(procId); ++i) {
