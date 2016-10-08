@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -4118,6 +4119,67 @@ public class TestFromClientSide {
       ok = true;
     }
     assertEquals(true, ok);
+  }
+
+  private List<Result> doAppend(final boolean walUsed) throws IOException {
+    LOG.info("Starting testAppend, walUsed is " + walUsed);
+    final TableName TABLENAME = TableName.valueOf(walUsed ? "testAppendWithWAL" : "testAppendWithoutWAL");
+    Table t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final byte[] row1 = Bytes.toBytes("c");
+    final byte[] row2 = Bytes.toBytes("b");
+    final byte[] row3 = Bytes.toBytes("a");
+    final byte[] qual = Bytes.toBytes("qual");
+    Put put_0 = new Put(row2);
+    put_0.addColumn(FAMILY, qual, Bytes.toBytes("put"));
+    Put put_1 = new Put(row3);
+    put_1.addColumn(FAMILY, qual, Bytes.toBytes("put"));
+    Append append_0 = new Append(row1);
+    append_0.add(FAMILY, qual, Bytes.toBytes("i"));
+    Append append_1 = new Append(row1);
+    append_1.add(FAMILY, qual, Bytes.toBytes("k"));
+    Append append_2 = new Append(row1);
+    append_2.add(FAMILY, qual, Bytes.toBytes("e"));
+    if (!walUsed) {
+      append_2.setDurability(Durability.SKIP_WAL);
+    }
+    Append append_3 = new Append(row1);
+    append_3.add(FAMILY, qual, Bytes.toBytes("a"));
+    Scan s = new Scan();
+    s.setCaching(1);
+    t.append(append_0);
+    t.put(put_0);
+    t.put(put_1);
+    List<Result> results = new LinkedList<>();
+    try (ResultScanner scanner = t.getScanner(s)) {
+      t.append(append_1);
+      t.append(append_2);
+      t.append(append_3);
+      for (Result r : scanner) {
+        results.add(r);
+      }
+    }
+    TEST_UTIL.deleteTable(TABLENAME);
+    return results;
+  }
+
+  @Test
+  public void testAppendWithoutWAL() throws Exception {
+    List<Result> resultsWithWal = doAppend(true);
+    List<Result> resultsWithoutWal = doAppend(false);
+    assertEquals(resultsWithWal.size(), resultsWithoutWal.size());
+    for (int i = 0; i != resultsWithWal.size(); ++i) {
+      Result resultWithWal = resultsWithWal.get(i);
+      Result resultWithoutWal = resultsWithoutWal.get(i);
+      assertEquals(resultWithWal.rawCells().length, resultWithoutWal.rawCells().length);
+      for (int j = 0; j != resultWithWal.rawCells().length; ++j) {
+        Cell cellWithWal = resultWithWal.rawCells()[j];
+        Cell cellWithoutWal = resultWithoutWal.rawCells()[j];
+        assertTrue(Bytes.equals(CellUtil.cloneRow(cellWithWal), CellUtil.cloneRow(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneFamily(cellWithWal), CellUtil.cloneFamily(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneQualifier(cellWithWal), CellUtil.cloneQualifier(cellWithoutWal)));
+        assertTrue(Bytes.equals(CellUtil.cloneValue(cellWithWal), CellUtil.cloneValue(cellWithoutWal)));
+      }
+    }
   }
 
   /**

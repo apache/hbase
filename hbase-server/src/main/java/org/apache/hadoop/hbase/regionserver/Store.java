@@ -151,6 +151,13 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   long add(Cell cell);
 
   /**
+   * Adds the specified value to the memstore
+   * @param cells
+   * @return memstore size delta
+   */
+  long add(Iterable<Cell> cells);
+
+  /**
    * When was the last edit done in the memstore
    */
   long timeOfOldestEdit();

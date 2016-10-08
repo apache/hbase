@@ -3324,8 +3324,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             != OperationStatusCode.NOT_RUN) {
           continue;
         }
+        // We need to update the sequence id for following reasons.
+        // 1) If the op is in replay mode, FSWALEntry#stampRegionSequenceId won't stamp sequence id.
+        // 2) If no WAL, FSWALEntry won't be used
+        boolean updateSeqId = isInReplay || batchOp.getMutation(i).getDurability() == Durability.SKIP_WAL;
+        if (updateSeqId) {
+          updateSequenceId(familyMaps[i].values(), mvccNum);
+        }
         doRollBackMemstore = true; // If we have a failure, we need to clean what we wrote
-        addedSize += applyFamilyMapToMemstore(familyMaps[i], mvccNum, isInReplay);
+        addedSize += applyFamilyMapToMemstore(familyMaps[i]);
       }
 
       // -------------------------------
@@ -3722,6 +3729,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     manifest.addRegion(this);
   }
 
+  private void updateSequenceId(final Iterable<List<Cell>> cellItr, final long sequenceId)
+          throws IOException {
+    for (List<Cell> cells : cellItr) {
+      if (cells == null) {
+        return;
+      }
+      for (Cell cell : cells) {
+        CellUtil.setSequenceId(cell, sequenceId);
+      }
+    }
+  }
+
   @Override
   public void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
       throws IOException {
@@ -3846,8 +3865,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * new entries.
    * @throws IOException
    */
-  private long applyFamilyMapToMemstore(Map<byte[], List<Cell>> familyMap,
-    long mvccNum, boolean isInReplay) throws IOException {
+  private long applyFamilyMapToMemstore(Map<byte[], List<Cell>> familyMap) throws IOException {
     long size = 0;
 
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
@@ -3855,14 +3873,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       List<Cell> cells = e.getValue();
       assert cells instanceof RandomAccess;
       Store store = getStore(family);
-      int listSize = cells.size();
-      for (int i=0; i < listSize; i++) {
-        Cell cell = cells.get(i);
-        if (cell.getSequenceId() == 0 || isInReplay) {
-          CellUtil.setSequenceId(cell, mvccNum);
-        }
-        size += store.add(cell);
-      }
+      size += store.add(cells);
     }
 
      return size;
@@ -7520,9 +7531,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               recordMutationWithoutWal(mutate.getFamilyCellMap());
             }
           }
+          boolean updateSeqId = false;
           if (walKey == null) {
             // Append a faked WALEdit in order for SKIP_WAL updates to get mvcc assigned
             walKey = this.appendEmptyEdit(this.wal);
+            // If no WAL, FSWALEntry won't be used and no update for sequence id
+            updateSeqId = true;
           }
           // Do a get on the write entry... this will block until sequenceid is assigned... w/o it,
           // TestAtomicOperation fails.
@@ -7533,21 +7547,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               writeEntry.getWriteNumber());
           }
 
+          if (updateSeqId) {
+            updateSequenceId(tempMemstore.values(), writeEntry.getWriteNumber());
+          }
+
           // Actually write to Memstore now
           if (!tempMemstore.isEmpty()) {
             for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
               Store store = entry.getKey();
               if (store.getFamily().getMaxVersions() == 1) {
                 // upsert if VERSIONS for this CF == 1
-                // Is this right? It immediately becomes visible? St.Ack 20150907
                 size += store.upsert(entry.getValue(), getSmallestReadPoint());
               } else {
                 // otherwise keep older versions around
-                for (Cell cell: entry.getValue()) {
-                  // This stamping of sequenceid seems redundant; it is happening down in
-                  // FSHLog when we consume edits off the ring buffer.
-                  CellUtil.setSequenceId(cell, walKey.getWriteEntry().getWriteNumber());
-                  size += store.add(cell);
+                size += store.add(entry.getValue());
+                if (!entry.getValue().isEmpty()) {
                   doRollBackMemstore = true;
                 }
               }
@@ -7746,6 +7760,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               }
             }
           }
+          boolean updateSeqId = false;
           // Actually write to WAL now. If walEdits is non-empty, we write the WAL.
           if (walEdits != null && !walEdits.isEmpty()) {
             // Using default cluster id, as this can only happen in the originating cluster.
@@ -7759,6 +7774,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           } else {
             // Append a faked WALEdit in order for SKIP_WAL updates to get mvccNum assigned
             walKey = this.appendEmptyEdit(this.wal);
+            // If no WAL, FSWALEntry won't be used and no update for sequence id
+            updateSeqId = true;
           }
           // Get WriteEntry. Will wait on assign of the sequence id.
           WriteEntry writeEntry = walKey.getWriteEntry();
@@ -7766,6 +7783,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           if (rsServices != null && rsServices.getNonceManager() != null) {
             rsServices.getNonceManager().addMvccToOperationContext(nonceGroup, nonce,
               writeEntry.getWriteNumber());
+          }
+
+          if (updateSeqId) {
+            updateSequenceId(forMemStore.values(), writeEntry.getWriteNumber());
           }
 
           // Now write to memstore, a family at a time.
@@ -7778,10 +7799,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               // TODO: St.Ack 20151222 Why no rollback in this case?
             } else {
               // Otherwise keep older versions around
-              for (Cell cell: results) {
-                // Why we need this?
-                CellUtil.setSequenceId(cell, walKey.getWriteEntry().getWriteNumber());
-                accumulatedResultSize += store.add(cell);
+              accumulatedResultSize += store.add(entry.getValue());
+              if (!entry.getValue().isEmpty()) {
                 doRollBackMemstore = true;
               }
             }

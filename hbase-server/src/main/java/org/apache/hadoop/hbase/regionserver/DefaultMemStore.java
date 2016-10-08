@@ -235,6 +235,15 @@ public class DefaultMemStore implements MemStore {
   }
 
   @Override
+  public long add(Iterable<Cell> cells) {
+    long size = 0;
+    for (Cell cell : cells) {
+      size += add(cell);
+    }
+    return size;
+  }
+
+  @Override
   public long timeOfOldestEdit() {
     return timeOfOldestEdit;
   }
