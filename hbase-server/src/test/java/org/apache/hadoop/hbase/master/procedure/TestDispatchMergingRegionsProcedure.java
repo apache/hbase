@@ -64,7 +64,7 @@ public class TestDispatchMergingRegionsProcedure {
     conf.setInt("hbase.master.maximum.ping.server.attempts", 3);
     conf.setInt("hbase.master.ping.server.retry.sleep.interval", 1);
 
-    conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 3);
+    conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
 
   @BeforeClass
@@ -119,18 +119,9 @@ public class TestDispatchMergingRegionsProcedure {
     final TableName tableName = TableName.valueOf("testMergeTwoRegions");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    byte[][] splitRows = new byte[2][];
-    splitRows[0] = new byte[]{(byte)'3'};
-    splitRows[1] = new byte[]{(byte)'6'};
-    admin.createTable(desc, splitRows);
+    List<HRegionInfo> tableRegions = createTable(tableName, 3);
 
-    List<HRegionInfo> tableRegions;
-    HRegionInfo [] regionsToMerge = new HRegionInfo[2];
-
-    tableRegions = admin.getTableRegions(tableName);
-    assertEquals(3, admin.getTableRegions(tableName).size());
+    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
     regionsToMerge[0] = tableRegions.get(0);
     regionsToMerge[1] = tableRegions.get(1);
 
@@ -139,7 +130,7 @@ public class TestDispatchMergingRegionsProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertEquals(2, admin.getTableRegions(tableName).size());
+    assertRegionCount(tableName, 2);
   }
 
   /**
@@ -150,20 +141,10 @@ public class TestDispatchMergingRegionsProcedure {
     final TableName tableName = TableName.valueOf("testMergeTwoRegions");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    byte[][] splitRows = new byte[3][];
-    splitRows[0] = new byte[]{(byte)'2'};
-    splitRows[1] = new byte[]{(byte)'4'};
-    splitRows[2] = new byte[]{(byte)'6'};
-    admin.createTable(desc, splitRows);
+    List<HRegionInfo> tableRegions = createTable(tableName, 4);
 
-    List<HRegionInfo> tableRegions;
-    HRegionInfo [] regionsToMerge1 = new HRegionInfo[2];
-    HRegionInfo [] regionsToMerge2 = new HRegionInfo[2];
-
-    tableRegions = admin.getTableRegions(tableName);
-    assertEquals(4, admin.getTableRegions(tableName).size());
+    HRegionInfo[] regionsToMerge1 = new HRegionInfo[2];
+    HRegionInfo[] regionsToMerge2 = new HRegionInfo[2];
     regionsToMerge1[0] = tableRegions.get(0);
     regionsToMerge1[1] = tableRegions.get(1);
     regionsToMerge2[0] = tableRegions.get(2);
@@ -178,7 +159,7 @@ public class TestDispatchMergingRegionsProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
 
-    assertEquals(2, admin.getTableRegions(tableName).size());
+    assertRegionCount(tableName, 2);
   }
 
   @Test(timeout=60000)
@@ -186,18 +167,9 @@ public class TestDispatchMergingRegionsProcedure {
     final TableName tableName = TableName.valueOf("testMergeRegionsTwiceWithSameNonce");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    byte[][] splitRows = new byte[2][];
-    splitRows[0] = new byte[]{(byte)'3'};
-    splitRows[1] = new byte[]{(byte)'6'};
-    admin.createTable(desc, splitRows);
+    List<HRegionInfo> tableRegions = createTable(tableName, 3);
 
-    List<HRegionInfo> tableRegions;
-    HRegionInfo [] regionsToMerge = new HRegionInfo[2];
-
-    tableRegions = admin.getTableRegions(tableName);
-    assertEquals(3, admin.getTableRegions(tableName).size());
+    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
     regionsToMerge[0] = tableRegions.get(0);
     regionsToMerge[1] = tableRegions.get(1);
 
@@ -205,13 +177,15 @@ public class TestDispatchMergingRegionsProcedure {
       procExec.getEnvironment(), tableName, regionsToMerge, true), nonceGroup, nonce);
     long procId2 = procExec.submitProcedure(new DispatchMergingRegionsProcedure(
       procExec.getEnvironment(), tableName, regionsToMerge, true), nonceGroup, nonce);
+    assertEquals(procId1, procId2);
+
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
     // The second proc should succeed too - because it is the same proc.
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
-    assertEquals(2, admin.getTableRegions(tableName).size());
+
+    assertRegionCount(tableName, 2);
   }
 
   @Test(timeout=60000)
@@ -219,21 +193,12 @@ public class TestDispatchMergingRegionsProcedure {
     final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    byte[][] splitRows = new byte[2][];
-    splitRows[0] = new byte[]{(byte)'3'};
-    splitRows[1] = new byte[]{(byte)'6'};
-    admin.createTable(desc, splitRows);
+    List<HRegionInfo> tableRegions = createTable(tableName, 3);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    List<HRegionInfo> tableRegions;
-    HRegionInfo [] regionsToMerge = new HRegionInfo[2];
-
-    tableRegions = admin.getTableRegions(tableName);
-    assertEquals(3, admin.getTableRegions(tableName).size());
+    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
     regionsToMerge[0] = tableRegions.get(0);
     regionsToMerge[1] = tableRegions.get(1);
 
@@ -246,7 +211,7 @@ public class TestDispatchMergingRegionsProcedure {
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertEquals(2, admin.getTableRegions(tableName).size());
+    assertRegionCount(tableName, 2);
   }
 
   @Test(timeout = 60000)
@@ -254,21 +219,12 @@ public class TestDispatchMergingRegionsProcedure {
     final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    byte[][] splitRows = new byte[2][];
-    splitRows[0] = new byte[]{(byte)'3'};
-    splitRows[1] = new byte[]{(byte)'6'};
-    admin.createTable(desc, splitRows);
+    List<HRegionInfo> tableRegions = createTable(tableName, 3);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    List<HRegionInfo> tableRegions;
-    HRegionInfo [] regionsToMerge = new HRegionInfo[2];
-
-    tableRegions = admin.getTableRegions(tableName);
-    assertEquals(3, admin.getTableRegions(tableName).size());
+    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
     regionsToMerge[0] = tableRegions.get(0);
     regionsToMerge[1] = tableRegions.get(1);
 
@@ -278,6 +234,26 @@ public class TestDispatchMergingRegionsProcedure {
 
     int numberOfSteps = DispatchMergingRegionsState.values().length - 3;
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
+  }
+
+  private List<HRegionInfo> createTable(final TableName tableName, final int nregions)
+      throws Exception {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(FAMILY));
+    byte[][] splitRows = new byte[nregions - 1][];
+    for (int i = 0; i < splitRows.length; ++i) {
+      splitRows[i] = Bytes.toBytes(String.format("%d", i));
+    }
+    admin.createTable(desc, splitRows);
+    return assertRegionCount(tableName, nregions);
+  }
+
+  public List<HRegionInfo> assertRegionCount(final TableName tableName, final int nregions)
+      throws Exception {
+    UTIL.waitUntilNoRegionsInTransition();
+    List<HRegionInfo> tableRegions = admin.getTableRegions(tableName);
+    assertEquals(nregions, tableRegions.size());
+    return tableRegions;
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
