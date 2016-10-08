@@ -63,6 +63,8 @@ import org.apache.htrace.TraceScope;
 import com.google.common.annotations.VisibleForTesting;
 import org.avaje.metric.CounterMetric;
 import org.avaje.metric.MetricManager;
+import org.avaje.metric.TimedEvent;
+import org.avaje.metric.TimedMetric;
 
 /**
  * Implementation that can handle all hfile versions of {@link HFile.Reader}.
@@ -160,7 +162,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
 
   //add some metrics
-
+  static final CounterMetric hitCacheCount = MetricManager.getCounterMetric("chokeqiang.HFileReaderImpl.readBlock.hitCache.count");
+  static final CounterMetric missCacheCount = MetricManager.getCounterMetric("chokeqiang.HFileReaderImpl.readBlock.missCache.count");
+  static final CounterMetric addLockCount = MetricManager.getCounterMetric("chokeqiang.HFileReaderImpl.readBlock.addLock.count");
+  static final CounterMetric releaseLockCount = MetricManager.getCounterMetric("chokeqiang.HFileReaderImpl.readBlock.releaseLock.count");
+  static final TimedMetric readBlockTime = MetricManager.getTimedMetric("chokeqiang.HFileReaderImpl.readBlock.readHFileBlock.time");
 
   /**
    * Opens a HFile. You must load the index before you can use it by calling
@@ -1453,6 +1459,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // Check cache for block. If found return.
         if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
           if (useLock) {
+            addLockCount.markEvent();
             lockEntry = offsetLock.getLockEntry(dataBlockOffset);
           }
           // Try and get the block from the block cache. If the useLock variable is true then this
@@ -1460,6 +1467,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
             updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
+            hitCacheCount.markEvent();
             if (LOG.isTraceEnabled()) {
               LOG.trace("From Cache " + cachedBlock);
             }
@@ -1495,11 +1503,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           traceScope.getSpan().addTimelineAnnotation("blockCacheMiss");
         }
         // Load block from filesystem.
+        missCacheCount.markEvent();
+        TimedEvent timeEvent = readBlockTime.startEvent();
         HFileBlock hfileBlock =
             fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread);
         validateBlockType(hfileBlock, expectedBlockType);
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
+        timeEvent.endWithSuccess();
 
         // Cache the block if necessary
         if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
@@ -1517,6 +1528,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     } finally {
       traceScope.close();
       if (lockEntry != null) {
+        releaseLockCount.markEvent();
         offsetLock.releaseLockEntry(lockEntry);
       }
     }

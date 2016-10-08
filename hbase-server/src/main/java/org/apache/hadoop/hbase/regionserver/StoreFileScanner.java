@@ -85,7 +85,8 @@ public class StoreFileScanner implements KeyValueScanner {
   static final CounterMetric requestSeekCount = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.requestSeek.count");
   static final CounterMetric seek_count = MetricManager.getCounterMetric("chokeqiang.StoreFileScaner.seek.count");
   static final CounterMetric setCurrentCellCount = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.count");
-
+  static final CounterMetric lazySeekCount = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.requestSeek.lazySeek.count");
+  static final CounterMetric bloomOutCount = MetricManager.getCounterMetric("chokeqiang.StoreFileScanner.requestSeek.bloomOut.count");
 
   /**
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
@@ -393,6 +394,7 @@ public class StoreFileScanner implements KeyValueScanner {
         // a higher timestamp than the max timestamp in this file. We know that
         // the next point when we have to consider this file again is when we
         // pass the max timestamp of this file (with the same row/column).
+        lazySeekCount.markEvent();
         setCurrentCell(CellUtil.createFirstOnRowColTS(kv, maxTimestampInFile));
       } else {
         // This will be the case e.g. when we need to seek to the next
@@ -414,6 +416,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // key/value and the store scanner will progress to the next column. This
     // is obviously not a "real real" seek, but unlike the fake KV earlier in
     // this method, we want this to be propagated to ScanQueryMatcher.
+    bloomOutCount.markEvent();
     setCurrentCell(CellUtil.createLastOnRowCol(kv));
 
     realSeekDone = true;

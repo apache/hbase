@@ -24,6 +24,8 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
+import org.avaje.metric.CounterMetric;
+import org.avaje.metric.MetricManager;
 
 /**
  * A "non-lazy" scanner which always does a real seek operation. Most scanners
@@ -31,10 +33,12 @@ import org.apache.hadoop.hbase.client.Scan;
  */
 @InterfaceAudience.Private
 public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
+  static final CounterMetric memStoreRequestCount = MetricManager.getCounterMetric("chokeqiang.NonLazyKeyValueScanner.requestSeek.count");
 
   @Override
   public boolean requestSeek(Cell kv, boolean forward, boolean useBloom)
       throws IOException {
+    memStoreRequestCount.markEvent();
     return doRealSeek(this, kv, forward);
   }
 
