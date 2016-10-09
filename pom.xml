@@ -795,6 +795,8 @@
               <exclude>src/main/site/resources/repo/**</exclude>
               <exclude>**/dependency-reduced-pom.xml</exclude>
               <exclude>**/rat.txt</exclude>
+              <!-- exclude the shaded protobuf files -->
+              <exclude>**/shaded/com/google/protobuf/**</exclude>
             </excludes>
           </configuration>
         </plugin>
