@@ -135,12 +135,42 @@ public class TestHCM {
 
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-              final Get get, final List<Cell> results) throws IOException {
+        final Get get, final List<Cell> results) throws IOException {
       Threads.sleep(sleepTime.get());
-      if (ct.incrementAndGet() == 1){
+      if (ct.incrementAndGet() == 1) {
         throw new IOException("first call I fail");
       }
     }
+
+    @Override
+    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Put put, final WALEdit edit, final Durability durability) throws IOException {
+      Threads.sleep(sleepTime.get());
+      if (ct.incrementAndGet() == 1) {
+        throw new IOException("first call I fail");
+      }
+    }
+
+    @Override
+    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Delete delete,
+        final WALEdit edit, final Durability durability) throws IOException {
+      Threads.sleep(sleepTime.get());
+      if (ct.incrementAndGet() == 1) {
+        throw new IOException("first call I fail");
+      }
+    }
+
+    @Override
+    public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Increment increment) throws IOException {
+      Threads.sleep(sleepTime.get());
+      if (ct.incrementAndGet() == 1) {
+        throw new IOException("first call I fail");
+      }
+      return super.preIncrement(e, increment);
+    }
+
   }
 
   public static class SleepCoprocessor extends BaseRegionObserver {
@@ -156,16 +186,20 @@ public class TestHCM {
         final Put put, final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
-  }
 
-  public static class SleepWriteCoprocessor extends BaseRegionObserver {
-    public static final int SLEEP_TIME = 5000;
     @Override
     public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
                                final Increment increment) throws IOException {
       Threads.sleep(SLEEP_TIME);
       return super.preIncrement(e, increment);
     }
+
+    @Override
+    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e, final Delete delete,
+        final WALEdit edit, final Durability durability) throws IOException {
+      Threads.sleep(SLEEP_TIME);
+    }
+
   }
 
   public static class SleepLongerAtFirstCoprocessor extends BaseRegionObserver {
@@ -364,11 +398,12 @@ public class TestHCM {
    * timeouted when the server answers.
    */
   @Test
-  public void testOperationTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testOperationTimeout");
+  public void testGetOperationTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testGetOperationTimeout");
     hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
-    Table table = TEST_UTIL.createTable(hdt, new byte[][]{FAM_NAM});
+    Table table = TEST_UTIL.createTable(hdt, new byte[][]{FAM_NAM}, TEST_UTIL.getConfiguration());
     table.setRpcTimeout(Integer.MAX_VALUE);
+    SleepAndFailFirstTime.ct.set(0);
     // Check that it works if the timeout is big enough
     table.setOperationTimeout(120 * 1000);
     table.get(new Get(FAM_NAM));
@@ -380,6 +415,64 @@ public class TestHCM {
       table.get(new Get(FAM_NAM));
       Assert.fail("We expect an exception here");
     } catch (SocketTimeoutException e) {
+      // The client has a CallTimeout class, but it's not shared.We're not very clean today,
+      //  in the general case you can expect the call to stop, but the exception may vary.
+      // In this test however, we're sure that it will be a socket timeout.
+      LOG.info("We received an exception, as expected ", e);
+    } catch (IOException e) {
+      Assert.fail("Wrong exception:" + e.getMessage());
+    } finally {
+      table.close();
+    }
+  }
+
+  @Test
+  public void testPutOperationTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testPutOperationTimeout");
+    hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
+    Table table = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM },TEST_UTIL.getConfiguration());
+    table.setRpcTimeout(Integer.MAX_VALUE);
+    SleepAndFailFirstTime.ct.set(0);
+    // Check that it works if the timeout is big enough
+    table.setOperationTimeout(120 * 1000);
+    table.put(new Put(FAM_NAM).addColumn(FAM_NAM, FAM_NAM, FAM_NAM));
+
+    // Resetting and retrying. Will fail this time, not enough time for the second try
+    SleepAndFailFirstTime.ct.set(0);
+    try {
+      table.setOperationTimeout(30 * 1000);
+      table.put(new Put(FAM_NAM).addColumn(FAM_NAM, FAM_NAM, FAM_NAM));
+      Assert.fail("We expect an exception here");
+    } catch (RetriesExhaustedWithDetailsException e) {
+      // The client has a CallTimeout class, but it's not shared.We're not very clean today,
+      //  in the general case you can expect the call to stop, but the exception may vary.
+      // In this test however, we're sure that it will be a socket timeout.
+      LOG.info("We received an exception, as expected ", e);
+    } catch (IOException e) {
+      Assert.fail("Wrong exception:" + e.getMessage());
+    } finally {
+      table.close();
+    }
+  }
+
+  @Test
+  public void testDeleteOperationTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testDeleteOperationTimeout");
+    hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
+    Table table = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM },TEST_UTIL.getConfiguration());
+    table.setRpcTimeout(Integer.MAX_VALUE);
+    SleepAndFailFirstTime.ct.set(0);
+    // Check that it works if the timeout is big enough
+    table.setOperationTimeout(120 * 1000);
+    table.delete(new Delete(FAM_NAM));
+
+    // Resetting and retrying. Will fail this time, not enough time for the second try
+    SleepAndFailFirstTime.ct.set(0);
+    try {
+      table.setOperationTimeout(30 * 1000);
+      table.delete(new Delete(FAM_NAM));
+      Assert.fail("We expect an exception here");
+    } catch (RetriesExhaustedWithDetailsException e) {
       // The client has a CallTimeout class, but it's not shared.We're not very clean today,
       //  in the general case you can expect the call to stop, but the exception may vary.
       // In this test however, we're sure that it will be a socket timeout.
@@ -419,14 +512,14 @@ public class TestHCM {
   }
 
   @Test
-  public void testWriteRpcTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testWriteRpcTimeout");
-    hdt.addCoprocessor(SleepWriteCoprocessor.class.getName());
+  public void testIncrementRpcTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testIncrementRpcTimeout");
+    hdt.addCoprocessor(SleepCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
     try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
-      t.setWriteRpcTimeout(SleepWriteCoprocessor.SLEEP_TIME / 2);
-      t.setOperationTimeout(SleepWriteCoprocessor.SLEEP_TIME * 100);
+      t.setWriteRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2);
+      t.setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100);
       Increment i = new Increment(FAM_NAM);
       i.addColumn(FAM_NAM, FAM_NAM, 1);
       t.increment(i);
@@ -436,7 +529,7 @@ public class TestHCM {
     }
 
     // Again, with configuration based override
-    c.setInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY, SleepWriteCoprocessor.SLEEP_TIME / 2);
+    c.setInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY, SleepCoprocessor.SLEEP_TIME / 2);
     try (Connection conn = ConnectionFactory.createConnection(c)) {
       try (Table t = conn.getTable(hdt.getTableName())) {
         Increment i = new Increment(FAM_NAM);
@@ -450,8 +543,46 @@ public class TestHCM {
   }
 
   @Test
-  public void testReadRpcTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testReadRpcTimeout");
+  public void testDeleteRpcTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testDeleteRpcTimeout");
+    hdt.addCoprocessor(SleepCoprocessor.class.getName());
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+
+    try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
+      t.setWriteRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2);
+      t.setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100);
+      Delete d = new Delete(FAM_NAM);
+      d.addColumn(FAM_NAM, FAM_NAM, 1);
+      t.delete(d);
+      fail("Write should not have succeeded");
+    } catch (RetriesExhaustedException e) {
+      // expected
+    }
+
+  }
+
+  @Test
+  public void testPutRpcTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testPutRpcTimeout");
+    hdt.addCoprocessor(SleepCoprocessor.class.getName());
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+
+    try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
+      t.setWriteRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2);
+      t.setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100);
+      Put p = new Put(FAM_NAM);
+      p.addColumn(FAM_NAM, FAM_NAM, FAM_NAM);
+      t.put(p);
+      fail("Write should not have succeeded");
+    } catch (RetriesExhaustedException e) {
+      // expected
+    }
+
+  }
+
+  @Test
+  public void testGetRpcTimeout() throws Exception {
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testGetRpcTimeout");
     hdt.addCoprocessor(SleepCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -502,6 +633,7 @@ public class TestHCM {
     TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }).close();
 
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    SleepAndFailFirstTime.ct.set(0);
     c.setInt(HConstants.HBASE_CLIENT_PAUSE, 3000);
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 4000);
 
@@ -1013,8 +1145,7 @@ public class TestHCM {
       curServer.getServerName().getPort(),
       conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort());
 
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, RPC_RETRY);
     table.close();
     connection.close();
   }

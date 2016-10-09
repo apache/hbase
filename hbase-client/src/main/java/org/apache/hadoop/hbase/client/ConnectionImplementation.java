@@ -1831,8 +1831,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   // For tests to override.
   protected AsyncProcess createAsyncProcess(Configuration conf) {
     // No default pool available.
-    int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-    return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory, rpcTimeout);
+    int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    int operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+    return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory,
+        rpcTimeout, operationTimeout);
   }
 
   @Override

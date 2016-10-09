@@ -120,6 +120,16 @@ public interface BufferedMutator extends Closeable {
   long getWriteBufferSize();
 
   /**
+   * Set rpc timeout for this mutator instance
+   */
+  void setRpcTimeout(int timeout);
+
+  /**
+   * Set operation timeout for this mutator instance
+   */
+  void setOperationTimeout(int timeout);
+
+  /**
    * Listens for asynchronous exceptions on a {@link BufferedMutator}.
    */
   @InterfaceAudience.Public

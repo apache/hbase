@@ -152,7 +152,10 @@ public class TestAsyncProcess {
     final AtomicInteger nbActions = new AtomicInteger();
     public List<AsyncRequestFuture> allReqs = new ArrayList<AsyncRequestFuture>();
     public AtomicInteger callsCt = new AtomicInteger();
-    private static int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    private static int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    private static int operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
     private long previousTimeout = -1;
     @Override
     protected <Res> AsyncRequestFutureImpl<Res> createAsyncRequestFuture(TableName tableName,
@@ -162,7 +165,7 @@ public class TestAsyncProcess {
       // Test HTable has tableName of null, so pass DUMMY_TABLE
       AsyncRequestFutureImpl<Res> r = new MyAsyncRequestFutureImpl<Res>(
           DUMMY_TABLE, actions, nonceGroup, getPool(pool), needResults,
-          results, callback, callable, curTimeout, this);
+          results, callback, callable, operationTimeout, rpcTimeout, this);
       allReqs.add(r);
       return r;
     }
@@ -174,14 +177,16 @@ public class TestAsyncProcess {
     public MyAsyncProcess(ClusterConnection hc, Configuration conf, AtomicInteger nbThreads) {
       super(hc, conf, new ThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS,
           new SynchronousQueue<Runnable>(), new CountingThreadFactory(nbThreads)),
-            new RpcRetryingCallerFactory(conf), false, new RpcControllerFactory(conf), rpcTimeout);
+            new RpcRetryingCallerFactory(conf), false, new RpcControllerFactory(conf), rpcTimeout,
+          operationTimeout);
     }
 
     public MyAsyncProcess(
         ClusterConnection hc, Configuration conf, boolean useGlobalErrors) {
       super(hc, conf, new ThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(), new CountingThreadFactory(new AtomicInteger())),
-          new RpcRetryingCallerFactory(conf), useGlobalErrors, new RpcControllerFactory(conf), rpcTimeout);
+          new RpcRetryingCallerFactory(conf), useGlobalErrors, new RpcControllerFactory(conf),
+          rpcTimeout, operationTimeout);
     }
 
     public MyAsyncProcess(ClusterConnection hc, Configuration conf, boolean useGlobalErrors,
@@ -193,7 +198,8 @@ public class TestAsyncProcess {
           throw new RejectedExecutionException("test under failure");
         }
       },
-          new RpcRetryingCallerFactory(conf), useGlobalErrors, new RpcControllerFactory(conf), rpcTimeout);
+          new RpcRetryingCallerFactory(conf), useGlobalErrors, new RpcControllerFactory(conf),
+          rpcTimeout, operationTimeout);
     }
 
     @Override
@@ -213,7 +219,7 @@ public class TestAsyncProcess {
     }
     @Override
     protected RpcRetryingCaller<AbstractResponse> createCaller(
-        CancellableRegionServerCallable callable) {
+        CancellableRegionServerCallable callable, int rpcTimeout) {
       callsCt.incrementAndGet();
       MultiServerCallable callable1 = (MultiServerCallable) callable;
       final MultiResponse mr = createMultiResponse(
@@ -254,12 +260,11 @@ public class TestAsyncProcess {
   static class MyAsyncRequestFutureImpl<Res> extends AsyncRequestFutureImpl<Res> {
 
     public MyAsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
-                                  ExecutorService pool, boolean needResults, Object[] results,
-                                  Batch.Callback callback,
-                                  CancellableRegionServerCallable callable, int timeout,
-                                  AsyncProcess asyncProcess) {
+        ExecutorService pool, boolean needResults, Object[] results,
+        Batch.Callback callback, CancellableRegionServerCallable callable, int operationTimeout,
+        int rpcTimeout, AsyncProcess asyncProcess) {
       super(tableName, actions, nonceGroup, pool, needResults,
-          results, callback, callable, timeout, asyncProcess);
+          results, callback, callable, operationTimeout, rpcTimeout, asyncProcess);
     }
 
     @Override
@@ -299,7 +304,7 @@ public class TestAsyncProcess {
 
     @Override
     protected RpcRetryingCaller<AbstractResponse> createCaller(
-      CancellableRegionServerCallable callable) {
+      CancellableRegionServerCallable callable, int rpcTimeout) {
       callsCt.incrementAndGet();
       return new CallerWithFailure(ioe);
     }
@@ -351,7 +356,7 @@ public class TestAsyncProcess {
 
     @Override
     protected RpcRetryingCaller<AbstractResponse> createCaller(
-        CancellableRegionServerCallable payloadCallable) {
+        CancellableRegionServerCallable payloadCallable, int rpcTimeout) {
       MultiServerCallable<Row> callable = (MultiServerCallable) payloadCallable;
       final MultiResponse mr = createMultiResponse(
           callable.getMulti(), nbMultiResponse, nbActions, new ResponseGenerator() {
@@ -1638,12 +1643,14 @@ public class TestAsyncProcess {
   }
 
   static class AsyncProcessForThrowableCheck extends AsyncProcess {
-    private static int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-
+    private static int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    private static int operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
     public AsyncProcessForThrowableCheck(ClusterConnection hc, Configuration conf,
         ExecutorService pool) {
       super(hc, conf, pool, new RpcRetryingCallerFactory(conf), false, new RpcControllerFactory(
-          conf), rpcTimeout);
+          conf), rpcTimeout, operationTimeout);
     }
   }
 

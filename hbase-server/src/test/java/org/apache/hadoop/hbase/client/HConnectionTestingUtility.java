@@ -128,7 +128,9 @@ public class HConnectionTestingUtility {
     Mockito.when(c.getAsyncProcess()).thenReturn(
       new AsyncProcess(c, conf, null, RpcRetryingCallerFactory.instantiate(conf), false,
           RpcControllerFactory.instantiate(conf), conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-              HConstants.DEFAULT_HBASE_RPC_TIMEOUT)));
+              HConstants.DEFAULT_HBASE_RPC_TIMEOUT), conf.getInt(
+                  HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+          HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT)));
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(
         RpcRetryingCallerFactory.instantiate(conf,
             RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null));

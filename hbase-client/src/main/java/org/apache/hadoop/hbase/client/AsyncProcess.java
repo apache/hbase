@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -54,8 +56,6 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class  allows a continuous flow of requests. It's written to be compatible with a
@@ -212,7 +212,8 @@ class AsyncProcess {
   protected final long pause;
   protected int numTries;
   protected int serverTrackerTimeout;
-  protected int timeout;
+  protected int rpcTimeout;
+  protected int operationTimeout;
   protected long primaryCallTimeoutMicroseconds;
   /** Whether to log details for batch errors */
   protected final boolean logBatchErrorDetails;
@@ -220,7 +221,7 @@ class AsyncProcess {
 
   public AsyncProcess(ClusterConnection hc, Configuration conf, ExecutorService pool,
       RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors,
-      RpcControllerFactory rpcFactory, int rpcTimeout) {
+      RpcControllerFactory rpcFactory, int rpcTimeout, int operationTimeout) {
     if (hc == null) {
       throw new IllegalArgumentException("ClusterConnection cannot be null.");
     }
@@ -236,7 +237,8 @@ class AsyncProcess {
     // how many times we could try in total, one more than retry number
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) + 1;
-    this.timeout = rpcTimeout;
+    this.rpcTimeout = rpcTimeout;
+    this.operationTimeout = operationTimeout;
     this.primaryCallTimeoutMicroseconds = conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10000);
 
     this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
@@ -434,7 +436,7 @@ class AsyncProcess {
       List<Integer> locationErrorRows, Map<ServerName, MultiAction<Row>> actionsByServer,
       ExecutorService pool) {
     AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
-      tableName, retainedActions, nonceGroup, pool, callback, results, needResults, null, timeout);
+      tableName, retainedActions, nonceGroup, pool, callback, results, needResults, null, -1);
     // Add location errors if any
     if (locationErrors != null) {
       for (int i = 0; i < locationErrors.size(); ++i) {
@@ -446,6 +448,14 @@ class AsyncProcess {
     }
     ars.sendMultiAction(actionsByServer, 1, null, false);
     return ars;
+  }
+
+  public void setRpcTimeout(int rpcTimeout) {
+    this.rpcTimeout = rpcTimeout;
+  }
+
+  public void setOperationTimeout(int operationTimeout) {
+    this.operationTimeout = operationTimeout;
   }
 
   /**
@@ -473,7 +483,7 @@ class AsyncProcess {
 
   public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
-    return submitAll(pool, tableName, rows, callback, results, null, timeout);
+    return submitAll(pool, tableName, rows, callback, results, null, -1);
   }
   /**
    * Submit immediately the list of rows, whatever the server status. Kept for backward
@@ -484,10 +494,11 @@ class AsyncProcess {
    * @param rows the list of rows.
    * @param callback the callback.
    * @param results Optional array to return the results thru; backward compat.
+   * @param rpcTimeout rpc timeout for this batch, set -1 if want to use current setting.
    */
   public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results,
-      CancellableRegionServerCallable callable, int curTimeout) {
+      CancellableRegionServerCallable callable, int rpcTimeout) {
     List<Action<Row>> actions = new ArrayList<Action<Row>>(rows.size());
 
     // The position will be used by the processBatch to match the object array returned.
@@ -507,7 +518,7 @@ class AsyncProcess {
     }
     AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
         tableName, actions, ng.getNonceGroup(), getPool(pool), callback, results, results != null,
-        callable, curTimeout);
+        callable, rpcTimeout);
     ars.groupAndSendMultiAction(actions, 1);
     return ars;
   }
@@ -520,10 +531,11 @@ class AsyncProcess {
   protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
       TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
       Batch.Callback<CResult> callback, Object[] results, boolean needResults,
-      CancellableRegionServerCallable callable, int curTimeout) {
+      CancellableRegionServerCallable callable, int rpcTimeout) {
     return new AsyncRequestFutureImpl<CResult>(
         tableName, actions, nonceGroup, getPool(pool), needResults,
-        results, callback, callable, curTimeout, this);
+        results, callback, callable, operationTimeout,
+        rpcTimeout > 0 ? rpcTimeout : this.rpcTimeout, this);
   }
 
   /** Wait until the async does not have more than max tasks in progress. */
@@ -664,8 +676,8 @@ class AsyncProcess {
    */
   @VisibleForTesting
   protected RpcRetryingCaller<AbstractResponse> createCaller(
-      CancellableRegionServerCallable callable) {
-    return rpcCallerFactory.<AbstractResponse> newCaller();
+      CancellableRegionServerCallable callable, int rpcTimeout) {
+    return rpcCallerFactory.<AbstractResponse> newCaller(rpcTimeout);
   }
 
 

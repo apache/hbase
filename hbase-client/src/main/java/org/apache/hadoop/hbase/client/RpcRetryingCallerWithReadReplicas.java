@@ -58,7 +58,8 @@ public class RpcRetryingCallerWithReadReplicas {
   protected final Get get;
   protected final TableName tableName;
   protected final int timeBeforeReplicas;
-  private final int callTimeout;
+  private final int operationTimeout;
+  private final int rpcTimeout;
   private final int retries;
   private final RpcControllerFactory rpcControllerFactory;
   private final RpcRetryingCallerFactory rpcRetryingCallerFactory;
@@ -66,7 +67,7 @@ public class RpcRetryingCallerWithReadReplicas {
   public RpcRetryingCallerWithReadReplicas(
       RpcControllerFactory rpcControllerFactory, TableName tableName,
       ClusterConnection cConnection, final Get get,
-      ExecutorService pool, int retries, int callTimeout,
+      ExecutorService pool, int retries, int operationTimeout, int rpcTimeout,
       int timeBeforeReplicas) {
     this.rpcControllerFactory = rpcControllerFactory;
     this.tableName = tableName;
@@ -75,7 +76,8 @@ public class RpcRetryingCallerWithReadReplicas {
     this.get = get;
     this.pool = pool;
     this.retries = retries;
-    this.callTimeout = callTimeout;
+    this.operationTimeout = operationTimeout;
+    this.rpcTimeout = rpcTimeout;
     this.timeBeforeReplicas = timeBeforeReplicas;
     this.rpcRetryingCallerFactory = new RpcRetryingCallerFactory(conf);
   }
@@ -91,7 +93,7 @@ public class RpcRetryingCallerWithReadReplicas {
     public ReplicaRegionServerCallable(int id, HRegionLocation location) {
       super(RpcRetryingCallerWithReadReplicas.this.cConnection,
           RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow(),
-          rpcControllerFactory.newController());
+          rpcControllerFactory.newController(), rpcTimeout, new RetryingTimeTracker());
       this.id = id;
       this.location = location;
     }
@@ -133,7 +135,7 @@ public class RpcRetryingCallerWithReadReplicas {
       ClientProtos.GetRequest request = RequestConverter.buildGetRequest(reg, get);
       HBaseRpcController hrc = (HBaseRpcController)getRpcController();
       hrc.reset();
-      hrc.setCallTimeout(callTimeout);
+      hrc.setCallTimeout(rpcTimeout);
       hrc.setPriority(tableName);
       ClientProtos.GetResponse response = getStub().get(hrc, request);
       if (response == null) {
@@ -258,7 +260,7 @@ public class RpcRetryingCallerWithReadReplicas {
     for (int id = min; id <= max; id++) {
       HRegionLocation hrl = rl.getRegionLocation(id);
       ReplicaRegionServerCallable callOnReplica = new ReplicaRegionServerCallable(id, hrl);
-      cs.submit(callOnReplica, callTimeout, id);
+      cs.submit(callOnReplica, operationTimeout, id);
     }
   }
 

@@ -30,15 +30,20 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
  * This class is used to unify HTable calls with AsyncProcess Framework. HTable can use
  * AsyncProcess directly though this class. Also adds global timeout tracking on top of
  * RegionServerCallable and implements Cancellable.
+ * Global timeout tracking conflicts with logic in RpcRetryingCallerImpl's callWithRetries. So you
+ * can only use this callable in AsyncProcess which only uses callWithoutRetries and retries in its
+ * own implementation.
  */
 @InterfaceAudience.Private
 abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<T> implements
     Cancellable {
-  private final RetryingTimeTracker tracker = new RetryingTimeTracker();
-
+  private final RetryingTimeTracker tracker;
+  private final int rpcTimeout;
   CancellableRegionServerCallable(Connection connection, TableName tableName, byte[] row,
-      RpcController rpcController) {
+      RpcController rpcController, int rpcTimeout, RetryingTimeTracker tracker) {
     super(connection, tableName, row, rpcController);
+    this.rpcTimeout = rpcTimeout;
+    this.tracker = tracker;
   }
 
   /* Override so can mess with the callTimeout.
@@ -46,7 +51,7 @@ abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<
    * @see org.apache.hadoop.hbase.client.RegionServerCallable#rpcCall(int)
    */
   @Override
-  public T call(int callTimeout) throws IOException {
+  public T call(int operationTimeout) throws IOException {
     if (isCancelled()) return null;
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
@@ -54,11 +59,12 @@ abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<
     // It is expected (it seems) that tracker.start can be called multiple times (on each trip
     // through the call when retrying). Also, we can call start and no need of a stop.
     this.tracker.start();
-    int remainingTime = tracker.getRemainingTime(callTimeout);
-    if (remainingTime == 0) {
-      throw new DoNotRetryIOException("Timeout for mutate row");
+    int remainingTime = tracker.getRemainingTime(operationTimeout);
+    if (remainingTime <= 1) {
+      // "1" is a special return value in RetryingTimeTracker, see its implementation.
+      throw new DoNotRetryIOException("Operation rpcTimeout");
     }
-    return super.call(remainingTime);
+    return super.call(Math.min(rpcTimeout, remainingTime));
   }
 
   @Override

@@ -20,6 +20,24 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -39,23 +57,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Trace;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * The context, and return value, for a single submit/submitAll call.
  * Note on how this class (one AP submit) works. Initially, all requests are split into groups
@@ -69,6 +70,8 @@ import java.util.concurrent.atomic.AtomicLong;
 class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
   private static final Log LOG = LogFactory.getLog(AsyncRequestFutureImpl.class);
+
+  private RetryingTimeTracker tracker;
 
   /**
    * Runnable (that can be submitted to thread pool) that waits for when it's time
@@ -219,12 +222,12 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         if (callable == null) {
           callable = createCallable(server, tableName, multiAction);
         }
-        RpcRetryingCaller<AbstractResponse> caller = asyncProcess.createCaller(callable);
+        RpcRetryingCaller<AbstractResponse> caller = asyncProcess.createCaller(callable,rpcTimeout);
         try {
           if (callsInProgress != null) {
             callsInProgress.add(callable);
           }
-          res = caller.callWithoutRetries(callable, currentCallTotalTimeout);
+          res = caller.callWithoutRetries(callable, operationTimeout);
           if (res == null) {
             // Cancelled
             return;
@@ -297,7 +300,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private final boolean hasAnyReplicaGets;
   private final long nonceGroup;
   private CancellableRegionServerCallable currentCallable;
-  private int currentCallTotalTimeout;
+  private int operationTimeout;
+  private int rpcTimeout;
   private final Map<ServerName, List<Long>> heapSizesByServer = new HashMap<>();
   protected AsyncProcess asyncProcess;
 
@@ -337,10 +341,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
 
   public AsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
-                                ExecutorService pool, boolean needResults, Object[] results,
-                                Batch.Callback<CResult> callback,
-                                CancellableRegionServerCallable callable, int timeout,
-                                AsyncProcess asyncProcess) {
+      ExecutorService pool, boolean needResults, Object[] results, Batch.Callback<CResult> callback,
+      CancellableRegionServerCallable callable, int operationTimeout, int rpcTimeout,
+      AsyncProcess asyncProcess) {
     this.pool = pool;
     this.callback = callback;
     this.nonceGroup = nonceGroup;
@@ -410,9 +413,12 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     this.errorsByServer = createServerErrorTracker();
     this.errors = (asyncProcess.globalErrors != null)
         ? asyncProcess.globalErrors : new BatchErrors();
+    this.operationTimeout = operationTimeout;
+    this.rpcTimeout = rpcTimeout;
     this.currentCallable = callable;
-    this.currentCallTotalTimeout = timeout;
-
+    if (callable == null) {
+      tracker = new RetryingTimeTracker().start();
+    }
   }
 
   @VisibleForTesting
@@ -1281,9 +1287,9 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   /**
    * Create a callable. Isolated to be easily overridden in the tests.
    */
-  private MultiServerCallable<Row> createCallable(final ServerName server,
-                                                    TableName tableName, final MultiAction<Row> multi) {
+  private MultiServerCallable<Row> createCallable(final ServerName server, TableName tableName,
+      final MultiAction<Row> multi) {
     return new MultiServerCallable<Row>(asyncProcess.connection, tableName, server,
-        multi, asyncProcess.rpcFactory.newController());
+        multi, asyncProcess.rpcFactory.newController(), rpcTimeout, tracker);
   }
 }

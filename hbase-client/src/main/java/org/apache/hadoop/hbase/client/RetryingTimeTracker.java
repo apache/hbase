@@ -24,10 +24,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 class RetryingTimeTracker {
   private long globalStartTime = -1;
 
-  public void start() {
+  public RetryingTimeTracker start() {
     if (this.globalStartTime < 0) {
       this.globalStartTime = EnvironmentEdgeManager.currentTime();
     }
+    return this;
   }
 
   public int getRemainingTime(int callTimeout) {

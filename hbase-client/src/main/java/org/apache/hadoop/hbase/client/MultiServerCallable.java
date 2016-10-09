@@ -50,17 +50,24 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 class MultiServerCallable<R> extends CancellableRegionServerCallable<MultiResponse> {
-  private final MultiAction<R> multiAction;
-  private final boolean cellBlock;
+  private MultiAction<R> multiAction;
+  private boolean cellBlock;
 
   MultiServerCallable(final ClusterConnection connection, final TableName tableName,
-      final ServerName location, final MultiAction<R> multi, RpcController rpcController) {
-    super(connection, tableName, null, rpcController);
+      final ServerName location, final MultiAction<R> multi, RpcController rpcController,
+      int rpcTimeout, RetryingTimeTracker tracker) {
+    super(connection, tableName, null, rpcController, rpcTimeout, tracker);
     this.multiAction = multi;
     // RegionServerCallable has HRegionLocation field, but this is a multi-region request.
     // Using region info from parent HRegionLocation would be a mistake for this class; so
     // we will store the server here, and throw if someone tries to obtain location/regioninfo.
     this.location = new HRegionLocation(null, location);
+    this.cellBlock = isCellBlock();
+  }
+
+  public void reset(ServerName location, MultiAction<R> multiAction) {
+    this.location = new HRegionLocation(null, location);
+    this.multiAction = multiAction;
     this.cellBlock = isCellBlock();
   }
 

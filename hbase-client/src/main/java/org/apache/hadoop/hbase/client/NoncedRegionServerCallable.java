@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
  * @param <T> the class that the ServerCallable handles
  */
 @InterfaceAudience.Private
-public abstract class NoncedRegionServerCallable<T> extends CancellableRegionServerCallable<T> {
+public abstract class NoncedRegionServerCallable<T> extends ClientServiceCallable<T> {
   private final long nonce;
 
   /**
