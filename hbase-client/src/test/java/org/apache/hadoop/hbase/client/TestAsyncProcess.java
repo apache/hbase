@@ -211,9 +211,10 @@ public class TestAsyncProcess {
     @Override
     public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results,
-      PayloadCarryingServerCallable callable, int curTimeout) {
-      previousTimeout = curTimeout;
-      return super.submitAll(pool, tableName, rows, callback, results, callable, curTimeout);
+      PayloadCarryingServerCallable callable, int operationTimeout, int rpcTimeout) {
+      previousTimeout = rpcTimeout;
+      return super.submitAll(pool, tableName, rows, callback, results, callable, operationTimeout,
+          rpcTimeout);
     }
 
     @Override
@@ -222,7 +223,7 @@ public class TestAsyncProcess {
     }
     @Override
     protected RpcRetryingCaller<MultiResponse> createCaller(
-        PayloadCarryingServerCallable callable) {
+        PayloadCarryingServerCallable callable, int rpcTimeout) {
       callsCt.incrementAndGet();
       MultiServerCallable callable1 = (MultiServerCallable) callable;
       final MultiResponse mr = createMultiResponse(
@@ -285,7 +286,7 @@ public class TestAsyncProcess {
 
     @Override
     protected RpcRetryingCaller<MultiResponse> createCaller(
-      PayloadCarryingServerCallable callable) {
+      PayloadCarryingServerCallable callable, int rpcTimeout) {
       callsCt.incrementAndGet();
       return new CallerWithFailure(ioe);
     }
@@ -336,7 +337,7 @@ public class TestAsyncProcess {
 
     @Override
     protected RpcRetryingCaller<MultiResponse> createCaller(
-        PayloadCarryingServerCallable payloadCallable) {
+        PayloadCarryingServerCallable payloadCallable, int rpcTimeout) {
       MultiServerCallable<Row> callable = (MultiServerCallable) payloadCallable;
       final MultiResponse mr = createMultiResponse(
           callable.getMulti(), nbMultiResponse, nbActions, new ResponseGenerator() {

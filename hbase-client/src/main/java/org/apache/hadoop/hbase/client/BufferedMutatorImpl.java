@@ -81,6 +81,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
   private boolean closed = false;
   private final ExecutorService pool;
   private int writeRpcTimeout; // needed to pass in through AsyncProcess constructor
+  private int operationTimeout;
 
   @VisibleForTesting
   protected AsyncProcess ap; // non-final so can be overridden in test
@@ -106,7 +107,9 @@ public class BufferedMutatorImpl implements BufferedMutator {
     this.writeRpcTimeout = conn.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
         conn.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
             HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-
+    this.operationTimeout = conn.getConfiguration().getInt(
+        HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
     // puts need to track errors globally due to how the APIs currently work.
     ap = new AsyncProcess(connection, conf, pool, rpcCallerFactory, true, rpcFactory, writeRpcTimeout);
   }
@@ -279,6 +282,16 @@ public class BufferedMutatorImpl implements BufferedMutator {
   @Override
   public long getWriteBufferSize() {
     return this.writeBufferSize;
+  }
+
+  public void setRpcTimeout(int writeRpcTimeout) {
+    this.writeRpcTimeout = writeRpcTimeout;
+    this.ap.setRpcTimeout(writeRpcTimeout);
+  }
+
+  public void setOperationTimeout(int operationTimeout) {
+    this.operationTimeout = operationTimeout;
+    this.ap.setOperationTimeout(operationTimeout);
   }
 
   /**

@@ -911,9 +911,10 @@ public class HTable implements HTableInterface, RegionLocator {
     }
   }
 
-  public void batch(final List<? extends Row> actions, final Object[] results, int timeout)
+  public void batch(final List<? extends Row> actions, final Object[] results, int rpcTimeout)
       throws InterruptedException, IOException {
-    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results, null, timeout);
+    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results, null,
+        operationTimeout, rpcTimeout);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -1055,13 +1056,12 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @Override
   public void mutateRow(final RowMutations rm) throws IOException {
-    final RetryingTimeTracker tracker = new RetryingTimeTracker();
+    final RetryingTimeTracker tracker = new RetryingTimeTracker().start();
     PayloadCarryingServerCallable<MultiResponse> callable =
       new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
           rpcControllerFactory) {
         @Override
         public MultiResponse call(int callTimeout) throws IOException {
-          tracker.start();
           controller.setPriority(tableName);
           int remainingTime = tracker.getRemainingTime(callTimeout);
           if (remainingTime == 0) {
@@ -1091,7 +1091,7 @@ public class HTable implements HTableInterface, RegionLocator {
         }
       };
     AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rm.getMutations(),
-        null, null, callable, operationTimeout);
+        null, null, callable, operationTimeout, writeRpcTimeout);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -1364,13 +1364,12 @@ public class HTable implements HTableInterface, RegionLocator {
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
     final CompareOp compareOp, final byte [] value, final RowMutations rm)
     throws IOException {
-    final RetryingTimeTracker tracker = new RetryingTimeTracker();
+    final RetryingTimeTracker tracker = new RetryingTimeTracker().start();
     PayloadCarryingServerCallable<MultiResponse> callable =
       new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
         rpcControllerFactory) {
         @Override
         public MultiResponse call(int callTimeout) throws IOException {
-          tracker.start();
           controller.setPriority(tableName);
           int remainingTime = tracker.getRemainingTime(callTimeout);
           if (remainingTime == 0) {
@@ -1404,7 +1403,7 @@ public class HTable implements HTableInterface, RegionLocator {
      * */
     Object[] results = new Object[rm.getMutations().size()];
     AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rm.getMutations(),
-      null, results, callable, operationTimeout);
+      null, results, callable, operationTimeout, writeRpcTimeout);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -1809,6 +1808,10 @@ public class HTable implements HTableInterface, RegionLocator {
 
   public void setOperationTimeout(int operationTimeout) {
     this.operationTimeout = operationTimeout;
+    if (mutator != null) {
+      mutator.setOperationTimeout(operationTimeout);
+    }
+    multiAp.setOperationTimeout(operationTimeout);
   }
 
   public int getOperationTimeout() {
@@ -1824,8 +1827,8 @@ public class HTable implements HTableInterface, RegionLocator {
   @Override
   @Deprecated
   public void setRpcTimeout(int rpcTimeout) {
-    this.readRpcTimeout = rpcTimeout;
-    this.writeRpcTimeout = rpcTimeout;
+    setWriteRpcTimeout(rpcTimeout);
+    setReadRpcTimeout(rpcTimeout);
   }
 
   @Override
@@ -1836,6 +1839,10 @@ public class HTable implements HTableInterface, RegionLocator {
   @Override
   public void setWriteRpcTimeout(int writeRpcTimeout) {
     this.writeRpcTimeout = writeRpcTimeout;
+    if (mutator != null) {
+      mutator.setRpcTimeout(writeRpcTimeout);
+    }
+    multiAp.setRpcTimeout(writeRpcTimeout);
   }
 
   @Override
@@ -1973,6 +1980,8 @@ public class HTable implements HTableInterface, RegionLocator {
               .writeBufferSize(connConfiguration.getWriteBufferSize())
               .maxKeyValueSize(connConfiguration.getMaxKeyValueSize())
       );
+      mutator.setRpcTimeout(writeRpcTimeout);
+      mutator.setOperationTimeout(operationTimeout);
     }
     return mutator;
   }
