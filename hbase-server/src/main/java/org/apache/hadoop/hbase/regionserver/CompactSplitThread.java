@@ -724,6 +724,11 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   }
 
   @VisibleForTesting
+  public long getCompletedMergeTaskCount() {
+    return mergePool.getCompletedTaskCount();
+  }
+
+  @VisibleForTesting
   /**
    * Shutdown the long compaction thread pool.
    * Should only be used in unit test to prevent long compaction thread pool from stealing job
