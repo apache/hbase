@@ -229,8 +229,8 @@ public class PartitionedMobCompactor extends MobCompactor {
     }
     // archive the del files if all the mob files are selected.
     if (request.type == CompactionType.ALL_FILES && !newDelPaths.isEmpty()) {
-      LOG.info(
-          "After a mob compaction with all files selected, archiving the del files " + newDelPaths);
+      LOG.info("After a mob compaction with all files selected, archiving the del files "
+        + newDelPaths);
       try {
         MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), newDelFiles);
       } catch (IOException e) {
@@ -381,7 +381,7 @@ public class PartitionedMobCompactor extends MobCompactor {
                                       List<StoreFile> filesToCompact, int batch,
                                       Path bulkloadPathOfPartition, Path bulkloadColumnPath,
                                       List<Path> newFiles)
-      throws IOException {
+    throws IOException {
     // open scanner to the selected mob files and del files.
     StoreScanner scanner = createScanner(filesToCompact, ScanType.COMPACT_DROP_DELETES);
     // the mob files to be compacted, not include the del files.
@@ -392,92 +392,62 @@ public class PartitionedMobCompactor extends MobCompactor {
     StoreFileWriter writer = null;
     StoreFileWriter refFileWriter = null;
     Path filePath = null;
+    Path refFilePath = null;
     long mobCells = 0;
-    boolean cleanupTmpMobFile = false;
-    boolean cleanupBulkloadDirOfPartition = false;
-    boolean cleanupCommittedMobFile = false;
-    boolean closeReaders= true;
-
     try {
-      try {
-        writer = MobUtils
-            .createWriter(conf, fs, column, partition.getPartitionId().getDate(), tempPath,
-                Long.MAX_VALUE, column.getCompactionCompressionType(),
-                partition.getPartitionId().getStartKey(), compactionCacheConfig, cryptoContext);
-        cleanupTmpMobFile = true;
-        filePath = writer.getPath();
-        byte[] fileName = Bytes.toBytes(filePath.getName());
-        // create a temp file and open a writer for it in the bulkloadPath
-        refFileWriter = MobUtils.createRefFileWriter(conf, fs, column, bulkloadColumnPath,
-            fileInfo.getSecond().longValue(), compactionCacheConfig, cryptoContext);
-        cleanupBulkloadDirOfPartition = true;
-        List<Cell> cells = new ArrayList<>();
-        boolean hasMore;
-        ScannerContext scannerContext =
-            ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
-        do {
-          hasMore = scanner.next(cells, scannerContext);
-          for (Cell cell : cells) {
-            // write the mob cell to the mob file.
-            writer.append(cell);
-            // write the new reference cell to the store file.
-            KeyValue reference = MobUtils.createMobRefKeyValue(cell, fileName, tableNameTag);
-            refFileWriter.append(reference);
-            mobCells++;
-          }
-          cells.clear();
-        } while (hasMore);
-      } finally {
-        // close the scanner.
-        scanner.close();
-
-        if (cleanupTmpMobFile) {
-          // append metadata to the mob file, and close the mob file writer.
-          closeMobFileWriter(writer, fileInfo.getFirst(), mobCells);
+      writer = MobUtils.createWriter(conf, fs, column, partition.getPartitionId().getDate(),
+        tempPath, Long.MAX_VALUE, column.getCompactionCompressionType(), partition.getPartitionId()
+          .getStartKey(), compactionCacheConfig, cryptoContext);
+      filePath = writer.getPath();
+      byte[] fileName = Bytes.toBytes(filePath.getName());
+      // create a temp file and open a writer for it in the bulkloadPath
+      refFileWriter = MobUtils.createRefFileWriter(conf, fs, column, bulkloadColumnPath, fileInfo
+        .getSecond().longValue(), compactionCacheConfig, cryptoContext);
+      refFilePath = refFileWriter.getPath();
+      List<Cell> cells = new ArrayList<>();
+      boolean hasMore;
+      ScannerContext scannerContext =
+              ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+      do {
+        hasMore = scanner.next(cells, scannerContext);
+        for (Cell cell : cells) {
+          // write the mob cell to the mob file.
+          writer.append(cell);
+          // write the new reference cell to the store file.
+          KeyValue reference = MobUtils.createMobRefKeyValue(cell, fileName, tableNameTag);
+          refFileWriter.append(reference);
+          mobCells++;
         }
-
-        if (cleanupBulkloadDirOfPartition) {
-          // append metadata and bulkload info to the ref mob file, and close the writer.
-          closeRefFileWriter(refFileWriter, fileInfo.getFirst(), request.selectionTime);
-        }
-      }
-
-      if (mobCells > 0) {
-        // commit mob file
-        MobUtils.commitFile(conf, fs, filePath, mobFamilyDir, compactionCacheConfig);
-        cleanupTmpMobFile = false;
-        cleanupCommittedMobFile = true;
-        // bulkload the ref file
-        bulkloadRefFile(connection, table, bulkloadPathOfPartition, filePath.getName());
-        cleanupCommittedMobFile = false;
-        newFiles.add(new Path(mobFamilyDir, filePath.getName()));
-      }
-
-      // archive the old mob files, do not archive the del files.
-      try {
-        closeStoreFileReaders(mobFilesToCompact);
-        closeReaders = false;
-        MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), mobFilesToCompact);
-      } catch (IOException e) {
-        LOG.error("Failed to archive the files " + mobFilesToCompact, e);
-      }
+        cells.clear();
+      } while (hasMore);
     } finally {
-      if (closeReaders) {
-        closeStoreFileReaders(mobFilesToCompact);
-      }
-
-      if (cleanupTmpMobFile) {
-        deletePath(filePath);
-      }
-
-      if (cleanupBulkloadDirOfPartition) {
-        // delete the bulkload files in bulkloadPath
-        deletePath(bulkloadPathOfPartition);
-      }
-
-      if (cleanupCommittedMobFile) {
-        deletePath(new Path(mobFamilyDir, filePath.getName()));
-      }
+      // close the scanner.
+      scanner.close();
+      // append metadata to the mob file, and close the mob file writer.
+      closeMobFileWriter(writer, fileInfo.getFirst(), mobCells);
+      // append metadata and bulkload info to the ref mob file, and close the writer.
+      closeRefFileWriter(refFileWriter, fileInfo.getFirst(), request.selectionTime);
+    }
+    if (mobCells > 0) {
+      // commit mob file
+      MobUtils.commitFile(conf, fs, filePath, mobFamilyDir, compactionCacheConfig);
+      // bulkload the ref file
+      bulkloadRefFile(connection, table, bulkloadPathOfPartition, filePath.getName());
+      newFiles.add(new Path(mobFamilyDir, filePath.getName()));
+    } else {
+      // remove the new files
+      // the mob file is empty, delete it instead of committing.
+      deletePath(filePath);
+      // the ref file is empty, delete it instead of committing.
+      deletePath(refFilePath);
+    }
+    // archive the old mob files, do not archive the del files.
+    try {
+      closeStoreFileReaders(mobFilesToCompact);
+      MobUtils
+        .removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), mobFilesToCompact);
+    } catch (IOException e) {
+      LOG.error("Failed to archive the files " + mobFilesToCompact, e);
     }
   }
 
@@ -539,7 +509,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       writer = MobUtils.createDelFileWriter(conf, fs, column,
         MobUtils.formatDate(new Date(request.selectionTime)), tempPath, Long.MAX_VALUE,
         column.getCompactionCompressionType(), HConstants.EMPTY_START_ROW, compactionCacheConfig,
-          cryptoContext);
+        cryptoContext);
       filePath = writer.getPath();
       List<Cell> cells = new ArrayList<>();
       boolean hasMore;
@@ -602,15 +572,22 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @throws IOException if IO failure is encountered
    */
   private void bulkloadRefFile(Connection connection, Table table, Path bulkloadDirectory,
-      String fileName)
-      throws IOException {
+                               String fileName)
+    throws IOException {
     // bulkload the ref file
     try {
       LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-      bulkload.doBulkLoad(bulkloadDirectory, connection.getAdmin(), table,
-          connection.getRegionLocator(table.getName()));
+      bulkload.doBulkLoad(bulkloadDirectory,
+        connection.getAdmin(),
+        table,
+        connection.getRegionLocator(table.getName()));
     } catch (Exception e) {
+      // delete the committed mob file
+      deletePath(new Path(mobFamilyDir, fileName));
       throw new IOException(e);
+    } finally {
+      // delete the bulkload files in bulkloadPath
+      deletePath(bulkloadDirectory);
     }
   }
 
