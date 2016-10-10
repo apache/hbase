@@ -31,8 +31,7 @@ public class DefaultOperationQuota implements OperationQuota {
   private long readAvailable = 0;
   private long writeConsumed = 0;
   private long readConsumed = 0;
-
-  private AvgOperationSize avgOpSize = new AvgOperationSize();
+  private final long[] operationSize;
 
   public DefaultOperationQuota(final QuotaLimiter... limiters) {
     this(Arrays.asList(limiters));
@@ -43,6 +42,12 @@ public class DefaultOperationQuota implements OperationQuota {
    */
   public DefaultOperationQuota(final List<QuotaLimiter> limiters) {
     this.limiters = limiters;
+    int size = OperationType.values().length;
+    operationSize = new long[size];
+
+    for (int i = 0; i < size; ++i) {
+      operationSize[i] = 0;
+    }
   }
 
   @Override
@@ -68,22 +73,12 @@ public class DefaultOperationQuota implements OperationQuota {
 
   @Override
   public void close() {
-    // Calculate and set the average size of get, scan and mutate for the current operation
-    long getSize = avgOpSize.getAvgOperationSize(OperationType.GET);
-    long scanSize = avgOpSize.getAvgOperationSize(OperationType.SCAN);
-    long mutationSize = avgOpSize.getAvgOperationSize(OperationType.MUTATE);
-    for (final QuotaLimiter limiter : limiters) {
-      limiter.addOperationSize(OperationType.GET, getSize);
-      limiter.addOperationSize(OperationType.SCAN, scanSize);
-      limiter.addOperationSize(OperationType.MUTATE, mutationSize);
-    }
-
     // Adjust the quota consumed for the specified operation
-    long writeDiff = avgOpSize.getOperationSize(OperationType.MUTATE) - writeConsumed;
-    long readDiff =
-        (avgOpSize.getOperationSize(OperationType.GET) + avgOpSize
-            .getOperationSize(OperationType.SCAN)) - readConsumed;
-    for (final QuotaLimiter limiter : limiters) {
+    long writeDiff = operationSize[OperationType.MUTATE.ordinal()] - writeConsumed;
+    long readDiff = operationSize[OperationType.GET.ordinal()] +
+        operationSize[OperationType.SCAN.ordinal()] - readConsumed;
+
+    for (final QuotaLimiter limiter: limiters) {
       if (writeDiff != 0) limiter.consumeWrite(writeDiff);
       if (readDiff != 0) limiter.consumeRead(readDiff);
     }
@@ -101,33 +96,21 @@ public class DefaultOperationQuota implements OperationQuota {
 
   @Override
   public void addGetResult(final Result result) {
-    avgOpSize.addGetResult(result);
+    operationSize[OperationType.GET.ordinal()] += QuotaUtil.calculateResultSize(result);
   }
 
   @Override
   public void addScanResult(final List<Result> results) {
-    avgOpSize.addScanResult(results);
+    operationSize[OperationType.SCAN.ordinal()] += QuotaUtil.calculateResultSize(results);
   }
 
   @Override
   public void addMutation(final Mutation mutation) {
-    avgOpSize.addMutation(mutation);
-  }
-
-  @Override
-  public long getAvgOperationSize(OperationType type) {
-    return avgOpSize.getAvgOperationSize(type);
+    operationSize[OperationType.MUTATE.ordinal()] += QuotaUtil.calculateMutationSize(mutation);
   }
 
   private long estimateConsume(final OperationType type, int numReqs, long avgSize) {
     if (numReqs > 0) {
-      for (final QuotaLimiter limiter : limiters) {
-        long size = limiter.getAvgOperationSize(type);
-        if (size > 0) {
-          avgSize = size;
-          break;
-        }
-      }
       return avgSize * numReqs;
     }
     return 0;

@@ -111,7 +111,15 @@ public abstract class RateLimiter {
   public synchronized void update(final RateLimiter other) {
     this.tunit = other.tunit;
     if (this.limit < other.limit) {
-      this.avail += (other.limit - this.limit);
+      // If avail is capped to this.limit, it will never overflow,
+      // otherwise, avail may overflow, just be careful here.
+      long diff = other.limit - this.limit;
+      if (this.avail <= Long.MAX_VALUE - diff) {
+        this.avail += diff;
+        this.avail = Math.min(this.avail, other.limit);
+      } else {
+        this.avail = other.limit;
+      }
     }
     this.limit = other.limit;
   }
@@ -142,10 +150,14 @@ public abstract class RateLimiter {
 
   /**
    * Are there enough available resources to allow execution?
-   * @param amount the number of required resources
+   * @param amount the number of required resources, a non-negative number
    * @return true if there are enough available resources, otherwise false
    */
   public synchronized boolean canExecute(final long amount) {
+    if (isBypass()) {
+      return true;
+    }
+
     long refillAmount = refill(limit);
     if (refillAmount == 0 && avail < amount) {
       return false;
@@ -170,13 +182,27 @@ public abstract class RateLimiter {
   }
 
   /**
-   * consume amount available units.
+   * consume amount available units, amount could be a negative number
    * @param amount the number of units to consume
    */
   public synchronized void consume(final long amount) {
-    this.avail -= amount;
-    if (this.avail < 0) {
-      this.avail = 0;
+
+    if (isBypass()) {
+      return;
+    }
+
+    if (amount >= 0 ) {
+      this.avail -= amount;
+      if (this.avail < 0) {
+        this.avail = 0;
+      }
+    } else {
+      if (this.avail <= Long.MAX_VALUE + amount) {
+        this.avail -= amount;
+        this.avail = Math.min(this.avail, this.limit);
+      } else {
+        this.avail = this.limit;
+      }
     }
   }
 
