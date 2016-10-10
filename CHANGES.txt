@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.4 10/10/2016
+Release Notes - HBase - Version 1.2.4 10/17/2016
 
 ** Sub-task
     * [HBASE-14734] - BindException when setting up MiniKdc
@@ -26,7 +26,9 @@ Release Notes - HBase - Version 1.2.4 10/10/2016
     * [HBASE-16649] - Truncate table with splits preserved can cause both data loss and truncated data appeared again
     * [HBASE-16662] - Fix open POODLE vulnerabilities
     * [HBASE-16678] - MapReduce jobs do not update counters from ScanMetrics
+    * [HBASE-16682] - Fix Shell tests failure. NoClassDefFoundError for MiniKdc
     * [HBASE-16721] - Concurrency issue in WAL unflushed seqId tracking
+    * [HBASE-16723] - RMI registry is not destroyed after stopping JMX Connector Server
     * [HBASE-16732] - Avoid possible NPE in MetaTableLocator
 
 ** Improvement
