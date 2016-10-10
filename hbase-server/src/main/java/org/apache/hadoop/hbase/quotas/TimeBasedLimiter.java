@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota;
-import org.apache.hadoop.hbase.quotas.OperationQuota.AvgOperationSize;
-import org.apache.hadoop.hbase.quotas.OperationQuota.OperationType;
 
 /**
  * Simple time based limiter that checks the quota Throttle
@@ -42,7 +40,6 @@ public class TimeBasedLimiter implements QuotaLimiter {
   private RateLimiter writeSizeLimiter = null;
   private RateLimiter readReqsLimiter = null;
   private RateLimiter readSizeLimiter = null;
-  private AvgOperationSize avgOpSize = new AvgOperationSize();
 
   private TimeBasedLimiter() {
     if (FixedIntervalRateLimiter.class.getName().equals(
@@ -183,16 +180,6 @@ public class TimeBasedLimiter implements QuotaLimiter {
   @Override
   public long getReadAvailable() {
     return readSizeLimiter.getAvailable();
-  }
-
-  @Override
-  public void addOperationSize(OperationType type, long size) {
-    avgOpSize.addOperationSize(type, size);
-  }
-
-  @Override
-  public long getAvgOperationSize(OperationType type) {
-    return avgOpSize.getAvgOperationSize(type);
   }
 
   @Override
