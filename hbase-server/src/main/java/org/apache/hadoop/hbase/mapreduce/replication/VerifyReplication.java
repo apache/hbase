@@ -102,6 +102,7 @@ public class VerifyReplication extends Configured implements Tool {
     private Result currentCompareRowInPeerTable;
     private Table replicatedTable;
     private int sleepMsBeforeReCompare;
+    private String delimiter = "";
     private boolean verbose = false;
 
     /**
@@ -119,6 +120,7 @@ public class VerifyReplication extends Configured implements Tool {
       if (replicatedScanner == null) {
         Configuration conf = context.getConfiguration();
         sleepMsBeforeReCompare = conf.getInt(NAME +".sleepMsBeforeReCompare", 0);
+        delimiter = conf.get(NAME + ".delimiter", "");
         verbose = conf.getBoolean(NAME +".verbose", false);
         final Scan scan = new Scan();
         scan.setBatch(batch);
@@ -179,7 +181,6 @@ public class VerifyReplication extends Configured implements Tool {
             }
           } catch (Exception e) {
             logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value);
-            LOG.error("Exception while comparing row : " + e);
           }
           currentCompareRowInPeerTable = replicatedScanner.next();
           break;
@@ -203,9 +204,11 @@ public class VerifyReplication extends Configured implements Tool {
           Result sourceResult = sourceTable.get(new Get(row.getRow()));
           Result replicatedResult = replicatedTable.get(new Get(row.getRow()));
           Result.compareResults(sourceResult, replicatedResult);
-          context.getCounter(Counters.GOODROWS).increment(1);
-          if (verbose) {
-            LOG.info("Good row key: " + delimiter + Bytes.toString(row.getRow()) + delimiter);
+          if (!sourceResult.isEmpty()) {
+            context.getCounter(Counters.GOODROWS).increment(1);
+            if (verbose) {
+              LOG.info("Good row key: " + delimiter + Bytes.toString(row.getRow()) + delimiter);
+            }
           }
           return;
         } catch (Exception e) {
@@ -309,6 +312,7 @@ public class VerifyReplication extends Configured implements Tool {
     conf.setLong(NAME+".startTime", startTime);
     conf.setLong(NAME+".endTime", endTime);
     conf.setInt(NAME +".sleepMsBeforeReCompare", sleepMsBeforeReCompare);
+    conf.set(NAME + ".delimiter", delimiter);
     conf.setBoolean(NAME +".verbose", verbose);
     if (families != null) {
       conf.set(NAME+".families", families);
