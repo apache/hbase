@@ -124,7 +124,7 @@ module Hbase
     define_test "add_peer: multiple zk cluster key and namespaces" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       namespaces = ["ns1", "ns2", "ns3"]
-      namespaces_str = "ns2;ns1;ns3"
+      namespaces_str = "ns1;ns2;ns3"
 
       args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces }
       command(:add_peer, @peer_id, args)
@@ -145,7 +145,7 @@ module Hbase
       namespaces = ["ns1", "ns2"]
       table_cfs = { "ns3:table1" => [], "ns3:table2" => ["cf1"],
         "ns3:table3" => ["cf1", "cf2"] }
-      namespaces_str = "ns2;ns1"
+      namespaces_str = "ns1;ns2"
       table_cfs_str = "ns3.table1;ns3.table3:cf1,cf2;ns3.table2:cf1"
 
       args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces,
@@ -198,7 +198,7 @@ module Hbase
     define_test "set_peer_namespaces: works with namespaces array" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       namespaces = ["ns1", "ns2"]
-      namespaces_str = "ns2;ns1"
+      namespaces_str = "ns1;ns2"
 
       args = { CLUSTER_KEY => cluster_key }
       command(:add_peer, @peer_id, args)
@@ -208,6 +208,93 @@ module Hbase
       replication_admin.peer_added(@peer_id)
 
       command(:set_peer_namespaces, @peer_id, namespaces)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test "append_peer_namespaces: works with namespaces array" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      namespaces = ["ns1", "ns2"]
+      namespaces_str = "ns1;ns2"
+
+      args = { CLUSTER_KEY => cluster_key }
+      command(:add_peer, @peer_id, args)
+
+      # Normally the ReplicationSourceManager will call ReplicationPeer#peer_added
+      # but here we have to do it ourselves
+      replication_admin.peer_added(@peer_id)
+
+      command(:append_peer_namespaces, @peer_id, namespaces)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+
+      namespaces = ["ns3"]
+      namespaces_str = "ns1;ns2;ns3"
+      command(:append_peer_namespaces, @peer_id, namespaces)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+
+      # append a namespace which is already in the peer config
+      command(:append_peer_namespaces, @peer_id, namespaces)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test "remove_peer_namespaces: works with namespaces array" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      namespaces = ["ns1", "ns2", "ns3"]
+
+      args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces }
+      command(:add_peer, @peer_id, args)
+
+      # Normally the ReplicationSourceManager will call ReplicationPeer#peer_added
+      # but here we have to do it ourselves
+      replication_admin.peer_added(@peer_id)
+
+      namespaces = ["ns1", "ns2"]
+      namespaces_str = "ns3"
+      command(:remove_peer_namespaces, @peer_id, namespaces)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+
+      namespaces = ["ns3"]
+      namespaces_str = nil
+      command(:remove_peer_namespaces, @peer_id, namespaces)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(namespaces_str,
+        replication_admin.show_peer_namespaces(peer_config))
+
+      # remove a namespace which is not in peer config
+      command(:remove_peer_namespaces, @peer_id, namespaces)
 
       assert_equal(1, command(:list_peers).length)
       assert(command(:list_peers).key?(@peer_id))
