@@ -63,15 +63,6 @@ final class NoopQuotaLimiter implements QuotaLimiter {
   }
 
   @Override
-  public void addOperationSize(OperationType type, long size) {
-  }
-
-  @Override
-  public long getAvgOperationSize(OperationType type) {
-    return -1;
-  }
-
-  @Override
   public String toString() {
     return "NoopQuotaLimiter";
   }
