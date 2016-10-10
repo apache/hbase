@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -284,5 +285,134 @@ public class TestRateLimiter {
     assertEquals(60, limiter.refill(limiter.getLimit()));
     limiter.setNextRefillTime(limiter.getNextRefillTime() - 5000);
     assertEquals(60, limiter.refill(limiter.getLimit()));
+  }
+
+  @Test
+  public void testUnconfiguredLimiters() throws InterruptedException {
+
+    ManualEnvironmentEdge testEdge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(testEdge);
+    long limit = Long.MAX_VALUE;
+
+    // For unconfigured limiters, it is supposed to use as much as possible
+    RateLimiter avgLimiter = new AverageIntervalRateLimiter();
+    RateLimiter fixLimiter = new FixedIntervalRateLimiter();
+
+    assertEquals(limit, avgLimiter.getAvailable());
+    assertEquals(limit, fixLimiter.getAvailable());
+
+    assertTrue(avgLimiter.canExecute(limit));
+    avgLimiter.consume(limit);
+
+    assertTrue(fixLimiter.canExecute(limit));
+    fixLimiter.consume(limit);
+
+    // Make sure that available is Long.MAX_VALUE
+    assertTrue(limit == avgLimiter.getAvailable());
+    assertTrue(limit == fixLimiter.getAvailable());
+
+    // after 100 millseconds, it should be able to execute limit as well
+    testEdge.incValue(100);
+
+    assertTrue(avgLimiter.canExecute(limit));
+    avgLimiter.consume(limit);
+
+    assertTrue(fixLimiter.canExecute(limit));
+    fixLimiter.consume(limit);
+
+    // Make sure that available is Long.MAX_VALUE
+    assertTrue(limit == avgLimiter.getAvailable());
+    assertTrue(limit == fixLimiter.getAvailable());
+
+    EnvironmentEdgeManager.reset();
+  }
+
+  @Test
+  public void testExtremeLimiters() throws InterruptedException {
+
+    ManualEnvironmentEdge testEdge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(testEdge);
+    long limit = Long.MAX_VALUE - 1;
+
+    RateLimiter avgLimiter = new AverageIntervalRateLimiter();
+    avgLimiter.set(limit, TimeUnit.SECONDS);
+    RateLimiter fixLimiter = new FixedIntervalRateLimiter();
+    fixLimiter.set(limit, TimeUnit.SECONDS);
+
+    assertEquals(limit, avgLimiter.getAvailable());
+    assertEquals(limit, fixLimiter.getAvailable());
+
+    assertTrue(avgLimiter.canExecute(limit / 2));
+    avgLimiter.consume(limit / 2);
+
+    assertTrue(fixLimiter.canExecute(limit / 2));
+    fixLimiter.consume(limit / 2);
+
+    // Make sure that available is whatever left
+    assertTrue((limit - (limit / 2)) == avgLimiter.getAvailable());
+    assertTrue((limit - (limit / 2)) == fixLimiter.getAvailable());
+
+    // after 100 millseconds, both should not be able to execute the limit
+    testEdge.incValue(100);
+
+    assertFalse(avgLimiter.canExecute(limit));
+    assertFalse(fixLimiter.canExecute(limit));
+
+    // after 500 millseconds, average interval limiter should be able to execute the limit
+    testEdge.incValue(500);
+    assertTrue(avgLimiter.canExecute(limit));
+    assertFalse(fixLimiter.canExecute(limit));
+
+    // Make sure that available is correct
+    assertTrue(limit == avgLimiter.getAvailable());
+    assertTrue((limit - (limit / 2)) == fixLimiter.getAvailable());
+
+    // after 500 millseconds, both should be able to execute
+    testEdge.incValue(500);
+    assertTrue(avgLimiter.canExecute(limit));
+    assertTrue(fixLimiter.canExecute(limit));
+
+    // Make sure that available is Long.MAX_VALUE
+    assertTrue(limit == avgLimiter.getAvailable());
+    assertTrue(limit == fixLimiter.getAvailable());
+
+    EnvironmentEdgeManager.reset();
+  }
+
+  /*
+   * This test case is tricky. Basically, it simulates the following events:
+   *           Thread-1                             Thread-2
+   * t0:  canExecute(100) and consume(100)
+   * t1:                                         canExecute(100), avail may be increased by 80
+   * t2:  consume(-80) as actual size is 20
+   * It will check if consume(-80) can handle overflow correctly.
+   */
+  @Test
+  public void testLimiterCompensationOverflow() throws InterruptedException {
+
+    long limit = Long.MAX_VALUE - 1;
+    long guessNumber = 100;
+
+    // For unconfigured limiters, it is supposed to use as much as possible
+    RateLimiter avgLimiter = new AverageIntervalRateLimiter();
+    avgLimiter.set(limit, TimeUnit.SECONDS);
+
+    assertEquals(limit, avgLimiter.getAvailable());
+
+    // The initial guess is that 100 bytes.
+    assertTrue(avgLimiter.canExecute(guessNumber));
+    avgLimiter.consume(guessNumber);
+
+    // Make sure that available is whatever left
+    assertTrue((limit - guessNumber) == avgLimiter.getAvailable());
+
+    // Manually set avil to simulate that another thread call canExecute().
+    // It is simulated by consume().
+    avgLimiter.consume(-80);
+    assertTrue((limit - guessNumber + 80) == avgLimiter.getAvailable());
+
+    // Now thread1 compensates 80
+    avgLimiter.consume(-80);
+    assertTrue(limit == avgLimiter.getAvailable());
   }
 }

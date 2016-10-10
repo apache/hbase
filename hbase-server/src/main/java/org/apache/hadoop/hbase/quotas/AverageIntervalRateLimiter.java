@@ -34,12 +34,21 @@ public class AverageIntervalRateLimiter extends RateLimiter {
       return limit;
     }
 
-    long delta = (limit * (now - nextRefillTime)) / super.getTimeUnitInMillis();
+    long timeInterval = now - nextRefillTime;
+    long delta = 0;
+    long timeUnitInMillis = super.getTimeUnitInMillis();
+    if (timeInterval >= timeUnitInMillis) {
+      delta = limit;
+    } else if (timeInterval > 0) {
+      double r = ((double)timeInterval / (double)timeUnitInMillis) * limit;
+      delta = (long)r;
+    }
+
     if (delta > 0) {
       this.nextRefillTime = now;
-      return Math.min(limit, delta);
     }
-    return 0;
+
+    return delta;
   }
 
   @Override
@@ -47,8 +56,9 @@ public class AverageIntervalRateLimiter extends RateLimiter {
     if (nextRefillTime == -1) {
       return 0;
     }
-    long timeUnitInMillis = super.getTimeUnitInMillis();
-    return ((amount * timeUnitInMillis) / limit) - ((available * timeUnitInMillis) / limit);
+
+    double r = ((double)(amount - available)) * super.getTimeUnitInMillis() / limit;
+    return (long)r;
   }
 
   // This method is for strictly testing purpose only

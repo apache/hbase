@@ -68,13 +68,4 @@ public interface QuotaLimiter {
 
   /** @return the number of bytes available to write to avoid exceeding the quota */
   long getWriteAvailable();
-
-  /**
-   * Add the average size of the specified operation type.
-   * The average will be used as estimate for the next operations.
-   */
-  void addOperationSize(OperationType type, long size);
-
-  /** @return the average data size of the specified operation */
-  long getAvgOperationSize(OperationType type);
 }
