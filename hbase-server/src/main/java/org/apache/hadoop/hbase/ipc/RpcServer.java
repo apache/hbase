@@ -401,7 +401,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       return "callId: " + this.id + " service: " + serviceName +
           " methodName: " + ((this.md != null) ? this.md.getName() : "n/a") +
           " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
-          " connection: " + connection.toString();
+          " connection: " + connection.toString() +
+          " deadline: " + deadline;
     }
 
     String toTraceString() {
@@ -610,6 +611,11 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     @Override
     public void incrementResponseBlockSize(long blockSize) {
       responseBlockSize += blockSize;
+    }
+
+    @Override
+    public long getDeadline() {
+      return deadline;
     }
 
     public synchronized void sendResponseIfReady() throws IOException {

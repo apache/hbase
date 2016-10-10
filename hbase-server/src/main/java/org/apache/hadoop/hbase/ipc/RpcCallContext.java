@@ -93,4 +93,11 @@ public interface RpcCallContext {
 
   long getResponseBlockSize();
   void incrementResponseBlockSize(long blockSize);
+
+  /**
+   * Return the deadline of this call. If we can not complete this call in time, we can throw a
+   * TimeoutIOException and RPCServer will drop it.
+   * @return The system timestamp of deadline.
+   */
+  long getDeadline();
 }
