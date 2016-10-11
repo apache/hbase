@@ -199,10 +199,11 @@ public class ShutdownHook {
         throw new RuntimeException("Client finalizer is null, can't suppress!");
       }
       synchronized (fsShutdownHooks) {
-        if (!fsShutdownHooks.containsKey(hdfsClientFinalizer) &&
-            !ShutdownHookManager.deleteShutdownHook(hdfsClientFinalizer)) {
-          throw new RuntimeException("Failed suppression of fs shutdown hook: " +
-            hdfsClientFinalizer);
+        boolean isFSCacheDisabled = fs.getConf().getBoolean("fs.hdfs.impl.disable.cache", false);
+        if (!isFSCacheDisabled && !fsShutdownHooks.containsKey(hdfsClientFinalizer)
+            && !ShutdownHookManager.deleteShutdownHook(hdfsClientFinalizer)) {
+          throw new RuntimeException(
+              "Failed suppression of fs shutdown hook: " + hdfsClientFinalizer);
         }
         Integer refs = fsShutdownHooks.get(hdfsClientFinalizer);
         fsShutdownHooks.put(hdfsClientFinalizer, refs == null ? 1 : refs + 1);
