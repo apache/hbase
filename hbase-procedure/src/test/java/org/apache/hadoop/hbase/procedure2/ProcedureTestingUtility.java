@@ -97,7 +97,7 @@ public class ProcedureTestingUtility {
     procStore.load(loader);
   }
 
-  public static void storeRestartAndAssert(ProcedureStore procStore, long maxProcId,
+  public static LoadCounter storeRestartAndAssert(ProcedureStore procStore, long maxProcId,
       long runnableCount, int completedCount, int corruptedCount) throws Exception {
     final LoadCounter loader = new LoadCounter();
     storeRestart(procStore, loader);
@@ -105,6 +105,7 @@ public class ProcedureTestingUtility {
     assertEquals(runnableCount, loader.getRunnableCount());
     assertEquals(completedCount, loader.getCompletedCount());
     assertEquals(corruptedCount, loader.getCorruptedCount());
+    return loader;
   }
 
   public static <TEnv> void setKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
@@ -364,6 +365,15 @@ public class ProcedureTestingUtility {
 
     public int getCorruptedCount() {
       return corrupted.size();
+    }
+
+    public boolean isRunnable(final long procId) {
+      for (Procedure proc: runnable) {
+        if (proc.getProcId() == procId) {
+          return true;
+        }
+      }
+      return false;
     }
 
     @Override

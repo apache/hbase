@@ -75,4 +75,9 @@ public class NoopProcedureStore extends ProcedureStoreBase {
   public void delete(Procedure proc, long[] subprocs) {
     // no-op
   }
+
+  @Override
+  public void delete(long[] procIds, int offset, int count) {
+    // no-op
+  }
 }

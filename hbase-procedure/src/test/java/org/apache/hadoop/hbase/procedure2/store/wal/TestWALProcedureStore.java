@@ -404,13 +404,13 @@ public class TestWALProcedureStore {
     procStore.insert(procs[1], null);
     procStore.insert(procs[2], null);
     procStore.insert(procs[3], null);
-    procStore.delete(procs[0], null);
+    procStore.delete(procs[0].getProcId());
     procStore.rollWriterForTesting();
-    procStore.delete(procs[2], null);
+    procStore.delete(procs[2].getProcId());
     procStore.update(procs[3]);
     procStore.insert(procs[4], null);
     procStore.rollWriterForTesting();
-    procStore.delete(procs[4], null);
+    procStore.delete(procs[4].getProcId());
     procStore.insert(procs[5], null);
 
     // Stop the store
@@ -737,9 +737,56 @@ public class TestWALProcedureStore {
     restartAndAssert(3, 0, 1, 0);
   }
 
-  private void restartAndAssert(long maxProcId, long runnableCount,
+  @Test
+  public void testBatchDelete() throws Exception {
+    for (int i = 1; i < 10; ++i) {
+      procStore.insert(new TestProcedure(i), null);
+    }
+
+    // delete nothing
+    long[] toDelete = new long[] { 1, 2, 3, 4 };
+    procStore.delete(toDelete, 2, 0);
+    LoadCounter loader = restartAndAssert(9, 9, 0, 0);
+    for (int i = 1; i < 10; ++i) {
+      assertEquals(true, loader.isRunnable(i));
+    }
+
+    // delete the full "toDelete" array (2, 4, 6, 8)
+    toDelete = new long[] { 2, 4, 6, 8 };
+    procStore.delete(toDelete, 0, toDelete.length);
+    loader = restartAndAssert(9, 5, 0, 0);
+    for (int i = 1; i < 10; ++i) {
+      assertEquals(i % 2 != 0, loader.isRunnable(i));
+    }
+
+    // delete a slice of "toDelete" (1, 3)
+    toDelete = new long[] { 5, 7, 1, 3, 9 };
+    procStore.delete(toDelete, 2, 2);
+    loader = restartAndAssert(9, 3, 0, 0);
+    for (int i = 1; i < 10; ++i) {
+      assertEquals(i > 3 && i % 2 != 0, loader.isRunnable(i));
+    }
+
+    // delete a single item (5)
+    toDelete = new long[] { 5 };
+    procStore.delete(toDelete, 0, 1);
+    loader = restartAndAssert(9, 2, 0, 0);
+    for (int i = 1; i < 10; ++i) {
+      assertEquals(i > 5 && i % 2 != 0, loader.isRunnable(i));
+    }
+
+    // delete remaining using a slice of "toDelete" (7, 9)
+    toDelete = new long[] { 0, 7, 9 };
+    procStore.delete(toDelete, 1, 2);
+    loader = restartAndAssert(0, 0, 0, 0);
+    for (int i = 1; i < 10; ++i) {
+      assertEquals(false, loader.isRunnable(i));
+    }
+  }
+
+  private LoadCounter restartAndAssert(long maxProcId, long runnableCount,
       int completedCount, int corruptedCount) throws Exception {
-    ProcedureTestingUtility.storeRestartAndAssert(procStore, maxProcId,
+    return ProcedureTestingUtility.storeRestartAndAssert(procStore, maxProcId,
       runnableCount, completedCount, corruptedCount);
   }
 

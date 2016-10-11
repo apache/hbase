@@ -196,4 +196,14 @@ public interface ProcedureStore {
    * @param subProcIds the IDs of the sub-procedure to remove.
    */
   void delete(Procedure parentProc, long[] subProcIds);
+
+  /**
+   * The specified procIds were removed from the executor,
+   * due to completion, abort or failure.
+   * The store implementor should remove all the information about the specified procIds.
+   * @param procIds the IDs of the procedures to remove.
+   * @param offset the array offset from where to start to delete
+   * @param count the number of IDs to delete
+   */
+  void delete(long[] procIds, int offset, int count);
 }

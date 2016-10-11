@@ -465,6 +465,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   @Override
   public void delete(final Procedure proc, final long[] subProcIds) {
+    assert proc != null : "expected a non-null procedure";
+    assert subProcIds != null && subProcIds.length > 0 : "expected subProcIds";
     if (LOG.isTraceEnabled()) {
       LOG.trace("Update " + proc + " and Delete " + Arrays.toString(subProcIds));
     }
@@ -480,6 +482,42 @@ public class WALProcedureStore extends ProcedureStoreBase {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
       LOG.fatal("Unable to serialize the procedure: " + proc, e);
+      throw new RuntimeException(e);
+    } finally {
+      releaseSlot(slot);
+    }
+  }
+
+  @Override
+  public void delete(final long[] procIds, final int offset, final int count) {
+    if (count == 0) return;
+    if (offset == 0 && count == procIds.length) {
+      delete(procIds);
+    } else if (count == 1) {
+      delete(procIds[offset]);
+    } else {
+      delete(Arrays.copyOfRange(procIds, offset, offset + count));
+    }
+  }
+
+  private void delete(final long[] procIds) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Delete " + Arrays.toString(procIds));
+    }
+
+    final ByteSlot slot = acquireSlot();
+    try {
+      // Serialize the delete
+      for (int i = 0; i < procIds.length; ++i) {
+        ProcedureWALFormat.writeDelete(slot, procIds[i]);
+      }
+
+      // Push the transaction data and wait until it is persisted
+      pushData(PushType.DELETE, slot, -1, procIds);
+    } catch (IOException e) {
+      // We are not able to serialize the procedure.
+      // this is a code error, and we are not able to go on.
+      LOG.fatal("Unable to serialize the procedures: " + Arrays.toString(procIds), e);
       throw new RuntimeException(e);
     } finally {
       releaseSlot(slot);

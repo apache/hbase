@@ -138,6 +138,9 @@ public class ProcedureExecutor<TEnvironment> {
     private static final String EVICT_ACKED_TTL_CONF_KEY ="hbase.procedure.cleaner.acked.evict.ttl";
     private static final int DEFAULT_ACKED_EVICT_TTL = 5 * 60000; // 5min
 
+    private static final String BATCH_SIZE_CONF_KEY = "hbase.procedure.cleaner.evict.batch.size";
+    private static final int DEFAULT_BATCH_SIZE = 32;
+
     private final Map<Long, ProcedureInfo> completed;
     private final Map<NonceKey, Long> nonceKeysToProcIdsMap;
     private final ProcedureStore store;
@@ -165,6 +168,10 @@ public class ProcedureExecutor<TEnvironment> {
 
       final long evictTtl = conf.getInt(EVICT_TTL_CONF_KEY, DEFAULT_EVICT_TTL);
       final long evictAckTtl = conf.getInt(EVICT_ACKED_TTL_CONF_KEY, DEFAULT_ACKED_EVICT_TTL);
+      final int batchSize = conf.getInt(BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
+
+      final long[] batchIds = new long[batchSize];
+      int batchCount = 0;
 
       final long now = EnvironmentEdgeManager.currentTime();
       final Iterator<Map.Entry<Long, ProcedureInfo>> it = completed.entrySet().iterator();
@@ -179,14 +186,21 @@ public class ProcedureExecutor<TEnvironment> {
           if (isDebugEnabled) {
             LOG.debug("Evict completed procedure: " + procInfo);
           }
-          store.delete(entry.getKey());
+          batchIds[batchCount++] = entry.getKey();
+          if (batchCount == batchIds.length) {
+            store.delete(batchIds, 0, batchCount);
+            batchCount = 0;
+          }
           it.remove();
 
-          NonceKey nonceKey = procInfo.getNonceKey();
+          final NonceKey nonceKey = procInfo.getNonceKey();
           if (nonceKey != null) {
             nonceKeysToProcIdsMap.remove(nonceKey);
           }
         }
+      }
+      if (batchCount > 0) {
+        store.delete(batchIds, 0, batchCount);
       }
     }
   }
