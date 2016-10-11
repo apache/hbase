@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
@@ -139,8 +138,6 @@ public class AccessControlLists {
             // Set cache data blocks in L1 if more than one cache tier deployed; e.g. this will
             // be the case if we are using CombinedBlockCache (Bucket Cache).
             .setCacheDataInL1(true));
-    ACL_TABLEDESC.setValue(HTableDescriptor.SPLIT_POLICY,
-        DisabledRegionSplitPolicy.class.getName());
     master.createSystemTable(ACL_TABLEDESC);
   }
 
