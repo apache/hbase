@@ -79,14 +79,14 @@ private[spark] object HBaseConnectionCache extends Logging {
       connectionMap.foreach {
         x => {
           if(x._2.refCount < 0) {
-            logError("Bug to be fixed: negative refCount")
+            logError(s"Bug to be fixed: negative refCount of connection ${x._2}")
           }
 
           if(forceClean || ((x._2.refCount <= 0) && (tsNow - x._2.timestamp > timeout))) {
             try{
               x._2.connection.close()
             } catch {
-              case e: IOException => logWarning("Fail to close connection", e)
+              case e: IOException => logWarning(s"Fail to close connection ${x._2}", e)
             }
             connectionMap.remove(x._1)
           }
