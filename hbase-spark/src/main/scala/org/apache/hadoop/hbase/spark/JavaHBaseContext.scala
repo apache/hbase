@@ -281,7 +281,7 @@ class JavaHBaseContext(@transient jsc: JavaSparkContext,
                           batchSize: Integer,
                           javaDStream: JavaDStream[T],
                           makeGet: Function[T, Get],
-                          convertResult: Function[Result, U]) {
+                          convertResult: Function[Result, U]): JavaDStream[U] = {
     JavaDStream.fromDStream(hbaseContext.streamBulkGet(tableName,
       batchSize,
       javaDStream.dstream,
