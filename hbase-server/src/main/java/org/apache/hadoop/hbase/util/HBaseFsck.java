@@ -1388,10 +1388,11 @@ public class HBaseFsck extends Configured implements Closeable {
   /**
    * This borrows code from MasterFileSystem.bootstrap(). Explicitly creates it's own WAL, so be
    * sure to close it as well as the region when you're finished.
-   *
+   * @param walFactoryID A unique identifier for WAL factory. Filesystem implementations will use
+   *          this ID to make a directory inside WAL directory path.
    * @return an open hbase:meta HRegion
    */
-  private HRegion createNewMeta() throws IOException {
+  private HRegion createNewMeta(String walFactoryID) throws IOException {
     Path rootdir = FSUtils.getRootDir(getConf());
     Configuration c = getConf();
     HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
@@ -1402,9 +1403,8 @@ public class HBaseFsck extends Configured implements Closeable {
     Configuration confForWAL = new Configuration(c);
     confForWAL.set(HConstants.HBASE_DIR, rootdir.toString());
     WAL wal = (new WALFactory(confForWAL,
-        Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-        "hbck-meta-recovery-" + RandomStringUtils.randomNumeric(8))).
-        getWAL(metaHRI.getEncodedNameAsBytes(), metaHRI.getTable().getNamespace());
+        Collections.<WALActionsListener> singletonList(new MetricsWAL()), walFactoryID))
+            .getWAL(metaHRI.getEncodedNameAsBytes(), metaHRI.getTable().getNamespace());
     HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor, wal);
     MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, true);
     return meta;
@@ -1513,7 +1513,8 @@ public class HBaseFsck extends Configured implements Closeable {
     Path backupDir = sidelineOldMeta();
 
     LOG.info("Creating new hbase:meta");
-    HRegion meta = createNewMeta();
+    String walFactoryId = "hbck-meta-recovery-" + RandomStringUtils.randomNumeric(8);
+    HRegion meta = createNewMeta(walFactoryId);
 
     // populate meta
     List<Put> puts = generatePuts(tablesInfo);
@@ -1527,9 +1528,29 @@ public class HBaseFsck extends Configured implements Closeable {
     if (meta.getWAL() != null) {
       meta.getWAL().close();
     }
+    // clean up the temporary hbck meta recovery WAL directory
+    removeHBCKMetaRecoveryWALDir(walFactoryId);
     LOG.info("Success! hbase:meta table rebuilt.");
     LOG.info("Old hbase:meta is moved into " + backupDir);
     return true;
+  }
+
+  /**
+   * Removes the empty Meta recovery WAL directory.
+   * @param walFactoryID A unique identifier for WAL factory which was used by Filesystem to make a
+   *          Meta recovery WAL directory inside WAL directory path.
+   */
+  private void removeHBCKMetaRecoveryWALDir(String walFactoryId) throws IOException {
+    Path rootdir = FSUtils.getRootDir(getConf());
+    Path walLogDir = new Path(new Path(rootdir, HConstants.HREGION_LOGDIR_NAME), walFactoryId);
+    FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
+    FileStatus[] walFiles = FSUtils.listStatus(fs, walLogDir, null);
+    if (walFiles == null || walFiles.length == 0) {
+      LOG.info("HBCK meta recovery WAL directory is empty, removing it now.");
+      if (!FSUtils.deleteDirectory(fs, walLogDir)) {
+        LOG.warn("Couldn't clear the HBCK Meta recovery WAL directory " + walLogDir);
+      }
+    }
   }
 
   /**
