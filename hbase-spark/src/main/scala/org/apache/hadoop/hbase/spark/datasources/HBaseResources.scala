@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.spark.datasources
 
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client._
-import org.apache.hadoop.hbase.spark.HBaseRelation
+import org.apache.hadoop.hbase.spark.{HBaseConnectionKey, SmartConnection,
+  HBaseConnectionCache, HBaseRelation}
 import scala.language.implicitConversions
 
 // Resource and ReferencedResources are defined for extensibility,
@@ -84,11 +85,11 @@ trait ReferencedResource {
 }
 
 case class TableResource(relation: HBaseRelation) extends ReferencedResource {
-  var connection: Connection = _
+  var connection: SmartConnection = _
   var table: Table = _
 
   override def init(): Unit = {
-    connection = ConnectionFactory.createConnection(relation.hbaseConf)
+    connection = HBaseConnectionCache.getConnection(relation.hbaseConf)
     table = connection.getTable(TableName.valueOf(relation.tableName))
   }
 
@@ -113,7 +114,7 @@ case class TableResource(relation: HBaseRelation) extends ReferencedResource {
 }
 
 case class RegionResource(relation: HBaseRelation) extends ReferencedResource {
-  var connection: Connection = _
+  var connection: SmartConnection = _
   var rl: RegionLocator = _
   val regions = releaseOnException {
     val keys = rl.getStartEndKeys
@@ -127,7 +128,7 @@ case class RegionResource(relation: HBaseRelation) extends ReferencedResource {
   }
 
   override def init(): Unit = {
-    connection = ConnectionFactory.createConnection(relation.hbaseConf)
+    connection = HBaseConnectionCache.getConnection(relation.hbaseConf)
     rl = connection.getRegionLocator(TableName.valueOf(relation.tableName))
   }
 

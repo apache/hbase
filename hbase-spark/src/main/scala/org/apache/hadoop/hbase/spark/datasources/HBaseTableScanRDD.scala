@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.spark._
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.spark.datasources.HBaseResources._
+import org.apache.hadoop.hbase.util.ShutdownHookManager
 import org.apache.spark.sql.datasources.hbase.Field
 import org.apache.spark.{SparkEnv, TaskContext, Logging, Partition}
 import org.apache.spark.rdd.RDD
@@ -85,9 +86,13 @@ class HBaseTableScanRDD(relation: HBaseRelation,
       }
     }.toArray
     regions.release()
+    ShutdownHookManager.affixShutdownHook( new Thread() {
+      override def run() {
+        HBaseConnectionCache.close()
+      }
+    }, 0)
     ps.asInstanceOf[Array[Partition]]
   }
-
 
   override def getPreferredLocations(split: Partition): Seq[String] = {
     split.asInstanceOf[HBaseScanPartition].regions.server.map {
@@ -147,7 +152,6 @@ class HBaseTableScanRDD(relation: HBaseRelation,
     }
     iterator
   }
-
 
   private def buildScan(range: Range,
       filter: Option[SparkSQLPushDownFilter],
@@ -226,6 +230,11 @@ class HBaseTableScanRDD(relation: HBaseRelation,
       .fold(Iterator.empty: Iterator[Result]){ case (x, y) =>
       x ++ y
     } ++ gIt
+    ShutdownHookManager.affixShutdownHook( new Thread() {
+      override def run() {
+        HBaseConnectionCache.close()
+      }
+    }, 0)
     rIts
   }
 
