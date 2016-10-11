@@ -2333,7 +2333,8 @@ class ConnectionManager {
     // For tests to override.
     protected AsyncProcess createAsyncProcess(Configuration conf) {
       // No default pool available.
-      return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory);
+      return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory,
+          rpcTimeout);
     }
 
     @Override

@@ -52,9 +52,12 @@ import com.google.protobuf.ServiceException;
 class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse> {
   private final MultiAction<R> multiAction;
   private final boolean cellBlock;
+  private final RetryingTimeTracker tracker;
+  private final int rpcTimeout;
 
   MultiServerCallable(final ClusterConnection connection, final TableName tableName,
-      final ServerName location, RpcControllerFactory rpcFactory, final MultiAction<R> multi) {
+      final ServerName location, RpcControllerFactory rpcFactory, final MultiAction<R> multi,
+      int rpcTimeout, RetryingTimeTracker tracker) {
     super(connection, tableName, null, rpcFactory);
     this.multiAction = multi;
     // RegionServerCallable has HRegionLocation field, but this is a multi-region request.
@@ -62,6 +65,8 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
     // we will store the server here, and throw if someone tries to obtain location/regioninfo.
     this.location = new HRegionLocation(null, location);
     this.cellBlock = isCellBlock();
+    this.tracker = tracker;
+    this.rpcTimeout = rpcTimeout;
   }
 
   @Override
@@ -79,7 +84,13 @@ class MultiServerCallable<R> extends PayloadCarryingServerCallable<MultiResponse
   }
 
   @Override
-  public MultiResponse call(int callTimeout) throws IOException {
+  public MultiResponse call(int operationTimeout) throws IOException {
+    int remainingTime = tracker.getRemainingTime(operationTimeout);
+    if (remainingTime <= 1) {
+      // "1" is a special return value in RetryingTimeTracker, see its implementation.
+      throw new DoNotRetryIOException("Operation Timeout");
+    }
+    int callTimeout = Math.min(rpcTimeout, remainingTime);
     int countOfActions = this.multiAction.size();
     if (countOfActions <= 0) throw new DoNotRetryIOException("No Actions");
     MultiRequest.Builder multiRequestBuilder = MultiRequest.newBuilder();

@@ -232,7 +232,8 @@ class AsyncProcess {
   protected final long pause;
   protected int numTries;
   protected int serverTrackerTimeout;
-  protected int timeout;
+  protected int rpcTimeout;
+  protected int operationTimeout;
   protected long primaryCallTimeoutMicroseconds;
   // End configuration settings.
 
@@ -275,7 +276,8 @@ class AsyncProcess {
   }
 
   public AsyncProcess(ClusterConnection hc, Configuration conf, ExecutorService pool,
-      RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors, RpcControllerFactory rpcFactory) {
+      RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors, RpcControllerFactory rpcFactory,
+      int rpcTimeout) {
     if (hc == null) {
       throw new IllegalArgumentException("HConnection cannot be null.");
     }
@@ -290,8 +292,9 @@ class AsyncProcess {
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
-    this.timeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    this.rpcTimeout = rpcTimeout;
+    this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
     this.primaryCallTimeoutMicroseconds = conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10000);
 
     this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
@@ -334,6 +337,14 @@ class AsyncProcess {
     this.thresholdToLogUndoneTaskDetails =
         conf.getInt(THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS,
           DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS);
+  }
+
+  public void setRpcTimeout(int rpcTimeout) {
+    this.rpcTimeout = rpcTimeout;
+  }
+
+  public void setOperationTimeout(int operationTimeout) {
+    this.operationTimeout = operationTimeout;
   }
 
   /**
@@ -561,12 +572,12 @@ class AsyncProcess {
    */
   public <CResult> AsyncRequestFuture submitAll(TableName tableName,
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
-    return submitAll(null, tableName, rows, callback, results, null, timeout);
+    return submitAll(null, tableName, rows, callback, results, null, operationTimeout, rpcTimeout);
   }
 
   public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results) {
-    return submitAll(pool, tableName, rows, callback, results, null, timeout);
+    return submitAll(pool, tableName, rows, callback, results, null, operationTimeout, rpcTimeout);
   }
   /**
    * Submit immediately the list of rows, whatever the server status. Kept for backward
@@ -580,7 +591,7 @@ class AsyncProcess {
    */
   public <CResult> AsyncRequestFuture submitAll(ExecutorService pool, TableName tableName,
       List<? extends Row> rows, Batch.Callback<CResult> callback, Object[] results,
-      PayloadCarryingServerCallable callable, int curTimeout) {
+      PayloadCarryingServerCallable callable, int operationTimeout, int rpcTimeout) {
     List<Action<Row>> actions = new ArrayList<Action<Row>>(rows.size());
 
     // The position will be used by the processBatch to match the object array returned.
@@ -600,7 +611,7 @@ class AsyncProcess {
     }
     AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
         tableName, actions, ng.getNonceGroup(), getPool(pool), callback, results, results != null,
-        callable, curTimeout);
+        callable, operationTimeout, rpcTimeout);
     ars.groupAndSendMultiAction(actions, 1);
     return ars;
   }
@@ -752,12 +763,12 @@ class AsyncProcess {
           if (callable == null) {
             callable = createCallable(server, tableName, multiAction);
           }
-          RpcRetryingCaller<MultiResponse> caller = createCaller(callable);
+          RpcRetryingCaller<MultiResponse> caller = createCaller(callable, rpcTimeout);
           try {
             if (callsInProgress != null) {
               callsInProgress.add(callable);
             }
-            res = caller.callWithoutRetries(callable, currentCallTotalTimeout);
+            res = caller.callWithoutRetries(callable, operationTimeout);
             if (res == null) {
               // Cancelled
               return;
@@ -823,11 +834,14 @@ class AsyncProcess {
     private final boolean hasAnyReplicaGets;
     private final long nonceGroup;
     private PayloadCarryingServerCallable currentCallable;
-    private int currentCallTotalTimeout;
+    private int operationTimeout;
+    private int rpcTimeout;
+    private RetryingTimeTracker tracker;
 
     public AsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
         ExecutorService pool, boolean needResults, Object[] results,
-        Batch.Callback<CResult> callback, PayloadCarryingServerCallable callable, int timeout) {
+        Batch.Callback<CResult> callback, PayloadCarryingServerCallable callable,
+        int operationTimeout, int rpcTimeout) {
       this.pool = pool;
       this.callback = callback;
       this.nonceGroup = nonceGroup;
@@ -897,7 +911,11 @@ class AsyncProcess {
       this.errorsByServer = createServerErrorTracker();
       this.errors = (globalErrors != null) ? globalErrors : new BatchErrors();
       this.currentCallable = callable;
-      this.currentCallTotalTimeout = timeout;
+      this.operationTimeout = operationTimeout;
+      this.rpcTimeout = rpcTimeout;
+      if (callable == null) {
+        this.tracker = new RetryingTimeTracker().start();
+      }
     }
 
     public Set<PayloadCarryingServerCallable> getCallsInProgress() {
@@ -1717,6 +1735,16 @@ class AsyncProcess {
       waitUntilDone();
       return results;
     }
+
+    /**
+     * Create a callable. Isolated to be easily overridden in the tests.
+     */
+    @VisibleForTesting
+    protected MultiServerCallable<Row> createCallable(final ServerName server,
+        TableName tableName, final MultiAction<Row> multi) {
+      return new MultiServerCallable<Row>(connection, tableName, server,
+          AsyncProcess.this.rpcFactory, multi, rpcTimeout, tracker);
+    }
   }
 
   private void updateStats(ServerName server, Map<byte[], MultiResponse.RegionResult> results) {
@@ -1738,10 +1766,10 @@ class AsyncProcess {
   protected <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
       TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
       Batch.Callback<CResult> callback, Object[] results, boolean needResults,
-      PayloadCarryingServerCallable callable, int curTimeout) {
+      PayloadCarryingServerCallable callable, int operationTimeout, int rpcTimeout) {
     return new AsyncRequestFutureImpl<CResult>(
         tableName, actions, nonceGroup, getPool(pool), needResults,
-        results, callback, callable, curTimeout);
+        results, callback, callable, operationTimeout, rpcTimeout);
   }
 
   @VisibleForTesting
@@ -1750,24 +1778,17 @@ class AsyncProcess {
       TableName tableName, List<Action<Row>> actions, long nonceGroup, ExecutorService pool,
       Batch.Callback<CResult> callback, Object[] results, boolean needResults) {
     return createAsyncRequestFuture(
-        tableName, actions, nonceGroup, pool, callback, results, needResults, null, timeout);
-  }
-
-  /**
-   * Create a callable. Isolated to be easily overridden in the tests.
-   */
-  @VisibleForTesting
-  protected MultiServerCallable<Row> createCallable(final ServerName server,
-      TableName tableName, final MultiAction<Row> multi) {
-    return new MultiServerCallable<Row>(connection, tableName, server, this.rpcFactory, multi);
+        tableName, actions, nonceGroup, pool, callback, results, needResults, null,
+        operationTimeout, rpcTimeout);
   }
 
   /**
    * Create a caller. Isolated to be easily overridden in the tests.
    */
   @VisibleForTesting
-  protected RpcRetryingCaller<MultiResponse> createCaller(PayloadCarryingServerCallable callable) {
-    return rpcCallerFactory.<MultiResponse> newCaller();
+  protected RpcRetryingCaller<MultiResponse> createCaller(PayloadCarryingServerCallable callable,
+      int rpcTimeout) {
+    return rpcCallerFactory.<MultiResponse> newCaller(rpcTimeout);
   }
 
   @VisibleForTesting

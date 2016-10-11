@@ -1035,13 +1035,12 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @Override
   public void mutateRow(final RowMutations rm) throws IOException {
-    final RetryingTimeTracker tracker = new RetryingTimeTracker();
+    final RetryingTimeTracker tracker = new RetryingTimeTracker().start();
     PayloadCarryingServerCallable<MultiResponse> callable =
       new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
           rpcControllerFactory) {
         @Override
         public MultiResponse call(int callTimeout) throws IOException {
-          tracker.start();
           controller.setPriority(tableName);
           int remainingTime = tracker.getRemainingTime(callTimeout);
           if (remainingTime == 0) {
@@ -1071,7 +1070,7 @@ public class HTable implements HTableInterface, RegionLocator {
         }
       };
     AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rm.getMutations(),
-        null, null, callable, operationTimeout);
+        null, null, callable, operationTimeout, rpcTimeout);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -1344,13 +1343,12 @@ public class HTable implements HTableInterface, RegionLocator {
   public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
     final CompareOp compareOp, final byte [] value, final RowMutations rm)
     throws IOException {
-    final RetryingTimeTracker tracker = new RetryingTimeTracker();
+    final RetryingTimeTracker tracker = new RetryingTimeTracker().start();
     PayloadCarryingServerCallable<MultiResponse> callable =
       new PayloadCarryingServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
         rpcControllerFactory) {
         @Override
         public MultiResponse call(int callTimeout) throws IOException {
-          tracker.start();
           controller.setPriority(tableName);
           int remainingTime = tracker.getRemainingTime(callTimeout);
           if (remainingTime == 0) {
@@ -1384,7 +1382,7 @@ public class HTable implements HTableInterface, RegionLocator {
      * */
     Object[] results = new Object[rm.getMutations().size()];
     AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rm.getMutations(),
-      null, results, callable, operationTimeout);
+      null, results, callable, operationTimeout, rpcTimeout);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -1800,6 +1798,10 @@ public class HTable implements HTableInterface, RegionLocator {
 
   public void setOperationTimeout(int operationTimeout) {
     this.operationTimeout = operationTimeout;
+    if (mutator != null) {
+      mutator.setOperationTimeout(operationTimeout);
+    }
+    multiAp.setOperationTimeout(operationTimeout);
   }
 
   public int getOperationTimeout() {
@@ -1808,6 +1810,10 @@ public class HTable implements HTableInterface, RegionLocator {
 
   @Override public void setRpcTimeout(int rpcTimeout) {
     this.rpcTimeout = rpcTimeout;
+    if (mutator != null) {
+      mutator.setRpcTimeout(rpcTimeout);
+    }
+    multiAp.setRpcTimeout(rpcTimeout);
   }
 
   @Override public int getRpcTimeout() {
@@ -1891,7 +1897,7 @@ public class HTable implements HTableInterface, RegionLocator {
     AsyncProcess asyncProcess =
         new AsyncProcess(connection, configuration, pool,
             RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
-            true, RpcControllerFactory.instantiate(configuration));
+            true, RpcControllerFactory.instantiate(configuration), rpcTimeout);
 
     AsyncRequestFuture future = asyncProcess.submitAll(tableName, execs,
         new Callback<ClientProtos.CoprocessorServiceResult>() {
@@ -1941,6 +1947,8 @@ public class HTable implements HTableInterface, RegionLocator {
               .writeBufferSize(connConfiguration.getWriteBufferSize())
               .maxKeyValueSize(connConfiguration.getMaxKeyValueSize())
       );
+      mutator.setRpcTimeout(rpcTimeout);
+      mutator.setOperationTimeout(operationTimeout);
     }
     return mutator;
   }
