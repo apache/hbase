@@ -109,7 +109,6 @@
       <item name="ACID Semantics" href="acid-semantics.html" target="_blank" />
       <item name="Bulk Loads" href="book.html#arch.bulk.load" target="_blank" />
       <item name="Metrics" href="metrics.html" target="_blank" />
-      <item name="HBase on Windows" href="cygwin.html" target="_blank" />
       <item name="Cluster replication" href="book.html#replication" target="_blank" />
       <item name="1.2 Documentation">
         <item name="API" href="1.2/apidocs/index.html" target="_blank" />
