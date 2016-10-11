@@ -31,8 +31,10 @@ RUN apt-get install -y vim maven inetutils-ping python-pip doxygen graphviz && \
       rm -rf /var/lib/{apt,dpkg,cache,log}/ && \
       rm -rf /tmp/*
 
-RUN git clone --depth 1 --branch v2.6.1 https://github.com/google/protobuf.git /usr/src/protobuf && \
+RUN git clone https://github.com/google/protobuf.git /usr/src/protobuf && \
   cd /usr/src/protobuf/ && \
+  git checkout 2.7.0 && \
+  mkdir gmock && \
   ldconfig && \
   ./autogen.sh && \
   ./configure && \
