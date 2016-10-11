@@ -62,7 +62,7 @@ public class ServerNonceManager {
     private static final long WAITING_BIT = 4;
     private static final long ALL_FLAG_BITS = WAITING_BIT | STATE_BITS;
 
-    private static long mvcc;
+    private long mvcc;
 
     @Override
     public String toString() {
