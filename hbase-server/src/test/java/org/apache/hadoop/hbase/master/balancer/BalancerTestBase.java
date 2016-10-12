@@ -21,7 +21,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -35,17 +37,37 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.master.*;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -149,6 +171,85 @@ public class BalancerTestBase {
       largeCluster,
 
   };
+
+  /**
+   * Data set for testLocalityCost:
+   *
+   * [test][regions][0] = [serverIndex] -> number of regions
+   * [test][regions][regionIndex+1] = {server hosting region, locality percentage, datanodes}
+   *
+   * For each [test], there is a list of cluster config information grouped by [regions].
+   * - [0] - the first element of the [regions] list is a list of servers with the value
+   *         indicating the number of regions it hosts.
+   * - [regionIndex+1] - the remaining elements of the array are regions, where the index value
+   *         is 1 greater than the regionIndex.  This element holds an array that identifies:
+   *     [0] - the serverIndex of the server hosting this region
+   *     [1] - the locality percentage returned by getLocalityOfRegion(region, server) when the
+   *           server is hosting both region and the hdfs blocks.
+   *     [.] - the serverIndex of servers hosting the hdfs blocks, where a value of -1 indicates
+   *         a dfs server not in the list of region servers.
+   */
+  protected int[][][] clusterRegionLocationMocks = new int[][][]{
+      // Test 1: Basic region placement with 1 region server not hosting dfs block
+      //     Locality Calculation:
+      //        region[0] = 1 - 80/100 = (.2)  - server[2] hosts both the region and dfs blocks
+      //        region[1] = 1.0                - server[0] only hosts the region, not dfs blocks
+      //        region[2] = 1 - 70/100 = (.3)  - server[1] hosts both the region and dfs blocks
+      //
+      //      RESULT = 0.2 + 1.0 + 0.3 / 3.0 (3.0 is max value)
+      //             = 1.5 / 3.0
+      //             = 0.5
+      new int[][]{
+          new int[]{1, 1, 1},         // 3 region servers with 1 region each
+          new int[]{2, 80, 1, 2, 0},  // region[0] on server[2] w/ 80% locality
+          new int[]{0, 50, 1, 2},     // region[1] on server[0] w/ 50% , but no local dfs blocks
+          new int[]{1, 70, 2, 0, 1},  // region[2] on server[1] w/ 70% locality
+      },
+
+      // Test 2: Sames as Test 1, but the last region has a datanode that isn't a region server
+      new int[][]{
+          new int[]{1, 1, 1},
+          new int[]{2, 80, 1, 2, 0},
+          new int[]{0, 50, 1, 2},
+          new int[]{1, 70, -1, 2, 0, 1},  // the first region location is not on a region server
+      },
+  };
+
+  // This mock allows us to test the LocalityCostFunction
+  protected class MockCluster extends BaseLoadBalancer.Cluster {
+
+    protected int[][] localityValue = null;   // [region][server] = percent of blocks
+
+    protected MockCluster(int[][] regions) {
+
+      // regions[0] is an array where index = serverIndex an value = number of regions
+      super(mockClusterServers(regions[0], 1), null, null, null);
+
+      localityValue = new int[regions.length-1][];
+      // the remaining elements in the regions array contain values for:
+      //   [0] - the serverIndex of the server hosting this region
+      //   [1] - the locality percentage (in whole numbers) for the hosting region server
+      //   [.] - a list of servers hosting dfs blocks for the region (-1 means its not one
+      //         of our region servers.
+      for (int i = 1; i < regions.length; i++){
+        int regionIndex = i - 1;
+        int serverIndex = regions[i][0];
+        int locality = regions[i][1];
+        int[] locations = Arrays.copyOfRange(regions[i], 2, regions[i].length);
+
+        regionIndexToServerIndex[regionIndex] = serverIndex;
+        localityValue[regionIndex] = new int[servers.length];
+        localityValue[regionIndex][serverIndex] = (locality > 100)? locality % 100 : locality;
+        regionLocations[regionIndex] = locations;
+      }
+    }
+
+    @Override
+    float getLocalityOfRegion(int region, int server) {
+      // convert the locality percentage to a fraction
+      return localityValue[region][server] / 100.0f;
+    }
+  }
 
   // This class is introduced because IP to rack resolution can be lengthy.
   public static class MockMapping implements DNSToSwitchMapping {
