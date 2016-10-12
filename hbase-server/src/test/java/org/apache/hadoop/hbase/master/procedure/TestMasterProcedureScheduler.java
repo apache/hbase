@@ -501,11 +501,11 @@ public class TestMasterProcedureScheduler {
     // (this step is done by the executor/rootProc, we are simulating it)
     Procedure[] subProcs = new Procedure[] {
       new TestRegionProcedure(1, 2, tableName,
-        TableProcedureInterface.TableOperationType.ASSIGN, regionA),
+        TableProcedureInterface.TableOperationType.REGION_EDIT, regionA),
       new TestRegionProcedure(1, 3, tableName,
-        TableProcedureInterface.TableOperationType.ASSIGN, regionB),
+        TableProcedureInterface.TableOperationType.REGION_EDIT, regionB),
       new TestRegionProcedure(1, 4, tableName,
-        TableProcedureInterface.TableOperationType.ASSIGN, regionC),
+        TableProcedureInterface.TableOperationType.REGION_EDIT, regionC),
     };
 
     // at this point the rootProc is going in a waiting state
@@ -678,6 +678,79 @@ public class TestMasterProcedureScheduler {
     queue.releaseTableExclusiveLock(parentProc, tableName);
   }
 
+  @Test
+  public void testYieldWithXLockHeld() throws Exception {
+    final TableName tableName = TableName.valueOf("testYieldWithXLockHeld");
+
+    queue.addBack(new TestTableProcedure(1, tableName,
+        TableProcedureInterface.TableOperationType.EDIT));
+    queue.addBack(new TestTableProcedure(2, tableName,
+        TableProcedureInterface.TableOperationType.EDIT));
+
+    // fetch from the queue and acquire xlock for the first proc
+    Procedure proc = queue.poll();
+    assertEquals(1, proc.getProcId());
+    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
+
+    // nothing available, until xlock release
+    assertEquals(null, queue.poll(0));
+
+    // put the proc in the queue
+    queue.yield(proc);
+
+    // fetch from the queue, it should be the one with just added back
+    proc = queue.poll();
+    assertEquals(1, proc.getProcId());
+
+    // release the xlock
+    queue.releaseTableExclusiveLock(proc, tableName);
+
+    proc = queue.poll();
+    assertEquals(2, proc.getProcId());
+  }
+
+  @Test
+  public void testYieldWithSharedLockHeld() throws Exception {
+    final TableName tableName = TableName.valueOf("testYieldWithSharedLockHeld");
+
+    queue.addBack(new TestTableProcedure(1, tableName,
+        TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(new TestTableProcedure(2, tableName,
+        TableProcedureInterface.TableOperationType.READ));
+    queue.addBack(new TestTableProcedure(3, tableName,
+        TableProcedureInterface.TableOperationType.EDIT));
+
+    // fetch and acquire the first shared-lock
+    Procedure proc1 = queue.poll();
+    assertEquals(1, proc1.getProcId());
+    assertEquals(true, queue.tryAcquireTableSharedLock(proc1, tableName));
+
+    // fetch and acquire the second shared-lock
+    Procedure proc2 = queue.poll();
+    assertEquals(2, proc2.getProcId());
+    assertEquals(true, queue.tryAcquireTableSharedLock(proc2, tableName));
+
+    // nothing available, until xlock release
+    assertEquals(null, queue.poll(0));
+
+    // put the procs back in the queue
+    queue.yield(proc2);
+    queue.yield(proc1);
+
+    // fetch from the queue, it should fetch the ones with just added back
+    proc1 = queue.poll();
+    assertEquals(1, proc1.getProcId());
+    proc2 = queue.poll();
+    assertEquals(2, proc2.getProcId());
+
+    // release the xlock
+    queue.releaseTableSharedLock(proc1, tableName);
+    queue.releaseTableSharedLock(proc2, tableName);
+
+    Procedure proc3 = queue.poll();
+    assertEquals(3, proc3.getProcId());
+  }
+
   public static class TestTableProcedure extends TestProcedure
       implements TableProcedureInterface {
     private final TableOperationType opType;
@@ -710,7 +783,7 @@ public class TestMasterProcedureScheduler {
     @Override
     public void toStringClassDetails(final StringBuilder sb) {
       sb.append(getClass().getSimpleName());
-      sb.append(" (table=");
+      sb.append("(table=");
       sb.append(getTableName());
       sb.append(")");
     }
@@ -754,7 +827,7 @@ public class TestMasterProcedureScheduler {
     @Override
     public void toStringClassDetails(final StringBuilder sb) {
       sb.append(getClass().getSimpleName());
-      sb.append(" (region=");
+      sb.append("(regions=");
       sb.append(Arrays.toString(getRegionInfo()));
       sb.append(")");
     }
@@ -784,5 +857,14 @@ public class TestMasterProcedureScheduler {
     public TableOperationType getTableOperationType() {
       return opType;
     }
+
+    @Override
+    public void toStringClassDetails(final StringBuilder sb) {
+      sb.append(getClass().getSimpleName());
+      sb.append("(ns=");
+      sb.append(nsName);
+      sb.append(")");
+    }
   }
 }
+

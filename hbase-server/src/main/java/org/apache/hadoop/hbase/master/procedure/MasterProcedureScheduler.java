@@ -150,23 +150,17 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     if (proc.isSuspended()) return;
 
     queue.add(proc, addFront);
-    if (!(queue.isSuspended() ||
-        (queue.hasExclusiveLock() && !queue.isLockOwner(proc.getProcId())))) {
-      // the queue is not suspended or removed from the fairq (run-queue)
-      // because someone has an xlock on it.
-      // so, if the queue is not-linked we should add it
-      if (queue.size() == 1 && !AvlIterableList.isLinked(queue)) {
-        fairq.add(queue);
-      }
+    if (!queue.hasExclusiveLock() || queue.isLockOwner(proc.getProcId())) {
+      // if the queue was not remove for an xlock execution
+      // or the proc is the lock owner, put the queue back into execution
+      addToRunQueue(fairq, queue);
     } else if (queue.hasParentLock(proc)) {
       assert addFront : "expected to add a child in the front";
       assert !queue.isSuspended() : "unexpected suspended state for the queue";
       // our (proc) parent has the xlock,
       // so the queue is not in the fairq (run-queue)
       // add it back to let the child run (inherit the lock)
-      if (!AvlIterableList.isLinked(queue)) {
-        fairq.add(queue);
-      }
+      addToRunQueue(fairq, queue);
     }
   }
 
@@ -348,15 +342,16 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   }
 
   private <T extends Comparable<T>> void addToRunQueue(FairQueue<T> fairq, Queue<T> queue) {
-    if (AvlIterableList.isLinked(queue)) return;
-    if (!queue.isEmpty())  {
+    if (!AvlIterableList.isLinked(queue) &&
+        !queue.isEmpty() && !queue.isSuspended())  {
       fairq.add(queue);
     }
   }
 
   private <T extends Comparable<T>> void removeFromRunQueue(FairQueue<T> fairq, Queue<T> queue) {
-    if (!AvlIterableList.isLinked(queue)) return;
-    fairq.remove(queue);
+    if (AvlIterableList.isLinked(queue)) {
+      fairq.remove(queue);
+    }
   }
 
   // ============================================================================
@@ -924,6 +919,7 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
         case MERGE:
         case ASSIGN:
         case UNASSIGN:
+        case REGION_EDIT:
           return false;
         default:
           break;
@@ -1154,8 +1150,10 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
     // Zk lock is expensive...
     queue.releaseZkSharedLock(lockManager);
 
-    queue.releaseSharedLock();
     queue.getNamespaceQueue().releaseSharedLock();
+    if (queue.releaseSharedLock()) {
+      addToRunQueue(tableRunQueue, queue);
+    }
     schedLock.unlock();
   }
 
@@ -1354,11 +1352,13 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
   public void releaseNamespaceExclusiveLock(final Procedure procedure, final String nsName) {
     schedLock.lock();
     try {
-      TableQueue tableQueue = getTableQueue(TableName.NAMESPACE_TABLE_NAME);
-      tableQueue.releaseSharedLock();
+      final TableQueue tableQueue = getTableQueue(TableName.NAMESPACE_TABLE_NAME);
+      final NamespaceQueue queue = getNamespaceQueue(nsName);
 
-      NamespaceQueue queue = getNamespaceQueue(nsName);
       queue.releaseExclusiveLock();
+      if (tableQueue.releaseSharedLock()) {
+        addToRunQueue(tableRunQueue, tableQueue);
+      }
     } finally {
       schedLock.unlock();
     }
@@ -1503,8 +1503,8 @@ public class MasterProcedureScheduler implements ProcedureRunnableSet {
       return true;
     }
 
-    public synchronized void releaseSharedLock() {
-      sharedLock--;
+    public synchronized boolean releaseSharedLock() {
+      return --sharedLock == 0;
     }
 
     protected synchronized boolean isSingleSharedLock() {
