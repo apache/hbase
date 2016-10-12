@@ -661,10 +661,8 @@ public class KeyValueUtil {
    * Write the given cell in KeyValue serialization format into the given buf and return a new
    * KeyValue object around that.
    */
-  public static KeyValue copyCellTo(Cell cell, byte[] buf, int offset) {
+  public static KeyValue copyCellTo(Cell cell, byte[] buf, int offset, int len) {
     int tagsLen = cell.getTagsLength();
-    int len = length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
-        cell.getValueLength(), tagsLen, true);
     if (cell instanceof ExtendedCell) {
       ((ExtendedCell) cell).write(buf, offset);
     } else {

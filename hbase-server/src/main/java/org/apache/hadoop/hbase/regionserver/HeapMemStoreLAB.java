@@ -26,11 +26,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.MemStoreChunkPool.PooledChunk;
-import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -130,7 +130,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
       // try to retire this chunk
       tryRetireChunk(c);
     }
-    return KeyValueUtil.copyCellTo(cell, c.getData(), allocOffset);
+    return KeyValueUtil.copyCellTo(cell, c.getData(), allocOffset, size);
   }
 
   /**
