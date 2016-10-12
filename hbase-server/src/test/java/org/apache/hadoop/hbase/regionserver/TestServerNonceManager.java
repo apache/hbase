@@ -45,6 +45,27 @@ import org.mockito.stubbing.Answer;
 public class TestServerNonceManager {
 
   @Test
+  public void testMvcc() throws Exception {
+    ServerNonceManager nm = createManager();
+    final long group = 100;
+    final long nonce = 1;
+    final long initMvcc = 999;
+    assertTrue(nm.startOperation(group, nonce, createStoppable()));
+    nm.addMvccToOperationContext(group, nonce, initMvcc);
+    nm.endOperation(group, nonce, true);
+    assertEquals(initMvcc, nm.getMvccFromOperationContext(group, nonce));
+    long newMvcc = initMvcc + 1;
+    for (long newNonce = nonce + 1; newNonce != (nonce + 5); ++newNonce) {
+      assertTrue(nm.startOperation(group, newNonce, createStoppable()));
+      nm.addMvccToOperationContext(group, newNonce, newMvcc);
+      nm.endOperation(group, newNonce, true);
+      assertEquals(newMvcc, nm.getMvccFromOperationContext(group, newNonce));
+      ++newMvcc;
+    }
+    assertEquals(initMvcc, nm.getMvccFromOperationContext(group, nonce));
+  }
+
+  @Test
   public void testNormalStartEnd() throws Exception {
     final long[] numbers = new long[] { NO_NONCE, 1, 2, Long.MAX_VALUE, Long.MIN_VALUE };
     ServerNonceManager nm = createManager();
