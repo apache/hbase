@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,17 +29,15 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.Threads;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -199,86 +192,5 @@ public class TestMasterProcedureEvents {
       }
     }
     return null;
-  }
-
-  @Test(timeout=30000)
-  public void testTimeoutEventProcedure() throws Exception {
-    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureQueue();
-
-    TestTimeoutEventProcedure proc = new TestTimeoutEventProcedure(1000, 5);
-    procExec.submitProcedure(proc);
-
-    ProcedureTestingUtility.waitProcedure(procExec, proc.getProcId());
-    ProcedureTestingUtility.assertIsAbortException(procExec.getResult(proc.getProcId()));
-  }
-
-  public static class TestTimeoutEventProcedure
-      extends Procedure<MasterProcedureEnv> implements TableProcedureInterface {
-    private final ProcedureEvent event = new ProcedureEvent("timeout-event");
-
-    private final AtomicInteger ntimeouts = new AtomicInteger(0);
-    private int maxTimeouts = 1;
-
-    public TestTimeoutEventProcedure() {}
-
-    public TestTimeoutEventProcedure(final int timeoutMsec, final int maxTimeouts) {
-      this.maxTimeouts = maxTimeouts;
-      setTimeout(timeoutMsec);
-      setOwner("test");
-    }
-
-    @Override
-    protected Procedure[] execute(final MasterProcedureEnv env)
-        throws ProcedureSuspendedException {
-      LOG.info("EXECUTE " + this + " ntimeouts=" + ntimeouts);
-      if (ntimeouts.get() > maxTimeouts) {
-        setAbortFailure("test", "give up after " + ntimeouts.get());
-        return null;
-      }
-
-      env.getProcedureQueue().suspendEvent(event);
-      if (env.getProcedureQueue().waitEvent(event, this)) {
-        setState(ProcedureState.WAITING_TIMEOUT);
-        throw new ProcedureSuspendedException();
-      }
-
-      return null;
-    }
-
-    @Override
-    protected void rollback(final MasterProcedureEnv env) {
-    }
-
-    @Override
-    protected boolean setTimeoutFailure(final MasterProcedureEnv env) {
-      int n = ntimeouts.incrementAndGet();
-      LOG.info("HANDLE TIMEOUT " + this + " ntimeouts=" + n);
-      setState(ProcedureState.RUNNABLE);
-      env.getProcedureQueue().wakeEvent(event);
-      return false;
-    }
-
-    @Override
-    public TableName getTableName() {
-      return TableName.valueOf("testtb");
-    }
-
-    @Override
-    public TableOperationType getTableOperationType() {
-      return TableOperationType.READ;
-    }
-
-    @Override
-    protected boolean abort(MasterProcedureEnv env) { return false; }
-
-    @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException {
-    }
-
-    @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException {
-    }
   }
 }

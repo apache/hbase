@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.procedure2;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
@@ -28,7 +30,23 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface ProcedureRunnableSet {
+public interface ProcedureScheduler {
+  /**
+   * Start the scheduler
+   */
+  void start();
+
+  /**
+   * Stop the scheduler
+   */
+  void stop();
+
+  /**
+   * In case the class is blocking on poll() waiting for items to be added,
+   * this method should awake poll() and poll() should return.
+   */
+  void signalAll();
+
   /**
    * Inserts the specified element at the front of this queue.
    * @param proc the Procedure to add
@@ -56,26 +74,64 @@ public interface ProcedureRunnableSet {
   void completionCleanup(Procedure proc);
 
   /**
+   * @return true if there are procedures available to process, otherwise false.
+   */
+  boolean hasRunnables();
+
+  /**
    * Fetch one Procedure from the queue
    * @return the Procedure to execute, or null if nothing present.
    */
   Procedure poll();
 
   /**
-   * In case the class is blocking on poll() waiting for items to be added,
-   * this method should awake poll() and poll() should return.
+   * Fetch one Procedure from the queue
+   * @param timeout how long to wait before giving up, in units of unit
+   * @param unit a TimeUnit determining how to interpret the timeout parameter
+   * @return the Procedure to execute, or null if nothing present.
    */
-  void signalAll();
+  Procedure poll(long timeout, TimeUnit unit);
 
   /**
-   * Returns the number of elements in this collection.
-   * @return the number of elements in this collection.
+   * Mark the event has not ready.
+   * procedures calling waitEvent() will be suspended.
+   * @param event the event to mark as suspended/not ready
+   */
+  void suspendEvent(ProcedureEvent event);
+
+  /**
+   * Wake every procedure waiting for the specified event
+   * (By design each event has only one "wake" caller)
+   * @param event the event to wait
+   */
+  void wakeEvent(ProcedureEvent event);
+
+  /**
+   * Wake every procedure waiting for the specified events.
+   * (By design each event has only one "wake" caller)
+   * @param count the number of events in the array to wake
+   * @param events the list of events to wake
+   */
+  void wakeEvents(int count, ProcedureEvent... events);
+
+  /**
+   * Suspend the procedure if the event is not ready yet.
+   * @param event the event to wait on
+   * @param procedure the procedure waiting on the event
+   * @return true if the procedure has to wait for the event to be ready, false otherwise.
+   */
+  boolean waitEvent(ProcedureEvent event, Procedure procedure);
+
+  /**
+   * Returns the number of elements in this queue.
+   * @return the number of elements in this queue.
    */
   @VisibleForTesting
   int size();
 
   /**
-   * Removes all of the elements from this collection.
+   * Removes all of the elements from the queue
    */
+  @VisibleForTesting
   void clear();
 }

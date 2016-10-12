@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -538,40 +538,6 @@ public class TestMasterProcedureScheduler {
 
     // release the table lock (for the root procedure)
     queue.releaseTableExclusiveLock(rootProc, tableName);
-  }
-
-  @Test
-  public void testSuspendedTableQueue() throws Exception {
-    final TableName tableName = TableName.valueOf("testSuspendedQueue");
-
-    queue.addBack(new TestTableProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.EDIT));
-    queue.addBack(new TestTableProcedure(2, tableName,
-        TableProcedureInterface.TableOperationType.EDIT));
-
-    Procedure proc = queue.poll();
-    assertEquals(1, proc.getProcId());
-    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
-
-    // Suspend
-    // TODO: If we want to keep the zk-lock we need to retain the lock on suspend
-    ProcedureEvent event = new ProcedureEvent("testSuspendedTableQueueEvent");
-    assertEquals(true, queue.waitEvent(event, proc, true));
-    queue.releaseTableExclusiveLock(proc, tableName);
-    assertEquals(null, queue.poll(0));
-
-    // Resume
-    queue.wakeEvent(event);
-
-    proc = queue.poll();
-    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
-    assertEquals(1, proc.getProcId());
-    queue.releaseTableExclusiveLock(proc, tableName);
-
-    proc = queue.poll();
-    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
-    assertEquals(2, proc.getProcId());
-    queue.releaseTableExclusiveLock(proc, tableName);
   }
 
   @Test

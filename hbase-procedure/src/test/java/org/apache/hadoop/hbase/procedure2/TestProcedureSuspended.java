@@ -92,7 +92,7 @@ public class TestProcedureSuspended {
 
     // release p3
     p3keyB.setThrowSuspend(false);
-    procExecutor.getRunnableSet().addFront(p3keyB);
+    procExecutor.getScheduler().addFront(p3keyB);
     waitAndAssertTimestamp(p1keyA, 1, 1);
     waitAndAssertTimestamp(p2keyA, 0, -1);
     waitAndAssertTimestamp(p3keyB, 2, 3);
@@ -104,7 +104,7 @@ public class TestProcedureSuspended {
 
     // rollback p2 and wait until is fully completed
     p1keyA.setTriggerRollback(true);
-    procExecutor.getRunnableSet().addFront(p1keyA);
+    procExecutor.getScheduler().addFront(p1keyA);
     ProcedureTestingUtility.waitProcedure(procExecutor, p1keyA);
 
     // p2 should start and suspend
@@ -115,7 +115,7 @@ public class TestProcedureSuspended {
 
     // wait until p2 is fully completed
     p2keyA.setThrowSuspend(false);
-    procExecutor.getRunnableSet().addFront(p2keyA);
+    procExecutor.getScheduler().addFront(p2keyA);
     ProcedureTestingUtility.waitProcedure(procExecutor, p2keyA);
     waitAndAssertTimestamp(p1keyA, 4, 60000);
     waitAndAssertTimestamp(p2keyA, 2, 8);

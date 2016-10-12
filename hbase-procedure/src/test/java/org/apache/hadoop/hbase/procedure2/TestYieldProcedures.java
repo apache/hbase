@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,7 +51,7 @@ public class TestYieldProcedures {
   private static final Procedure NULL_PROC = null;
 
   private ProcedureExecutor<TestProcEnv> procExecutor;
-  private TestRunQueue procRunnables;
+  private TestScheduler procRunnables;
   private ProcedureStore procStore;
 
   private HBaseCommonTestingUtility htu;
@@ -67,7 +68,7 @@ public class TestYieldProcedures {
 
     logDir = new Path(testDir, "proc-logs");
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
-    procRunnables = new TestRunQueue();
+    procRunnables = new TestScheduler();
     procExecutor = new ProcedureExecutor(htu.getConfiguration(), new TestProcEnv(),
         procStore, procRunnables);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
@@ -343,41 +344,47 @@ public class TestYieldProcedures {
     }
   }
 
-  private static class TestRunQueue extends ProcedureSimpleRunQueue {
+  private static class TestScheduler extends SimpleProcedureScheduler {
     private int completionCalls;
     private int addFrontCalls;
     private int addBackCalls;
     private int yieldCalls;
     private int pollCalls;
 
-    public TestRunQueue() {}
+    public TestScheduler() {}
 
     public void addFront(final Procedure proc) {
-        addFrontCalls++;
-        super.addFront(proc);
-      }
+      addFrontCalls++;
+      super.addFront(proc);
+    }
 
-      @Override
-      public void addBack(final Procedure proc) {
-        addBackCalls++;
-        super.addBack(proc);
-      }
+    @Override
+    public void addBack(final Procedure proc) {
+      addBackCalls++;
+      super.addBack(proc);
+    }
 
-      @Override
-      public void yield(final Procedure proc) {
-        yieldCalls++;
-        super.yield(proc);
-      }
+    @Override
+    public void yield(final Procedure proc) {
+      yieldCalls++;
+      super.yield(proc);
+    }
 
-      @Override
-      public Procedure poll() {
-        pollCalls++;
-        return super.poll();
-      }
+    @Override
+    public Procedure poll() {
+      pollCalls++;
+      return super.poll();
+    }
 
-      @Override
-      public void completionCleanup(Procedure proc) {
-        completionCalls++;
-      }
+    @Override
+    public Procedure poll(long timeout, TimeUnit unit) {
+      pollCalls++;
+      return super.poll(timeout, unit);
+    }
+
+    @Override
+    public void completionCleanup(Procedure proc) {
+      completionCalls++;
+    }
   }
 }

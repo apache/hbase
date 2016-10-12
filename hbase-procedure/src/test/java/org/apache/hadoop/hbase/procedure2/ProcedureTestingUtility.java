@@ -181,7 +181,7 @@ public class ProcedureTestingUtility {
   public static <TEnv> void waitNoProcedureRunning(ProcedureExecutor<TEnv> procExecutor) {
     int stableRuns = 0;
     while (stableRuns < 10) {
-      if (procExecutor.getActiveExecutorCount() > 0 || procExecutor.getRunnableSet().size() > 0) {
+      if (procExecutor.getActiveExecutorCount() > 0 || procExecutor.getScheduler().size() > 0) {
         stableRuns = 0;
         Threads.sleepWithoutInterrupt(100);
       } else {
@@ -236,7 +236,32 @@ public class ProcedureTestingUtility {
     return cause == null ? procInfo.getException() : cause;
   }
 
-  public static class TestProcedure extends Procedure<Void> {
+  public static class NoopProcedure<TEnv> extends Procedure<TEnv> {
+    public NoopProcedure() {}
+
+    @Override
+    protected Procedure[] execute(TEnv env)
+        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      return null;
+    }
+
+    @Override
+    protected void rollback(TEnv env) throws IOException, InterruptedException {
+    }
+
+    @Override
+    protected boolean abort(TEnv env) { return false; }
+
+    @Override
+    protected void serializeStateData(final OutputStream stream) throws IOException {
+    }
+
+    @Override
+    protected void deserializeStateData(final InputStream stream) throws IOException {
+    }
+  }
+
+  public static class TestProcedure extends NoopProcedure<Void> {
     private byte[] data = null;
 
     public TestProcedure() {}
@@ -268,15 +293,6 @@ public class ProcedureTestingUtility {
     public void setData(final byte[] data) {
       this.data = data;
     }
-
-    @Override
-    protected Procedure[] execute(Void env) { return null; }
-
-    @Override
-    protected void rollback(Void env) { }
-
-    @Override
-    protected boolean abort(Void env) { return false; }
 
     @Override
     protected void serializeStateData(final OutputStream stream) throws IOException {

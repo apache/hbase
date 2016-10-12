@@ -243,9 +243,9 @@ public class ProcedureExecutor<TEnvironment> {
     new TimeoutBlockingQueue<Procedure>(new ProcedureTimeoutRetriever());
 
   /**
-   * Queue that contains runnable procedures.
+   * Scheduler/Queue that contains runnable procedures.
    */
-  private final ProcedureRunnableSet runnables;
+  private final ProcedureScheduler scheduler;
 
   // TODO
   private final ReentrantLock submitLock = new ReentrantLock();
@@ -267,13 +267,13 @@ public class ProcedureExecutor<TEnvironment> {
 
   public ProcedureExecutor(final Configuration conf, final TEnvironment environment,
       final ProcedureStore store) {
-    this(conf, environment, store, new ProcedureSimpleRunQueue());
+    this(conf, environment, store, new SimpleProcedureScheduler());
   }
 
   public ProcedureExecutor(final Configuration conf, final TEnvironment environment,
-      final ProcedureStore store, final ProcedureRunnableSet runqueue) {
+      final ProcedureStore store, final ProcedureScheduler scheduler) {
     this.environment = environment;
-    this.runnables = runqueue;
+    this.scheduler = scheduler;
     this.store = store;
     this.conf = conf;
     this.checkOwnerSet = conf.getBoolean(CHECK_OWNER_SET_CONF_KEY, true);
@@ -284,7 +284,7 @@ public class ProcedureExecutor<TEnvironment> {
     Preconditions.checkArgument(rollbackStack.isEmpty());
     Preconditions.checkArgument(procedures.isEmpty());
     Preconditions.checkArgument(waitingTimeout.isEmpty());
-    Preconditions.checkArgument(runnables.size() == 0);
+    Preconditions.checkArgument(scheduler.size() == 0);
 
     store.load(new ProcedureStore.ProcedureLoader() {
       @Override
@@ -378,7 +378,7 @@ public class ProcedureExecutor<TEnvironment> {
       Long rootProcId = getRootProcedureId(proc);
       if (rootProcId == null) {
         // The 'proc' was ready to run but the root procedure was rolledback?
-        runnables.addBack(proc);
+        scheduler.addBack(proc);
         continue;
       }
 
@@ -410,8 +410,8 @@ public class ProcedureExecutor<TEnvironment> {
           break;
         case FINISHED:
           if (proc.hasException()) {
-            // add the proc to the runnables to perform the rollback
-            runnables.addBack(proc);
+            // add the proc to the scheduler to perform the rollback
+            scheduler.addBack(proc);
           }
           break;
         case ROLLEDBACK:
@@ -446,7 +446,7 @@ public class ProcedureExecutor<TEnvironment> {
       throw new IOException("found " + corruptedCount + " procedures on replay");
     }
 
-    // 4. Push the runnables
+    // 4. Push the scheduler
     if (!runnableList.isEmpty()) {
       // TODO: See ProcedureWALFormatReader#hasFastStartSupport
       // some procedure may be started way before this stuff.
@@ -457,10 +457,10 @@ public class ProcedureExecutor<TEnvironment> {
           sendProcedureLoadedNotification(proc.getProcId());
         }
         if (proc.wasExecuted()) {
-          runnables.addFront(proc);
+          scheduler.addFront(proc);
         } else {
           // if it was not in execution, it can wait.
-          runnables.addBack(proc);
+          scheduler.addBack(proc);
         }
       }
     }
@@ -514,6 +514,9 @@ public class ProcedureExecutor<TEnvironment> {
     LOG.info(String.format("recover procedure store (%s) lease: %s",
       store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
+    // start the procedure scheduler
+    scheduler.start();
+
     // TODO: Split in two steps.
     // TODO: Handle corrupted procedures (currently just a warn)
     // The first one will make sure that we have the latest id,
@@ -540,7 +543,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     LOG.info("Stopping the procedure executor");
-    runnables.signalAll();
+    scheduler.stop();
     waitingTimeout.signalAll();
   }
 
@@ -564,7 +567,7 @@ public class ProcedureExecutor<TEnvironment> {
     procedures.clear();
     nonceKeysToProcIdsMap.clear();
     waitingTimeout.clear();
-    runnables.clear();
+    scheduler.clear();
     lastProcId.set(-1);
   }
 
@@ -698,7 +701,7 @@ public class ProcedureExecutor<TEnvironment> {
     assert !procedures.containsKey(currentProcId);
     procedures.put(currentProcId, proc);
     sendProcedureAddedNotification(currentProcId);
-    runnables.addBack(proc);
+    scheduler.addBack(proc);
     return currentProcId;
   }
 
@@ -810,18 +813,18 @@ public class ProcedureExecutor<TEnvironment> {
     return procedures.get(procId);
   }
 
-  protected ProcedureRunnableSet getRunnableSet() {
-    return runnables;
+  protected ProcedureScheduler getScheduler() {
+    return scheduler;
   }
 
   /**
    * Execution loop (N threads)
    * while the executor is in a running state,
-   * fetch a procedure from the runnables queue and start the execution.
+   * fetch a procedure from the scheduler queue and start the execution.
    */
   private void execLoop() {
     while (isRunning()) {
-      Procedure proc = runnables.poll();
+      Procedure proc = scheduler.poll();
       if (proc == null) continue;
 
       try {
@@ -855,7 +858,7 @@ public class ProcedureExecutor<TEnvironment> {
           // we have the 'rollback-lock' we can start rollingback
           if (!executeRollback(rootProcId, procStack)) {
             procStack.unsetRollback();
-            runnables.yield(proc);
+            scheduler.yield(proc);
           }
         } else {
           // if we can't rollback means that some child is still running.
@@ -863,7 +866,7 @@ public class ProcedureExecutor<TEnvironment> {
           // If the procedure was never executed, remove and mark it as rolledback.
           if (!proc.wasExecuted()) {
             if (!executeRollback(proc)) {
-              runnables.yield(proc);
+              scheduler.yield(proc);
             }
           }
         }
@@ -876,7 +879,7 @@ public class ProcedureExecutor<TEnvironment> {
         execProcedure(procStack, proc);
         releaseLock(proc, false);
       } else {
-        runnables.yield(proc);
+        scheduler.yield(proc);
       }
       procStack.release(proc);
 
@@ -965,7 +968,7 @@ public class ProcedureExecutor<TEnvironment> {
         RootProcedureState procStack = rollbackStack.get(rootProcId);
         procStack.abort();
         store.update(proc);
-        runnables.addFront(proc);
+        scheduler.addFront(proc);
         continue;
       } else if (proc.getState() == ProcedureState.WAITING_TIMEOUT) {
         waitingTimeout.add(proc);
@@ -1124,11 +1127,11 @@ public class ProcedureExecutor<TEnvironment> {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Yield procedure: " + procedure + ": " + e.getMessage());
         }
-        runnables.yield(procedure);
+        scheduler.yield(procedure);
         return;
       } catch (InterruptedException e) {
         handleInterruptedException(procedure, e);
-        runnables.yield(procedure);
+        scheduler.yield(procedure);
         return;
       } catch (Throwable e) {
         // Catch NullPointerExceptions or similar errors...
@@ -1205,7 +1208,7 @@ public class ProcedureExecutor<TEnvironment> {
       // if the procedure is kind enough to pass the slot to someone else, yield
       if (procedure.getState() == ProcedureState.RUNNABLE &&
           procedure.isYieldAfterExecutionStep(getEnvironment())) {
-        runnables.yield(procedure);
+        scheduler.yield(procedure);
         return;
       }
 
@@ -1218,7 +1221,7 @@ public class ProcedureExecutor<TEnvironment> {
         Procedure subproc = subprocs[i];
         assert !procedures.containsKey(subproc.getProcId());
         procedures.put(subproc.getProcId(), subproc);
-        runnables.addFront(subproc);
+        scheduler.addFront(subproc);
       }
     }
 
@@ -1236,7 +1239,7 @@ public class ProcedureExecutor<TEnvironment> {
       if (parent.childrenCountDown() && parent.getState() == ProcedureState.WAITING) {
         parent.setState(ProcedureState.RUNNABLE);
         store.update(parent);
-        runnables.addFront(parent);
+        scheduler.addFront(parent);
         if (LOG.isTraceEnabled()) {
           LOG.trace(parent + " all the children finished their work, resume.");
         }
@@ -1374,10 +1377,10 @@ public class ProcedureExecutor<TEnvironment> {
 
     // call the runnableSet completion cleanup handler
     try {
-      runnables.completionCleanup(proc);
+      scheduler.completionCleanup(proc);
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
-      LOG.error("CODE-BUG: uncatched runtime exception for runnableSet: " + runnables, e);
+      LOG.error("CODE-BUG: uncatched runtime exception for completion cleanup: " + proc, e);
     }
 
     // Notify the listeners

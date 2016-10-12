@@ -23,23 +23,18 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
 import org.apache.hadoop.hbase.master.procedure.TestMasterProcedureScheduler.TestTableProcedure;
-import org.apache.hadoop.hbase.master.procedure.TestMasterProcedureScheduler.TestTableProcedureWithEvent;
 import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.util.Threads;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -210,92 +205,6 @@ public class TestMasterProcedureSchedulerConcurrency {
       assertTrue("queue should be deleted, table=" + table,
         queue.markTableAsDeleted(table, dummyProc));
     }
-  }
-
-  @Test(timeout=60000)
-  public void testConcurrentWaitWake() throws Exception {
-    testConcurrentWaitWake(false);
-  }
-
-  @Test(timeout=60000)
-  public void testConcurrentWaitWakeBatch() throws Exception {
-    testConcurrentWaitWake(true);
-  }
-
-  private void testConcurrentWaitWake(final boolean useWakeBatch) throws Exception {
-    final TableName tableName = TableName.valueOf("testtb");
-
-    final int NPROCS = 20;
-    final int NRUNS = 100;
-
-    for (long i = 0; i < NPROCS; ++i) {
-      queue.addBack(new TestTableProcedureWithEvent(i, tableName,
-          TableProcedureInterface.TableOperationType.READ));
-    }
-
-    final Thread[] threads = new Thread[4];
-    final AtomicInteger waitCount = new AtomicInteger(0);
-    final AtomicInteger wakeCount = new AtomicInteger(0);
-
-    final ConcurrentSkipListSet<TestTableProcedureWithEvent> waitQueue =
-      new ConcurrentSkipListSet<TestTableProcedureWithEvent>();
-    threads[0] = new Thread() {
-      @Override
-      public void run() {
-        while (true) {
-          if (useWakeBatch) {
-            ProcedureEvent[] ev = new ProcedureEvent[waitQueue.size()];
-            for (int i = 0; i < ev.length; ++i) {
-              ev[i] = waitQueue.pollFirst().getEvent();
-              LOG.debug("WAKE " + ev[i] + " total=" + wakeCount.get());
-            }
-            queue.wakeEvents(ev, ev.length);
-            wakeCount.addAndGet(ev.length);
-          } else {
-            int size = waitQueue.size();
-            while (size-- > 0) {
-              ProcedureEvent ev = waitQueue.pollFirst().getEvent();
-              queue.wakeEvent(ev);
-              LOG.debug("WAKE " + ev + " total=" + wakeCount.get());
-              wakeCount.incrementAndGet();
-            }
-          }
-          if (wakeCount.get() >= NRUNS) {
-            break;
-          }
-          Threads.sleepWithoutInterrupt(25);
-        }
-      }
-    };
-
-    for (int i = 1; i < threads.length; ++i) {
-      threads[i] = new Thread() {
-        @Override
-        public void run() {
-          while (true) {
-            TestTableProcedureWithEvent proc = (TestTableProcedureWithEvent)queue.poll();
-            if (proc == null) continue;
-
-            waitQueue.add(proc);
-            queue.suspendEvent(proc.getEvent());
-            queue.waitEvent(proc.getEvent(), proc);
-            LOG.debug("WAIT " + proc.getEvent());
-            if (waitCount.incrementAndGet() >= NRUNS) {
-              break;
-            }
-          }
-        }
-      };
-    }
-
-    for (int i = 0; i < threads.length; ++i) {
-      threads[i].start();
-    }
-    for (int i = 0; i < threads.length; ++i) {
-      threads[i].join();
-    }
-
-    queue.clear();
   }
 
   public static class TestTableProcSet {

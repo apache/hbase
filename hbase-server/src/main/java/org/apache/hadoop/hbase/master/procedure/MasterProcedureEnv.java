@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.security.User;
@@ -121,7 +121,12 @@ public class MasterProcedureEnv {
     return master.getMasterCoprocessorHost();
   }
 
+  @Deprecated
   public MasterProcedureScheduler getProcedureQueue() {
+    return procSched;
+  }
+
+  public MasterProcedureScheduler getProcedureScheduler() {
     return procSched;
   }
 
