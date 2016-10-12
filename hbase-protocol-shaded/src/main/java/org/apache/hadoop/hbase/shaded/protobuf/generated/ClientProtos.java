@@ -2058,6 +2058,23 @@ public final class ClientProtos {
      */
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder getCfTimeRangeOrBuilder(
         int index);
+
+    /**
+     * <pre>
+     * DO NOT add defaults to load_column_families_on_demand. 
+     * </pre>
+     *
+     * <code>optional bool load_column_families_on_demand = 14;</code>
+     */
+    boolean hasLoadColumnFamiliesOnDemand();
+    /**
+     * <pre>
+     * DO NOT add defaults to load_column_families_on_demand. 
+     * </pre>
+     *
+     * <code>optional bool load_column_families_on_demand = 14;</code>
+     */
+    boolean getLoadColumnFamiliesOnDemand();
   }
   /**
    * <pre>
@@ -2088,6 +2105,7 @@ public final class ClientProtos {
       existenceOnly_ = false;
       consistency_ = 0;
       cfTimeRange_ = java.util.Collections.emptyList();
+      loadColumnFamiliesOnDemand_ = false;
     }
 
     @java.lang.Override
@@ -2210,6 +2228,11 @@ public final class ClientProtos {
               }
               cfTimeRange_.add(
                   input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.PARSER, extensionRegistry));
+              break;
+            }
+            case 112: {
+              bitField0_ |= 0x00000200;
+              loadColumnFamiliesOnDemand_ = input.readBool();
               break;
             }
           }
@@ -2509,6 +2532,29 @@ public final class ClientProtos {
       return cfTimeRange_.get(index);
     }
 
+    public static final int LOAD_COLUMN_FAMILIES_ON_DEMAND_FIELD_NUMBER = 14;
+    private boolean loadColumnFamiliesOnDemand_;
+    /**
+     * <pre>
+     * DO NOT add defaults to load_column_families_on_demand. 
+     * </pre>
+     *
+     * <code>optional bool load_column_families_on_demand = 14;</code>
+     */
+    public boolean hasLoadColumnFamiliesOnDemand() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <pre>
+     * DO NOT add defaults to load_column_families_on_demand. 
+     * </pre>
+     *
+     * <code>optional bool load_column_families_on_demand = 14;</code>
+     */
+    public boolean getLoadColumnFamiliesOnDemand() {
+      return loadColumnFamiliesOnDemand_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -2585,6 +2631,9 @@ public final class ClientProtos {
       for (int i = 0; i < cfTimeRange_.size(); i++) {
         output.writeMessage(13, cfTimeRange_.get(i));
       }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeBool(14, loadColumnFamiliesOnDemand_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -2640,6 +2689,10 @@ public final class ClientProtos {
       for (int i = 0; i < cfTimeRange_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeMessageSize(13, cfTimeRange_.get(i));
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeBoolSize(14, loadColumnFamiliesOnDemand_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -2708,6 +2761,11 @@ public final class ClientProtos {
       }
       result = result && getCfTimeRangeList()
           .equals(other.getCfTimeRangeList());
+      result = result && (hasLoadColumnFamiliesOnDemand() == other.hasLoadColumnFamiliesOnDemand());
+      if (hasLoadColumnFamiliesOnDemand()) {
+        result = result && (getLoadColumnFamiliesOnDemand()
+            == other.getLoadColumnFamiliesOnDemand());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -2768,6 +2826,11 @@ public final class ClientProtos {
       if (getCfTimeRangeCount() > 0) {
         hash = (37 * hash) + CF_TIME_RANGE_FIELD_NUMBER;
         hash = (53 * hash) + getCfTimeRangeList().hashCode();
+      }
+      if (hasLoadColumnFamiliesOnDemand()) {
+        hash = (37 * hash) + LOAD_COLUMN_FAMILIES_ON_DEMAND_FIELD_NUMBER;
+        hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
+            getLoadColumnFamiliesOnDemand());
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -2943,6 +3006,8 @@ public final class ClientProtos {
         } else {
           cfTimeRangeBuilder_.clear();
         }
+        loadColumnFamiliesOnDemand_ = false;
+        bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
 
@@ -3038,6 +3103,10 @@ public final class ClientProtos {
         } else {
           result.cfTimeRange_ = cfTimeRangeBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.loadColumnFamiliesOnDemand_ = loadColumnFamiliesOnDemand_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3184,6 +3253,9 @@ public final class ClientProtos {
               cfTimeRangeBuilder_.addAllMessages(other.cfTimeRange_);
             }
           }
+        }
+        if (other.hasLoadColumnFamiliesOnDemand()) {
+          setLoadColumnFamiliesOnDemand(other.getLoadColumnFamiliesOnDemand());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -4441,6 +4513,54 @@ public final class ClientProtos {
           cfTimeRange_ = null;
         }
         return cfTimeRangeBuilder_;
+      }
+
+      private boolean loadColumnFamiliesOnDemand_ ;
+      /**
+       * <pre>
+       * DO NOT add defaults to load_column_families_on_demand. 
+       * </pre>
+       *
+       * <code>optional bool load_column_families_on_demand = 14;</code>
+       */
+      public boolean hasLoadColumnFamiliesOnDemand() {
+        return ((bitField0_ & 0x00001000) == 0x00001000);
+      }
+      /**
+       * <pre>
+       * DO NOT add defaults to load_column_families_on_demand. 
+       * </pre>
+       *
+       * <code>optional bool load_column_families_on_demand = 14;</code>
+       */
+      public boolean getLoadColumnFamiliesOnDemand() {
+        return loadColumnFamiliesOnDemand_;
+      }
+      /**
+       * <pre>
+       * DO NOT add defaults to load_column_families_on_demand. 
+       * </pre>
+       *
+       * <code>optional bool load_column_families_on_demand = 14;</code>
+       */
+      public Builder setLoadColumnFamiliesOnDemand(boolean value) {
+        bitField0_ |= 0x00001000;
+        loadColumnFamiliesOnDemand_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * DO NOT add defaults to load_column_families_on_demand. 
+       * </pre>
+       *
+       * <code>optional bool load_column_families_on_demand = 14;</code>
+       */
+      public Builder clearLoadColumnFamiliesOnDemand() {
+        bitField0_ = (bitField0_ & ~0x00001000);
+        loadColumnFamiliesOnDemand_ = false;
+        onChanged();
+        return this;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -40264,7 +40384,7 @@ public final class ClientProtos {
       "o\032\017MapReduce.proto\"\037\n\016Authorizations\022\r\n\005" +
       "label\030\001 \003(\t\"$\n\016CellVisibility\022\022\n\nexpress" +
       "ion\030\001 \002(\t\"+\n\006Column\022\016\n\006family\030\001 \002(\014\022\021\n\tq" +
-      "ualifier\030\002 \003(\014\"\226\003\n\003Get\022\013\n\003row\030\001 \002(\014\022 \n\006c" +
+      "ualifier\030\002 \003(\014\"\276\003\n\003Get\022\013\n\003row\030\001 \002(\014\022 \n\006c" +
       "olumn\030\002 \003(\0132\020.hbase.pb.Column\022*\n\tattribu" +
       "te\030\003 \003(\0132\027.hbase.pb.NameBytesPair\022 \n\006fil" +
       "ter\030\004 \001(\0132\020.hbase.pb.Filter\022\'\n\ntime_rang" +
@@ -40274,11 +40394,12 @@ public final class ClientProtos {
       " \001(\r\022\035\n\016existence_only\030\n \001(\010:\005false\0222\n\013c" +
       "onsistency\030\014 \001(\0162\025.hbase.pb.Consistency:" +
       "\006STRONG\0226\n\rcf_time_range\030\r \003(\0132\037.hbase.p" +
-      "b.ColumnFamilyTimeRange\"\203\001\n\006Result\022\034\n\004ce" +
+      "b.ColumnFamilyTimeRange\022&\n\036load_column_f" +
+      "amilies_on_demand\030\016 \001(\010\"\203\001\n\006Result\022\034\n\004ce" +
       "ll\030\001 \003(\0132\016.hbase.pb.Cell\022\035\n\025associated_c" +
       "ell_count\030\002 \001(\005\022\016\n\006exists\030\003 \001(\010\022\024\n\005stale" +
-      "\030\004 \001(\010:\005false\022\026\n\007partial\030\005 \001(\010:\005false\"S\n" +
-      "\nGetRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.R",
+      "\030\004 \001(\010:\005false\022\026\n\007partial\030\005 \001(\010:\005false\"S\n",
+      "\nGetRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.R" +
       "egionSpecifier\022\032\n\003get\030\002 \002(\0132\r.hbase.pb.G" +
       "et\"/\n\013GetResponse\022 \n\006result\030\001 \001(\0132\020.hbas" +
       "e.pb.Result\"\222\001\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016" +
@@ -40287,8 +40408,8 @@ public final class ClientProtos {
       "\n\ncomparator\030\005 \002(\0132\024.hbase.pb.Comparator" +
       "\"\364\006\n\rMutationProto\022\013\n\003row\030\001 \001(\014\0229\n\013mutat" +
       "e_type\030\002 \001(\0162$.hbase.pb.MutationProto.Mu" +
-      "tationType\0229\n\014column_value\030\003 \003(\0132#.hbase" +
-      ".pb.MutationProto.ColumnValue\022\021\n\ttimesta",
+      "tationType\0229\n\014column_value\030\003 \003(\0132#.hbase",
+      ".pb.MutationProto.ColumnValue\022\021\n\ttimesta" +
       "mp\030\004 \001(\004\022*\n\tattribute\030\005 \003(\0132\027.hbase.pb.N" +
       "ameBytesPair\022C\n\ndurability\030\006 \001(\0162\".hbase" +
       ".pb.MutationProto.Durability:\013USE_DEFAUL" +
@@ -40297,8 +40418,8 @@ public final class ClientProtos {
       "ce\030\t \001(\004\032\371\001\n\013ColumnValue\022\016\n\006family\030\001 \002(\014" +
       "\022K\n\017qualifier_value\030\002 \003(\01322.hbase.pb.Mut" +
       "ationProto.ColumnValue.QualifierValue\032\214\001" +
-      "\n\016QualifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005v" +
-      "alue\030\002 \001(\014\022\021\n\ttimestamp\030\003 \001(\004\0227\n\013delete_",
+      "\n\016QualifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005v",
+      "alue\030\002 \001(\014\022\021\n\ttimestamp\030\003 \001(\004\0227\n\013delete_" +
       "type\030\004 \001(\0162\".hbase.pb.MutationProto.Dele" +
       "teType\022\014\n\004tags\030\005 \001(\014\"W\n\nDurability\022\017\n\013US" +
       "E_DEFAULT\020\000\022\014\n\010SKIP_WAL\020\001\022\r\n\tASYNC_WAL\020\002" +
@@ -40307,8 +40428,8 @@ public final class ClientProtos {
       "\002\022\n\n\006DELETE\020\003\"p\n\nDeleteType\022\026\n\022DELETE_ON" +
       "E_VERSION\020\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020" +
       "\001\022\021\n\rDELETE_FAMILY\020\002\022\031\n\025DELETE_FAMILY_VE" +
-      "RSION\020\003\"\242\001\n\rMutateRequest\022)\n\006region\030\001 \002(" +
-      "\0132\031.hbase.pb.RegionSpecifier\022)\n\010mutation",
+      "RSION\020\003\"\242\001\n\rMutateRequest\022)\n\006region\030\001 \002(",
+      "\0132\031.hbase.pb.RegionSpecifier\022)\n\010mutation" +
       "\030\002 \002(\0132\027.hbase.pb.MutationProto\022&\n\tcondi" +
       "tion\030\003 \001(\0132\023.hbase.pb.Condition\022\023\n\013nonce" +
       "_group\030\004 \001(\004\"E\n\016MutateResponse\022 \n\006result" +
@@ -40317,8 +40438,8 @@ public final class ClientProtos {
       "Column\022*\n\tattribute\030\002 \003(\0132\027.hbase.pb.Nam" +
       "eBytesPair\022\021\n\tstart_row\030\003 \001(\014\022\020\n\010stop_ro" +
       "w\030\004 \001(\014\022 \n\006filter\030\005 \001(\0132\020.hbase.pb.Filte" +
-      "r\022\'\n\ntime_range\030\006 \001(\0132\023.hbase.pb.TimeRan" +
-      "ge\022\027\n\014max_versions\030\007 \001(\r:\0011\022\032\n\014cache_blo",
+      "r\022\'\n\ntime_range\030\006 \001(\0132\023.hbase.pb.TimeRan",
+      "ge\022\027\n\014max_versions\030\007 \001(\r:\0011\022\032\n\014cache_blo" +
       "cks\030\010 \001(\010:\004true\022\022\n\nbatch_size\030\t \001(\r\022\027\n\017m" +
       "ax_result_size\030\n \001(\004\022\023\n\013store_limit\030\013 \001(" +
       "\r\022\024\n\014store_offset\030\014 \001(\r\022&\n\036load_column_f" +
@@ -40327,8 +40448,8 @@ public final class ClientProtos {
       " \001(\0162\025.hbase.pb.Consistency:\006STRONG\022\017\n\007c" +
       "aching\030\021 \001(\r\022\035\n\025allow_partial_results\030\022 " +
       "\001(\010\0226\n\rcf_time_range\030\023 \003(\0132\037.hbase.pb.Co" +
-      "lumnFamilyTimeRange\"\246\002\n\013ScanRequest\022)\n\006r" +
-      "egion\030\001 \001(\0132\031.hbase.pb.RegionSpecifier\022\034",
+      "lumnFamilyTimeRange\"\246\002\n\013ScanRequest\022)\n\006r",
+      "egion\030\001 \001(\0132\031.hbase.pb.RegionSpecifier\022\034" +
       "\n\004scan\030\002 \001(\0132\016.hbase.pb.Scan\022\022\n\nscanner_" +
       "id\030\003 \001(\004\022\026\n\016number_of_rows\030\004 \001(\r\022\025\n\rclos" +
       "e_scanner\030\005 \001(\010\022\025\n\rnext_call_seq\030\006 \001(\004\022\037" +
@@ -40337,8 +40458,8 @@ public final class ClientProtos {
       "_metrics\030\t \001(\010\022\024\n\005renew\030\n \001(\010:\005false\"\232\002\n" +
       "\014ScanResponse\022\030\n\020cells_per_result\030\001 \003(\r\022" +
       "\022\n\nscanner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(" +
-      "\010\022\013\n\003ttl\030\004 \001(\r\022!\n\007results\030\005 \003(\0132\020.hbase." +
-      "pb.Result\022\r\n\005stale\030\006 \001(\010\022\037\n\027partial_flag",
+      "\010\022\013\n\003ttl\030\004 \001(\r\022!\n\007results\030\005 \003(\0132\020.hbase.",
+      "pb.Result\022\r\n\005stale\030\006 \001(\010\022\037\n\027partial_flag" +
       "_per_result\030\007 \003(\010\022\036\n\026more_results_in_reg" +
       "ion\030\010 \001(\010\022\031\n\021heartbeat_message\030\t \001(\010\022+\n\014" +
       "scan_metrics\030\n \001(\0132\025.hbase.pb.ScanMetric" +
@@ -40347,8 +40468,8 @@ public final class ClientProtos {
       "path\030\002 \003(\0132).hbase.pb.BulkLoadHFileReque" +
       "st.FamilyPath\022\026\n\016assign_seq_num\030\003 \001(\010\022+\n" +
       "\010fs_token\030\004 \001(\0132\031.hbase.pb.DelegationTok" +
-      "en\022\022\n\nbulk_token\030\005 \001(\t\022\030\n\tcopy_file\030\006 \001(" +
-      "\010:\005false\032*\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014",
+      "en\022\022\n\nbulk_token\030\005 \001(\t\022\030\n\tcopy_file\030\006 \001(",
+      "\010:\005false\032*\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014" +
       "\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileResponse\022\016\n" +
       "\006loaded\030\001 \002(\010\"V\n\017DelegationToken\022\022\n\niden" +
       "tifier\030\001 \001(\014\022\020\n\010password\030\002 \001(\014\022\014\n\004kind\030\003" +
@@ -40357,8 +40478,8 @@ public final class ClientProtos {
       "ableName\022)\n\006region\030\002 \001(\0132\031.hbase.pb.Regi" +
       "onSpecifier\"-\n\027PrepareBulkLoadResponse\022\022" +
       "\n\nbulk_token\030\001 \002(\t\"W\n\026CleanupBulkLoadReq" +
-      "uest\022\022\n\nbulk_token\030\001 \002(\t\022)\n\006region\030\002 \001(\013" +
-      "2\031.hbase.pb.RegionSpecifier\"\031\n\027CleanupBu",
+      "uest\022\022\n\nbulk_token\030\001 \002(\t\022)\n\006region\030\002 \001(\013",
+      "2\031.hbase.pb.RegionSpecifier\"\031\n\027CleanupBu" +
       "lkLoadResponse\"a\n\026CoprocessorServiceCall" +
       "\022\013\n\003row\030\001 \002(\014\022\024\n\014service_name\030\002 \002(\t\022\023\n\013m" +
       "ethod_name\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"B\n\030Cop" +
@@ -40367,8 +40488,8 @@ public final class ClientProtos {
       "iceRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Re" +
       "gionSpecifier\022.\n\004call\030\002 \002(\0132 .hbase.pb.C" +
       "oprocessorServiceCall\"o\n\032CoprocessorServ" +
-      "iceResponse\022)\n\006region\030\001 \002(\0132\031.hbase.pb.R" +
-      "egionSpecifier\022&\n\005value\030\002 \002(\0132\027.hbase.pb",
+      "iceResponse\022)\n\006region\030\001 \002(\0132\031.hbase.pb.R",
+      "egionSpecifier\022&\n\005value\030\002 \002(\0132\027.hbase.pb" +
       ".NameBytesPair\"\226\001\n\006Action\022\r\n\005index\030\001 \001(\r" +
       "\022)\n\010mutation\030\002 \001(\0132\027.hbase.pb.MutationPr" +
       "oto\022\032\n\003get\030\003 \001(\0132\r.hbase.pb.Get\0226\n\014servi" +
@@ -40377,8 +40498,8 @@ public final class ClientProtos {
       "\031.hbase.pb.RegionSpecifier\022\016\n\006atomic\030\002 \001" +
       "(\010\022 \n\006action\030\003 \003(\0132\020.hbase.pb.Action\"c\n\017" +
       "RegionLoadStats\022\027\n\014memstoreLoad\030\001 \001(\005:\0010" +
-      "\022\030\n\rheapOccupancy\030\002 \001(\005:\0010\022\035\n\022compaction" +
-      "Pressure\030\003 \001(\005:\0010\"j\n\024MultiRegionLoadStat",
+      "\022\030\n\rheapOccupancy\030\002 \001(\005:\0010\022\035\n\022compaction",
+      "Pressure\030\003 \001(\005:\0010\"j\n\024MultiRegionLoadStat" +
       "s\022)\n\006region\030\001 \003(\0132\031.hbase.pb.RegionSpeci" +
       "fier\022\'\n\004stat\030\002 \003(\0132\031.hbase.pb.RegionLoad" +
       "Stats\"\336\001\n\021ResultOrException\022\r\n\005index\030\001 \001" +
@@ -40387,8 +40508,8 @@ public final class ClientProtos {
       "\022:\n\016service_result\030\004 \001(\0132\".hbase.pb.Copr" +
       "ocessorServiceResult\0220\n\tloadStats\030\005 \001(\0132" +
       "\031.hbase.pb.RegionLoadStatsB\002\030\001\"x\n\022Region" +
-      "ActionResult\0226\n\021resultOrException\030\001 \003(\0132" +
-      "\033.hbase.pb.ResultOrException\022*\n\texceptio",
+      "ActionResult\0226\n\021resultOrException\030\001 \003(\0132",
+      "\033.hbase.pb.ResultOrException\022*\n\texceptio" +
       "n\030\002 \001(\0132\027.hbase.pb.NameBytesPair\"x\n\014Mult" +
       "iRequest\022,\n\014regionAction\030\001 \003(\0132\026.hbase.p" +
       "b.RegionAction\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tco" +
@@ -40397,8 +40518,8 @@ public final class ClientProtos {
       "2\034.hbase.pb.RegionActionResult\022\021\n\tproces" +
       "sed\030\002 \001(\010\0228\n\020regionStatistics\030\003 \001(\0132\036.hb" +
       "ase.pb.MultiRegionLoadStats*\'\n\013Consisten" +
-      "cy\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\263\005\n\rClientS" +
-      "ervice\0222\n\003Get\022\024.hbase.pb.GetRequest\032\025.hb",
+      "cy\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\263\005\n\rClientS",
+      "ervice\0222\n\003Get\022\024.hbase.pb.GetRequest\032\025.hb" +
       "ase.pb.GetResponse\022;\n\006Mutate\022\027.hbase.pb." +
       "MutateRequest\032\030.hbase.pb.MutateResponse\022" +
       "5\n\004Scan\022\025.hbase.pb.ScanRequest\032\026.hbase.p" +
@@ -40407,8 +40528,8 @@ public final class ClientProtos {
       "oadHFileResponse\022V\n\017PrepareBulkLoad\022 .hb" +
       "ase.pb.PrepareBulkLoadRequest\032!.hbase.pb" +
       ".PrepareBulkLoadResponse\022V\n\017CleanupBulkL" +
-      "oad\022 .hbase.pb.CleanupBulkLoadRequest\032!." +
-      "hbase.pb.CleanupBulkLoadResponse\022X\n\013Exec",
+      "oad\022 .hbase.pb.CleanupBulkLoadRequest\032!.",
+      "hbase.pb.CleanupBulkLoadResponse\022X\n\013Exec" +
       "Service\022#.hbase.pb.CoprocessorServiceReq" +
       "uest\032$.hbase.pb.CoprocessorServiceRespon" +
       "se\022d\n\027ExecRegionServerService\022#.hbase.pb" +
@@ -40458,7 +40579,7 @@ public final class ClientProtos {
     internal_static_hbase_pb_Get_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_Get_descriptor,
-        new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "Consistency", "CfTimeRange", });
+        new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "Consistency", "CfTimeRange", "LoadColumnFamiliesOnDemand", });
     internal_static_hbase_pb_Result_descriptor =
       getDescriptor().getMessageTypes().get(4);
     internal_static_hbase_pb_Result_fieldAccessorTable = new

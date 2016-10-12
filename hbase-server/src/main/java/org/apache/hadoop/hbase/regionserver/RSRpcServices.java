@@ -2250,7 +2250,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     long before = EnvironmentEdgeManager.currentTime();
     Scan scan = new Scan(get);
-
+    if (scan.getLoadColumnFamiliesOnDemandValue() == null) {
+      scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
+    }
     RegionScanner scanner = null;
     try {
       scanner = region.getScanner(scan);

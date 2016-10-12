@@ -83,6 +83,7 @@ message Get {
 
   optional Consistency consistency = 12 [default = STRONG];
   repeated ColumnFamilyTimeRange cf_time_range = 13;
+  optional bool load_column_families_on_demand = 14; /* DO NOT add defaults to load_column_families_on_demand. */
 }
 
 message Result {
