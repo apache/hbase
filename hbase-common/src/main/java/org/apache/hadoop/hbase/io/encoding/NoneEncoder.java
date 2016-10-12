@@ -41,14 +41,10 @@ public class NoneEncoder {
   }
 
   public int write(Cell cell) throws IOException {
-    int klength = KeyValueUtil.keyLength(cell);
-    int vlength = cell.getValueLength();
-
-    out.writeInt(klength);
-    out.writeInt(vlength);
-    CellUtil.writeFlatKey(cell, out);
-    CellUtil.writeValue(out, cell, vlength);
-    int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+    // We write tags seperately because though there is no tag in KV
+    // if the hfilecontext says include tags we need the tags length to be
+    // written
+    int size = KeyValueUtil.oswrite(cell, out, false);
     // Write the additional tag into the stream
     if (encodingCtx.getHFileContext().isIncludesTags()) {
       int tagsLength = cell.getTagsLength();

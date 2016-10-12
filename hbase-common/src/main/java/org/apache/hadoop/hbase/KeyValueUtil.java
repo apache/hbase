@@ -615,19 +615,20 @@ public class KeyValueUtil {
         cell.getValueLength(), cell.getTagsLength(), withTags);
   }
 
-  public static void oswrite(final Cell cell, final OutputStream out, final boolean withTags)
+  public static int oswrite(final Cell cell, final OutputStream out, final boolean withTags)
       throws IOException {
     if (cell instanceof ExtendedCell) {
-      ((ExtendedCell)cell).write(out, withTags);
+      return ((ExtendedCell)cell).write(out, withTags);
     } else {
       short rlen = cell.getRowLength();
       byte flen = cell.getFamilyLength();
       int qlen = cell.getQualifierLength();
       int vlen = cell.getValueLength();
       int tlen = cell.getTagsLength();
-
+      int size = 0;
       // write key length
-      ByteBufferUtils.putInt(out, keyLength(rlen, flen, qlen));
+      int klen = keyLength(rlen, flen, qlen);
+      ByteBufferUtils.putInt(out, klen);
       // write value length
       ByteBufferUtils.putInt(out, vlen);
       // Write rowkey - 2 bytes rk length followed by rowkey bytes
@@ -644,6 +645,7 @@ public class KeyValueUtil {
       out.write(cell.getTypeByte());
       // write value
       out.write(cell.getValueArray(), cell.getValueOffset(), vlen);
+      size = klen + vlen + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
       // write tags if we have to
       if (withTags && tlen > 0) {
         // 2 bytes tags length followed by tags bytes
@@ -653,7 +655,9 @@ public class KeyValueUtil {
         out.write((byte) (0xff & (tlen >> 8)));
         out.write((byte) (0xff & tlen));
         out.write(cell.getTagsArray(), cell.getTagsOffset(), tlen);
+        size += tlen + KeyValue.TAGS_LENGTH_SIZE;
       }
+      return size;
     }
   }
 
