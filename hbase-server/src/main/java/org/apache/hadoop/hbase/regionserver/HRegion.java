@@ -1307,12 +1307,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public boolean isMergeable() {
     if (!isAvailable()) {
-      LOG.debug("Region " + getRegionInfo().getRegionNameAsString()
+      LOG.debug("Region " + this
           + " is not mergeable because it is closing or closed");
       return false;
     }
     if (hasReferences()) {
-      LOG.debug("Region " + getRegionInfo().getRegionNameAsString()
+      LOG.debug("Region " + this
           + " is not mergeable because it has references");
       return false;
     }
@@ -1466,7 +1466,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // the close flag?
     if (!abort && worthPreFlushing() && canFlush) {
       status.setStatus("Pre-flushing region before close");
-      LOG.info("Running close preflush of " + getRegionInfo().getRegionNameAsString());
+      LOG.info("Running close preflush of " + this);
       try {
         internalFlushcache(status);
       } catch (IOException ioe) {

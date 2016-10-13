@@ -180,7 +180,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                   LOG.info("Null result expected for the rowkey " + Bytes.toString(rowKey));
                 } else {
                   failedKeySet.add(rowKeyBase);
-                  LOG.error("Failed to update the row with key = [" + rowKey
+                  LOG.error("Failed to update the row with key = [" + Bytes.toString(rowKey)
                       + "], since we could not get the original row");
                 }
               }

@@ -303,7 +303,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     // If we were able to connect to the server, reset the failure
     // information.
     if (couldNotCommunicate == false) {
-      LOG.info("Clearing out PFFE for server " + server.getServerName());
+      LOG.info("Clearing out PFFE for server " + server);
       repeatedFailuresMap.remove(server);
     } else {
       // update time of last attempt

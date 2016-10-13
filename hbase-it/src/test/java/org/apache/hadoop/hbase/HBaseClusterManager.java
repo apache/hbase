@@ -84,6 +84,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       sshOptions = StringUtils.join(new Object[] { sshOptions, extraSshOptions }, " ");
     }
     sshOptions = (sshOptions == null) ? "" : sshOptions;
+    sshUserName = (sshUserName == null) ? "" : sshUserName;
     tunnelCmd = conf.get("hbase.it.clustermanager.ssh.cmd", DEFAULT_TUNNEL_CMD);
     // Print out ssh special config if any.
     if ((sshUserName != null && sshUserName.length() > 0) ||

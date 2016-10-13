@@ -103,7 +103,7 @@ public class CloseRegionHandler extends EventHandler {
           // This region got closed.  Most likely due to a split.
           // The split message will clean up the master state.
           LOG.warn("Can't close region: was already closed during close(): " +
-            regionInfo.getRegionNameAsString());
+            name);
           return;
         }
       } catch (IOException ioe) {
