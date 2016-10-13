@@ -369,7 +369,7 @@ public class WALSplitter {
           continue;
         }
         // Don't send Compaction/Close/Open region events to recovered edit type sinks.
-        if (entry.getEdit().isMetaEdit() && !outputSink.keepRegionEvents()) {
+        if (entry.getEdit().isMetaEdit() && !outputSink.keepRegionEvent(entry)) {
           editsSkipped++;
           continue;
         }
@@ -534,8 +534,9 @@ public class WALSplitter {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  private static Path getRegionSplitEditsPath(final FileSystem fs,
-      final Entry logEntry, final Path rootDir, FileStatus fileBeingSplit)
+  @VisibleForTesting
+  static Path getRegionSplitEditsPath(final FileSystem fs,
+      final Entry logEntry, final Path rootDir, String fileBeingSplit)
   throws IOException {
     Path tableDir = FSUtils.getTableDir(rootDir, logEntry.getKey().getTablename());
     String encodedRegionName = Bytes.toString(logEntry.getKey().getEncodedRegionName());
@@ -570,7 +571,7 @@ public class WALSplitter {
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
     // region's replayRecoveredEdits will not delete it
     String fileName = formatRecoveredEditsFileName(logEntry.getKey().getLogSeqNum());
-    fileName = getTmpRecoveredEditsFileName(fileName + "-" + fileBeingSplit.getPath().getName());
+    fileName = getTmpRecoveredEditsFileName(fileName + "-" + fileBeingSplit);
     return new Path(dir, fileName);
   }
 
@@ -1281,12 +1282,11 @@ public class WALSplitter {
 
     /**
      * Some WALEdit's contain only KV's for account on what happened to a region.
-     * Not all sinks will want to get those edits.
+     * Not all sinks will want to get all of those edits.
      *
-     * @return Return true if this sink wants to get all WALEdit's regardless of if it's a region
-     * event.
+     * @return Return true if this sink wants to accept this region-level WALEdit.
      */
-    public abstract boolean keepRegionEvents();
+    public abstract boolean keepRegionEvent(Entry entry);
   }
 
   /**
@@ -1540,7 +1540,8 @@ public class WALSplitter {
      * @return a path with a write for that path. caller should close.
      */
     private WriterAndPath createWAP(byte[] region, Entry entry, Path rootdir) throws IOException {
-      Path regionedits = getRegionSplitEditsPath(fs, entry, rootdir, fileBeingSplit);
+      Path regionedits = getRegionSplitEditsPath(fs, entry, rootdir,
+          fileBeingSplit.getPath().getName());
       if (regionedits == null) {
         return null;
       }
@@ -1630,7 +1631,13 @@ public class WALSplitter {
     }
 
     @Override
-    public boolean keepRegionEvents() {
+    public boolean keepRegionEvent(Entry entry) {
+      ArrayList<Cell> cells = entry.getEdit().getCells();
+      for (int i = 0; i < cells.size(); i++) {
+        if (WALEdit.isCompactionMarker(cells.get(i))) {
+          return true;
+        }
+      }
       return false;
     }
 
@@ -2083,7 +2090,7 @@ public class WALSplitter {
     }
 
     @Override
-    public boolean keepRegionEvents() {
+    public boolean keepRegionEvent(Entry entry) {
       return true;
     }
 
