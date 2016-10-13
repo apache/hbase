@@ -2124,15 +2124,13 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
-          snapshot, null);
+          snapshot, htd);
         return null;
       }
     };
-    // Clone by snapshot owner is not allowed , because clone operation creates a new table,
-    // which needs global admin permission.
-    verifyAllowed(cloneAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
-      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyAllowed(cloneAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN, USER_OWNER);
+    verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test (timeout=180000)
