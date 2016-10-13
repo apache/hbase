@@ -139,7 +139,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     protected void invalidate() {
       valueOffset = -1;
       tagsCompressedLength = 0;
-      currentKey = new KeyValue.KeyOnlyKeyValue();
+      currentKey.clear();
       uncompressTags = true;
       currentBuffer = null;
     }
