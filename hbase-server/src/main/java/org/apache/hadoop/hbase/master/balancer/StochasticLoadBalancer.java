@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.AssignRegionAction;
@@ -1238,7 +1237,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         if (index < 0) {
           cost += 1;
         } else {
-          cost += (1 - cluster.getLocalityOfRegion(i, index));
+          cost += (1 - cluster.getLocalityOfRegion(i, serverIndex));
         }
       }
       return scale(0, max, cost);
