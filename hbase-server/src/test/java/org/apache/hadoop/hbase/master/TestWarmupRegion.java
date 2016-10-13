@@ -157,6 +157,8 @@ public class TestWarmupRegion {
        HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(serverid);
        byte [] destName = Bytes.toBytes(rs.getServerName().toString());
        TEST_UTIL.getMiniHBaseCluster().getMaster().move(info.getEncodedNameAsBytes(), destName);
+       //wait region online
+       TEST_UTIL.waitUntilNoRegionsInTransition(1000);
        serverid = (serverid + 1) % 2;
      }
    }
