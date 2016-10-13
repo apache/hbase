@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 

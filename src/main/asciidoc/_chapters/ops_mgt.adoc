@@ -671,7 +671,7 @@ Run it like:
 
 [source, bash]
 ----
-$ ./bin/hbase org.apache.hadoop.hbase.regionserver.CompactionTool
+$ ./bin/hbase org.apache.hadoop.hbase.regionserver.LegacyCompactionTool
 ----
 
 === `hbase clean`

@@ -151,6 +151,17 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
   public abstract Collection<HRegionInfo> getRegions(StorageContext ctx, TableName tableName)
     throws IOException;
 
+  /**
+   * Returns region info given table name and encoded region name
+   * @throws IOException
+   */
+  public HRegionInfo getRegion(TableName tableName, String encodedName) throws IOException {
+    return getRegion(StorageContext.DATA, tableName, encodedName);
+  }
+
+  public abstract HRegionInfo getRegion(StorageContext ctx, TableName tableName, String regionName)
+      throws IOException;
+
   // TODO: Move in HRegionStorage
   public void deleteFamilyFromStorage(HRegionInfo regionInfo, byte[] familyName, boolean hasMob)
       throws IOException {

@@ -209,6 +209,13 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
     }
   }
 
+  @Override
+  public HRegionInfo getRegion(StorageContext ctx, TableName tableName, String encodedName)
+      throws IOException {
+    Path regionDir = LegacyLayout.getRegionDir(getTableDir(ctx, tableName), encodedName);
+    return loadRegionInfo(regionDir);
+  }
+
   /**
    * Archives the specified region's storage artifacts (files, directories etc)
    * @param regionInfo

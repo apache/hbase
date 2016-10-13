@@ -77,6 +77,10 @@ public final class LegacyLayout {
     return new Path(tableDir, hri.getEncodedName());
   }
 
+  public static Path getRegionDir(Path tableDir, String encodedRegionName) {
+    return new Path(tableDir, encodedRegionName);
+  }
+
   public static Path getFamilyDir(Path regionDir, String familyName) {
     return new Path(regionDir, familyName);
   }
