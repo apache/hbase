@@ -1805,6 +1805,11 @@ MasterServices, Server {
       getRegionState(Bytes.toString(encodedRegionName));
     if (regionState == null) {
       throw new UnknownRegionException(Bytes.toStringBinary(encodedRegionName));
+    } else if (!assignmentManager.getRegionStates()
+        .isRegionOnline(regionState.getRegion())) {
+      throw new HBaseIOException(
+          "moving region not onlined: " + regionState.getRegion() + ", "
+              + regionState);
     }
 
     HRegionInfo hri = regionState.getRegion();
