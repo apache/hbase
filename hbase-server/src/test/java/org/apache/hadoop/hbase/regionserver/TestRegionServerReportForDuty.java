@@ -166,8 +166,8 @@ public class TestRegionServerReportForDuty {
     }
 
     @Override
-    protected synchronized ServerName createRegionServerStatusStub() {
-      sn = super.createRegionServerStatusStub();
+    protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
+      sn = super.createRegionServerStatusStub(refresh);
       rpcStubCreatedFlag = true;
 
       // Wait for master switch over. Only do this for the second region server.

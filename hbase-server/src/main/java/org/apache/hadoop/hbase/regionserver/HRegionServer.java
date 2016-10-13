@@ -1213,7 +1213,7 @@ public class HRegionServer extends HasThread implements
       }
       // Couldn't connect to the master, get location from zk and reconnect
       // Method blocks until new master is found or we are stopped
-      createRegionServerStatusStub();
+      createRegionServerStatusStub(true);
     }
   }
 
@@ -2284,12 +2284,24 @@ public class HRegionServer extends HasThread implements
    */
   @VisibleForTesting
   protected synchronized ServerName createRegionServerStatusStub() {
+    // Create RS stub without refreshing the master node from ZK, use cached data
+    return createRegionServerStatusStub(false);
+  }
+
+  /**
+   * Get the current master from ZooKeeper and open the RPC connection to it. To get a fresh
+   * connection, the current rssStub must be null. Method will block until a master is available.
+   * You can break from this block by requesting the server stop.
+   * @param refresh If true then master address will be read from ZK, otherwise use cached data
+   * @return master + port, or null if server has been stopped
+   */
+  @VisibleForTesting
+  protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
     if (rssStub != null) {
       return masterAddressTracker.getMasterAddress();
     }
     ServerName sn = null;
     long previousLogTime = 0;
-    boolean refresh = false; // for the first time, use cached data
     RegionServerStatusService.BlockingInterface intf = null;
     boolean interrupted = false;
     try {
@@ -2364,7 +2376,7 @@ public class HRegionServer extends HasThread implements
    * @throws IOException
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
-    ServerName masterServerName = createRegionServerStatusStub();
+    ServerName masterServerName = createRegionServerStatusStub(true);
     if (masterServerName == null) return null;
     RegionServerStartupResponse result = null;
     try {
