@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -449,6 +451,39 @@ public class TestWALSplit {
     assertEquals(1, splitLog.length);
 
     assertFalse("edits differ after split", logsAreEqual(originalLog, splitLog[0]));
+    // split log should only have the test edits
+    assertEquals(10, countWAL(splitLog[0]));
+  }
+
+
+  @Test (timeout=300000)
+  public void testSplitLeavesCompactionEventsEdits() throws IOException{
+    HRegionInfo hri = new HRegionInfo(TABLE_NAME);
+    REGIONS.clear();
+    REGIONS.add(hri.getEncodedName());
+    Path regionDir = new Path(FSUtils.getTableDir(HBASEDIR, TABLE_NAME), hri.getEncodedName());
+    LOG.info("Creating region directory: " + regionDir);
+    assertTrue(fs.mkdirs(regionDir));
+
+    Writer writer = generateWALs(1, 10, 0, 10);
+    String[] compactInputs = new String[]{"file1", "file2", "file3"};
+    String compactOutput = "file4";
+    appendCompactionEvent(writer, hri, compactInputs, compactOutput);
+    writer.close();
+
+    useDifferentDFSClient();
+    WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
+
+    Path originalLog = (fs.listStatus(OLDLOGDIR))[0].getPath();
+    // original log should have 10 test edits, 10 region markers, 1 compaction marker
+    assertEquals(21, countWAL(originalLog));
+
+    Path[] splitLog = getLogForRegion(HBASEDIR, TABLE_NAME, hri.getEncodedName());
+    assertEquals(1, splitLog.length);
+
+    assertFalse("edits differ after split", logsAreEqual(originalLog, splitLog[0]));
+    // split log should have 10 test edits plus 1 compaction marker
+    assertEquals(11, countWAL(splitLog[0]));
   }
 
   /**
@@ -1300,6 +1335,24 @@ public class TestWALSplit {
     return count;
   }
 
+  private static void appendCompactionEvent(Writer w, HRegionInfo hri, String[] inputs,
+      String output) throws IOException {
+    WALProtos.CompactionDescriptor.Builder desc = WALProtos.CompactionDescriptor.newBuilder();
+    desc.setTableName(ByteString.copyFrom(hri.getTable().toBytes()))
+        .setEncodedRegionName(ByteString.copyFrom(hri.getEncodedNameAsBytes()))
+        .setRegionName(ByteString.copyFrom(hri.getRegionName()))
+        .setFamilyName(ByteString.copyFrom(FAMILY))
+        .setStoreHomeDir(hri.getEncodedName() + "/" + Bytes.toString(FAMILY))
+        .addAllCompactionInput(Arrays.asList(inputs))
+        .addCompactionOutput(output);
+
+    WALEdit edit = WALEdit.createCompaction(hri, desc.build());
+    WALKey key = new WALKey(hri.getEncodedNameAsBytes(), TABLE_NAME, 1,
+        EnvironmentEdgeManager.currentTime(), HConstants.DEFAULT_CLUSTER_ID);
+    w.append(new Entry(key, edit));
+    w.sync();
+  }
+
   private static void appendRegionEvent(Writer w, String region) throws IOException {
     WALProtos.RegionEventDescriptor regionOpenDesc = ProtobufUtil.toRegionEventDescriptor(
         WALProtos.RegionEventDescriptor.EventType.REGION_OPEN,
@@ -1315,6 +1368,7 @@ public class TestWALSplit {
         HConstants.DEFAULT_CLUSTER_ID);
     w.append(
         new Entry(walKey, new WALEdit().add(kv)));
+    w.sync();
   }
 
   public static long appendEntry(Writer writer, TableName table, byte[] region,
