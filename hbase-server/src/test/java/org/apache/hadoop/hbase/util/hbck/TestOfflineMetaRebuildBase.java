@@ -20,17 +20,24 @@ package org.apache.hadoop.hbase.util.hbck;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.junit.Test;
@@ -65,6 +72,7 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     // rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);
     assertTrue(fsck.rebuildMeta(false));
+    assertTrue("HBCK meta recovery WAL directory exist.", validateHBCKMetaRecoveryWALDir());
 
     // bring up the minicluster
     TEST_UTIL.startMiniZKCluster();
@@ -86,5 +94,23 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     assertErrors(doFsck(conf, false), new ERROR_CODE[] {});
     LOG.info("Table " + table + " has " + tableRowCount(conf, table) + " entries.");
     assertEquals(16, tableRowCount(conf, table));
+  }
+
+  /**
+   * Validate whether Meta recovery empty WAL directory is removed.
+   * @return True if directory is removed otherwise false.
+   */
+  private boolean validateHBCKMetaRecoveryWALDir() throws IOException {
+    Path rootdir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path walLogDir = new Path(rootdir, HConstants.HREGION_LOGDIR_NAME);
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    FileStatus[] walFiles = FSUtils.listStatus(fs, walLogDir, null);
+    assertNotNull(walFiles);
+    for (FileStatus fsStat : walFiles) {
+      if (fsStat.isDirectory() && fsStat.getPath().getName().startsWith("hregion-")) {
+        return false;
+      }
+    }
+    return true;
   }
 }

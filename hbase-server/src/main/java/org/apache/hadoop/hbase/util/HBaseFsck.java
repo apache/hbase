@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
@@ -1524,9 +1525,29 @@ public class HBaseFsck extends Configured implements Closeable {
     }
     meta.batchMutate(puts.toArray(new Put[puts.size()]));
     HRegion.closeHRegion(meta);
+    // clean up the temporary hbck meta recovery WAL directory
+    removeHBCKMetaRecoveryWALDir(meta);
     LOG.info("Success! hbase:meta table rebuilt.");
     LOG.info("Old hbase:meta is moved into " + backupDir);
     return true;
+  }
+
+  /**
+   * Removes the empty Meta recovery WAL directory.
+   * @param meta Meta region
+   */
+  private void removeHBCKMetaRecoveryWALDir(HRegion meta) throws IOException {
+    // TODO Since HBASE-11983 not available in this branch, so we don't know the walFactoryId.
+    // Retrieving WAL directory
+    Path walLogDir = ((FSHLog) meta.getWAL()).getCurrentFileName().getParent();
+    FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
+    FileStatus[] walFiles = FSUtils.listStatus(fs, walLogDir, null);
+    if (walFiles == null || walFiles.length == 0) {
+      LOG.info("HBCK meta recovery WAL directory is empty, removing it now.");
+      if (!FSUtils.deleteDirectory(fs, walLogDir)) {
+        LOG.warn("Couldn't clear the HBCK Meta recovery WAL directory " + walLogDir);
+      }
+    }
   }
 
   /**
