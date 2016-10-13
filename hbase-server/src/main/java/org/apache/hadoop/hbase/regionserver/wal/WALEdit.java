@@ -363,10 +363,19 @@ public class WALEdit implements Writable, HeapSize {
    * @return deserialized CompactionDescriptor or null.
    */
   public static CompactionDescriptor getCompaction(Cell kv) throws IOException {
-    if (CellUtil.matchingColumn(kv, METAFAMILY, COMPACTION)) {
-      return CompactionDescriptor.parseFrom(kv.getValue());
+    if (isCompactionMarker(kv)) {
+      return CompactionDescriptor.parseFrom(CellUtil.cloneValue(kv));
     }
     return null;
+  }
+
+  /**
+   * Returns true if the given cell is a serialized {@link CompactionDescriptor}
+   *
+   * @see #getCompaction(Cell)
+   */
+  public static boolean isCompactionMarker(Cell cell) {
+    return CellUtil.matchingColumn(cell, METAFAMILY, COMPACTION);
   }
 
   /**

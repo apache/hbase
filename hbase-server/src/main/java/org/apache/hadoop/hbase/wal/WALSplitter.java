@@ -369,7 +369,7 @@ public class WALSplitter {
           continue;
         }
         // Don't send Compaction/Close/Open region events to recovered edit type sinks.
-        if (entry.getEdit().isMetaEdit() && !outputSink.keepRegionEvents()) {
+        if (entry.getEdit().isMetaEdit() && !outputSink.keepRegionEvent(entry)) {
           editsSkipped++;
           continue;
         }
@@ -1282,12 +1282,11 @@ public class WALSplitter {
 
     /**
      * Some WALEdit's contain only KV's for account on what happened to a region.
-     * Not all sinks will want to get those edits.
+     * Not all sinks will want to get all of those edits.
      *
-     * @return Return true if this sink wants to get all WALEdit's regardless of if it's a region
-     * event.
+     * @return Return true if this sink wants to accept this region-level WALEdit.
      */
-    public abstract boolean keepRegionEvents();
+    public abstract boolean keepRegionEvent(Entry entry);
   }
 
   /**
@@ -1632,7 +1631,13 @@ public class WALSplitter {
     }
 
     @Override
-    public boolean keepRegionEvents() {
+    public boolean keepRegionEvent(Entry entry) {
+      ArrayList<Cell> cells = entry.getEdit().getCells();
+      for (int i = 0; i < cells.size(); i++) {
+        if (WALEdit.isCompactionMarker(cells.get(i))) {
+          return true;
+        }
+      }
       return false;
     }
 
@@ -2085,7 +2090,7 @@ public class WALSplitter {
     }
 
     @Override
-    public boolean keepRegionEvents() {
+    public boolean keepRegionEvent(Entry entry) {
       return true;
     }
 
