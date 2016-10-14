@@ -404,13 +404,14 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
           util.getConfiguration()) {
         @Override
-        protected List<LoadQueueItem> groupOrSplit(
+        protected Pair<List<LoadQueueItem>, String> groupOrSplit(
             Multimap<ByteBuffer, LoadQueueItem> regionGroups,
             final LoadQueueItem item, final Table htable,
             final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
-          List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
-          if (lqis != null) {
-            countedLqis.addAndGet(lqis.size());
+          Pair<List<LoadQueueItem>, String> lqis = super.groupOrSplit(regionGroups, item, htable,
+              startEndKeys);
+          if (lqis != null && lqis.getFirst() != null) {
+            countedLqis.addAndGet(lqis.getFirst().size());
           }
           return lqis;
         }
@@ -479,7 +480,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         int i = 0;
 
         @Override
-        protected List<LoadQueueItem> groupOrSplit(
+        protected Pair<List<LoadQueueItem>, String> groupOrSplit(
             Multimap<ByteBuffer, LoadQueueItem> regionGroups,
             final LoadQueueItem item, final Table table,
             final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
@@ -521,13 +522,14 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration()) {
 
       @Override
-      protected List<LoadQueueItem> groupOrSplit(
+      protected Pair<List<LoadQueueItem>, String> groupOrSplit(
           Multimap<ByteBuffer, LoadQueueItem> regionGroups,
           final LoadQueueItem item, final Table htable,
           final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
-        List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
-        if (lqis != null) {
-          countedLqis.addAndGet(lqis.size());
+        Pair<List<LoadQueueItem>, String> lqis = super.groupOrSplit(regionGroups, item, htable,
+            startEndKeys);
+        if (lqis != null && lqis.getFirst() != null) {
+          countedLqis.addAndGet(lqis.getFirst().size());
         }
         return lqis;
       }
