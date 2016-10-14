@@ -775,7 +775,7 @@ public final class HConstants {
   /**
    * Default value of {@link #HBASE_META_VERSIONS}.
    */
-  public static int DEFAULT_HBASE_META_VERSIONS = 10;
+  public static int DEFAULT_HBASE_META_VERSIONS = 3;
 
   /**
    * Parameter name for number of versions, kept by meta table.
