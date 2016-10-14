@@ -18,14 +18,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -37,8 +39,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import edu.umd.cs.findbugs.annotations.Nullable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,6 +63,11 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -79,8 +84,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
-import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -92,11 +95,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
-
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingRpcChannel;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * Main implementation of {@link Connection} and {@link ClusterConnection} interfaces.
@@ -196,7 +195,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
       HConstants.DEFAULT_USE_META_REPLICAS);
     // how many times to try, one more than max *retry* time
-    this.numTries = connectionConfig.getRetriesNumber() + 1;
+    this.numTries = retries2Attempts(connectionConfig.getRetriesNumber());
     this.rpcTimeout = conf.getInt(
         HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
@@ -1094,8 +1093,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           throw new MasterNotRunningException(sn + " is dead.");
         }
         // Use the security info interface name as our stub key
-        String key = getStubKey(getServiceName(),
-            sn.getHostname(), sn.getPort(), hostnamesCanChange);
+        String key = getStubKey(getServiceName(), sn, hostnamesCanChange);
         connectionLock.putIfAbsent(key, key);
         Object stub = null;
         synchronized (connectionLock.get(key)) {
@@ -1176,8 +1174,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
-    String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(),
-      serverName.getHostname(), serverName.getPort(), this.hostnamesCanChange);
+    String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(), serverName,
+      this.hostnamesCanChange);
     this.connectionLock.putIfAbsent(key, key);
     AdminProtos.AdminService.BlockingInterface stub;
     synchronized (this.connectionLock.get(key)) {
@@ -1198,8 +1196,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (isDeadServer(sn)) {
       throw new RegionServerStoppedException(sn + " is dead.");
     }
-    String key = getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(), sn.getHostname(),
-      sn.getPort(), this.hostnamesCanChange);
+    String key = getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(), sn,
+      this.hostnamesCanChange);
     this.connectionLock.putIfAbsent(key, key);
     ClientProtos.ClientService.BlockingInterface stub = null;
     synchronized (this.connectionLock.get(key)) {
@@ -1213,25 +1211,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
     }
     return stub;
-  }
-
-  static String getStubKey(final String serviceName,
-                           final String rsHostname,
-                           int port,
-                           boolean resolveHostnames) {
-    // Sometimes, servers go down and they come back up with the same hostname but a different
-    // IP address. Force a resolution of the rsHostname by trying to instantiate an
-    // InetSocketAddress, and this way we will rightfully get a new stubKey.
-    // Also, include the hostname in the key so as to take care of those cases where the
-    // DNS name is different but IP address remains the same.
-    String address = rsHostname;
-    if (resolveHostnames) {
-      InetAddress i = new InetSocketAddress(rsHostname, port).getAddress();
-      if (i != null) {
-        address = i.getHostAddress() + "-" + rsHostname;
-      }
-    }
-    return serviceName + "@" + address + ":" + port;
   }
 
   private ZooKeeperKeepAliveConnection keepAliveZookeeper;

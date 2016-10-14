@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -32,11 +34,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
-
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
 /**
  * Runs an rpc'ing {@link RetryingCallable}. Sets into rpc client
@@ -66,18 +67,18 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   public RpcRetryingCallerImpl(long pause, int retries, int startLogErrorsCnt) {
     this(pause, retries, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, startLogErrorsCnt, 0);
   }
-  
+
   public RpcRetryingCallerImpl(long pause, int retries,
       RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout) {
     this.pause = pause;
-    this.maxAttempts = retries + 1;
+    this.maxAttempts = retries2Attempts(retries);
     this.interceptor = interceptor;
     context = interceptor.createEmptyContext();
     this.startLogErrorsCnt = startLogErrorsCnt;
     this.tracker = new RetryingTimeTracker();
     this.rpcTimeout = rpcTimeout;
   }
-  
+
   @Override
   public void cancel(){
     cancelled.set(true);

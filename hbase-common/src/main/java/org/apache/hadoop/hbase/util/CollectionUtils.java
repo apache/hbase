@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -103,5 +105,27 @@ public class CollectionUtils {
       return null;
     }
     return list.get(list.size() - 1);
+  }
+
+  /**
+   * A supplier that throws IOException when get.
+   */
+  @FunctionalInterface
+  public interface IOExceptionSupplier<V> {
+    V get() throws IOException;
+  }
+
+  /**
+   * In HBASE-16648 we found that ConcurrentHashMap.get is much faster than computeIfAbsent if the
+   * value already exists. So here we copy the implementation of
+   * {@link ConcurrentMap#computeIfAbsent(Object, java.util.function.Function)}. It uses get and
+   * putIfAbsent to implement computeIfAbsent. And notice that the implementation does not guarantee
+   * that the supplier will only be executed once.
+   */
+  public static <K, V> V computeIfAbsentEx(ConcurrentMap<K, V> map, K key,
+      IOExceptionSupplier<V> supplier) throws IOException {
+    V v, newValue;
+    return ((v = map.get(key)) == null && (newValue = supplier.get()) != null
+        && (v = map.putIfAbsent(key, newValue)) == null) ? newValue : v;
   }
 }
