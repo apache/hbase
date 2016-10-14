@@ -29,12 +29,15 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -48,8 +51,6 @@ import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue;
-import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue.TimeoutRetriever;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -96,17 +97,58 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   /**
-   * Used by the TimeoutBlockingQueue to get the timeout interval of the procedure
+   * Used by the DelayQueue to get the timeout interval of the procedure
    */
-  private static class ProcedureTimeoutRetriever implements TimeoutRetriever<Procedure> {
-    @Override
-    public long getTimeout(Procedure proc) {
-      return proc.getTimeRemaining();
+  private static class DelayedContainer implements Delayed {
+    static final DelayedContainer POISON = new DelayedContainer();
+
+    /** null if poison */
+    final Procedure proc;
+    final long timeoutTime;
+
+    DelayedContainer(Procedure proc) {
+      assert proc != null;
+      this.proc = proc;
+      this.timeoutTime = proc.getLastUpdate() + proc.getTimeout();
+    }
+
+    DelayedContainer() {
+      this.proc = null;
+      this.timeoutTime = Long.MIN_VALUE;
     }
 
     @Override
-    public TimeUnit getTimeUnit(Procedure proc) {
-      return TimeUnit.MILLISECONDS;
+    public long getDelay(TimeUnit unit) {
+      long currentTime = EnvironmentEdgeManager.currentTime();
+      if (currentTime >= timeoutTime) {
+        return 0;
+      }
+      return unit.convert(timeoutTime - currentTime, TimeUnit.MICROSECONDS);
+    }
+
+    /**
+     * @throws NullPointerException {@inheritDoc}
+     * @throws ClassCastException {@inheritDoc}
+     */
+    @Override
+    public int compareTo(Delayed o) {
+      return Long.compare(timeoutTime, ((DelayedContainer)o).timeoutTime);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == this) {
+        return true;
+      }
+      if (! (obj instanceof DelayedContainer)) {
+        return false;
+      }
+      return Objects.equals(proc, ((DelayedContainer)obj).proc);
+    }
+
+    @Override
+    public int hashCode() {
+      return proc != null ? proc.hashCode() : 0;
     }
   }
 
@@ -239,8 +281,8 @@ public class ProcedureExecutor<TEnvironment> {
    * Timeout Queue that contains Procedures in a WAITING_TIMEOUT state
    * or periodic procedures.
    */
-  private final TimeoutBlockingQueue<Procedure> waitingTimeout =
-    new TimeoutBlockingQueue<Procedure>(new ProcedureTimeoutRetriever());
+  private final DelayQueue<DelayedContainer> waitingTimeout =
+    new DelayQueue<DelayedContainer>();
 
   /**
    * Scheduler/Queue that contains runnable procedures.
@@ -544,7 +586,7 @@ public class ProcedureExecutor<TEnvironment> {
 
     LOG.info("Stopping the procedure executor");
     scheduler.stop();
-    waitingTimeout.signalAll();
+    waitingTimeout.add(DelayedContainer.POISON);
   }
 
   public void join() {
@@ -628,7 +670,7 @@ public class ProcedureExecutor<TEnvironment> {
    */
   public void addChore(final ProcedureInMemoryChore chore) {
     chore.setState(ProcedureState.RUNNABLE);
-    waitingTimeout.add(chore);
+    waitingTimeout.add(new DelayedContainer(chore));
   }
 
   /**
@@ -638,7 +680,7 @@ public class ProcedureExecutor<TEnvironment> {
    */
   public boolean removeChore(final ProcedureInMemoryChore chore) {
     chore.setState(ProcedureState.FINISHED);
-    return waitingTimeout.remove(chore);
+    return waitingTimeout.remove(new DelayedContainer(chore));
   }
 
   /**
@@ -927,14 +969,15 @@ public class ProcedureExecutor<TEnvironment> {
 
   private void timeoutLoop() {
     while (isRunning()) {
-      Procedure proc = waitingTimeout.poll();
-      if (proc == null) continue;
-
-      if (proc.getTimeRemaining() > 100) {
-        // got an early wake, maybe a stop?
-        // re-enqueue the task in case was not a stop or just a signal
-        waitingTimeout.add(proc);
+      Procedure proc;
+      try {
+        proc = waitingTimeout.take().proc;
+      } catch (InterruptedException e) {
+        // Just consume the interruption.
         continue;
+      }
+      if (proc == null) { // POISON to stop
+        break;
       }
 
       // ----------------------------------------------------------------------------
@@ -955,8 +998,8 @@ public class ProcedureExecutor<TEnvironment> {
           } catch (Throwable e) {
             LOG.error("Ignoring CompletedProcedureCleaner exception: " + e.getMessage(), e);
           }
-          proc.setStartTime(EnvironmentEdgeManager.currentTime());
-          if (proc.isRunnable()) waitingTimeout.add(proc);
+          proc.updateTimestamp();
+          if (proc.isRunnable()) waitingTimeout.add(new DelayedContainer(proc));
         }
         continue;
       }
@@ -970,8 +1013,6 @@ public class ProcedureExecutor<TEnvironment> {
         store.update(proc);
         scheduler.addFront(proc);
         continue;
-      } else if (proc.getState() == ProcedureState.WAITING_TIMEOUT) {
-        waitingTimeout.add(proc);
       }
     }
   }
@@ -1171,7 +1212,7 @@ public class ProcedureExecutor<TEnvironment> {
                   procedure.setState(ProcedureState.WAITING);
                   break;
                 case WAITING_TIMEOUT:
-                  waitingTimeout.add(procedure);
+                  waitingTimeout.add(new DelayedContainer(procedure));
                   break;
                 default:
                   break;
@@ -1179,7 +1220,7 @@ public class ProcedureExecutor<TEnvironment> {
             }
           }
         } else if (procedure.getState() == ProcedureState.WAITING_TIMEOUT) {
-          waitingTimeout.add(procedure);
+          waitingTimeout.add(new DelayedContainer(procedure));
         } else if (!isSuspended) {
           // No subtask, so we are done
           procedure.setState(ProcedureState.FINISHED);
