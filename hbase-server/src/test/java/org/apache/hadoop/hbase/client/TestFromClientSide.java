@@ -5437,25 +5437,19 @@ public class TestFromClientSide {
         scanResults.add(r);
       }
     }
-    
+    assertEquals(1, scanResults.size());
     Get g = new Get(Bytes.toBytes("row"));
     g.setFilter(new FilterList());
     Result getResult = table.get(g);
-    if (scanResults.isEmpty()) {
-      assertTrue(getResult.isEmpty());
-    } else if(scanResults.size() == 1) {
-      Result scanResult = scanResults.get(0);
-      assertEquals(scanResult.rawCells().length, getResult.rawCells().length);
-      for (int i = 0; i != scanResult.rawCells().length; ++i) {
-        Cell scanCell = scanResult.rawCells()[i];
-        Cell getCell = getResult.rawCells()[i];
-        assertEquals(0, Bytes.compareTo(CellUtil.cloneRow(scanCell), CellUtil.cloneRow(getCell)));
-        assertEquals(0, Bytes.compareTo(CellUtil.cloneFamily(scanCell), CellUtil.cloneFamily(getCell)));
-        assertEquals(0, Bytes.compareTo(CellUtil.cloneQualifier(scanCell), CellUtil.cloneQualifier(getCell)));
-        assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(scanCell), CellUtil.cloneValue(getCell)));
-      }
-    } else {
-      fail("The result retrieved from SCAN and Get should be same");
+    Result scanResult = scanResults.get(0);
+    assertEquals(scanResult.rawCells().length, getResult.rawCells().length);
+    for (int i = 0; i != scanResult.rawCells().length; ++i) {
+      Cell scanCell = scanResult.rawCells()[i];
+      Cell getCell = getResult.rawCells()[i];
+      assertEquals(0, Bytes.compareTo(CellUtil.cloneRow(scanCell), CellUtil.cloneRow(getCell)));
+      assertEquals(0, Bytes.compareTo(CellUtil.cloneFamily(scanCell), CellUtil.cloneFamily(getCell)));
+      assertEquals(0, Bytes.compareTo(CellUtil.cloneQualifier(scanCell), CellUtil.cloneQualifier(getCell)));
+      assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(scanCell), CellUtil.cloneValue(getCell)));
     }
   }
 

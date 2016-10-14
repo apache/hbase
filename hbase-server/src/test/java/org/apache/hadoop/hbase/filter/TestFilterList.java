@@ -18,16 +18,11 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
+import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
@@ -40,10 +35,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Lists;
 
 /**
  * Tests filter sets
@@ -75,9 +73,48 @@ public class TestFilterList {
     filterList = new FilterList(Operator.MUST_PASS_ALL, Arrays.asList(filter1, filter2));
     filterList.addFilter(new FirstKeyOnlyFilter());
 
+    filterList.setReversed(false);
+    FirstKeyOnlyFilter f = new FirstKeyOnlyFilter();
+    f.setReversed(true);
+    try {
+      filterList.addFilter(f);
+      fail("The IllegalArgumentException should be thrown because the added filter is reversed");
+    } catch (IllegalArgumentException e) {
+    }
+
   }
 
+  @Test
+  public void testConstruction() {
+    FirstKeyOnlyFilter f1 = new FirstKeyOnlyFilter();
+    FirstKeyOnlyFilter f2 = new FirstKeyOnlyFilter();
+    f1.setReversed(true);
+    f2.setReversed(false);
 
+    try {
+      FilterList ff = new FilterList(f1, f2);
+      fail("The IllegalArgumentException should be thrown");
+    } catch (IllegalArgumentException e) {
+    }
+
+    try {
+      FilterList ff = new FilterList(Arrays.asList(f1, f2));
+      fail("The IllegalArgumentException should be thrown because the added filter is reversed");
+    } catch (IllegalArgumentException e) {
+    }
+
+    try {
+      FilterList ff = new FilterList(FilterList.Operator.MUST_PASS_ALL, Arrays.asList(f1, f2));
+      fail("The IllegalArgumentException should be thrown because the added filter is reversed");
+    } catch (IllegalArgumentException e) {
+    }
+
+    try {
+      FilterList ff = new FilterList(FilterList.Operator.MUST_PASS_ALL, f1, f2);
+      fail("The IllegalArgumentException should be thrown because the added filter is reversed");
+    } catch (IllegalArgumentException e) {
+    }
+  }
   /**
    * Test "must pass one"
    * @throws Exception

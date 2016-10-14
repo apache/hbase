@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferE
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-final public class FilterList extends Filter {
+final public class FilterList extends FilterBase {
   /** set operator */
   @InterfaceAudience.Public
   @InterfaceStability.Stable
@@ -65,7 +65,7 @@ final public class FilterList extends Filter {
 
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
-  private List<Filter> filters = new ArrayList<Filter>();
+  private final List<Filter> filters;
   private Filter seekHintFilter = null;
 
   /** Reference Cell used by {@link #transformCell(Cell)} for validation purpose. */
@@ -83,15 +83,12 @@ final public class FilterList extends Filter {
   /**
    * Constructor that takes a set of {@link Filter}s. The default operator
    * MUST_PASS_ALL is assumed.
-   *
+   * All filters are cloned to internal list.
    * @param rowFilters list of filters
    */
   public FilterList(final List<Filter> rowFilters) {
-    if (rowFilters instanceof ArrayList) {
-      this.filters = rowFilters;
-    } else {
-      this.filters = new ArrayList<Filter>(rowFilters);
-    }
+    reversed = getReversed(rowFilters, reversed);
+    this.filters = new ArrayList<>(rowFilters);
   }
 
   /**
@@ -100,7 +97,7 @@ final public class FilterList extends Filter {
    * @param rowFilters
    */
   public FilterList(final Filter... rowFilters) {
-    this.filters = new ArrayList<Filter>(Arrays.asList(rowFilters));
+    this(Arrays.asList(rowFilters));
   }
 
   /**
@@ -110,6 +107,7 @@ final public class FilterList extends Filter {
    */
   public FilterList(final Operator operator) {
     this.operator = operator;
+    this.filters = new ArrayList<>();
   }
 
   /**
@@ -119,7 +117,7 @@ final public class FilterList extends Filter {
    * @param rowFilters Set of row filters.
    */
   public FilterList(final Operator operator, final List<Filter> rowFilters) {
-    this.filters = new ArrayList<Filter>(rowFilters);
+    this(rowFilters);
     this.operator = operator;
   }
 
@@ -130,7 +128,7 @@ final public class FilterList extends Filter {
    * @param rowFilters Filters to use
    */
   public FilterList(final Operator operator, final Filter... rowFilters) {
-    this.filters = new ArrayList<Filter>(Arrays.asList(rowFilters));
+    this(rowFilters);
     this.operator = operator;
   }
 
@@ -152,18 +150,51 @@ final public class FilterList extends Filter {
     return filters;
   }
 
+  private int size() {
+    return filters.size();
+  }
+
+  private boolean isEmpty() {
+    return filters.isEmpty();
+  }
+
+  private static boolean getReversed(List<Filter> rowFilters, boolean defaultValue) {
+    boolean rval = defaultValue;
+    boolean isFirst = true;
+    for (Filter f : rowFilters) {
+      if (isFirst) {
+        rval = f.isReversed();
+        isFirst = false;
+        continue;
+      }
+      if (rval != f.isReversed()) {
+        throw new IllegalArgumentException("Filters in the list must have the same reversed flag");
+      }
+    }
+    return rval;
+  }
+  private static void checkReversed(List<Filter> rowFilters, boolean expected) {
+    for (Filter filter : rowFilters) {
+      if (expected != filter.isReversed()) {
+        throw new IllegalArgumentException(
+            "Filters in the list must have the same reversed flag, expected="
+                + expected);
+      }
+    }
+  }
+
+  public void addFilter(List<Filter> filters) {
+    checkReversed(filters, isReversed());
+    this.filters.addAll(filters);
+  }
+
   /**
    * Add a filter.
    *
    * @param filter another filter
    */
   public void addFilter(Filter filter) {
-    if (this.isReversed() != filter.isReversed()) {
-      throw new IllegalArgumentException(
-          "Filters in the list must have the same reversed flag, this.reversed="
-              + this.isReversed());
-    }
-    this.filters.add(filter);
+    addFilter(Arrays.asList(filter));
   }
 
   @Override
@@ -177,7 +208,10 @@ final public class FilterList extends Filter {
 
   @Override
   public boolean filterRowKey(byte[] rowKey, int offset, int length) throws IOException {
-    boolean flag = (this.operator == Operator.MUST_PASS_ONE) ? true : false;
+    if (isEmpty()) {
+      return super.filterRowKey(rowKey, offset, length);
+    }
+    boolean flag = this.operator == Operator.MUST_PASS_ONE;
     int listize = filters.size();
     for (int i = 0; i < listize; i++) {
       Filter filter = filters.get(i);
@@ -198,7 +232,10 @@ final public class FilterList extends Filter {
 
   @Override
   public boolean filterRowKey(Cell firstRowCell) throws IOException {
-    boolean flag = (this.operator == Operator.MUST_PASS_ONE) ? true : false;
+    if (isEmpty()) {
+      return super.filterRowKey(firstRowCell);
+    }
+    boolean flag = this.operator == Operator.MUST_PASS_ONE;
     int listize = filters.size();
     for (int i = 0; i < listize; i++) {
       Filter filter = filters.get(i);
@@ -217,6 +254,9 @@ final public class FilterList extends Filter {
 
   @Override
   public boolean filterAllRemaining() throws IOException {
+    if (isEmpty()) {
+      return super.filterAllRemaining();
+    }
     int listize = filters.size();
     for (int i = 0; i < listize; i++) {
       if (filters.get(i).filterAllRemaining()) {
@@ -234,6 +274,9 @@ final public class FilterList extends Filter {
 
   @Override
   public Cell transformCell(Cell c) throws IOException {
+    if (isEmpty()) {
+      return super.transformCell(c);
+    }
     if (!CellUtil.equals(c, referenceCell)) {
       throw new IllegalStateException("Reference Cell: " + this.referenceCell + " does not match: "
           + c);
@@ -245,6 +288,9 @@ final public class FilterList extends Filter {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
     justification="Intentional")
   public ReturnCode filterKeyValue(Cell c) throws IOException {
+    if (isEmpty()) {
+      return ReturnCode.INCLUDE;
+    }
     this.referenceCell = c;
 
     // Accumulates successive transformation of every filter that includes the Cell:
@@ -358,6 +404,9 @@ final public class FilterList extends Filter {
 
   @Override
   public boolean filterRow() throws IOException {
+    if (isEmpty()) {
+      return super.filterRow();
+    }
     int listize = filters.size();
     for (int i = 0; i < listize; i++) {
       Filter filter = filters.get(i);
@@ -433,6 +482,9 @@ final public class FilterList extends Filter {
 
   @Override
   public Cell getNextCellHint(Cell currentCell) throws IOException {
+    if (isEmpty()) {
+      return super.getNextCellHint(currentCell);
+    }
     Cell keyHint = null;
     if (operator == Operator.MUST_PASS_ALL) {
       keyHint = seekHintFilter.getNextCellHint(currentCell);
@@ -450,15 +502,13 @@ final public class FilterList extends Filter {
         // If we ever don't have a hint and this is must-pass-one, then no hint
         return null;
       }
-      if (curKeyHint != null) {
-        // If this is the first hint we find, set it
-        if (keyHint == null) {
-          keyHint = curKeyHint;
-          continue;
-        }
-        if (CellComparator.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
-          keyHint = curKeyHint;
-        }
+      // If this is the first hint we find, set it
+      if (keyHint == null) {
+        keyHint = curKeyHint;
+        continue;
+      }
+      if (CellComparator.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
+        keyHint = curKeyHint;
       }
     }
     return keyHint;
@@ -466,6 +516,9 @@ final public class FilterList extends Filter {
 
   @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
+    if (isEmpty()) {
+      return super.isFamilyEssential(name);
+    }
     int listize = filters.size();
     for (int i = 0; i < listize; i++) {
       if (filters.get(i).isFamilyEssential(name)) {
