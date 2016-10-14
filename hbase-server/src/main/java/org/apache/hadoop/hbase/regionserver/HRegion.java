@@ -942,8 +942,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           Future<HStore> future = completionService.take();
           HStore store = future.get();
           this.stores.put(store.getFamily().getName(), store);
-          MemStore memStore = store.getMemStore();
-          if(memStore != null && memStore.isSloppy()) {
+          if (store.isSloppyMemstore()) {
             hasSloppyStores = true;
           }
 
@@ -2561,7 +2560,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // If we get to here, the HStores have been written.
     for(Store storeToFlush :storesToFlush) {
-      storeToFlush.finalizeFlush();
+      ((HStore) storeToFlush).finalizeFlush();
     }
     if (wal != null) {
       wal.completeCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
@@ -3863,9 +3862,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemstore!!!!
     boolean upsert = delta && store.getFamily().getMaxVersions() == 1;
     if (upsert) {
-      return store.upsert(cells, getSmallestReadPoint());
+      return ((HStore) store).upsert(cells, getSmallestReadPoint());
     } else {
-      return store.add(cells);
+      return ((HStore) store).add(cells);
     }
   }
 
@@ -3880,7 +3879,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       checkFamily(CellUtil.cloneFamily(cell));
       // Unreachable because checkFamily will throw exception
     }
-    return store.add(cell);
+    return ((HStore) store).add(cell);
   }
 
   @Override
@@ -4121,7 +4120,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       long editsCount = 0;
       long intervalEdits = 0;
       WAL.Entry entry;
-      Store store = null;
+      HStore store = null;
       boolean reported_once = false;
       ServerNonceManager ng = this.rsServices == null ? null : this.rsServices.getNonceManager();
 
@@ -4217,7 +4216,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             }
             // Figure which store the edit is meant for.
             if (store == null || !CellUtil.matchingFamily(cell, store.getFamily().getName())) {
-              store = getStore(cell);
+              store = getHStore(cell);
             }
             if (store == null) {
               // This should never happen.  Perhaps schema was changed between
@@ -4344,7 +4343,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       startRegionOperation(Operation.REPLAY_EVENT);
       try {
-        Store store = this.getStore(compaction.getFamilyName().toByteArray());
+        HStore store = this.getHStore(compaction.getFamilyName().toByteArray());
         if (store == null) {
           LOG.warn(getRegionInfo().getEncodedName() + " : "
               + "Found Compaction WAL edit for deleted family:"
@@ -4927,7 +4926,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         for (StoreDescriptor storeDescriptor : bulkLoadEvent.getStoresList()) {
           // stores of primary may be different now
           family = storeDescriptor.getFamilyName().toByteArray();
-          Store store = getStore(family);
+          HStore store = getHStore(family);
           if (store == null) {
             LOG.warn(getRegionInfo().getEncodedName() + " : "
                     + "Received a bulk load marker from primary, but the family is not found. "
@@ -5129,7 +5128,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param cell Cell to add.
    * @return True if we should flush.
    */
-  protected boolean restoreEdit(final Store s, final Cell cell) {
+  protected boolean restoreEdit(final HStore s, final Cell cell) {
     long kvSize = s.add(cell);
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetRegionReplayEditsSize(getRegionInfo().getRegionName(), kvSize);
@@ -5167,19 +5166,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public Store getStore(final byte[] column) {
-    return this.stores.get(column);
+    return getHStore(column);
+  }
+
+  public HStore getHStore(final byte[] column) {
+    return (HStore) this.stores.get(column);
   }
 
   /**
    * Return HStore instance. Does not do any copy: as the number of store is limited, we
    *  iterate on the list.
    */
-  private Store getStore(Cell cell) {
+  private HStore getHStore(Cell cell) {
     for (Map.Entry<byte[], Store> famStore : stores.entrySet()) {
       if (Bytes.equals(
           cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
           famStore.getKey(), 0, famStore.getKey().length)) {
-        return famStore.getValue();
+        return (HStore) famStore.getValue();
       }
     }
 
@@ -5484,7 +5487,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         byte[] familyName = p.getFirst();
         String path = p.getSecond();
 
-        Store store = getStore(familyName);
+        HStore store = getHStore(familyName);
         if (store == null) {
           IOException ioe = new org.apache.hadoop.hbase.DoNotRetryIOException(
               "No such column family " + Bytes.toStringBinary(familyName));
@@ -5542,7 +5545,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (Pair<byte[], String> p : familyPaths) {
         byte[] familyName = p.getFirst();
         String path = p.getSecond();
-        Store store = getStore(familyName);
+        HStore store = getHStore(familyName);
         try {
           String finalPath = path;
           if (bulkLoadListener != null) {
@@ -7089,8 +7092,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 // If no WAL, need to stamp it here.
                 CellUtil.setSequenceId(cell, sequenceId);
               }
-              Store store = getStore(cell);
-              addedSize += applyToMemstore(store, cell);
+              addedSize += applyToMemstore(getHStore(cell), cell);
             }
           }
           // STEP 8. Complete mvcc.

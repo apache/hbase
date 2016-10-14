@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -957,14 +958,13 @@ public class TestDefaultMemStore {
       EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
       EnvironmentEdgeManager.injectEdge(edge);
       HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
-      HRegion region = hbaseUtility.createTestRegion("foobar", new HColumnDescriptor("foo"));
+      String cf = "foo";
+      HRegion region = hbaseUtility.createTestRegion("foobar", new HColumnDescriptor(cf));
 
-      List<Store> stores = region.getStores();
-      assertTrue(stores.size() == 1);
-
-      Store s = stores.iterator().next();
       edge.setCurrentTimeMillis(1234);
-      s.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"));
+      Put p = new Put(Bytes.toBytes("r"));
+      p.add(KeyValueTestUtil.create("r", cf, "q", 100, "v"));
+      region.put(p);
       edge.setCurrentTimeMillis(1234 + 100);
       StringBuffer sb = new StringBuffer();
       assertTrue(!region.shouldFlush(sb));

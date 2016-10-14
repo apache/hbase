@@ -171,11 +171,11 @@ public class TestWalAndCompactingMemStoreFlush {
     String s = "\n\n----------------------------------\n"
         + "Upon initial insert and before any flush, size of CF1 is:"
         + cf1MemstoreSizePhaseI + ", is CF1 compacted memstore?:"
-        + region.getStore(FAMILY1).getMemStore().isSloppy() + ". Size of CF2 is:"
+        + region.getStore(FAMILY1).isSloppyMemstore() + ". Size of CF2 is:"
         + cf2MemstoreSizePhaseI + ", is CF2 compacted memstore?:"
-        + region.getStore(FAMILY2).getMemStore().isSloppy() + ". Size of CF3 is:"
+        + region.getStore(FAMILY2).isSloppyMemstore() + ". Size of CF3 is:"
         + cf3MemstoreSizePhaseI + ", is CF3 compacted memstore?:"
-        + region.getStore(FAMILY3).getMemStore().isSloppy() + "\n";
+        + region.getStore(FAMILY3).isSloppyMemstore() + "\n";
 
     // The overall smallest LSN in the region's memstores should be the same as
     // the LSN of the smallest edit in CF1
@@ -208,8 +208,10 @@ public class TestWalAndCompactingMemStoreFlush {
     // Since CF1 and CF3 should be flushed to memory (not to disk),
     // CF2 is going to be flushed to disk.
     // CF1 - nothing to compact (but flattening), CF3 - should be twice compacted
-    ((CompactingMemStore) region.getStore(FAMILY1).getMemStore()).flushInMemory();
-    ((CompactingMemStore) region.getStore(FAMILY3).getMemStore()).flushInMemory();
+    CompactingMemStore cms1 = (CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore;
+    CompactingMemStore cms3 = (CompactingMemStore) ((HStore) region.getStore(FAMILY3)).memstore;
+    cms1.flushInMemory();
+    cms3.flushInMemory();
     region.flush(false);
 
     // Recalculate everything
@@ -423,11 +425,11 @@ public class TestWalAndCompactingMemStoreFlush {
     String s = "\n\n----------------------------------\n"
         + "Upon initial insert and before any flush, size of CF1 is:"
         + cf1MemstoreSizePhaseI + ", is CF1 compacted memstore?:"
-        + region.getStore(FAMILY1).getMemStore().isSloppy() + ". Size of CF2 is:"
+        + region.getStore(FAMILY1).isSloppyMemstore() + ". Size of CF2 is:"
         + cf2MemstoreSizePhaseI + ", is CF2 compacted memstore?:"
-        + region.getStore(FAMILY2).getMemStore().isSloppy() + ". Size of CF3 is:"
+        + region.getStore(FAMILY2).isSloppyMemstore() + ". Size of CF3 is:"
         + cf3MemstoreSizePhaseI + ", is CF3 compacted memstore?:"
-        + region.getStore(FAMILY3).getMemStore().isSloppy() + "\n";
+        + region.getStore(FAMILY3).isSloppyMemstore() + "\n";
 
     // The overall smallest LSN in the region's memstores should be the same as
     // the LSN of the smallest edit in CF1
@@ -459,8 +461,10 @@ public class TestWalAndCompactingMemStoreFlush {
     // Since CF1 and CF3 should be flushed to memory (not to disk),
     // CF2 is going to be flushed to disk.
     // CF1 - nothing to compact, CF3 - should be twice compacted
-    ((CompactingMemStore) region.getStore(FAMILY1).getMemStore()).flushInMemory();
-    ((CompactingMemStore) region.getStore(FAMILY3).getMemStore()).flushInMemory();
+    CompactingMemStore cms1 = (CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore;
+    CompactingMemStore cms3 = (CompactingMemStore) ((HStore) region.getStore(FAMILY3)).memstore;
+    cms1.flushInMemory();
+    cms3.flushInMemory();
     region.flush(false);
 
     // Recalculate everything
@@ -670,8 +674,10 @@ public class TestWalAndCompactingMemStoreFlush {
         cf1MemstoreSizePhaseI + cf2MemstoreSizePhaseI + cf3MemstoreSizePhaseI);
 
     // Flush!
-    ((CompactingMemStore) region.getStore(FAMILY1).getMemStore()).flushInMemory();
-    ((CompactingMemStore) region.getStore(FAMILY3).getMemStore()).flushInMemory();
+    CompactingMemStore cms1 = (CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore;
+    CompactingMemStore cms3 = (CompactingMemStore) ((HStore) region.getStore(FAMILY3)).memstore;
+    cms1.flushInMemory();
+    cms3.flushInMemory();
     region.flush(false);
 
     long cf2MemstoreSizePhaseII = region.getStore(FAMILY2).getMemStoreSize();
@@ -720,8 +726,10 @@ public class TestWalAndCompactingMemStoreFlush {
         + smallestSeqCF2PhaseIII +", the smallest sequence in CF3:" + smallestSeqCF3PhaseIII + "\n";
 
     // Flush!
-    ((CompactingMemStore) region.getStore(FAMILY1).getMemStore()).flushInMemory();
-    ((CompactingMemStore) region.getStore(FAMILY3).getMemStore()).flushInMemory();
+    cms1 = (CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore;
+    cms3 = (CompactingMemStore) ((HStore) region.getStore(FAMILY3)).memstore;
+    cms1.flushInMemory();
+    cms3.flushInMemory();
     region.flush(false);
 
     long smallestSeqInRegionCurrentMemstorePhaseIV =

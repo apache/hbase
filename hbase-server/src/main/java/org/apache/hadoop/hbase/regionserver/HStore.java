@@ -28,13 +28,11 @@ import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -63,9 +61,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
@@ -638,7 +633,11 @@ public class HStore implements Store {
     return storeFile;
   }
 
-  @Override
+  /**
+   * Adds a value to the memstore
+   * @param cell
+   * @return memstore size delta
+   */
   public long add(final Cell cell) {
     lock.readLock().lock();
     try {
@@ -648,7 +647,11 @@ public class HStore implements Store {
     }
   }
 
-  @Override
+  /**
+   * Adds the specified value to the memstore
+   * @param cells
+   * @return memstore size delta
+   */
   public long add(final Iterable<Cell> cells) {
     lock.readLock().lock();
     try {
@@ -686,7 +689,10 @@ public class HStore implements Store {
     return this.storeEngine.getStoreFileManager().getStorefiles();
   }
 
-  @Override
+  /**
+   * This throws a WrongRegionException if the HFile does not fit in this region, or an
+   * InvalidHFileException if the HFile is not valid.
+   */
   public void assertBulkLoadHFileOk(Path srcPath) throws IOException {
     HFile.Reader reader  = null;
     try {
@@ -757,7 +763,13 @@ public class HStore implements Store {
     }
   }
 
-  @Override
+  /**
+   * This method should only be called from Region. It is assumed that the ranges of values in the
+   * HFile fit within the stores assigned region. (assertBulkLoadHFileOk checks this)
+   *
+   * @param srcPathStr
+   * @param seqNum sequence Id associated with the HFile
+   */
   public Path bulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
     Path srcPath = new Path(srcPathStr);
     Path dstPath = fs.bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum);
@@ -774,7 +786,6 @@ public class HStore implements Store {
     return dstPath;
   }
 
-  @Override
   public void bulkLoadHFile(StoreFileInfo fileInfo) throws IOException {
     StoreFile sf = createStoreFileAndReader(fileInfo);
     bulkLoadHFile(sf);
@@ -1415,7 +1426,6 @@ public class HStore implements Store {
    * See HBASE-2231.
    * @param compaction
    */
-  @Override
   public void replayCompactionMarker(CompactionDescriptor compaction,
       boolean pickCompactionFiles, boolean removeFiles)
       throws IOException {
@@ -2089,7 +2099,19 @@ public class HStore implements Store {
     }
   }
 
-  @Override
+  /**
+   * Adds or replaces the specified KeyValues.
+   * <p>
+   * For each KeyValue specified, if a cell with the same row, family, and qualifier exists in
+   * MemStore, it will be replaced. Otherwise, it will just be inserted to MemStore.
+   * <p>
+   * This operation is atomic on each KeyValue (row/family/qualifier) but not necessarily atomic
+   * across all of them.
+   * @param cells
+   * @param readpoint readpoint below which we can safely remove duplicate KVs
+   * @return memstore size delta
+   * @throws IOException
+   */
   public long upsert(Iterable<Cell> cells, long readpoint) throws IOException {
     this.lock.readLock().lock();
     try {
@@ -2454,12 +2476,13 @@ public class HStore implements Store {
     }
   }
 
-  @Override public void finalizeFlush() {
+  public void finalizeFlush() {
     memstore.finalizeFlush();
   }
 
-  @Override public MemStore getMemStore() {
-    return memstore;
+  @Override
+  public boolean isSloppyMemstore() {
+    return this.memstore.isSloppy();
   }
 
   private void clearCompactedfiles(final List<StoreFile> filesToRemove) throws IOException {

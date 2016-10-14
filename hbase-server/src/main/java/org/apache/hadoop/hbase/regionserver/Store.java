@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -38,7 +36,6 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -127,35 +124,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
           byte[] stopRow, long readPt, boolean includeMemstoreScanner) throws IOException;
 
   ScanInfo getScanInfo();
-
-  /**
-   * Adds or replaces the specified KeyValues.
-   * <p>
-   * For each KeyValue specified, if a cell with the same row, family, and qualifier exists in
-   * MemStore, it will be replaced. Otherwise, it will just be inserted to MemStore.
-   * <p>
-   * This operation is atomic on each KeyValue (row/family/qualifier) but not necessarily atomic
-   * across all of them.
-   * @param cells
-   * @param readpoint readpoint below which we can safely remove duplicate KVs
-   * @return memstore size delta
-   * @throws IOException
-   */
-  long upsert(Iterable<Cell> cells, long readpoint) throws IOException;
-
-  /**
-   * Adds a value to the memstore
-   * @param cell
-   * @return memstore size delta
-   */
-  long add(Cell cell);
-
-  /**
-   * Adds the specified value to the memstore
-   * @param cells
-   * @return memstore size delta
-   */
-  long add(Iterable<Cell> cells);
 
   /**
    * When was the last edit done in the memstore
@@ -267,19 +235,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
 
   StoreFlushContext createFlushContext(long cacheFlushId);
 
-  /**
-   * Call to complete a compaction. Its for the case where we find in the WAL a compaction
-   * that was not finished.  We could find one recovering a WAL after a regionserver crash.
-   * See HBASE-2331.
-   * @param compaction the descriptor for compaction
-   * @param pickCompactionFiles whether or not pick up the new compaction output files and
-   * add it to the store
-   * @param removeFiles whether to remove/archive files from filesystem
-   */
-  void replayCompactionMarker(CompactionDescriptor compaction, boolean pickCompactionFiles,
-      boolean removeFiles)
-      throws IOException;
-
   // Split oriented methods
 
   boolean canSplit();
@@ -289,23 +244,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @return byte[] if store should be split, null otherwise.
    */
   byte[] getSplitPoint();
-
-  // Bulk Load methods
-
-  /**
-   * This throws a WrongRegionException if the HFile does not fit in this region, or an
-   * InvalidHFileException if the HFile is not valid.
-   */
-  void assertBulkLoadHFileOk(Path srcPath) throws IOException;
-
-  /**
-   * This method should only be called from Region. It is assumed that the ranges of values in the
-   * HFile fit within the stores assigned region. (assertBulkLoadHFileOk checks this)
-   *
-   * @param srcPathStr
-   * @param sequenceId sequence Id associated with the HFile
-   */
-  Path bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
 
   // General accessors into the state of the store
   // TODO abstract some of this out into a metrics class
@@ -528,8 +466,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
     */
   void refreshStoreFiles(Collection<String> newFiles) throws IOException;
 
-  void bulkLoadHFile(StoreFileInfo fileInfo) throws IOException;
-
   boolean isPrimaryReplicaStore();
 
   /**
@@ -538,11 +474,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   void closeAndArchiveCompactedFiles() throws IOException;
 
   /**
-   * This method is called when it is clear that the flush to disk is completed.
-   * The store may do any post-flush actions at this point.
-   * One example is to update the wal with sequence number that is known only at the store level.
+   * @return true if the memstore may need some extra memory space
    */
-  void finalizeFlush();
-
-  MemStore getMemStore();
+  boolean isSloppyMemstore();
 }
