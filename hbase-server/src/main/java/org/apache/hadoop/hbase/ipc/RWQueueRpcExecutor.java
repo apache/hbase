@@ -146,17 +146,16 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     this.scanBalancer = numScanQueues > 0 ? getBalancer(numScanQueues) : null;
 
     queues = new ArrayList<BlockingQueue<CallRunner>>(numWriteQueues + numReadQueues + numScanQueues);
-    LOG.debug(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount +
-              " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount +
-              ((numScanQueues == 0) ? "" : " scanQueues=" + numScanQueues +
-                " scanHandlers=" + scanHandlersCount));
+    LOG.info(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount
+        + " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount + " scanQueues="
+        + numScanQueues + " scanHandlers=" + scanHandlersCount);
+
     if (writeQueueInitArgs.length > 0) {
       currentQueueLimit = (int) writeQueueInitArgs[0];
       writeQueueInitArgs[0] = Math.max((int) writeQueueInitArgs[0],
         DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
     }
     for (int i = 0; i < numWriteQueues; ++i) {
-
       queues.add((BlockingQueue<CallRunner>)
         ReflectionUtils.newInstance(writeQueueClass, writeQueueInitArgs));
     }
@@ -176,8 +175,10 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   protected void startHandlers(final int port) {
     startHandlers(".write", writeHandlersCount, queues, 0, numWriteQueues, port);
     startHandlers(".read", readHandlersCount, queues, numWriteQueues, numReadQueues, port);
-    startHandlers(".scan", scanHandlersCount, queues,
-                  numWriteQueues + numReadQueues, numScanQueues, port);
+    if (numScanQueues > 0) {
+      startHandlers(".scan", scanHandlersCount, queues, numWriteQueues + numReadQueues,
+        numScanQueues, port);
+    }
   }
 
   @Override
