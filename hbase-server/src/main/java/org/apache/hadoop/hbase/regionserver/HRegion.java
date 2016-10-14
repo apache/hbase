@@ -3310,7 +3310,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         this.mvcc.advanceTo(batchOp.getReplaySequenceId());
       } else {
         // writeEntry won't be empty if not in replay mode
-        assert writeEntry != null;
         mvcc.completeAndWait(writeEntry);
         writeEntry = null;
       }
