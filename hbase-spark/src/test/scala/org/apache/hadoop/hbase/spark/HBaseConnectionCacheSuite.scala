@@ -78,6 +78,9 @@ class HBaseConnectionCacheSuite extends FunSuite with Logging {
 
   def testBasic() {
     HBaseConnectionCache.setTimeout(1 * 1000)
+    HBaseConnectionCache.connectionMap.synchronized {
+      HBaseConnectionCache.connectionMap.clear()
+    }
 
     val connKeyMocker1 = new HBaseConnectionKeyMocker(1)
     val connKeyMocker1a = new HBaseConnectionKeyMocker(1)
