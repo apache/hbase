@@ -112,16 +112,11 @@ class FSWALEntry extends Entry {
     }
     stamped = true;
     long regionSequenceId = WALKey.NO_SEQUENCE_ID;
-    WALKey key = getKey();
-    MultiVersionConcurrencyControl.WriteEntry we = key.getPreAssignedWriteEntry();
-    boolean preAssigned = (we != null);
-    if (!preAssigned) {
-      MultiVersionConcurrencyControl mvcc = key.getMvcc();
-      if (mvcc != null) {
-        we = mvcc.begin();
-      }
-    }
-    if (we != null) {
+    MultiVersionConcurrencyControl mvcc = getKey().getMvcc();
+    MultiVersionConcurrencyControl.WriteEntry we = null;
+
+    if (mvcc != null) {
+      we = mvcc.begin();
       regionSequenceId = we.getWriteNumber();
     }
 
@@ -130,9 +125,7 @@ class FSWALEntry extends Entry {
         CellUtil.setSequenceId(c, regionSequenceId);
       }
     }
-    if (!preAssigned) {
-      key.setWriteEntry(we);
-    }
+    getKey().setWriteEntry(we);
     return regionSequenceId;
   }
 

@@ -64,7 +64,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -197,10 +196,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
     "hbase.hregion.scan.loadColumnFamiliesOnDemand";
-
-  /** Config key for using mvcc pre-assign feature for put */
-  public static final String HREGION_MVCC_PRE_ASSIGN = "hbase.hregion.mvcc.preassign";
-  public static final boolean DEFAULT_HREGION_MVCC_PRE_ASSIGN = true;
 
   /**
    * This is the global default value for durability. All tables/mutations not
@@ -590,9 +585,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // that has non-default scope
   private final NavigableMap<byte[], Integer> replicationScope = new TreeMap<byte[], Integer>(
       Bytes.BYTES_COMPARATOR);
-  // flag and lock for MVCC preassign
-  private final boolean mvccPreAssign;
-  private final ReentrantLock preAssignMvccLock;
 
   /**
    * HRegion constructor. This constructor should only be used for testing and
@@ -752,14 +744,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           false :
           conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
               HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
-
-    // get mvcc pre-assign flag and lock
-    this.mvccPreAssign = conf.getBoolean(HREGION_MVCC_PRE_ASSIGN, DEFAULT_HREGION_MVCC_PRE_ASSIGN);
-    if (this.mvccPreAssign) {
-      this.preAssignMvccLock = new ReentrantLock();
-    } else {
-      this.preAssignMvccLock = null;
-    }
   }
 
   void setHTableSpecificConf() {
@@ -3230,61 +3214,36 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // STEP 4. Append the final edit to WAL and sync.
       Mutation mutation = batchOp.getMutation(firstIndex);
       WALKey walKey = null;
-      long txid;
       if (replay) {
         // use wal key from the original
         walKey = new ReplayHLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
           this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
           mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc);
         walKey.setOrigLogSeqNum(batchOp.getReplaySequenceId());
-        if (!walEdit.isEmpty()) {
-          txid = this.wal.append(this.getRegionInfo(), walKey, walEdit, true);
-          if (txid != 0) {
-            sync(txid, durability);
-          }
+      }
+      // Not sure what is going on here when replay is going on... does the below append get
+      // called for replayed edits? Am afraid to change it without test.
+      if (!walEdit.isEmpty()) {
+        if (!replay) {
+          // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
+          walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
+              mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc,
+              this.getReplicationScope());
         }
-      } else {
+        // TODO: Use the doAppend methods below... complicated by the replay stuff above.
         try {
-          if (!walEdit.isEmpty()) {
-            try {
-              if (this.mvccPreAssign) {
-                preAssignMvccLock.lock();
-                writeEntry = mvcc.begin();
-              }
-              // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-              walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-                  this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
-                  mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc,
-                  this.getReplicationScope());
-              if (this.mvccPreAssign) {
-                walKey.setPreAssignedWriteEntry(writeEntry);
-              }
-              // TODO: Use the doAppend methods below... complicated by the replay stuff above.
-              txid = this.wal.append(this.getRegionInfo(), walKey, walEdit, true);
-            } finally {
-              if (mvccPreAssign) {
-                preAssignMvccLock.unlock();
-              }
-            }
-            if (txid != 0) {
-              sync(txid, durability);
-            }
-            if (writeEntry == null) {
-              // if MVCC not preassigned, wait here until assigned
-              writeEntry = walKey.getWriteEntry();
-            }
-          }
+          long txid = this.wal.append(this.getRegionInfo(), walKey,
+              walEdit, true);
+          if (txid != 0) sync(txid, durability);
+          writeEntry = walKey.getWriteEntry();
         } catch (IOException ioe) {
-          if (walKey != null && writeEntry == null) {
-            // the writeEntry is not preassigned and error occurred during append or sync
-            mvcc.complete(walKey.getWriteEntry());
-          }
+          if (walKey != null) mvcc.complete(walKey.getWriteEntry());
           throw ioe;
         }
       }
       if (walKey == null) {
-        // If no walKey, then not in replay and skipping WAL or some such. Begin an MVCC transaction
-        // to get sequence id.
+        // If no walKey, then skipping WAL or some such. Being an mvcc transaction so sequenceid.
         writeEntry = mvcc.begin();
       }
 
@@ -3307,9 +3266,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // STEP 6. Complete mvcc.
       if (replay) {
         this.mvcc.advanceTo(batchOp.getReplaySequenceId());
-      } else {
-        // writeEntry won't be empty if not in replay mode
-        assert writeEntry != null;
+      } else if (writeEntry != null/*Can be null if in replay mode*/) {
         mvcc.completeAndWait(writeEntry);
         writeEntry = null;
       }
@@ -7637,9 +7594,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      50 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      49 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
-      6 * Bytes.SIZEOF_BOOLEAN);
+      5 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
