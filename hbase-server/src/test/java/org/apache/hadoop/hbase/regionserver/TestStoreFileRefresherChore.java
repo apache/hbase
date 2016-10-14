@@ -84,7 +84,8 @@ public class TestStoreFileRefresherChore {
   static class FailingHRegionStorage extends LegacyRegionStorage {
     boolean fail = false;
     FailingHRegionStorage(Configuration conf, FileSystem fs, Path tableDir, HRegionInfo regionInfo) {
-      super(conf, fs, tableDir, regionInfo);
+//      super(conf, fs, tableDir, regionInfo);
+      super(conf, fs, null, regionInfo);
     }
 
     @Override

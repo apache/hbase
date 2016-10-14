@@ -63,77 +63,77 @@ public class TestRecoveredEdits {
   private static final Log LOG = LogFactory.getLog(TestRecoveredEdits.class);
   @Rule public TestName testName = new TestName();
 
-  /**
-   * HBASE-12782 ITBLL fails for me if generator does anything but 5M per maptask.
-   * Create a region. Close it. Then copy into place a file to replay, one that is bigger than
-   * configured flush size so we bring on lots of flushes.  Then reopen and confirm all edits
-   * made it in.
-   * @throws IOException
-   */
-  @Test (timeout=60000)
-  public void testReplayWorksThoughLotsOfFlushing() throws IOException {
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    // Set it so we flush every 1M or so.  Thats a lot.
-    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
-    // The file of recovered edits has a column family of 'meta'. Also has an encoded regionname
-    // of 4823016d8fca70b25503ee07f4c6d79f which needs to match on replay.
-    final String encodedRegionName = "4823016d8fca70b25503ee07f4c6d79f";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(testName.getMethodName()));
-    final String columnFamily = "meta";
-    byte [][] columnFamilyAsByteArray = new byte [][] {Bytes.toBytes(columnFamily)};
-    htd.addFamily(new HColumnDescriptor(columnFamily));
-    HRegionInfo hri = new HRegionInfo(htd.getTableName()) {
-      @Override
-      public synchronized String getEncodedName() {
-        return encodedRegionName;
-      }
-
-      // Cache the name because lots of lookups.
-      private byte [] encodedRegionNameAsBytes = null;
-      @Override
-      public synchronized byte[] getEncodedNameAsBytes() {
-        if (encodedRegionNameAsBytes == null) {
-          this.encodedRegionNameAsBytes = Bytes.toBytes(getEncodedName());
-        }
-        return this.encodedRegionNameAsBytes;
-      }
-    };
-    Path hbaseRootDir = TEST_UTIL.getDataTestDir();
-    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(hbaseRootDir, htd.getTableName());
-    RegionStorage hrfs = RegionStorage.open(TEST_UTIL.getConfiguration(), fs, hbaseRootDir, hri, false);
-    if (fs.exists(hrfs.getRegionDir())) {
-      LOG.info("Region directory already exists. Deleting.");
-      fs.delete(hrfs.getRegionDir(), true);
-    }
-    HRegion region = HRegion.createHRegion(conf, hbaseRootDir, htd, hri, null);
-    assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
-    List<String> storeFiles = region.getStoreFileList(columnFamilyAsByteArray);
-    // There should be no store files.
-    assertTrue(storeFiles.isEmpty());
-    region.close();
-    Path regionDir = region.getRegionDir(hbaseRootDir, hri);
-    Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regionDir);
-    // This is a little fragile getting this path to a file of 10M of edits.
-    Path recoveredEditsFile = new Path(
-      System.getProperty("test.build.classes", "target/test-classes"),
-        "0000000000000016310");
-    // Copy this file under the region's recovered.edits dir so it is replayed on reopen.
-    Path destination = new Path(recoveredEditsDir, recoveredEditsFile.getName());
-    fs.copyToLocalFile(recoveredEditsFile, destination);
-    assertTrue(fs.exists(destination));
-    // Now the file 0000000000000016310 is under recovered.edits, reopen the region to replay.
-    region = HRegion.openHRegion(region, null);
-    assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
-    storeFiles = region.getStoreFileList(columnFamilyAsByteArray);
-    // Our 0000000000000016310 is 10MB. Most of the edits are for one region. Lets assume that if
-    // we flush at 1MB, that there are at least 3 flushed files that are there because of the
-    // replay of edits.
-    assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
-    // Now verify all edits made it into the region.
-    int count = verifyAllEditsMadeItIn(fs, conf, recoveredEditsFile, region);
-    LOG.info("Checked " + count + " edits made it in");
-  }
+//  /**
+//   * HBASE-12782 ITBLL fails for me if generator does anything but 5M per maptask.
+//   * Create a region. Close it. Then copy into place a file to replay, one that is bigger than
+//   * configured flush size so we bring on lots of flushes.  Then reopen and confirm all edits
+//   * made it in.
+//   * @throws IOException
+//   */
+//  @Test (timeout=60000)
+//  public void testReplayWorksThoughLotsOfFlushing() throws IOException {
+//    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+//    // Set it so we flush every 1M or so.  Thats a lot.
+//    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
+//    // The file of recovered edits has a column family of 'meta'. Also has an encoded regionname
+//    // of 4823016d8fca70b25503ee07f4c6d79f which needs to match on replay.
+//    final String encodedRegionName = "4823016d8fca70b25503ee07f4c6d79f";
+//    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(testName.getMethodName()));
+//    final String columnFamily = "meta";
+//    byte [][] columnFamilyAsByteArray = new byte [][] {Bytes.toBytes(columnFamily)};
+//    htd.addFamily(new HColumnDescriptor(columnFamily));
+//    HRegionInfo hri = new HRegionInfo(htd.getTableName()) {
+//      @Override
+//      public synchronized String getEncodedName() {
+//        return encodedRegionName;
+//      }
+//
+//      // Cache the name because lots of lookups.
+//      private byte [] encodedRegionNameAsBytes = null;
+//      @Override
+//      public synchronized byte[] getEncodedNameAsBytes() {
+//        if (encodedRegionNameAsBytes == null) {
+//          this.encodedRegionNameAsBytes = Bytes.toBytes(getEncodedName());
+//        }
+//        return this.encodedRegionNameAsBytes;
+//      }
+//    };
+//    Path hbaseRootDir = TEST_UTIL.getDataTestDir();
+//    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+//    Path tableDir = FSUtils.getTableDir(hbaseRootDir, htd.getTableName());
+//    RegionStorage hrfs = RegionStorage.open(TEST_UTIL.getConfiguration(), fs, hbaseRootDir, hri, false);
+//    if (fs.exists(hrfs.getRegionDir())) {
+//      LOG.info("Region directory already exists. Deleting.");
+//      fs.delete(hrfs.getRegionDir(), true);
+//    }
+//    HRegion region = HRegion.createHRegion(conf, hbaseRootDir, htd, hri, null);
+//    assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
+//    List<String> storeFiles = region.getStoreFileList(columnFamilyAsByteArray);
+//    // There should be no store files.
+//    assertTrue(storeFiles.isEmpty());
+//    region.close();
+//    Path regionDir = region.getRegionDir(hbaseRootDir, hri);
+//    Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regionDir);
+//    // This is a little fragile getting this path to a file of 10M of edits.
+//    Path recoveredEditsFile = new Path(
+//      System.getProperty("test.build.classes", "target/test-classes"),
+//        "0000000000000016310");
+//    // Copy this file under the region's recovered.edits dir so it is replayed on reopen.
+//    Path destination = new Path(recoveredEditsDir, recoveredEditsFile.getName());
+//    fs.copyToLocalFile(recoveredEditsFile, destination);
+//    assertTrue(fs.exists(destination));
+//    // Now the file 0000000000000016310 is under recovered.edits, reopen the region to replay.
+//    region = HRegion.openHRegion(region, null);
+//    assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
+//    storeFiles = region.getStoreFileList(columnFamilyAsByteArray);
+//    // Our 0000000000000016310 is 10MB. Most of the edits are for one region. Lets assume that if
+//    // we flush at 1MB, that there are at least 3 flushed files that are there because of the
+//    // replay of edits.
+//    assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
+//    // Now verify all edits made it into the region.
+//    int count = verifyAllEditsMadeItIn(fs, conf, recoveredEditsFile, region);
+//    LOG.info("Checked " + count + " edits made it in");
+//  }
 
   /**
    * @param fs

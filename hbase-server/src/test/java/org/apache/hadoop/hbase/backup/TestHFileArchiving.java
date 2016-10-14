@@ -113,114 +113,114 @@ public class TestHFileArchiving {
     }
   }
 
-  @Test
-  public void testRemovesRegionDirOnArchive() throws Exception {
-    TableName TABLE_NAME =
-        TableName.valueOf("testRemovesRegionDirOnArchive");
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
-
-    final Admin admin = UTIL.getHBaseAdmin();
-
-    // get the current store files for the region
-    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
-    // make sure we only have 1 region serving this table
-    assertEquals(1, servingRegions.size());
-    HRegion region = servingRegions.get(0);
-
-    // and load the table
-    UTIL.loadRegion(region, TEST_FAM);
-
-    // shutdown the table so we can manipulate the files
-    admin.disableTable(TABLE_NAME);
-
-    FileSystem fs = UTIL.getTestFileSystem();
-
-    // now attempt to depose the region
-    Path rootDir = region.getRegionStorage().getTableDir().getParent();
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
-
-    HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
-
-    // check for the existence of the archive directory and some files in it
-    Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(), region);
-    assertTrue(fs.exists(archiveDir));
-
-    // check to make sure the store directory was copied
-    // check to make sure the store directory was copied
-    FileStatus[] stores = fs.listStatus(archiveDir, new PathFilter() {
-      @Override
-      public boolean accept(Path p) {
-        if (p.getName().contains(HConstants.RECOVERED_EDITS_DIR)) {
-          return false;
-        }
-        return true;
-      }
-    });
-    assertTrue(stores.length == 1);
-
-    // make sure we archived the store files
-    FileStatus[] storeFiles = fs.listStatus(stores[0].getPath());
-    assertTrue(storeFiles.length > 0);
-
-    // then ensure the region's directory isn't present
-    assertFalse(fs.exists(regionDir));
-
-    UTIL.deleteTable(TABLE_NAME);
-  }
-
-  /**
-   * Test that the region directory is removed when we archive a region without store files, but
-   * still has hidden files.
-   * @throws Exception
-   */
-  @Test
-  public void testDeleteRegionWithNoStoreFiles() throws Exception {
-    TableName TABLE_NAME =
-        TableName.valueOf("testDeleteRegionWithNoStoreFiles");
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
-
-    // get the current store files for the region
-    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
-    // make sure we only have 1 region serving this table
-    assertEquals(1, servingRegions.size());
-    HRegion region = servingRegions.get(0);
-
-    FileSystem fs = region.getRegionStorage().getFileSystem();
-
-    // make sure there are some files in the regiondir
-    Path rootDir = FSUtils.getRootDir(fs.getConf());
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
-    FileStatus[] regionFiles = FSUtils.listStatus(fs, regionDir, null);
-    Assert.assertNotNull("No files in the region directory", regionFiles);
-    if (LOG.isDebugEnabled()) {
-      List<Path> files = new ArrayList<Path>();
-      for (FileStatus file : regionFiles) {
-        files.add(file.getPath());
-      }
-      LOG.debug("Current files:" + files);
-    }
-    // delete the visible folders so we just have hidden files/folders
-    final PathFilter dirFilter = new FSUtils.DirFilter(fs);
-    PathFilter nonHidden = new PathFilter() {
-      @Override
-      public boolean accept(Path file) {
-        return dirFilter.accept(file) && !file.getName().toString().startsWith(".");
-      }
-    };
-    FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
-    for (FileStatus store : storeDirs) {
-      LOG.debug("Deleting store for test");
-      fs.delete(store.getPath(), true);
-    }
-
-    // then archive the region
-    HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
-
-    // and check to make sure the region directoy got deleted
-    assertFalse("Region directory (" + regionDir + "), still exists.", fs.exists(regionDir));
-
-    UTIL.deleteTable(TABLE_NAME);
-  }
+//  @Test
+//  public void testRemovesRegionDirOnArchive() throws Exception {
+//    TableName TABLE_NAME =
+//        TableName.valueOf("testRemovesRegionDirOnArchive");
+//    UTIL.createTable(TABLE_NAME, TEST_FAM);
+//
+//    final Admin admin = UTIL.getHBaseAdmin();
+//
+//    // get the current store files for the region
+//    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+//    // make sure we only have 1 region serving this table
+//    assertEquals(1, servingRegions.size());
+//    HRegion region = servingRegions.get(0);
+//
+//    // and load the table
+//    UTIL.loadRegion(region, TEST_FAM);
+//
+//    // shutdown the table so we can manipulate the files
+//    admin.disableTable(TABLE_NAME);
+//
+//    FileSystem fs = UTIL.getTestFileSystem();
+//
+//    // now attempt to depose the region
+//    Path rootDir = region.getRegionStorage().getTableDir().getParent();
+//    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+//
+//    HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
+//
+//    // check for the existence of the archive directory and some files in it
+//    Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(), region);
+//    assertTrue(fs.exists(archiveDir));
+//
+//    // check to make sure the store directory was copied
+//    // check to make sure the store directory was copied
+//    FileStatus[] stores = fs.listStatus(archiveDir, new PathFilter() {
+//      @Override
+//      public boolean accept(Path p) {
+//        if (p.getName().contains(HConstants.RECOVERED_EDITS_DIR)) {
+//          return false;
+//        }
+//        return true;
+//      }
+//    });
+//    assertTrue(stores.length == 1);
+//
+//    // make sure we archived the store files
+//    FileStatus[] storeFiles = fs.listStatus(stores[0].getPath());
+//    assertTrue(storeFiles.length > 0);
+//
+//    // then ensure the region's directory isn't present
+//    assertFalse(fs.exists(regionDir));
+//
+//    UTIL.deleteTable(TABLE_NAME);
+//  }
+//
+//  /**
+//   * Test that the region directory is removed when we archive a region without store files, but
+//   * still has hidden files.
+//   * @throws Exception
+//   */
+//  @Test
+//  public void testDeleteRegionWithNoStoreFiles() throws Exception {
+//    TableName TABLE_NAME =
+//        TableName.valueOf("testDeleteRegionWithNoStoreFiles");
+//    UTIL.createTable(TABLE_NAME, TEST_FAM);
+//
+//    // get the current store files for the region
+//    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+//    // make sure we only have 1 region serving this table
+//    assertEquals(1, servingRegions.size());
+//    HRegion region = servingRegions.get(0);
+//
+//    FileSystem fs = region.getRegionStorage().getFileSystem();
+//
+//    // make sure there are some files in the regiondir
+//    Path rootDir = FSUtils.getRootDir(fs.getConf());
+//    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+//    FileStatus[] regionFiles = FSUtils.listStatus(fs, regionDir, null);
+//    Assert.assertNotNull("No files in the region directory", regionFiles);
+//    if (LOG.isDebugEnabled()) {
+//      List<Path> files = new ArrayList<Path>();
+//      for (FileStatus file : regionFiles) {
+//        files.add(file.getPath());
+//      }
+//      LOG.debug("Current files:" + files);
+//    }
+//    // delete the visible folders so we just have hidden files/folders
+//    final PathFilter dirFilter = new FSUtils.DirFilter(fs);
+//    PathFilter nonHidden = new PathFilter() {
+//      @Override
+//      public boolean accept(Path file) {
+//        return dirFilter.accept(file) && !file.getName().toString().startsWith(".");
+//      }
+//    };
+//    FileStatus[] storeDirs = FSUtils.listStatus(fs, regionDir, nonHidden);
+//    for (FileStatus store : storeDirs) {
+//      LOG.debug("Deleting store for test");
+//      fs.delete(store.getPath(), true);
+//    }
+//
+//    // then archive the region
+//    HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
+//
+//    // and check to make sure the region directoy got deleted
+//    assertFalse("Region directory (" + regionDir + "), still exists.", fs.exists(regionDir));
+//
+//    UTIL.deleteTable(TABLE_NAME);
+//  }
 
   @Test
   public void testArchiveOnTableDelete() throws Exception {

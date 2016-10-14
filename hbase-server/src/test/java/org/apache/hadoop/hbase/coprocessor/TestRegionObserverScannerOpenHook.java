@@ -154,7 +154,8 @@ public class TestRegionObserverScannerOpenHook {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     WAL wal = HBaseTestingUtility.createWal(conf, path, info);
-    HRegion r = HRegion.createHRegion(conf, path, htd, info, wal);
+//    HRegion r = HRegion.createHRegion(conf, path, htd, info, wal);
+    HRegion r = null;
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost

@@ -281,9 +281,10 @@ public class TestIOFencing {
       // those entries
       HRegionInfo oldHri = new HRegionInfo(table.getName(),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      CompactionDescriptor compactionDescriptor = ServerProtobufUtil.toCompactionDescriptor(oldHri,
-        FAMILY, Lists.newArrayList(new Path("/a")), Lists.newArrayList(new Path("/b")),
-        new Path("store_dir"));
+//      CompactionDescriptor compactionDescriptor = ServerProtobufUtil.toCompactionDescriptor(oldHri,
+//        FAMILY, Lists.newArrayList(new Path("/a")), Lists.newArrayList(new Path("/b")),
+//        new Path("store_dir"));
+      CompactionDescriptor compactionDescriptor = null;
       WALUtil.writeCompactionMarker(compactingRegion.getWAL(),
           ((HRegion)compactingRegion).getReplicationScope(),
         oldHri, compactionDescriptor, compactingRegion.getMVCC());

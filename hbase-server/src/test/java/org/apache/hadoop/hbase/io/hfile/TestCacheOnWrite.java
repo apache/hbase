@@ -411,13 +411,14 @@ public class TestCacheOnWrite {
     final String cf = "myCF";
     final byte[] cfBytes = Bytes.toBytes(cf);
     final int maxVersions = 3;
-    Region region = TEST_UTIL.createTestRegion(table, 
-        new HColumnDescriptor(cf)
-            .setCompressionType(compress)
-            .setBloomFilterType(BLOOM_TYPE)
-            .setMaxVersions(maxVersions)
-            .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
-    );
+//    Region region = TEST_UTIL.createTestRegion(table,
+//        new HColumnDescriptor(cf)
+//            .setCompressionType(compress)
+//            .setBloomFilterType(BLOOM_TYPE)
+//            .setMaxVersions(maxVersions)
+//            .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
+//    );
+    Region region = null;
     int rowIdx = 0;
     long ts = EnvironmentEdgeManager.currentTime();
     for (int iFile = 0; iFile < 5; ++iFile) {

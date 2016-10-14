@@ -159,9 +159,9 @@ public class TestHMobStore {
     FSUtils.setRootDir(walConf, basedir);
     final WALFactory wals = new WALFactory(walConf, null, methodName);
 
-    RegionStorage rfs = RegionStorage.open(conf, fs, basedir, info, false);
-    region = new HRegion(rfs, htd,
-      wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), null);
+//    RegionStorage rfs = RegionStorage.open(conf, fs, basedir, info, false);
+//    region = new HRegion(rfs, htd,
+//      wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), null);
     store = new HMobStore(region, hcd, conf);
     if(testStore) {
       init(conf, hcd);

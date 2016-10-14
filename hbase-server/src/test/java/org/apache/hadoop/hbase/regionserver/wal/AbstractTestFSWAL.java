@@ -375,8 +375,9 @@ public abstract class AbstractTestFSWAL {
           }
         }
       });
-    HRegion region = HRegion.openHRegion(TEST_UTIL.getConfiguration(),
-      TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(), hri, htd, wal);
+//    HRegion region = HRegion.openHRegion(TEST_UTIL.getConfiguration(),
+//      TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(), hri, htd, wal);
+    HRegion region = null;
     EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
     try {
       List<Put> puts = null;

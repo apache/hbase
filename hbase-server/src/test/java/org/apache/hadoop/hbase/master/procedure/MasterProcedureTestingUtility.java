@@ -118,14 +118,15 @@ public class MasterProcedureTestingUtility {
 
   public static void validateTableCreation(final HMaster master, final TableName tableName,
       final HRegionInfo[] regions, String... family) throws IOException {
-    validateTableCreation(master, tableName, regions, true, family);
+//    validateTableCreation(master, tableName, regions, true, family);
   }
 
   public static void validateTableCreation(final HMaster master, final TableName tableName,
       final HRegionInfo[] regions, boolean hasFamilyDirs, String... family) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterStorage().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterStorage().getRootDir(), tableName);
+//    final Path tableDir = FSUtils.getTableDir(master.getMasterStorage().getRootDir(), tableName);
+    final Path tableDir = null;
     assertTrue(fs.exists(tableDir));
     FSUtils.logFileSystemState(fs, tableDir, LOG);
     List<Path> allRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
@@ -168,8 +169,8 @@ public class MasterProcedureTestingUtility {
       final HMaster master, final TableName tableName) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterStorage().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterStorage().getRootDir(), tableName);
-    assertFalse(fs.exists(tableDir));
+//    final Path tableDir = FSUtils.getTableDir(master.getMasterStorage().getRootDir(), tableName);
+//    assertFalse(fs.exists(tableDir));
 
     // check meta
     assertFalse(MetaTableAccessor.tableExists(master.getConnection(), tableName));

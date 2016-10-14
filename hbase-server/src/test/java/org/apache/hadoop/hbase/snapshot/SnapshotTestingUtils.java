@@ -65,8 +65,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -163,8 +161,8 @@ public final class SnapshotTestingUtils {
       HBaseProtos.SnapshotDescription snapshotDescriptor, TableName tableName, byte[] family)
       throws IOException {
     MasterStorage mfs = testUtil.getHBaseCluster().getMaster().getMasterStorage();
-    confirmSnapshotValid(snapshotDescriptor, tableName, family,
-        mfs.getRootDir(), testUtil.getHBaseAdmin(), mfs.getFileSystem());
+//    confirmSnapshotValid(snapshotDescriptor, tableName, family,
+//        mfs.getRootDir(), testUtil.getHBaseAdmin(), mfs.getFileSystem());
   }
 
   /**
@@ -273,18 +271,18 @@ public final class SnapshotTestingUtils {
    */
   public static void waitForSnapshotToComplete(HMaster master,
       HBaseProtos.SnapshotDescription snapshot, long sleep) throws ServiceException {
-    final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder()
-        .setSnapshot(snapshot).build();
-    IsSnapshotDoneResponse done = IsSnapshotDoneResponse.newBuilder()
-        .buildPartial();
-    while (!done.getDone()) {
-      done = master.getMasterRpcServices().isSnapshotDone(null, request);
-      try {
-        Thread.sleep(sleep);
-      } catch (InterruptedException e) {
-        throw new ServiceException(e);
-      }
-    }
+//    final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder()
+//        .setSnapshot(snapshot).build();
+//    IsSnapshotDoneResponse done = IsSnapshotDoneResponse.newBuilder()
+//        .buildPartial();
+//    while (!done.getDone()) {
+//      done = master.getMasterRpcServices().isSnapshotDone(null, request);
+//      try {
+//        Thread.sleep(sleep);
+//      } catch (InterruptedException e) {
+//        throw new ServiceException(e);
+//      }
+//    }
   }
 
   /*
@@ -321,30 +319,30 @@ public final class SnapshotTestingUtils {
     assertNoSnapshots(admin);
   }
 
-  /**
-   * Expect the snapshot to throw an error when checking if the snapshot is
-   * complete
-   *
-   * @param master master to check
-   * @param snapshot the {@link SnapshotDescription} request to pass to the master
-   * @param clazz expected exception from the master
-   */
-  public static void expectSnapshotDoneException(HMaster master,
-      IsSnapshotDoneRequest snapshot,
-      Class<? extends HBaseSnapshotException> clazz) {
-    try {
-      master.getMasterRpcServices().isSnapshotDone(null, snapshot);
-      Assert.fail("didn't fail to lookup a snapshot");
-    } catch (ServiceException se) {
-      try {
-        throw ProtobufUtil.getRemoteException(se);
-      } catch (HBaseSnapshotException e) {
-        assertEquals("Threw wrong snapshot exception!", clazz, e.getClass());
-      } catch (Throwable t) {
-        Assert.fail("Threw an unexpected exception:" + t);
-      }
-    }
-  }
+//  /**
+//   * Expect the snapshot to throw an error when checking if the snapshot is
+//   * complete
+//   *
+//   * @param master master to check
+//   * @param snapshot the {@link SnapshotDescription} request to pass to the master
+//   * @param clazz expected exception from the master
+//   */
+//  public static void expectSnapshotDoneException(HMaster master,
+//      IsSnapshotDoneRequest snapshot,
+//      Class<? extends HBaseSnapshotException> clazz) {
+//    try {
+//      master.getMasterRpcServices().isSnapshotDone(null, snapshot);
+//      Assert.fail("didn't fail to lookup a snapshot");
+//    } catch (ServiceException se) {
+//      try {
+//        throw ProtobufUtil.getRemoteException(se);
+//      } catch (HBaseSnapshotException e) {
+//        assertEquals("Threw wrong snapshot exception!", clazz, e.getClass());
+//      } catch (Throwable t) {
+//        Assert.fail("Threw an unexpected exception:" + t);
+//      }
+//    }
+//  }
 
   /**
    * List all the HFiles in the given table
@@ -427,8 +425,9 @@ public final class SnapshotTestingUtils {
     final MasterStorage mfs = util.getHBaseCluster().getMaster().getMasterStorage();
     final FileSystem fs = mfs.getFileSystem();
 
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
-                                                                        mfs.getRootDir());
+//    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
+//                                                                        mfs.getRootDir());
+    Path snapshotDir = null;
     HBaseProtos.SnapshotDescription snapshotDesc =
         SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     final TableName table = TableName.valueOf(snapshotDesc.getTable());
@@ -701,24 +700,24 @@ public final class SnapshotTestingUtils {
 
         // First region, simple with one plain hfile.
         HRegionInfo hri = new HRegionInfo(htd.getTableName(), startKey, endKey);
-        RegionStorage rfs = RegionStorage.open(conf, fs, tableDir, hri, true);
-        regions[i] = new RegionData(tableDir, hri, 3);
-        for (int j = 0; j < regions[i].files.length; ++j) {
-          Path storeFile = createStoreFile(rfs.createTempName());
-          regions[i].files[j] = rfs.commitStoreFile(TEST_FAMILY, storeFile);
-        }
+//        RegionStorage rfs = RegionStorage.open(conf, fs, tableDir, hri, true);
+//        regions[i] = new RegionData(tableDir, hri, 3);
+//        for (int j = 0; j < regions[i].files.length; ++j) {
+//          Path storeFile = createStoreFile(rfs.createTempName());
+//          regions[i].files[j] = rfs.commitStoreFile(TEST_FAMILY, storeFile);
+//        }
 
         // Second region, used to test the split case.
         // This region contains a reference to the hfile in the first region.
         startKey = Bytes.toBytes(2 + i * 2);
         endKey = Bytes.toBytes(3 + i * 2);
         hri = new HRegionInfo(htd.getTableName());
-        rfs = RegionStorage.open(conf, fs, tableDir, hri, true);
+//        rfs = RegionStorage.open(conf, fs, tableDir, hri, true);
         regions[i+1] = new RegionData(tableDir, hri, regions[i].files.length);
         for (int j = 0; j < regions[i].files.length; ++j) {
           String refName = regions[i].files[j].getName() + '.' + regions[i].hri.getEncodedName();
           Path refFile = createStoreFile(new Path(rootDir, refName));
-          regions[i+1].files[j] = rfs.commitStoreFile(TEST_FAMILY, refFile);
+//          regions[i+1].files[j] = rfs.commitStoreFile(TEST_FAMILY, refFile);
         }
       }
       return regions;
@@ -855,8 +854,8 @@ public final class SnapshotTestingUtils {
       throws IOException {
     // Ensure the archiver to be empty
     MasterStorage mfs = util.getMiniHBaseCluster().getMaster().getMasterStorage();
-    Path archiveDir = new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
-    mfs.getFileSystem().delete(archiveDir, true);
+//    Path archiveDir = new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+//    mfs.getFileSystem().delete(archiveDir, true);
   }
 
   public static void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,

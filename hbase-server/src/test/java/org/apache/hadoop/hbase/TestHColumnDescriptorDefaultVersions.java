@@ -158,7 +158,8 @@ public class TestHColumnDescriptorDefaultVersions {
 
     // Verify descriptor from HDFS
     MasterStorage mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterStorage();
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
+//    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
+    Path tableDir = null;
     HTableDescriptor td = LegacyTableDescriptor.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     hcds = td.getColumnFamilies();
     verifyHColumnDescriptor(expected, hcds, tableName, families);

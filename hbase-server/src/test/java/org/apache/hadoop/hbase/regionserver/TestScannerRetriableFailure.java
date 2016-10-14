@@ -124,7 +124,8 @@ public class TestScannerRetriableFailure {
   }
 
   private Path getRootDir() {
-    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+    return null;
   }
 
   public void loadTable(final Table table, int numRows) throws IOException {

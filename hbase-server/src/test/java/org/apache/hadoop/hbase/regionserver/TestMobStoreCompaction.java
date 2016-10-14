@@ -106,7 +106,7 @@ public class TestMobStoreCompaction {
     hcd.setMaxVersions(1);
     htd.modifyFamily(hcd);
 
-    region = UTIL.createLocalHRegion(htd, null, null);
+//    region = UTIL.createLocalHRegion(htd, null, null);
     fs = FileSystem.get(conf);
   }
 

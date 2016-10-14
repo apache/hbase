@@ -178,13 +178,13 @@ public class TestHRegionReplayEvents {
       string+"-"+string, 1);
     when(rss.getExecutorService()).thenReturn(es);
 
-    primaryRegion = HRegion.createHRegion(CONF, rootDir, htd, primaryHri, walPrimary);
+//    primaryRegion = HRegion.createHRegion(CONF, rootDir, htd, primaryHri, walPrimary);
     primaryRegion.close();
     List<Region> regions = new ArrayList<Region>();
     regions.add(primaryRegion);
     when(rss.getOnlineRegions()).thenReturn(regions);
 
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
+//    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, null, CONF, rss, null);
 
     reader = null;
@@ -824,7 +824,7 @@ public class TestHRegionReplayEvents {
 
     // close the region and open again.
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
+//    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
     reader =  createWALReaderForPrimary();
@@ -904,7 +904,7 @@ public class TestHRegionReplayEvents {
 
     // close the region and open again.
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
+//    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
     reader =  createWALReaderForPrimary();
@@ -983,7 +983,7 @@ public class TestHRegionReplayEvents {
 
     // close the region and open again.
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
+//    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // now replay the edits and the flush marker
     reader =  createWALReaderForPrimary();
@@ -1327,7 +1327,7 @@ public class TestHRegionReplayEvents {
     disableReads(secondaryRegion);
 
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
+//    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     reader = createWALReaderForPrimary();
     while (true) {
@@ -1477,7 +1477,7 @@ public class TestHRegionReplayEvents {
 
     // close the region and open again.
     primaryRegion.close();
-    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
+//    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
 
     // bulk load a file into primary region
     Random random = new Random();

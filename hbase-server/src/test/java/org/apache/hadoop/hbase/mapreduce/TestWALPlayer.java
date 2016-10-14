@@ -80,54 +80,54 @@ public class TestWALPlayer {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * Simple end-to-end test
-   * @throws Exception
-   */
-  @Test
-  public void testWALPlayer() throws Exception {
-    final TableName TABLENAME1 = TableName.valueOf("testWALPlayer1");
-    final TableName TABLENAME2 = TableName.valueOf("testWALPlayer2");
-    final byte[] FAMILY = Bytes.toBytes("family");
-    final byte[] COLUMN1 = Bytes.toBytes("c1");
-    final byte[] COLUMN2 = Bytes.toBytes("c2");
-    final byte[] ROW = Bytes.toBytes("row");
-    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
-
-    // put a row into the first table
-    Put p = new Put(ROW);
-    p.addColumn(FAMILY, COLUMN1, COLUMN1);
-    p.addColumn(FAMILY, COLUMN2, COLUMN2);
-    t1.put(p);
-    // delete one column
-    Delete d = new Delete(ROW);
-    d.addColumns(FAMILY, COLUMN1);
-    t1.delete(d);
-
-    // replay the WAL, map table 1 to table 2
-    WAL log = cluster.getRegionServer(0).getWAL(null);
-    log.rollWriter();
-    String walInputDir = new Path(cluster.getMaster().getMasterStorage()
-        .getRootDir(), HConstants.HREGION_LOGDIR_NAME).toString();
-
-    Configuration configuration= TEST_UTIL.getConfiguration();
-    WALPlayer player = new WALPlayer(configuration);
-    String optionName="_test_.name";
-    configuration.set(optionName, "1000");
-    player.setupTime(configuration, optionName);
-    assertEquals(1000,configuration.getLong(optionName,0));
-    assertEquals(0, ToolRunner.run(configuration, player,
-        new String[] {walInputDir, TABLENAME1.getNameAsString(),
-        TABLENAME2.getNameAsString() }));
-
-
-    // verify the WAL was player into table 2
-    Get g = new Get(ROW);
-    Result r = t2.get(g);
-    assertEquals(1, r.size());
-    assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN2));
-  }
+//  /**
+//   * Simple end-to-end test
+//   * @throws Exception
+//   */
+//  @Test
+//  public void testWALPlayer() throws Exception {
+//    final TableName TABLENAME1 = TableName.valueOf("testWALPlayer1");
+//    final TableName TABLENAME2 = TableName.valueOf("testWALPlayer2");
+//    final byte[] FAMILY = Bytes.toBytes("family");
+//    final byte[] COLUMN1 = Bytes.toBytes("c1");
+//    final byte[] COLUMN2 = Bytes.toBytes("c2");
+//    final byte[] ROW = Bytes.toBytes("row");
+//    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+//    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+//
+//    // put a row into the first table
+//    Put p = new Put(ROW);
+//    p.addColumn(FAMILY, COLUMN1, COLUMN1);
+//    p.addColumn(FAMILY, COLUMN2, COLUMN2);
+//    t1.put(p);
+//    // delete one column
+//    Delete d = new Delete(ROW);
+//    d.addColumns(FAMILY, COLUMN1);
+//    t1.delete(d);
+//
+//    // replay the WAL, map table 1 to table 2
+//    WAL log = cluster.getRegionServer(0).getWAL(null);
+//    log.rollWriter();
+//    String walInputDir = new Path(cluster.getMaster().getMasterStorage()
+//        .getRootDir(), HConstants.HREGION_LOGDIR_NAME).toString();
+//
+//    Configuration configuration= TEST_UTIL.getConfiguration();
+//    WALPlayer player = new WALPlayer(configuration);
+//    String optionName="_test_.name";
+//    configuration.set(optionName, "1000");
+//    player.setupTime(configuration, optionName);
+//    assertEquals(1000,configuration.getLong(optionName,0));
+//    assertEquals(0, ToolRunner.run(configuration, player,
+//        new String[] {walInputDir, TABLENAME1.getNameAsString(),
+//        TABLENAME2.getNameAsString() }));
+//
+//
+//    // verify the WAL was player into table 2
+//    Get g = new Get(ROW);
+//    Result r = t2.get(g);
+//    assertEquals(1, r.size());
+//    assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN2));
+//  }
 
   /**
    * Test WALKeyValueMapper setup and map

@@ -75,7 +75,7 @@ public class TestCompactedHFilesDischarger {
     htd.addFamily(new HColumnDescriptor(fam));
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
-    region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
+//    region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
     rss = mock(RegionServerServices.class);
     List<Region> regions = new ArrayList<Region>();
     regions.add(region);

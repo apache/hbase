@@ -975,37 +975,37 @@ public class TestDefaultMemStore {
     }
   }
 
-  @Test
-  public void testShouldFlushMeta() throws Exception {
-    // write an edit in the META and ensure the shouldFlush (that the periodic memstore
-    // flusher invokes) returns true after SYSTEM_CACHE_FLUSH_INTERVAL (even though
-    // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
-    Configuration conf = new Configuration();
-    conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
-    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
-    Path testDir = hbaseUtility.getDataTestDir();
-    EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
-    EnvironmentEdgeManager.injectEdge(edge);
-    edge.setCurrentTimeMillis(1234);
-    WALFactory wFactory = new WALFactory(conf, null, "1234");
-    HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf, HTableDescriptor.metaTableDescriptor(conf),
-        wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
-            getEncodedNameAsBytes()));
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf("testShouldFlushMeta"),
-        Bytes.toBytes("row_0200"), Bytes.toBytes("row_0300"));
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("testShouldFlushMeta"));
-    desc.addFamily(new HColumnDescriptor("foo".getBytes()));
-    HRegion r =
-        HRegion.createHRegion(conf, testDir, desc, hri,
-            wFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()));
-    HRegion.addRegionToMETA(meta, r);
-    edge.setCurrentTimeMillis(1234 + 100);
-    StringBuffer sb = new StringBuffer();
-    assertTrue(meta.shouldFlush(sb) == false);
-    edge.setCurrentTimeMillis(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
-    assertTrue(meta.shouldFlush(sb) == true);
-  }
+//  @Test
+//  public void testShouldFlushMeta() throws Exception {
+//    // write an edit in the META and ensure the shouldFlush (that the periodic memstore
+//    // flusher invokes) returns true after SYSTEM_CACHE_FLUSH_INTERVAL (even though
+//    // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
+//    Configuration conf = new Configuration();
+//    conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
+//    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+//    Path testDir = hbaseUtility.getDataTestDir();
+//    EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
+//    EnvironmentEdgeManager.injectEdge(edge);
+//    edge.setCurrentTimeMillis(1234);
+//    WALFactory wFactory = new WALFactory(conf, null, "1234");
+//    HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
+//        conf, HTableDescriptor.metaTableDescriptor(conf),
+//        wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
+//            getEncodedNameAsBytes()));
+//    HRegionInfo hri = new HRegionInfo(TableName.valueOf("testShouldFlushMeta"),
+//        Bytes.toBytes("row_0200"), Bytes.toBytes("row_0300"));
+//    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("testShouldFlushMeta"));
+//    desc.addFamily(new HColumnDescriptor("foo".getBytes()));
+//    HRegion r =
+//        HRegion.createHRegion(conf, testDir, desc, hri,
+//            wFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()));
+//    HRegion.addRegionToMETA(meta, r);
+//    edge.setCurrentTimeMillis(1234 + 100);
+//    StringBuffer sb = new StringBuffer();
+//    assertTrue(meta.shouldFlush(sb) == false);
+//    edge.setCurrentTimeMillis(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
+//    assertTrue(meta.shouldFlush(sb) == true);
+//  }
 
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
     long t = 1234;

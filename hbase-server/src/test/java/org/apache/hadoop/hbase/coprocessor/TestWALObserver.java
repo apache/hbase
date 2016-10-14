@@ -386,78 +386,78 @@ public class TestWALObserver {
     }
   }
 
-  /**
-   * Test WAL replay behavior with WALObserver.
-   */
-  @Test
-  public void testWALCoprocessorReplay() throws Exception {
-    // WAL replay is handled at HRegion::replayRecoveredEdits(), which is
-    // ultimately called by HRegion::initialize()
-    TableName tableName = TableName.valueOf("testWALCoprocessorReplay");
-    final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(tableName);
-    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    // final HRegionInfo hri =
-    // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
-    // final HRegionInfo hri1 =
-    // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
-    final HRegionInfo hri = new HRegionInfo(tableName, null, null);
-
-    final Path basedir =
-        FSUtils.getTableDir(this.hbaseRootDir, tableName);
-    deleteDir(basedir);
-    fs.mkdirs(new Path(basedir, hri.getEncodedName()));
-
-    final Configuration newConf = HBaseConfiguration.create(this.conf);
-
-    // WAL wal = new WAL(this.fs, this.dir, this.oldLogDir, this.conf);
-    WAL wal = wals.getWAL(UNSPECIFIED_REGION, null);
-    // Put p = creatPutWith2Families(TEST_ROW);
-    WALEdit edit = new WALEdit();
-    long now = EnvironmentEdgeManager.currentTime();
-    final int countPerFamily = 1000;
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
-    for (HColumnDescriptor hcd : htd.getFamilies()) {
-      scopes.put(hcd.getName(), 0);
-    }
-    for (HColumnDescriptor hcd : htd.getFamilies()) {
-      addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
-          EnvironmentEdgeManager.getDelegate(), wal, scopes, mvcc);
-    }
-    wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit,
-        true);
-    // sync to fs.
-    wal.sync();
-
-    User user = HBaseTestingUtility.getDifferentUser(newConf,
-        ".replay.wal.secondtime");
-    user.runAs(new PrivilegedExceptionAction() {
-      public Object run() throws Exception {
-        Path p = runWALSplit(newConf);
-        LOG.info("WALSplit path == " + p);
-        FileSystem newFS = FileSystem.get(newConf);
-        // Make a new wal for new region open.
-        final WALFactory wals2 = new WALFactory(conf, null, currentTest.getMethodName()+"2");
-        WAL wal2 = wals2.getWAL(UNSPECIFIED_REGION, null);;
-        HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,
-            hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
-        long seqid2 = region.getOpenSeqNum();
-
-        SampleRegionWALObserver cp2 =
-          (SampleRegionWALObserver)region.getCoprocessorHost().findCoprocessor(
-              SampleRegionWALObserver.class.getName());
-        // TODO: asserting here is problematic.
-        assertNotNull(cp2);
-        assertTrue(cp2.isPreWALRestoreCalled());
-        assertTrue(cp2.isPostWALRestoreCalled());
-        assertFalse(cp2.isPreWALRestoreDeprecatedCalled());
-        assertFalse(cp2.isPostWALRestoreDeprecatedCalled());
-        region.close();
-        wals2.close();
-        return null;
-      }
-    });
-  }
+//  /**
+//   * Test WAL replay behavior with WALObserver.
+//   */
+//  @Test
+//  public void testWALCoprocessorReplay() throws Exception {
+//    // WAL replay is handled at HRegion::replayRecoveredEdits(), which is
+//    // ultimately called by HRegion::initialize()
+//    TableName tableName = TableName.valueOf("testWALCoprocessorReplay");
+//    final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(tableName);
+//    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+//    // final HRegionInfo hri =
+//    // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
+//    // final HRegionInfo hri1 =
+//    // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
+//    final HRegionInfo hri = new HRegionInfo(tableName, null, null);
+//
+//    final Path basedir =
+//        FSUtils.getTableDir(this.hbaseRootDir, tableName);
+//    deleteDir(basedir);
+//    fs.mkdirs(new Path(basedir, hri.getEncodedName()));
+//
+//    final Configuration newConf = HBaseConfiguration.create(this.conf);
+//
+//    // WAL wal = new WAL(this.fs, this.dir, this.oldLogDir, this.conf);
+//    WAL wal = wals.getWAL(UNSPECIFIED_REGION, null);
+//    // Put p = creatPutWith2Families(TEST_ROW);
+//    WALEdit edit = new WALEdit();
+//    long now = EnvironmentEdgeManager.currentTime();
+//    final int countPerFamily = 1000;
+//    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+//        Bytes.BYTES_COMPARATOR);
+//    for (HColumnDescriptor hcd : htd.getFamilies()) {
+//      scopes.put(hcd.getName(), 0);
+//    }
+//    for (HColumnDescriptor hcd : htd.getFamilies()) {
+//      addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
+//          EnvironmentEdgeManager.getDelegate(), wal, scopes, mvcc);
+//    }
+//    wal.append(hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc, scopes), edit,
+//        true);
+//    // sync to fs.
+//    wal.sync();
+//
+//    User user = HBaseTestingUtility.getDifferentUser(newConf,
+//        ".replay.wal.secondtime");
+//    user.runAs(new PrivilegedExceptionAction() {
+//      public Object run() throws Exception {
+//        Path p = runWALSplit(newConf);
+//        LOG.info("WALSplit path == " + p);
+//        FileSystem newFS = FileSystem.get(newConf);
+//        // Make a new wal for new region open.
+//        final WALFactory wals2 = new WALFactory(conf, null, currentTest.getMethodName()+"2");
+//        WAL wal2 = wals2.getWAL(UNSPECIFIED_REGION, null);;
+//        HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,
+//            hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
+//        long seqid2 = region.getOpenSeqNum();
+//
+//        SampleRegionWALObserver cp2 =
+//          (SampleRegionWALObserver)region.getCoprocessorHost().findCoprocessor(
+//              SampleRegionWALObserver.class.getName());
+//        // TODO: asserting here is problematic.
+//        assertNotNull(cp2);
+//        assertTrue(cp2.isPreWALRestoreCalled());
+//        assertTrue(cp2.isPostWALRestoreCalled());
+//        assertFalse(cp2.isPreWALRestoreDeprecatedCalled());
+//        assertFalse(cp2.isPostWALRestoreDeprecatedCalled());
+//        region.close();
+//        wals2.close();
+//        return null;
+//      }
+//    });
+//  }
 
   /**
    * Test to see CP loaded successfully or not. There is a duplication at

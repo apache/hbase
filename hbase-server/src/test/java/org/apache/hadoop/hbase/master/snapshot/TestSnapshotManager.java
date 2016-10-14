@@ -74,7 +74,7 @@ public class TestSnapshotManager {
     Mockito.when(services.getConfiguration()).thenReturn(conf);
     Mockito.when(services.getMasterStorage()).thenReturn(mfs);
     Mockito.when(mfs.getFileSystem()).thenReturn(fs);
-    Mockito.when(mfs.getRootDir()).thenReturn(UTIL.getDataTestDir());
+//    Mockito.when(mfs.getRootDir()).thenReturn(UTIL.getDataTestDir());
     return new SnapshotManager(services, metrics, coordinator, pool);
   }
 

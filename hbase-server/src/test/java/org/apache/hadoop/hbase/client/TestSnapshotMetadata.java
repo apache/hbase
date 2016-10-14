@@ -99,7 +99,7 @@ public class TestSnapshotMetadata {
     UTIL.startMiniCluster(NUM_RS);
 
     fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
-    rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//    rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
   }
 
   @AfterClass

@@ -206,104 +206,104 @@ public class TestRegionMergeTransactionOnCluster {
     table.close();
   }
 
-  @Test
-  public void testCleanMergeReference() throws Exception {
-    LOG.info("Starting testCleanMergeReference");
-    ADMIN.enableCatalogJanitor(false);
-    try {
-      final TableName tableName =
-          TableName.valueOf("testCleanMergeReference");
-      // Create table and load data.
-      Table table = createTableAndLoadData(MASTER, tableName);
-      // Merge 1st and 2nd region
-      mergeRegionsAndVerifyRegionNum(MASTER, tableName, 0, 1,
-          INITIAL_REGION_NUM - 1);
-      verifyRowCount(table, ROWSIZE);
-      table.close();
-
-      List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor
-          .getTableRegionsAndLocations(MASTER.getConnection(), tableName);
-      HRegionInfo mergedRegionInfo = tableRegions.get(0).getFirst();
-      HTableDescriptor tableDescriptor = MASTER.getTableDescriptors().get(
-          tableName);
-      Result mergedRegionResult = MetaTableAccessor.getRegionResult(
-        MASTER.getConnection(), mergedRegionInfo.getRegionName());
-
-      // contains merge reference in META
-      assertTrue(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.MERGEA_QUALIFIER) != null);
-      assertTrue(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.MERGEB_QUALIFIER) != null);
-
-      // merging regions' directory are in the file system all the same
-      PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(mergedRegionResult);
-      HRegionInfo regionA = p.getFirst();
-      HRegionInfo regionB = p.getSecond();
-      FileSystem fs = MASTER.getMasterStorage().getFileSystem();
-      Path rootDir = MASTER.getMasterStorage().getRootDir();
-
-      Path tabledir = FSUtils.getTableDir(rootDir, mergedRegionInfo.getTable());
-      Path regionAdir = new Path(tabledir, regionA.getEncodedName());
-      Path regionBdir = new Path(tabledir, regionB.getEncodedName());
-      assertTrue(fs.exists(regionAdir));
-      assertTrue(fs.exists(regionBdir));
-
-      admin.compactRegion(mergedRegionInfo.getRegionName());
-      // wait until merged region doesn't have reference file
-      long timeout = System.currentTimeMillis() + waitTime;
-      RegionStorage hrfs = RegionStorage.open(
-          TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo, false);
-      while (System.currentTimeMillis() < timeout) {
-        for(HColumnDescriptor colFamily : columnFamilies) {
-          newcount += hrfs.getStoreFiles(colFamily.getName()).size();
-        }
-        if(newcount > count) {
-          break;
-        }
-        Thread.sleep(50);
-      }
-      assertTrue(newcount > count);
-      List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
-          .getRegionServerThreads();
-      for (RegionServerThread rs : regionServerThreads) {
-        CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null,
-            rs.getRegionServer(), false);
-        cleaner.chore();
-        Thread.sleep(1000);
-      }
-      while (System.currentTimeMillis() < timeout) {
-        int newcount1 = 0;
-        for(HColumnDescriptor colFamily : columnFamilies) {
-          newcount1 += hrfs.getStoreFiles(colFamily.getName()).size();
-        }
-        if(newcount1 <= 1) {
-          break;
-        }
-        Thread.sleep(50);
-      }
-      // run CatalogJanitor to clean merge references in hbase:meta and archive the
-      // files of merging regions
-      int cleaned = 0;
-      while (cleaned == 0) {
-        cleaned = ADMIN.runCatalogScan();
-        LOG.debug("catalog janitor returned " + cleaned);
-        Thread.sleep(50);
-      }
-      assertFalse(regionAdir.toString(), fs.exists(regionAdir));
-      assertFalse(regionBdir.toString(), fs.exists(regionBdir));
-      assertTrue(cleaned > 0);
-
-      mergedRegionResult = MetaTableAccessor.getRegionResult(
-        TEST_UTIL.getConnection(), mergedRegionInfo.getRegionName());
-      assertFalse(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.MERGEA_QUALIFIER) != null);
-      assertFalse(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.MERGEB_QUALIFIER) != null);
-
-    } finally {
-      ADMIN.enableCatalogJanitor(true);
-    }
-  }
+//  @Test
+//  public void testCleanMergeReference() throws Exception {
+//    LOG.info("Starting testCleanMergeReference");
+//    ADMIN.enableCatalogJanitor(false);
+//    try {
+//      final TableName tableName =
+//          TableName.valueOf("testCleanMergeReference");
+//      // Create table and load data.
+//      Table table = createTableAndLoadData(MASTER, tableName);
+//      // Merge 1st and 2nd region
+//      mergeRegionsAndVerifyRegionNum(MASTER, tableName, 0, 1,
+//          INITIAL_REGION_NUM - 1);
+//      verifyRowCount(table, ROWSIZE);
+//      table.close();
+//
+//      List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor
+//          .getTableRegionsAndLocations(MASTER.getConnection(), tableName);
+//      HRegionInfo mergedRegionInfo = tableRegions.get(0).getFirst();
+//      HTableDescriptor tableDescriptor = MASTER.getTableDescriptors().get(
+//          tableName);
+//      Result mergedRegionResult = MetaTableAccessor.getRegionResult(
+//        MASTER.getConnection(), mergedRegionInfo.getRegionName());
+//
+//      // contains merge reference in META
+//      assertTrue(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
+//          HConstants.MERGEA_QUALIFIER) != null);
+//      assertTrue(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
+//          HConstants.MERGEB_QUALIFIER) != null);
+//
+//      // merging regions' directory are in the file system all the same
+//      PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(mergedRegionResult);
+//      HRegionInfo regionA = p.getFirst();
+//      HRegionInfo regionB = p.getSecond();
+//      FileSystem fs = MASTER.getMasterStorage().getFileSystem();
+//      Path rootDir = MASTER.getMasterStorage().getRootDir();
+//
+//      Path tabledir = FSUtils.getTableDir(rootDir, mergedRegionInfo.getTable());
+//      Path regionAdir = new Path(tabledir, regionA.getEncodedName());
+//      Path regionBdir = new Path(tabledir, regionB.getEncodedName());
+//      assertTrue(fs.exists(regionAdir));
+//      assertTrue(fs.exists(regionBdir));
+//
+//      admin.compactRegion(mergedRegionInfo.getRegionName());
+//      // wait until merged region doesn't have reference file
+//      long timeout = System.currentTimeMillis() + waitTime;
+//      RegionStorage hrfs = RegionStorage.open(
+//          TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo, false);
+//      while (System.currentTimeMillis() < timeout) {
+//        for(HColumnDescriptor colFamily : columnFamilies) {
+//          newcount += hrfs.getStoreFiles(colFamily.getName()).size();
+//        }
+//        if(newcount > count) {
+//          break;
+//        }
+//        Thread.sleep(50);
+//      }
+//      assertTrue(newcount > count);
+//      List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
+//          .getRegionServerThreads();
+//      for (RegionServerThread rs : regionServerThreads) {
+//        CompactedHFilesDischarger cleaner = new CompactedHFilesDischarger(100, null,
+//            rs.getRegionServer(), false);
+//        cleaner.chore();
+//        Thread.sleep(1000);
+//      }
+//      while (System.currentTimeMillis() < timeout) {
+//        int newcount1 = 0;
+//        for(HColumnDescriptor colFamily : columnFamilies) {
+//          newcount1 += hrfs.getStoreFiles(colFamily.getName()).size();
+//        }
+//        if(newcount1 <= 1) {
+//          break;
+//        }
+//        Thread.sleep(50);
+//      }
+//      // run CatalogJanitor to clean merge references in hbase:meta and archive the
+//      // files of merging regions
+//      int cleaned = 0;
+//      while (cleaned == 0) {
+//        cleaned = ADMIN.runCatalogScan();
+//        LOG.debug("catalog janitor returned " + cleaned);
+//        Thread.sleep(50);
+//      }
+//      assertFalse(regionAdir.toString(), fs.exists(regionAdir));
+//      assertFalse(regionBdir.toString(), fs.exists(regionBdir));
+//      assertTrue(cleaned > 0);
+//
+//      mergedRegionResult = MetaTableAccessor.getRegionResult(
+//        TEST_UTIL.getConnection(), mergedRegionInfo.getRegionName());
+//      assertFalse(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
+//          HConstants.MERGEA_QUALIFIER) != null);
+//      assertFalse(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
+//          HConstants.MERGEB_QUALIFIER) != null);
+//
+//    } finally {
+//      ADMIN.enableCatalogJanitor(true);
+//    }
+//  }
 
   /**
    * This test tests 1, merging region not online;

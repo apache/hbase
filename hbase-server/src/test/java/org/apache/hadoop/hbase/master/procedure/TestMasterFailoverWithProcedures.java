@@ -141,7 +141,7 @@ public class TestMasterFailoverWithProcedures {
     byte[][] splitKeys = null;
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
         getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
-    Path tableDir = FSUtils.getTableDir(getRootDir(), tableName);
+//    Path tableDir = FSUtils.getTableDir(getRootDir(), tableName);
     MasterProcedureTestingUtility.validateTableCreation(
         UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
     UTIL.getHBaseAdmin().disableTable(tableName);
@@ -155,8 +155,8 @@ public class TestMasterFailoverWithProcedures {
         new DeleteTableProcedure(procExec.getEnvironment(), tableName));
     testRecoveryAndDoubleExecution(UTIL, procId, step, DeleteTableState.values());
 
-    MasterProcedureTestingUtility.validateTableDeletion(
-        UTIL.getHBaseCluster().getMaster(), tableName);
+//    MasterProcedureTestingUtility.validateTableDeletion(
+//        UTIL.getHBaseCluster().getMaster(), tableName);
   }
 
   // ==========================================================================
@@ -325,7 +325,7 @@ public class TestMasterFailoverWithProcedures {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
 
-  private Path getRootDir() {
-    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
-  }
+//  private Path getRootDir() {
+//    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//  }
 }

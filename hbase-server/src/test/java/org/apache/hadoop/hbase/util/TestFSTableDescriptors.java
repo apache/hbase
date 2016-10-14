@@ -181,25 +181,25 @@ public class TestFSTableDescriptors {
     assertTrue(htd.equals(td2));
   }
 
-  @Test public void testReadingOldHTDFromFS() throws IOException, DeserializationException {
-    final String name = "testReadingOldHTDFromFS";
-    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    Path rootdir = UTIL.getDataTestDir(name);
-    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    Path tableDir = FSUtils.getTableDir(rootdir, htd.getTableName());
-    fstd.updateTableDescriptor(htd);
-    Path descriptorFile = LegacyTableDescriptor.getTableInfoPath(fs, tableDir).getPath();
-    FSUtils.writeFully(fs, descriptorFile, htd.toByteArray(), true);
-    FSTableDescriptors fstd2 = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
-    HTableDescriptor td2 = fstd2.getDescriptor(htd.getTableName());
-    assertEquals(htd, td2);
-    FileStatus descriptorFile2 = LegacyTableDescriptor.getTableInfoPath(fs, tableDir);
-    byte[] buffer = htd.toByteArray();
-    FSUtils.readFully(fs, descriptorFile2.getPath(), buffer);
-    TableDescriptor td3 = TableDescriptor.parseFrom(buffer);
-    assertEquals(htd, td3);
-  }
+//  @Test public void testReadingOldHTDFromFS() throws IOException, DeserializationException {
+//    final String name = "testReadingOldHTDFromFS";
+//    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+//    Path rootdir = UTIL.getDataTestDir(name);
+//    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
+//    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
+//    Path tableDir = FSUtils.getTableDir(rootdir, htd.getTableName());
+//    fstd.updateTableDescriptor(htd);
+//    Path descriptorFile = LegacyTableDescriptor.getTableInfoPath(fs, tableDir).getPath();
+//    FSUtils.writeFully(fs, descriptorFile, htd.toByteArray(), true);
+//    FSTableDescriptors fstd2 = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
+//    HTableDescriptor td2 = fstd2.getDescriptor(htd.getTableName());
+//    assertEquals(htd, td2);
+//    FileStatus descriptorFile2 = LegacyTableDescriptor.getTableInfoPath(fs, tableDir);
+//    byte[] buffer = htd.toByteArray();
+//    FSUtils.readFully(fs, descriptorFile2.getPath(), buffer);
+//    TableDescriptor td3 = TableDescriptor.parseFrom(buffer);
+//    assertEquals(htd, td3);
+//  }
 
   @Test public void testHTableDescriptors()
   throws IOException, InterruptedException {

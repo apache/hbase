@@ -1826,7 +1826,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc, WAL wal)
       throws IOException {
-    return HRegion.createHRegion(getConfiguration(), getDataTestDir(), desc, info, wal);
+//    return HRegion.createHRegion(getConfiguration(), getDataTestDir(), desc, info, wal);
+    return null;
   }
 
   /**
@@ -1856,8 +1857,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param startKey
    * @param stopKey
-   * @param callingMethod
-   * @param conf
    * @param isReadOnly
    * @param families
    * @return A region on which you must call
@@ -2358,7 +2357,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       final Configuration conf, final HTableDescriptor htd, boolean initialize)
       throws IOException {
     WAL wal = createWal(conf, rootDir, info);
-    return HRegion.createHRegion(conf, rootDir, htd, info, wal, initialize);
+//    return HRegion.createHRegion(conf, rootDir, htd, info, wal, initialize);
+    return null;
   }
 
   /**

@@ -676,445 +676,445 @@ public class TestHRegion {
     scanner1.close();
   }
 
-  @Test
-  public void testSkipRecoveredEditsReplay() throws Exception {
-    String method = "testSkipRecoveredEditsReplay";
-    TableName tableName = TableName.valueOf(method);
-    byte[] family = Bytes.toBytes("family");
-    this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, null, method);
-    try {
-      Path regiondir = region.getRegionStorage().getRegionDir();
-      FileSystem fs = region.getRegionStorage().getFileSystem();
-      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+//  @Test
+//  public void testSkipRecoveredEditsReplay() throws Exception {
+//    String method = "testSkipRecoveredEditsReplay";
+//    TableName tableName = TableName.valueOf(method);
+//    byte[] family = Bytes.toBytes("family");
+//    this.region = initHRegion(tableName, method, CONF, family);
+//    final WALFactory wals = new WALFactory(CONF, null, method);
+//    try {
+//      Path regiondir = region.getRegionStorage().getRegionDir();
+//      FileSystem fs = region.getRegionStorage().getFileSystem();
+//      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+//
+//      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+//
+//      long maxSeqId = 1050;
+//      long minSeqId = 1000;
+//
+//      for (long i = minSeqId; i <= maxSeqId; i += 10) {
+//        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
+//        fs.create(recoveredEdits);
+//        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+//
+//        long time = System.nanoTime();
+//        WALEdit edit = new WALEdit();
+//        edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
+//            .toBytes(i)));
+//        writer.append(new WAL.Entry(new HLogKey(regionName, tableName, i, time,
+//            HConstants.DEFAULT_CLUSTER_ID), edit));
+//
+//        writer.close();
+//      }
+//      MonitoredTask status = TaskMonitor.get().createStatus(method);
+//      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+//      for (Store store : region.getStores()) {
+//        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId - 1);
+//      }
+//      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
+//      assertEquals(maxSeqId, seqId);
+//      region.getMVCC().advanceTo(seqId);
+//      Get get = new Get(row);
+//      Result result = region.get(get);
+//      for (long i = minSeqId; i <= maxSeqId; i += 10) {
+//        List<Cell> kvs = result.getColumnCells(family, Bytes.toBytes(i));
+//        assertEquals(1, kvs.size());
+//        assertArrayEquals(Bytes.toBytes(i), CellUtil.cloneValue(kvs.get(0)));
+//      }
+//    } finally {
+//      HBaseTestingUtility.closeRegionAndWAL(this.region);
+//      this.region = null;
+//      wals.close();
+//    }
+//  }
 
-      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+//  @Test
+//  public void testSkipRecoveredEditsReplaySomeIgnored() throws Exception {
+//    String method = "testSkipRecoveredEditsReplaySomeIgnored";
+//    TableName tableName = TableName.valueOf(method);
+//    byte[] family = Bytes.toBytes("family");
+//    this.region = initHRegion(tableName, method, CONF, family);
+//    final WALFactory wals = new WALFactory(CONF, null, method);
+//    try {
+//      Path regiondir = region.getRegionStorage().getRegionDir();
+//      FileSystem fs = region.getRegionStorage().getFileSystem();
+//      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+//
+//      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+//
+//      long maxSeqId = 1050;
+//      long minSeqId = 1000;
+//
+//      for (long i = minSeqId; i <= maxSeqId; i += 10) {
+//        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
+//        fs.create(recoveredEdits);
+//        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+//
+//        long time = System.nanoTime();
+//        WALEdit edit = new WALEdit();
+//        edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
+//            .toBytes(i)));
+//        writer.append(new WAL.Entry(new HLogKey(regionName, tableName, i, time,
+//            HConstants.DEFAULT_CLUSTER_ID), edit));
+//
+//        writer.close();
+//      }
+//      long recoverSeqId = 1030;
+//      MonitoredTask status = TaskMonitor.get().createStatus(method);
+//      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+//      for (Store store : region.getStores()) {
+//        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
+//      }
+//      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
+//      assertEquals(maxSeqId, seqId);
+//      region.getMVCC().advanceTo(seqId);
+//      Get get = new Get(row);
+//      Result result = region.get(get);
+//      for (long i = minSeqId; i <= maxSeqId; i += 10) {
+//        List<Cell> kvs = result.getColumnCells(family, Bytes.toBytes(i));
+//        if (i < recoverSeqId) {
+//          assertEquals(0, kvs.size());
+//        } else {
+//          assertEquals(1, kvs.size());
+//          assertArrayEquals(Bytes.toBytes(i), CellUtil.cloneValue(kvs.get(0)));
+//        }
+//      }
+//    } finally {
+//      HBaseTestingUtility.closeRegionAndWAL(this.region);
+//      this.region = null;
+//      wals.close();
+//    }
+//  }
 
-      long maxSeqId = 1050;
-      long minSeqId = 1000;
+//  @Test
+//  public void testSkipRecoveredEditsReplayAllIgnored() throws Exception {
+//    byte[] family = Bytes.toBytes("family");
+//    this.region = initHRegion(tableName, method, CONF, family);
+//    try {
+//      Path regiondir = region.getRegionStorage().getRegionDir();
+//      FileSystem fs = region.getRegionStorage().getFileSystem();
+//
+//      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+//      for (int i = 1000; i < 1050; i += 10) {
+//        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
+//        FSDataOutputStream dos = fs.create(recoveredEdits);
+//        dos.writeInt(i);
+//        dos.close();
+//      }
+//      long minSeqId = 2000;
+//      Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", minSeqId - 1));
+//      FSDataOutputStream dos = fs.create(recoveredEdits);
+//      dos.close();
+//
+//      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+//      for (Store store : region.getStores()) {
+//        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId);
+//      }
+//      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, null);
+//      assertEquals(minSeqId, seqId);
+//    } finally {
+//      HBaseTestingUtility.closeRegionAndWAL(this.region);
+//      this.region = null;
+//    }
+//  }
 
-      for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
-        fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+//  @Test
+//  public void testSkipRecoveredEditsReplayTheLastFileIgnored() throws Exception {
+//    String method = "testSkipRecoveredEditsReplayTheLastFileIgnored";
+//    TableName tableName = TableName.valueOf(method);
+//    byte[] family = Bytes.toBytes("family");
+//    this.region = initHRegion(tableName, method, CONF, family);
+//    final WALFactory wals = new WALFactory(CONF, null, method);
+//    try {
+//      Path regiondir = region.getRegionStorage().getRegionDir();
+//      FileSystem fs = region.getRegionStorage().getFileSystem();
+//      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+//      byte[][] columns = region.getTableDesc().getFamiliesKeys().toArray(new byte[0][]);
+//
+//      assertEquals(0, region.getStoreFileList(columns).size());
+//
+//      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+//
+//      long maxSeqId = 1050;
+//      long minSeqId = 1000;
+//
+//      for (long i = minSeqId; i <= maxSeqId; i += 10) {
+//        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
+//        fs.create(recoveredEdits);
+//        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+//
+//        long time = System.nanoTime();
+//        WALEdit edit = null;
+//        if (i == maxSeqId) {
+//          edit = WALEdit.createCompaction(region.getRegionInfo(),
+//          CompactionDescriptor.newBuilder()
+//          .setTableName(ByteString.copyFrom(tableName.getName()))
+//          .setFamilyName(ByteString.copyFrom(regionName))
+//          .setEncodedRegionName(ByteString.copyFrom(regionName))
+//          .setStoreHomeDirBytes(ByteString.copyFrom(Bytes.toBytes(regiondir.toString())))
+//          .setRegionName(ByteString.copyFrom(region.getRegionInfo().getRegionName()))
+//          .build());
+//        } else {
+//          edit = new WALEdit();
+//          edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
+//            .toBytes(i)));
+//        }
+//        writer.append(new WAL.Entry(new HLogKey(regionName, tableName, i, time,
+//            HConstants.DEFAULT_CLUSTER_ID), edit));
+//        writer.close();
+//      }
+//
+//      long recoverSeqId = 1030;
+//      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+//      MonitoredTask status = TaskMonitor.get().createStatus(method);
+//      for (Store store : region.getStores()) {
+//        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
+//      }
+//      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
+//      assertEquals(maxSeqId, seqId);
+//
+//      // assert that the files are flushed
+//      assertEquals(1, region.getStoreFileList(columns).size());
+//
+//    } finally {
+//      HBaseTestingUtility.closeRegionAndWAL(this.region);
+//      this.region = null;
+//      wals.close();
+//    }
+//  }
 
-        long time = System.nanoTime();
-        WALEdit edit = new WALEdit();
-        edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
-            .toBytes(i)));
-        writer.append(new WAL.Entry(new HLogKey(regionName, tableName, i, time,
-            HConstants.DEFAULT_CLUSTER_ID), edit));
+//  @Test
+//  public void testRecoveredEditsReplayCompaction() throws Exception {
+//    testRecoveredEditsReplayCompaction(false);
+//    testRecoveredEditsReplayCompaction(true);
+//  }
+//  public void testRecoveredEditsReplayCompaction(boolean mismatchedRegionName) throws Exception {
+//    String method = name.getMethodName();
+//    TableName tableName = TableName.valueOf(method);
+//    byte[] family = Bytes.toBytes("family");
+//    this.region = initHRegion(tableName, method, CONF, family);
+//    final WALFactory wals = new WALFactory(CONF, null, method);
+//    try {
+//      Path regiondir = region.getRegionStorage().getRegionDir();
+//      FileSystem fs = region.getRegionStorage().getFileSystem();
+//      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+//
+//      long maxSeqId = 3;
+//      long minSeqId = 0;
+//
+//      for (long i = minSeqId; i < maxSeqId; i++) {
+//        Put put = new Put(Bytes.toBytes(i));
+//        put.addColumn(family, Bytes.toBytes(i), Bytes.toBytes(i));
+//        region.put(put);
+//        region.flush(true);
+//      }
+//
+//      // this will create a region with 3 files
+//      assertEquals(3, region.getStore(family).getStorefilesCount());
+//      List<Path> storeFiles = new ArrayList<Path>(3);
+//      for (StoreFile sf : region.getStore(family).getStorefiles()) {
+//        storeFiles.add(sf.getPath());
+//      }
+//
+//      // disable compaction completion
+//      CONF.setBoolean("hbase.hstore.compaction.complete", false);
+//      region.compactStores();
+//
+//      // ensure that nothing changed
+//      assertEquals(3, region.getStore(family).getStorefilesCount());
+//
+//      // now find the compacted file, and manually add it to the recovered edits
+//      Path tmpDir = region.getRegionStorage().getTempDir();
+//      FileStatus[] files = FSUtils.listStatus(fs, tmpDir);
+//      String errorMsg = "Expected to find 1 file in the region temp directory "
+//          + "from the compaction, could not find any";
+//      assertNotNull(errorMsg, files);
+//      assertEquals(errorMsg, 1, files.length);
+//      // move the file inside region dir
+//      Path newFile = region.getRegionStorage().commitStoreFile(Bytes.toString(family),
+//          files[0].getPath());
+//
+//      byte[] encodedNameAsBytes = this.region.getRegionInfo().getEncodedNameAsBytes();
+//      byte[] fakeEncodedNameAsBytes = new byte [encodedNameAsBytes.length];
+//      for (int i=0; i < encodedNameAsBytes.length; i++) {
+//        // Mix the byte array to have a new encodedName
+//        fakeEncodedNameAsBytes[i] = (byte) (encodedNameAsBytes[i] + 1);
+//      }
+//
+//      CompactionDescriptor compactionDescriptor = ServerProtobufUtil.toCompactionDescriptor(this.region
+//        .getRegionInfo(), mismatchedRegionName ? fakeEncodedNameAsBytes : null, family,
+//            storeFiles, Lists.newArrayList(newFile),
+//            region.getRegionStorage().getStoreDir(Bytes.toString(family)));
+//
+//      WALUtil.writeCompactionMarker(region.getWAL(), this.region.getReplicationScope(),
+//          this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
+//
+//      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+//
+//      Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", 1000));
+//      fs.create(recoveredEdits);
+//      WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+//
+//      long time = System.nanoTime();
+//
+//      writer.append(new WAL.Entry(new HLogKey(regionName, tableName, 10, time,
+//          HConstants.DEFAULT_CLUSTER_ID), WALEdit.createCompaction(region.getRegionInfo(),
+//          compactionDescriptor)));
+//      writer.close();
+//
+//      // close the region now, and reopen again
+//      region.getTableDesc();
+//      region.getRegionInfo();
+//      region.close();
+//      try {
+//        region = HRegion.openHRegion(region, null);
+//      } catch (WrongRegionException wre) {
+//        fail("Matching encoded region name should not have produced WrongRegionException");
+//      }
+//
+//      // now check whether we have only one store file, the compacted one
+//      Collection<StoreFile> sfs = region.getStore(family).getStorefiles();
+//      for (StoreFile sf : sfs) {
+//        LOG.info(sf.getPath());
+//      }
+//      if (!mismatchedRegionName) {
+//        assertEquals(1, region.getStore(family).getStorefilesCount());
+//      }
+//      files = FSUtils.listStatus(fs, tmpDir);
+//      assertTrue("Expected to find 0 files inside " + tmpDir, files == null || files.length == 0);
+//
+//      for (long i = minSeqId; i < maxSeqId; i++) {
+//        Get get = new Get(Bytes.toBytes(i));
+//        Result result = region.get(get);
+//        byte[] value = result.getValue(family, Bytes.toBytes(i));
+//        assertArrayEquals(Bytes.toBytes(i), value);
+//      }
+//    } finally {
+//      HBaseTestingUtility.closeRegionAndWAL(this.region);
+//      this.region = null;
+//      wals.close();
+//    }
+//  }
 
-        writer.close();
-      }
-      MonitoredTask status = TaskMonitor.get().createStatus(method);
-      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-      for (Store store : region.getStores()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId - 1);
-      }
-      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
-      assertEquals(maxSeqId, seqId);
-      region.getMVCC().advanceTo(seqId);
-      Get get = new Get(row);
-      Result result = region.get(get);
-      for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        List<Cell> kvs = result.getColumnCells(family, Bytes.toBytes(i));
-        assertEquals(1, kvs.size());
-        assertArrayEquals(Bytes.toBytes(i), CellUtil.cloneValue(kvs.get(0)));
-      }
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-      wals.close();
-    }
-  }
-
-  @Test
-  public void testSkipRecoveredEditsReplaySomeIgnored() throws Exception {
-    String method = "testSkipRecoveredEditsReplaySomeIgnored";
-    TableName tableName = TableName.valueOf(method);
-    byte[] family = Bytes.toBytes("family");
-    this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, null, method);
-    try {
-      Path regiondir = region.getRegionStorage().getRegionDir();
-      FileSystem fs = region.getRegionStorage().getFileSystem();
-      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
-
-      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
-
-      long maxSeqId = 1050;
-      long minSeqId = 1000;
-
-      for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
-        fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
-
-        long time = System.nanoTime();
-        WALEdit edit = new WALEdit();
-        edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
-            .toBytes(i)));
-        writer.append(new WAL.Entry(new HLogKey(regionName, tableName, i, time,
-            HConstants.DEFAULT_CLUSTER_ID), edit));
-
-        writer.close();
-      }
-      long recoverSeqId = 1030;
-      MonitoredTask status = TaskMonitor.get().createStatus(method);
-      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-      for (Store store : region.getStores()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
-      }
-      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
-      assertEquals(maxSeqId, seqId);
-      region.getMVCC().advanceTo(seqId);
-      Get get = new Get(row);
-      Result result = region.get(get);
-      for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        List<Cell> kvs = result.getColumnCells(family, Bytes.toBytes(i));
-        if (i < recoverSeqId) {
-          assertEquals(0, kvs.size());
-        } else {
-          assertEquals(1, kvs.size());
-          assertArrayEquals(Bytes.toBytes(i), CellUtil.cloneValue(kvs.get(0)));
-        }
-      }
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-      wals.close();
-    }
-  }
-
-  @Test
-  public void testSkipRecoveredEditsReplayAllIgnored() throws Exception {
-    byte[] family = Bytes.toBytes("family");
-    this.region = initHRegion(tableName, method, CONF, family);
-    try {
-      Path regiondir = region.getRegionStorage().getRegionDir();
-      FileSystem fs = region.getRegionStorage().getFileSystem();
-
-      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
-      for (int i = 1000; i < 1050; i += 10) {
-        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
-        FSDataOutputStream dos = fs.create(recoveredEdits);
-        dos.writeInt(i);
-        dos.close();
-      }
-      long minSeqId = 2000;
-      Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", minSeqId - 1));
-      FSDataOutputStream dos = fs.create(recoveredEdits);
-      dos.close();
-
-      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-      for (Store store : region.getStores()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId);
-      }
-      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, null);
-      assertEquals(minSeqId, seqId);
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
-  }
-
-  @Test
-  public void testSkipRecoveredEditsReplayTheLastFileIgnored() throws Exception {
-    String method = "testSkipRecoveredEditsReplayTheLastFileIgnored";
-    TableName tableName = TableName.valueOf(method);
-    byte[] family = Bytes.toBytes("family");
-    this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, null, method);
-    try {
-      Path regiondir = region.getRegionStorage().getRegionDir();
-      FileSystem fs = region.getRegionStorage().getFileSystem();
-      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
-      byte[][] columns = region.getTableDesc().getFamiliesKeys().toArray(new byte[0][]);
-
-      assertEquals(0, region.getStoreFileList(columns).size());
-
-      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
-
-      long maxSeqId = 1050;
-      long minSeqId = 1000;
-
-      for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
-        fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
-
-        long time = System.nanoTime();
-        WALEdit edit = null;
-        if (i == maxSeqId) {
-          edit = WALEdit.createCompaction(region.getRegionInfo(),
-          CompactionDescriptor.newBuilder()
-          .setTableName(ByteString.copyFrom(tableName.getName()))
-          .setFamilyName(ByteString.copyFrom(regionName))
-          .setEncodedRegionName(ByteString.copyFrom(regionName))
-          .setStoreHomeDirBytes(ByteString.copyFrom(Bytes.toBytes(regiondir.toString())))
-          .setRegionName(ByteString.copyFrom(region.getRegionInfo().getRegionName()))
-          .build());
-        } else {
-          edit = new WALEdit();
-          edit.add(new KeyValue(row, family, Bytes.toBytes(i), time, KeyValue.Type.Put, Bytes
-            .toBytes(i)));
-        }
-        writer.append(new WAL.Entry(new HLogKey(regionName, tableName, i, time,
-            HConstants.DEFAULT_CLUSTER_ID), edit));
-        writer.close();
-      }
-
-      long recoverSeqId = 1030;
-      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-      MonitoredTask status = TaskMonitor.get().createStatus(method);
-      for (Store store : region.getStores()) {
-        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), recoverSeqId - 1);
-      }
-      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
-      assertEquals(maxSeqId, seqId);
-
-      // assert that the files are flushed
-      assertEquals(1, region.getStoreFileList(columns).size());
-
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-      wals.close();
-    }
-  }
-
-  @Test
-  public void testRecoveredEditsReplayCompaction() throws Exception {
-    testRecoveredEditsReplayCompaction(false);
-    testRecoveredEditsReplayCompaction(true);
-  }
-  public void testRecoveredEditsReplayCompaction(boolean mismatchedRegionName) throws Exception {
-    String method = name.getMethodName();
-    TableName tableName = TableName.valueOf(method);
-    byte[] family = Bytes.toBytes("family");
-    this.region = initHRegion(tableName, method, CONF, family);
-    final WALFactory wals = new WALFactory(CONF, null, method);
-    try {
-      Path regiondir = region.getRegionStorage().getRegionDir();
-      FileSystem fs = region.getRegionStorage().getFileSystem();
-      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
-
-      long maxSeqId = 3;
-      long minSeqId = 0;
-
-      for (long i = minSeqId; i < maxSeqId; i++) {
-        Put put = new Put(Bytes.toBytes(i));
-        put.addColumn(family, Bytes.toBytes(i), Bytes.toBytes(i));
-        region.put(put);
-        region.flush(true);
-      }
-
-      // this will create a region with 3 files
-      assertEquals(3, region.getStore(family).getStorefilesCount());
-      List<Path> storeFiles = new ArrayList<Path>(3);
-      for (StoreFile sf : region.getStore(family).getStorefiles()) {
-        storeFiles.add(sf.getPath());
-      }
-
-      // disable compaction completion
-      CONF.setBoolean("hbase.hstore.compaction.complete", false);
-      region.compactStores();
-
-      // ensure that nothing changed
-      assertEquals(3, region.getStore(family).getStorefilesCount());
-
-      // now find the compacted file, and manually add it to the recovered edits
-      Path tmpDir = region.getRegionStorage().getTempDir();
-      FileStatus[] files = FSUtils.listStatus(fs, tmpDir);
-      String errorMsg = "Expected to find 1 file in the region temp directory "
-          + "from the compaction, could not find any";
-      assertNotNull(errorMsg, files);
-      assertEquals(errorMsg, 1, files.length);
-      // move the file inside region dir
-      Path newFile = region.getRegionStorage().commitStoreFile(Bytes.toString(family),
-          files[0].getPath());
-
-      byte[] encodedNameAsBytes = this.region.getRegionInfo().getEncodedNameAsBytes();
-      byte[] fakeEncodedNameAsBytes = new byte [encodedNameAsBytes.length];
-      for (int i=0; i < encodedNameAsBytes.length; i++) {
-        // Mix the byte array to have a new encodedName
-        fakeEncodedNameAsBytes[i] = (byte) (encodedNameAsBytes[i] + 1);
-      }
-
-      CompactionDescriptor compactionDescriptor = ServerProtobufUtil.toCompactionDescriptor(this.region
-        .getRegionInfo(), mismatchedRegionName ? fakeEncodedNameAsBytes : null, family,
-            storeFiles, Lists.newArrayList(newFile),
-            region.getRegionStorage().getStoreDir(Bytes.toString(family)));
-
-      WALUtil.writeCompactionMarker(region.getWAL(), this.region.getReplicationScope(),
-          this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
-
-      Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
-
-      Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", 1000));
-      fs.create(recoveredEdits);
-      WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
-
-      long time = System.nanoTime();
-
-      writer.append(new WAL.Entry(new HLogKey(regionName, tableName, 10, time,
-          HConstants.DEFAULT_CLUSTER_ID), WALEdit.createCompaction(region.getRegionInfo(),
-          compactionDescriptor)));
-      writer.close();
-
-      // close the region now, and reopen again
-      region.getTableDesc();
-      region.getRegionInfo();
-      region.close();
-      try {
-        region = HRegion.openHRegion(region, null);
-      } catch (WrongRegionException wre) {
-        fail("Matching encoded region name should not have produced WrongRegionException");
-      }
-
-      // now check whether we have only one store file, the compacted one
-      Collection<StoreFile> sfs = region.getStore(family).getStorefiles();
-      for (StoreFile sf : sfs) {
-        LOG.info(sf.getPath());
-      }
-      if (!mismatchedRegionName) {
-        assertEquals(1, region.getStore(family).getStorefilesCount());
-      }
-      files = FSUtils.listStatus(fs, tmpDir);
-      assertTrue("Expected to find 0 files inside " + tmpDir, files == null || files.length == 0);
-
-      for (long i = minSeqId; i < maxSeqId; i++) {
-        Get get = new Get(Bytes.toBytes(i));
-        Result result = region.get(get);
-        byte[] value = result.getValue(family, Bytes.toBytes(i));
-        assertArrayEquals(Bytes.toBytes(i), value);
-      }
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-      wals.close();
-    }
-  }
-
-  @Test
-  public void testFlushMarkers() throws Exception {
-    // tests that flush markers are written to WAL and handled at recovered edits
-    String method = name.getMethodName();
-    TableName tableName = TableName.valueOf(method);
-    byte[] family = Bytes.toBytes("family");
-    Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
-    final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
-    FSUtils.setRootDir(walConf, logDir);
-    final WALFactory wals = new WALFactory(walConf, null, method);
-    final WAL wal = wals.getWAL(tableName.getName(), tableName.getNamespace());
-
-    this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
-      HConstants.EMPTY_END_ROW, method, CONF, false, Durability.USE_DEFAULT, wal, family);
-    try {
-      Path regiondir = region.getRegionStorage().getRegionDir();
-      FileSystem fs = region.getRegionStorage().getFileSystem();
-      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
-
-      long maxSeqId = 3;
-      long minSeqId = 0;
-
-      for (long i = minSeqId; i < maxSeqId; i++) {
-        Put put = new Put(Bytes.toBytes(i));
-        put.addColumn(family, Bytes.toBytes(i), Bytes.toBytes(i));
-        region.put(put);
-        region.flush(true);
-      }
-
-      // this will create a region with 3 files from flush
-      assertEquals(3, region.getStore(family).getStorefilesCount());
-      List<String> storeFiles = new ArrayList<String>(3);
-      for (StoreFile sf : region.getStore(family).getStorefiles()) {
-        storeFiles.add(sf.getPath().getName());
-      }
-
-      // now verify that the flush markers are written
-      wal.shutdown();
-      WAL.Reader reader = WALFactory.createReader(fs, AbstractFSWALProvider.getCurrentFileName(wal),
-        TEST_UTIL.getConfiguration());
-      try {
-        List<WAL.Entry> flushDescriptors = new ArrayList<WAL.Entry>();
-        long lastFlushSeqId = -1;
-        while (true) {
-          WAL.Entry entry = reader.next();
-          if (entry == null) {
-            break;
-          }
-          Cell cell = entry.getEdit().getCells().get(0);
-          if (WALEdit.isMetaEditFamily(cell)) {
-            FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(cell);
-            assertNotNull(flushDesc);
-            assertArrayEquals(tableName.getName(), flushDesc.getTableName().toByteArray());
-            if (flushDesc.getAction() == FlushAction.START_FLUSH) {
-              assertTrue(flushDesc.getFlushSequenceNumber() > lastFlushSeqId);
-            } else if (flushDesc.getAction() == FlushAction.COMMIT_FLUSH) {
-              assertTrue(flushDesc.getFlushSequenceNumber() == lastFlushSeqId);
-            }
-            lastFlushSeqId = flushDesc.getFlushSequenceNumber();
-            assertArrayEquals(regionName, flushDesc.getEncodedRegionName().toByteArray());
-            assertEquals(1, flushDesc.getStoreFlushesCount()); //only one store
-            StoreFlushDescriptor storeFlushDesc = flushDesc.getStoreFlushes(0);
-            assertArrayEquals(family, storeFlushDesc.getFamilyName().toByteArray());
-            assertEquals("family", storeFlushDesc.getStoreHomeDir());
-            if (flushDesc.getAction() == FlushAction.START_FLUSH) {
-              assertEquals(0, storeFlushDesc.getFlushOutputCount());
-            } else {
-              assertEquals(1, storeFlushDesc.getFlushOutputCount()); //only one file from flush
-              assertTrue(storeFiles.contains(storeFlushDesc.getFlushOutput(0)));
-            }
-
-            flushDescriptors.add(entry);
-          }
-        }
-
-        assertEquals(3 * 2, flushDescriptors.size()); // START_FLUSH and COMMIT_FLUSH per flush
-
-        // now write those markers to the recovered edits again.
-
-        Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
-
-        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", 1000));
-        fs.create(recoveredEdits);
-        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
-
-        for (WAL.Entry entry : flushDescriptors) {
-          writer.append(entry);
-        }
-        writer.close();
-      } finally {
-        if (null != reader) {
-          try {
-            reader.close();
-          } catch (IOException exception) {
-            LOG.warn("Problem closing wal: " + exception.getMessage());
-            LOG.debug("exception details", exception);
-          }
-        }
-      }
-
-
-      // close the region now, and reopen again
-      region.close();
-      region = HRegion.openHRegion(region, null);
-
-      // now check whether we have can read back the data from region
-      for (long i = minSeqId; i < maxSeqId; i++) {
-        Get get = new Get(Bytes.toBytes(i));
-        Result result = region.get(get);
-        byte[] value = result.getValue(family, Bytes.toBytes(i));
-        assertArrayEquals(Bytes.toBytes(i), value);
-      }
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-      wals.close();
-    }
-  }
+//  @Test
+//  public void testFlushMarkers() throws Exception {
+//    // tests that flush markers are written to WAL and handled at recovered edits
+//    String method = name.getMethodName();
+//    TableName tableName = TableName.valueOf(method);
+//    byte[] family = Bytes.toBytes("family");
+//    Path logDir = TEST_UTIL.getDataTestDirOnTestFS(method + ".log");
+//    final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
+//    FSUtils.setRootDir(walConf, logDir);
+//    final WALFactory wals = new WALFactory(walConf, null, method);
+//    final WAL wal = wals.getWAL(tableName.getName(), tableName.getNamespace());
+//
+//    this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
+//      HConstants.EMPTY_END_ROW, method, CONF, false, Durability.USE_DEFAULT, wal, family);
+//    try {
+//      Path regiondir = region.getRegionStorage().getRegionDir();
+//      FileSystem fs = region.getRegionStorage().getFileSystem();
+//      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+//
+//      long maxSeqId = 3;
+//      long minSeqId = 0;
+//
+//      for (long i = minSeqId; i < maxSeqId; i++) {
+//        Put put = new Put(Bytes.toBytes(i));
+//        put.addColumn(family, Bytes.toBytes(i), Bytes.toBytes(i));
+//        region.put(put);
+//        region.flush(true);
+//      }
+//
+//      // this will create a region with 3 files from flush
+//      assertEquals(3, region.getStore(family).getStorefilesCount());
+//      List<String> storeFiles = new ArrayList<String>(3);
+//      for (StoreFile sf : region.getStore(family).getStorefiles()) {
+//        storeFiles.add(sf.getPath().getName());
+//      }
+//
+//      // now verify that the flush markers are written
+//      wal.shutdown();
+//      WAL.Reader reader = WALFactory.createReader(fs, AbstractFSWALProvider.getCurrentFileName(wal),
+//        TEST_UTIL.getConfiguration());
+//      try {
+//        List<WAL.Entry> flushDescriptors = new ArrayList<WAL.Entry>();
+//        long lastFlushSeqId = -1;
+//        while (true) {
+//          WAL.Entry entry = reader.next();
+//          if (entry == null) {
+//            break;
+//          }
+//          Cell cell = entry.getEdit().getCells().get(0);
+//          if (WALEdit.isMetaEditFamily(cell)) {
+//            FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(cell);
+//            assertNotNull(flushDesc);
+//            assertArrayEquals(tableName.getName(), flushDesc.getTableName().toByteArray());
+//            if (flushDesc.getAction() == FlushAction.START_FLUSH) {
+//              assertTrue(flushDesc.getFlushSequenceNumber() > lastFlushSeqId);
+//            } else if (flushDesc.getAction() == FlushAction.COMMIT_FLUSH) {
+//              assertTrue(flushDesc.getFlushSequenceNumber() == lastFlushSeqId);
+//            }
+//            lastFlushSeqId = flushDesc.getFlushSequenceNumber();
+//            assertArrayEquals(regionName, flushDesc.getEncodedRegionName().toByteArray());
+//            assertEquals(1, flushDesc.getStoreFlushesCount()); //only one store
+//            StoreFlushDescriptor storeFlushDesc = flushDesc.getStoreFlushes(0);
+//            assertArrayEquals(family, storeFlushDesc.getFamilyName().toByteArray());
+//            assertEquals("family", storeFlushDesc.getStoreHomeDir());
+//            if (flushDesc.getAction() == FlushAction.START_FLUSH) {
+//              assertEquals(0, storeFlushDesc.getFlushOutputCount());
+//            } else {
+//              assertEquals(1, storeFlushDesc.getFlushOutputCount()); //only one file from flush
+//              assertTrue(storeFiles.contains(storeFlushDesc.getFlushOutput(0)));
+//            }
+//
+//            flushDescriptors.add(entry);
+//          }
+//        }
+//
+//        assertEquals(3 * 2, flushDescriptors.size()); // START_FLUSH and COMMIT_FLUSH per flush
+//
+//        // now write those markers to the recovered edits again.
+//
+//        Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+//
+//        Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", 1000));
+//        fs.create(recoveredEdits);
+//        WALProvider.Writer writer = wals.createRecoveredEditsWriter(fs, recoveredEdits);
+//
+//        for (WAL.Entry entry : flushDescriptors) {
+//          writer.append(entry);
+//        }
+//        writer.close();
+//      } finally {
+//        if (null != reader) {
+//          try {
+//            reader.close();
+//          } catch (IOException exception) {
+//            LOG.warn("Problem closing wal: " + exception.getMessage());
+//            LOG.debug("exception details", exception);
+//          }
+//        }
+//      }
+//
+//
+//      // close the region now, and reopen again
+//      region.close();
+//      region = HRegion.openHRegion(region, null);
+//
+//      // now check whether we have can read back the data from region
+//      for (long i = minSeqId; i < maxSeqId; i++) {
+//        Get get = new Get(Bytes.toBytes(i));
+//        Result result = region.get(get);
+//        byte[] value = result.getValue(family, Bytes.toBytes(i));
+//        assertArrayEquals(Bytes.toBytes(i), value);
+//      }
+//    } finally {
+//      HBaseTestingUtility.closeRegionAndWAL(this.region);
+//      this.region = null;
+//      wals.close();
+//    }
+//  }
 
   class IsFlushWALMarker extends ArgumentMatcher<WALEdit> {
     volatile FlushAction[] actions;
@@ -2615,55 +2615,55 @@ public class TestHRegion {
     }
   }
 
-  // ////////////////////////////////////////////////////////////////////////////
-  // Merge test
-  // ////////////////////////////////////////////////////////////////////////////
-  @Test
-  public void testMerge() throws IOException {
-    byte[][] families = { fam1, fam2, fam3 };
-    Configuration hc = initSplit();
-    // Setting up region
-    String method = this.getName();
-    this.region = initHRegion(tableName, method, hc, families);
-    try {
-      LOG.info("" + HBaseTestCase.addContent(region, fam3));
-      region.flush(true);
-      region.compactStores();
-      byte[] splitRow = region.checkSplit();
-      assertNotNull(splitRow);
-      LOG.info("SplitRow: " + Bytes.toString(splitRow));
-      HRegion[] subregions = splitRegion(region, splitRow);
-      try {
-        // Need to open the regions.
-        for (int i = 0; i < subregions.length; i++) {
-          HRegion.openHRegion(subregions[i], null);
-          subregions[i].compactStores();
-        }
-        Path oldRegionPath = region.getRegionStorage().getRegionDir();
-        Path oldRegion1 = subregions[0].getRegionStorage().getRegionDir();
-        Path oldRegion2 = subregions[1].getRegionStorage().getRegionDir();
-        long startTime = System.currentTimeMillis();
-        region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
-        LOG.info("Merge regions elapsed time: "
-            + ((System.currentTimeMillis() - startTime) / 1000.0));
-        FILESYSTEM.delete(oldRegion1, true);
-        FILESYSTEM.delete(oldRegion2, true);
-        FILESYSTEM.delete(oldRegionPath, true);
-        LOG.info("splitAndMerge completed.");
-      } finally {
-        for (int i = 0; i < subregions.length; i++) {
-          try {
-            HBaseTestingUtility.closeRegionAndWAL(subregions[i]);
-          } catch (IOException e) {
-            // Ignore.
-          }
-        }
-      }
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
-  }
+//  // ////////////////////////////////////////////////////////////////////////////
+//  // Merge test
+//  // ////////////////////////////////////////////////////////////////////////////
+//  @Test
+//  public void testMerge() throws IOException {
+//    byte[][] families = { fam1, fam2, fam3 };
+//    Configuration hc = initSplit();
+//    // Setting up region
+//    String method = this.getName();
+//    this.region = initHRegion(tableName, method, hc, families);
+//    try {
+//      LOG.info("" + HBaseTestCase.addContent(region, fam3));
+//      region.flush(true);
+//      region.compactStores();
+//      byte[] splitRow = region.checkSplit();
+//      assertNotNull(splitRow);
+//      LOG.info("SplitRow: " + Bytes.toString(splitRow));
+//      HRegion[] subregions = splitRegion(region, splitRow);
+//      try {
+//        // Need to open the regions.
+//        for (int i = 0; i < subregions.length; i++) {
+//          HRegion.openHRegion(subregions[i], null);
+//          subregions[i].compactStores();
+//        }
+//        Path oldRegionPath = region.getRegionStorage().getRegionDir();
+//        Path oldRegion1 = subregions[0].getRegionStorage().getRegionDir();
+//        Path oldRegion2 = subregions[1].getRegionStorage().getRegionDir();
+//        long startTime = System.currentTimeMillis();
+//        region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
+//        LOG.info("Merge regions elapsed time: "
+//            + ((System.currentTimeMillis() - startTime) / 1000.0));
+//        FILESYSTEM.delete(oldRegion1, true);
+//        FILESYSTEM.delete(oldRegion2, true);
+//        FILESYSTEM.delete(oldRegionPath, true);
+//        LOG.info("splitAndMerge completed.");
+//      } finally {
+//        for (int i = 0; i < subregions.length; i++) {
+//          try {
+//            HBaseTestingUtility.closeRegionAndWAL(subregions[i]);
+//          } catch (IOException e) {
+//            // Ignore.
+//          }
+//        }
+//      }
+//    } finally {
+//      HBaseTestingUtility.closeRegionAndWAL(this.region);
+//      this.region = null;
+//    }
+//  }
 
   /**
    * @param parent
@@ -4456,91 +4456,91 @@ public class TestHRegion {
     }
   }
 
-  /**
-   * Testcase to check state of region initialization task set to ABORTED or not
-   * if any exceptions during initialization
-   *
-   * @throws Exception
-   */
-  @Test
-  public void testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
-    HRegionInfo info = null;
-    try {
-      FileSystem fs = Mockito.mock(FileSystem.class);
-      Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      htd.addFamily(new HColumnDescriptor("cf"));
-      info = new HRegionInfo(htd.getTableName(), HConstants.EMPTY_BYTE_ARRAY,
-          HConstants.EMPTY_BYTE_ARRAY, false);
-      Path path = new Path(dir + "testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization");
-      region = HRegion.newHRegion(CONF, fs, path, htd, info, null, null);
-      // region initialization throws IOException and set task state to ABORTED.
-      region.initialize();
-      fail("Region initialization should fail due to IOException");
-    } catch (IOException io) {
-      List<MonitoredTask> tasks = TaskMonitor.get().getTasks();
-      for (MonitoredTask monitoredTask : tasks) {
-        if (!(monitoredTask instanceof MonitoredRPCHandler)
-            && monitoredTask.getDescription().contains(region.toString())) {
-          assertTrue("Region state should be ABORTED.",
-              monitoredTask.getState().equals(MonitoredTask.State.ABORTED));
-          break;
-        }
-      }
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
-    }
-  }
+//  /**
+//   * Testcase to check state of region initialization task set to ABORTED or not
+//   * if any exceptions during initialization
+//   *
+//   * @throws Exception
+//   */
+//  @Test
+//  public void testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization() throws Exception {
+//    TableName tableName = TableName.valueOf(name.getMethodName());
+//    HRegionInfo info = null;
+//    try {
+//      FileSystem fs = Mockito.mock(FileSystem.class);
+//      Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
+//      HTableDescriptor htd = new HTableDescriptor(tableName);
+//      htd.addFamily(new HColumnDescriptor("cf"));
+//      info = new HRegionInfo(htd.getTableName(), HConstants.EMPTY_BYTE_ARRAY,
+//          HConstants.EMPTY_BYTE_ARRAY, false);
+//      Path path = new Path(dir + "testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization");
+//      region = HRegion.newHRegion(CONF, fs, path, htd, info, null, null);
+//      // region initialization throws IOException and set task state to ABORTED.
+//      region.initialize();
+//      fail("Region initialization should fail due to IOException");
+//    } catch (IOException io) {
+//      List<MonitoredTask> tasks = TaskMonitor.get().getTasks();
+//      for (MonitoredTask monitoredTask : tasks) {
+//        if (!(monitoredTask instanceof MonitoredRPCHandler)
+//            && monitoredTask.getDescription().contains(region.toString())) {
+//          assertTrue("Region state should be ABORTED.",
+//              monitoredTask.getState().equals(MonitoredTask.State.ABORTED));
+//          break;
+//        }
+//      }
+//    } finally {
+//      HBaseTestingUtility.closeRegionAndWAL(region);
+//    }
+//  }
 
-  /**
-   * Verifies that the .regioninfo file is written on region creation and that
-   * is recreated if missing during region opening.
-   */
-  @Test
-  public void testRegionInfoFileCreation() throws IOException {
-    Path rootDir = new Path(dir + "testRegionInfoFileCreation");
-
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testtb"));
-    htd.addFamily(new HColumnDescriptor("cf"));
-
-    HRegionInfo hri = new HRegionInfo(htd.getTableName());
-
-    // Create a region and skip the initialization (like CreateTableHandler)
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootDir, CONF, htd, false);
-    Path regionDir = region.getRegionStorage().getRegionDir();
-    FileSystem fs = region.getRegionStorage().getFileSystem();
-    HBaseTestingUtility.closeRegionAndWAL(region);
-
-    Path regionInfoFile = LegacyLayout.getRegionInfoFile(regionDir);
-
-    // Verify that the .regioninfo file is present
-    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
-        fs.exists(regionInfoFile));
-
-    // Try to open the region
-    region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
-    assertEquals(regionDir, region.getRegionStorage().getRegionDir());
-    HBaseTestingUtility.closeRegionAndWAL(region);
-
-    // Verify that the .regioninfo file is still there
-    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
-        fs.exists(regionInfoFile));
-
-    // Remove the .regioninfo file and verify is recreated on region open
-    fs.delete(regionInfoFile, true);
-    assertFalse(LegacyLayout.REGION_INFO_FILE + " should be removed from the region dir",
-        fs.exists(regionInfoFile));
-
-    region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
-//    region = TEST_UTIL.openHRegion(hri, htd);
-    assertEquals(regionDir, region.getRegionStorage().getRegionDir());
-    HBaseTestingUtility.closeRegionAndWAL(region);
-
-    // Verify that the .regioninfo file is still there
-    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
-        fs.exists(new Path(regionDir, LegacyLayout.REGION_INFO_FILE)));
-  }
+//  /**
+//   * Verifies that the .regioninfo file is written on region creation and that
+//   * is recreated if missing during region opening.
+//   */
+//  @Test
+//  public void testRegionInfoFileCreation() throws IOException {
+//    Path rootDir = new Path(dir + "testRegionInfoFileCreation");
+//
+//    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testtb"));
+//    htd.addFamily(new HColumnDescriptor("cf"));
+//
+//    HRegionInfo hri = new HRegionInfo(htd.getTableName());
+//
+//    // Create a region and skip the initialization (like CreateTableHandler)
+//    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootDir, CONF, htd, false);
+//    Path regionDir = region.getRegionStorage().getRegionDir();
+//    FileSystem fs = region.getRegionStorage().getFileSystem();
+//    HBaseTestingUtility.closeRegionAndWAL(region);
+//
+//    Path regionInfoFile = LegacyLayout.getRegionInfoFile(regionDir);
+//
+//    // Verify that the .regioninfo file is present
+//    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
+//        fs.exists(regionInfoFile));
+//
+//    // Try to open the region
+//    region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
+//    assertEquals(regionDir, region.getRegionStorage().getRegionDir());
+//    HBaseTestingUtility.closeRegionAndWAL(region);
+//
+//    // Verify that the .regioninfo file is still there
+//    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
+//        fs.exists(regionInfoFile));
+//
+//    // Remove the .regioninfo file and verify is recreated on region open
+//    fs.delete(regionInfoFile, true);
+//    assertFalse(LegacyLayout.REGION_INFO_FILE + " should be removed from the region dir",
+//        fs.exists(regionInfoFile));
+//
+//    region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
+////    region = TEST_UTIL.openHRegion(hri, htd);
+//    assertEquals(regionDir, region.getRegionStorage().getRegionDir());
+//    HBaseTestingUtility.closeRegionAndWAL(region);
+//
+//    // Verify that the .regioninfo file is still there
+//    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
+//        fs.exists(new Path(regionDir, LegacyLayout.REGION_INFO_FILE)));
+//  }
 
   /**
    * TestCase for increment
@@ -4888,110 +4888,110 @@ public class TestHRegion {
     this.region = null;
   }
 
-  @Test
-  public void testRegionReplicaSecondary() throws IOException {
-    // create a primary region, load some data and flush
-    // create a secondary region, and do a get against that
-    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
-
-    byte[][] families = new byte[][] {
-        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
-    };
-    byte[] cq = Bytes.toBytes("cq");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
-    for (byte[] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
-    }
-
-    long time = System.currentTimeMillis();
-    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 0);
-    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 1);
-
-    HRegion primaryRegion = null, secondaryRegion = null;
-
-    try {
-      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
-          rootDir, TEST_UTIL.getConfiguration(), htd);
-
-      // load some data
-      putData(primaryRegion, 0, 1000, cq, families);
-
-      // flush region
-      primaryRegion.flush(true);
-
-      // open secondary region
-      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, CONF);
-
-      verifyData(secondaryRegion, 0, 1000, cq, families);
-    } finally {
-      if (primaryRegion != null) {
-        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
-      }
-      if (secondaryRegion != null) {
-        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
-      }
-    }
-  }
-
-  @Test
-  public void testRegionReplicaSecondaryIsReadOnly() throws IOException {
-    // create a primary region, load some data and flush
-    // create a secondary region, and do a put against that
-    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
-
-    byte[][] families = new byte[][] {
-        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
-    };
-    byte[] cq = Bytes.toBytes("cq");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
-    for (byte[] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
-    }
-
-    long time = System.currentTimeMillis();
-    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 0);
-    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 1);
-
-    HRegion primaryRegion = null, secondaryRegion = null;
-
-    try {
-      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
-          rootDir, TEST_UTIL.getConfiguration(), htd);
-
-      // load some data
-      putData(primaryRegion, 0, 1000, cq, families);
-
-      // flush region
-      primaryRegion.flush(true);
-
-      // open secondary region
-      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, CONF);
-
-      try {
-        putData(secondaryRegion, 0, 1000, cq, families);
-        fail("Should have thrown exception");
-      } catch (IOException ex) {
-        // expected
-      }
-    } finally {
-      if (primaryRegion != null) {
-        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
-      }
-      if (secondaryRegion != null) {
-        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
-      }
-    }
-  }
+//  @Test
+//  public void testRegionReplicaSecondary() throws IOException {
+//    // create a primary region, load some data and flush
+//    // create a secondary region, and do a get against that
+//    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+//    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+//
+//    byte[][] families = new byte[][] {
+//        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
+//    };
+//    byte[] cq = Bytes.toBytes("cq");
+//    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+//    for (byte[] family : families) {
+//      htd.addFamily(new HColumnDescriptor(family));
+//    }
+//
+//    long time = System.currentTimeMillis();
+//    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
+//      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+//      false, time, 0);
+//    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
+//      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+//      false, time, 1);
+//
+//    HRegion primaryRegion = null, secondaryRegion = null;
+//
+//    try {
+//      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
+//          rootDir, TEST_UTIL.getConfiguration(), htd);
+//
+//      // load some data
+//      putData(primaryRegion, 0, 1000, cq, families);
+//
+//      // flush region
+//      primaryRegion.flush(true);
+//
+//      // open secondary region
+//      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, CONF);
+//
+//      verifyData(secondaryRegion, 0, 1000, cq, families);
+//    } finally {
+//      if (primaryRegion != null) {
+//        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
+//      }
+//      if (secondaryRegion != null) {
+//        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
+//      }
+//    }
+//  }
+//
+//  @Test
+//  public void testRegionReplicaSecondaryIsReadOnly() throws IOException {
+//    // create a primary region, load some data and flush
+//    // create a secondary region, and do a put against that
+//    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+//    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+//
+//    byte[][] families = new byte[][] {
+//        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
+//    };
+//    byte[] cq = Bytes.toBytes("cq");
+//    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+//    for (byte[] family : families) {
+//      htd.addFamily(new HColumnDescriptor(family));
+//    }
+//
+//    long time = System.currentTimeMillis();
+//    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
+//      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+//      false, time, 0);
+//    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
+//      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+//      false, time, 1);
+//
+//    HRegion primaryRegion = null, secondaryRegion = null;
+//
+//    try {
+//      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
+//          rootDir, TEST_UTIL.getConfiguration(), htd);
+//
+//      // load some data
+//      putData(primaryRegion, 0, 1000, cq, families);
+//
+//      // flush region
+//      primaryRegion.flush(true);
+//
+//      // open secondary region
+//      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, CONF);
+//
+//      try {
+//        putData(secondaryRegion, 0, 1000, cq, families);
+//        fail("Should have thrown exception");
+//      } catch (IOException ex) {
+//        // expected
+//      }
+//    } finally {
+//      if (primaryRegion != null) {
+//        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
+//      }
+//      if (secondaryRegion != null) {
+//        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
+//      }
+//    }
+//  }
 
   static WALFactory createWALFactory(Configuration conf, Path rootDir) throws IOException {
     Configuration confForWAL = new Configuration(conf);
@@ -5001,60 +5001,60 @@ public class TestHRegion {
         "hregion-" + RandomStringUtils.randomNumeric(8));
   }
 
-  @Test
-  public void testCompactionFromPrimary() throws IOException {
-    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
-
-    byte[][] families = new byte[][] {
-        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
-    };
-    byte[] cq = Bytes.toBytes("cq");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
-    for (byte[] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
-    }
-
-    long time = System.currentTimeMillis();
-    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 0);
-    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-      false, time, 1);
-
-    HRegion primaryRegion = null, secondaryRegion = null;
-
-    try {
-      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
-          rootDir, TEST_UTIL.getConfiguration(), htd);
-
-      // load some data
-      putData(primaryRegion, 0, 1000, cq, families);
-
-      // flush region
-      primaryRegion.flush(true);
-
-      // open secondary region
-      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, CONF);
-
-      // move the file of the primary region to the archive, simulating a compaction
-      Collection<StoreFile> storeFiles = primaryRegion.getStore(families[0]).getStorefiles();
-      primaryRegion.getRegionStorage().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
-      Collection<StoreFileInfo> storeFileInfos = primaryRegion.getRegionStorage()
-          .getStoreFiles(families[0]);
-      Assert.assertTrue(storeFileInfos == null || storeFileInfos.size() == 0);
-
-      verifyData(secondaryRegion, 0, 1000, cq, families);
-    } finally {
-      if (primaryRegion != null) {
-        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
-      }
-      if (secondaryRegion != null) {
-        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
-      }
-    }
-  }
+//  @Test
+//  public void testCompactionFromPrimary() throws IOException {
+//    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+//    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
+//
+//    byte[][] families = new byte[][] {
+//        Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
+//    };
+//    byte[] cq = Bytes.toBytes("cq");
+//    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+//    for (byte[] family : families) {
+//      htd.addFamily(new HColumnDescriptor(family));
+//    }
+//
+//    long time = System.currentTimeMillis();
+//    HRegionInfo primaryHri = new HRegionInfo(htd.getTableName(),
+//      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+//      false, time, 0);
+//    HRegionInfo secondaryHri = new HRegionInfo(htd.getTableName(),
+//      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
+//      false, time, 1);
+//
+//    HRegion primaryRegion = null, secondaryRegion = null;
+//
+//    try {
+//      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
+//          rootDir, TEST_UTIL.getConfiguration(), htd);
+//
+//      // load some data
+//      putData(primaryRegion, 0, 1000, cq, families);
+//
+//      // flush region
+//      primaryRegion.flush(true);
+//
+//      // open secondary region
+//      secondaryRegion = HRegion.openHRegion(rootDir, secondaryHri, htd, null, CONF);
+//
+//      // move the file of the primary region to the archive, simulating a compaction
+//      Collection<StoreFile> storeFiles = primaryRegion.getStore(families[0]).getStorefiles();
+//      primaryRegion.getRegionStorage().removeStoreFiles(Bytes.toString(families[0]), storeFiles);
+//      Collection<StoreFileInfo> storeFileInfos = primaryRegion.getRegionStorage()
+//          .getStoreFiles(families[0]);
+//      Assert.assertTrue(storeFileInfos == null || storeFileInfos.size() == 0);
+//
+//      verifyData(secondaryRegion, 0, 1000, cq, families);
+//    } finally {
+//      if (primaryRegion != null) {
+//        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
+//      }
+//      if (secondaryRegion != null) {
+//        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
+//      }
+//    }
+//  }
 
   private void putData(int startRow, int numRows, byte[] qf, byte[]... families) throws
       IOException {

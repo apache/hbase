@@ -532,7 +532,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       });
     }
 
-    return HRegion.createHRegion(getConf(), dir, htd, regionInfo, wal);
+//    return HRegion.createHRegion(getConf(), dir, htd, regionInfo, wal);
+    return null;
   }
 
   private void closeRegion(final HRegion region) throws IOException {

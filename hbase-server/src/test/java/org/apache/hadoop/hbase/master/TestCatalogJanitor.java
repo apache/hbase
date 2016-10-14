@@ -134,7 +134,8 @@ public class TestCatalogJanitor {
       FSUtils.setRootDir(getConfiguration(), rootdir);
       Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
 
-      this.ms = new MasterStorage(this);
+//      this.ms = new MasterStorage(this);
+      this.ms = null;
       this.asm = Mockito.mock(AssignmentManager.class);
       this.sm = Mockito.mock(ServerManager.class);
     }
@@ -244,7 +245,8 @@ public class TestCatalogJanitor {
       // remove the parent.
       Result r = createResult(parent, splita, splitb);
       // Add a reference under splitA directory so we don't clear out the parent.
-      Path rootdir = services.getMasterStorage().getRootContainer();
+//      Path rootdir = services.getMasterStorage().getRootContainer();
+      Path rootdir = null;
       Path tabledir =
         FSUtils.getTableDir(rootdir, htd.getTableName());
       Path storedir = HStore.getStoreHomedir(tabledir, splita,
@@ -580,7 +582,8 @@ public class TestCatalogJanitor {
     // remove the parent.
     Result parentMetaRow = createResult(parent, splita, splitb);
     FileSystem fs = FileSystem.get(htu.getConfiguration());
-    Path rootdir = services.getMasterStorage().getRootDir();
+//    Path rootdir = services.getMasterStorage().getRootDir();
+    Path rootdir = null;
     // have to set the root directory since we use it in HFileDisposer to figure out to get to the
     // archive directory. Otherwise, it just seems to pick the first root directory it can find (so
     // the single test passes, but when the full suite is run, things get borked).
@@ -663,7 +666,8 @@ public class TestCatalogJanitor {
 
     FileSystem fs = FileSystem.get(htu.getConfiguration());
 
-    Path rootdir = services.getMasterStorage().getRootDir();
+//    Path rootdir = services.getMasterStorage().getRootDir();
+    Path rootdir = null;
     // have to set the root directory since we use it in HFileDisposer to figure out to get to the
     // archive directory. Otherwise, it just seems to pick the first root directory it can find (so
     // the single test passes, but when the full suite is run, things get borked).
@@ -748,7 +752,8 @@ public class TestCatalogJanitor {
       final HTableDescriptor htd, final HRegionInfo parent,
       final HRegionInfo daughter, final byte [] midkey, final boolean top)
   throws IOException {
-    Path rootdir = services.getMasterStorage().getRootDir();
+//    Path rootdir = services.getMasterStorage().getRootDir();
+    Path rootdir = null;
     Path tabledir = FSUtils.getTableDir(rootdir, parent.getTable());
     Path storedir = HStore.getStoreHomedir(tabledir, daughter,
       htd.getColumnFamilies()[0].getName());

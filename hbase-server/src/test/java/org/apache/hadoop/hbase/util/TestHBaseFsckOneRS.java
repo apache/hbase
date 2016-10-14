@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -423,7 +422,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       // Write the .tableinfo
       cluster.getMaster().getMasterStorage().createTableDescriptor(
-        new TableDescriptor(htdDisabled), true);
+        new HTableDescriptor(htdDisabled), true);
       List<HRegionInfo> disabledRegions =
           TEST_UTIL.createMultiRegionsInMeta(conf, htdDisabled, SPLIT_KEYS);
 

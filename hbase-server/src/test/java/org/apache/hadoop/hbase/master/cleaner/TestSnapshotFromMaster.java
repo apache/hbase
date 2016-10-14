@@ -41,11 +41,6 @@ import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -102,7 +97,7 @@ public class TestSnapshotFromMaster {
     UTIL.startMiniCluster(NUM_RS);
     fs = UTIL.getDFSCluster().getFileSystem();
     master = UTIL.getMiniHBaseCluster().getMaster();
-    rootDir = master.getMasterStorage().getRootDir();
+//    rootDir = master.getMasterStorage().getRootDir();
     archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
   }
 
@@ -151,128 +146,128 @@ public class TestSnapshotFromMaster {
     }
   }
 
-  /**
-   * Test that the contract from the master for checking on a snapshot are valid.
-   * <p>
-   * <ol>
-   * <li>If a snapshot fails with an error, we expect to get the source error.</li>
-   * <li>If there is no snapshot name supplied, we should get an error.</li>
-   * <li>If asking about a snapshot has hasn't occurred, you should get an error.</li>
-   * </ol>
-   */
-  @Test(timeout = 300000)
-  public void testIsDoneContract() throws Exception {
-
-    IsSnapshotDoneRequest.Builder builder = IsSnapshotDoneRequest.newBuilder();
-
-    String snapshotName = "asyncExpectedFailureTest";
-
-    // check that we get an exception when looking up snapshot where one hasn't happened
-    SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
-      UnknownSnapshotException.class);
-
-    // and that we get the same issue, even if we specify a name
-    SnapshotDescription desc = SnapshotDescription.newBuilder()
-      .setName(snapshotName).setTable(TABLE_NAME.getNameAsString()).build();
-    builder.setSnapshot(desc);
-    SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
-      UnknownSnapshotException.class);
-
-    // set a mock handler to simulate a snapshot
-    DisabledTableSnapshotHandler mockHandler = Mockito.mock(DisabledTableSnapshotHandler.class);
-    Mockito.when(mockHandler.getException()).thenReturn(null);
-    Mockito.when(mockHandler.getSnapshot()).thenReturn(desc);
-    Mockito.when(mockHandler.isFinished()).thenReturn(new Boolean(true));
-    Mockito.when(mockHandler.getCompletionTimestamp())
-      .thenReturn(EnvironmentEdgeManager.currentTime());
-
-    master.getSnapshotManager()
-        .setSnapshotHandlerForTesting(TABLE_NAME, mockHandler);
-
-    // if we do a lookup without a snapshot name, we should fail - you should always know your name
-    builder = IsSnapshotDoneRequest.newBuilder();
-    SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
-      UnknownSnapshotException.class);
-
-    // then do the lookup for the snapshot that it is done
-    builder.setSnapshot(desc);
-    IsSnapshotDoneResponse response =
-      master.getMasterRpcServices().isSnapshotDone(null, builder.build());
-    assertTrue("Snapshot didn't complete when it should have.", response.getDone());
-
-    // now try the case where we are looking for a snapshot we didn't take
-    builder.setSnapshot(SnapshotDescription.newBuilder().setName("Not A Snapshot").build());
-    SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
-      UnknownSnapshotException.class);
-
-    // then create a snapshot to the fs and make sure that we can find it when checking done
-    snapshotName = "completed";
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    desc = desc.toBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnapshotInfo(desc, snapshotDir, fs);
-
-    builder.setSnapshot(desc);
-    response = master.getMasterRpcServices().isSnapshotDone(null, builder.build());
-    assertTrue("Completed, on-disk snapshot not found", response.getDone());
-  }
-
-  @Test(timeout = 300000)
-  public void testGetCompletedSnapshots() throws Exception {
-    // first check when there are no snapshots
-    GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
-    GetCompletedSnapshotsResponse response =
-      master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
-
-    // write one snapshot to the fs
-    String snapshotName = "completed";
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
-
-    // check that we get one snapshot
-    response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 1, response.getSnapshotsCount());
-    List<SnapshotDescription> snapshots = response.getSnapshotsList();
-    List<SnapshotDescription> expected = Lists.newArrayList(snapshot);
-    assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);
-
-    // write a second snapshot
-    snapshotName = "completed_two";
-    snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
-    expected.add(snapshot);
-
-    // check that we get one snapshot
-    response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
-    snapshots = response.getSnapshotsList();
-    assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);
-  }
-
-  @Test(timeout = 300000)
-  public void testDeleteSnapshot() throws Exception {
-
-    String snapshotName = "completed";
-    SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
-
-    DeleteSnapshotRequest request = DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot)
-        .build();
-    try {
-      master.getMasterRpcServices().deleteSnapshot(null, request);
-      fail("Master didn't throw exception when attempting to delete snapshot that doesn't exist");
-    } catch (ServiceException e) {
-      LOG.debug("Correctly failed delete of non-existant snapshot:" + e.getMessage());
-    }
-
-    // write one snapshot to the fs
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
-
-    // then delete the existing snapshot,which shouldn't cause an exception to be thrown
-    master.getMasterRpcServices().deleteSnapshot(null, request);
-  }
+//  /**
+//   * Test that the contract from the master for checking on a snapshot are valid.
+//   * <p>
+//   * <ol>
+//   * <li>If a snapshot fails with an error, we expect to get the source error.</li>
+//   * <li>If there is no snapshot name supplied, we should get an error.</li>
+//   * <li>If asking about a snapshot has hasn't occurred, you should get an error.</li>
+//   * </ol>
+//   */
+//  @Test(timeout = 300000)
+//  public void testIsDoneContract() throws Exception {
+//
+//    IsSnapshotDoneRequest.Builder builder = IsSnapshotDoneRequest.newBuilder();
+//
+//    String snapshotName = "asyncExpectedFailureTest";
+//
+//    // check that we get an exception when looking up snapshot where one hasn't happened
+//    SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
+//      UnknownSnapshotException.class);
+//
+//    // and that we get the same issue, even if we specify a name
+//    SnapshotDescription desc = SnapshotDescription.newBuilder()
+//      .setName(snapshotName).setTable(TABLE_NAME.getNameAsString()).build();
+//    builder.setSnapshot(desc);
+//    SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
+//      UnknownSnapshotException.class);
+//
+//    // set a mock handler to simulate a snapshot
+//    DisabledTableSnapshotHandler mockHandler = Mockito.mock(DisabledTableSnapshotHandler.class);
+//    Mockito.when(mockHandler.getException()).thenReturn(null);
+//    Mockito.when(mockHandler.getSnapshot()).thenReturn(desc);
+//    Mockito.when(mockHandler.isFinished()).thenReturn(new Boolean(true));
+//    Mockito.when(mockHandler.getCompletionTimestamp())
+//      .thenReturn(EnvironmentEdgeManager.currentTime());
+//
+//    master.getSnapshotManager()
+//        .setSnapshotHandlerForTesting(TABLE_NAME, mockHandler);
+//
+//    // if we do a lookup without a snapshot name, we should fail - you should always know your name
+//    builder = IsSnapshotDoneRequest.newBuilder();
+//    SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
+//      UnknownSnapshotException.class);
+//
+//    // then do the lookup for the snapshot that it is done
+//    builder.setSnapshot(desc);
+//    IsSnapshotDoneResponse response =
+//      master.getMasterRpcServices().isSnapshotDone(null, builder.build());
+//    assertTrue("Snapshot didn't complete when it should have.", response.getDone());
+//
+//    // now try the case where we are looking for a snapshot we didn't take
+//    builder.setSnapshot(SnapshotDescription.newBuilder().setName("Not A Snapshot").build());
+//    SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
+//      UnknownSnapshotException.class);
+//
+//    // then create a snapshot to the fs and make sure that we can find it when checking done
+//    snapshotName = "completed";
+//    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+//    desc = desc.toBuilder().setName(snapshotName).build();
+//    SnapshotDescriptionUtils.writeSnapshotInfo(desc, snapshotDir, fs);
+//
+//    builder.setSnapshot(desc);
+//    response = master.getMasterRpcServices().isSnapshotDone(null, builder.build());
+//    assertTrue("Completed, on-disk snapshot not found", response.getDone());
+//  }
+//
+//  @Test(timeout = 300000)
+//  public void testGetCompletedSnapshots() throws Exception {
+//    // first check when there are no snapshots
+//    GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
+//    GetCompletedSnapshotsResponse response =
+//      master.getMasterRpcServices().getCompletedSnapshots(null, request);
+//    assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
+//
+//    // write one snapshot to the fs
+//    String snapshotName = "completed";
+//    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+//    SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
+//    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
+//
+//    // check that we get one snapshot
+//    response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
+//    assertEquals("Found unexpected number of snapshots", 1, response.getSnapshotsCount());
+//    List<SnapshotDescription> snapshots = response.getSnapshotsList();
+//    List<SnapshotDescription> expected = Lists.newArrayList(snapshot);
+//    assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);
+//
+//    // write a second snapshot
+//    snapshotName = "completed_two";
+//    snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+//    snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
+//    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
+//    expected.add(snapshot);
+//
+//    // check that we get one snapshot
+//    response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
+//    assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
+//    snapshots = response.getSnapshotsList();
+//    assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);
+//  }
+//
+//  @Test(timeout = 300000)
+//  public void testDeleteSnapshot() throws Exception {
+//
+//    String snapshotName = "completed";
+//    SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
+//
+//    DeleteSnapshotRequest request = DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot)
+//        .build();
+//    try {
+//      master.getMasterRpcServices().deleteSnapshot(null, request);
+//      fail("Master didn't throw exception when attempting to delete snapshot that doesn't exist");
+//    } catch (ServiceException e) {
+//      LOG.debug("Correctly failed delete of non-existant snapshot:" + e.getMessage());
+//    }
+//
+//    // write one snapshot to the fs
+//    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+//    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
+//
+//    // then delete the existing snapshot,which shouldn't cause an exception to be thrown
+//    master.getMasterRpcServices().deleteSnapshot(null, request);
+//  }
 
   /**
    * Test that the snapshot hfile archive cleaner works correctly. HFiles that are in snapshots

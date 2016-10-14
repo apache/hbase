@@ -148,51 +148,51 @@ public class TestStore {
   }
 
   private void init(String methodName) throws IOException {
-    init(methodName, TEST_UTIL.getConfiguration());
+//    init(methodName, TEST_UTIL.getConfiguration());
   }
 
-  private void init(String methodName, Configuration conf)
-  throws IOException {
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    // some of the tests write 4 versions and then flush
-    // (with HBASE-4241, lower versions are collected on flush)
-    hcd.setMaxVersions(4);
-    init(methodName, conf, hcd);
-  }
-
-  private void init(String methodName, Configuration conf,
-      HColumnDescriptor hcd) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
-    init(methodName, conf, htd, hcd);
-  }
-
-  @SuppressWarnings("deprecation")
-  private Store init(String methodName, Configuration conf, HTableDescriptor htd,
-      HColumnDescriptor hcd) throws IOException {
-    //Setting up a Store
-    Path basedir = new Path(DIR+methodName);
-    final Path logdir = new Path(basedir, AbstractFSWALProvider.getWALDirectoryName(methodName));
-
-    FileSystem fs = FileSystem.get(conf);
-    fs.delete(logdir, true);
-
-    if (htd.hasFamily(hcd.getName())) {
-      htd.modifyFamily(hcd);
-    } else {
-      htd.addFamily(hcd);
-    }
-
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    final Configuration walConf = new Configuration(conf);
-    FSUtils.setRootDir(walConf, basedir);
-    final WALFactory wals = new WALFactory(walConf, null, methodName);
-    RegionStorage rfs = RegionStorage.open(conf, fs, basedir, info, false);
-    HRegion region = new HRegion(rfs, htd,
-      wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), null);
-
-    store = new HStore(region, hcd, conf);
-    return store;
-  }
+//  private void init(String methodName, Configuration conf)
+//  throws IOException {
+//    HColumnDescriptor hcd = new HColumnDescriptor(family);
+//    // some of the tests write 4 versions and then flush
+//    // (with HBASE-4241, lower versions are collected on flush)
+//    hcd.setMaxVersions(4);
+//    init(methodName, conf, hcd);
+//  }
+//
+//  private void init(String methodName, Configuration conf,
+//      HColumnDescriptor hcd) throws IOException {
+//    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+//    init(methodName, conf, htd, hcd);
+//  }
+//
+//  @SuppressWarnings("deprecation")
+//  private Store init(String methodName, Configuration conf, HTableDescriptor htd,
+//      HColumnDescriptor hcd) throws IOException {
+//    //Setting up a Store
+//    Path basedir = new Path(DIR+methodName);
+//    final Path logdir = new Path(basedir, AbstractFSWALProvider.getWALDirectoryName(methodName));
+//
+//    FileSystem fs = FileSystem.get(conf);
+//    fs.delete(logdir, true);
+//
+//    if (htd.hasFamily(hcd.getName())) {
+//      htd.modifyFamily(hcd);
+//    } else {
+//      htd.addFamily(hcd);
+//    }
+//
+//    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+//    final Configuration walConf = new Configuration(conf);
+//    FSUtils.setRootDir(walConf, basedir);
+//    final WALFactory wals = new WALFactory(walConf, null, methodName);
+//    RegionStorage rfs = RegionStorage.open(conf, fs, basedir, info, false);
+//    HRegion region = new HRegion(rfs, htd,
+//      wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), null);
+//
+//    store = new HStore(region, hcd, conf);
+//    return store;
+//  }
 
   /**
    * Test we do not lose data if we fail a flush and then close.
@@ -219,7 +219,7 @@ public class TestStore {
         FaultyFileSystem ffs = (FaultyFileSystem)fs;
 
         // Initialize region
-        init(name.getMethodName(), conf);
+//        init(name.getMethodName(), conf);
 
         long size = store.memstore.getFlushableSize();
         Assert.assertEquals(0, size);
@@ -266,7 +266,7 @@ public class TestStore {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setCompressionType(Compression.Algorithm.GZ);
     hcd.setDataBlockEncoding(DataBlockEncoding.DIFF);
-    init(name.getMethodName(), conf, hcd);
+//    init(name.getMethodName(), conf, hcd);
 
     // Test createWriterInTmp()
     StoreFileWriter writer = store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false);
@@ -308,7 +308,7 @@ public class TestStore {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMinVersions(minVersions);
     hcd.setTimeToLive(ttl);
-    init(name.getMethodName() + "-" + minVersions, conf, hcd);
+//    init(name.getMethodName() + "-" + minVersions, conf, hcd);
 
     long storeTtl = this.store.getScanInfo().getTtl();
     long sleepTime = storeTtl / storeFileNum;
@@ -367,7 +367,7 @@ public class TestStore {
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
     // Initialize region
-    init(name.getMethodName(), conf);
+//    init(name.getMethodName(), conf);
 
     int storeFileNum = 4;
     for (int i = 1; i <= storeFileNum; i++) {
@@ -764,7 +764,7 @@ public class TestStore {
         Assert.assertEquals(FaultyFileSystem.class, fs.getClass());
 
         // Initialize region
-        init(name.getMethodName(), conf);
+//        init(name.getMethodName(), conf);
 
         LOG.info("Adding some data");
         store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
@@ -964,7 +964,7 @@ public class TestStore {
     // a number we pass in is higher than some config value, inside compactionPolicy.
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(CONFIG_KEY, anyValue);
-    init(name.getMethodName() + "-xml", conf);
+//    init(name.getMethodName() + "-xml", conf);
     Assert.assertTrue(store.throttleCompaction(anyValue + 1));
     Assert.assertFalse(store.throttleCompaction(anyValue));
 
@@ -973,14 +973,14 @@ public class TestStore {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     htd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
-    init(name.getMethodName() + "-htd", conf, htd, hcd);
+//    init(name.getMethodName() + "-htd", conf, htd, hcd);
     Assert.assertTrue(store.throttleCompaction(anyValue + 1));
     Assert.assertFalse(store.throttleCompaction(anyValue));
 
     // HCD overrides them both.
     --anyValue;
     hcd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
-    init(name.getMethodName() + "-hcd", conf, htd, hcd);
+//    init(name.getMethodName() + "-hcd", conf, htd, hcd);
     Assert.assertTrue(store.throttleCompaction(anyValue + 1));
     Assert.assertFalse(store.throttleCompaction(anyValue));
   }
@@ -999,7 +999,7 @@ public class TestStore {
   public void testStoreUsesSearchEngineOverride() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DummyStoreEngine.class.getName());
-    init(this.name.getMethodName(), conf);
+//    init(this.name.getMethodName(), conf);
     Assert.assertEquals(DummyStoreEngine.lastCreatedCompactor,
       this.store.storeEngine.getCompactor());
   }

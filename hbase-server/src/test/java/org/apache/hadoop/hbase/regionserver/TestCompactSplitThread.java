@@ -60,7 +60,7 @@ public class TestCompactSplitThread {
     setupConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(NUM_RS);
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    rootDir = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//    rootDir = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterStorage().getRootDir();
 
   }
 

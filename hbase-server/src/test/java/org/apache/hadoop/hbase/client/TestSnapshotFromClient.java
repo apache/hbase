@@ -183,57 +183,57 @@ public class TestSnapshotFromClient {
     admin.deleteSnapshot(snapshot3);
     admin.close();
   }
-  /**
-   * Test snapshotting a table that is offline
-   * @throws Exception
-   */
-  @Test (timeout=300000)
-  public void testOfflineTableSnapshot() throws Exception {
-    Admin admin = UTIL.getHBaseAdmin();
-    // make sure we don't fail on listing snapshots
-    SnapshotTestingUtils.assertNoSnapshots(admin);
-
-    // put some stuff in the table
-    Table table = UTIL.getConnection().getTable(TABLE_NAME);
-    UTIL.loadTable(table, TEST_FAM, false);
-
-    LOG.debug("FS state before disable:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
-    // XXX if this is flakey, might want to consider using the async version and looping as
-    // disableTable can succeed and still timeout.
-    admin.disableTable(TABLE_NAME);
-
-    LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
-
-    // take a snapshot of the disabled table
-    final String SNAPSHOT_NAME = "offlineTableSnapshot";
-    byte[] snapshot = Bytes.toBytes(SNAPSHOT_NAME);
-
-    admin.snapshot(new SnapshotDescription(SNAPSHOT_NAME, STRING_TABLE_NAME,
-        SnapshotType.DISABLED, null, -1, SnapshotManifestV1.DESCRIPTOR_VERSION));
-    LOG.debug("Snapshot completed.");
-
-    // make sure we have the snapshot
-    List<SnapshotDescription> snapshots =
-        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
-
-    // make sure its a valid snapshot
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
-    LOG.debug("FS state after snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
-
-    SnapshotTestingUtils.confirmSnapshotValid(
-      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM,
-      rootDir, admin, fs);
-
-    admin.deleteSnapshot(snapshot);
-    snapshots = admin.listSnapshots();
-    SnapshotTestingUtils.assertNoSnapshots(admin);
-  }
+//  /**
+//   * Test snapshotting a table that is offline
+//   * @throws Exception
+//   */
+//  @Test (timeout=300000)
+//  public void testOfflineTableSnapshot() throws Exception {
+//    Admin admin = UTIL.getHBaseAdmin();
+//    // make sure we don't fail on listing snapshots
+//    SnapshotTestingUtils.assertNoSnapshots(admin);
+//
+//    // put some stuff in the table
+//    Table table = UTIL.getConnection().getTable(TABLE_NAME);
+//    UTIL.loadTable(table, TEST_FAM, false);
+//
+//    LOG.debug("FS state before disable:");
+//    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+//      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+//    // XXX if this is flakey, might want to consider using the async version and looping as
+//    // disableTable can succeed and still timeout.
+//    admin.disableTable(TABLE_NAME);
+//
+//    LOG.debug("FS state before snapshot:");
+//    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+//      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+//
+//    // take a snapshot of the disabled table
+//    final String SNAPSHOT_NAME = "offlineTableSnapshot";
+//    byte[] snapshot = Bytes.toBytes(SNAPSHOT_NAME);
+//
+//    admin.snapshot(new SnapshotDescription(SNAPSHOT_NAME, STRING_TABLE_NAME,
+//        SnapshotType.DISABLED, null, -1, SnapshotManifestV1.DESCRIPTOR_VERSION));
+//    LOG.debug("Snapshot completed.");
+//
+//    // make sure we have the snapshot
+//    List<SnapshotDescription> snapshots =
+//        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
+//
+//    // make sure its a valid snapshot
+//    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
+//    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//    LOG.debug("FS state after snapshot:");
+//    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
+//
+//    SnapshotTestingUtils.confirmSnapshotValid(
+//      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM,
+//      rootDir, admin, fs);
+//
+//    admin.deleteSnapshot(snapshot);
+//    snapshots = admin.listSnapshots();
+//    SnapshotTestingUtils.assertNoSnapshots(admin);
+//  }
 
   @Test (timeout=300000)
   public void testSnapshotFailsOnNonExistantTable() throws Exception {
@@ -264,48 +264,48 @@ public class TestSnapshotFromClient {
     }
   }
 
-  @Test (timeout=300000)
-  public void testOfflineTableSnapshotWithEmptyRegions() throws Exception {
-    // test with an empty table with one region
-
-    Admin admin = UTIL.getHBaseAdmin();
-    // make sure we don't fail on listing snapshots
-    SnapshotTestingUtils.assertNoSnapshots(admin);
-
-    LOG.debug("FS state before disable:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
-    admin.disableTable(TABLE_NAME);
-
-    LOG.debug("FS state before snapshot:");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
-
-    // take a snapshot of the disabled table
-    byte[] snapshot = Bytes.toBytes("testOfflineTableSnapshotWithEmptyRegions");
-    admin.snapshot(snapshot, TABLE_NAME);
-    LOG.debug("Snapshot completed.");
-
-    // make sure we have the snapshot
-    List<SnapshotDescription> snapshots =
-        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
-
-    // make sure its a valid snapshot
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
-    LOG.debug("FS state after snapshot:");
-    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
-
-    List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
-    List<byte[]> nonEmptyCfs = Lists.newArrayList();
-    SnapshotTestingUtils.confirmSnapshotValid(
-      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, nonEmptyCfs,
-      emptyCfs, rootDir, admin, fs);
-
-    admin.deleteSnapshot(snapshot);
-    snapshots = admin.listSnapshots();
-    SnapshotTestingUtils.assertNoSnapshots(admin);
-  }
+//  @Test (timeout=300000)
+//  public void testOfflineTableSnapshotWithEmptyRegions() throws Exception {
+//    // test with an empty table with one region
+//
+//    Admin admin = UTIL.getHBaseAdmin();
+//    // make sure we don't fail on listing snapshots
+//    SnapshotTestingUtils.assertNoSnapshots(admin);
+//
+//    LOG.debug("FS state before disable:");
+//    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+//      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+//    admin.disableTable(TABLE_NAME);
+//
+//    LOG.debug("FS state before snapshot:");
+//    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+//      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+//
+//    // take a snapshot of the disabled table
+//    byte[] snapshot = Bytes.toBytes("testOfflineTableSnapshotWithEmptyRegions");
+//    admin.snapshot(snapshot, TABLE_NAME);
+//    LOG.debug("Snapshot completed.");
+//
+//    // make sure we have the snapshot
+//    List<SnapshotDescription> snapshots =
+//        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
+//
+//    // make sure its a valid snapshot
+//    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
+//    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//    LOG.debug("FS state after snapshot:");
+//    UTIL.getHBaseCluster().getMaster().getMasterStorage().logStorageState(LOG);
+//
+//    List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
+//    List<byte[]> nonEmptyCfs = Lists.newArrayList();
+//    SnapshotTestingUtils.confirmSnapshotValid(
+//      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, nonEmptyCfs,
+//      emptyCfs, rootDir, admin, fs);
+//
+//    admin.deleteSnapshot(snapshot);
+//    snapshots = admin.listSnapshots();
+//    SnapshotTestingUtils.assertNoSnapshots(admin);
+//  }
 
   @Test(timeout = 300000)
   public void testListTableSnapshots() throws Exception {

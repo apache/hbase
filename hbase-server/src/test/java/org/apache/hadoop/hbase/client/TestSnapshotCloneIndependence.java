@@ -121,7 +121,7 @@ public class TestSnapshotCloneIndependence {
   @Before
   public void setup() throws Exception {
     fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
-    rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//    rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
 
     admin = UTIL.getHBaseAdmin();
     originalTableName = TableName.valueOf("test" + testName.getMethodName());

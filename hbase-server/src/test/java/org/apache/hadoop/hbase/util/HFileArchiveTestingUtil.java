@@ -211,10 +211,11 @@ public class HFileArchiveTestingUtil {
    * @return {@link Path} to the archive directory for the given region
    */
   public static Path getRegionArchiveDir(Configuration conf, HRegion region) throws IOException {
-    return HFileArchiveUtil.getRegionArchiveDir(
-        FSUtils.getRootDir(conf),
-        region.getTableDesc().getTableName(),
-        region.getRegionInfo().getEncodedName());
+//    return HFileArchiveUtil.getRegionArchiveDir(
+//        FSUtils.getRootDir(conf),
+//        region.getTableDesc().getTableName(),
+//        region.getRegionInfo().getEncodedName());
+    return null;
   }
 
   /**
@@ -226,8 +227,9 @@ public class HFileArchiveTestingUtil {
    */
   public static Path getStoreArchivePath(Configuration conf, HRegion region, Store store)
       throws IOException {
-    return HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(),
-        region.getRegionStorage().getTableDir(), store.getFamily().getName());
+//    return HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(),
+//        region.getRegionStorage().getTableDir(), store.getFamily().getName());
+    return null;
   }
 
   public static Path getStoreArchivePath(HBaseTestingUtility util, String tableName,

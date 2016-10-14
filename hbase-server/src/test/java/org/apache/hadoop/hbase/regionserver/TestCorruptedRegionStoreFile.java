@@ -190,9 +190,9 @@ public class TestCorruptedRegionStoreFile {
     return UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
   }
 
-  private Path getRootDir() {
-    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
-  }
+//  private Path getRootDir() {
+//    return UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//  }
 
   private void evictHFileCache(final Path hfile) throws Exception {
     for (RegionServerThread rst: UTIL.getMiniHBaseCluster().getRegionServerThreads()) {

@@ -70,7 +70,7 @@ public class TestCompactionPolicy {
   @Before
   public void setUp() throws Exception {
     config();
-    initialize();
+//    initialize();
   }
 
   /**
@@ -86,34 +86,34 @@ public class TestCompactionPolicy {
     this.conf.setFloat(CompactionConfiguration.HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.0F);
   }
 
-  /**
-   * Setting up a Store
-   * @throws IOException with error
-   */
-  protected void initialize() throws IOException {
-    Path basedir = new Path(DIR);
-    String logName = "logs";
-    Path logdir = new Path(DIR, logName);
-    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("family"));
-    FileSystem fs = FileSystem.get(conf);
-
-    fs.delete(logdir, true);
-
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("table")));
-    htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-
-    hlog = new FSHLog(fs, basedir, logName, conf);
-    region = HRegion.createHRegion(info, basedir, conf, htd, hlog);
-    region.close();
-    Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
-    region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
-
-    store = new HStore(region, hcd, conf);
-
-    TEST_FILE = region.getRegionStorage().createTempName();
-    fs.createNewFile(TEST_FILE);
-  }
+//  /**
+//   * Setting up a Store
+//   * @throws IOException with error
+//   */
+//  protected void initialize() throws IOException {
+//    Path basedir = new Path(DIR);
+//    String logName = "logs";
+//    Path logdir = new Path(DIR, logName);
+//    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("family"));
+//    FileSystem fs = FileSystem.get(conf);
+//
+//    fs.delete(logdir, true);
+//
+//    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("table")));
+//    htd.addFamily(hcd);
+//    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
+//
+//    hlog = new FSHLog(fs, basedir, logName, conf);
+//    region = HRegion.createHRegion(info, basedir, conf, htd, hlog);
+//    region.close();
+//    Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
+//    region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
+//
+//    store = new HStore(region, hcd, conf);
+//
+//    TEST_FILE = region.getRegionStorage().createTempName();
+//    fs.createNewFile(TEST_FILE);
+//  }
 
   @After
   public void tearDown() throws IOException {

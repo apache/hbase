@@ -389,23 +389,23 @@ public class TestFlushSnapshotFromClient {
     UTIL.deleteTable(cloneName);
   }
 
-  /**
-   * Basic end-to-end test of simple-flush-based snapshots
-   */
-  @Test
-  public void testFlushCreateListDestroy() throws Exception {
-    LOG.debug("------- Starting Snapshot test -------------");
-    // make sure we don't fail on listing snapshots
-    SnapshotTestingUtils.assertNoSnapshots(admin);
-    // load the table so we have some data
-    SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
-
-    String snapshotName = "flushSnapshotCreateListDestroy";
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, TABLE_NAME, Bytes.toString(TEST_FAM),
-      snapshotName, rootDir, fs, true);
-  }
+//  /**
+//   * Basic end-to-end test of simple-flush-based snapshots
+//   */
+//  @Test
+//  public void testFlushCreateListDestroy() throws Exception {
+//    LOG.debug("------- Starting Snapshot test -------------");
+//    // make sure we don't fail on listing snapshots
+//    SnapshotTestingUtils.assertNoSnapshots(admin);
+//    // load the table so we have some data
+//    SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
+//
+//    String snapshotName = "flushSnapshotCreateListDestroy";
+//    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterStorage().getFileSystem();
+//    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterStorage().getRootDir();
+//    SnapshotTestingUtils.createSnapshotAndValidate(admin, TABLE_NAME, Bytes.toString(TEST_FAM),
+//      snapshotName, rootDir, fs, true);
+//  }
 
   /**
    * Demonstrate that we reject snapshot requests if there is a snapshot already running on the
