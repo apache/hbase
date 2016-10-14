@@ -915,7 +915,7 @@ public interface Admin extends Abortable, Closeable {
    *          two adjacent regions
    * @throws IOException
    */
-  public Future<Void> mergeRegionsAsync(
+  Future<Void> mergeRegionsAsync(
       final byte[] nameOfRegionA,
       final byte[] nameOfRegionB,
       final boolean forcible) throws IOException;

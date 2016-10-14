@@ -153,13 +153,13 @@ public class DispatchMergingRegionsProcedure
     try {
       switch (state) {
       case DISPATCH_MERGING_REGIONS_POST_OPERATION:
-        break; // nothing to rollback
       case DISPATCH_MERGING_REGIONS_DO_MERGE_IN_RS:
         String msg = this + " We are in the " + state + " state."
             + " It is complicated to rollback the merge operation that region server is working on."
             + " Rollback is not supported and we should let the merge operation to complete";
         LOG.warn(msg);
-        break;
+        // PONR
+        throw new UnsupportedOperationException(this + " unhandled state=" + state);
       case DISPATCH_MERGING_REGIONS_MOVE_REGION_TO_SAME_RS:
         break; // nothing to rollback
       case DISPATCH_MERGING_REGIONS_PRE_OPERATION:
@@ -193,18 +193,19 @@ public class DispatchMergingRegionsProcedure
     return DispatchMergingRegionsState.DISPATCH_MERGING_REGIONS_PREPARE;
   }
 
+  /*
+   * Check whether we are in the state that can be rollback
+   */
   @Override
-  protected void setNextState(DispatchMergingRegionsState state) {
-    if (aborted.get()) {
-      setAbortFailure("merge-table-regions", "abort requested");
-    } else {
-      super.setNextState(state);
+  protected boolean isRollbackSupported(final DispatchMergingRegionsState state) {
+    switch (state) {
+    case DISPATCH_MERGING_REGIONS_POST_OPERATION:
+    case DISPATCH_MERGING_REGIONS_DO_MERGE_IN_RS:
+        // It is not safe to rollback if we reach to these states.
+        return false;
+      default:
+        break;
     }
-  }
-
-  @Override
-  public boolean abort(final MasterProcedureEnv env) {
-    aborted.set(true);
     return true;
   }
 
