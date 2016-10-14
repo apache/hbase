@@ -276,7 +276,11 @@ case class HBaseRelation (
         (x, null)
       } else {
         val v = CellUtil.cloneValue(kv)
-        (x, Utils.hbaseFieldToScalaType(x, v, 0, v.length))
+        (x, x.dt match {
+          // Here, to avoid arraycopy, return v directly instead of calling hbaseFieldToScalaType
+          case BinaryType => v
+          case _ => Utils.hbaseFieldToScalaType(x, v, 0, v.length)
+        })
       }
     }.toMap
     val unionedRow = keySeq ++ valueSeq
