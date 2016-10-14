@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
 import org.apache.hadoop.util.Tool;
@@ -118,11 +118,11 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
     }
   }
 
-  private void printEntry(ProcedureWALEntry entry) throws IOException {
+  private void printEntry(final ProcedureWALEntry entry) throws IOException {
     out.println("EntryType=" + entry.getType());
     int procCount = entry.getProcedureCount();
     for (int i = 0; i < procCount; i++) {
-      Procedure<?> proc = Procedure.convert(entry.getProcedure(i));
+      Procedure<?> proc = ProcedureUtil.convertToProcedure(entry.getProcedure(i));
       printProcedure(proc);
     }
   }

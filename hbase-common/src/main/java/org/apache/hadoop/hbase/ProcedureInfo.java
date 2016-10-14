@@ -121,7 +121,7 @@ public class ProcedureInfo implements Cloneable {
     return procName;
   }
 
-  private boolean hasOwner() {
+  public boolean hasOwner() {
     return procOwner != null;
   }
 

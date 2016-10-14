@@ -339,13 +339,13 @@ public class ProcedureWALFormatReader {
 
     public Procedure convert() throws IOException {
       if (procedure == null) {
-        procedure = Procedure.convert(proto);
+        procedure = ProcedureUtil.convertToProcedure(proto);
       }
       return procedure;
     }
 
     public ProcedureInfo convertToInfo() {
-      return ProcedureUtil.convert(proto);
+      return ProcedureUtil.convertToProcedureInfo(proto);
     }
 
     @Override

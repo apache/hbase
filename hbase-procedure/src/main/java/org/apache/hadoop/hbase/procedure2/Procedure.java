@@ -21,26 +21,19 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 
 /**
  * Base Procedure class responsible to handle the Procedure Metadata
@@ -610,7 +603,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * Called on store load to initialize the Procedure internals after
    * the creation/deserialization.
    */
-  private synchronized void setLastUpdate(final long lastUpdate) {
+  protected synchronized void setLastUpdate(final long lastUpdate) {
     this.lastUpdate = lastUpdate;
   }
 
@@ -732,163 +725,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
       if (proc == null) return null;
     }
     return proc.getProcId();
-  }
-
-  protected static Procedure newInstance(final String className) throws IOException {
-    try {
-      Class<?> clazz = Class.forName(className);
-      if (!Modifier.isPublic(clazz.getModifiers())) {
-        throw new Exception("the " + clazz + " class is not public");
-      }
-
-      Constructor<?> ctor = clazz.getConstructor();
-      assert ctor != null : "no constructor found";
-      if (!Modifier.isPublic(ctor.getModifiers())) {
-        throw new Exception("the " + clazz + " constructor is not public");
-      }
-      return (Procedure)ctor.newInstance();
-    } catch (Exception e) {
-      throw new IOException("The procedure class " + className +
-          " must be accessible and have an empty constructor", e);
-    }
-  }
-
-  protected static void validateClass(final Procedure proc) throws IOException {
-    try {
-      Class<?> clazz = proc.getClass();
-      if (!Modifier.isPublic(clazz.getModifiers())) {
-        throw new Exception("the " + clazz + " class is not public");
-      }
-
-      Constructor<?> ctor = clazz.getConstructor();
-      assert ctor != null;
-      if (!Modifier.isPublic(ctor.getModifiers())) {
-        throw new Exception("the " + clazz + " constructor is not public");
-      }
-    } catch (Exception e) {
-      throw new IOException("The procedure class " + proc.getClass().getName() +
-          " must be accessible and have an empty constructor", e);
-    }
-  }
-
-  /**
-   * Helper to convert the procedure to protobuf.
-   * Used by ProcedureStore implementations.
-   */
-  @InterfaceAudience.Private
-  public static ProcedureProtos.Procedure convert(final Procedure proc)
-      throws IOException {
-    Preconditions.checkArgument(proc != null);
-    validateClass(proc);
-
-    ProcedureProtos.Procedure.Builder builder = ProcedureProtos.Procedure.newBuilder()
-      .setClassName(proc.getClass().getName())
-      .setProcId(proc.getProcId())
-      .setState(proc.getState())
-      .setStartTime(proc.getStartTime())
-      .setLastUpdate(proc.getLastUpdate());
-
-    if (proc.hasParent()) {
-      builder.setParentId(proc.getParentProcId());
-    }
-
-    if (proc.hasTimeout()) {
-      builder.setTimeout(proc.getTimeout());
-    }
-
-    if (proc.hasOwner()) {
-      builder.setOwner(proc.getOwner());
-    }
-
-    int[] stackIds = proc.getStackIndexes();
-    if (stackIds != null) {
-      for (int i = 0; i < stackIds.length; ++i) {
-        builder.addStackId(stackIds[i]);
-      }
-    }
-
-    if (proc.hasException()) {
-      RemoteProcedureException exception = proc.getException();
-      builder.setException(
-        RemoteProcedureException.toProto(exception.getSource(), exception.getCause()));
-    }
-
-    byte[] result = proc.getResult();
-    if (result != null) {
-      builder.setResult(UnsafeByteOperations.unsafeWrap(result));
-    }
-
-    ByteString.Output stateStream = ByteString.newOutput();
-    proc.serializeStateData(stateStream);
-    if (stateStream.size() > 0) {
-      builder.setStateData(stateStream.toByteString());
-    }
-
-    if (proc.getNonceKey() != null) {
-      builder.setNonceGroup(proc.getNonceKey().getNonceGroup());
-      builder.setNonce(proc.getNonceKey().getNonce());
-    }
-
-    return builder.build();
-  }
-
-  /**
-   * Helper to convert the protobuf procedure.
-   * Used by ProcedureStore implementations.
-   *
-   * TODO: OPTIMIZATION: some of the field never change during the execution
-   *                     (e.g. className, procId, parentId, ...).
-   *                     We can split in 'data' and 'state', and the store
-   *                     may take advantage of it by storing the data only on insert().
-   */
-  @InterfaceAudience.Private
-  public static Procedure convert(final ProcedureProtos.Procedure proto)
-      throws IOException {
-    // Procedure from class name
-    Procedure proc = Procedure.newInstance(proto.getClassName());
-
-    // set fields
-    proc.setProcId(proto.getProcId());
-    proc.setState(proto.getState());
-    proc.setStartTime(proto.getStartTime());
-    proc.setLastUpdate(proto.getLastUpdate());
-
-    if (proto.hasParentId()) {
-      proc.setParentProcId(proto.getParentId());
-    }
-
-    if (proto.hasOwner()) {
-      proc.setOwner(proto.getOwner());
-    }
-
-    if (proto.hasTimeout()) {
-      proc.setTimeout(proto.getTimeout());
-    }
-
-    if (proto.getStackIdCount() > 0) {
-      proc.setStackIndexes(proto.getStackIdList());
-    }
-
-    if (proto.hasException()) {
-      assert proc.getState() == ProcedureState.FINISHED ||
-             proc.getState() == ProcedureState.ROLLEDBACK :
-             "The procedure must be failed (waiting to rollback) or rolledback";
-      proc.setFailure(RemoteProcedureException.fromProto(proto.getException()));
-    }
-
-    if (proto.hasResult()) {
-      proc.setResult(proto.getResult().toByteArray());
-    }
-
-    if (proto.getNonce() != HConstants.NO_NONCE) {
-      NonceKey nonceKey = new NonceKey(proto.getNonceGroup(), proto.getNonce());
-      proc.setNonceKey(nonceKey);
-    }
-
-    // we want to call deserialize even when the stream is empty, mainly for testing.
-    proc.deserializeStateData(proto.getStateData().newInput());
-
-    return proc;
   }
 
   /**

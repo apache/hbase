@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
@@ -205,12 +206,12 @@ public final class ProcedureWALFormat {
 
   public static void writeEntry(ByteSlot slot, ProcedureWALEntry.Type type,
       Procedure proc, Procedure[] subprocs) throws IOException {
-    ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
+    final ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(type);
-    builder.addProcedure(Procedure.convert(proc));
+    builder.addProcedure(ProcedureUtil.convertToProtoProcedure(proc));
     if (subprocs != null) {
       for (int i = 0; i < subprocs.length; ++i) {
-        builder.addProcedure(Procedure.convert(subprocs[i]));
+        builder.addProcedure(ProcedureUtil.convertToProtoProcedure(subprocs[i]));
       }
     }
     builder.build().writeDelimitedTo(slot);
@@ -233,7 +234,7 @@ public final class ProcedureWALFormat {
 
   public static void writeDelete(ByteSlot slot, long procId)
       throws IOException {
-    ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
+    final ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(ProcedureWALEntry.Type.PROCEDURE_WAL_DELETE);
     builder.setProcId(procId);
     builder.build().writeDelimitedTo(slot);
@@ -241,11 +242,11 @@ public final class ProcedureWALFormat {
 
   public static void writeDelete(ByteSlot slot, Procedure proc, long[] subprocs)
       throws IOException {
-    ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
+    final ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(ProcedureWALEntry.Type.PROCEDURE_WAL_DELETE);
     builder.setProcId(proc.getProcId());
     if (subprocs != null) {
-      builder.addProcedure(Procedure.convert(proc));
+      builder.addProcedure(ProcedureUtil.convertToProtoProcedure(proc));
       for (int i = 0; i < subprocs.length; ++i) {
         builder.addChildId(subprocs[i]);
       }

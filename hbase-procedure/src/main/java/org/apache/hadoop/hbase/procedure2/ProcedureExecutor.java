@@ -649,12 +649,12 @@ public class ProcedureExecutor<TEnvironment> {
    * @return the procedures in a list
    */
   public List<ProcedureInfo> listProcedures() {
-    List<ProcedureInfo> procedureLists =
+    final List<ProcedureInfo> procedureLists =
         new ArrayList<ProcedureInfo>(procedures.size() + completed.size());
-    for (java.util.Map.Entry<Long, Procedure> p: procedures.entrySet()) {
-      procedureLists.add(ProcedureUtil.createProcedureInfo(p.getValue()));
+    for (Map.Entry<Long, Procedure> p: procedures.entrySet()) {
+      procedureLists.add(ProcedureUtil.convertToProcedureInfo(p.getValue()));
     }
-    for (java.util.Map.Entry<Long, ProcedureInfo> e: completed.entrySet()) {
+    for (Map.Entry<Long, ProcedureInfo> e: completed.entrySet()) {
       // Note: The procedure could show up twice in the list with different state, as
       // it could complete after we walk through procedures list and insert into
       // procedureList - it is ok, as we will use the information in the ProcedureInfo
@@ -1407,7 +1407,7 @@ public class ProcedureExecutor<TEnvironment> {
     execCompletionCleanup(proc);
 
     // update the executor internal state maps
-    ProcedureInfo procInfo = ProcedureUtil.createProcedureInfo(proc, proc.getNonceKey());
+    final ProcedureInfo procInfo = ProcedureUtil.convertToProcedureInfo(proc, proc.getNonceKey());
     if (!proc.shouldWaitClientAck(getEnvironment())) {
       procInfo.setClientAckTime(0);
     }

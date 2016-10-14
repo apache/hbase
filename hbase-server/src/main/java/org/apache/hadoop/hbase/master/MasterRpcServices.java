@@ -973,10 +973,9 @@ public class MasterRpcServices extends RSRpcServices
       RpcController rpcController,
       ListProceduresRequest request) throws ServiceException {
     try {
-      ListProceduresResponse.Builder response =
-          ListProceduresResponse.newBuilder();
-      for(ProcedureInfo p: master.listProcedures()) {
-        response.addProcedure(ProcedureUtil.convertToProcedureProto(p));
+      final ListProceduresResponse.Builder response = ListProceduresResponse.newBuilder();
+      for (ProcedureInfo p: master.listProcedures()) {
+        response.addProcedure(ProcedureUtil.convertToProtoProcedure(p));
       }
       return response.build();
     } catch (IOException e) {
