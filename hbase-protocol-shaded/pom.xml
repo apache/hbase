@@ -191,7 +191,7 @@
         <!--When the compile for this profile runs, make sure it makes jars that
              can be related back to this shading profile. Give them a shading prefix.
          -->
-        <jar.finalName>${profile.id}.${artifactId}-${project.version}</jar.finalName>
+        <jar.finalName>${profile.id}.${project.artifactId}-${project.version}</jar.finalName>
       </properties>
       <build>
         <plugins>
@@ -337,9 +337,32 @@
               </execution>
             </executions>
           </plugin>
-          <!--Patch the files here!!!
-               Use maven-patch-plugin
-               -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-patch-plugin</artifactId>
+        <version>1.2</version>
+        <configuration>
+           <!--Patches are made at top-level-->
+           <targetDirectory>${basedir}/..</targetDirectory>
+          <skipApplication>false</skipApplication>
+        </configuration>
+        <executions>
+          <execution>
+            <id>patch</id>
+            <configuration>
+               <strip>1</strip>
+              <patchDirectory>src/main/patches</patchDirectory>
+              <patchTrackingFile>${project.build.directory}/patches-applied.txt</patchTrackingFile>
+              <naturalOrderProcessing>true</naturalOrderProcessing>
+            </configuration>
+            <phase>package</phase>
+            <goals>
+              <!--This should run after the above unpack phase-->
+              <goal>apply</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
         </plugins>
       </build>
     </profile>
