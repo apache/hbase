@@ -146,7 +146,6 @@ module Hbase
       table_cfs = { "ns3:table1" => [], "ns3:table2" => ["cf1"],
         "ns3:table3" => ["cf1", "cf2"] }
       namespaces_str = "ns1;ns2"
-      table_cfs_str = "ns3.table1;ns3.table3:cf1,cf2;ns3.table2:cf1"
 
       args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces,
         TABLE_CFS => table_cfs }
@@ -158,16 +157,30 @@ module Hbase
       assert_equal(cluster_key, peer_config.get_cluster_key)
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
-      assert_equal(table_cfs_str, command(:show_peer_tableCFs, @peer_id))
+      assert_tablecfs_equal(table_cfs, peer_config.getTableCFsMap())
 
       # cleanup for future tests
       command(:remove_peer, @peer_id)
     end
 
+    def assert_tablecfs_equal(table_cfs, table_cfs_map)
+      assert_equal(table_cfs.length, table_cfs_map.length)
+      table_cfs_map.each{|key, value|
+        assert(table_cfs.has_key?(key.getNameAsString))
+        if table_cfs.fetch(key.getNameAsString).length == 0
+          assert_equal(nil, value)
+        else
+          assert_equal(table_cfs.fetch(key.getNameAsString).length, value.length)
+          value.each{|v|
+            assert(table_cfs.fetch(key.getNameAsString).include?(v))
+          }
+        end
+      }
+    end
+
     define_test "add_peer: multiple zk cluster key and table_cfs - peer config" do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       table_cfs = { "table1" => [], "table2" => ["cf1"], "table3" => ["cf1", "cf2"] }
-      #table_cfs_str = "default.table1;default.table3:cf1,cf2;default.table2:cf1"
 
       args = { CLUSTER_KEY => cluster_key, TABLE_CFS => table_cfs }
       command(:add_peer, @peer_id, args)
@@ -175,11 +188,7 @@ module Hbase
       assert_equal(1, command(:list_peers).length)
       assert(command(:list_peers).key?(@peer_id))
       assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
-
-      # Note: below assertion is dependent on the sort order of an unordered
-      # map and hence flaky depending on JVM
-      # Commenting out until HBASE-16274 is worked.
-      # assert_equal(table_cfs_str, command(:show_peer_tableCFs, @peer_id))
+      assert_tablecfs_equal(table_cfs, command(:get_peer_config, @peer_id).getTableCFsMap())
 
       # cleanup for future tests
       command(:remove_peer, @peer_id)
@@ -193,6 +202,62 @@ module Hbase
         args = { CLUSTER_KEY => cluster_key }
         command(:add_peer, @peer_id, args, table_cfs_str)
       end
+    end
+
+    define_test "set_peer_tableCFs: works with table-cfs map" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      args = { CLUSTER_KEY => cluster_key}
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+
+      table_cfs = { "table1" => [], "table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
+      command(:set_peer_tableCFs, @peer_id, table_cfs)
+      assert_tablecfs_equal(table_cfs, command(:get_peer_config, @peer_id).getTableCFsMap())
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test "append_peer_tableCFs: works with table-cfs map" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      args = { CLUSTER_KEY => cluster_key}
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"] }
+      command(:append_peer_tableCFs, @peer_id, table_cfs)
+      assert_tablecfs_equal(table_cfs, command(:get_peer_config, @peer_id).getTableCFsMap())
+
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
+      command(:append_peer_tableCFs, @peer_id, { "ns3:table3" => ["cf1", "cf2"] })
+      assert_tablecfs_equal(table_cfs, command(:get_peer_config, @peer_id).getTableCFsMap())
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test "remove_peer_tableCFs: works with table-cfs map" do
+      cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
+      args = { CLUSTER_KEY => cluster_key, TABLE_CFS => table_cfs }
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+      assert(command(:list_peers).key?(@peer_id))
+      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+
+      table_cfs = { "table1" => [], "ns2:table2" => ["cf1"] }
+      command(:remove_peer_tableCFs, @peer_id, { "ns3:table3" => ["cf1", "cf2"] })
+      assert_tablecfs_equal(table_cfs, command(:get_peer_config, @peer_id).getTableCFsMap())
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
     end
 
     define_test "set_peer_namespaces: works with namespaces array" do
