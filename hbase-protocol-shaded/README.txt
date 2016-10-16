@@ -16,10 +16,6 @@ protobuf Message class is at
 org.apache.hadoop.hbase.shaded.com.google.protobuf.Message
 rather than at com.google.protobuf.Message.
 
-Finally, this module also includes patches applied on top of
-protobuf to add functionality not yet in protobuf that we
-need now.
-
 Below we describe how to generate the java files for this
 module. Run this step any time you change the proto files
 in this module or if you change the protobuf version. If you
@@ -47,10 +43,6 @@ to build and trigger the special generate-shaded-classes
 profile. When finished, the content of
 src/main/java/org/apache/hadoop/hbase/shaded will have
 been updated. Check in the changes.
-
-If you have patches for the protobuf, add them to
-src/main/patches directory. They will be applied after
-protobuf is shaded and unbundled into src/main/java.
 
 See the pom.xml under the generate-shaded-classes profile
 for more info on how this step works.
