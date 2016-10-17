@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
+
 import com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -2639,6 +2640,20 @@ public class KeyValue implements ExtendedCell {
       this.length = length;
       this.offset = offset;
       this.rowLen = Bytes.toShort(this.bytes, this.offset);
+    }
+
+    public void set(KeyOnlyKeyValue keyOnlyKeyValue) {
+      this.bytes = keyOnlyKeyValue.bytes;
+      this.length = keyOnlyKeyValue.length;
+      this.offset = keyOnlyKeyValue.offset;
+      this.rowLen = keyOnlyKeyValue.rowLen;
+    }
+
+    public void clear() {
+      rowLen = -1;
+      bytes = null;
+      offset = 0;
+      length = 0;
     }
 
     @Override

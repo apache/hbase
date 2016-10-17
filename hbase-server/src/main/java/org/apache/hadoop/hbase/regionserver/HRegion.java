@@ -356,9 +356,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // We need to ensure that while we are calculating the smallestReadPoint
     // no new RegionScanners can grab a readPoint that we are unaware of.
     // We achieve this by synchronizing on the scannerReadPoints object.
-    synchronized(scannerReadPoints) {
+    synchronized (scannerReadPoints) {
       minimumReadPoint = mvcc.getReadPoint();
-      for (Long readPoint: this.scannerReadPoints.values()) {
+      for (Long readPoint : this.scannerReadPoints.values()) {
         if (readPoint < minimumReadPoint) {
           minimumReadPoint = readPoint;
         }
