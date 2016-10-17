@@ -139,7 +139,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     protected void invalidate() {
       valueOffset = -1;
       tagsCompressedLength = 0;
-      currentKey.clear();
+      currentKey = new KeyValue.KeyOnlyKeyValue();
       uncompressTags = true;
       currentBuffer = null;
     }
@@ -188,7 +188,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
             keyBuffer, nextState.lastCommonPrefix, nextState.keyLength
                 - nextState.lastCommonPrefix);
       }
-      currentKey.set(nextState.currentKey);
+      currentKey = nextState.currentKey;
 
       valueOffset = nextState.valueOffset;
       keyLength = nextState.keyLength;
