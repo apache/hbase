@@ -135,10 +135,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     this.scanBalancer = getBalancer(numScanQueues);
 
     queues = new ArrayList<BlockingQueue<CallRunner>>(writeHandlersCount + readHandlersCount);
-    LOG.debug(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount +
-              " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount +
-              ((numScanQueues == 0) ? "" : " scanQueues=" + numScanQueues +
-                " scanHandlers=" + scanHandlersCount));
+    LOG.info(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount
+        + " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount + " scanQueues="
+        + numScanQueues + " scanHandlers=" + scanHandlersCount);
 
     for (int i = 0; i < numWriteQueues; ++i) {
       queues.add((BlockingQueue<CallRunner>)
@@ -155,8 +154,10 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   protected void startHandlers(final int port) {
     startHandlers(".write", writeHandlersCount, queues, 0, numWriteQueues, port);
     startHandlers(".read", readHandlersCount, queues, numWriteQueues, numReadQueues, port);
-    startHandlers(".scan", scanHandlersCount, queues,
-                  numWriteQueues + numReadQueues, numScanQueues, port);
+    if (numScanQueues > 0) {
+      startHandlers(".scan", scanHandlersCount, queues, numWriteQueues + numReadQueues,
+        numScanQueues, port);
+    }
   }
 
   @Override
