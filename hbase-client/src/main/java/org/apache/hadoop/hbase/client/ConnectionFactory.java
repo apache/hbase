@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 
 /**
@@ -56,6 +57,9 @@ import org.apache.hadoop.hbase.security.UserProvider;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ConnectionFactory {
+
+  public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL =
+      "hbase.client.async.connection.impl";
 
   /** No public c.tors */
   protected ConnectionFactory() {
@@ -229,6 +233,55 @@ public class ConnectionFactory {
           ExecutorService.class, User.class);
       constructor.setAccessible(true);
       return (Connection) constructor.newInstance(conf, pool, user);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Call {@link #createAsyncConnection(Configuration)} using default HBaseConfiguration.
+   * @see #createAsyncConnection(Configuration)
+   * @return AsyncConnection object
+   */
+  public static AsyncConnection createAsyncConnection() throws IOException {
+    return createAsyncConnection(HBaseConfiguration.create());
+  }
+
+  /**
+   * Call {@link #createAsyncConnection(Configuration, User)} using the given {@code conf} and a
+   * User object created by {@link UserProvider}. The given {@code conf} will also be used to
+   * initialize the {@link UserProvider}.
+   * @param conf configuration
+   * @return AsyncConnection object
+   * @see #createAsyncConnection(Configuration, User)
+   * @see UserProvider
+   */
+  public static AsyncConnection createAsyncConnection(Configuration conf) throws IOException {
+    return createAsyncConnection(conf, UserProvider.instantiate(conf).getCurrent());
+  }
+
+  /**
+   * Create a new AsyncConnection instance using the passed {@code conf} and {@code user}.
+   * AsyncConnection encapsulates all housekeeping for a connection to the cluster. All tables and
+   * interfaces created from returned connection share zookeeper connection, meta cache, and
+   * connections to region servers and masters.
+   * <p>
+   * The caller is responsible for calling {@link AsyncConnection#close()} on the returned
+   * connection instance.
+   * <p>
+   * Usually you should only create one AsyncConnection instance in your code and use it everywhere
+   * as it is thread safe.
+   * @param conf configuration
+   * @param user the user the asynchronous connection is for
+   * @return AsyncConnection object
+   * @throws IOException
+   */
+  public static AsyncConnection createAsyncConnection(Configuration conf, User user)
+      throws IOException {
+    Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
+      AsyncConnectionImpl.class, AsyncConnection.class);
+    try {
+      return ReflectionUtils.newInstance(clazz, conf, user);
     } catch (Exception e) {
       throw new IOException(e);
     }
