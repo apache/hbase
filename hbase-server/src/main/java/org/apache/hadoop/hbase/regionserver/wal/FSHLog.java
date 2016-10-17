@@ -601,7 +601,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
             currentSequence = this.sequence;
             long syncFutureSequence = takeSyncFuture.getTxid();
             if (syncFutureSequence > currentSequence) {
-              throw new IllegalStateException("currentSequence=" + syncFutureSequence
+              throw new IllegalStateException("currentSequence=" + currentSequence
                   + ", syncFutureSequence=" + syncFutureSequence);
             }
             // See if we can process any syncfutures BEFORE we go sync.
