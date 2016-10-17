@@ -1098,7 +1098,7 @@ under the License.
     </project>
   </supplement>
   <supplement>
-    <project> 
+    <project>
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
 
@@ -1211,7 +1211,7 @@ Copyright 2006 Envoi Solutions LLC
         </license>
       </licenses>
     </project>
-  </supplement> 
+  </supplement>
 
   <supplement>
     <project>   <!-- hadoop.profile=3.0 from hadoop-3.0.0-alpha1 -->
