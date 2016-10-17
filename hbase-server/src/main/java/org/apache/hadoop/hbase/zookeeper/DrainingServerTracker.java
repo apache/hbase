@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.zookeeper.KeeperException;
 
@@ -68,6 +69,23 @@ public class DrainingServerTracker extends ZooKeeperListener {
    */
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
+    // Add a ServerListener to check if a server is draining when it's added.
+    serverManager.registerListener(
+        new ServerListener() {
+
+          @Override
+          public void serverAdded(ServerName sn) {
+            if (drainingServers.contains(sn)){
+              serverManager.addServerToDrainList(sn);
+            }
+          }
+
+          @Override
+          public void serverRemoved(ServerName serverName) {
+            // no-op
+          }
+        }
+    );
     List<String> servers =
       ZKUtil.listChildrenAndWatchThem(watcher, watcher.znodePaths.drainingZNode);
     add(servers);
