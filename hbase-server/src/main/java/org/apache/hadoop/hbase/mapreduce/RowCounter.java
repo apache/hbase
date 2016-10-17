@@ -207,12 +207,7 @@ public class RowCounter extends Configured implements Tool {
       scan.setStartRow(range.getStartRow()); //inclusive
       scan.setStopRow(range.getStopRow());   //exclusive
     } else if (size > 1) {
-      try {
-        scan.setFilter(new MultiRowRangeFilter(rowRangeList));
-      } catch (IOException e) {
-        //the IOException should never be thrown. see HBASE-16145
-        throw new RuntimeException("Cannot instantiate MultiRowRangeFilter");
-      }
+      scan.setFilter(new MultiRowRangeFilter(rowRangeList));
     }
   }
 

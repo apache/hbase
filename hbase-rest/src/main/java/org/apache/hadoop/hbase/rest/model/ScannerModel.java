@@ -407,11 +407,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new MultipleColumnPrefixFilter(values);
       } break;
       case MultiRowRangeFilter: {
-        try {
-          filter = new MultiRowRangeFilter(ranges);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        filter = new MultiRowRangeFilter(ranges);
       } break;
       case PageFilter:
         filter = new PageFilter(Long.parseLong(value));

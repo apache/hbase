@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -64,11 +63,8 @@ public class MultiRowRangeFilter extends FilterBase {
 
   /**
    * @param list A list of <code>RowRange</code>
-   * @throws java.io.IOException
-   *           throw an exception if the range list is not in an natural order or any
-   *           <code>RowRange</code> is invalid
    */
-  public MultiRowRangeFilter(List<RowRange> list) throws IOException {
+  public MultiRowRangeFilter(List<RowRange> list) {
     this.rangeList = sortAndMerge(list);
   }
 
@@ -184,11 +180,7 @@ public class MultiRowRangeFilter extends FilterBase {
               rangeProto.getStopRow().toByteArray() : null, rangeProto.getStopRowInclusive());
       rangeList.add(range);
     }
-    try {
-      return new MultiRowRangeFilter(rangeList);
-    } catch (IOException e) {
-      throw new DeserializationException("Fail to instantiate the MultiRowRangeFilter", e);
-    }
+    return new MultiRowRangeFilter(rangeList);
   }
 
   /**
