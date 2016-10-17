@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.codahale.metrics.RatioGauge;
+import com.codahale.metrics.RatioGauge.Ratio;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -32,24 +34,28 @@ import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import static org.junit.Assert.assertEquals;
 
 @Category({ClientTests.class, MetricsTests.class, SmallTests.class})
 public class TestMetricsConnection {
 
   private static MetricsConnection METRICS;
-
+  private static final ExecutorService BATCH_POOL = Executors.newFixedThreadPool(2);
   @BeforeClass
   public static void beforeClass() {
     ConnectionImplementation mocked = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(mocked.toString()).thenReturn("mocked-connection");
-    METRICS = new MetricsConnection(Mockito.mock(ConnectionImplementation.class));
+    Mockito.when(mocked.getCurrentBatchPool()).thenReturn(BATCH_POOL);
+    METRICS = new MetricsConnection(mocked);
   }
 
   @AfterClass
@@ -112,9 +118,15 @@ public class TestMetricsConnection {
         METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
         METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
     }) {
-      Assert.assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
-      Assert.assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());
-      Assert.assertEquals("Failed to invoke respHist on " + t, loop, t.respHist.getCount());
+      assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
+      assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());
+      assertEquals("Failed to invoke respHist on " + t, loop, t.respHist.getCount());
     }
+    RatioGauge executorMetrics = (RatioGauge) METRICS.getMetricRegistry()
+            .getMetrics().get(METRICS.getExecutorPoolName());
+    RatioGauge metaMetrics = (RatioGauge) METRICS.getMetricRegistry()
+            .getMetrics().get(METRICS.getMetaPoolName());
+    assertEquals(Ratio.of(0, 3).getValue(), executorMetrics.getValue(), 0);
+    assertEquals(Double.NaN, metaMetrics.getValue(), 0);
   }
 }

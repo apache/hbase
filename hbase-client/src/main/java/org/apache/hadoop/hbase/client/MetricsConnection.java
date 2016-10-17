@@ -298,23 +298,29 @@ public class MetricsConnection implements StatisticTrackable {
   private final ConcurrentMap<String, Counter> cacheDroppingExceptions =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
-  public MetricsConnection(final ConnectionImplementation conn) {
+  MetricsConnection(final ConnectionImplementation conn) {
     this.scope = conn.toString();
     this.registry = new MetricRegistry();
-    final ThreadPoolExecutor batchPool = (ThreadPoolExecutor) conn.getCurrentBatchPool();
-    final ThreadPoolExecutor metaPool = (ThreadPoolExecutor) conn.getCurrentMetaLookupPool();
 
-    this.registry.register(name(this.getClass(), "executorPoolActiveThreads", scope),
+    this.registry.register(getExecutorPoolName(),
         new RatioGauge() {
           @Override
           protected Ratio getRatio() {
+            ThreadPoolExecutor batchPool = (ThreadPoolExecutor) conn.getCurrentBatchPool();
+            if (batchPool == null) {
+              return Ratio.of(0, 0);
+            }
             return Ratio.of(batchPool.getActiveCount(), batchPool.getMaximumPoolSize());
           }
         });
-    this.registry.register(name(this.getClass(), "metaPoolActiveThreads", scope),
+    this.registry.register(getMetaPoolName(),
         new RatioGauge() {
           @Override
           protected Ratio getRatio() {
+            ThreadPoolExecutor metaPool = (ThreadPoolExecutor) conn.getCurrentMetaLookupPool();
+            if (metaPool == null) {
+              return Ratio.of(0, 0);
+            }
             return Ratio.of(metaPool.getActiveCount(), metaPool.getMaximumPoolSize());
           }
         });
@@ -335,6 +341,21 @@ public class MetricsConnection implements StatisticTrackable {
 
     this.reporter = JmxReporter.forRegistry(this.registry).build();
     this.reporter.start();
+  }
+
+  @VisibleForTesting
+  final String getExecutorPoolName() {
+    return name(getClass(), "executorPoolActiveThreads", scope);
+  }
+
+  @VisibleForTesting
+  final String getMetaPoolName() {
+    return name(getClass(), "metaPoolActiveThreads", scope);
+  }
+
+  @VisibleForTesting
+  MetricRegistry getMetricRegistry() {
+    return registry;
   }
 
   public void shutdown() {
