@@ -57,26 +57,30 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
+  protected static final long NO_PROC_ID = -1;
+  protected static final int NO_TIMEOUT = -1;
+
   // unchanged after initialization
+  private NonceKey nonceKey = null;
   private String owner = null;
-  private Long parentProcId = null;
-  private Long procId = null;
+  private long parentProcId = NO_PROC_ID;
+  private long rootProcId = NO_PROC_ID;
+  private long procId = NO_PROC_ID;
   private long startTime;
 
   // runtime state, updated every operation
   private ProcedureState state = ProcedureState.INITIALIZING;
-  private Integer timeout = null;
+  private RemoteProcedureException exception = null;
   private int[] stackIndexes = null;
   private int childrenLatch = 0;
-  private long lastUpdate;
+
+  private volatile int timeout = NO_TIMEOUT;
+  private volatile long lastUpdate;
+
+  private volatile byte[] result = null;
 
   // TODO: it will be nice having pointers to allow the scheduler doing suspend/resume tricks
   private boolean suspended = false;
-
-  private RemoteProcedureException exception = null;
-  private byte[] result = null;
-
-  private NonceKey nonceKey = null;
 
   /**
    * The main code of the procedure. It must be idempotent since execute()
@@ -235,13 +239,11 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * @return the StringBuilder
    */
   protected StringBuilder toStringSimpleSB() {
-    StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder();
     toStringClassDetails(sb);
 
-    if (procId != null) {
-      sb.append(" id=");
-      sb.append(getProcId());
-    }
+    sb.append(" id=");
+    sb.append(getProcId());
 
     if (hasParent()) {
       sb.append(" parent=");
@@ -256,6 +258,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     sb.append(" state=");
     toStringState(sb);
 
+    if (hasException()) {
+      sb.append(" failed=" + getException());
+    }
+
     return sb;
   }
 
@@ -264,7 +270,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * details
    */
   public String toStringDetails() {
-    StringBuilder sb = toStringSimpleSB();
+    final StringBuilder sb = toStringSimpleSB();
 
     sb.append(" startTime=");
     sb.append(getStartTime());
@@ -272,7 +278,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     sb.append(" lastUpdate=");
     sb.append(getLastUpdate());
 
-    int[] stackIndices = getStackIndexes();
+    final int[] stackIndices = getStackIndexes();
     if (stackIndices != null) {
       sb.append("\n");
       sb.append("stackIndexes=");
@@ -285,7 +291,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   protected String toStringClass() {
     StringBuilder sb = new StringBuilder();
     toStringClassDetails(sb);
-
     return sb.toString();
   }
 
@@ -309,6 +314,156 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     builder.append(getClass().getName());
   }
 
+  // ==========================================================================
+  //  Those fields are unchanged after initialization.
+  //
+  //  Each procedure will get created from the user or during
+  //  ProcedureExecutor.start() during the load() phase and then submitted
+  //  to the executor. these fields will never be changed after initialization
+  // ==========================================================================
+  public long getProcId() {
+    return procId;
+  }
+
+  public boolean hasParent() {
+    return parentProcId != NO_PROC_ID;
+  }
+
+  public long getParentProcId() {
+    return parentProcId;
+  }
+
+  public long getRootProcId() {
+    return rootProcId;
+  }
+
+  public NonceKey getNonceKey() {
+    return nonceKey;
+  }
+
+  public long getStartTime() {
+    return startTime;
+  }
+
+  public String getOwner() {
+    return owner;
+  }
+
+  public boolean hasOwner() {
+    return owner != null;
+  }
+
+  /**
+   * Called by the ProcedureExecutor to assign the ID to the newly created procedure.
+   */
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  protected void setProcId(final long procId) {
+    this.procId = procId;
+    this.startTime = EnvironmentEdgeManager.currentTime();
+    setState(ProcedureState.RUNNABLE);
+  }
+
+  /**
+   * Called by the ProcedureExecutor to assign the parent to the newly created procedure.
+   */
+  @InterfaceAudience.Private
+  protected void setParentProcId(final long parentProcId) {
+    this.parentProcId = parentProcId;
+  }
+
+  @InterfaceAudience.Private
+  protected void setRootProcId(final long rootProcId) {
+    this.rootProcId = rootProcId;
+  }
+
+  /**
+   * Called by the ProcedureExecutor to set the value to the newly created procedure.
+   */
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  protected void setNonceKey(final NonceKey nonceKey) {
+    this.nonceKey = nonceKey;
+  }
+
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  public void setOwner(final String owner) {
+    this.owner = StringUtils.isEmpty(owner) ? null : owner;
+  }
+
+  /**
+   * Called on store load to initialize the Procedure internals after
+   * the creation/deserialization.
+   */
+  @InterfaceAudience.Private
+  protected void setStartTime(final long startTime) {
+    this.startTime = startTime;
+  }
+
+  // ==========================================================================
+  //  runtime state - timeout related
+  // ==========================================================================
+  /**
+   * @param timeout timeout interval in msec
+   */
+  protected void setTimeout(final int timeout) {
+    this.timeout = timeout;
+  }
+
+  public boolean hasTimeout() {
+    return timeout != NO_TIMEOUT;
+  }
+
+  /**
+   * @return the timeout in msec
+   */
+  public int getTimeout() {
+    return timeout;
+  }
+
+  /**
+   * Called on store load to initialize the Procedure internals after
+   * the creation/deserialization.
+   */
+  @InterfaceAudience.Private
+  protected void setLastUpdate(final long lastUpdate) {
+    this.lastUpdate = lastUpdate;
+  }
+
+  /**
+   * Called by ProcedureExecutor after each time a procedure step is executed.
+   */
+  @InterfaceAudience.Private
+  protected void updateTimestamp() {
+    this.lastUpdate = EnvironmentEdgeManager.currentTime();
+  }
+
+  public long getLastUpdate() {
+    return lastUpdate;
+  }
+
+  /**
+   * Timeout of the next timeout.
+   * Called by the ProcedureExecutor if the procedure has timeout set and
+   * the procedure is in the waiting queue.
+   * @return the timestamp of the next timeout.
+   */
+  @InterfaceAudience.Private
+  protected long getTimeoutTimestamp() {
+    return getLastUpdate() + getTimeout();
+  }
+
+  // ==========================================================================
+  //  runtime state
+  // ==========================================================================
+  /**
+   * @return the time elapsed between the last update and the start time of the procedure.
+   */
+  public long elapsedTime() {
+    return getLastUpdate() - getStartTime();
+  }
+
   /**
    * @return the serialized result if any, otherwise null
    */
@@ -324,28 +479,30 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     this.result = result;
   }
 
-  public long getProcId() {
-    return procId;
+  // ==============================================================================================
+  //  Runtime state, updated every operation by the ProcedureExecutor
+  //
+  //  There is always 1 thread at the time operating on the state of the procedure.
+  //  The ProcedureExecutor may check and set states, or some Procecedure may
+  //  update its own state. but no concurrent updates. we use synchronized here
+  //  just because the procedure can get scheduled on different executor threads on each step.
+  // ==============================================================================================
+
+  /**
+   * @return true if the procedure is in a suspended state,
+   *         waiting for the resources required to execute the procedure will become available.
+   */
+  public synchronized boolean isSuspended() {
+    return suspended;
   }
 
-  public boolean hasParent() {
-    return parentProcId != null;
+  public synchronized void suspend() {
+    suspended = true;
   }
 
-  public boolean hasException() {
-    return exception != null;
-  }
-
-  public boolean hasTimeout() {
-    return timeout != null;
-  }
-
-  public long getParentProcId() {
-    return parentProcId.longValue();
-  }
-
-  public NonceKey getNonceKey() {
-    return nonceKey;
+  public synchronized void resume() {
+    assert isSuspended() : this + " expected suspended state, got " + state;
+    suspended = false;
   }
 
   /**
@@ -404,74 +561,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return false;
   }
 
-  /**
-   * @return true if the procedure is in a suspended state,
-   *         waiting for the resources required to execute the procedure will become available.
-   */
-  public synchronized boolean isSuspended() {
-    return suspended;
-  }
-
-  public synchronized void suspend() {
-    suspended = true;
-  }
-
-  public synchronized void resume() {
-    assert isSuspended() : this + " expected suspended state, got " + state;
-    suspended = false;
-  }
-
-  public synchronized RemoteProcedureException getException() {
-    return exception;
-  }
-
-  public long getStartTime() {
-    return startTime;
-  }
-
-  public synchronized long getLastUpdate() {
-    return lastUpdate;
-  }
-
-  public synchronized long elapsedTime() {
-    return lastUpdate - startTime;
-  }
-
-  /**
-   * @param timeout timeout in msec
-   */
-  protected void setTimeout(final int timeout) {
-    this.timeout = timeout;
-  }
-
-  /**
-   * @return the timeout in msec
-   */
-  public int getTimeout() {
-    return timeout.intValue();
-  }
-
-  /**
-   * @return the remaining time before the timeout
-   */
-  public long getTimeRemaining() {
-    return Math.max(0, timeout - (EnvironmentEdgeManager.currentTime() - startTime));
-  }
-
-  @VisibleForTesting
-  @InterfaceAudience.Private
-  public void setOwner(final String owner) {
-    this.owner = StringUtils.isEmpty(owner) ? null : owner;
-  }
-
-  public String getOwner() {
-    return owner;
-  }
-
-  public boolean hasOwner() {
-    return owner != null;
-  }
-
   @VisibleForTesting
   @InterfaceAudience.Private
   protected synchronized void setState(final ProcedureState state) {
@@ -514,101 +603,12 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return false;
   }
 
-  /**
-   * Called by the ProcedureExecutor to assign the ID to the newly created procedure.
-   */
-  @VisibleForTesting
-  @InterfaceAudience.Private
-  protected void setProcId(final long procId) {
-    this.procId = procId;
-    this.startTime = EnvironmentEdgeManager.currentTime();
-    setState(ProcedureState.RUNNABLE);
+  public synchronized boolean hasException() {
+    return exception != null;
   }
 
-  /**
-   * Called by the ProcedureExecutor to assign the parent to the newly created procedure.
-   */
-  @InterfaceAudience.Private
-  protected void setParentProcId(final long parentProcId) {
-    this.parentProcId = parentProcId;
-  }
-
-  /**
-   * Called by the ProcedureExecutor to set the value to the newly created procedure.
-   */
-  @VisibleForTesting
-  @InterfaceAudience.Private
-  protected void setNonceKey(final NonceKey nonceKey) {
-    this.nonceKey = nonceKey;
-  }
-
-  /**
-   * Internal method called by the ProcedureExecutor that starts the
-   * user-level code execute().
-   */
-  @InterfaceAudience.Private
-  protected Procedure[] doExecute(final TEnvironment env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
-    try {
-      updateTimestamp();
-      return execute(env);
-    } finally {
-      updateTimestamp();
-    }
-  }
-
-  /**
-   * Internal method called by the ProcedureExecutor that starts the
-   * user-level code rollback().
-   */
-  @InterfaceAudience.Private
-  protected void doRollback(final TEnvironment env)
-      throws IOException, InterruptedException {
-    try {
-      updateTimestamp();
-      rollback(env);
-    } finally {
-      updateTimestamp();
-    }
-  }
-
-  /**
-   * Internal method called by the ProcedureExecutor that starts the
-   * user-level code acquireLock().
-   */
-  @InterfaceAudience.Private
-  protected boolean doAcquireLock(final TEnvironment env) {
-    return acquireLock(env);
-  }
-
-  /**
-   * Internal method called by the ProcedureExecutor that starts the
-   * user-level code releaseLock().
-   */
-  @InterfaceAudience.Private
-  protected void doReleaseLock(final TEnvironment env) {
-    releaseLock(env);
-  }
-
-  /**
-   * Called on store load to initialize the Procedure internals after
-   * the creation/deserialization.
-   */
-  @InterfaceAudience.Private
-  protected void setStartTime(final long startTime) {
-    this.startTime = startTime;
-  }
-
-  /**
-   * Called on store load to initialize the Procedure internals after
-   * the creation/deserialization.
-   */
-  protected synchronized void setLastUpdate(final long lastUpdate) {
-    this.lastUpdate = lastUpdate;
-  }
-
-  protected synchronized void updateTimestamp() {
-    this.lastUpdate = EnvironmentEdgeManager.currentTime();
+  public synchronized RemoteProcedureException getException() {
+    return exception;
   }
 
   /**
@@ -629,8 +629,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
-   * Called by the ProcedureExecutor to notify that one of the sub-procedures
-   * has completed.
+   * Called by the ProcedureExecutor to notify that one of the sub-procedures has completed.
    */
   @InterfaceAudience.Private
   protected synchronized boolean childrenCountDown() {
@@ -643,6 +642,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return childrenLatch > 0;
   }
 
+  @InterfaceAudience.Private
   protected synchronized int getChildrenLatch() {
     return childrenLatch;
   }
@@ -695,11 +695,62 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return stackIndexes;
   }
 
+  // ==========================================================================
+  //  Internal methods - called by the ProcedureExecutor
+  // ==========================================================================
+
+  /**
+   * Internal method called by the ProcedureExecutor that starts the user-level code execute().
+   */
+  @InterfaceAudience.Private
+  protected Procedure[] doExecute(final TEnvironment env)
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    try {
+      updateTimestamp();
+      return execute(env);
+    } finally {
+      updateTimestamp();
+    }
+  }
+
+  /**
+   * Internal method called by the ProcedureExecutor that starts the user-level code rollback().
+   */
+  @InterfaceAudience.Private
+  protected void doRollback(final TEnvironment env)
+      throws IOException, InterruptedException {
+    try {
+      updateTimestamp();
+      rollback(env);
+    } finally {
+      updateTimestamp();
+    }
+  }
+
+  /**
+   * Internal method called by the ProcedureExecutor that starts the user-level code acquireLock().
+   */
+  @InterfaceAudience.Private
+  protected boolean doAcquireLock(final TEnvironment env) {
+    return acquireLock(env);
+  }
+
+  /**
+   * Internal method called by the ProcedureExecutor that starts the user-level code releaseLock().
+   */
+  @InterfaceAudience.Private
+  protected void doReleaseLock(final TEnvironment env) {
+    releaseLock(env);
+  }
+
   @Override
   public int compareTo(final Procedure other) {
-    long diff = getProcId() - other.getProcId();
-    return (diff < 0) ? -1 : (diff > 0) ? 1 : 0;
+    return Long.compare(getProcId(), other.getProcId());
   }
+
+  // ==========================================================================
+  //  misc utils
+  // ==========================================================================
 
   /**
    * Get an hashcode for the specified Procedure ID

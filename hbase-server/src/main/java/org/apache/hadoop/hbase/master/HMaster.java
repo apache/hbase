@@ -1035,6 +1035,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
     procedureExecutor = new ProcedureExecutor(conf, procEnv, procedureStore,
         procEnv.getProcedureQueue());
+    configurationManager.registerObserver(procEnv);
 
     final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS,
         Math.max(Runtime.getRuntime().availableProcessors(),
@@ -1048,6 +1049,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void stopProcedureExecutor() {
     if (procedureExecutor != null) {
+      configurationManager.deregisterObserver(procedureExecutor.getEnvironment());
       procedureExecutor.stop();
     }
 

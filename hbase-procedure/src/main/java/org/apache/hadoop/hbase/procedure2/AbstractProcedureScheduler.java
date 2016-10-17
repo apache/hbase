@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.procedure2;
 
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -123,17 +122,26 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
     return poll(unit.toNanos(timeout));
   }
 
-  public Procedure poll(long nanos) {
-    final boolean waitForever = (nanos < 0);
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings("WA_AWAIT_NOT_IN_LOOP")
+  public Procedure poll(final long nanos) {
     schedLock();
     try {
-      while (!queueHasRunnables()) {
-        if (!running) return null;
-        if (waitForever) {
+      if (!running) {
+        LOG.debug("the scheduler is not running");
+        return null;
+      }
+
+      if (!queueHasRunnables()) {
+        // WA_AWAIT_NOT_IN_LOOP: we are not in a loop because we want the caller
+        // to take decisions after a wake/interruption.
+        if (nanos < 0) {
           schedWaitCond.await();
         } else {
-          if (nanos <= 0) return null;
-          nanos = schedWaitCond.awaitNanos(nanos);
+          schedWaitCond.awaitNanos(nanos);
+        }
+        if (!queueHasRunnables()) {
+          nullPollCalls++;
+          return null;
         }
       }
 

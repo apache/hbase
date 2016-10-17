@@ -191,6 +191,10 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       serverBuckets[i] = null;
     }
 
+    // Remove Namespaces
+    clear(namespaceMap, null, NAMESPACE_QUEUE_KEY_COMPARATOR);
+    namespaceMap = null;
+
     // Remove Tables
     clear(tableMap, tableRunQueue, TABLE_QUEUE_KEY_COMPARATOR);
     tableMap = null;
@@ -204,12 +208,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       Queue<T> node = AvlTree.getFirst(treeMap);
       assert !node.isSuspended() : "can't clear suspended " + node.getKey();
       treeMap = AvlTree.remove(treeMap, node.getKey(), comparator);
-      removeFromRunQueue(fairq, node);
+      if (fairq != null) removeFromRunQueue(fairq, node);
     }
   }
 
   @Override
-  public int queueSize() {
+  protected int queueSize() {
     int count = 0;
 
     // Server queues

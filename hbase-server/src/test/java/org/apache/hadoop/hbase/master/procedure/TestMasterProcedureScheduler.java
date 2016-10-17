@@ -59,11 +59,13 @@ public class TestMasterProcedureScheduler {
   public void setUp() throws IOException {
     conf = HBaseConfiguration.create();
     queue = new MasterProcedureScheduler(conf, new TableLockManager.NullTableLockManager());
+    queue.start();
   }
 
   @After
   public void tearDown() throws IOException {
     assertEquals("proc-queue expected to be empty", 0, queue.size());
+    queue.stop();
     queue.clear();
   }
 

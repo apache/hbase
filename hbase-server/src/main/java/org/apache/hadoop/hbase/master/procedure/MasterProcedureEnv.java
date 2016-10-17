@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -42,7 +43,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class MasterProcedureEnv {
+public class MasterProcedureEnv implements ConfigurationObserver {
   private static final Log LOG = LogFactory.getLog(MasterProcedureEnv.class);
 
   @InterfaceAudience.Private
@@ -160,5 +161,10 @@ public class MasterProcedureEnv {
     } else {
       procSched.suspendEvent(event);
     }
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    master.getMasterProcedureExecutor().refreshConfiguration(conf);
   }
 }

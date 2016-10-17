@@ -76,17 +76,17 @@ public class TestProcedureInMemoryChore {
     CountDownLatch latch = new CountDownLatch(nCountDown);
     TestLatchChore chore = new TestLatchChore(timeoutMSec, latch);
     procExecutor.addChore(chore);
-    assertTrue(chore.isRunnable());
+    assertTrue(chore.isWaiting());
     latch.await();
 
     // remove the chore and verify it is no longer executed
-    assertTrue(chore.isRunnable());
+    assertTrue(chore.isWaiting());
     procExecutor.removeChore(chore);
     latch = new CountDownLatch(nCountDown);
     chore.setLatch(latch);
     latch.await(timeoutMSec * nCountDown, TimeUnit.MILLISECONDS);
     LOG.info("chore latch count=" + latch.getCount());
-    assertFalse(chore.isRunnable());
+    assertFalse(chore.isWaiting());
     assertTrue("latchCount=" + latch.getCount(), latch.getCount() > 0);
   }
 
@@ -104,6 +104,7 @@ public class TestProcedureInMemoryChore {
 
     @Override
     protected void periodicExecute(final TestProcEnv env) {
+      LOG.info("periodic execute " + this);
       latch.countDown();
     }
   }

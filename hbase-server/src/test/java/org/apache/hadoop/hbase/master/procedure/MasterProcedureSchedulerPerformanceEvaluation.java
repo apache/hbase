@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -244,24 +245,29 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
   protected int doWork() throws Exception {
     procedureScheduler = new MasterProcedureScheduler(
         UTIL.getConfiguration(), new TableLockManager.NullTableLockManager());
+    procedureScheduler.start();
     setupOperations();
 
     final Thread[] threads = new Thread[numThreads];
     for (int i = 0; i < numThreads; ++i) {
       threads[i] = new AddProcsWorker();
     }
-    final float addBackTime = runThreads(threads) / 1000.0f;
+    final long addBackTime = runThreads(threads);
     System.out.println("Added " + numOps + " procedures to scheduler.");
 
     for (int i = 0; i < numThreads; ++i) {
       threads[i] = new PollAndLockWorker();
     }
-    final float pollTime = runThreads(threads) / 1000.0f;
+    final long pollTime = runThreads(threads);
+    procedureScheduler.stop();
+
+    final float pollTimeSec = pollTime / 1000.0f;
+    final float addBackTimeSec = addBackTime / 1000.0f;
     System.out.println("******************************************");
-    System.out.println("Time - addBack     : " + addBackTime + "sec");
-    System.out.println("Ops/sec - addBack  : " + ((float)numOps / addBackTime));
-    System.out.println("Time - poll        : " + pollTime + "sec");
-    System.out.println("Ops/sec - poll     : " + ((float)numOps / pollTime));
+    System.out.println("Time - addBack     : " + StringUtils.humanTimeDiff(addBackTime));
+    System.out.println("Ops/sec - addBack  : " + StringUtils.humanSize(numOps / addBackTimeSec));
+    System.out.println("Time - poll        : " + StringUtils.humanTimeDiff(pollTime));
+    System.out.println("Ops/sec - poll     : " + StringUtils.humanSize(numOps / pollTimeSec));
     System.out.println("Num Operations     : " + numOps);
     System.out.println();
     System.out.println("Completed          : " + completed.get());

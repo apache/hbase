@@ -74,8 +74,8 @@ public class ProcedureTestingUtility {
   public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor,
       Runnable beforeStartAction, boolean failOnCorrupted) throws Exception {
     ProcedureStore procStore = procExecutor.getStore();
-    int storeThreads = procExecutor.getNumThreads();
-    int execThreads = procExecutor.getNumThreads();
+    int storeThreads = procExecutor.getCorePoolSize();
+    int execThreads = procExecutor.getCorePoolSize();
     // stop
     procExecutor.stop();
     procExecutor.join();

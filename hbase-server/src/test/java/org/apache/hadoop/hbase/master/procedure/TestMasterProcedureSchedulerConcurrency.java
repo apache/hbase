@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.procedure.TestMasterProcedureScheduler.TestTableProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 
@@ -55,11 +56,13 @@ public class TestMasterProcedureSchedulerConcurrency {
   public void setUp() throws IOException {
     conf = HBaseConfiguration.create();
     queue = new MasterProcedureScheduler(conf, new TableLockManager.NullTableLockManager());
+    queue.start();
   }
 
   @After
   public void tearDown() throws IOException {
     assertEquals("proc-queue expected to be empty", 0, queue.size());
+    queue.stop();
     queue.clear();
   }
 
@@ -205,6 +208,14 @@ public class TestMasterProcedureSchedulerConcurrency {
       assertTrue("queue should be deleted, table=" + table,
         queue.markTableAsDeleted(table, dummyProc));
     }
+  }
+
+  @Test(timeout=60000)
+  public void testMasterProcedureSchedulerPerformanceEvaluation() throws Exception {
+    // Make sure the tool does not get stuck
+    MasterProcedureSchedulerPerformanceEvaluation.main(new String[] {
+      "-num_ops", "1000"
+    });
   }
 
   public static class TestTableProcSet {
