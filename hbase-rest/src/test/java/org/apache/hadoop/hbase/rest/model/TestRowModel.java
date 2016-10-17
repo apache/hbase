@@ -23,10 +23,14 @@ import java.util.Iterator;
 
 import javax.xml.bind.JAXBContext;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
@@ -71,6 +75,27 @@ public class TestRowModel extends TestModelBase<RowModel> {
   @Override
   public void testFromPB() throws Exception {
     //do nothing row model has no PB
+  }
+
+  @Test
+  public void testEquals() throws Exception {
+    RowModel rowModel1 = buildTestModel();
+    RowModel rowModel2 = buildTestModel();
+
+    assertEquals(rowModel1, rowModel2);
+
+    RowModel rowModel3 = new RowModel();
+    assertFalse(rowModel1.equals(rowModel3));
+  }
+
+  @Test
+  public void testToString() throws Exception {
+    String expectedRowKey = ToStringBuilder.reflectionToString(ROW1, ToStringStyle.SIMPLE_STYLE);
+
+    RowModel rowModel = buildTestModel();
+    System.out.println(rowModel);
+
+    assertTrue(StringUtils.contains(rowModel.toString(), expectedRowKey));
   }
 }
 

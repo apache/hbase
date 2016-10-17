@@ -30,6 +30,9 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -147,5 +150,39 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
     // there is no standalone row protobuf message
     throw new UnsupportedOperationException(
         "no protobuf equivalent to RowModel");
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (obj == this) {
+      return true;
+    }
+    if (obj.getClass() != getClass()) {
+      return false;
+    }
+    RowModel rowModel = (RowModel) obj;
+    return new EqualsBuilder().
+        append(key, rowModel.key).
+        append(cells, rowModel.cells).
+        isEquals();
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder().
+        append(key).
+        append(cells).
+        toHashCode();
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this).
+        append("key", key).
+        append("cells", cells).
+        toString();
   }
 }

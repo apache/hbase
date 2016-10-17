@@ -28,6 +28,9 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellUtil;
@@ -206,5 +209,42 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
       setTimestamp(builder.getTimestamp());
     }
     return this;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (obj == this) {
+      return true;
+    }
+    if (obj.getClass() != getClass()) {
+      return false;
+    }
+    CellModel cellModel = (CellModel) obj;
+    return new EqualsBuilder().
+        append(column, cellModel.column).
+        append(timestamp, cellModel.timestamp).
+        append(value, cellModel.value).
+        isEquals();
+  }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder().
+        append(column).
+        append(timestamp).
+        append(value).
+        toHashCode();
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this).
+        append("column", column).
+        append("timestamp", timestamp).
+        append("value", value).
+        toString();
   }
 }

@@ -19,10 +19,14 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, SmallTests.class})
@@ -71,5 +75,25 @@ public class TestCellModel extends TestModelBase<CellModel> {
     checkModel(fromPB(AS_PB));
   }
 
+  @Test
+  public void testEquals() throws Exception {
+    CellModel cellModel1 = buildTestModel();
+    CellModel cellModel2 = buildTestModel();
+
+    assertEquals(cellModel1, cellModel2);
+
+    CellModel cellModel3 = new CellModel();
+    assertFalse(cellModel1.equals(cellModel3));
+  }
+
+  @Test
+  public void testToString() throws Exception {
+    String expectedColumn = ToStringBuilder.reflectionToString(COLUMN, ToStringStyle.SIMPLE_STYLE);
+
+    CellModel cellModel = buildTestModel();
+    System.out.println(cellModel);
+
+    assertTrue(StringUtils.contains(cellModel.toString(), expectedColumn));
+  }
 }
 
