@@ -527,7 +527,6 @@ public class ServerManager {
     }
   }
 
-
   public DeadServer getDeadServers() {
     return this.deadservers;
   }
@@ -738,6 +737,7 @@ public class ServerManager {
                "Ignoring request to add it again.");
       return false;
     }
+    LOG.info("Server " + sn + " added to draining server list.");
     return this.drainingServers.add(sn);
   }
 
