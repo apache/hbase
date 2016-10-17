@@ -22,6 +22,7 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.reporting.JmxReporter;
@@ -294,24 +295,38 @@ public class MetricsConnection implements StatisticTrackable {
   public MetricsConnection(final ConnectionManager.HConnectionImplementation conn) {
     this.scope = conn.toString();
     this.registry = new MetricsRegistry();
-    final ThreadPoolExecutor batchPool = (ThreadPoolExecutor) conn.getCurrentBatchPool();
-    final ThreadPoolExecutor metaPool = (ThreadPoolExecutor) conn.getCurrentMetaLookupPool();
 
-    this.registry.newGauge(this.getClass(), "executorPoolActiveThreads", scope,
+    this.registry.newGauge(getExecutorPoolName(),
         new RatioGauge() {
           @Override protected double getNumerator() {
+            ThreadPoolExecutor batchPool = (ThreadPoolExecutor) conn.getCurrentBatchPool();
+            if (batchPool == null) {
+              return 0;
+            }
             return batchPool.getActiveCount();
           }
           @Override protected double getDenominator() {
+            ThreadPoolExecutor batchPool = (ThreadPoolExecutor) conn.getCurrentBatchPool();
+            if (batchPool == null) {
+              return 0;
+            }
             return batchPool.getMaximumPoolSize();
           }
         });
-    this.registry.newGauge(this.getClass(), "metaPoolActiveThreads", scope,
+    this.registry.newGauge(getMetaPoolName(),
         new RatioGauge() {
           @Override protected double getNumerator() {
+            ThreadPoolExecutor metaPool = (ThreadPoolExecutor) conn.getCurrentMetaLookupPool();
+            if (metaPool == null) {
+              return 0;
+            }
             return metaPool.getActiveCount();
           }
           @Override protected double getDenominator() {
+            ThreadPoolExecutor metaPool = (ThreadPoolExecutor) conn.getCurrentMetaLookupPool();
+            if (metaPool == null) {
+              return 0;
+            }
             return metaPool.getMaximumPoolSize();
           }
         });
@@ -332,6 +347,21 @@ public class MetricsConnection implements StatisticTrackable {
 
     this.reporter = new JmxReporter(this.registry);
     this.reporter.start();
+  }
+
+  @VisibleForTesting
+  final MetricName getExecutorPoolName() {
+    return new MetricName(getClass(), "executorPoolActiveThreads", scope);
+  }
+
+  @VisibleForTesting
+  final MetricName getMetaPoolName() {
+    return new MetricName(getClass(), "metaPoolActiveThreads", scope);
+  }
+
+  @VisibleForTesting
+  MetricsRegistry getMetricsRegistry() {
+    return registry;
   }
 
   public void shutdown() {
