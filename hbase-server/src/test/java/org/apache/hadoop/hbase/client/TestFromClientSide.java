@@ -4449,6 +4449,30 @@ public class TestFromClientSide {
   }
 
   @Test
+  public void testBatchAppendWithReturnResultFalse() throws Exception {
+    LOG.info("Starting testBatchAppendWithReturnResultFalse");
+    final TableName TABLENAME = TableName.valueOf("testBatchAppend");
+    Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    Append append1 = new Append(Bytes.toBytes("row1"));
+    append1.setReturnResults(false);
+    append1.add(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value1"));
+    Append append2 = new Append(Bytes.toBytes("row1"));
+    append2.setReturnResults(false);
+    append2.add(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value2"));
+    List<Append> appends = new ArrayList<>();
+    appends.add(append1);
+    appends.add(append2);
+    Object[] results = new Object[2];
+    table.batch(appends, results);
+    assertTrue(results.length == 2);
+    for(Object r : results) {
+      Result result = (Result)r;
+      assertTrue(result.isEmpty());
+    }
+    table.close();
+  }
+
+  @Test
   public void testAppend() throws Exception {
     LOG.info("Starting testAppend");
     final TableName TABLENAME = TableName.valueOf("testAppend");
@@ -4462,7 +4486,7 @@ public class TestFromClientSide {
     a.add(FAMILY, QUALIFIERS[0], v1);
     a.add(FAMILY, QUALIFIERS[1], v2);
     a.setReturnResults(false);
-    assertNullResult(t.append(a));
+    assertEmptyResult(t.append(a));
 
     a = new Append(ROW);
     a.add(FAMILY, QUALIFIERS[0], v2);

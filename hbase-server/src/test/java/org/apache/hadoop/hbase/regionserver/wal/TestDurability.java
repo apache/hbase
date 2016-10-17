@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -238,7 +239,7 @@ public class TestDurability {
     inc1.setReturnResults(false);
     inc1.addColumn(FAMILY, col1, 1);
     Result res = region.increment(inc1);
-    assertNull(res);
+    assertTrue(res.isEmpty());
   }
 
   private Put newPut(Durability durability) {

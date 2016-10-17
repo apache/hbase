@@ -132,7 +132,7 @@ public class TestAtomicOperation {
     a.setReturnResults(false);
     a.add(fam1, qual1, Bytes.toBytes(v1));
     a.add(fam1, qual2, Bytes.toBytes(v2));
-    assertNull(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE));
+    assertTrue(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE).isEmpty());
     a = new Append(row);
     a.add(fam1, qual1, Bytes.toBytes(v2));
     a.add(fam1, qual2, Bytes.toBytes(v1));

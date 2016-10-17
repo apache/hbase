@@ -7256,7 +7256,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         dropMemstoreContents();
       }
       // If results is null, then client asked that we not return the calculated results.
-      return results != null && returnResults? Result.create(results): null;
+      return results != null && returnResults? Result.create(results): Result.EMPTY_RESULT;
     } finally {
       // Call complete always, even on success. doDelta is doing a Get READ_UNCOMMITTED when it goes
       // to get current value under an exclusive lock so no need so no need to wait to return to

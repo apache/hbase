@@ -19,10 +19,13 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -174,6 +177,30 @@ public class TestIncrementsFromClientSide {
     } catch (DoNotRetryIOException iox) {
       // success
     }
+  }
+
+  @Test
+  public void testBatchIncrementsWithReturnResultFalse() throws Exception {
+    LOG.info("Starting testBatchIncrementsWithReturnResultFalse");
+    final TableName TABLENAME = TableName.valueOf("testBatchAppend");
+    Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    Increment inc1 = new Increment(Bytes.toBytes("row2"));
+    inc1.setReturnResults(false);
+    inc1.addColumn(FAMILY, Bytes.toBytes("f1"), 1);
+    Increment inc2 = new Increment(Bytes.toBytes("row2"));
+    inc2.setReturnResults(false);
+    inc2.addColumn(FAMILY, Bytes.toBytes("f1"), 1);
+    List<Increment> incs = new ArrayList<>();
+    incs.add(inc1);
+    incs.add(inc2);
+    Object[] results = new Object[2];
+    table.batch(incs, results);
+    assertTrue(results.length == 2);
+    for(Object r : results) {
+      Result result = (Result)r;
+      assertTrue(result.isEmpty());
+    }
+    table.close();
   }
 
   @Test
