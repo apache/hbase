@@ -1239,7 +1239,7 @@ public class FSHLog implements WAL {
             currentSequence = this.sequence;
             long syncFutureSequence = takeSyncFuture.getRingBufferSequence();
             if (syncFutureSequence > currentSequence) {
-              throw new IllegalStateException("currentSequence=" + syncFutureSequence +
+              throw new IllegalStateException("currentSequence=" + currentSequence +
                 ", syncFutureSequence=" + syncFutureSequence);
             }
             // See if we can process any syncfutures BEFORE we go sync.
