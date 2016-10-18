@@ -34,11 +34,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  * regionName. Intended to be used with {@link AsyncProcess}.
  */
 @InterfaceAudience.Private
-public final class MultiAction<R> {
+public final class MultiAction {
   // TODO: This class should not be visible outside of the client package.
 
   // map of regions to lists of puts/gets/deletes for that region.
-  protected Map<byte[], List<Action<R>>> actions = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  protected Map<byte[], List<Action>> actions = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   private long nonceGroup = HConstants.NO_NONCE;
 
@@ -67,7 +67,7 @@ public final class MultiAction<R> {
    * @param regionName
    * @param a
    */
-  public void add(byte[] regionName, Action<R> a) {
+  public void add(byte[] regionName, Action a) {
     add(regionName, Arrays.asList(a));
   }
 
@@ -79,10 +79,10 @@ public final class MultiAction<R> {
    * @param regionName
    * @param actionList list of actions to add for the region
    */
-  public void add(byte[] regionName, List<Action<R>> actionList){
-    List<Action<R>> rsActions = actions.get(regionName);
+  public void add(byte[] regionName, List<Action> actionList){
+    List<Action> rsActions = actions.get(regionName);
     if (rsActions == null) {
-      rsActions = new ArrayList<Action<R>>(actionList.size());
+      rsActions = new ArrayList<Action>(actionList.size());
       actions.put(regionName, rsActions);
     }
     rsActions.addAll(actionList);

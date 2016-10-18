@@ -41,8 +41,8 @@ public class TestDelayingRunner {
   @SuppressWarnings({ "rawtypes", "unchecked" })
   @Test
   public void testDelayingRunner() throws Exception{
-    MultiAction<Row> ma = new MultiAction<Row>();
-    ma.add(hri1.getRegionName(), new Action<Row>(new Put(DUMMY_BYTES_1), 0));
+    MultiAction ma = new MultiAction();
+    ma.add(hri1.getRegionName(), new Action(new Put(DUMMY_BYTES_1), 0));
     final AtomicLong endTime = new AtomicLong();
     final long sleepTime = 1000;
     DelayingRunner runner = new DelayingRunner(sleepTime, ma.actions.entrySet().iterator().next());

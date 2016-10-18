@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * Implementations of this interface will keep and return to clients 
+ * Implementations of this interface will keep and return to clients
  * implementations of classes providing API to execute
  * coordinated operations. This interface is client-side, so it does NOT
  * include methods to retrieve the particular interface implementations.

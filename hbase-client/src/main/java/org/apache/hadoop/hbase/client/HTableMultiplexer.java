@@ -578,11 +578,11 @@ public class HTableMultiplexer {
         // failedCount is decreased whenever a Put is success or resubmit.
         failedCount = processingList.size();
 
-        List<Action<Row>> retainedActions = new ArrayList<>(processingList.size());
-        MultiAction<Row> actions = new MultiAction<>();
+        List<Action> retainedActions = new ArrayList<>(processingList.size());
+        MultiAction actions = new MultiAction();
         for (int i = 0; i < processingList.size(); i++) {
           PutStatus putStatus = processingList.get(i);
-          Action<Row> action = new Action<Row>(putStatus.put, i);
+          Action action = new Action(putStatus.put, i);
           actions.add(putStatus.regionInfo.getRegionName(), action);
           retainedActions.add(action);
         }
@@ -591,7 +591,7 @@ public class HTableMultiplexer {
         List<PutStatus> failed = null;
         Object[] results = new Object[actions.size()];
         ServerName server = addr.getServerName();
-        Map<ServerName, MultiAction<Row>> actionsByServer =
+        Map<ServerName, MultiAction> actionsByServer =
             Collections.singletonMap(server, actions);
         try {
           AsyncRequestFuture arf =

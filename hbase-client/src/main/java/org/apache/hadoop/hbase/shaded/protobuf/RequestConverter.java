@@ -587,11 +587,11 @@ public final class RequestConverter {
    * @return a multi request
    * @throws IOException
    */
-  public static <R> RegionAction.Builder buildRegionAction(final byte[] regionName,
-      final List<Action<R>> actions, final RegionAction.Builder regionActionBuilder,
+  public static RegionAction.Builder buildRegionAction(final byte[] regionName,
+      final List<Action> actions, final RegionAction.Builder regionActionBuilder,
       final ClientProtos.Action.Builder actionBuilder,
       final MutationProto.Builder mutationBuilder) throws IOException {
-    for (Action<R> action: actions) {
+    for (Action action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
       actionBuilder.setIndex(action.getOriginalIndex());
@@ -648,14 +648,14 @@ public final class RequestConverter {
    * @return a multi request that does not carry any data.
    * @throws IOException
    */
-  public static <R> RegionAction.Builder buildNoDataRegionAction(final byte[] regionName,
-      final List<Action<R>> actions, final List<CellScannable> cells,
+  public static RegionAction.Builder buildNoDataRegionAction(final byte[] regionName,
+      final List<Action> actions, final List<CellScannable> cells,
       final RegionAction.Builder regionActionBuilder,
       final ClientProtos.Action.Builder actionBuilder,
       final MutationProto.Builder mutationBuilder) throws IOException {
     RegionAction.Builder builder = getRegionActionBuilderWithRegion(
       RegionAction.newBuilder(), regionName);
-    for (Action<R> action: actions) {
+    for (Action action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
       actionBuilder.setIndex(action.getOriginalIndex());

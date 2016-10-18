@@ -49,12 +49,12 @@ import com.google.common.annotations.VisibleForTesting;
  * @param <R>
  */
 @InterfaceAudience.Private
-class MultiServerCallable<R> extends CancellableRegionServerCallable<MultiResponse> {
-  private MultiAction<R> multiAction;
+class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse> {
+  private MultiAction multiAction;
   private boolean cellBlock;
 
   MultiServerCallable(final ClusterConnection connection, final TableName tableName,
-      final ServerName location, final MultiAction<R> multi, RpcController rpcController,
+      final ServerName location, final MultiAction multi, RpcController rpcController,
       int rpcTimeout, RetryingTimeTracker tracker) {
     super(connection, tableName, null, rpcController, rpcTimeout, tracker);
     this.multiAction = multi;
@@ -65,7 +65,7 @@ class MultiServerCallable<R> extends CancellableRegionServerCallable<MultiRespon
     this.cellBlock = isCellBlock();
   }
 
-  public void reset(ServerName location, MultiAction<R> multiAction) {
+  public void reset(ServerName location, MultiAction multiAction) {
     this.location = new HRegionLocation(null, location);
     this.multiAction = multiAction;
     this.cellBlock = isCellBlock();
@@ -81,7 +81,7 @@ class MultiServerCallable<R> extends CancellableRegionServerCallable<MultiRespon
     throw new RuntimeException("Cannot get region info for multi-region request");
   }
 
-  MultiAction<R> getMulti() {
+  MultiAction getMulti() {
     return this.multiAction;
   }
 
@@ -99,9 +99,9 @@ class MultiServerCallable<R> extends CancellableRegionServerCallable<MultiRespon
     if (nonceGroup != HConstants.NO_NONCE) {
       multiRequestBuilder.setNonceGroup(nonceGroup);
     }
-    for (Map.Entry<byte[], List<Action<R>>> e: this.multiAction.actions.entrySet()) {
+    for (Map.Entry<byte[], List<Action>> e: this.multiAction.actions.entrySet()) {
       final byte [] regionName = e.getKey();
-      final List<Action<R>> actions = e.getValue();
+      final List<Action> actions = e.getValue();
       regionActionBuilder.clear();
       regionActionBuilder.setRegion(RequestConverter.buildRegionSpecifier(
           HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName));

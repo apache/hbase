@@ -22,21 +22,18 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * A Get, Put, Increment, Append, or Delete associated with it's region.  Used internally by  
+ * A Get, Put, Increment, Append, or Delete associated with it's region.  Used internally by
  * {@link Table#batch} to associate the action with it's region and maintain
- * the index from the original request. 
+ * the index from the original request.
  */
 @InterfaceAudience.Private
-//TODO: R is never used
-public class Action<R> implements Comparable<R> {
-  // TODO: This class should not be visible outside of the client package.
-  private Row action;
-  private int originalIndex;
+public class Action implements Comparable<Action> {
+  private final Row action;
+  private final int originalIndex;
   private long nonce = HConstants.NO_NONCE;
   private int replicaId = RegionReplicaUtil.DEFAULT_REPLICA_ID;
 
   public Action(Row action, int originalIndex) {
-    super();
     this.action = action;
     this.originalIndex = originalIndex;
   }
@@ -46,14 +43,12 @@ public class Action<R> implements Comparable<R> {
    * @param action Original action.
    * @param replicaId Replica id for the new action.
    */
-  public Action(Action<R> action, int replicaId) {
-    super();
+  public Action(Action action, int replicaId) {
     this.action = action.action;
     this.nonce = action.nonce;
     this.originalIndex = action.originalIndex;
     this.replicaId = replicaId;
   }
-
 
   public void setNonce(long nonce) {
     this.nonce = nonce;
@@ -75,10 +70,9 @@ public class Action<R> implements Comparable<R> {
     return replicaId;
   }
 
-  @SuppressWarnings("rawtypes")
   @Override
-  public int compareTo(Object o) {
-    return action.compareTo(((Action) o).getAction());
+  public int compareTo(Action other) {
+    return action.compareTo(other.getAction());
   }
 
   @Override
@@ -89,9 +83,10 @@ public class Action<R> implements Comparable<R> {
   @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
-    if (obj == null || getClass() != obj.getClass()) return false;
-    Action<?> other = (Action<?>) obj;
-    return compareTo(other) == 0;
+    if (obj instanceof Action) {
+      return compareTo((Action) obj) == 0;
+    }
+    return false;
   }
 
   public long getNonce() {

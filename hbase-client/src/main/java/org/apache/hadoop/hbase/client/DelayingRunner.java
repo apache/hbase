@@ -39,16 +39,16 @@ import java.util.Map;
  * </p>
  */
 @InterfaceAudience.Private
-public class DelayingRunner<T> implements Runnable {
+public class DelayingRunner implements Runnable {
   private static final Log LOG = LogFactory.getLog(DelayingRunner.class);
 
   private final Object sleepLock = new Object();
   private boolean triggerWake = false;
   private long sleepTime;
-  private MultiAction<T> actions = new MultiAction<T>();
+  private MultiAction actions = new MultiAction();
   private Runnable runnable;
 
-  public DelayingRunner(long sleepTime, Map.Entry<byte[], List<Action<T>>> e) {
+  public DelayingRunner(long sleepTime, Map.Entry<byte[], List<Action>> e) {
     this.sleepTime = sleepTime;
     add(e);
   }
@@ -102,11 +102,11 @@ public class DelayingRunner<T> implements Runnable {
     return true;
   }
 
-  public void add(Map.Entry<byte[], List<Action<T>>> e) {
+  public void add(Map.Entry<byte[], List<Action>> e) {
     actions.add(e.getKey(), e.getValue());
   }
 
-  public MultiAction<T> getActions() {
+  public MultiAction getActions() {
     return actions;
   }
 
