@@ -6290,8 +6290,11 @@ public class TestHRegion {
         @Override
         public Long answer(InvocationOnMock invocation) throws Throwable {
           WALKey key = invocation.getArgumentAt(1, WALKey.class);
-          MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin();
-          key.setWriteEntry(we);
+          MultiVersionConcurrencyControl.WriteEntry we = key.getPreAssignedWriteEntry();
+          if (we == null) {
+            we = key.getMvcc().begin();
+            key.setWriteEntry(we);
+          }
           return 1L;
         }
 
