@@ -977,6 +977,11 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     for (Map.Entry<byte[], MultiResponse.RegionResult> regionStats : results.entrySet()) {
       byte[] regionName = regionStats.getKey();
       ClientProtos.RegionLoadStats stat = regionStats.getValue().getStat();
+      if (stat == null) {
+        LOG.error("No ClientProtos.RegionLoadStats found for server=" + server
+          + ", region=" + Bytes.toStringBinary(regionName));
+        continue;
+      }
       RegionLoadStats regionLoadstats = ProtobufUtil.createRegionLoadStats(stat);
       ResultStatsUtil.updateStats(asyncProcess.connection.getStatisticsTracker(), server,
           regionName, regionLoadstats);
