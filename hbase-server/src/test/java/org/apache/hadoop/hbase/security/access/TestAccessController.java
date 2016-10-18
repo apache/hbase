@@ -92,10 +92,11 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProcedureProtos;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
+import org.apache.hadoop.hbase.master.locking.LockProcedure.LockType;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -105,8 +106,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -117,6 +116,9 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -127,6 +129,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcCallback;
@@ -2975,5 +2978,74 @@ public class TestAccessController extends SecureTestUtil {
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN);
     verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testRemoteLocks() throws Exception {
+    String namespace = "preQueueNs";
+    final TableName tableName = TableName.valueOf(namespace, "testTable");
+    HRegionInfo[] regionInfos = new HRegionInfo[] {new HRegionInfo(tableName)};
+
+    // Setup Users
+    // User will be granted ADMIN and CREATE on namespace. Should be denied before grant.
+    User namespaceUser = User.createUserForTesting(conf, "qLNSUser", new String[0]);
+    // User will be granted ADMIN and CREATE on table. Should be denied before grant.
+    User tableACUser = User.createUserForTesting(conf, "qLTableACUser", new String[0]);
+    // User will be granted READ, WRITE, EXECUTE on table. Should be denied.
+    User tableRWXUser = User.createUserForTesting(conf, "qLTableRWXUser", new String[0]);
+    grantOnTable(TEST_UTIL, tableRWXUser.getShortName(), tableName, null, null,
+        Action.READ, Action.WRITE, Action.EXEC);
+    // User with global READ, WRITE, EXECUTE should be denied lock access.
+    User globalRWXUser = User.createUserForTesting(conf, "qLGlobalRWXUser", new String[0]);
+    grantGlobal(TEST_UTIL, globalRWXUser.getShortName(), Action.READ, Action.WRITE, Action.EXEC);
+
+    AccessTestAction namespaceLockAction = new AccessTestAction() {
+      @Override public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRequestLock(ObserverContext.createAndPrepare(CP_ENV, null), namespace,
+            null, null, LockType.EXCLUSIVE, null);
+        return null;
+      }
+    };
+    verifyAllowed(namespaceLockAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(namespaceLockAction, globalRWXUser, tableACUser, namespaceUser, tableRWXUser);
+    grantOnNamespace(TEST_UTIL, namespaceUser.getShortName(), namespace, Action.ADMIN);
+    verifyAllowed(namespaceLockAction, namespaceUser);
+
+    AccessTestAction tableLockAction = new AccessTestAction() {
+      @Override public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRequestLock(ObserverContext.createAndPrepare(CP_ENV, null),
+            null, tableName, null, LockType.EXCLUSIVE, null);
+        return null;
+      }
+    };
+    verifyAllowed(tableLockAction, SUPERUSER, USER_ADMIN, namespaceUser);
+    verifyDenied(tableLockAction, globalRWXUser, tableACUser, tableRWXUser);
+    grantOnTable(TEST_UTIL, tableACUser.getShortName(), tableName, null, null,
+        Action.ADMIN, Action.CREATE);
+    verifyAllowed(tableLockAction, tableACUser);
+
+    AccessTestAction regionsLockAction = new AccessTestAction() {
+      @Override public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRequestLock(ObserverContext.createAndPrepare(CP_ENV, null),
+            null, null, regionInfos, LockType.EXCLUSIVE, null);
+        return null;
+      }
+    };
+    verifyAllowed(regionsLockAction, SUPERUSER, USER_ADMIN, namespaceUser, tableACUser);
+    verifyDenied(regionsLockAction, globalRWXUser, tableRWXUser);
+
+    // Test heartbeats
+    // Create a lock procedure and try sending heartbeat to it. It doesn't matter how the lock
+    // was created, we just need namespace from the lock's tablename.
+    LockProcedure proc = new LockProcedure(conf, tableName, LockType.EXCLUSIVE, "test", null);
+    AccessTestAction regionLockHeartbeatAction = new AccessTestAction() {
+      @Override public Object run() throws Exception {
+        ACCESS_CONTROLLER.preLockHeartbeat(ObserverContext.createAndPrepare(CP_ENV, null),
+            proc, false);
+        return null;
+      }
+    };
+    verifyAllowed(regionLockHeartbeatAction, SUPERUSER, USER_ADMIN, namespaceUser, tableACUser);
+    verifyDenied(regionLockHeartbeatAction, globalRWXUser, tableRWXUser);
   }
 }

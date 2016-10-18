@@ -86,16 +86,13 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
+import org.apache.hadoop.hbase.master.locking.LockProcedure.LockType;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -111,6 +108,11 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2738,5 +2740,37 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preListReplicationPeers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       String regex) throws IOException {
     requirePermission(getActiveUser(ctx), "listReplicationPeers", Action.ADMIN);
+  }
+
+  @Override
+  public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
+      TableName tableName, HRegionInfo[] regionInfos, LockType type, String description)
+  throws IOException {
+    // There are operations in the CREATE and ADMIN domain which may require lock, READ
+    // or WRITE. So for any lock request, we check for these two perms irrespective of lock type.
+    String reason = String.format("Lock %s, description=%s", type, description);
+    checkLockPermissions(getActiveUser(ctx), namespace, tableName, regionInfos, reason);
+  }
+
+  @Override
+  public void preLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      LockProcedure proc, boolean keepAlive) throws IOException {
+    String reason = "Heartbeat for lock " + proc.getProcId();
+    checkLockPermissions(getActiveUser(ctx), null, proc.getTableName(), null, reason);
+  }
+
+  private void checkLockPermissions(User user, String namespace,
+      TableName tableName, HRegionInfo[] regionInfos, String reason)
+  throws IOException {
+    if (namespace != null && !namespace.isEmpty()) {
+      requireNamespacePermission(user, reason, namespace, Action.ADMIN, Action.CREATE);
+    } else if (tableName != null || (regionInfos != null && regionInfos.length > 0)) {
+      // So, either a table or regions op. If latter, check perms ons table.
+      TableName tn = tableName != null? tableName: regionInfos[0].getTable();
+      requireTablePermission(user, reason, tn, null, null,
+          Action.ADMIN, Action.CREATE);
+    } else {
+      throw new DoNotRetryIOException("Invalid lock level when requesting permissions.");
+    }
   }
 }
