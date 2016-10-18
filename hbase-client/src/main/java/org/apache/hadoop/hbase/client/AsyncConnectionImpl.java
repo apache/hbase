@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.HConstants.CLUSTER_ID_DEFAULT;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
+import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 
 import io.netty.util.HashedWheelTimer;
 
@@ -80,8 +82,11 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   final AsyncRpcRetryingCallerFactory callerFactory;
 
+  private final NonceGenerator nonceGenerator;
+
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
 
+  @SuppressWarnings("deprecation")
   public AsyncConnectionImpl(Configuration conf, User user) throws IOException {
     this.conf = conf;
     this.user = user;
@@ -103,6 +108,11 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     this.rpcTimeout = conf.getInt(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT);
     this.callerFactory = new AsyncRpcRetryingCallerFactory(this, RETRY_TIMER);
+    if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
+      nonceGenerator = PerClientRandomNonceGenerator.get();
+    } else {
+      nonceGenerator = NO_NONCE_GENERATOR;
+    }
   }
 
   @Override
@@ -125,6 +135,11 @@ class AsyncConnectionImpl implements AsyncConnection {
   // we will override this method for testing retry caller, so do not remove this method.
   AsyncRegionLocator getLocator() {
     return locator;
+  }
+
+  // ditto
+  public NonceGenerator getNonceGenerator() {
+    return nonceGenerator;
   }
 
   private ClientService.Interface createRegionServerStub(ServerName serverName) throws IOException {

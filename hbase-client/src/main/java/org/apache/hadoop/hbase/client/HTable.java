@@ -18,6 +18,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
+
+import com.google.common.annotations.VisibleForTesting;
+// DO NOT MAKE USE OF THESE IMPORTS! THEY ARE HERE FOR COPROCESSOR ENDPOINTS ONLY.
+// Internally, we use shaded protobuf. This below are part of our public API.
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -49,8 +59,8 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.client.RegionCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+//SEE ABOVE NOTE!
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
@@ -64,15 +74,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
-
-import com.google.common.annotations.VisibleForTesting;
-// DO NOT MAKE USE OF THESE IMPORTS! THEY ARE HERE FOR COPROCESSOR ENDPOINTS ONLY.
-// Internally, we use shaded protobuf. This below are part of our public API.
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-// SEE ABOVE NOTE!
 
 /**
  * An implementation of {@link Table}. Used to communicate with a single HBase table.
@@ -614,12 +615,6 @@ public class HTable implements Table {
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
-    }
-  }
-
-  private static void checkHasFamilies(final Mutation mutation) throws IOException {
-    if (mutation.numFamilies() == 0) {
-      throw new IOException("Invalid arguments to " + mutation + ", zero columns specified");
     }
   }
 

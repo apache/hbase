@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
@@ -108,7 +109,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final Log LOG = LogFactory.getLog(ConnectionImplementation.class);
-  private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
+
   private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
   private final boolean hostnamesCanChange;
@@ -199,14 +200,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.rpcTimeout = conf.getInt(
         HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-    if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
+    if (conf.getBoolean(NonceGenerator.CLIENT_NONCES_ENABLED_KEY, true)) {
       synchronized (nonceGeneratorCreateLock) {
         if (nonceGenerator == null) {
-          nonceGenerator = new PerClientRandomNonceGenerator();
+          nonceGenerator = PerClientRandomNonceGenerator.get();
         }
       }
     } else {
-      nonceGenerator = new NoNonceGenerator();
+      nonceGenerator = NO_NONCE_GENERATOR;
     }
 
     this.stats = ServerStatisticTracker.create(conf);
@@ -945,18 +946,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         throw ProtobufUtil.handleRemoteException(e);
       }
       return response != null? response.getIsMasterRunning(): false;
-    }
-  }
-
-  /** Dummy nonce generator for disabled nonces. */
-  static class NoNonceGenerator implements NonceGenerator {
-    @Override
-    public long getNonceGroup() {
-      return HConstants.NO_NONCE;
-    }
-    @Override
-    public long newNonce() {
-      return HConstants.NO_NONCE;
     }
   }
 

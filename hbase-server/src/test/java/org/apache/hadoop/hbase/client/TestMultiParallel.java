@@ -500,18 +500,27 @@ public class TestMultiParallel {
     put.addColumn(BYTES_FAMILY, QUALIFIER, Bytes.toBytes(0L));
 
     // Replace nonce manager with the one that returns each nonce twice.
-    NonceGenerator cnm = new PerClientRandomNonceGenerator() {
-      long lastNonce = -1;
+    NonceGenerator cnm = new NonceGenerator() {
+
+      private final PerClientRandomNonceGenerator delegate = PerClientRandomNonceGenerator.get();
+
+      private long lastNonce = -1;
+
       @Override
       public synchronized long newNonce() {
         long nonce = 0;
         if (lastNonce == -1) {
-          lastNonce = nonce = super.newNonce();
+          lastNonce = nonce = delegate.newNonce();
         } else {
           nonce = lastNonce;
           lastNonce = -1L;
         }
         return nonce;
+      }
+
+      @Override
+      public long getNonceGroup() {
+        return delegate.getNonceGroup();
       }
     };
 

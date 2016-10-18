@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.security.UserProvider;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CoprocessorHConnection extends ConnectionImplementation {
-  private static final NonceGenerator NO_NONCE_GEN = new NoNonceGenerator();
 
   /**
    * Create a {@link ClusterConnection} based on the environment in which we are running the
@@ -101,6 +100,6 @@ public class CoprocessorHConnection extends ConnectionImplementation {
 
   @Override
   public NonceGenerator getNonceGenerator() {
-    return NO_NONCE_GEN; // don't use nonces for coprocessor connection
+    return ConnectionUtils.NO_NONCE_GENERATOR; // don't use nonces for coprocessor connection
   }
 }

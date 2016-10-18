@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.base.Preconditions;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -24,6 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * The asynchronous version of Table. Obtain an instance from a {@link AsyncConnection}.
@@ -99,28 +103,105 @@ public interface AsyncTable {
    * This will return true if the Get matches one or more keys, false if not.
    * <p>
    * This is a server-side call so it prevents any data from being transfered to the client.
+   * @return true if the specified Get matches one or more keys, false if not. The return value will
+   *         be wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<Boolean> exists(Get get);
+  default CompletableFuture<Boolean> exists(Get get) {
+    if (!get.isCheckExistenceOnly()) {
+      get = ReflectionUtils.newInstance(get.getClass(), get);
+      get.setCheckExistenceOnly(true);
+    }
+    return get(get).thenApply(r -> r.getExists());
+  }
 
   /**
    * Extracts certain cells from a given row.
-   * <p>
-   * Return the data coming from the specified row, if it exists. If the row specified doesn't
-   * exist, the {@link Result} instance returned won't contain any
-   * {@link org.apache.hadoop.hbase.KeyValue}, as indicated by {@link Result#isEmpty()}.
    * @param get The object that specifies what data to fetch and from which row.
+   * @return The data coming from the specified row, if it exists. If the row specified doesn't
+   *         exist, the {@link Result} instance returned won't contain any
+   *         {@link org.apache.hadoop.hbase.KeyValue}, as indicated by {@link Result#isEmpty()}. The
+   *         return value will be wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<Result> get(Get get);
 
   /**
    * Puts some data to the table.
    * @param put The data to put.
+   * @return A {@link CompletableFuture} that always returns null when complete normally.
    */
   CompletableFuture<Void> put(Put put);
 
   /**
    * Deletes the specified cells/row.
    * @param delete The object that specifies what to delete.
+   * @return A {@link CompletableFuture} that always returns null when complete normally.
    */
   CompletableFuture<Void> delete(Delete delete);
+
+  /**
+   * Appends values to one or more columns within a single row.
+   * <p>
+   * This operation does not appear atomic to readers. Appends are done under a single row lock, so
+   * write operations to a row are synchronized, but readers do not take row locks so get and scan
+   * operations can see this operation partially completed.
+   * @param append object that specifies the columns and amounts to be used for the increment
+   *          operations
+   * @return values of columns after the append operation (maybe null). The return value will be
+   *         wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<Result> append(Append append);
+
+  /**
+   * Increments one or more columns within a single row.
+   * <p>
+   * This operation does not appear atomic to readers. Increments are done under a single row lock,
+   * so write operations to a row are synchronized, but readers do not take row locks so get and
+   * scan operations can see this operation partially completed.
+   * @param increment object that specifies the columns and amounts to be used for the increment
+   *          operations
+   * @return values of columns after the increment. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Result> increment(Increment increment);
+
+  /**
+   * See {@link #incrementColumnValue(byte[], byte[], byte[], long, Durability)}
+   * <p>
+   * The {@link Durability} is defaulted to {@link Durability#SYNC_WAL}.
+   * @param row The row that contains the cell to increment.
+   * @param family The column family of the cell to increment.
+   * @param qualifier The column qualifier of the cell to increment.
+   * @param amount The amount to increment the cell with (or decrement, if the amount is negative).
+   * @return The new value, post increment. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  default CompletableFuture<Long> incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
+      long amount) {
+    return incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL);
+  }
+
+  /**
+   * Atomically increments a column value. If the column value already exists and is not a
+   * big-endian long, this could throw an exception. If the column value does not yet exist it is
+   * initialized to <code>amount</code> and written to the specified column.
+   * <p>
+   * Setting durability to {@link Durability#SKIP_WAL} means that in a fail scenario you will lose
+   * any increments that have not been flushed.
+   * @param row The row that contains the cell to increment.
+   * @param family The column family of the cell to increment.
+   * @param qualifier The column qualifier of the cell to increment.
+   * @param amount The amount to increment the cell with (or decrement, if the amount is negative).
+   * @param durability The persistence guarantee for this increment.
+   * @return The new value, post increment. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  default CompletableFuture<Long> incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
+      long amount, Durability durability) {
+    Preconditions.checkNotNull(row, "row is null");
+    Preconditions.checkNotNull(family, "family is null");
+    Preconditions.checkNotNull(qualifier, "qualifier is null");
+    return increment(
+      new Increment(row).addColumn(family, qualifier, amount).setDurability(durability))
+          .thenApply(r -> Bytes.toLong(r.getValue(family, qualifier)));
+  }
 }

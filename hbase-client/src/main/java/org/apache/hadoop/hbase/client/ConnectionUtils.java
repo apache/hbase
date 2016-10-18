@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -202,4 +203,23 @@ public final class ConnectionUtils {
     }
     return serviceName + "@" + hostname + ":" + port;
   }
+
+  static void checkHasFamilies(Mutation mutation) {
+    Preconditions.checkArgument(mutation.numFamilies() > 0,
+      "Invalid arguments to %s, zero columns specified", mutation.toString());
+  }
+
+  /** Dummy nonce generator for disabled nonces. */
+  static final NonceGenerator NO_NONCE_GENERATOR = new NonceGenerator() {
+
+    @Override
+    public long newNonce() {
+      return HConstants.NO_NONCE;
+    }
+
+    @Override
+    public long getNonceGroup() {
+      return HConstants.NO_NONCE;
+    }
+  };
 }

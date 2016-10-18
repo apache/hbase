@@ -25,17 +25,20 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * NonceGenerator implementation that uses client ID hash + random int as nonce group,
- * and random numbers as nonces.
+ * NonceGenerator implementation that uses client ID hash + random int as nonce group, and random
+ * numbers as nonces.
  */
 @InterfaceAudience.Private
-public class PerClientRandomNonceGenerator implements NonceGenerator {
+public final class PerClientRandomNonceGenerator implements NonceGenerator {
+
+  private static final PerClientRandomNonceGenerator INST = new PerClientRandomNonceGenerator();
+
   private final Random rdm = new Random();
   private final long clientId;
 
-  public PerClientRandomNonceGenerator() {
+  private PerClientRandomNonceGenerator() {
     byte[] clientIdBase = ClientIdGenerator.generateClientId();
-    this.clientId = (((long)Arrays.hashCode(clientIdBase)) << 32) + rdm.nextInt();
+    this.clientId = (((long) Arrays.hashCode(clientIdBase)) << 32) + rdm.nextInt();
   }
 
   public long getNonceGroup() {
@@ -48,5 +51,12 @@ public class PerClientRandomNonceGenerator implements NonceGenerator {
       result = rdm.nextLong();
     } while (result == HConstants.NO_NONCE);
     return result;
+  }
+
+  /**
+   * Get the singleton nonce generator.
+   */
+  public static PerClientRandomNonceGenerator get() {
+    return INST;
   }
 }
