@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
@@ -204,4 +205,70 @@ public interface AsyncTable {
       new Increment(row).addColumn(family, qualifier, amount).setDurability(durability))
           .thenApply(r -> Bytes.toLong(r.getValue(family, qualifier)));
   }
+
+  /**
+   * Atomically checks if a row/family/qualifier value equals to the expected value. If it does, it
+   * adds the put. If the passed value is null, the check is for the lack of column (ie:
+   * non-existence)
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param value the expected value
+   * @param put data to put if check succeeds
+   * @return true if the new put was executed, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}.
+   */
+  default CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+      byte[] value, Put put) {
+    return checkAndPut(row, family, qualifier, CompareOp.EQUAL, value, put);
+  }
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
+   * adds the put. If the passed value is null, the check is for the lack of column (ie:
+   * non-existence)
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param compareOp comparison operator to use
+   * @param value the expected value
+   * @param put data to put if check succeeds
+   * @return true if the new put was executed, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, Put put);
+
+  /**
+   * Atomically checks if a row/family/qualifier value equals to the expected value. If it does, it
+   * adds the delete. If the passed value is null, the check is for the lack of column (ie:
+   * non-existence)
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param value the expected value
+   * @param delete data to delete if check succeeds
+   * @return true if the new delete was executed, false otherwise. The return value will be wrapped
+   *         by a {@link CompletableFuture}.
+   */
+  default CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+      byte[] value, Delete delete) {
+    return checkAndDelete(row, family, qualifier, CompareOp.EQUAL, value, delete);
+  }
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
+   * adds the delete. If the passed value is null, the check is for the lack of column (ie:
+   * non-existence)
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param compareOp comparison operator to use
+   * @param value the expected value
+   * @param delete data to delete if check succeeds
+   * @return true if the new delete was executed, false otherwise. The return value will be wrapped
+   *         by a {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, Delete delete);
 }

@@ -28,6 +28,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
@@ -183,5 +184,62 @@ public class TestAsyncTable {
     int[] actual = Arrays.asList(value.split("" + suffix)).stream().mapToInt(Integer::parseInt)
         .sorted().toArray();
     assertArrayEquals(IntStream.range(0, count).toArray(), actual);
+  }
+
+  @Test
+  public void testCheckAndPut() throws InterruptedException, ExecutionException {
+    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AtomicInteger successCount = new AtomicInteger(0);
+    AtomicInteger successIndex = new AtomicInteger(-1);
+    int count = 10;
+    CountDownLatch latch = new CountDownLatch(count);
+    IntStream.range(0, count).forEach(i -> table.checkAndPut(row, FAMILY, QUALIFIER, null,
+      new Put(row).addColumn(FAMILY, QUALIFIER, concat(VALUE, i))).thenAccept(x -> {
+        if (x) {
+          successCount.incrementAndGet();
+          successIndex.set(i);
+        }
+        latch.countDown();
+      }));
+    latch.await();
+    assertEquals(1, successCount.get());
+    String actual = Bytes.toString(table.get(new Get(row)).get().getValue(FAMILY, QUALIFIER));
+    assertTrue(actual.endsWith(Integer.toString(successIndex.get())));
+  }
+
+  @Test
+  public void testCheckAndDelete() throws InterruptedException, ExecutionException {
+    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    int count = 10;
+    CountDownLatch putLatch = new CountDownLatch(count + 1);
+    table.put(new Put(row).addColumn(FAMILY, QUALIFIER, VALUE)).thenRun(() -> putLatch.countDown());
+    IntStream.range(0, count)
+        .forEach(i -> table.put(new Put(row).addColumn(FAMILY, concat(QUALIFIER, i), VALUE))
+            .thenRun(() -> putLatch.countDown()));
+    putLatch.await();
+
+    AtomicInteger successCount = new AtomicInteger(0);
+    AtomicInteger successIndex = new AtomicInteger(-1);
+    CountDownLatch deleteLatch = new CountDownLatch(count);
+    IntStream.range(0, count).forEach(i -> table
+        .checkAndDelete(row, FAMILY, QUALIFIER, VALUE,
+          new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i)))
+        .thenAccept(x -> {
+          if (x) {
+            successCount.incrementAndGet();
+            successIndex.set(i);
+          }
+          deleteLatch.countDown();
+        }));
+    deleteLatch.await();
+    assertEquals(1, successCount.get());
+    Result result = table.get(new Get(row)).get();
+    IntStream.range(0, count).forEach(i -> {
+      if (i == successIndex.get()) {
+        assertFalse(result.containsColumn(FAMILY, concat(QUALIFIER, i)));
+      } else {
+        assertArrayEquals(VALUE, result.getValue(FAMILY, concat(QUALIFIER, i)));
+      }
+    });
   }
 }
