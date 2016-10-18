@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.zookeeper.server.persistence.SnapShot;
 
 /**
  * Utility class to help read/write the Snapshot Manifest.
@@ -131,6 +133,12 @@ public final class SnapshotManifest {
     return manifest;
   }
 
+  public static SnapshotManifest open(final Configuration conf, final SnapshotDescription desc)
+      throws IOException {
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc,
+        FSUtils.getRootDir(conf));
+    return open(conf, snapshotDir.getFileSystem(conf), snapshotDir, desc);
+  }
 
   /**
    * Add the table descriptor to the snapshot manifest

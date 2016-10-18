@@ -117,6 +117,10 @@ public final class LegacyLayout {
     return new Path(rootDir, MobConstants.MOB_DIR_NAME);
   }
 
+  public static Path getMobTableDir(Path rootDir, TableName table) {
+    return new Path(getMobDir(rootDir), table.getQualifierAsString());
+  }
+
   public static Path getBulkDir(Path rootDir) {
     return new Path(rootDir, HConstants.BULKLOAD_STAGING_DIR_NAME);
   }

@@ -1744,7 +1744,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return fs.getFileSystem();
   }
 
-  /** @return the {@link HRegionStorage} used by this region */
+  /** @return the {@link RegionStorage} used by this region */
   public RegionStorage getRegionStorage() {
     return this.fs;
   }
@@ -6394,12 +6394,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return createHRegion(conf, hTableDescriptor, info, wal, true);
   }
 
-  /**
-   * TODO remove after refactoring ModifyRegionUtils to use a RegionStorage impl instead of specifying a different root dir manually.
-   */
-  public static HRegion createHRegion(final Configuration conf, final Path rootDir, final HTableDescriptor htd, final HRegionInfo info) throws IOException {
-    RegionStorage rfs = RegionStorage.open(conf, rootDir.getFileSystem(conf), new LegacyPathIdentifier(rootDir), info, true);
-    return HRegion.newHRegion(rfs, htd, null, null);
+  public static HRegion createHRegion(final Configuration conf, final HTableDescriptor htd,
+                                      final HRegionInfo info) throws IOException {
+    RegionStorage<? extends StorageIdentifier> rs = RegionStorage.open(conf, info, true);
+    return HRegion.newHRegion(rs, htd, null, null);
   }
 
   /**

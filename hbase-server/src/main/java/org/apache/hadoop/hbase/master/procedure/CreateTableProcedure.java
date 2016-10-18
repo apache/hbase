@@ -27,8 +27,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,16 +35,14 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.fs.StorageContext;
 import org.apache.hadoop.hbase.fs.MasterStorage;
-import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateTableState;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
@@ -100,7 +96,7 @@ public class CreateTableProcedure
           setNextState(CreateTableState.CREATE_TABLE_WRITE_FS_LAYOUT);
           break;
         case CREATE_TABLE_WRITE_FS_LAYOUT:
-          newRegions = createFsLayout(env, hTableDescriptor, newRegions);
+          newRegions = createTableOnStorage(env, hTableDescriptor, newRegions);
           setNextState(CreateTableState.CREATE_TABLE_ADD_TO_META);
           break;
         case CREATE_TABLE_ADD_TO_META:
@@ -267,67 +263,45 @@ public class CreateTableProcedure
     }
   }
 
-  protected interface CreateHdfsRegions {
-    List<HRegionInfo> createHdfsRegions(final MasterProcedureEnv env,
-      final Path tableRootDir, final TableName tableName,
-      final List<HRegionInfo> newRegions) throws IOException;
+  protected interface CreateStorageRegions {
+    List<HRegionInfo> createRegionsOnStorage(final MasterProcedureEnv env,
+        final TableName tableName, final List<HRegionInfo> newRegions) throws IOException;
   }
 
-  protected static List<HRegionInfo> createFsLayout(final MasterProcedureEnv env,
+  protected static List<HRegionInfo> createTableOnStorage(final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor, final List<HRegionInfo> newRegions)
       throws IOException {
-    return createFsLayout(env, hTableDescriptor, newRegions, new CreateHdfsRegions() {
+    return createTableOnStorage(env, hTableDescriptor, newRegions, new CreateStorageRegions() {
       @Override
-      public List<HRegionInfo> createHdfsRegions(final MasterProcedureEnv env,
-          final Path tableRootDir, final TableName tableName,
-          final List<HRegionInfo> newRegions) throws IOException {
+      public List<HRegionInfo> createRegionsOnStorage(final MasterProcedureEnv env,
+          final TableName tableName, final List<HRegionInfo> newRegions) throws IOException {
         HRegionInfo[] regions = newRegions != null ?
           newRegions.toArray(new HRegionInfo[newRegions.size()]) : null;
-        //TODO this should be RegionStorage
-        return ModifyRegionUtils.createRegions(env.getMasterConfiguration(),
-            tableRootDir, hTableDescriptor, regions, null);
+        return ModifyRegionUtils.createRegions(env.getMasterConfiguration(), hTableDescriptor,
+            regions, null);
       }
     });
   }
 
-  protected static List<HRegionInfo> createFsLayout(final MasterProcedureEnv env,
+  protected static List<HRegionInfo> createTableOnStorage(final MasterProcedureEnv env,
       final HTableDescriptor hTableDescriptor, List<HRegionInfo> newRegions,
-      final CreateHdfsRegions hdfsRegionHandler) throws IOException {
-    final MasterStorage ms = env.getMasterServices().getMasterStorage();
-    final Path tempdir = ((LegacyPathIdentifier) ms.getTempContainer()).path;
+      final CreateStorageRegions storageRegionHandler) throws IOException {
+    final MasterStorage<? extends StorageIdentifier> ms =
+        env.getMasterServices().getMasterStorage();
 
-    // 1. Create Table Descriptor
+    // 1. Delete existing artifacts (dir, files etc) for the table
+    ms.deleteTable(hTableDescriptor.getTableName());
+
+    // 2. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     HTableDescriptor underConstruction = new HTableDescriptor(hTableDescriptor);
-    final Path tempTableDir = FSUtils.getTableDir(tempdir, hTableDescriptor.getTableName());
-    ms.createTableDescriptor(StorageContext.TEMP, underConstruction, false);
+    ms.createTableDescriptor(underConstruction, true);
 
-    // 2. Create Regions
-    newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir,
-      hTableDescriptor.getTableName(), newRegions);
-
-    // 3. Move Table temp directory to the hbase root location
-    moveTempDirectoryToHBaseRoot(env, hTableDescriptor, tempTableDir);
+    // 3. Create Regions
+    newRegions = storageRegionHandler.createRegionsOnStorage(env, hTableDescriptor.getTableName(),
+        newRegions);
 
     return newRegions;
-  }
-
-  protected static void moveTempDirectoryToHBaseRoot(
-    final MasterProcedureEnv env,
-    final HTableDescriptor hTableDescriptor,
-    final Path tempTableDir) throws IOException {
-    final MasterStorage ms = env.getMasterServices().getMasterStorage();
-    final Path tableDir = FSUtils.getTableDir(((LegacyPathIdentifier)ms.getRootContainer()).path,
-        hTableDescriptor.getTableName());
-    FileSystem fs = ms.getFileSystem();
-
-    if (!fs.delete(tableDir, true) && fs.exists(tableDir)) {
-      throw new IOException("Couldn't delete " + tableDir);
-    }
-    if (!fs.rename(tempTableDir, tableDir)) {
-      throw new IOException("Unable to move table from temp=" + tempTableDir +
-        " to hbase root=" + tableDir);
-    }
   }
 
   protected static List<HRegionInfo> addTableToMeta(final MasterProcedureEnv env,

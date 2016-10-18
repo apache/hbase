@@ -125,40 +125,28 @@ public class RestoreSnapshotHelper {
   private final TableName snapshotTable;
 
   private final HTableDescriptor tableDesc;
-  private final Path rootDir;
   private final Path tableDir;
 
   private final Configuration conf;
   private final FileSystem fs;
   private final boolean createBackRefs;
 
-  public RestoreSnapshotHelper(final Configuration conf,
-      final FileSystem fs,
-      final SnapshotManifest manifest,
-      final HTableDescriptor tableDescriptor,
-      final Path rootDir,
-      final ForeignExceptionDispatcher monitor,
-      final MonitoredTask status) {
-    this(conf, fs, manifest, tableDescriptor, rootDir, monitor, status, true);
+  public RestoreSnapshotHelper(final Configuration conf, final SnapshotManifest manifest,
+      final HTableDescriptor tableDescriptor, final ForeignExceptionDispatcher monitor,
+      final MonitoredTask status) throws IOException {
+    this(conf, manifest, tableDescriptor, monitor, status, true);
   }
 
-  public RestoreSnapshotHelper(final Configuration conf,
-      final FileSystem fs,
-      final SnapshotManifest manifest,
-      final HTableDescriptor tableDescriptor,
-      final Path rootDir,
-      final ForeignExceptionDispatcher monitor,
-      final MonitoredTask status,
-      final boolean createBackRefs)
-  {
-    this.fs = fs;
+  public RestoreSnapshotHelper(final Configuration conf, final SnapshotManifest manifest,
+      final HTableDescriptor tableDescriptor, final ForeignExceptionDispatcher monitor,
+      final MonitoredTask status, final boolean createBackRefs) throws IOException {
+    this.fs = FSUtils.getCurrentFileSystem(conf);
     this.conf = conf;
     this.snapshotManifest = manifest;
     this.snapshotDesc = manifest.getSnapshotDescription();
     this.snapshotTable = TableName.valueOf(snapshotDesc.getTable());
     this.tableDesc = tableDescriptor;
-    this.rootDir = rootDir;
-    this.tableDir = FSUtils.getTableDir(rootDir, tableDesc.getTableName());
+    this.tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableDesc.getTableName());
     this.monitor = monitor;
     this.status = status;
     this.createBackRefs = createBackRefs;
@@ -168,7 +156,7 @@ public class RestoreSnapshotHelper {
    * Restore the on-disk table to a specified snapshot state.
    * @return the set of regions touched by the restore operation
    */
-  public RestoreMetaChanges restoreHdfsRegions() throws IOException {
+  public RestoreMetaChanges restoreStorageRegions() throws IOException {
     ThreadPoolExecutor exec = SnapshotManifest.createExecutor(conf, "RestoreSnapshot");
     try {
       return restoreHdfsRegions(exec);
@@ -588,8 +576,8 @@ public class RestoreSnapshotHelper {
     }
 
     // create the regions on disk
-    ModifyRegionUtils.createRegions(exec, conf, rootDir,
-      tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
+    ModifyRegionUtils.createRegions(exec, conf,
+        tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
         @Override
         public void fillRegion(final HRegion region) throws IOException {
           HRegionInfo snapshotHri = snapshotRegions.get(region.getRegionInfo().getEncodedName());
@@ -822,9 +810,9 @@ public class RestoreSnapshotHelper {
 
     // we send createBackRefs=false so that restored hfiles do not create back reference links
     // in the base hbase root dir.
-    RestoreSnapshotHelper helper = new RestoreSnapshotHelper(conf, fs,
-      manifest, manifest.getTableDescriptor(), restoreDir, monitor, status, false);
-    RestoreMetaChanges metaChanges = helper.restoreHdfsRegions(); // TODO: parallelize.
+    RestoreSnapshotHelper helper = new RestoreSnapshotHelper(conf,
+        manifest, manifest.getTableDescriptor(), monitor, status, false);
+    RestoreMetaChanges metaChanges = helper.restoreStorageRegions(); // TODO: parallelize.
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Restored table dir:" + restoreDir);

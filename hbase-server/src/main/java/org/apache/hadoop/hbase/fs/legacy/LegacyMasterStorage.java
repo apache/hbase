@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.StorageContext;
@@ -162,10 +163,26 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
   //  PUBLIC Methods - Table related
   // ==========================================================================
   @Override
-  public void deleteTable(StorageContext ctx, TableName tableName) throws IOException {
+  public void deleteTable(StorageContext ctx, TableName tableName, boolean archive)
+      throws IOException {
+    if (archive) {
+      archiveTable(ctx, tableName);
+    }
+
     Path tableDir = getTableDir(ctx, tableName);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Deleting table '" + tableName + "' from '" + tableDir + "'.");
+    }
     if (!FSUtils.deleteDirectory(getFileSystem(), tableDir)) {
       throw new IOException("Failed delete of " + tableName);
+    }
+
+    Path mobTableDir = LegacyLayout.getMobTableDir(getRootContainer().path, tableName);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Deleting MOB data '" + mobTableDir + "'.");
+    }
+    if (!FSUtils.deleteDirectory(getFileSystem(), mobTableDir)) {
+      throw new IOException("Failed delete MOB data of table " + tableName);
     }
   }
 
@@ -181,6 +198,27 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
       tables.add(TableName.valueOf(namespace, stats[i].getPath().getName()));
     }
     return tables;
+  }
+
+  @Override
+  public void archiveTable(StorageContext ctx, TableName tableName) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Archiving table '" + tableName + "' from storage");
+    }
+
+    // archive all regions
+    for (HRegionInfo hri : getRegions(ctx, tableName)) {
+      archiveRegion(hri);
+    }
+
+    // archive MOB data
+    Path mobTableDir = LegacyLayout.getMobTableDir(getRootContainer().path, tableName);
+    Path mobRegionDir = new Path(mobTableDir,
+        MobUtils.getMobRegionInfo(tableName).getEncodedName());
+    if (getFileSystem().exists(mobRegionDir)) {
+      HFileArchiver.archiveRegion(getFileSystem(), getRootContainer().path, mobTableDir,
+          mobRegionDir);
+    }
   }
 
   // ==========================================================================
@@ -223,6 +261,9 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
    */
   @Override
   public void archiveRegion(HRegionInfo regionInfo) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Archiving region '" + regionInfo.getRegionNameAsString() + "' from storage.");
+    }
     HFileArchiver.archiveRegion(getConfiguration(), getFileSystem(), regionInfo);
   }
 

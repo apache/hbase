@@ -26,15 +26,11 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
@@ -44,17 +40,12 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
-import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteTableState;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 @InterfaceAudience.Private
 public class DeleteTableProcedure
@@ -113,8 +104,8 @@ public class DeleteTableProcedure
           setNextState(DeleteTableState.DELETE_TABLE_CLEAR_FS_LAYOUT);
           break;
         case DELETE_TABLE_CLEAR_FS_LAYOUT:
-          LOG.debug("delete '" + getTableName() + "' from filesystem");
-          DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
+          LOG.debug("delete '" + getTableName() + "' from storage");
+          DeleteTableProcedure.deleteFromStorage(env, getTableName(), regions, true);
           setNextState(DeleteTableState.DELETE_TABLE_UPDATE_DESC_CACHE);
           regions = null;
           break;
@@ -259,79 +250,11 @@ public class DeleteTableProcedure
     }
   }
 
-  protected static void deleteFromFs(final MasterProcedureEnv env,
-      final TableName tableName, final List<HRegionInfo> regions,
-      final boolean archive) throws IOException {
+  protected static void deleteFromStorage(final MasterProcedureEnv env,
+      final TableName tableName, final List<HRegionInfo> regions, final boolean archive)
+      throws IOException {
     final MasterStorage ms = env.getMasterServices().getMasterStorage();
-    final FileSystem fs = ms.getFileSystem();
-    final Path tempdir = ((LegacyPathIdentifier)ms.getTempContainer()).path;
-
-    final Path tableDir = FSUtils.getTableDir(((LegacyPathIdentifier)ms.getRootContainer()).path,
-        tableName);
-    final Path tempTableDir = FSUtils.getTableDir(tempdir, tableName);
-
-    if (fs.exists(tableDir)) {
-      // Ensure temp exists
-      if (!fs.exists(tempdir) && !fs.mkdirs(tempdir)) {
-        throw new IOException("HBase temp directory '" + tempdir + "' creation failure.");
-      }
-
-      // Ensure parent exists
-      if (!fs.exists(tempTableDir.getParent()) && !fs.mkdirs(tempTableDir.getParent())) {
-        throw new IOException("HBase temp directory '" + tempdir + "' creation failure.");
-      }
-
-      // Move the table in /hbase/.tmp
-      if (!fs.rename(tableDir, tempTableDir)) {
-        if (fs.exists(tempTableDir)) {
-          // TODO
-          // what's in this dir? something old? probably something manual from the user...
-          // let's get rid of this stuff...
-          FileStatus[] files = fs.listStatus(tempdir);
-          if (files != null && files.length > 0) {
-            for (int i = 0; i < files.length; ++i) {
-              if (!files[i].isDir()) continue;
-              HFileArchiver.archiveRegion(fs, ((LegacyPathIdentifier) ms.getRootContainer()).path,
-                  tempTableDir, files[i].getPath());
-            }
-          }
-          fs.delete(tempdir, true);
-        }
-        throw new IOException("Unable to move '" + tableDir + "' to temp '" + tempTableDir + "'");
-      }
-    }
-
-    // Archive regions from FS (temp directory)
-    if (archive) {
-      for (HRegionInfo hri : regions) {
-        LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
-        HFileArchiver.archiveRegion(fs, ((LegacyPathIdentifier) ms.getRootContainer()).path,
-            tempTableDir, HRegion.getRegionDir(tempTableDir, hri.getEncodedName()));
-      }
-      LOG.debug("Table '" + tableName + "' archived!");
-    }
-
-    // Archive mob data
-    Path mobTableDir = FSUtils.getTableDir(new Path(((LegacyPathIdentifier) ms.getRootContainer())
-            .path, MobConstants.MOB_DIR_NAME), tableName);
-    Path regionDir =
-            new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
-    if (fs.exists(regionDir)) {
-      HFileArchiver.archiveRegion(fs, ((LegacyPathIdentifier) ms.getRootContainer()).path,
-          mobTableDir, regionDir);
-    }
-
-    // Delete table directory from FS (temp directory)
-    if (!fs.delete(tempTableDir, true) && fs.exists(tempTableDir)) {
-      throw new IOException("Couldn't delete " + tempTableDir);
-    }
-
-    // Delete the table directory where the mob files are saved
-    if (mobTableDir != null && fs.exists(mobTableDir)) {
-      if (!fs.delete(mobTableDir, true)) {
-        throw new IOException("Couldn't delete mob dir " + mobTableDir);
-      }
-    }
+    ms.deleteTable(tableName, archive);
   }
 
   /**

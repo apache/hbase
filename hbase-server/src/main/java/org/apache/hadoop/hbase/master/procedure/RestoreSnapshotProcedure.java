@@ -30,8 +30,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,7 +40,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.fs.MasterStorage;
-import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -54,7 +52,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.RestoreS
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -334,12 +331,7 @@ public class RestoreSnapshotProcedure
 
     if (!getTableName().isSystemTable()) {
       // Table already exist. Check and update the region quota for this table namespace.
-      final MasterStorage ms = env.getMasterServices().getMasterStorage();
-      SnapshotManifest manifest = SnapshotManifest.open(
-        env.getMasterConfiguration(),
-        ms.getFileSystem(),
-        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, ((LegacyPathIdentifier) ms
-            .getRootContainer()).path), snapshot);
+      SnapshotManifest manifest = SnapshotManifest.open(env.getMasterConfiguration(), snapshot);
       int snapshotRegionCount = manifest.getRegionManifestsMap().size();
       int tableRegionCount =
           ProcedureSyncWait.getMasterQuotaManager(env).getRegionCountOfTable(tableName);
@@ -366,26 +358,17 @@ public class RestoreSnapshotProcedure
    * @throws IOException
    **/
   private void restoreSnapshot(final MasterProcedureEnv env) throws IOException {
-    MasterStorage fileSystemManager = env.getMasterServices().getMasterStorage();
-    FileSystem fs = fileSystemManager.getFileSystem();
-    Path rootDir = ((LegacyPathIdentifier) fileSystemManager.getRootContainer()).path;
     final ForeignExceptionDispatcher monitorException = new ForeignExceptionDispatcher();
 
     LOG.info("Starting restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot));
     try {
-      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
-      SnapshotManifest manifest = SnapshotManifest.open(
-        env.getMasterServices().getConfiguration(), fs, snapshotDir, snapshot);
+      SnapshotManifest manifest = SnapshotManifest.open(env.getMasterServices().getConfiguration(),
+          snapshot);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
-        env.getMasterServices().getConfiguration(),
-        fs,
-        manifest,
-        modifiedHTableDescriptor,
-        rootDir,
-        monitorException,
-        getMonitorStatus());
+          env.getMasterServices().getConfiguration(), manifest, modifiedHTableDescriptor,
+          monitorException, getMonitorStatus());
 
-      RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
+      RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreStorageRegions();
       regionsToRestore = metaChanges.getRegionsToRestore();
       regionsToRemove = metaChanges.getRegionsToRemove();
       regionsToAdd = metaChanges.getRegionsToAdd();

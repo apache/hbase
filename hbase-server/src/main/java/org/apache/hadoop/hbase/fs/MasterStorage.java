@@ -116,18 +116,42 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
   // ==========================================================================
   //  PUBLIC Methods - Table related
   // ==========================================================================
+
+  /**
+   * Deletes table from master storage (without archival before delete and from DATA context)
+   * @param tableName
+   * @throws IOException
+   */
   public void deleteTable(TableName tableName) throws IOException {
-    deleteTable(StorageContext.DATA, tableName);
+    deleteTable(StorageContext.DATA, tableName, false);
   }
+
+  /**
+   * Deletes table from master storage (from DATA context)
+   * @param tableName
+   * @param archive if true, all regions are archived before deletion
+   * @throws IOException
+   */
+  public void deleteTable(TableName tableName, boolean archive) throws IOException {
+    deleteTable(StorageContext.DATA, tableName, archive);
+  }
+
+  /**
+   * Deletes table from master storage
+   * @param ctx Storage context of the table
+   * @param tableName
+   * @param archive if true, all regions are archived for the table before deletion.
+   * @throws IOException
+   */
+  public abstract void deleteTable(StorageContext ctx, TableName tableName, boolean archive)
+      throws IOException;
 
   public Collection<TableName> getTables(String namespace) throws IOException {
     return getTables(StorageContext.DATA, namespace);
   }
 
-  public abstract void deleteTable(StorageContext ctx, TableName tableName) throws IOException;
-
   public abstract Collection<TableName> getTables(StorageContext ctx, String namespace)
-    throws IOException;
+      throws IOException;
 
   public Collection<TableName> getTables() throws IOException {
     ArrayList<TableName> tables = new ArrayList<TableName>();
@@ -136,6 +160,23 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
     }
     return tables;
   }
+
+  /**
+   * Archives specified table and all it's regions
+   * @param tableName
+   * @throws IOException
+   */
+  public void archiveTable(TableName tableName) throws IOException {
+    archiveTable(StorageContext.DATA, tableName);
+  }
+
+  /**
+   * Archives specified table and all it's regions
+   * @param ctx Storage context of the table.
+   * @param tableName
+   * @throws IOException
+   */
+  public abstract void archiveTable(StorageContext ctx, TableName tableName) throws IOException;
 
   // ==========================================================================
   //  PUBLIC Methods - Table Region related

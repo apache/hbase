@@ -31,8 +31,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -40,26 +38,21 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.fs.StorageContext;
 import org.apache.hadoop.hbase.fs.MasterStorage;
-import org.apache.hadoop.hbase.fs.StorageIdentifier;
-import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
-import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateHdfsRegions;
+import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateStorageRegions;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 
 import com.google.common.base.Preconditions;
@@ -128,7 +121,7 @@ public class CloneSnapshotProcedure
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_WRITE_FS_LAYOUT);
           break;
         case CLONE_SNAPSHOT_WRITE_FS_LAYOUT:
-          newRegions = createFilesystemLayout(env, hTableDescriptor, newRegions);
+          newRegions = createStorageLayout(env, hTableDescriptor, newRegions);
           setNextState(CloneSnapshotState.CLONE_SNAPSHOT_ADD_TO_META);
           break;
         case CLONE_SNAPSHOT_ADD_TO_META:
@@ -310,11 +303,7 @@ public class CloneSnapshotProcedure
       // Check and update namespace quota
       final MasterStorage ms = env.getMasterServices().getMasterStorage();
 
-      SnapshotManifest manifest = SnapshotManifest.open(
-        env.getMasterConfiguration(),
-        ms.getFileSystem(),
-        SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, ((LegacyPathIdentifier) ms
-            .getRootContainer()).path), snapshot);
+      SnapshotManifest manifest = SnapshotManifest.open(env.getMasterConfiguration(), snapshot);
 
       ProcedureSyncWait.getMasterQuotaManager(env)
         .checkNamespaceTableAndRegionQuota(getTableName(), manifest.getRegionManifestsMap().size());
@@ -343,24 +332,21 @@ public class CloneSnapshotProcedure
   }
 
   /**
-   * Create regions in file system.
+   * Create regions on storage.
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private List<HRegionInfo> createFilesystemLayout(
+  private List<HRegionInfo> createStorageLayout(
     final MasterProcedureEnv env,
     final HTableDescriptor hTableDescriptor,
     final List<HRegionInfo> newRegions) throws IOException {
-    return createFsLayout(env, hTableDescriptor, newRegions, new CreateHdfsRegions() {
+    return createTableOnStorage(env, hTableDescriptor, newRegions, new CreateStorageRegions() {
       @Override
-      public List<HRegionInfo> createHdfsRegions(
-        final MasterProcedureEnv env,
-        final Path tableRootDir, final TableName tableName,
-        final List<HRegionInfo> newRegions) throws IOException {
+      public List<HRegionInfo> createRegionsOnStorage(
+          final MasterProcedureEnv env,
+          final TableName tableName,
+          final List<HRegionInfo> newRegions) throws IOException {
 
-        final MasterStorage ms = env.getMasterServices().getMasterStorage();
-        final FileSystem fs = ms.getFileSystem();
-        final StorageIdentifier rootContainer = ms.getRootContainer();
         final Configuration conf = env.getMasterConfiguration();
         final ForeignExceptionDispatcher monitorException = new ForeignExceptionDispatcher();
 
@@ -368,12 +354,11 @@ public class CloneSnapshotProcedure
 
         try {
           // 1. Execute the on-disk Clone
-          Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot,
-              ((LegacyPathIdentifier) rootContainer).path);
-          SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshot);
-          RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
-            conf, fs, manifest, hTableDescriptor, tableRootDir, monitorException, monitorStatus);
-          RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
+          SnapshotManifest manifest = SnapshotManifest.open(conf, snapshot);
+          RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, manifest,
+              hTableDescriptor, monitorException, monitorStatus);
+          RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
+              restoreHelper.restoreStorageRegions();
 
           // Clone operation should not have stuff to restore or remove
           Preconditions.checkArgument(
@@ -405,30 +390,28 @@ public class CloneSnapshotProcedure
   }
 
   /**
-   * Create region layout in file system.
+   * Create region layout on storage.
    * @param env MasterProcedureEnv
    * @throws IOException
    */
-  private List<HRegionInfo> createFsLayout(
+  private List<HRegionInfo> createTableOnStorage(
     final MasterProcedureEnv env,
     final HTableDescriptor hTableDescriptor,
     List<HRegionInfo> newRegions,
-    final CreateHdfsRegions hdfsRegionHandler) throws IOException {
+    final CreateStorageRegions storageRegionHandler) throws IOException {
     final MasterStorage ms = env.getMasterServices().getMasterStorage();
-    final Path tempdir = ((LegacyPathIdentifier)ms.getTempContainer()).path;
 
-    // 1. Create Table Descriptor
+    // 1. Delete existing artifacts (dir, files etc) for the table
+    ms.deleteTable(hTableDescriptor.getTableName());
+
+    // 2. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     HTableDescriptor underConstruction = new HTableDescriptor(hTableDescriptor);
-    final Path tempTableDir = FSUtils.getTableDir(tempdir, hTableDescriptor.getTableName());
-    ms.createTableDescriptor(StorageContext.TEMP, underConstruction, false);
+    ms.createTableDescriptor(underConstruction, true);
 
-    // 2. Create Regions
-    newRegions = hdfsRegionHandler.createHdfsRegions(
-      env, tempdir, hTableDescriptor.getTableName(), newRegions);
-
-    // 3. Move Table temp directory to the hbase root location
-    CreateTableProcedure.moveTempDirectoryToHBaseRoot(env, hTableDescriptor, tempTableDir);
+    // 3. Create Regions
+    newRegions = storageRegionHandler.createRegionsOnStorage(env, hTableDescriptor.getTableName(),
+        newRegions);
 
     return newRegions;
   }

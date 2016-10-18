@@ -154,7 +154,7 @@ public class TestRestoreSnapshotHelper {
 
     new FSTableDescriptors(conf).createTableDescriptor(htdClone);
     RestoreSnapshotHelper helper = getRestoreHelper(rootDir, snapshotDir, sd, htdClone);
-    helper.restoreHdfsRegions();
+    helper.restoreStorageRegions();
 
     LOG.debug("post-restore table=" + htdClone.getTableName() + " snapshot=" + snapshotDir);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
@@ -169,8 +169,8 @@ public class TestRestoreSnapshotHelper {
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
 
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
-    return new RestoreSnapshotHelper(conf, fs, manifest,
-      htdClone, rootDir, monitor, status);
+    return new RestoreSnapshotHelper(conf, manifest,
+      htdClone, monitor, status);
   }
 
   private Path getReferredToFile(final String referenceName) {
