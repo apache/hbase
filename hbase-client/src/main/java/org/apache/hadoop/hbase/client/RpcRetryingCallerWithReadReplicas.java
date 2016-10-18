@@ -29,6 +29,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class RpcRetryingCallerWithReadReplicas {
+  private static final Log LOG = LogFactory.getLog(RpcRetryingCallerWithReadReplicas.class);
   protected final ExecutorService pool;
   protected final ClusterConnection cConnection;
   protected final Configuration conf;
@@ -171,9 +174,12 @@ public class RpcRetryingCallerWithReadReplicas {
         : RegionReplicaUtil.DEFAULT_REPLICA_ID), cConnection, tableName, get.getRow());
    final ResultBoundedCompletionService<Result> cs =
         new ResultBoundedCompletionService<Result>(this.rpcRetryingCallerFactory, pool, rl.size());
+    int startIndex = 0;
+    int endIndex = rl.size();
 
     if(isTargetReplicaSpecified) {
       addCallsForReplica(cs, rl, get.getReplicaId(), get.getReplicaId());
+      endIndex = 1;
     } else {
       addCallsForReplica(cs, rl, 0, 0);
       try {
@@ -183,7 +189,13 @@ public class RpcRetryingCallerWithReadReplicas {
           return f.get(); //great we got a response
         }
       } catch (ExecutionException e) {
-        throwEnrichedException(e, retries);
+        // We ignore the ExecutionException and continue with the secondary replicas
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Primary replica returns " + e.getCause());
+        }
+
+        // Skip the result from the primary as we know that there is something wrong
+        startIndex = 1;
       } catch (CancellationException e) {
         throw new InterruptedIOException();
       } catch (InterruptedException e) {
@@ -194,19 +206,14 @@ public class RpcRetryingCallerWithReadReplicas {
       addCallsForReplica(cs, rl, 1, rl.size() - 1);
     }
     try {
-      try {
-        long start = EnvironmentEdgeManager.currentTime();
-        Future<Result> f = cs.poll(operationTimeout, TimeUnit.MILLISECONDS);
-        long duration = EnvironmentEdgeManager.currentTime() - start;
-        if (f == null) {
-          throw new RetriesExhaustedException("timed out after " + duration + " ms");
-        }
-        return f.get(operationTimeout - duration, TimeUnit.MILLISECONDS);
-      } catch (ExecutionException e) {
-        throwEnrichedException(e, retries);
-      } catch (TimeoutException te) {
+      Future<Result> f = cs.pollForFirstSuccessfullyCompletedTask(operationTimeout,
+          TimeUnit.MILLISECONDS, startIndex, endIndex);
+      if (f == null) {
         throw new RetriesExhaustedException("timed out after " + operationTimeout + " ms");
       }
+      return f.get();
+    } catch (ExecutionException e) {
+      throwEnrichedException(e, retries);
     } catch (CancellationException e) {
       throw new InterruptedIOException();
     } catch (InterruptedException e) {
@@ -217,6 +224,7 @@ public class RpcRetryingCallerWithReadReplicas {
       cs.cancelAll();
     }
 
+    LOG.error("Imposible? Arrive at an unreachable line..."); // unreachable
     return null; // unreachable
   }
 

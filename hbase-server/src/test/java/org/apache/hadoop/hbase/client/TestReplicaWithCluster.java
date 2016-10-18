@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -63,7 +65,7 @@ import org.junit.experimental.categories.Category;
 public class TestReplicaWithCluster {
   private static final Log LOG = LogFactory.getLog(TestReplicaWithCluster.class);
 
-  private static final int NB_SERVERS = 2;
+  private static final int NB_SERVERS = 3;
   private static final byte[] row = TestReplicaWithCluster.class.getName().getBytes();
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
@@ -109,11 +111,56 @@ public class TestReplicaWithCluster {
     }
   }
 
+  /**
+   * This copro is used to simulate region server down exception for Get and Scan
+   */
+  public static class RegionServerStoppedCopro extends BaseRegionObserver {
+
+    public RegionServerStoppedCopro() {
+    }
+
+    @Override
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Get get, final List<Cell> results) throws IOException {
+
+      int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
+
+      // Fail for the primary replica and replica 1
+      if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
+        LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
+        throw new RegionServerStoppedException("Server " +
+            e.getEnvironment().getRegionServerServices().getServerName()
+            + " not running");
+      } else {
+        LOG.info("We're replica region " + replicaId);
+      }
+    }
+
+    @Override
+    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan, final RegionScanner s) throws IOException {
+
+      int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
+
+      // Fail for the primary replica and replica 1
+      if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
+        LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
+        throw new RegionServerStoppedException("Server " +
+            e.getEnvironment().getRegionServerServices().getServerName()
+            + " not running");
+      } else {
+        LOG.info("We're replica region " + replicaId);
+      }
+
+      return null;
+    }
+  }
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     // enable store file refreshing
-    HTU.getConfiguration().setInt(
-        StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
+    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
+        REFRESH_PERIOD);
 
     HTU.getConfiguration().setFloat("hbase.regionserver.logroll.multiplier", 0.0001f);
     HTU.getConfiguration().setInt("replication.source.size.capacity", 10240);
@@ -122,6 +169,13 @@ public class TestReplicaWithCluster {
     HTU.getConfiguration().setLong("hbase.master.logcleaner.ttl", 10);
     HTU.getConfiguration().setInt("zookeeper.recovery.retry", 1);
     HTU.getConfiguration().setInt("zookeeper.recovery.retry.intervalmill", 10);
+
+    // Wait for primary call longer so make sure that it will get exception from the primary call
+    HTU.getConfiguration().setInt("hbase.client.primaryCallTimeout.get", 1000000);
+    HTU.getConfiguration().setInt("hbase.client.primaryCallTimeout.scan", 1000000);
+
+    // Retry less so it can fail faster
+    HTU.getConfiguration().setInt("hbase.client.retries.number", 1);
 
     HTU.startMiniCluster(NB_SERVERS);
     HTU.getHBaseCluster().startMaster();
@@ -263,39 +317,39 @@ public class TestReplicaWithCluster {
     LOG.info("Put & flush done on the first cluster. Now doing a get on the same cluster.");
 
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
+      @Override public boolean evaluate() throws Exception {
         try {
           SlowMeCopro.cdl.set(new CountDownLatch(1));
           Get g = new Get(row);
           g.setConsistency(Consistency.TIMELINE);
           Result r = table.get(g);
           Assert.assertTrue(r.isStale());
-          return  !r.isEmpty();
+          return !r.isEmpty();
         } finally {
           SlowMeCopro.cdl.get().countDown();
           SlowMeCopro.sleepTime.set(0);
         }
-      }});
+      }
+    });
     table.close();
     LOG.info("stale get on the first cluster done. Now for the second.");
 
     final Table table2 = HTU.getConnection().getTable(hdt.getTableName());
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
+      @Override public boolean evaluate() throws Exception {
         try {
           SlowMeCopro.cdl.set(new CountDownLatch(1));
           Get g = new Get(row);
           g.setConsistency(Consistency.TIMELINE);
           Result r = table2.get(g);
           Assert.assertTrue(r.isStale());
-          return  !r.isEmpty();
+          return !r.isEmpty();
         } finally {
           SlowMeCopro.cdl.get().countDown();
           SlowMeCopro.sleepTime.set(0);
         }
-      }});
+      }
+    });
     table2.close();
 
     HTU.getHBaseAdmin().disableTable(hdt.getTableName());
@@ -386,5 +440,84 @@ public class TestReplicaWithCluster {
 
     HTU.getHBaseAdmin().disableTable(hdt.getTableName());
     HTU.deleteTable(hdt.getTableName());
+  }
+
+  @Test
+  public void testReplicaGetWithPrimaryDown() throws IOException {
+    // Create table then get the single region for our new table.
+    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    hdt.setRegionReplication(NB_SERVERS);
+    hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
+    try {
+      Table table = HTU.createTable(hdt, new byte[][] { f }, null);
+
+      Put p = new Put(row);
+      p.addColumn(f, row, row);
+      table.put(p);
+
+      // Flush so it can be picked by the replica refresher thread
+      HTU.flush(table.getName());
+
+      // Sleep for some time until data is picked up by replicas
+      try {
+        Thread.sleep(2 * REFRESH_PERIOD);
+      } catch (InterruptedException e1) {
+        LOG.error(e1);
+      }
+
+      // But if we ask for stale we will get it
+      Get g = new Get(row);
+      g.setConsistency(Consistency.TIMELINE);
+      Result r = table.get(g);
+      Assert.assertTrue(r.isStale());
+    } finally {
+      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.deleteTable(hdt.getTableName());
+    }
+  }
+
+  @Test
+  public void testReplicaScanWithPrimaryDown() throws IOException {
+    // Create table then get the single region for our new table.
+    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    hdt.setRegionReplication(NB_SERVERS);
+    hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
+
+    try {
+      Table table = HTU.createTable(hdt, new byte[][] { f }, null);
+
+      Put p = new Put(row);
+      p.addColumn(f, row, row);
+      table.put(p);
+
+      // Flush so it can be picked by the replica refresher thread
+      HTU.flush(table.getName());
+
+      // Sleep for some time until data is picked up by replicas
+      try {
+        Thread.sleep(2 * REFRESH_PERIOD);
+      } catch (InterruptedException e1) {
+        LOG.error(e1);
+      }
+
+      // But if we ask for stale we will get it
+      // Instantiating the Scan class
+      Scan scan = new Scan();
+
+      // Scanning the required columns
+      scan.addFamily(f);
+      scan.setConsistency(Consistency.TIMELINE);
+
+      // Getting the scan result
+      ResultScanner scanner = table.getScanner(scan);
+
+      Result r = scanner.next();
+
+      Assert.assertTrue(r.isStale());
+    } finally {
+
+      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.deleteTable(hdt.getTableName());
+    }
   }
 }

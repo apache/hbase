@@ -169,53 +169,69 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     replicaSwitched.set(false);
     // submit call for the primary replica.
     addCallsForCurrentReplica(cs, rl);
+    int startIndex = 0;
 
     try {
       // wait for the timeout to see whether the primary responds back
       Future<Pair<Result[], ScannerCallable>> f = cs.poll(timeBeforeReplicas,
           TimeUnit.MICROSECONDS); // Yes, microseconds
       if (f != null) {
-        Pair<Result[], ScannerCallable> r = f.get(timeout, TimeUnit.MILLISECONDS);
+        // After poll, if f is not null, there must be a completed task
+        Pair<Result[], ScannerCallable> r = f.get();
         if (r != null && r.getSecond() != null) {
           updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
         }
         return r == null ? null : r.getFirst(); //great we got a response
       }
     } catch (ExecutionException e) {
-      RpcRetryingCallerWithReadReplicas.throwEnrichedException(e, retries);
+      // We ignore the ExecutionException and continue with the replicas
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Scan with primary region returns " + e.getCause());
+      }
+
+      // If rl's size is 1 or scan's consitency is strong, it needs to throw
+      // out the exception from the primary replica
+      if ((rl.size() == 1) || (scan.getConsistency() == Consistency.STRONG)) {
+        // Rethrow the first exception
+        RpcRetryingCallerWithReadReplicas.throwEnrichedException(e, retries);
+      }
+
+      startIndex = 1;
     } catch (CancellationException e) {
       throw new InterruptedIOException(e.getMessage());
     } catch (InterruptedException e) {
       throw new InterruptedIOException(e.getMessage());
-    } catch (TimeoutException e) {
-      throw new InterruptedIOException(e.getMessage());
     }
 
     // submit call for the all of the secondaries at once
-    // TODO: this may be an overkill for large region replication
-    addCallsForOtherReplicas(cs, rl, 0, rl.size() - 1);
+    int endIndex = rl.size();
+    if (scan.getConsistency() == Consistency.STRONG) {
+      // When scan's consistency is strong, do not send to the secondaries
+      endIndex = 1;
+    } else {
+      // TODO: this may be an overkill for large region replication
+      addCallsForOtherReplicas(cs, rl, 0, rl.size() - 1);
+    }
 
     try {
-      long start = EnvironmentEdgeManager.currentTime();
-      Future<Pair<Result[], ScannerCallable>> f = cs.poll(timeout, TimeUnit.MILLISECONDS);
-      long duration = EnvironmentEdgeManager.currentTime() - start;
-      if (f != null) {
-        Pair<Result[], ScannerCallable> r = f.get(timeout - duration, TimeUnit.MILLISECONDS);
-        if (r != null && r.getSecond() != null) {
-          updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
-        }
-        return r == null ? null : r.getFirst(); // great we got an answer
-      } else {
-        throw new IOException("Failed to get result within timeout, timeout="
-            + timeout + "ms");
+      Future<Pair<Result[], ScannerCallable>> f = cs.pollForFirstSuccessfullyCompletedTask(timeout,
+          TimeUnit.MILLISECONDS, startIndex, endIndex);
+
+      if (f == null) {
+        throw new IOException("Failed to get result within timeout, timeout=" + timeout + "ms");
       }
+      Pair<Result[], ScannerCallable> r = f.get();
+
+      if (r != null && r.getSecond() != null) {
+        updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
+      }
+      return r == null ? null : r.getFirst(); // great we got an answer
+
     } catch (ExecutionException e) {
       RpcRetryingCallerWithReadReplicas.throwEnrichedException(e, retries);
     } catch (CancellationException e) {
       throw new InterruptedIOException(e.getMessage());
     } catch (InterruptedException e) {
-      throw new InterruptedIOException(e.getMessage());
-    } catch (TimeoutException e) {
       throw new InterruptedIOException(e.getMessage());
     } finally {
       // We get there because we were interrupted or because one or more of the
@@ -292,9 +308,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   private void addCallsForOtherReplicas(
       ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs, RegionLocations rl,
       int min, int max) {
-    if (scan.getConsistency() == Consistency.STRONG) {
-      return; // not scheduling on other replicas for strong consistency
-    }
+
     for (int id = min; id <= max; id++) {
       if (currentScannerCallable.id == id) {
         continue; //this was already scheduled earlier
