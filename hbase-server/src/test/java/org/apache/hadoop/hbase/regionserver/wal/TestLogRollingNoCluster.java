@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertFalse;
-
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
-
+import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -50,7 +51,18 @@ import org.junit.experimental.categories.Category;
 public class TestLogRollingNoCluster {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte [] EMPTY_1K_ARRAY = new byte[1024];
-  private static final int THREAD_COUNT = 100; // Spin up this many threads
+  private static final int NUM_THREADS = 100; // Spin up this many threads
+  private static final int NUM_ENTRIES = 100; // How many entries to write
+
+  /** ProtobufLogWriter that simulates higher latencies in sync() call */
+  public static class HighLatencySyncWriter extends  ProtobufLogWriter {
+    @Override
+    public void sync() throws IOException {
+      Threads.sleep(ThreadLocalRandom.current().nextInt(10));
+      super.sync();
+      Threads.sleep(ThreadLocalRandom.current().nextInt(10));
+    }
+  }
 
   /**
    * Spin up a bunch of threads and have them all append to a WAL.  Roll the
@@ -59,38 +71,41 @@ public class TestLogRollingNoCluster {
    * @throws InterruptedException
    */
   @Test
-  public void testContendedLogRolling() throws IOException, InterruptedException {
-    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    Path dir = TEST_UTIL.getDataTestDir();
+  public void testContendedLogRolling() throws Exception {
+    TEST_UTIL.startMiniDFSCluster(3);
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS();
+
     // The implementation needs to know the 'handler' count.
-    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, THREAD_COUNT);
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, NUM_THREADS);
     final Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     FSUtils.setRootDir(conf, dir);
+    conf.set("hbase.regionserver.hlog.writer.impl", HighLatencySyncWriter.class.getName());
     final WALFactory wals = new WALFactory(conf, null, TestLogRollingNoCluster.class.getName());
     final WAL wal = wals.getWAL(new byte[]{});
     
     Appender [] appenders = null;
 
-    final int count = THREAD_COUNT;
-    appenders = new Appender[count];
+    final int numThreads = NUM_THREADS;
+    appenders = new Appender[numThreads];
     try {
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < numThreads; i++) {
         // Have each appending thread write 'count' entries
-        appenders[i] = new Appender(wal, i, count);
+        appenders[i] = new Appender(wal, i, NUM_ENTRIES);
       }
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < numThreads; i++) {
         appenders[i].start();
       }
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < numThreads; i++) {
         //ensure that all threads are joined before closing the wal
         appenders[i].join();
       }
     } finally {
       wals.close();
     }
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < numThreads; i++) {
       assertFalse(appenders[i].isException());
     }
+    TEST_UTIL.shutdownMiniDFSCluster();
   }
 
   /**
@@ -139,6 +154,7 @@ public class TestLogRollingNoCluster {
           final HTableDescriptor htd = fts.get(TableName.META_TABLE_NAME);
           final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(),
               TableName.META_TABLE_NAME, now), edit, sequenceId, true, null);
+          Threads.sleep(ThreadLocalRandom.current().nextInt(5));
           wal.sync(txid);
         }
         String msg = getName() + " finished";
