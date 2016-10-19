@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -63,7 +65,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class TestReplicaWithCluster {
   private static final Log LOG = LogFactory.getLog(TestReplicaWithCluster.class);
 
-  private static final int NB_SERVERS = 2;
+  private static final int NB_SERVERS = 3;
   private static final byte[] row = TestReplicaWithCluster.class.getName().getBytes();
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
@@ -110,6 +112,51 @@ public class TestReplicaWithCluster {
     }
   }
 
+  /**
+   * This copro is used to simulate region server down exception for Get and Scan
+   */
+  public static class RegionServerStoppedCopro extends BaseRegionObserver {
+
+    public RegionServerStoppedCopro() {
+    }
+
+    @Override
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Get get, final List<Cell> results) throws IOException {
+
+      int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
+
+      // Fail for the primary replica and replica 1
+      if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
+        LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
+        throw new RegionServerStoppedException("Server " +
+            e.getEnvironment().getRegionServerServices().getServerName()
+            + " not running");
+      } else {
+        LOG.info("We're replica region " + replicaId);
+      }
+    }
+
+    @Override
+    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan, final RegionScanner s) throws IOException {
+
+      int replicaId = e.getEnvironment().getRegion().getRegionInfo().getReplicaId();
+
+      // Fail for the primary replica and replica 1
+      if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() <= 1) {
+        LOG.info("Throw Region Server Stopped Exceptoin for replica id " + replicaId);
+        throw new RegionServerStoppedException("Server " +
+            e.getEnvironment().getRegionServerServices().getServerName()
+            + " not running");
+      } else {
+        LOG.info("We're replica region " + replicaId);
+      }
+
+      return null;
+    }
+  }
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     // enable store file refreshing
@@ -124,13 +171,19 @@ public class TestReplicaWithCluster {
     HTU.getConfiguration().setInt("zookeeper.recovery.retry", 1);
     HTU.getConfiguration().setInt("zookeeper.recovery.retry.intervalmill", 10);
 
+    // Wait for primary call longer so make sure that it will get exception from the primary call
+    HTU.getConfiguration().setInt("hbase.client.primaryCallTimeout.get", 1000000);
+    HTU.getConfiguration().setInt("hbase.client.primaryCallTimeout.scan", 1000000);
+
     HTU.startMiniCluster(NB_SERVERS);
     HTU.getHBaseCluster().startMaster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    HTU2.shutdownMiniCluster();
+    if (HTU2 != null) {
+      HTU2.shutdownMiniCluster();
+    }
     HTU.shutdownMiniCluster();
   }
 
@@ -381,5 +434,91 @@ public class TestReplicaWithCluster {
 
     HTU.getHBaseAdmin().disableTable(hdt.getTableName());
     HTU.deleteTable(hdt.getTableName());
+  }
+
+  @Test
+  public void testReplicaGetWithPrimaryDown() throws IOException {
+    // Create table then get the single region for our new table.
+    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    hdt.setRegionReplication(NB_SERVERS);
+    hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
+    try {
+      // Retry less so it can fail faster
+      HTU.getConfiguration().setInt("hbase.client.retries.number", 1);
+
+      Table table = HTU.createTable(hdt, new byte[][] { f }, null);
+
+      Put p = new Put(row);
+      p.addColumn(f, row, row);
+      table.put(p);
+
+      // Flush so it can be picked by the replica refresher thread
+      HTU.flush(table.getName());
+
+      // Sleep for some time until data is picked up by replicas
+      try {
+        Thread.sleep(2 * REFRESH_PERIOD);
+      } catch (InterruptedException e1) {
+        LOG.error(e1);
+      }
+
+      // But if we ask for stale we will get it
+      Get g = new Get(row);
+      g.setConsistency(Consistency.TIMELINE);
+      Result r = table.get(g);
+      Assert.assertTrue(r.isStale());
+    } finally {
+      HTU.getConfiguration().unset("hbase.client.retries.number");
+      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.deleteTable(hdt.getTableName());
+    }
+  }
+
+  @Test
+  public void testReplicaScanWithPrimaryDown() throws IOException {
+    // Create table then get the single region for our new table.
+    HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
+    hdt.setRegionReplication(NB_SERVERS);
+    hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
+
+    try {
+      // Retry less so it can fail faster
+      HTU.getConfiguration().setInt("hbase.client.retries.number", 1);
+
+      Table table = HTU.createTable(hdt, new byte[][] { f }, null);
+
+      Put p = new Put(row);
+      p.addColumn(f, row, row);
+      table.put(p);
+
+      // Flush so it can be picked by the replica refresher thread
+      HTU.flush(table.getName());
+
+      // Sleep for some time until data is picked up by replicas
+      try {
+        Thread.sleep(2 * REFRESH_PERIOD);
+      } catch (InterruptedException e1) {
+        LOG.error(e1);
+      }
+
+      // But if we ask for stale we will get it
+      // Instantiating the Scan class
+      Scan scan = new Scan();
+
+      // Scanning the required columns
+      scan.addFamily(f);
+      scan.setConsistency(Consistency.TIMELINE);
+
+      // Getting the scan result
+      ResultScanner scanner = table.getScanner(scan);
+
+      Result r = scanner.next();
+
+      Assert.assertTrue(r.isStale());
+    } finally {
+      HTU.getConfiguration().unset("hbase.client.retries.number");
+      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.deleteTable(hdt.getTableName());
+    }
   }
 }
