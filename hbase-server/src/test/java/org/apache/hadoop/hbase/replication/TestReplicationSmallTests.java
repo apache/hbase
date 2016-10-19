@@ -719,7 +719,12 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   public void testReplicationStatus() throws Exception {
     LOG.info("testReplicationStatus");
 
-    try (Admin admin = utility1.getConnection().getAdmin()) {
+    try (Admin hbaseAdmin = utility1.getConnection().getAdmin()) {
+      // Wait roll log request in setUp() to finish
+      Thread.sleep(5000);
+
+      // disable peer
+      admin.disablePeer(PEER_ID);
 
       final byte[] qualName = Bytes.toBytes("q");
       Put p;
@@ -730,7 +735,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         htable1.put(p);
       }
 
-      ClusterStatus status = admin.getClusterStatus();
+      ClusterStatus status = hbaseAdmin.getClusterStatus();
+      long globalSizeOfLogQueue = 0;
 
       for (JVMClusterUtil.RegionServerThread thread :
           utility1.getHBaseCluster().getRegionServerThreads()) {
@@ -739,8 +745,9 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         List<ReplicationLoadSource> rLoadSourceList = sl.getReplicationLoadSourceList();
         ReplicationLoadSink rLoadSink = sl.getReplicationLoadSink();
 
-        // check SourceList has at least one entry
-        assertTrue("failed to get ReplicationLoadSourceList", (rLoadSourceList.size() > 0));
+        // check SourceList only has one entry
+        assertTrue("failed to get ReplicationLoadSourceList", (rLoadSourceList.size() == 1));
+        globalSizeOfLogQueue += rLoadSourceList.get(0).getSizeOfLogQueue();
 
         // check Sink exist only as it is difficult to verify the value on the fly
         assertTrue("failed to get ReplicationLoadSink.AgeOfLastShippedOp ",
@@ -748,6 +755,21 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         assertTrue("failed to get ReplicationLoadSink.TimeStampsOfLastAppliedOp ",
           (rLoadSink.getTimeStampsOfLastAppliedOp() >= 0));
       }
+
+      // Stop one rs
+      utility1.getHBaseCluster().getRegionServer(1).stop("Stop RegionServer");
+      Thread.sleep(5000);
+      status = hbaseAdmin.getClusterStatus();
+      ServerName server = utility1.getHBaseCluster().getRegionServer(0).getServerName();
+      ServerLoad sl = status.getLoad(server);
+      List<ReplicationLoadSource> rLoadSourceList = sl.getReplicationLoadSourceList();
+      // check SourceList only has one entry
+      assertTrue("failed to get ReplicationLoadSourceList", (rLoadSourceList.size() == 1));
+      // Another rs has one queue and one recovery queue from died rs
+      assertEquals(globalSizeOfLogQueue, rLoadSourceList.get(0).getSizeOfLogQueue());
+    } finally {
+      utility1.getHBaseCluster().getRegionServer(1).start();
+      admin.enablePeer(PEER_ID);
     }
   }
 

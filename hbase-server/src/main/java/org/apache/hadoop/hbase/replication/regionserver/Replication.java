@@ -376,15 +376,24 @@ public class Replication extends WALActionsListener.Base implements
   }
 
   private void buildReplicationLoad() {
-    // get source
-    List<ReplicationSourceInterface> sources = this.replicationManager.getSources();
     List<MetricsSource> sourceMetricsList = new ArrayList<MetricsSource>();
 
+    // get source
+    List<ReplicationSourceInterface> sources = this.replicationManager.getSources();
     for (ReplicationSourceInterface source : sources) {
       if (source instanceof ReplicationSource) {
         sourceMetricsList.add(((ReplicationSource) source).getSourceMetrics());
       }
     }
+
+    // get old source
+    List<ReplicationSourceInterface> oldSources = this.replicationManager.getOldSources();
+    for (ReplicationSourceInterface source : oldSources) {
+      if (source instanceof ReplicationSource) {
+        sourceMetricsList.add(((ReplicationSource) source).getSourceMetrics());
+      }
+    }
+
     // get sink
     MetricsSink sinkMetrics = this.replicationSink.getSinkMetrics();
     this.replicationLoad.buildReplicationLoad(sourceMetricsList, sinkMetrics);
