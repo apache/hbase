@@ -69,6 +69,7 @@ public class TestMasterFailoverWithProcedures {
     conf.setInt("hbase.procedure.store.wal.wait.before.roll", 0);
     conf.setInt("hbase.procedure.store.wal.max.roll.retries", 1);
     conf.setInt("hbase.procedure.store.wal.sync.failure.roll.max", 1);
+    conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
 
   @Before
