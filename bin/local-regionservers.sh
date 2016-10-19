@@ -25,11 +25,15 @@ bin=`cd "$bin" >/dev/null && pwd`
 
 if [ $# -lt 2 ]; then
   S=`basename "${BASH_SOURCE-$0}"`
-  echo "Usage: $S [--config <conf-dir>] [start|stop] offset(s)"
-  echo ""
+  echo "Usage: $S [--config <conf-dir>]  [--autostart-window-size <window size in hours>]"
+  echo "  [--autostart-window-retry-limit <retry count limit for autostart>] [autostart|start|stop] offset(s)"
   echo "    e.g. $S start 1 2"
   exit
 fi
+
+# default autostart args value indicating infinite window size and no retry limit
+AUTOSTART_WINDOW_SIZE=0
+AUTOSTART_WINDOW_RETRY_LIMIT=0
 
 . "$bin"/hbase-config.sh
 
@@ -40,9 +44,13 @@ run_regionserver () {
   DN=$2
   export HBASE_IDENT_STRING="$USER-$DN"
   HBASE_REGIONSERVER_ARGS="\
-    -D hbase.regionserver.port=`expr 16200 + $DN` \
-    -D hbase.regionserver.info.port=`expr 16300 + $DN`"
-  "$bin"/hbase-daemon.sh  --config "${HBASE_CONF_DIR}" $1 regionserver $HBASE_REGIONSERVER_ARGS
+    -Dhbase.regionserver.port=`expr 16200 + $DN` \
+    -Dhbase.regionserver.info.port=`expr 16300 + $DN`"
+
+  "$bin"/hbase-daemon.sh  --config "${HBASE_CONF_DIR}" \
+    --autostart-window-size "${AUTOSTART_WINDOW_SIZE}" \
+    --autostart-window-retry-limit "${AUTOSTART_WINDOW_RETRY_LIMIT}" \
+    $1 regionserver $HBASE_REGIONSERVER_ARGS
 }
 
 cmd=$1

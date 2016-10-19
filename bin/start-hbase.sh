@@ -22,10 +22,16 @@
 
 # Start hadoop hbase daemons.
 # Run this on master node.
-usage="Usage: start-hbase.sh"
+usage="Usage: start-hbase.sh [--autostart-window-size <window size in hours>]\
+      [--autostart-window-retry-limit <retry count limit for autostart>]\
+      [autostart|start]"
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin">/dev/null; pwd`
+
+# default autostart args value indicating infinite window size and no retry limit
+AUTOSTART_WINDOW_SIZE=0
+AUTOSTART_WINDOW_RETRY_LIMIT=0
 
 . "$bin"/hbase-config.sh
 
@@ -36,24 +42,22 @@ then
   exit $errCode
 fi
 
-
-if [ "$1" = "autorestart" ]
+if [ "$1" = "autostart" ]
 then
-  commandToRun="autorestart"
-else 
+  commandToRun="--autostart-window-size ${AUTOSTART_WINDOW_SIZE} --autostart-window-retry-limit ${AUTOSTART_WINDOW_RETRY_LIMIT} autostart"
+else
   commandToRun="start"
 fi
 
 # HBASE-6504 - only take the first line of the output in case verbose gc is on
 distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
 
-
-if [ "$distMode" == 'false' ] 
+if [ "$distMode" == 'false' ]
 then
-  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master $@
+  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master
 else
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" $commandToRun zookeeper
-  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master 
+  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
     --hosts "${HBASE_REGIONSERVERS}" $commandToRun regionserver
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \

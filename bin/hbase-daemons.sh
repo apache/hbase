@@ -17,12 +17,13 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
-# 
+#
 # Run a hbase command on all slave hosts.
 # Modelled after $HADOOP_HOME/bin/hadoop-daemons.sh
 
-usage="Usage: hbase-daemons.sh [--config <hbase-confdir>] \
- [--hosts regionserversfile] [start|stop] command args..."
+usage="Usage: hbase-daemons.sh [--config <hbase-confdir>] [--autostart-window-size <window size in hours>]\
+      [--autostart-window-retry-limit <retry count limit for autostart>] \
+      [--hosts regionserversfile] [autostart|autorestart|restart|start|stop] command args..."
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -33,9 +34,18 @@ fi
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin">/dev/null; pwd`
 
+# default autostart args value indicating infinite window size and no retry limit
+AUTOSTART_WINDOW_SIZE=0
+AUTOSTART_WINDOW_RETRY_LIMIT=0
+
 . $bin/hbase-config.sh
 
-remote_cmd="cd ${HBASE_HOME}; $bin/hbase-daemon.sh --config ${HBASE_CONF_DIR} $@"
+if [[ "$1" = "autostart" || "$1" = "autorestart" ]]
+then
+  autostart_args="--autostart-window-size ${AUTOSTART_WINDOW_SIZE} --autostart-window-retry-limit ${AUTOSTART_WINDOW_RETRY_LIMIT}"
+fi
+
+remote_cmd="$bin/hbase-daemon.sh --config ${HBASE_CONF_DIR} ${autostart_args} $@"
 args="--hosts ${HBASE_REGIONSERVERS} --config ${HBASE_CONF_DIR} $remote_cmd"
 
 command=$2
@@ -50,4 +60,3 @@ case $command in
     exec "$bin/regionservers.sh" $args
     ;;
 esac
-

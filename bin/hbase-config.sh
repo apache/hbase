@@ -66,6 +66,24 @@ do
     shift
     # shellcheck disable=SC2034
     AUTH_AS_SERVER="true"
+  elif [ "--autostart-window-size" = "$1" ]
+  then
+    shift
+    AUTOSTART_WINDOW_SIZE=$(( $1 + 0 ))
+    if [ $AUTOSTART_WINDOW_SIZE -lt 0 ]; then
+      echo "Invalid value for --autostart-window-size, should be a positive integer"
+      exit 1
+    fi
+    shift
+  elif [ "--autostart-window-retry-limit" = "$1" ]
+  then
+    shift
+    AUTOSTART_WINDOW_RETRY_LIMIT=$(( $1 + 0 ))
+    if [ $AUTOSTART_WINDOW_RETRY_LIMIT -lt 0 ]; then
+      echo "Invalid value for --autostart-window-retry-limit, should be a positive integer"
+      exit 1
+    fi
+    shift
   else
     # Presume we are at end of options and break
     break
