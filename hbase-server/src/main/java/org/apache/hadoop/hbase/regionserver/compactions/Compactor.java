@@ -276,7 +276,11 @@ public abstract class Compactor<T extends CellSink> {
       // HFiles, and their readers
       readersToClose = new ArrayList<StoreFile>(request.getFiles().size());
       for (StoreFile f : request.getFiles()) {
-        readersToClose.add(f.cloneForReader());
+        StoreFile clonedStoreFile = f.cloneForReader();
+        // create the reader after the store file is cloned in case
+        // the sequence id is used for sorting in scanners
+        clonedStoreFile.createReader();
+        readersToClose.add(clonedStoreFile);
       }
       scanners = createFileScanners(readersToClose, smallestReadPoint,
         store.throttleCompaction(request.getSize()));

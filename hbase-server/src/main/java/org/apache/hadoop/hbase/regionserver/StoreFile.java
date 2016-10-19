@@ -453,7 +453,12 @@ public class StoreFile {
       // loaded to hbase, these cells have the same seqIds with the old ones. We do not want
       // to reset new seqIds for them since this might make a mess of the visibility of cells that
       // have the same row key but different seqIds.
-      this.reader.setSkipResetSeqId(isSkipResetSeqId(metadataMap.get(SKIP_RESET_SEQ_ID)));
+      boolean skipResetSeqId = isSkipResetSeqId(metadataMap.get(SKIP_RESET_SEQ_ID));
+      if (skipResetSeqId) {
+        // increase the seqId when it is a bulk loaded file from mob compaction.
+        this.sequenceid += 1;
+      }
+      this.reader.setSkipResetSeqId(skipResetSeqId);
       this.reader.setBulkLoaded(true);
     }
     this.reader.setSequenceID(this.sequenceid);
