@@ -67,6 +67,7 @@ public class TestMasterFailoverWithProcedures {
     conf.setInt(WALProcedureStore.WAIT_BEFORE_ROLL_CONF_KEY, 0);
     conf.setInt(WALProcedureStore.ROLL_RETRIES_CONF_KEY, 1);
     conf.setInt(WALProcedureStore.MAX_SYNC_FAILURE_ROLL_CONF_KEY, 1);
+    conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
 
   @Before
