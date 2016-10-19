@@ -48,6 +48,8 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     extends Procedure<TEnvironment> {
   private static final Log LOG = LogFactory.getLog(StateMachineProcedure.class);
 
+  private static final int EOF_STATE = Integer.MIN_VALUE;
+
   private final AtomicBoolean aborted = new AtomicBoolean(false);
 
   private Flow stateFlow = Flow.HAS_MORE_STATE;
@@ -150,6 +152,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       }
 
       stateFlow = executeFromState(env, state);
+      if (!hasMoreState()) setNextState(EOF_STATE);
 
       if (subProcList != null && subProcList.size() != 0) {
         Procedure[] subProcedures = subProcList.toArray(new Procedure[subProcList.size()]);
@@ -166,6 +169,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   @Override
   protected void rollback(final TEnvironment env)
       throws IOException, InterruptedException {
+    if (isEofState()) stateCount--;
     try {
       updateTimestamp();
       rollbackState(env, getCurrentState());
@@ -175,13 +179,22 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     }
   }
 
+  private boolean isEofState() {
+    return stateCount > 0 && states[stateCount-1] == EOF_STATE;
+  }
+
   @Override
   protected boolean abort(final TEnvironment env) {
+    final boolean isDebugEnabled = LOG.isDebugEnabled();
     final TState state = getCurrentState();
     if (isRollbackSupported(state)) {
-      LOG.debug("abort requested for " + getClass().getSimpleName() + " state=" + state);
+      if (isDebugEnabled) {
+        LOG.debug("abort requested for " + this + " state=" + state);
+      }
       aborted.set(true);
       return true;
+    } else if (isDebugEnabled) {
+      LOG.debug("ignoring abort request on state=" + state + " for " + this);
     }
     return false;
   }
@@ -226,7 +239,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   @Override
   protected void toStringState(StringBuilder builder) {
     super.toStringState(builder);
-    if (!isFinished() && getCurrentState() != null) {
+    if (!isFinished() && !isEofState() && getCurrentState() != null) {
       builder.append(":").append(getCurrentState());
     }
   }
@@ -248,6 +261,9 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       states = new int[stateCount];
       for (int i = 0; i < stateCount; ++i) {
         states[i] = data.getState(i);
+      }
+      if (isEofState()) {
+        stateFlow = Flow.NO_MORE_STATE;
       }
     } else {
       states = null;

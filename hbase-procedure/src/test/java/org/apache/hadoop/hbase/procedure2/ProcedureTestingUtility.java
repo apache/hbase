@@ -208,24 +208,31 @@ public class ProcedureTestingUtility {
     assertFalse("found exception: " + result.getException(), result.isFailed());
   }
 
-  public static void assertIsAbortException(final ProcedureInfo result) {
+  public static <TEnv> Throwable assertProcFailed(final ProcedureExecutor<TEnv> procExecutor,
+      final long procId) {
+    ProcedureInfo result = procExecutor.getResult(procId);
+    assertTrue("expected procedure result", result != null);
+    return assertProcFailed(result);
+  }
+
+  public static Throwable assertProcFailed(final ProcedureInfo result) {
     assertEquals(true, result.isFailed());
-    LOG.info(result.getException().getMessage());
-    Throwable cause = result.getException().getCause();
+    LOG.info("procId=" + result.getProcId() + " exception: " + result.getException().getMessage());
+    return getExceptionCause(result);
+  }
+
+  public static void assertIsAbortException(final ProcedureInfo result) {
+    Throwable cause = assertProcFailed(result);
     assertTrue("expected abort exception, got "+ cause, cause instanceof ProcedureAbortedException);
   }
 
   public static void assertIsTimeoutException(final ProcedureInfo result) {
-    assertEquals(true, result.isFailed());
-    LOG.info(result.getException().getMessage());
-    Throwable cause = result.getException();
+    Throwable cause = assertProcFailed(result);
     assertTrue("expected TimeoutIOException, got " + cause, cause instanceof TimeoutIOException);
   }
 
   public static void assertIsIllegalArgumentException(final ProcedureInfo result) {
-    assertEquals(true, result.isFailed());
-    LOG.info(result.getException().getMessage());
-    Throwable cause = getExceptionCause(result);
+    Throwable cause = assertProcFailed(result);
     assertTrue("expected IllegalArgumentIOException, got " + cause,
       cause instanceof IllegalArgumentIOException);
   }
@@ -234,6 +241,54 @@ public class ProcedureTestingUtility {
     assert procInfo.isFailed();
     Throwable cause = procInfo.getException().getCause();
     return cause == null ? procInfo.getException() : cause;
+  }
+
+  /**
+   * Run through all procedure flow states TWICE while also restarting
+   * procedure executor at each step; i.e force a reread of procedure store.
+   *
+   *<p>It does
+   * <ol><li>Execute step N - kill the executor before store update
+   * <li>Restart executor/store
+   * <li>Execute step N - and then save to store
+   * </ol>
+   *
+   *<p>This is a good test for finding state that needs persisting and steps that are not
+   * idempotent.
+   */
+  public static <TEnv> void testRecoveryAndDoubleExecution(final ProcedureExecutor<TEnv> procExec,
+      final long procId) throws Exception {
+    testRecoveryAndDoubleExecution(procExec, procId, false);
+  }
+
+  public static <TEnv> void testRecoveryAndDoubleExecution(final ProcedureExecutor<TEnv> procExec,
+      final long procId, final boolean expectFailure) throws Exception {
+    testRecoveryAndDoubleExecution(procExec, procId, expectFailure, null);
+  }
+
+  public static <TEnv> void testRecoveryAndDoubleExecution(final ProcedureExecutor<TEnv> procExec,
+      final long procId, final boolean expectFailure, final Runnable customRestart)
+      throws Exception {
+    final Procedure proc = procExec.getProcedure(procId);
+    waitProcedure(procExec, procId);
+    assertEquals(false, procExec.isRunning());
+
+    for (int i = 0; !procExec.isFinished(procId); ++i) {
+      LOG.info("Restart " + i + " exec state: " + proc);
+      if (customRestart != null) {
+        customRestart.run();
+      } else {
+        restart(procExec);
+      }
+      waitProcedure(procExec, procId);
+    }
+
+    assertEquals(true, procExec.isRunning());
+    if (expectFailure) {
+      assertProcFailed(procExec, procId);
+    } else {
+      assertProcNotFailed(procExec, procId);
+    }
   }
 
   public static class NoopProcedure<TEnv> extends Procedure<TEnv> {
