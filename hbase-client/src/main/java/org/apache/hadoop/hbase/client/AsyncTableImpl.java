@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -34,12 +35,17 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * The implementation of AsyncTable.
@@ -232,6 +238,73 @@ class AsyncTableImpl implements AsyncTable {
         .call();
   }
 
+  // We need the MultiRequest when constructing the org.apache.hadoop.hbase.client.MultiResponse,
+  // so here I write a new method as I do not want to change the abstraction of call method.
+  private static <RESP> CompletableFuture<RESP> mutateRow(HBaseRpcController controller,
+      HRegionLocation loc, ClientService.Interface stub, RowMutations mutation,
+      Converter<MultiRequest, byte[], RowMutations> reqConvert,
+      Function<Result, RESP> respConverter) {
+    CompletableFuture<RESP> future = new CompletableFuture<>();
+    try {
+      byte[] regionName = loc.getRegionInfo().getRegionName();
+      MultiRequest req = reqConvert.convert(regionName, mutation);
+      stub.multi(controller, req, new RpcCallback<MultiResponse>() {
+
+        @Override
+        public void run(MultiResponse resp) {
+          if (controller.failed()) {
+            future.completeExceptionally(controller.getFailed());
+          } else {
+            try {
+              org.apache.hadoop.hbase.client.MultiResponse multiResp = ResponseConverter
+                  .getResults(req, resp, controller.cellScanner());
+              Throwable ex = multiResp.getException(regionName);
+              if (ex != null) {
+                future
+                    .completeExceptionally(ex instanceof IOException ? ex
+                        : new IOException(
+                            "Failed to mutate row: " + Bytes.toStringBinary(mutation.getRow()),
+                            ex));
+              } else {
+                future.complete(respConverter
+                    .apply((Result) multiResp.getResults().get(regionName).result.get(0)));
+              }
+            } catch (IOException e) {
+              future.completeExceptionally(e);
+            }
+          }
+        }
+      });
+    } catch (IOException e) {
+      future.completeExceptionally(e);
+    }
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Void> mutateRow(RowMutations mutation) {
+    return this.<Void> newCaller(mutation, writeRpcTimeoutNs).action((controller, loc,
+        stub) -> AsyncTableImpl.<Void> mutateRow(controller, loc, stub, mutation, (rn, rm) -> {
+          RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(rn, rm);
+          regionMutationBuilder.setAtomic(true);
+          return MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
+        }, (resp) -> {
+          return null;
+        })).call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, RowMutations mutation) {
+    return this.<Boolean> newCaller(mutation, writeRpcTimeoutNs)
+        .action((controller, loc, stub) -> AsyncTableImpl.<Boolean> mutateRow(controller, loc, stub,
+          mutation,
+          (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
+            new BinaryComparator(value), CompareType.valueOf(compareOp.name()), rm),
+          (resp) -> resp.getExists()))
+        .call();
+  }
+
   @Override
   public void setReadRpcTimeout(long timeout, TimeUnit unit) {
     this.readRpcTimeoutNs = unit.toNanos(timeout);
@@ -261,5 +334,4 @@ class AsyncTableImpl implements AsyncTable {
   public long getOperationTimeout(TimeUnit unit) {
     return unit.convert(operationTimeoutNs, TimeUnit.NANOSECONDS);
   }
-
 }

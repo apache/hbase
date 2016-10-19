@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -221,22 +223,83 @@ public class TestAsyncTable {
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger successIndex = new AtomicInteger(-1);
     CountDownLatch deleteLatch = new CountDownLatch(count);
-    IntStream.range(0, count).forEach(i -> table
-        .checkAndDelete(row, FAMILY, QUALIFIER, VALUE,
-          new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i)))
-        .thenAccept(x -> {
-          if (x) {
-            successCount.incrementAndGet();
-            successIndex.set(i);
-          }
-          deleteLatch.countDown();
-        }));
+    IntStream.range(0, count)
+        .forEach(i -> table
+            .checkAndDelete(row, FAMILY, QUALIFIER, VALUE,
+              new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i)))
+            .thenAccept(x -> {
+              if (x) {
+                successCount.incrementAndGet();
+                successIndex.set(i);
+              }
+              deleteLatch.countDown();
+            }));
     deleteLatch.await();
     assertEquals(1, successCount.get());
     Result result = table.get(new Get(row)).get();
     IntStream.range(0, count).forEach(i -> {
       if (i == successIndex.get()) {
         assertFalse(result.containsColumn(FAMILY, concat(QUALIFIER, i)));
+      } else {
+        assertArrayEquals(VALUE, result.getValue(FAMILY, concat(QUALIFIER, i)));
+      }
+    });
+  }
+
+  @Test
+  public void testMutateRow() throws InterruptedException, ExecutionException, IOException {
+    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    RowMutations mutation = new RowMutations(row);
+    mutation.add(new Put(row).addColumn(FAMILY, concat(QUALIFIER, 1), VALUE));
+    table.mutateRow(mutation).get();
+    Result result = table.get(new Get(row)).get();
+    assertArrayEquals(VALUE, result.getValue(FAMILY, concat(QUALIFIER, 1)));
+
+    mutation = new RowMutations(row);
+    mutation.add(new Delete(row).addColumn(FAMILY, concat(QUALIFIER, 1)));
+    mutation.add(new Put(row).addColumn(FAMILY, concat(QUALIFIER, 2), VALUE));
+    table.mutateRow(mutation).get();
+    result = table.get(new Get(row)).get();
+    assertNull(result.getValue(FAMILY, concat(QUALIFIER, 1)));
+    assertArrayEquals(VALUE, result.getValue(FAMILY, concat(QUALIFIER, 2)));
+  }
+
+  @Test
+  public void testCheckAndMutate() throws InterruptedException, ExecutionException {
+    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    int count = 10;
+    CountDownLatch putLatch = new CountDownLatch(count + 1);
+    table.put(new Put(row).addColumn(FAMILY, QUALIFIER, VALUE)).thenRun(() -> putLatch.countDown());
+    IntStream.range(0, count)
+        .forEach(i -> table.put(new Put(row).addColumn(FAMILY, concat(QUALIFIER, i), VALUE))
+            .thenRun(() -> putLatch.countDown()));
+    putLatch.await();
+
+    AtomicInteger successCount = new AtomicInteger(0);
+    AtomicInteger successIndex = new AtomicInteger(-1);
+    CountDownLatch mutateLatch = new CountDownLatch(count);
+    IntStream.range(0, count).forEach(i -> {
+      RowMutations mutation = new RowMutations(row);
+      try {
+        mutation.add(new Delete(row).addColumn(FAMILY, QUALIFIER));
+        mutation.add(new Put(row).addColumn(FAMILY, concat(QUALIFIER, i), concat(VALUE, i)));
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+      table.checkAndMutate(row, FAMILY, QUALIFIER, VALUE, mutation).thenAccept(x -> {
+        if (x) {
+          successCount.incrementAndGet();
+          successIndex.set(i);
+        }
+        mutateLatch.countDown();
+      });
+    });
+    mutateLatch.await();
+    assertEquals(1, successCount.get());
+    Result result = table.get(new Get(row)).get();
+    IntStream.range(0, count).forEach(i -> {
+      if (i == successIndex.get()) {
+        assertArrayEquals(concat(VALUE, i), result.getValue(FAMILY, concat(QUALIFIER, i)));
       } else {
         assertArrayEquals(VALUE, result.getValue(FAMILY, concat(QUALIFIER, i)));
       }

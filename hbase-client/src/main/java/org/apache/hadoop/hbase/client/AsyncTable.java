@@ -271,4 +271,45 @@ public interface AsyncTable {
    */
   CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Delete delete);
+
+  /**
+   * Performs multiple mutations atomically on a single row. Currently {@link Put} and
+   * {@link Delete} are supported.
+   * @param mutation object that specifies the set of mutations to perform atomically
+   * @return A {@link CompletableFuture} that always returns null when complete normally.
+   */
+  CompletableFuture<Void> mutateRow(RowMutations mutation);
+
+  /**
+   * Atomically checks if a row/family/qualifier value equals to the expected value. If it does, it
+   * performs the row mutations. If the passed value is null, the check is for the lack of column
+   * (ie: non-existence)
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param value the expected value
+   * @param mutation mutations to perform if check succeeds
+   * @return true if the new put was executed, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}.
+   */
+  default CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      byte[] value, RowMutations mutation) {
+    return checkAndMutate(row, family, qualifier, CompareOp.EQUAL, value, mutation);
+  }
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value. If it does, it
+   * performs the row mutations. If the passed value is null, the check is for the lack of column
+   * (ie: non-existence)
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param compareOp the comparison operator
+   * @param value the expected value
+   * @param mutation mutations to perform if check succeeds
+   * @return true if the new put was executed, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, RowMutations mutation);
 }
