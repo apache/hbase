@@ -1684,7 +1684,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             Call reqTooBig = new Call(header.getCallId(), this.service, null, null, null,
                 null, this, responder, 0, null, this.addr,0);
             metrics.exception(REQUEST_TOO_BIG_EXCEPTION);
-            setupResponse(null, reqTooBig, REQUEST_TOO_BIG_EXCEPTION, msg);
+            // Make sure the client recognizes the underlying exception
+            // Otherwise, throw a DoNotRetryIOException.
+            if (VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
+                RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
+              setupResponse(null, reqTooBig, REQUEST_TOO_BIG_EXCEPTION, msg);
+            } else {
+              setupResponse(null, reqTooBig, new DoNotRetryIOException(), msg);
+            }
             // We are going to close the connection, make sure we process the response
             // before that. In rare case when this fails, we still close the connection.
             responseWriteLock.lock();
