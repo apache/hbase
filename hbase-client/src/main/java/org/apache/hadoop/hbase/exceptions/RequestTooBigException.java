@@ -26,12 +26,16 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * Thrown when the size of the rpc request received by the server is too large.
  *
  * On receiving such an exception, the client does not retry the offending rpc.
+ * @since 1.3.0
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class RequestTooBigException extends DoNotRetryIOException {
-
   private static final long serialVersionUID = -1593339239809586516L;
+
+  // Recognized only in HBase version 1.3 and higher.
+  public static final int MAJOR_VERSION = 1;
+  public static final int MINOR_VERSION = 3;
 
   public RequestTooBigException() {
     super();
