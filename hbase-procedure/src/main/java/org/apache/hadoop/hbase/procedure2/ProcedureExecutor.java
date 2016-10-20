@@ -82,6 +82,7 @@ public class ProcedureExecutor<TEnvironment> {
 
   Testing testing = null;
   public static class Testing {
+    protected boolean killIfSuspended = false;
     protected boolean killBeforeStoreUpdate = false;
     protected boolean toggleKillBeforeStoreUpdate = false;
 
@@ -92,6 +93,10 @@ public class ProcedureExecutor<TEnvironment> {
         LOG.warn("Toggle Kill before store update to: " + this.killBeforeStoreUpdate);
       }
       return kill;
+    }
+
+    protected boolean shouldKillBeforeStoreUpdate(final boolean isSuspended) {
+      return (isSuspended && !killIfSuspended) ? false : shouldKillBeforeStoreUpdate();
     }
   }
 
@@ -343,7 +348,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // 2. Initialize the stacks
-    ArrayList<Procedure> runnableList = new ArrayList(runnablesCount);
+    final ArrayList<Procedure> runnableList = new ArrayList(runnablesCount);
     HashSet<Procedure> waitingSet = null;
     procIter.reset();
     while (procIter.hasNext()) {
@@ -432,7 +437,15 @@ public class ProcedureExecutor<TEnvironment> {
       throw new IOException("found " + corruptedCount + " procedures on replay");
     }
 
-    // 4. Push the scheduler
+    // 4. Push the procedures to the timeout executor
+    if (waitingSet != null && !waitingSet.isEmpty()) {
+      for (Procedure proc: waitingSet) {
+        proc.afterReplay(getEnvironment());
+        timeoutExecutor.add(proc);
+      }
+    }
+
+    // 5. Push the procedure to the scheduler
     if (!runnableList.isEmpty()) {
       // TODO: See ProcedureWALFormatReader#hasFastStartSupport
       // some procedure may be started way before this stuff.
@@ -1192,7 +1205,7 @@ public class ProcedureExecutor<TEnvironment> {
 
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
-      if (testing != null && !isSuspended && testing.shouldKillBeforeStoreUpdate()) {
+      if (testing != null && testing.shouldKillBeforeStoreUpdate(isSuspended)) {
         LOG.debug("TESTING: Kill before store update: " + procedure);
         stop();
         return;

@@ -19,14 +19,19 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
-import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -45,17 +50,22 @@ public class TestProcedureEvents {
   private static final Log LOG = LogFactory.getLog(TestProcedureEvents.class);
 
   private TestProcEnv procEnv;
-  private NoopProcedureStore procStore;
+  private ProcedureStore procStore;
   private ProcedureExecutor<TestProcEnv> procExecutor;
 
   private HBaseCommonTestingUtility htu;
+  private FileSystem fs;
+  private Path logDir;
 
   @Before
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
+    Path testDir = htu.getDataTestDir();
+    fs = testDir.getFileSystem(htu.getConfiguration());
+    logDir = new Path(testDir, "proc-logs");
 
     procEnv = new TestProcEnv();
-    procStore = new NoopProcedureStore();
+    procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
     procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
     procStore.start(1);
     procExecutor.start(1, true);
@@ -66,18 +76,39 @@ public class TestProcedureEvents {
     procExecutor.stop();
     procStore.stop(false);
     procExecutor.join();
+    fs.delete(logDir, true);
   }
 
   @Test(timeout=30000)
   public void testTimeoutEventProcedure() throws Exception {
     final int NTIMEOUTS = 5;
 
-    TestTimeoutEventProcedure proc = new TestTimeoutEventProcedure(1000, NTIMEOUTS);
+    TestTimeoutEventProcedure proc = new TestTimeoutEventProcedure(500, NTIMEOUTS);
     procExecutor.submitProcedure(proc);
 
     ProcedureTestingUtility.waitProcedure(procExecutor, proc.getProcId());
     ProcedureTestingUtility.assertIsAbortException(procExecutor.getResult(proc.getProcId()));
     assertEquals(NTIMEOUTS + 1, proc.getTimeoutsCount());
+  }
+
+  @Test(timeout=30000)
+  public void testTimeoutEventProcedureDoubleExecution() throws Exception {
+    testTimeoutEventProcedureDoubleExecution(false);
+  }
+
+  @Test(timeout=30000)
+  public void testTimeoutEventProcedureDoubleExecutionKillIfSuspended() throws Exception {
+    testTimeoutEventProcedureDoubleExecution(true);
+  }
+
+  private void testTimeoutEventProcedureDoubleExecution(final boolean killIfSuspended)
+      throws Exception {
+    TestTimeoutEventProcedure proc = new TestTimeoutEventProcedure(1000, 3);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExecutor, true);
+    ProcedureTestingUtility.setKillIfSuspended(procExecutor, killIfSuspended);
+    long procId = procExecutor.submitProcedure(proc);
+    ProcedureTestingUtility.testRecoveryAndDoubleExecution(procExecutor, procId, true);
+    ProcedureTestingUtility.assertIsAbortException(procExecutor.getResult(proc.getProcId()));
   }
 
   public static class TestTimeoutEventProcedure extends NoopProcedure<TestProcEnv> {
@@ -121,6 +152,26 @@ public class TestProcedureEvents {
       setState(ProcedureState.RUNNABLE);
       env.getProcedureScheduler().wakeEvent(event);
       return false;
+    }
+
+    @Override
+    protected void afterReplay(final TestProcEnv env) {
+      if (getState() == ProcedureState.WAITING_TIMEOUT) {
+        env.getProcedureScheduler().suspendEvent(event);
+        env.getProcedureScheduler().waitEvent(event, this);
+      }
+    }
+
+    @Override
+    protected void serializeStateData(final OutputStream stream) throws IOException {
+      StreamUtils.writeRawVInt32(stream, ntimeouts.get());
+      StreamUtils.writeRawVInt32(stream, maxTimeouts);
+    }
+
+    @Override
+    protected void deserializeStateData(final InputStream stream) throws IOException {
+      ntimeouts.set(StreamUtils.readRawVarint32(stream));
+      maxTimeouts = StreamUtils.readRawVarint32(stream);
     }
   }
 

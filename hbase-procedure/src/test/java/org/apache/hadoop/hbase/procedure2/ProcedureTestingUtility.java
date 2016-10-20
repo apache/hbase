@@ -108,11 +108,21 @@ public class ProcedureTestingUtility {
     return loader;
   }
 
-  public static <TEnv> void setKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
-      boolean value) {
+  private static <TEnv> void createExecutorTesting(final ProcedureExecutor<TEnv> procExecutor) {
     if (procExecutor.testing == null) {
       procExecutor.testing = new ProcedureExecutor.Testing();
     }
+  }
+
+  public static <TEnv> void setKillIfSuspended(ProcedureExecutor<TEnv> procExecutor,
+      boolean value) {
+    createExecutorTesting(procExecutor);
+    procExecutor.testing.killIfSuspended = value;
+  }
+
+  public static <TEnv> void setKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
+      boolean value) {
+    createExecutorTesting(procExecutor);
     procExecutor.testing.killBeforeStoreUpdate = value;
     LOG.warn("Set Kill before store update to: " + procExecutor.testing.killBeforeStoreUpdate);
     assertSingleExecutorForKillTests(procExecutor);
@@ -120,17 +130,13 @@ public class ProcedureTestingUtility {
 
   public static <TEnv> void setToggleKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,
       boolean value) {
-    if (procExecutor.testing == null) {
-      procExecutor.testing = new ProcedureExecutor.Testing();
-    }
+    createExecutorTesting(procExecutor);
     procExecutor.testing.toggleKillBeforeStoreUpdate = value;
     assertSingleExecutorForKillTests(procExecutor);
   }
 
   public static <TEnv> void toggleKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor) {
-    if (procExecutor.testing == null) {
-      procExecutor.testing = new ProcedureExecutor.Testing();
-    }
+    createExecutorTesting(procExecutor);
     procExecutor.testing.killBeforeStoreUpdate = !procExecutor.testing.killBeforeStoreUpdate;
     LOG.warn("Set Kill before store update to: " + procExecutor.testing.killBeforeStoreUpdate);
     assertSingleExecutorForKillTests(procExecutor);
