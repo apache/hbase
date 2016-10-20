@@ -66,6 +66,7 @@ public class TestReplicationBase {
 
   protected static HBaseTestingUtility utility1;
   protected static HBaseTestingUtility utility2;
+  protected static final String PEER_ID = "2";
   protected static final int NB_ROWS_IN_BATCH = 100;
   protected static final int NB_ROWS_IN_BIG_BATCH =
       NB_ROWS_IN_BATCH * 10;
@@ -126,7 +127,7 @@ public class TestReplicationBase {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
-    admin.addPeer("2", rpc);
+    admin.addPeer(PEER_ID, rpc);
 
     LOG.info("Setup second Zk");
     CONF_WITH_LOCALFS = HBaseConfiguration.create(conf1);
