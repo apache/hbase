@@ -71,7 +71,11 @@ public class ReplicationLoad {
     Map<String, ClusterStatusProtos.ReplicationLoadSource> replicationLoadSourceMap =
         new HashMap<String, ClusterStatusProtos.ReplicationLoadSource>();
     for (MetricsSource sm : this.sourceMetricsList) {
+      // Get the actual peer id
       String peerId = sm.getPeerID();
+      String[] parts = peerId.split("-", 2);
+      peerId = parts.length != 1 ? parts[0] : peerId;
+
       long ageOfLastShippedOp = sm.getAgeOfLastShippedOp();
       int sizeOfLogQueue = sm.getSizeOfLogQueue();
       long timeStampOfLastShippedOp = sm.getTimeStampOfLastShippedOp();
