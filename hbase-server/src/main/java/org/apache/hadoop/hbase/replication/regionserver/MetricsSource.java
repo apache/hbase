@@ -66,7 +66,7 @@ public class MetricsSource {
   public void setAgeOfLastShippedOp(long timestamp, String walGroup) {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
     singleSourceSource.setLastShippedAge(age);
-    globalSourceSource.setLastShippedAge(age);
+    globalSourceSource.setLastShippedAge(Math.max(age, globalSourceSource.getLastShippedAge()));
     this.lastTimeStamps.put(walGroup, timestamp);
   }
 
