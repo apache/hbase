@@ -111,11 +111,16 @@ class FSWALEntry extends Entry {
    */
   long stampRegionSequenceId() throws IOException {
     long regionSequenceId = WALKey.NO_SEQUENCE_ID;
-    MultiVersionConcurrencyControl mvcc = getKey().getMvcc();
-    MultiVersionConcurrencyControl.WriteEntry we = null;
-
-    if (mvcc != null) {
-      we = mvcc.begin();
+    WALKey key = getKey();
+    MultiVersionConcurrencyControl.WriteEntry we = key.getPreAssignedWriteEntry();
+    boolean preAssigned = (we != null);
+    if (!preAssigned) {
+      MultiVersionConcurrencyControl mvcc = key.getMvcc();
+      if (mvcc != null) {
+        we = mvcc.begin();
+      }
+    }
+    if (we != null) {
       regionSequenceId = we.getWriteNumber();
     }
 
@@ -126,9 +131,9 @@ class FSWALEntry extends Entry {
     }
 
     // This has to stay in this order
-    WALKey key = getKey();
-    key.setLogSeqNum(regionSequenceId);
-    key.setWriteEntry(we);
+    if (!preAssigned) {
+      key.setWriteEntry(we);
+    }
     return regionSequenceId;
   }
 

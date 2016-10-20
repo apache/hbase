@@ -33,6 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -94,6 +95,10 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    */
   @InterfaceAudience.Private // For internal use only.
   public MultiVersionConcurrencyControl.WriteEntry getWriteEntry() throws InterruptedIOException {
+    if (this.preAssignedWriteEntry != null) {
+      // don't wait for seqNumAssignedLatch if writeEntry is preassigned
+      return this.preAssignedWriteEntry;
+    }
     try {
       this.seqNumAssignedLatch.await();
     } catch (InterruptedException ie) {
@@ -114,7 +119,12 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
 
   @InterfaceAudience.Private // For internal use only.
   public void setWriteEntry(MultiVersionConcurrencyControl.WriteEntry writeEntry) {
+    assert this.writeEntry == null : "Non-null writeEntry when trying to set one";
     this.writeEntry = writeEntry;
+    // Set our sequenceid now using WriteEntry.
+    if (this.writeEntry != null) {
+      this.logSeqNum = this.writeEntry.getWriteNumber();
+    }
     this.seqNumAssignedLatch.countDown();
   }
 
@@ -196,6 +206,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   private long nonce = HConstants.NO_NONCE;
   private MultiVersionConcurrencyControl mvcc;
   private MultiVersionConcurrencyControl.WriteEntry writeEntry;
+  private MultiVersionConcurrencyControl.WriteEntry preAssignedWriteEntry = null;
   public static final List<UUID> EMPTY_UUIDS = Collections.unmodifiableList(new ArrayList<UUID>());
 
   // visible for deprecated HLogKey
@@ -357,17 +368,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   /** @return log sequence number */
   public long getLogSeqNum() {
     return this.logSeqNum;
-  }
-
-  /**
-   * Allow that the log sequence id to be set post-construction
-   * Only public for org.apache.hadoop.hbase.regionserver.wal.FSWALEntry
-   * @param sequence
-   */
-  @InterfaceAudience.Private
-  public void setLogSeqNum(final long sequence) {
-    this.logSeqNum = sequence;
-
   }
 
   /**
@@ -664,6 +664,26 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     this.writeTime = walKey.getWriteTime();
     if(walKey.hasOrigSequenceNumber()) {
       this.origLogSeqNum = walKey.getOrigSequenceNumber();
+    }
+  }
+
+  /**
+   * @return The preassigned writeEntry, if any
+   */
+  @InterfaceAudience.Private // For internal use only.
+  public MultiVersionConcurrencyControl.WriteEntry getPreAssignedWriteEntry() {
+    return this.preAssignedWriteEntry;
+  }
+
+  /**
+   * Preassign writeEntry
+   * @param writeEntry the entry to assign
+   */
+  @InterfaceAudience.Private // For internal use only.
+  public void setPreAssignedWriteEntry(WriteEntry writeEntry) {
+    if (writeEntry != null) {
+      this.preAssignedWriteEntry = writeEntry;
+      this.logSeqNum = writeEntry.getWriteNumber();
     }
   }
 }
