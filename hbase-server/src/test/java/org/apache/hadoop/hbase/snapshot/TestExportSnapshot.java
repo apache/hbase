@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import static org.apache.hadoop.util.ToolRunner.run;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -204,18 +206,18 @@ public class TestExportSnapshot {
     copyDir = copyDir.makeQualified(fs);
 
     List<String> opts = new ArrayList<String>();
-    opts.add("-snapshot");
+    opts.add("--snapshot");
     opts.add(Bytes.toString(snapshotName));
-    opts.add("-copy-to");
+    opts.add("--copy-to");
     opts.add(copyDir.toString());
     if (targetName != snapshotName) {
-      opts.add("-target");
+      opts.add("--target");
       opts.add(Bytes.toString(targetName));
     }
-    if (overwrite) opts.add("-overwrite");
+    if (overwrite) opts.add("--overwrite");
 
     // Export Snapshot
-    int res = ExportSnapshot.innerMain(conf, opts.toArray(new String[opts.size()]));
+    int res = run(conf, new ExportSnapshot(), opts.toArray(new String[opts.size()]));
     assertEquals(0, res);
 
     // Verify File-System state
@@ -273,12 +275,9 @@ public class TestExportSnapshot {
     }
     // Export Snapshot
     Path sourceDir = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-    int res = ExportSnapshot.innerMain(conf, new String[] {
-      "-snapshot", Bytes.toString(snapshotName),
-      "-copy-from", sourceDir.toString(),
-      "-copy-to", copyDir.toString()
-    });
-    return res;
+    String[] args = new String[] { "--snapshot", Bytes.toString(snapshotName),
+        "--copy-from", sourceDir.toString(), "--copy-to", copyDir.toString() };
+    return ToolRunner.run(conf, new ExportSnapshot(), args);
   }
 
   /*

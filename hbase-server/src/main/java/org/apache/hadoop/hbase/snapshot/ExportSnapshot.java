@@ -31,12 +31,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -76,7 +78,6 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.hbase.io.hadoopbackport.ThrottledInputStream;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Export the specified snapshot to a given FileSystem.
@@ -87,7 +88,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ExportSnapshot extends Configured implements Tool {
+public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   public static final String NAME = "exportsnapshot";
   /** Configuration prefix for overrides for the source filesystem */
   public static final String CONF_SOURCE_PREFIX = NAME + ".from.";
@@ -113,6 +114,34 @@ public class ExportSnapshot extends Configured implements Tool {
 
   static final String CONF_TEST_FAILURE = "test.snapshot.export.failure";
   static final String CONF_TEST_RETRY = "test.snapshot.export.failure.retry";
+
+
+  // Command line options and defaults.
+  static final class Options {
+    static final Option SNAPSHOT = new Option(null, "snapshot", true, "Snapshot to restore.");
+    static final Option TARGET_NAME = new Option(null, "target", true,
+        "Target name for the snapshot.");
+    static final Option COPY_TO = new Option(null, "copy-to", true, "Remote "
+        + "destination hdfs://");
+    static final Option COPY_FROM = new Option(null, "copy-from", true,
+        "Input folder hdfs:// (default hbase.rootdir)");
+    static final Option NO_CHECKSUM_VERIFY = new Option(null, "no-checksum-verify", false,
+        "Do not verify checksum, use name+length only.");
+    static final Option NO_TARGET_VERIFY = new Option(null, "no-target-verify", false,
+        "Do not verify the integrity of the exported snapshot.");
+    static final Option OVERWRITE = new Option(null, "overwrite", false,
+        "Rewrite the snapshot manifest if already exists.");
+    static final Option CHUSER = new Option(null, "chuser", true,
+        "Change the owner of the files to the specified one.");
+    static final Option CHGROUP = new Option(null, "chgroup", true,
+        "Change the group of the files to the specified one.");
+    static final Option CHMOD = new Option(null, "chmod", true,
+        "Change the permission of the files to the specified one.");
+    static final Option MAPPERS = new Option(null, "mappers", true,
+        "Number of mappers to use during the copy (mapreduce.job.maps).");
+    static final Option BANDWIDTH = new Option(null, "bandwidth", true,
+        "Limit bandwidth to this value in MB/second.");
+  }
 
   // Export Map-Reduce Counters, to keep track of the progress
   public enum Counter {
@@ -851,76 +880,69 @@ public class ExportSnapshot extends Configured implements Tool {
     }
   }
 
+  private boolean verifyTarget = true;
+  private boolean verifyChecksum = true;
+  private String snapshotName = null;
+  private String targetName = null;
+  private boolean overwrite = false;
+  private String filesGroup = null;
+  private String filesUser = null;
+  private Path outputRoot = null;
+  private Path inputRoot = null;
+  private int bandwidthMB = Integer.MAX_VALUE;
+  private int filesMode = 0;
+  private int mappers = 0;
+
+  @Override
+  protected void processOptions(CommandLine cmd) {
+    snapshotName = cmd.getOptionValue(Options.SNAPSHOT.getLongOpt(), snapshotName);
+    targetName = cmd.getOptionValue(Options.TARGET_NAME.getLongOpt(), targetName);
+    if (cmd.hasOption(Options.COPY_TO.getLongOpt())) {
+      outputRoot = new Path(cmd.getOptionValue(Options.COPY_TO.getLongOpt()));
+    }
+    if (cmd.hasOption(Options.COPY_FROM.getLongOpt())) {
+      inputRoot = new Path(cmd.getOptionValue(Options.COPY_FROM.getLongOpt()));
+    }
+    mappers = getOptionAsInt(cmd, Options.MAPPERS.getLongOpt(), mappers);
+    filesUser = cmd.getOptionValue(Options.CHUSER.getLongOpt(), filesUser);
+    filesGroup = cmd.getOptionValue(Options.CHGROUP.getLongOpt(), filesGroup);
+    filesMode = getOptionAsInt(cmd, Options.CHMOD.getLongOpt(), filesMode);
+    bandwidthMB = getOptionAsInt(cmd, Options.BANDWIDTH.getLongOpt(), bandwidthMB);
+    overwrite = cmd.hasOption(Options.OVERWRITE.getLongOpt());
+    // And verifyChecksum and verifyTarget with values read from old args in processOldArgs(...).
+    verifyChecksum = !cmd.hasOption(Options.NO_CHECKSUM_VERIFY.getLongOpt());
+    verifyTarget = !cmd.hasOption(Options.NO_TARGET_VERIFY.getLongOpt());
+  }
+
   /**
    * Execute the export snapshot by copying the snapshot metadata, hfiles and wals.
    * @return 0 on success, and != 0 upon failure.
    */
   @Override
-  public int run(String[] args) throws IOException {
-    boolean verifyTarget = true;
-    boolean verifyChecksum = true;
-    String snapshotName = null;
-    String targetName = null;
-    boolean overwrite = false;
-    String filesGroup = null;
-    String filesUser = null;
-    Path outputRoot = null;
-    int bandwidthMB = Integer.MAX_VALUE;
-    int filesMode = 0;
-    int mappers = 0;
-
+  public int doWork() throws IOException {
     Configuration conf = getConf();
-    Path inputRoot = FSUtils.getRootDir(conf);
-
-    // Process command line args
-    for (int i = 0; i < args.length; i++) {
-      String cmd = args[i];
-      if (cmd.equals("-snapshot")) {
-        snapshotName = args[++i];
-      } else if (cmd.equals("-target")) {
-        targetName = args[++i];
-      } else if (cmd.equals("-copy-to")) {
-        outputRoot = new Path(args[++i]);
-      } else if (cmd.equals("-copy-from")) {
-        inputRoot = new Path(args[++i]);
-        FSUtils.setRootDir(conf, inputRoot);
-      } else if (cmd.equals("-no-checksum-verify")) {
-        verifyChecksum = false;
-      } else if (cmd.equals("-no-target-verify")) {
-        verifyTarget = false;
-      } else if (cmd.equals("-mappers")) {
-        mappers = Integer.parseInt(args[++i]);
-      } else if (cmd.equals("-chuser")) {
-        filesUser = args[++i];
-      } else if (cmd.equals("-chgroup")) {
-        filesGroup = args[++i];
-      } else if (cmd.equals("-bandwidth")) {
-        bandwidthMB = Integer.parseInt(args[++i]);
-      } else if (cmd.equals("-chmod")) {
-        filesMode = Integer.parseInt(args[++i], 8);
-      } else if (cmd.equals("-overwrite")) {
-        overwrite = true;
-      } else if (cmd.equals("-h") || cmd.equals("--help")) {
-        printUsageAndExit();
-      } else {
-        System.err.println("UNEXPECTED: " + cmd);
-        printUsageAndExit();
-      }
-    }
 
     // Check user options
     if (snapshotName == null) {
       System.err.println("Snapshot name not provided.");
-      printUsageAndExit();
+      LOG.error("Use -h or --help for usage instructions.");
+      return 0;
     }
 
     if (outputRoot == null) {
-      System.err.println("Destination file-system not provided.");
-      printUsageAndExit();
+      System.err.println("Destination file-system (--" + Options.COPY_TO.getLongOpt()
+              + ") not provided.");
+      LOG.error("Use -h or --help for usage instructions.");
+      return 0;
     }
 
     if (targetName == null) {
       targetName = snapshotName;
+    }
+    if (inputRoot == null) {
+      inputRoot = FSUtils.getRootDir(conf);
+    } else {
+      FSUtils.setRootDir(conf, inputRoot);
     }
 
     Configuration srcConf = HBaseConfiguration.createClusterConf(conf, null, CONF_SOURCE_PREFIX);
@@ -1053,51 +1075,37 @@ public class ExportSnapshot extends Configured implements Tool {
     }
   }
 
-  // ExportSnapshot
-  private void printUsageAndExit() {
-    System.err.printf("Usage: bin/hbase %s [options]%n", getClass().getName());
-    System.err.println(" where [options] are:");
-    System.err.println("  -h|-help                Show this help and exit.");
-    System.err.println("  -snapshot NAME          Snapshot to restore.");
-    System.err.println("  -copy-to NAME           Remote destination hdfs://");
-    System.err.println("  -copy-from NAME         Input folder hdfs:// (default hbase.rootdir)");
-    System.err.println("  -no-checksum-verify     Do not verify checksum, use name+length only.");
-    System.err.println("  -no-target-verify       Do not verify the integrity of the \\" +
-        "exported snapshot.");
-    System.err.println("  -overwrite              Rewrite the snapshot manifest if already exists");
-    System.err.println("  -chuser USERNAME        Change the owner of the files " +
-        "to the specified one.");
-    System.err.println("  -chgroup GROUP          Change the group of the files to " +
-        "the specified one.");
-    System.err.println("  -chmod MODE             Change the permission of the files " +
-        "to the specified one.");
-    System.err.println("  -mappers                Number of mappers to use during the " +
-        "copy (mapreduce.job.maps).");
-    System.err.println("  -bandwidth              Limit bandwidth to this value in MB/second.");
-    System.err.println();
-    System.err.println("Examples:");
-    System.err.println("  hbase snapshot export \\");
-    System.err.println("    -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase \\");
-    System.err.println("    -chuser MyUser -chgroup MyGroup -chmod 700 -mappers 16");
-    System.err.println();
-    System.err.println("  hbase snapshot export \\");
-    System.err.println("    -snapshot MySnapshot -copy-from hdfs://srv2:8082/hbase \\");
-    System.err.println("    -copy-to hdfs://srv1:50070/hbase \\");
+  @Override
+  protected void printUsage() {
+    super.printUsage();
+    System.out.println("\n"
+        + "Examples:\n"
+        + "  hbase snapshot export \\\n"
+        + "    --snapshot MySnapshot --copy-to hdfs://srv2:8082/hbase \\\n"
+        + "    --chuser MyUser --chgroup MyGroup --chmod 700 --mappers 16\n"
+        + "\n"
+        + "  hbase snapshot export \\\n"
+        + "    --snapshot MySnapshot --copy-from hdfs://srv2:8082/hbase \\\n"
+        + "    --copy-to hdfs://srv1:50070/hbase");
     System.exit(1);
   }
 
-  /**
-   * The guts of the {@link #main} method.
-   * Call this method to avoid the {@link #main(String[])} System.exit.
-   * @param args
-   * @return errCode
-   * @throws Exception
-   */
-  static int innerMain(final Configuration conf, final String [] args) throws Exception {
-    return ToolRunner.run(conf, new ExportSnapshot(), args);
+  @Override protected void addOptions() {
+    addRequiredOption(Options.SNAPSHOT);
+    addOption(Options.COPY_TO);
+    addOption(Options.COPY_FROM);
+    addOption(Options.TARGET_NAME);
+    addOption(Options.NO_CHECKSUM_VERIFY);
+    addOption(Options.NO_TARGET_VERIFY);
+    addOption(Options.OVERWRITE);
+    addOption(Options.CHUSER);
+    addOption(Options.CHGROUP);
+    addOption(Options.CHMOD);
+    addOption(Options.MAPPERS);
+    addOption(Options.BANDWIDTH);
   }
 
-  public static void main(String[] args) throws Exception {
-    System.exit(innerMain(HBaseConfiguration.create(), args));
+  public static void main(String[] args) {
+    new ExportSnapshot().doStaticMain(args);
   }
 }
