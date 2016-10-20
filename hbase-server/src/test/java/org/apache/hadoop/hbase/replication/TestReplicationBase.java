@@ -66,6 +66,7 @@ public class TestReplicationBase {
 
   protected static HBaseTestingUtility utility1;
   protected static HBaseTestingUtility utility2;
+  protected static final String PEER_ID = "2";
   protected static final int NB_ROWS_IN_BATCH = 100;
   protected static final int NB_ROWS_IN_BIG_BATCH =
       NB_ROWS_IN_BATCH * 10;
@@ -121,7 +122,7 @@ public class TestReplicationBase {
     utility2.setZkCluster(miniZK);
     zkw2 = new ZooKeeperWatcher(conf2, "cluster2", null, true);
 
-    admin.addPeer("2", utility2.getClusterKey());
+    admin.addPeer(PEER_ID, utility2.getClusterKey());
 
     LOG.info("Setup second Zk");
     CONF_WITH_LOCALFS = HBaseConfiguration.create(conf1);

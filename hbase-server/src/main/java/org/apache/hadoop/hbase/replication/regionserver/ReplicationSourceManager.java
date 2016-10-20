@@ -459,6 +459,9 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   public void closeRecoveredQueue(ReplicationSourceInterface src) {
     LOG.info("Done with the recovered queue " + src.getPeerClusterZnode());
+    if (src instanceof ReplicationSource) {
+      ((ReplicationSource) src).getSourceMetrics().clear();
+    }
     this.oldsources.remove(src);
     deleteSource(src.getPeerClusterZnode(), false);
     this.walsByIdRecoveredQueues.remove(src.getPeerClusterZnode());
@@ -505,6 +508,9 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
     for (ReplicationSourceInterface toRemove : srcToRemove) {
       toRemove.terminate(terminateMessage);
+      if (toRemove instanceof ReplicationSource) {
+        ((ReplicationSource) toRemove).getSourceMetrics().clear();
+      }
       this.sources.remove(toRemove);
     }
     deleteSource(id, true);
