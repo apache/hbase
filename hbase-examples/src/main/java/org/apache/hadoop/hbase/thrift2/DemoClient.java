@@ -31,6 +31,8 @@ import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.sasl.Sasl;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
+
 import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
@@ -48,6 +50,7 @@ public class DemoClient {
   private static String host = "localhost";
   private static int port = 9090;
   private static boolean secure = false;
+  private static String user = null;
 
   public static void main(String[] args) throws Exception {
     System.out.println("Thrift2 Demo");
@@ -60,6 +63,15 @@ public class DemoClient {
     }
     if (args.length >= 2) {
       port = Integer.parseInt(args[1]);
+    }
+    org.apache.hadoop.conf.Configuration conf = HBaseConfiguration.create();
+    String principal = conf.get("hbase.thrift.kerberos.principal");
+    if (principal != null) {
+      secure = true;
+      int slashIdx = principal.indexOf("/");
+      int atIdx = principal.indexOf("@");
+      int idx = slashIdx != -1 ? slashIdx : atIdx != -1 ? atIdx : principal.length();
+      user = principal.substring(0, idx);
     }
     if (args.length >= 3) {
       secure = Boolean.parseBoolean(args[2]);
@@ -93,7 +105,7 @@ public class DemoClient {
       Map<String, String> saslProperties = new HashMap<String, String>();
       saslProperties.put(Sasl.QOP, "auth-conf,auth-int,auth");
       transport = new TSaslClientTransport("GSSAPI", null,
-        "hbase", // Thrift server user name, should be an authorized proxy user.
+        user != null ? user : "hbase",// Thrift server user name, should be an authorized proxy user
         host, // Thrift server domain
         saslProperties, null, transport);
     }
