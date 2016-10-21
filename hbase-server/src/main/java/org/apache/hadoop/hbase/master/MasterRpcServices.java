@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Reg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -1314,15 +1315,16 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkServiceStarted();
       RegionStateTransition rt = req.getTransition(0);
-      TableName tableName = ProtobufUtil.toTableName(
-        rt.getRegionInfo(0).getTableName());
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-      if (!(TableName.META_TABLE_NAME.equals(tableName)
-          && regionStates.getRegionState(HRegionInfo.FIRST_META_REGIONINFO) != null)
-            && !master.getAssignmentManager().isFailoverCleanupDone()) {
-        // Meta region is assigned before master finishes the
-        // failover cleanup. So no need this check for it
-        throw new PleaseHoldException("Master is rebuilding user regions");
+      for (RegionInfo ri : rt.getRegionInfoList())  { 
+        TableName tableName = ProtobufUtil.toTableName(ri.getTableName());
+        if (!(TableName.META_TABLE_NAME.equals(tableName)
+            && regionStates.getRegionState(HRegionInfo.FIRST_META_REGIONINFO) != null)
+              && !master.getAssignmentManager().isFailoverCleanupDone()) {
+          // Meta region is assigned before master finishes the
+          // failover cleanup. So no need this check for it
+          throw new PleaseHoldException("Master is rebuilding user regions");
+        }
       }
       ServerName sn = ProtobufUtil.toServerName(req.getServer());
       String error = master.getAssignmentManager().onRegionTransition(sn, rt);
