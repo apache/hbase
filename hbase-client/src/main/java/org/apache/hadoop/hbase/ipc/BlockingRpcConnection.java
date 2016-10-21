@@ -60,12 +60,14 @@ import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
+import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -110,6 +112,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private byte[] connectionHeaderPreamble;
 
   private byte[] connectionHeaderWithLength;
+
+  private boolean waitingConnectionHeaderResponse = false;
 
   /**
    * If the client wants to interrupt its calls easily (i.e. call Thread#interrupt), it gets into a
@@ -349,7 +353,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       throws IOException {
     saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal,
         this.rpcClient.fallbackAllowed, this.rpcClient.conf.get("hbase.rpc.protection",
-          QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)));
+          QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
+        this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
     return saslRpcClient.saslConnect(in2, out2);
   }
 
@@ -462,8 +467,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           }
           if (continueSasl) {
             // Sasl connect is successful. Let's set up Sasl i/o streams.
-            inStream = saslRpcClient.getInputStream(inStream);
-            outStream = saslRpcClient.getOutputStream(outStream);
+            inStream = saslRpcClient.getInputStream();
+            outStream = saslRpcClient.getOutputStream();
           } else {
             // fall back to simple auth because server told us so.
             // do not change authMethod and useSasl here, we should start from secure when
@@ -474,6 +479,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         this.out = new DataOutputStream(new BufferedOutputStream(outStream));
         // Now write out the connection header
         writeConnectionHeader();
+        // process the response from server for connection header if necessary
+        processResponseForConnectionHeader();
+
         break;
       }
     } catch (Throwable t) {
@@ -511,8 +519,58 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * Write the connection header.
    */
   private void writeConnectionHeader() throws IOException {
+    boolean isCryptoAesEnable = false;
+    // check if Crypto AES is enabled
+    if (saslRpcClient != null) {
+      boolean saslEncryptionEnabled = SaslUtil.QualityOfProtection.PRIVACY.
+          getSaslQop().equalsIgnoreCase(saslRpcClient.getSaslQOP());
+      isCryptoAesEnable = saslEncryptionEnabled && conf.getBoolean(
+          CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT);
+    }
+
+    // if Crypto AES is enabled, set transformation and negotiate with server
+    if (isCryptoAesEnable) {
+      waitingConnectionHeaderResponse = true;
+    }
     this.out.write(connectionHeaderWithLength);
     this.out.flush();
+  }
+
+  private void processResponseForConnectionHeader() throws IOException {
+    // if no response excepted, return
+    if (!waitingConnectionHeaderResponse) return;
+    try {
+      // read the ConnectionHeaderResponse from server
+      int len = this.in.readInt();
+      byte[] buff = new byte[len];
+      int readSize = this.in.read(buff);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Length of response for connection header:" + readSize);
+      }
+
+      RPCProtos.ConnectionHeaderResponse connectionHeaderResponse =
+          RPCProtos.ConnectionHeaderResponse.parseFrom(buff);
+
+      // Get the CryptoCipherMeta, update the HBaseSaslRpcClient for Crypto Cipher
+      if (connectionHeaderResponse.hasCryptoCipherMeta()) {
+        negotiateCryptoAes(connectionHeaderResponse.getCryptoCipherMeta());
+      }
+      waitingConnectionHeaderResponse = false;
+    } catch (SocketTimeoutException ste) {
+      LOG.fatal("Can't get the connection header response for rpc timeout, please check if" +
+          " server has the correct configuration to support the additional function.", ste);
+      // timeout when waiting the connection header response, ignore the additional function
+      throw new IOException("Timeout while waiting connection header response", ste);
+    }
+  }
+
+  private void negotiateCryptoAes(RPCProtos.CryptoCipherMeta cryptoCipherMeta)
+      throws IOException {
+    // initilize the Crypto AES with CryptoCipherMeta
+    saslRpcClient.initCryptoCipher(cryptoCipherMeta, this.rpcClient.conf);
+    // reset the inputStream/outputStream for Crypto AES encryption
+    this.in = new DataInputStream(new BufferedInputStream(saslRpcClient.getInputStream()));
+    this.out = new DataOutputStream(new BufferedOutputStream(saslRpcClient.getOutputStream()));
   }
 
   private void tracedWriteRequest(Call call) throws IOException {

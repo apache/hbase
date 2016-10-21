@@ -72,6 +72,12 @@ abstract class RpcConnection {
 
   protected final HashedWheelTimer timeoutTimer;
 
+  protected final Configuration conf;
+
+  protected static String CRYPTO_AES_ENABLED_KEY = "hbase.rpc.crypto.encryption.aes.enabled";
+
+  protected static boolean CRYPTO_AES_ENABLED_DEFAULT = false;
+
   // the last time we were picked up from connection pool.
   protected long lastTouched;
 
@@ -84,6 +90,7 @@ abstract class RpcConnection {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
+    this.conf = conf;
 
     UserGroupInformation ticket = remoteId.getTicket().getUGI();
     SecurityInfo securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
@@ -224,6 +231,12 @@ abstract class RpcConnection {
       builder.setCellBlockCompressorClass(this.compressor.getClass().getCanonicalName());
     }
     builder.setVersionInfo(ProtobufUtil.getVersionInfo());
+    boolean isCryptoAESEnable = conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT);
+    // if Crypto AES enable, setup Cipher transformation
+    if (isCryptoAESEnable) {
+      builder.setRpcCryptoCipherTransformation(
+          conf.get("hbase.rpc.crypto.encryption.aes.cipher.transform", "AES/CTR/NoPadding"));
+    }
     return builder.build();
   }
 

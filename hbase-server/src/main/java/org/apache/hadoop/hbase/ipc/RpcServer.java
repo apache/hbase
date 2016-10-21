@@ -45,6 +45,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
+import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,6 +54,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -70,6 +72,9 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
+import org.apache.commons.crypto.cipher.CryptoCipherFactory;
+import org.apache.commons.crypto.random.CryptoRandom;
+import org.apache.commons.crypto.random.CryptoRandomFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -91,10 +96,12 @@ import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
+import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
@@ -134,6 +141,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.TraceInfo;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
@@ -423,6 +431,12 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.response = new BufferChain(responseBufs);
     }
 
+    protected synchronized void setConnectionHeaderResponse(ByteBuffer response) {
+      ByteBuffer[] responseBufs = new ByteBuffer[1];
+      responseBufs[0] = response;
+      this.response = new BufferChain(responseBufs);
+    }
+
     protected synchronized void setResponse(Object m, final CellScanner cells,
         Throwable t, String errorMsg) {
       if (this.isError) return;
@@ -565,9 +579,16 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       byte [] responseBytes = bc.getBytes();
       byte [] token;
       // synchronization may be needed since there can be multiple Handler
-      // threads using saslServer to wrap responses.
-      synchronized (connection.saslServer) {
-        token = connection.saslServer.wrap(responseBytes, 0, responseBytes.length);
+      // threads using saslServer or Crypto AES to wrap responses.
+      if (connection.useCryptoAesWrap) {
+        // wrap with Crypto AES
+        synchronized (connection.cryptoAES) {
+          token = connection.cryptoAES.wrap(responseBytes, 0, responseBytes.length);
+        }
+      } else {
+        synchronized (connection.saslServer) {
+          token = connection.saslServer.wrap(responseBytes, 0, responseBytes.length);
+        }
       }
       if (LOG.isTraceEnabled()) {
         LOG.trace("Adding saslServer wrapped token of size " + token.length
@@ -1255,7 +1276,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     private ByteBuffer unwrappedDataLengthBuffer = ByteBuffer.allocate(4);
     boolean useSasl;
     SaslServer saslServer;
+    private CryptoAES cryptoAES;
     private boolean useWrap = false;
+    private boolean useCryptoAesWrap = false;
     // Fake 'call' for failed authorization response
     private static final int AUTHORIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall = new Call(AUTHORIZATION_FAILED_CALLID, null, null, null,
@@ -1266,6 +1289,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     private static final int SASL_CALLID = -33;
     private final Call saslCall = new Call(SASL_CALLID, null, null, null, null, null, this, null,
         0, null, null, 0);
+    // Fake 'call' for connection header response
+    private static final int CONNECTION_HEADER_RESPONSE_CALLID = -34;
+    private final Call setConnectionHeaderResponseCall = new Call(CONNECTION_HEADER_RESPONSE_CALLID,
+        null, null, null, null, null, this, null, 0, null, null, 0);
 
     // was authentication allowed with a fallback to simple auth
     private boolean authenticatedWithFallback;
@@ -1376,7 +1403,13 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           processOneRpc(saslToken);
         } else {
           byte[] b = saslToken.array();
-          byte [] plaintextData = saslServer.unwrap(b, saslToken.position(), saslToken.limit());
+          byte [] plaintextData;
+          if (useCryptoAesWrap) {
+            // unwrap with CryptoAES
+            plaintextData = cryptoAES.unwrap(b, saslToken.position(), saslToken.limit());
+          } else {
+            plaintextData = saslServer.unwrap(b, saslToken.position(), saslToken.limit());
+          }
           processUnwrappedData(plaintextData);
         }
       } else {
@@ -1499,6 +1532,31 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
         if (out != null) {
           out.close();
+        }
+      }
+    }
+
+    /**
+     * Send the response for connection header
+     */
+    private void doConnectionHeaderResponse(byte[] wrappedCipherMetaData) throws IOException {
+      ByteBufferOutputStream response = null;
+      DataOutputStream out = null;
+      try {
+        response = new ByteBufferOutputStream(wrappedCipherMetaData.length + 4);
+        out = new DataOutputStream(response);
+        out.writeInt(wrappedCipherMetaData.length);
+        out.write(wrappedCipherMetaData);
+
+        setConnectionHeaderResponseCall.setConnectionHeaderResponse(response.getByteBuffer());
+        setConnectionHeaderResponseCall.responder = responder;
+        setConnectionHeaderResponseCall.sendResponseIfReady();
+      } finally {
+        if (out != null) {
+          out.close();
+        }
+        if (response != null) {
+          response.close();
         }
       }
     }
@@ -1744,6 +1802,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.service = getService(services, serviceName);
       if (this.service == null) throw new UnknownServiceException(serviceName);
       setupCellBlockCodecs(this.connectionHeader);
+      RPCProtos.ConnectionHeaderResponse.Builder chrBuilder =
+          RPCProtos.ConnectionHeaderResponse.newBuilder();
+      setupCryptoCipher(this.connectionHeader, chrBuilder);
+      responseConnectionHeader(chrBuilder);
       UserGroupInformation protocolUser = createUser(connectionHeader);
       if (!useSasl) {
         ugi = protocolUser;
@@ -1792,8 +1854,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
             + " with unknown version info");
       }
-
-
     }
 
     /**
@@ -1817,6 +1877,92 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         this.compressionCodec = (CompressionCodec)Class.forName(className).newInstance();
       } catch (Exception e) {
         throw new UnsupportedCompressionCodecException(className, e);
+      }
+    }
+
+    /**
+     * Set up cipher for rpc encryption with Apache Commons Crypto
+     * @throws FatalConnectionException
+     */
+    private void setupCryptoCipher(final ConnectionHeader header,
+        RPCProtos.ConnectionHeaderResponse.Builder chrBuilder) throws FatalConnectionException {
+      // If simple auth, return
+      if (saslServer == null) return;
+      // check if rpc encryption with Crypto AES
+      String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+      boolean isEncryption = SaslUtil.QualityOfProtection.PRIVACY
+          .getSaslQop().equalsIgnoreCase(qop);
+      boolean isCryptoAesEncryption = isEncryption && conf.getBoolean(
+          "hbase.rpc.crypto.encryption.aes.enabled", false);
+      if (!isCryptoAesEncryption) return;
+      if (!header.hasRpcCryptoCipherTransformation()) return;
+      String transformation = header.getRpcCryptoCipherTransformation();
+      if (transformation == null || transformation.length() == 0) return;
+       // Negotiates AES based on complete saslServer.
+       // The Crypto metadata need to be encrypted and send to client.
+      Properties properties = new Properties();
+      // the property for SecureRandomFactory
+      properties.setProperty(CryptoRandomFactory.CLASSES_KEY,
+          conf.get("hbase.crypto.sasl.encryption.aes.crypto.random",
+              "org.apache.commons.crypto.random.JavaCryptoRandom"));
+      // the property for cipher class
+      properties.setProperty(CryptoCipherFactory.CLASSES_KEY,
+          conf.get("hbase.rpc.crypto.encryption.aes.cipher.class",
+              "org.apache.commons.crypto.cipher.JceCipher"));
+
+      int cipherKeyBits = conf.getInt(
+          "hbase.rpc.crypto.encryption.aes.cipher.keySizeBits", 128);
+      // generate key and iv
+      if (cipherKeyBits % 8 != 0) {
+        throw new IllegalArgumentException("The AES cipher key size in bits" +
+            " should be a multiple of byte");
+      }
+      int len = cipherKeyBits / 8;
+      byte[] inKey = new byte[len];
+      byte[] outKey = new byte[len];
+      byte[] inIv = new byte[len];
+      byte[] outIv = new byte[len];
+
+      try {
+        // generate the cipher meta data with SecureRandom
+        CryptoRandom secureRandom = CryptoRandomFactory.getCryptoRandom(properties);
+        secureRandom.nextBytes(inKey);
+        secureRandom.nextBytes(outKey);
+        secureRandom.nextBytes(inIv);
+        secureRandom.nextBytes(outIv);
+
+        // create CryptoAES for server
+        cryptoAES = new CryptoAES(transformation, properties,
+            inKey, outKey, inIv, outIv);
+        // create SaslCipherMeta and send to client,
+        //  for client, the [inKey, outKey], [inIv, outIv] should be reversed
+        RPCProtos.CryptoCipherMeta.Builder ccmBuilder = RPCProtos.CryptoCipherMeta.newBuilder();
+        ccmBuilder.setTransformation(transformation);
+        ccmBuilder.setInIv(getByteString(outIv));
+        ccmBuilder.setInKey(getByteString(outKey));
+        ccmBuilder.setOutIv(getByteString(inIv));
+        ccmBuilder.setOutKey(getByteString(inKey));
+        chrBuilder.setCryptoCipherMeta(ccmBuilder);
+        useCryptoAesWrap = true;
+      } catch (GeneralSecurityException | IOException ex) {
+        throw new UnsupportedCryptoException(ex.getMessage(), ex);
+      }
+    }
+
+    private void responseConnectionHeader(RPCProtos.ConnectionHeaderResponse.Builder chrBuilder)
+        throws FatalConnectionException {
+      // Response the connection header if Crypto AES is enabled
+      if (!chrBuilder.hasCryptoCipherMeta()) return;
+      try {
+        byte[] connectionHeaderResBytes = chrBuilder.build().toByteArray();
+        // encrypt the Crypto AES cipher meta data with sasl server, and send to client
+        byte[] unwrapped = new byte[connectionHeaderResBytes.length + 4];
+        Bytes.putBytes(unwrapped, 0, Bytes.toBytes(connectionHeaderResBytes.length), 0, 4);
+        Bytes.putBytes(unwrapped, 4, connectionHeaderResBytes, 0, connectionHeaderResBytes.length);
+
+        doConnectionHeaderResponse(saslServer.wrap(unwrapped, 0, unwrapped.length));
+      } catch (IOException ex) {
+        throw new UnsupportedCryptoException(ex.getMessage(), ex);
       }
     }
 
@@ -1857,7 +2003,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
       }
     }
-
 
     private void processOneRpc(ByteBuffer buf) throws IOException, InterruptedException {
       if (connectionHeaderRead) {
@@ -1986,6 +2131,11 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
                 ", too many items queued ?");
         responder.doRespond(call);
       }
+    }
+
+    private ByteString getByteString(byte[] bytes) {
+      // return singleton to reduce object allocation
+      return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
     }
 
     private boolean authorizeConnection() throws IOException {

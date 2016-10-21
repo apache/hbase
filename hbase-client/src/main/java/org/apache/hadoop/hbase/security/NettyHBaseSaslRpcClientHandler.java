@@ -27,6 +27,7 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -47,17 +48,25 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   private final NettyHBaseSaslRpcClient saslRpcClient;
 
+  private final Configuration conf;
+
+  // flag to mark if Crypto AES encryption is enable
+  private boolean needProcessConnectionHeader = false;
+
   /**
    * @param saslPromise {@code true} if success, {@code false} if server tells us to fallback to
    *          simple.
    */
   public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
       AuthMethod method, Token<? extends TokenIdentifier> token, String serverPrincipal,
-      boolean fallbackAllowed, String rpcProtection) throws IOException {
+      boolean fallbackAllowed, Configuration conf)
+      throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
+    this.conf = conf;
     this.saslRpcClient = new NettyHBaseSaslRpcClient(method, token, serverPrincipal,
-        fallbackAllowed, rpcProtection);
+        fallbackAllowed, conf.get(
+        "hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 
   private void writeResponse(ChannelHandlerContext ctx, byte[] response) {
@@ -72,8 +81,22 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
     if (!saslRpcClient.isComplete()) {
       return;
     }
+
     saslRpcClient.setupSaslHandler(ctx.pipeline());
+    setCryptoAESOption();
+
     saslPromise.setSuccess(true);
+  }
+
+  private void setCryptoAESOption() {
+    boolean saslEncryptionEnabled = SaslUtil.QualityOfProtection.PRIVACY.
+        getSaslQop().equalsIgnoreCase(saslRpcClient.getSaslQOP());
+    needProcessConnectionHeader = saslEncryptionEnabled && conf.getBoolean(
+        "hbase.rpc.crypto.encryption.aes.enabled", false);
+  }
+
+  public boolean isNeedProcessConnectionHeader() {
+    return needProcessConnectionHeader;
   }
 
   @Override

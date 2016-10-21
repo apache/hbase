@@ -1228,6 +1228,7 @@
     <spy.version>2.11.6</spy.version>
     <bouncycastle.version>1.46</bouncycastle.version>
     <kerby.version>1.0.0-RC2</kerby.version>
+    <commons-crypto.version>1.0.0</commons-crypto.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.8</maven.antrun.version>
@@ -1805,6 +1806,17 @@
        <groupId>org.apache.kerby</groupId>
        <artifactId>kerb-simplekdc</artifactId>
        <version>${kerby.version}</version>
+     </dependency>
+     <dependency>
+       <groupId>org.apache.commons</groupId>
+       <artifactId>commons-crypto</artifactId>
+       <version>${commons-crypto.version}</version>
+       <exclusions>
+         <exclusion>
+           <groupId>net.java.dev.jna</groupId>
+           <artifactId>jna</artifactId>
+         </exclusion>
+       </exclusions>
      </dependency>
     </dependencies>
   </dependencyManagement>

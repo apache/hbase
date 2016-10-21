@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
 import java.security.SecureRandom;
+import java.util.Properties;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +39,8 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -254,5 +258,28 @@ public final class EncryptionUtil {
       }
     }
     return key;
+  }
+
+  /**
+   * Helper to create an instance of CryptoAES.
+   *
+   * @param conf The current configuration.
+   * @param cryptoCipherMeta The metadata for create CryptoAES.
+   * @return The instance of CryptoAES.
+   * @throws IOException if create CryptoAES failed
+   */
+  public static CryptoAES createCryptoAES(RPCProtos.CryptoCipherMeta cryptoCipherMeta,
+                               Configuration conf) throws IOException {
+    Properties properties = new Properties();
+    // the property for cipher class
+    properties.setProperty(CryptoCipherFactory.CLASSES_KEY,
+        conf.get("hbase.rpc.crypto.encryption.aes.cipher.class",
+            "org.apache.commons.crypto.cipher.JceCipher"));
+    // create SaslAES for client
+    return new CryptoAES(cryptoCipherMeta.getTransformation(), properties,
+        cryptoCipherMeta.getInKey().toByteArray(),
+        cryptoCipherMeta.getOutKey().toByteArray(),
+        cryptoCipherMeta.getInIv().toByteArray(),
+        cryptoCipherMeta.getOutIv().toByteArray());
   }
 }

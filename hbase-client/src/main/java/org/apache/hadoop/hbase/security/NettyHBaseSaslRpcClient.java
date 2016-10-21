@@ -47,6 +47,7 @@ public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("SASL client context established. Negotiated QoP: " + qop);
     }
+
     if (qop == null || "auth".equalsIgnoreCase(qop)) {
       return;
     }
@@ -54,5 +55,9 @@ public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
     p.addFirst(new SaslWrapHandler(saslClient),
       new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4),
       new SaslUnwrapHandler(saslClient));
+  }
+
+  public String getSaslQOP() {
+    return (String) saslClient.getNegotiatedProperty(Sasl.QOP);
   }
 }

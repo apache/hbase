@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.ipc.CallEvent.Type.TIMEOUT;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.toIOE;
 
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 
 import io.netty.bootstrap.Bootstrap;
@@ -55,7 +57,6 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
-import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -130,8 +131,7 @@ class NettyRpcConnection extends RpcConnection {
     }
   }
 
-  private void established(Channel ch) {
-    ch.write(connectionHeaderWithLength.retainedDuplicate());
+  private void established(Channel ch) throws IOException {
     ChannelPipeline p = ch.pipeline();
     String addBeforeHandler = p.context(BufferCallBeforeInitHandler.class).name();
     p.addBefore(addBeforeHandler, null,
@@ -188,11 +188,10 @@ class NettyRpcConnection extends RpcConnection {
       return;
     }
     Promise<Boolean> saslPromise = ch.eventLoop().newPromise();
-    ChannelHandler saslHandler;
+    final NettyHBaseSaslRpcClientHandler saslHandler;
     try {
       saslHandler = new NettyHBaseSaslRpcClientHandler(saslPromise, ticket, authMethod, token,
-          serverPrincipal, rpcClient.fallbackAllowed, this.rpcClient.conf.get(
-            "hbase.rpc.protection", QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
+          serverPrincipal, rpcClient.fallbackAllowed, this.rpcClient.conf);
     } catch (IOException e) {
       failInit(ch, e);
       return;
@@ -206,7 +205,41 @@ class NettyRpcConnection extends RpcConnection {
           ChannelPipeline p = ch.pipeline();
           p.remove(SaslChallengeDecoder.class);
           p.remove(NettyHBaseSaslRpcClientHandler.class);
-          established(ch);
+
+          // check if negotiate with server for connection header is necessary
+          if (saslHandler.isNeedProcessConnectionHeader()) {
+            Promise<Boolean> connectionHeaderPromise = ch.eventLoop().newPromise();
+            // create the handler to handle the connection header
+            ChannelHandler chHandler = new NettyHBaseRpcConnectionHeaderHandler(
+                connectionHeaderPromise, conf, connectionHeaderWithLength);
+
+            // add ReadTimeoutHandler to deal with server doesn't response connection header
+            // because of the different configuration in client side and server side
+            p.addFirst(new ReadTimeoutHandler(
+                RpcClient.DEFAULT_SOCKET_TIMEOUT_READ, TimeUnit.MILLISECONDS));
+            p.addLast(chHandler);
+            connectionHeaderPromise.addListener(new FutureListener<Boolean>() {
+              @Override
+              public void operationComplete(Future<Boolean> future) throws Exception {
+                if (future.isSuccess()) {
+                  ChannelPipeline p = ch.pipeline();
+                  p.remove(ReadTimeoutHandler.class);
+                  p.remove(NettyHBaseRpcConnectionHeaderHandler.class);
+                  // don't send connection header, NettyHbaseRpcConnectionHeaderHandler
+                  // sent it already
+                  established(ch);
+                } else {
+                  final Throwable error = future.cause();
+                  scheduleRelogin(error);
+                  failInit(ch, toIOE(error));
+                }
+              }
+            });
+          } else {
+            // send the connection header to server
+            ch.write(connectionHeaderWithLength.retainedDuplicate());
+            established(ch);
+          }
         } else {
           final Throwable error = future.cause();
           scheduleRelogin(error);
@@ -240,6 +273,8 @@ class NettyRpcConnection extends RpcConnection {
             if (useSasl) {
               saslNegotiate(ch);
             } else {
+              // send the connection header to server
+              ch.write(connectionHeaderWithLength.retainedDuplicate());
               established(ch);
             }
           }

@@ -26,6 +26,7 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConf
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -96,8 +97,8 @@ public class TestSecureIPC {
 
   @Parameters(name = "{index}: rpcClientImpl={0}")
   public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[] { BlockingRpcClient.class.getName() },
-      new Object[] { NettyRpcClient.class.getName() });
+    return Arrays.asList(new Object[]{BlockingRpcClient.class.getName()},
+        new Object[]{NettyRpcClient.class.getName()});
   }
 
   @Parameter
@@ -190,6 +191,42 @@ public class TestSecureIPC {
     exception.expectMessage("No common protection layer between client and server");
     setRpcProtection("integrity", "privacy");
     callRpcService(User.create(ugi));
+  }
+
+  /**
+   * Test sasl encryption with Crypto AES.
+   * @throws Exception
+   */
+  @Test
+  public void testSaslWithCryptoAES() throws Exception {
+    setRpcProtection("privacy", "privacy");
+    setCryptoAES("true", "true");
+    callRpcService(User.create(ugi));
+  }
+
+  /**
+   * Test various combinations of Server and Client configuration for Crypto AES.
+   * @throws Exception
+   */
+  @Test
+  public void testDifferentConfWithCryptoAES() throws Exception {
+    setRpcProtection("privacy", "privacy");
+
+    setCryptoAES("false", "true");
+    callRpcService(User.create(ugi));
+
+    setCryptoAES("true", "false");
+    try {
+      callRpcService(User.create(ugi));
+      fail("The exception should be thrown out for the rpc timeout.");
+    } catch (Exception e) {
+      // ignore the expected exception
+    }
+  }
+
+  void setCryptoAES(String clientCryptoAES, String serverCryptoAES) {
+    clientConf.set("hbase.rpc.crypto.encryption.aes.enabled", clientCryptoAES);
+    serverConf.set("hbase.rpc.crypto.encryption.aes.enabled", serverCryptoAES);
   }
 
   private UserGroupInformation loginKerberosPrincipal(String krbKeytab, String krbPrincipal)

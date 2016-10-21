@@ -88,7 +88,7 @@ public class TestHBaseSaslRpcClient {
         DEFAULT_USER_PASSWORD);
     for (SaslUtil.QualityOfProtection qop : SaslUtil.QualityOfProtection.values()) {
       String negotiatedQop = new HBaseSaslRpcClient(AuthMethod.DIGEST, token,
-          "principal/host@DOMAIN.COM", false, qop.name()) {
+          "principal/host@DOMAIN.COM", false, qop.name(), false) {
         public String getQop() {
           return saslProps.get(Sasl.QOP);
         }
@@ -211,14 +211,14 @@ public class TestHBaseSaslRpcClient {
     };
 
     try {
-      rpcClient.getInputStream(Mockito.mock(InputStream.class));
+      rpcClient.getInputStream();
     } catch(IOException ex) {
       //Sasl authentication exchange hasn't completed yet
       inState = true;
     }
 
     try {
-      rpcClient.getOutputStream(Mockito.mock(OutputStream.class));
+      rpcClient.getOutputStream();
     } catch(IOException ex) {
       //Sasl authentication exchange hasn't completed yet
       outState = true;

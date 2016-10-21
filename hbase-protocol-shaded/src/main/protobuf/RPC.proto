@@ -89,6 +89,14 @@ message ConnectionHeader {
   // Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
   optional string cell_block_compressor_class = 4;
   optional VersionInfo version_info = 5;
+  // the transformation for rpc AES encryption with Apache Commons Crypto
+  optional string rpc_crypto_cipher_transformation = 6;
+}
+
+// This is sent by rpc server to negotiate the data if necessary
+message ConnectionHeaderResponse {
+  // To use Apache Commons Crypto, negotiate the metadata
+  optional CryptoCipherMeta crypto_cipher_meta = 1;
 }
 
 // Optional Cell block Message.  Included in client RequestHeader
@@ -110,6 +118,17 @@ message ExceptionResponse {
   optional int32 port = 4;
   // Set if we are NOT to retry on receipt of this exception
   optional bool do_not_retry = 5;
+}
+
+/**
+ * Cipher meta for Crypto
+ */
+message CryptoCipherMeta {
+  required string transformation = 1;
+  optional bytes inKey = 2;
+  optional bytes inIv = 3;
+  optional bytes outKey = 4;
+  optional bytes outIv = 5;
 }
 
 // Header sent making a request.

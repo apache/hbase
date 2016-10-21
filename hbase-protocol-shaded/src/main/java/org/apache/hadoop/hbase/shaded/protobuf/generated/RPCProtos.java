@@ -839,6 +839,32 @@ public final class RPCProtos {
      * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
      */
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfoOrBuilder getVersionInfoOrBuilder();
+
+    /**
+     * <pre>
+     * the transformation for rpc AES encryption with Apache Commons Crypto
+     * </pre>
+     *
+     * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+     */
+    boolean hasRpcCryptoCipherTransformation();
+    /**
+     * <pre>
+     * the transformation for rpc AES encryption with Apache Commons Crypto
+     * </pre>
+     *
+     * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+     */
+    java.lang.String getRpcCryptoCipherTransformation();
+    /**
+     * <pre>
+     * the transformation for rpc AES encryption with Apache Commons Crypto
+     * </pre>
+     *
+     * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getRpcCryptoCipherTransformationBytes();
   }
   /**
    * <pre>
@@ -859,6 +885,7 @@ public final class RPCProtos {
       serviceName_ = "";
       cellBlockCodecClass_ = "";
       cellBlockCompressorClass_ = "";
+      rpcCryptoCipherTransformation_ = "";
     }
 
     @java.lang.Override
@@ -931,6 +958,12 @@ public final class RPCProtos {
                 versionInfo_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000010;
+              break;
+            }
+            case 50: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000020;
+              rpcCryptoCipherTransformation_ = bs;
               break;
             }
           }
@@ -1156,6 +1189,60 @@ public final class RPCProtos {
       return versionInfo_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo.getDefaultInstance() : versionInfo_;
     }
 
+    public static final int RPC_CRYPTO_CIPHER_TRANSFORMATION_FIELD_NUMBER = 6;
+    private volatile java.lang.Object rpcCryptoCipherTransformation_;
+    /**
+     * <pre>
+     * the transformation for rpc AES encryption with Apache Commons Crypto
+     * </pre>
+     *
+     * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+     */
+    public boolean hasRpcCryptoCipherTransformation() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <pre>
+     * the transformation for rpc AES encryption with Apache Commons Crypto
+     * </pre>
+     *
+     * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+     */
+    public java.lang.String getRpcCryptoCipherTransformation() {
+      java.lang.Object ref = rpcCryptoCipherTransformation_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          rpcCryptoCipherTransformation_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * the transformation for rpc AES encryption with Apache Commons Crypto
+     * </pre>
+     *
+     * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getRpcCryptoCipherTransformationBytes() {
+      java.lang.Object ref = rpcCryptoCipherTransformation_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        rpcCryptoCipherTransformation_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -1195,6 +1282,9 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeMessage(5, getVersionInfo());
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 6, rpcCryptoCipherTransformation_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -1219,6 +1309,9 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, getVersionInfo());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(6, rpcCryptoCipherTransformation_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -1262,6 +1355,11 @@ public final class RPCProtos {
         result = result && getVersionInfo()
             .equals(other.getVersionInfo());
       }
+      result = result && (hasRpcCryptoCipherTransformation() == other.hasRpcCryptoCipherTransformation());
+      if (hasRpcCryptoCipherTransformation()) {
+        result = result && getRpcCryptoCipherTransformation()
+            .equals(other.getRpcCryptoCipherTransformation());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -1292,6 +1390,10 @@ public final class RPCProtos {
       if (hasVersionInfo()) {
         hash = (37 * hash) + VERSION_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getVersionInfo().hashCode();
+      }
+      if (hasRpcCryptoCipherTransformation()) {
+        hash = (37 * hash) + RPC_CRYPTO_CIPHER_TRANSFORMATION_FIELD_NUMBER;
+        hash = (53 * hash) + getRpcCryptoCipherTransformation().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -1435,6 +1537,8 @@ public final class RPCProtos {
           versionInfoBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000010);
+        rpcCryptoCipherTransformation_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -1487,6 +1591,10 @@ public final class RPCProtos {
         } else {
           result.versionInfo_ = versionInfoBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.rpcCryptoCipherTransformation_ = rpcCryptoCipherTransformation_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1549,6 +1657,11 @@ public final class RPCProtos {
         }
         if (other.hasVersionInfo()) {
           mergeVersionInfo(other.getVersionInfo());
+        }
+        if (other.hasRpcCryptoCipherTransformation()) {
+          bitField0_ |= 0x00000020;
+          rpcCryptoCipherTransformation_ = other.rpcCryptoCipherTransformation_;
+          onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -2111,6 +2224,106 @@ public final class RPCProtos {
         }
         return versionInfoBuilder_;
       }
+
+      private java.lang.Object rpcCryptoCipherTransformation_ = "";
+      /**
+       * <pre>
+       * the transformation for rpc AES encryption with Apache Commons Crypto
+       * </pre>
+       *
+       * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+       */
+      public boolean hasRpcCryptoCipherTransformation() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <pre>
+       * the transformation for rpc AES encryption with Apache Commons Crypto
+       * </pre>
+       *
+       * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+       */
+      public java.lang.String getRpcCryptoCipherTransformation() {
+        java.lang.Object ref = rpcCryptoCipherTransformation_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            rpcCryptoCipherTransformation_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * the transformation for rpc AES encryption with Apache Commons Crypto
+       * </pre>
+       *
+       * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getRpcCryptoCipherTransformationBytes() {
+        java.lang.Object ref = rpcCryptoCipherTransformation_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          rpcCryptoCipherTransformation_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * the transformation for rpc AES encryption with Apache Commons Crypto
+       * </pre>
+       *
+       * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+       */
+      public Builder setRpcCryptoCipherTransformation(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        rpcCryptoCipherTransformation_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * the transformation for rpc AES encryption with Apache Commons Crypto
+       * </pre>
+       *
+       * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+       */
+      public Builder clearRpcCryptoCipherTransformation() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        rpcCryptoCipherTransformation_ = getDefaultInstance().getRpcCryptoCipherTransformation();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * the transformation for rpc AES encryption with Apache Commons Crypto
+       * </pre>
+       *
+       * <code>optional string rpc_crypto_cipher_transformation = 6;</code>
+       */
+      public Builder setRpcCryptoCipherTransformationBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        rpcCryptoCipherTransformation_ = value;
+        onChanged();
+        return this;
+      }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
@@ -2155,6 +2368,663 @@ public final class RPCProtos {
     }
 
     public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ConnectionHeaderResponseOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.ConnectionHeaderResponse)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <pre>
+     * To use Apache Commons Crypto, negotiate the metadata
+     * </pre>
+     *
+     * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+     */
+    boolean hasCryptoCipherMeta();
+    /**
+     * <pre>
+     * To use Apache Commons Crypto, negotiate the metadata
+     * </pre>
+     *
+     * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta getCryptoCipherMeta();
+    /**
+     * <pre>
+     * To use Apache Commons Crypto, negotiate the metadata
+     * </pre>
+     *
+     * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMetaOrBuilder getCryptoCipherMetaOrBuilder();
+  }
+  /**
+   * <pre>
+   * This is sent by rpc server to negotiate the data if necessary
+   * </pre>
+   *
+   * Protobuf type {@code hbase.pb.ConnectionHeaderResponse}
+   */
+  public  static final class ConnectionHeaderResponse extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.ConnectionHeaderResponse)
+      ConnectionHeaderResponseOrBuilder {
+    // Use ConnectionHeaderResponse.newBuilder() to construct.
+    private ConnectionHeaderResponse(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ConnectionHeaderResponse() {
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ConnectionHeaderResponse(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = cryptoCipherMeta_.toBuilder();
+              }
+              cryptoCipherMeta_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(cryptoCipherMeta_);
+                cryptoCipherMeta_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeaderResponse_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeaderResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse.class, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int CRYPTO_CIPHER_META_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta cryptoCipherMeta_;
+    /**
+     * <pre>
+     * To use Apache Commons Crypto, negotiate the metadata
+     * </pre>
+     *
+     * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+     */
+    public boolean hasCryptoCipherMeta() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <pre>
+     * To use Apache Commons Crypto, negotiate the metadata
+     * </pre>
+     *
+     * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta getCryptoCipherMeta() {
+      return cryptoCipherMeta_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.getDefaultInstance() : cryptoCipherMeta_;
+    }
+    /**
+     * <pre>
+     * To use Apache Commons Crypto, negotiate the metadata
+     * </pre>
+     *
+     * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMetaOrBuilder getCryptoCipherMetaOrBuilder() {
+      return cryptoCipherMeta_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.getDefaultInstance() : cryptoCipherMeta_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (hasCryptoCipherMeta()) {
+        if (!getCryptoCipherMeta().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, getCryptoCipherMeta());
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getCryptoCipherMeta());
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse other = (org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse) obj;
+
+      boolean result = true;
+      result = result && (hasCryptoCipherMeta() == other.hasCryptoCipherMeta());
+      if (hasCryptoCipherMeta()) {
+        result = result && getCryptoCipherMeta()
+            .equals(other.getCryptoCipherMeta());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasCryptoCipherMeta()) {
+        hash = (37 * hash) + CRYPTO_CIPHER_META_FIELD_NUMBER;
+        hash = (53 * hash) + getCryptoCipherMeta().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * This is sent by rpc server to negotiate the data if necessary
+     * </pre>
+     *
+     * Protobuf type {@code hbase.pb.ConnectionHeaderResponse}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.ConnectionHeaderResponse)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponseOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeaderResponse_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeaderResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse.class, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getCryptoCipherMetaFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (cryptoCipherMetaBuilder_ == null) {
+          cryptoCipherMeta_ = null;
+        } else {
+          cryptoCipherMetaBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeaderResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse result = new org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (cryptoCipherMetaBuilder_ == null) {
+          result.cryptoCipherMeta_ = cryptoCipherMeta_;
+        } else {
+          result.cryptoCipherMeta_ = cryptoCipherMetaBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse.getDefaultInstance()) return this;
+        if (other.hasCryptoCipherMeta()) {
+          mergeCryptoCipherMeta(other.getCryptoCipherMeta());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (hasCryptoCipherMeta()) {
+          if (!getCryptoCipherMeta().isInitialized()) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta cryptoCipherMeta_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMetaOrBuilder> cryptoCipherMetaBuilder_;
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      public boolean hasCryptoCipherMeta() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta getCryptoCipherMeta() {
+        if (cryptoCipherMetaBuilder_ == null) {
+          return cryptoCipherMeta_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.getDefaultInstance() : cryptoCipherMeta_;
+        } else {
+          return cryptoCipherMetaBuilder_.getMessage();
+        }
+      }
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      public Builder setCryptoCipherMeta(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta value) {
+        if (cryptoCipherMetaBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          cryptoCipherMeta_ = value;
+          onChanged();
+        } else {
+          cryptoCipherMetaBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      public Builder setCryptoCipherMeta(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.Builder builderForValue) {
+        if (cryptoCipherMetaBuilder_ == null) {
+          cryptoCipherMeta_ = builderForValue.build();
+          onChanged();
+        } else {
+          cryptoCipherMetaBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      public Builder mergeCryptoCipherMeta(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta value) {
+        if (cryptoCipherMetaBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              cryptoCipherMeta_ != null &&
+              cryptoCipherMeta_ != org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.getDefaultInstance()) {
+            cryptoCipherMeta_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.newBuilder(cryptoCipherMeta_).mergeFrom(value).buildPartial();
+          } else {
+            cryptoCipherMeta_ = value;
+          }
+          onChanged();
+        } else {
+          cryptoCipherMetaBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      public Builder clearCryptoCipherMeta() {
+        if (cryptoCipherMetaBuilder_ == null) {
+          cryptoCipherMeta_ = null;
+          onChanged();
+        } else {
+          cryptoCipherMetaBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.Builder getCryptoCipherMetaBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getCryptoCipherMetaFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMetaOrBuilder getCryptoCipherMetaOrBuilder() {
+        if (cryptoCipherMetaBuilder_ != null) {
+          return cryptoCipherMetaBuilder_.getMessageOrBuilder();
+        } else {
+          return cryptoCipherMeta_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.getDefaultInstance() : cryptoCipherMeta_;
+        }
+      }
+      /**
+       * <pre>
+       * To use Apache Commons Crypto, negotiate the metadata
+       * </pre>
+       *
+       * <code>optional .hbase.pb.CryptoCipherMeta crypto_cipher_meta = 1;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMetaOrBuilder> 
+          getCryptoCipherMetaFieldBuilder() {
+        if (cryptoCipherMetaBuilder_ == null) {
+          cryptoCipherMetaBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMetaOrBuilder>(
+                  getCryptoCipherMeta(),
+                  getParentForChildren(),
+                  isClean());
+          cryptoCipherMeta_ = null;
+        }
+        return cryptoCipherMetaBuilder_;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ConnectionHeaderResponse)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ConnectionHeaderResponse)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ConnectionHeaderResponse>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<ConnectionHeaderResponse>() {
+      public ConnectionHeaderResponse parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new ConnectionHeaderResponse(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ConnectionHeaderResponse> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ConnectionHeaderResponse> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeaderResponse getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -3908,6 +4778,927 @@ public final class RPCProtos {
     }
 
     public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface CryptoCipherMetaOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.CryptoCipherMeta)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required string transformation = 1;</code>
+     */
+    boolean hasTransformation();
+    /**
+     * <code>required string transformation = 1;</code>
+     */
+    java.lang.String getTransformation();
+    /**
+     * <code>required string transformation = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getTransformationBytes();
+
+    /**
+     * <code>optional bytes inKey = 2;</code>
+     */
+    boolean hasInKey();
+    /**
+     * <code>optional bytes inKey = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getInKey();
+
+    /**
+     * <code>optional bytes inIv = 3;</code>
+     */
+    boolean hasInIv();
+    /**
+     * <code>optional bytes inIv = 3;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getInIv();
+
+    /**
+     * <code>optional bytes outKey = 4;</code>
+     */
+    boolean hasOutKey();
+    /**
+     * <code>optional bytes outKey = 4;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getOutKey();
+
+    /**
+     * <code>optional bytes outIv = 5;</code>
+     */
+    boolean hasOutIv();
+    /**
+     * <code>optional bytes outIv = 5;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getOutIv();
+  }
+  /**
+   * <pre>
+   **
+   * Cipher meta for Crypto
+   * </pre>
+   *
+   * Protobuf type {@code hbase.pb.CryptoCipherMeta}
+   */
+  public  static final class CryptoCipherMeta extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.CryptoCipherMeta)
+      CryptoCipherMetaOrBuilder {
+    // Use CryptoCipherMeta.newBuilder() to construct.
+    private CryptoCipherMeta(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private CryptoCipherMeta() {
+      transformation_ = "";
+      inKey_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+      inIv_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+      outKey_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+      outIv_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CryptoCipherMeta(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              transformation_ = bs;
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              inKey_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              inIv_ = input.readBytes();
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000008;
+              outKey_ = input.readBytes();
+              break;
+            }
+            case 42: {
+              bitField0_ |= 0x00000010;
+              outIv_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_CryptoCipherMeta_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_CryptoCipherMeta_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.class, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int TRANSFORMATION_FIELD_NUMBER = 1;
+    private volatile java.lang.Object transformation_;
+    /**
+     * <code>required string transformation = 1;</code>
+     */
+    public boolean hasTransformation() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string transformation = 1;</code>
+     */
+    public java.lang.String getTransformation() {
+      java.lang.Object ref = transformation_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          transformation_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string transformation = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getTransformationBytes() {
+      java.lang.Object ref = transformation_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        transformation_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int INKEY_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString inKey_;
+    /**
+     * <code>optional bytes inKey = 2;</code>
+     */
+    public boolean hasInKey() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional bytes inKey = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getInKey() {
+      return inKey_;
+    }
+
+    public static final int INIV_FIELD_NUMBER = 3;
+    private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString inIv_;
+    /**
+     * <code>optional bytes inIv = 3;</code>
+     */
+    public boolean hasInIv() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional bytes inIv = 3;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getInIv() {
+      return inIv_;
+    }
+
+    public static final int OUTKEY_FIELD_NUMBER = 4;
+    private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString outKey_;
+    /**
+     * <code>optional bytes outKey = 4;</code>
+     */
+    public boolean hasOutKey() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional bytes outKey = 4;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getOutKey() {
+      return outKey_;
+    }
+
+    public static final int OUTIV_FIELD_NUMBER = 5;
+    private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString outIv_;
+    /**
+     * <code>optional bytes outIv = 5;</code>
+     */
+    public boolean hasOutIv() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional bytes outIv = 5;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getOutIv() {
+      return outIv_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasTransformation()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 1, transformation_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, inKey_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, inIv_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, outKey_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(5, outIv_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(1, transformation_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, inKey_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, inIv_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, outKey_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeBytesSize(5, outIv_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta other = (org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta) obj;
+
+      boolean result = true;
+      result = result && (hasTransformation() == other.hasTransformation());
+      if (hasTransformation()) {
+        result = result && getTransformation()
+            .equals(other.getTransformation());
+      }
+      result = result && (hasInKey() == other.hasInKey());
+      if (hasInKey()) {
+        result = result && getInKey()
+            .equals(other.getInKey());
+      }
+      result = result && (hasInIv() == other.hasInIv());
+      if (hasInIv()) {
+        result = result && getInIv()
+            .equals(other.getInIv());
+      }
+      result = result && (hasOutKey() == other.hasOutKey());
+      if (hasOutKey()) {
+        result = result && getOutKey()
+            .equals(other.getOutKey());
+      }
+      result = result && (hasOutIv() == other.hasOutIv());
+      if (hasOutIv()) {
+        result = result && getOutIv()
+            .equals(other.getOutIv());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasTransformation()) {
+        hash = (37 * hash) + TRANSFORMATION_FIELD_NUMBER;
+        hash = (53 * hash) + getTransformation().hashCode();
+      }
+      if (hasInKey()) {
+        hash = (37 * hash) + INKEY_FIELD_NUMBER;
+        hash = (53 * hash) + getInKey().hashCode();
+      }
+      if (hasInIv()) {
+        hash = (37 * hash) + INIV_FIELD_NUMBER;
+        hash = (53 * hash) + getInIv().hashCode();
+      }
+      if (hasOutKey()) {
+        hash = (37 * hash) + OUTKEY_FIELD_NUMBER;
+        hash = (53 * hash) + getOutKey().hashCode();
+      }
+      if (hasOutIv()) {
+        hash = (37 * hash) + OUTIV_FIELD_NUMBER;
+        hash = (53 * hash) + getOutIv().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     **
+     * Cipher meta for Crypto
+     * </pre>
+     *
+     * Protobuf type {@code hbase.pb.CryptoCipherMeta}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.CryptoCipherMeta)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMetaOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_CryptoCipherMeta_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_CryptoCipherMeta_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.class, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        transformation_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        inKey_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        inIv_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        outKey_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        outIv_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.internal_static_hbase_pb_CryptoCipherMeta_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta result = new org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.transformation_ = transformation_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.inKey_ = inKey_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.inIv_ = inIv_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.outKey_ = outKey_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.outIv_ = outIv_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta.getDefaultInstance()) return this;
+        if (other.hasTransformation()) {
+          bitField0_ |= 0x00000001;
+          transformation_ = other.transformation_;
+          onChanged();
+        }
+        if (other.hasInKey()) {
+          setInKey(other.getInKey());
+        }
+        if (other.hasInIv()) {
+          setInIv(other.getInIv());
+        }
+        if (other.hasOutKey()) {
+          setOutKey(other.getOutKey());
+        }
+        if (other.hasOutIv()) {
+          setOutIv(other.getOutIv());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasTransformation()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object transformation_ = "";
+      /**
+       * <code>required string transformation = 1;</code>
+       */
+      public boolean hasTransformation() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string transformation = 1;</code>
+       */
+      public java.lang.String getTransformation() {
+        java.lang.Object ref = transformation_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            transformation_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string transformation = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getTransformationBytes() {
+        java.lang.Object ref = transformation_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          transformation_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string transformation = 1;</code>
+       */
+      public Builder setTransformation(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        transformation_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string transformation = 1;</code>
+       */
+      public Builder clearTransformation() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        transformation_ = getDefaultInstance().getTransformation();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string transformation = 1;</code>
+       */
+      public Builder setTransformationBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        transformation_ = value;
+        onChanged();
+        return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString inKey_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes inKey = 2;</code>
+       */
+      public boolean hasInKey() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bytes inKey = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getInKey() {
+        return inKey_;
+      }
+      /**
+       * <code>optional bytes inKey = 2;</code>
+       */
+      public Builder setInKey(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        inKey_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes inKey = 2;</code>
+       */
+      public Builder clearInKey() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        inKey_ = getDefaultInstance().getInKey();
+        onChanged();
+        return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString inIv_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes inIv = 3;</code>
+       */
+      public boolean hasInIv() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bytes inIv = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getInIv() {
+        return inIv_;
+      }
+      /**
+       * <code>optional bytes inIv = 3;</code>
+       */
+      public Builder setInIv(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        inIv_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes inIv = 3;</code>
+       */
+      public Builder clearInIv() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        inIv_ = getDefaultInstance().getInIv();
+        onChanged();
+        return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString outKey_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes outKey = 4;</code>
+       */
+      public boolean hasOutKey() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional bytes outKey = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getOutKey() {
+        return outKey_;
+      }
+      /**
+       * <code>optional bytes outKey = 4;</code>
+       */
+      public Builder setOutKey(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        outKey_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes outKey = 4;</code>
+       */
+      public Builder clearOutKey() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        outKey_ = getDefaultInstance().getOutKey();
+        onChanged();
+        return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString outIv_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes outIv = 5;</code>
+       */
+      public boolean hasOutIv() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional bytes outIv = 5;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getOutIv() {
+        return outIv_;
+      }
+      /**
+       * <code>optional bytes outIv = 5;</code>
+       */
+      public Builder setOutIv(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        outIv_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes outIv = 5;</code>
+       */
+      public Builder clearOutIv() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        outIv_ = getDefaultInstance().getOutIv();
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.CryptoCipherMeta)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.CryptoCipherMeta)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<CryptoCipherMeta>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<CryptoCipherMeta>() {
+      public CryptoCipherMeta parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new CryptoCipherMeta(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<CryptoCipherMeta> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<CryptoCipherMeta> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CryptoCipherMeta getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -6371,6 +8162,11 @@ public final class RPCProtos {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ConnectionHeader_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ConnectionHeaderResponse_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_ConnectionHeaderResponse_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_CellBlockMeta_descriptor;
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -6380,6 +8176,11 @@ public final class RPCProtos {
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ExceptionResponse_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_CryptoCipherMeta_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_CryptoCipherMeta_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RequestHeader_descriptor;
   private static final 
@@ -6401,26 +8202,32 @@ public final class RPCProtos {
     java.lang.String[] descriptorData = {
       "\n\tRPC.proto\022\010hbase.pb\032\rTracing.proto\032\013HB" +
       "ase.proto\"<\n\017UserInformation\022\026\n\016effectiv" +
-      "e_user\030\001 \002(\t\022\021\n\treal_user\030\002 \001(\t\"\310\001\n\020Conn" +
+      "e_user\030\001 \002(\t\022\021\n\treal_user\030\002 \001(\t\"\362\001\n\020Conn" +
       "ectionHeader\022,\n\tuser_info\030\001 \001(\0132\031.hbase." +
       "pb.UserInformation\022\024\n\014service_name\030\002 \001(\t" +
       "\022\036\n\026cell_block_codec_class\030\003 \001(\t\022#\n\033cell" +
       "_block_compressor_class\030\004 \001(\t\022+\n\014version" +
-      "_info\030\005 \001(\0132\025.hbase.pb.VersionInfo\"\037\n\rCe" +
-      "llBlockMeta\022\016\n\006length\030\001 \001(\r\"|\n\021Exception" +
-      "Response\022\034\n\024exception_class_name\030\001 \001(\t\022\023",
-      "\n\013stack_trace\030\002 \001(\t\022\020\n\010hostname\030\003 \001(\t\022\014\n" +
-      "\004port\030\004 \001(\005\022\024\n\014do_not_retry\030\005 \001(\010\"\311\001\n\rRe" +
-      "questHeader\022\017\n\007call_id\030\001 \001(\r\022&\n\ntrace_in" +
-      "fo\030\002 \001(\0132\022.hbase.pb.RPCTInfo\022\023\n\013method_n" +
-      "ame\030\003 \001(\t\022\025\n\rrequest_param\030\004 \001(\010\0220\n\017cell" +
-      "_block_meta\030\005 \001(\0132\027.hbase.pb.CellBlockMe" +
-      "ta\022\020\n\010priority\030\006 \001(\r\022\017\n\007timeout\030\007 \001(\r\"\203\001" +
-      "\n\016ResponseHeader\022\017\n\007call_id\030\001 \001(\r\022.\n\texc" +
-      "eption\030\002 \001(\0132\033.hbase.pb.ExceptionRespons" +
-      "e\0220\n\017cell_block_meta\030\003 \001(\0132\027.hbase.pb.Ce",
-      "llBlockMetaBC\n1org.apache.hadoop.hbase.s" +
-      "haded.protobuf.generatedB\tRPCProtosH\001\240\001\001"
+      "_info\030\005 \001(\0132\025.hbase.pb.VersionInfo\022(\n rp" +
+      "c_crypto_cipher_transformation\030\006 \001(\t\"R\n\030" +
+      "ConnectionHeaderResponse\0226\n\022crypto_ciphe",
+      "r_meta\030\001 \001(\0132\032.hbase.pb.CryptoCipherMeta" +
+      "\"\037\n\rCellBlockMeta\022\016\n\006length\030\001 \001(\r\"|\n\021Exc" +
+      "eptionResponse\022\034\n\024exception_class_name\030\001" +
+      " \001(\t\022\023\n\013stack_trace\030\002 \001(\t\022\020\n\010hostname\030\003 " +
+      "\001(\t\022\014\n\004port\030\004 \001(\005\022\024\n\014do_not_retry\030\005 \001(\010\"" +
+      "f\n\020CryptoCipherMeta\022\026\n\016transformation\030\001 " +
+      "\002(\t\022\r\n\005inKey\030\002 \001(\014\022\014\n\004inIv\030\003 \001(\014\022\016\n\006outK" +
+      "ey\030\004 \001(\014\022\r\n\005outIv\030\005 \001(\014\"\311\001\n\rRequestHeade" +
+      "r\022\017\n\007call_id\030\001 \001(\r\022&\n\ntrace_info\030\002 \001(\0132\022" +
+      ".hbase.pb.RPCTInfo\022\023\n\013method_name\030\003 \001(\t\022",
+      "\025\n\rrequest_param\030\004 \001(\010\0220\n\017cell_block_met" +
+      "a\030\005 \001(\0132\027.hbase.pb.CellBlockMeta\022\020\n\010prio" +
+      "rity\030\006 \001(\r\022\017\n\007timeout\030\007 \001(\r\"\203\001\n\016Response" +
+      "Header\022\017\n\007call_id\030\001 \001(\r\022.\n\texception\030\002 \001" +
+      "(\0132\033.hbase.pb.ExceptionResponse\0220\n\017cell_" +
+      "block_meta\030\003 \001(\0132\027.hbase.pb.CellBlockMet" +
+      "aBC\n1org.apache.hadoop.hbase.shaded.prot" +
+      "obuf.generatedB\tRPCProtosH\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -6447,27 +8254,39 @@ public final class RPCProtos {
     internal_static_hbase_pb_ConnectionHeader_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ConnectionHeader_descriptor,
-        new java.lang.String[] { "UserInfo", "ServiceName", "CellBlockCodecClass", "CellBlockCompressorClass", "VersionInfo", });
-    internal_static_hbase_pb_CellBlockMeta_descriptor =
+        new java.lang.String[] { "UserInfo", "ServiceName", "CellBlockCodecClass", "CellBlockCompressorClass", "VersionInfo", "RpcCryptoCipherTransformation", });
+    internal_static_hbase_pb_ConnectionHeaderResponse_descriptor =
       getDescriptor().getMessageTypes().get(2);
+    internal_static_hbase_pb_ConnectionHeaderResponse_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_ConnectionHeaderResponse_descriptor,
+        new java.lang.String[] { "CryptoCipherMeta", });
+    internal_static_hbase_pb_CellBlockMeta_descriptor =
+      getDescriptor().getMessageTypes().get(3);
     internal_static_hbase_pb_CellBlockMeta_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_CellBlockMeta_descriptor,
         new java.lang.String[] { "Length", });
     internal_static_hbase_pb_ExceptionResponse_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+      getDescriptor().getMessageTypes().get(4);
     internal_static_hbase_pb_ExceptionResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ExceptionResponse_descriptor,
         new java.lang.String[] { "ExceptionClassName", "StackTrace", "Hostname", "Port", "DoNotRetry", });
+    internal_static_hbase_pb_CryptoCipherMeta_descriptor =
+      getDescriptor().getMessageTypes().get(5);
+    internal_static_hbase_pb_CryptoCipherMeta_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_CryptoCipherMeta_descriptor,
+        new java.lang.String[] { "Transformation", "InKey", "InIv", "OutKey", "OutIv", });
     internal_static_hbase_pb_RequestHeader_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_hbase_pb_RequestHeader_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_RequestHeader_descriptor,
         new java.lang.String[] { "CallId", "TraceInfo", "MethodName", "RequestParam", "CellBlockMeta", "Priority", "Timeout", });
     internal_static_hbase_pb_ResponseHeader_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(7);
     internal_static_hbase_pb_ResponseHeader_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ResponseHeader_descriptor,
