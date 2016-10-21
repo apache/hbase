@@ -391,8 +391,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
         HBASE_GROUP_LOADBALANCER_CLASS,
         StochasticLoadBalancer.class, LoadBalancer.class);
     internalBalancer = ReflectionUtils.newInstance(balancerKlass, config);
-    internalBalancer.setClusterStatus(clusterStatus);
     internalBalancer.setMasterServices(masterServices);
+    internalBalancer.setClusterStatus(clusterStatus);
     internalBalancer.setConf(config);
     internalBalancer.initialize();
   }

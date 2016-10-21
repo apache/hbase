@@ -742,8 +742,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     //initialize load balancer
-    this.balancer.setClusterStatus(getClusterStatus());
     this.balancer.setMasterServices(this);
+    this.balancer.setClusterStatus(getClusterStatus());
     this.balancer.initialize();
 
     // Check if master is shutting down because of some issue
