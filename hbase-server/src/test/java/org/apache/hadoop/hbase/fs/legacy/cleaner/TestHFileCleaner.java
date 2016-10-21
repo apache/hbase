@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.cleaner;
+package org.apache.hadoop.hbase.fs.legacy.cleaner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -100,7 +100,7 @@ public class TestHFileCleaner {
     // set TTL
     long ttl = 2000;
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-      "org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner");
+      "org.apache.hadoop.hbase.fs.legacy.cleaner.TimeToLiveHFileCleaner");
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
     Path archivedHfileDir = new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);

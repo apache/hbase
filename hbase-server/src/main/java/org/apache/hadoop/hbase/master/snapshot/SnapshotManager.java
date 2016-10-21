@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.master.snapshot;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
@@ -54,8 +51,6 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
-import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
-import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.master.procedure.CloneSnapshotProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RestoreSnapshotProcedure;
@@ -1054,15 +1049,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     boolean snapshotEnabled = conf.getBoolean(HBASE_SNAPSHOT_ENABLED, false);
     boolean userDisabled = (enabled != null && enabled.trim().length() > 0 && !snapshotEnabled);
 
-    // Extract cleaners from conf
-    Set<String> hfileCleaners = new HashSet<String>();
-    String[] cleaners = conf.getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
-    if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
-
-    Set<String> logCleaners = new HashSet<String>();
-    cleaners = conf.getStrings(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS);
-    if (cleaners != null) Collections.addAll(logCleaners, cleaners);
-
     // check if an older version of snapshot directory was present
     Path oldSnapshotDir = new Path(((LegacyPathIdentifier) ms.getRootContainer()).path, HConstants
         .OLD_SNAPSHOT_DIR_NAME);
@@ -1077,20 +1063,10 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // otherwise we still need to check if cleaners are enabled or not and verify
     // that there're no snapshot in the .snapshot folder.
     if (snapshotEnabled) {
-      // Inject snapshot cleaners, if snapshot.enable is true
-      hfileCleaners.add(SnapshotHFileCleaner.class.getName());
-      hfileCleaners.add(HFileLinkCleaner.class.getName());
-
-      // Set cleaners conf
-      conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-        hfileCleaners.toArray(new String[hfileCleaners.size()]));
-      conf.setStrings(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS,
-        logCleaners.toArray(new String[logCleaners.size()]));
+      ms.enableSnapshots();
     } else {
       // Verify if cleaners are present
-      snapshotEnabled =
-        hfileCleaners.contains(SnapshotHFileCleaner.class.getName()) &&
-        hfileCleaners.contains(HFileLinkCleaner.class.getName());
+      snapshotEnabled = ms.isSnapshotsEnabled();
 
       // Warn if the cleaners are enabled but the snapshot.enabled property is false/not set.
       if (snapshotEnabled) {

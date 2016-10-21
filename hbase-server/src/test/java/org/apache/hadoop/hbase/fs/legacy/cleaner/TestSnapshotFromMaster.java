@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.cleaner;
+package org.apache.hadoop.hbase.fs.legacy.cleaner;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -37,10 +36,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
-import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.CompactedHFilesDischarger;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -48,11 +45,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
@@ -61,10 +56,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
-
-import com.google.common.collect.Lists;
-import com.google.protobuf.ServiceException;
 
 /**
  * Test the master-related aspects of a snapshot
@@ -368,8 +359,7 @@ public class TestSnapshotFromMaster {
 
     // make sure that we don't keep around the hfiles that aren't in a snapshot
     // make sure we wait long enough to refresh the snapshot hfile
-    List<BaseHFileCleanerDelegate> delegates = UTIL.getMiniHBaseCluster().getMaster()
-        .getHFileCleaner().cleanersChain;
+    List<BaseHFileCleanerDelegate> delegates = UTIL.getHFileCleanerChore().cleanersChain;
     for (BaseHFileCleanerDelegate delegate: delegates) {
       if (delegate instanceof SnapshotHFileCleaner) {
         ((SnapshotHFileCleaner)delegate).getFileCacheForTesting().triggerCacheRefreshForTesting();
@@ -399,6 +389,6 @@ public class TestSnapshotFromMaster {
    * Make sure the {@link HFileCleaner HFileCleaners} run at least once
    */
   private static void ensureHFileCleanersRun() {
-    UTIL.getHBaseCluster().getMaster().getHFileCleaner().chore();
+    UTIL.getHFileCleanerChore().chore();
   }
 }

@@ -46,9 +46,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -69,6 +66,8 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -83,13 +82,11 @@ import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
@@ -518,21 +515,17 @@ public class AssignmentManager {
       // if they don't have any WALs, this restart should be considered as a clean one
       Set<ServerName> queuedDeadServers = serverManager.getRequeuedDeadServers().keySet();
       if (!queuedDeadServers.isEmpty()) {
-        Configuration conf = server.getConfiguration();
-        Path rootdir = FSUtils.getRootDir(conf);
-        FileSystem fs = rootdir.getFileSystem(conf);
+        MasterStorage<? extends StorageIdentifier> ms = server.getMasterStorage();
         for (ServerName serverName: queuedDeadServers) {
           // In the case of a clean exit, the shutdown handler would have presplit any WALs and
           // removed empty directories.
-          Path logDir = new Path(rootdir,
-            AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
-          Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
-          if (checkWals(fs, logDir) || checkWals(fs, splitDir)) {
+          if (ms.hasWALs(serverName.toShortString())) {
             LOG.debug("Found queued dead server " + serverName);
             failover = true;
             break;
           }
         }
+
         if (!failover) {
           // We figured that it's not a failover, so no need to
           // work on these re-queued dead servers any more.
@@ -590,33 +583,6 @@ public class AssignmentManager {
     }
     replicasToClose.clear();
     return failover;
-  }
-
-  private boolean checkWals(FileSystem fs, Path dir) throws IOException {
-    if (!fs.exists(dir)) {
-      LOG.debug(dir + " doesn't exist");
-      return false;
-    }
-    if (!fs.getFileStatus(dir).isDirectory()) {
-      LOG.warn(dir + " is not a directory");
-      return false;
-    }
-    FileStatus[] files = FSUtils.listStatus(fs, dir);
-    if (files == null || files.length == 0) {
-      LOG.debug(dir + " has no files");
-      return false;
-    }
-    for (int i = 0; i < files.length; i++) {
-      if (files[i].isFile() && files[i].getLen() > 0) {
-        LOG.debug(dir + " has a non-empty file: " + files[i].getPath());
-        return true;
-      } else if (files[i].isDirectory() && checkWals(fs, dir)) {
-        LOG.debug(dir + " is a directory and has a non-empty file: " + files[i].getPath());
-        return true;
-      }
-    }
-    LOG.debug("Found 0 non-empty wal files for :" + dir);
-    return false;
   }
 
   /**

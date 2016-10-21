@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
 
@@ -36,7 +36,7 @@ import org.apache.zookeeper.KeeperException;
  * currently being archived.
  * <p>
  * This only works properly if the 
- * {@link org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner}
+ * {@link org.apache.hadoop.hbase.fs.legacy.cleaner.TimeToLiveHFileCleaner}
  *  is also enabled (it always should be), since it may take a little time
  *  for the ZK notification to propagate, in which case we may accidentally
  *  delete some files.

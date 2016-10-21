@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -249,7 +250,10 @@ public class TestCloneSnapshotFromClient {
   // ==========================================================================
 
   private void waitCleanerRun() throws InterruptedException {
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
+    HFileCleaner chore = TEST_UTIL.getHFileCleanerChore();
+    if (chore != null) {
+      chore.choreForTesting();
+    }
   }
 
   protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,

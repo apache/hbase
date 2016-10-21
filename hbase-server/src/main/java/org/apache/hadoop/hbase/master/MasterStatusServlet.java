@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
@@ -92,7 +91,7 @@ public class MasterStatusServlet extends HttpServlet {
     boolean showFragmentation = conf.getBoolean(
         "hbase.master.ui.fragmentation.enabled", false);
     if (showFragmentation) {
-      return FSUtils.getTableFragmentation(master);
+      return master.getMasterStorage().getTableFragmentation();
     } else {
       return null;
     }

@@ -143,7 +143,7 @@ A comma-separated list of BaseLogCleanerDelegate invoked by
     default log cleaners in the list.
 +
 .Default
-`org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner`
+`org.apache.hadoop.hbase.fs.legacy.cleaner.TimeToLiveLogCleaner`
 
 
 [[hbase.master.logcleaner.ttl]]
@@ -170,7 +170,7 @@ A comma-separated list of BaseHFileCleanerDelegate invoked by
     hbase-site.xml.
 +
 .Default
-`org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner`
+`org.apache.hadoop.hbase.fs.legacy.cleaner.TimeToLiveHFileCleaner`
 
 
 [[hbase.master.infoserver.redirect]]

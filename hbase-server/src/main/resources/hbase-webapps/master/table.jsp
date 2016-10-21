@@ -25,7 +25,6 @@
   import="java.util.List"
   import="java.util.LinkedHashMap"
   import="java.util.Map"
-  import="java.util.Set"
   import="java.util.Collection"
   import="java.util.Collections"
   import="java.util.Comparator"
@@ -40,7 +39,6 @@
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
   import="org.apache.hadoop.hbase.util.Bytes"
-  import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos"
   import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos"
   import="org.apache.hadoop.hbase.TableName"
@@ -69,7 +67,7 @@
                         HConstants.DEFAULT_META_REPLICA_NUM);
   Map<String, Integer> frags = null;
   if (showFragmentation) {
-      frags = FSUtils.getTableFragmentation(master);
+      frags = master.getMasterStorage().getTableFragmentation();
   }
   String action = request.getParameter("action");
   String key = request.getParameter("key");

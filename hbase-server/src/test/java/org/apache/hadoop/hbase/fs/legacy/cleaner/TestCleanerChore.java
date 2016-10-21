@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.cleaner;
+package org.apache.hadoop.hbase.fs.legacy.cleaner;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -145,7 +145,7 @@ public class TestCleanerChore {
     // touch a new file
     fs.create(file).close();
     assertTrue("Test file didn't get created.", fs.exists(file));
-    
+
     FileStatus fStat = fs.getFileStatus(parent);
     chore.chore();
     // make sure we never checked the directory

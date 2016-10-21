@@ -22,18 +22,22 @@ package org.apache.hadoop.hbase.fs;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.legacy.LegacyMasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
 import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
@@ -61,6 +65,39 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
   public Configuration getConfiguration() { return conf; }
   public FileSystem getFileSystem() { return fs; }  // TODO: definitely remove
   public IDENTIFIER getRootContainer() { return rootContainer; }
+
+  /**
+   * Get Chores that are required to be run from time to time for the underlying MasterStorage
+   * implementation. A few setup methods e.g. {@link #enableSnapshots()} may have their own chores.
+   * The returned list of chores or their configuration may vary depending on when in sequence
+   * this method is called with respect to other methods. Generally, a call to this method for
+   * getting and scheduling chores, needs to be after storage is setup properly by calling those
+   * methods first.
+   *
+   * Please refer to the documentation of specific method implementation for more details.
+   *
+   * @param stopper the stopper
+   * @return  storage chores.
+   */
+  public Iterable<ScheduledChore> getChores(Stoppable stopper, Map<String, Object> params) {
+    return new ArrayList<>();
+  }
+
+  /**
+   * This method should be called to prepare storage implementation/s for snapshots. The default
+   * implementation does nothing. MasterStorage subclasses need to override this method to
+   * provide specific preparatory steps.
+   */
+  public void enableSnapshots() {
+    return;
+  }
+
+  /**
+   * Returns true if MasterStorage is prepared for snapshots
+   */
+  public boolean isSnapshotsEnabled() {
+    return true;
+  }
 
   // ==========================================================================
   //  PUBLIC Interfaces - Visitors
@@ -178,6 +215,45 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
    */
   public abstract void archiveTable(StorageContext ctx, TableName tableName) throws IOException;
 
+  /**
+   * Runs through all tables and checks how many stores for each table
+   * have more than one file in them. Checks -ROOT- and hbase:meta too. The total
+   * percentage across all tables is stored under the special key "-TOTAL-".
+   *
+   * @return A map for each table and its percentage.
+   *
+   * @throws IOException When scanning the directory fails.
+   */
+  public Map<String, Integer> getTableFragmentation() throws IOException {
+    final Map<String, Integer> frags = new HashMap<>();
+    int cfCountTotal = 0;
+    int cfFragTotal = 0;
+
+    for (TableName table: getTables()) {
+      int cfCount = 0;
+      int cfFrag = 0;
+      for (HRegionInfo hri: getRegions(table)) {
+        RegionStorage<IDENTIFIER> rs = getRegionStorage(hri);
+        final Collection<String> families = rs.getFamilies();
+        for (String family: families) {
+          cfCount++;
+          cfCountTotal++;
+          if (rs.getStoreFiles(family).size() > 1) {
+            cfFrag++;
+            cfFragTotal++;
+          }
+        }
+      }
+      // compute percentage per table and store in result list
+      frags.put(table.getNameAsString(),
+          cfCount == 0? 0: Math.round((float) cfFrag / cfCount * 100));
+    }
+    // set overall percentage for all tables
+    frags.put("-TOTAL-",
+        cfCountTotal == 0? 0: Math.round((float) cfFragTotal / cfCountTotal * 100));
+    return frags;
+  }
+
   // ==========================================================================
   //  PUBLIC Methods - Table Region related
   // ==========================================================================
@@ -230,6 +306,16 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
    * @throws IOException
    */
   public abstract void archiveRegion(HRegionInfo regionInfo) throws IOException;
+
+  // ==========================================================================
+  // PUBLIC Methods - WAL
+  // ==========================================================================
+
+  /**
+   * Returns true if given region server has non-empty WAL files
+   * @param serverName
+   */
+  public abstract boolean hasWALs(String serverName) throws IOException;
 
   // ==========================================================================
   //  PUBLIC Methods - visitors

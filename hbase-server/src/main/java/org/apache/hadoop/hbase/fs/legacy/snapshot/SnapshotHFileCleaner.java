@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.snapshot;
+package org.apache.hadoop.hbase.fs.legacy.snapshot;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -31,9 +31,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -65,7 +65,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   @Override
   public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     try {
-      return cache.getUnreferencedFiles(files, master.getSnapshotManager());
+      if (master != null) return cache.getUnreferencedFiles(files, master.getSnapshotManager());
     } catch (CorruptedSnapshotException cse) {
       LOG.debug("Corrupted in-progress snapshot file exception, ignored ", cse);
     } catch (IOException e) {
@@ -76,7 +76,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
 
   @Override
   public void init(Map<String, Object> params) {
-    if (params.containsKey(HMaster.MASTER)) {
+    if (params != null && params.containsKey(HMaster.MASTER)) {
       this.master = (MasterServices) params.get(HMaster.MASTER);
     }
   }

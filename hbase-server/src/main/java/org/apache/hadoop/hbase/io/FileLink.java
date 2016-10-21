@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * {@link HFileLink} is a more concrete implementation of the {@code FileLink}.
  *
  * <p><b>Back-references:</b>
- * To help the {@link org.apache.hadoop.hbase.master.cleaner.CleanerChore} to keep track of
+ * To help the {@link org.apache.hadoop.hbase.fs.legacy.cleaner.CleanerChore} to keep track of
  * the links to a particular file, during the {@code FileLink} creation, a new file is placed
  * inside a back-reference directory. There's one back-reference directory for each file that
  * has links, and in the directory there's one file per link.

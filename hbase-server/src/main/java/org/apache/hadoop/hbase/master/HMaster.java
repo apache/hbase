@@ -99,8 +99,6 @@ import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
-import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
-import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationMetaCleaner;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
@@ -150,7 +148,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -312,8 +309,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   CatalogJanitor catalogJanitorChore;
   private ReplicationMetaCleaner replicationMetaCleaner;
-  private LogCleaner logCleaner;
-  private HFileCleaner hfileCleaner;
+  private Iterable<ScheduledChore> storageManagerChores = new ArrayList<>();
   private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
   private MobCompactionChore mobCompactChore;
   private MasterMobCompactionThread mobCompactThread;
@@ -961,26 +957,22 @@ public class HMaster extends HRegionServer implements MasterServices {
    this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
    startProcedureExecutor();
 
-   // Start log cleaner thread
-   int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
-   this.logCleaner =
-      new LogCleaner(cleanerInterval,
-         this, conf, getMasterWalManager().getFileSystem(),
-         getMasterWalManager().getOldLogDir());
-    getChoreService().scheduleChore(logCleaner);
-
-   //start the hfile archive cleaner thread
-    Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
-    Map<String, Object> params = new HashMap<String, Object>();
+    // Start storage chores
+    Map<String, Object> params = new HashMap<>(1);
     params.put(MASTER, this);
-    this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterStorage()
-        .getFileSystem(), archiveDir, params);
-    getChoreService().scheduleChore(hfileCleaner);
+    storageManagerChores = storageManager.getChores(this, params);
+    for (ScheduledChore chore: storageManagerChores) {
+      LOG.info("Starting storage chore: '" + chore.getName() + "'.");
+      getChoreService().scheduleChore(chore);
+    }
+
+   // Start log cleaner thread
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Started service threads");
     }
 
+    int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
     replicationMetaCleaner = new ReplicationMetaCleaner(this, this, cleanerInterval);
     getChoreService().scheduleChore(replicationMetaCleaner);
   }
@@ -1014,8 +1006,9 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.debug("Stopping service threads");
     }
     // Clean up and close up shop
-    if (this.logCleaner != null) this.logCleaner.cancel(true);
-    if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
+    for (ScheduledChore chore : storageManagerChores) {
+      if(chore != null) chore.cancel(true);
+    }
     if (this.replicationMetaCleaner != null) this.replicationMetaCleaner.cancel(true);
     if (this.quotaManager != null) this.quotaManager.stop();
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
@@ -2451,10 +2444,6 @@ public class HMaster extends HRegionServer implements MasterServices {
   public static void main(String [] args) {
     VersionInfo.logVersion();
     new HMasterCommandLine(HMaster.class).doMain(args);
-  }
-
-  public HFileCleaner getHFileCleaner() {
-    return this.hfileCleaner;
   }
 
   /**

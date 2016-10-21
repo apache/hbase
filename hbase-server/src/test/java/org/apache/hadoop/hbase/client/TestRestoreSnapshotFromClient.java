@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -298,7 +299,10 @@ public class TestRestoreSnapshotFromClient {
   //  Helpers
   // ==========================================================================
   private void waitCleanerRun() throws InterruptedException {
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
+    HFileCleaner chore = TEST_UTIL.getHFileCleanerChore();
+    if (chore != null) {
+      chore.choreForTesting();
+    }
   }
 
   private Set<String> getFamiliesFromFS(final TableName tableName) throws IOException {

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.cleaner;
+package org.apache.hadoop.hbase.fs.legacy.cleaner;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
@@ -169,7 +169,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     }
     return allEntriesDeleted;
   }
-  
+
   /**
    * Attempt to delete a directory and all files under that directory. Each child file is passed
    * through the delegates to see if it can be deleted. If the directory has no children when the
@@ -188,7 +188,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     try {
       FileStatus[] children = FSUtils.listStatus(fs, dir);
       boolean allChildrenDeleted = checkAndDeleteEntries(children);
-  
+
       // if the directory still has children, we can't delete it, so we are done
       if (!allChildrenDeleted) return false;
     } catch (IOException e) {
@@ -242,7 +242,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       }
 
       Iterable<FileStatus> filteredFiles = cleaner.getDeletableFiles(deletableValidFiles);
-      
+
       // trace which cleaner is holding on to each file
       if (LOG.isTraceEnabled()) {
         ImmutableSet<FileStatus> filteredFileSet = ImmutableSet.copyOf(filteredFiles);
@@ -252,10 +252,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           }
         }
       }
-      
+
       deletableValidFiles = filteredFiles;
     }
-    
+
     Iterable<FileStatus> filesToDelete = Iterables.concat(invalidFiles, deletableValidFiles);
     int deletedFileCount = 0;
     for (FileStatus file : filesToDelete) {

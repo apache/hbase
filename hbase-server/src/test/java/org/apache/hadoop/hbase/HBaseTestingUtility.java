@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -1151,6 +1152,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     throw new RuntimeException(hbaseCluster + " not an instance of " +
                                MiniHBaseCluster.class.getName());
+  }
+
+  public HFileCleaner getHFileCleanerChore() {
+    HFileCleaner hfileCleaner = null;
+    HMaster master = getMiniHBaseCluster().getMaster();
+    Iterable<ScheduledChore> chores = master.getMasterStorage().getChores(master, null);
+    for (ScheduledChore chore : chores) {
+      if (chore instanceof HFileCleaner) {
+        hfileCleaner = (HFileCleaner) chore;
+        break;
+      }
+    }
+    return hfileCleaner;
   }
 
   /**

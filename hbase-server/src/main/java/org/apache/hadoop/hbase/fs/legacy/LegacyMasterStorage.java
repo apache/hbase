@@ -24,6 +24,9 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,8 +37,19 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileLinkCleaner;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.LogCleaner;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -80,6 +94,8 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
 
   private final boolean isSecurityEnabled;
 
+  public static final String SPLITTING_EXT = "-splitting";
+
   public LegacyMasterStorage(Configuration conf, FileSystem fs, LegacyPathIdentifier rootDir) {
     super(conf, fs, rootDir);
 
@@ -95,6 +111,54 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
 
     this.secureRootSubDirPerms = new FsPermission(conf.get("hbase.rootdir.perms", "700"));
     this.isSecurityEnabled = "kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication"));
+  }
+
+  @Override
+  public Iterable<ScheduledChore> getChores(Stoppable stopper, Map<String, Object> params) {
+    ArrayList<ScheduledChore> chores = (ArrayList<ScheduledChore>) super.getChores(stopper, params);
+
+    int cleanerInterval = getConfiguration().getInt("hbase.master.cleaner.interval", 60 * 1000);
+    // add log cleaner chore
+    chores.add(new LogCleaner(cleanerInterval, stopper, getConfiguration(), getFileSystem(),
+        LegacyLayout.getOldLogDir(getRootContainer().path)));
+    // add hfile archive cleaner chore
+    chores.add(new HFileCleaner(cleanerInterval, stopper, getConfiguration(), getFileSystem(),
+        LegacyLayout.getArchiveDir(getRootContainer().path), params));
+
+    return chores;
+  }
+
+  /**
+   * This method modifies chores configuration for snapshots. Please call this method before
+   * instantiating and scheduling list of chores with {@link #getChores(Stoppable, Map)}.
+   */
+  @Override
+  public void enableSnapshots() {
+    super.enableSnapshots();
+    if (!isSnapshotsEnabled()) {
+      // Extract cleaners from conf
+      Set<String> hfileCleaners = new HashSet<>();
+      String[] cleaners = getConfiguration().getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+      if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
+
+      // add snapshot related cleaners
+      hfileCleaners.add(SnapshotHFileCleaner.class.getName());
+      hfileCleaners.add(HFileLinkCleaner.class.getName());
+
+      // Set cleaners conf
+      getConfiguration().setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
+          hfileCleaners.toArray(new String[hfileCleaners.size()]));
+    }
+  }
+
+  @Override
+  public boolean isSnapshotsEnabled() {
+    // Extract cleaners from conf
+    Set<String> hfileCleaners = new HashSet<>();
+    String[] cleaners = getConfiguration().getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+    if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
+    return hfileCleaners.contains(SnapshotHFileCleaner.class.getName()) &&
+        hfileCleaners.contains(HFileLinkCleaner.class.getName());
   }
 
   // ==========================================================================
@@ -265,6 +329,53 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
       LOG.debug("Archiving region '" + regionInfo.getRegionNameAsString() + "' from storage.");
     }
     HFileArchiver.archiveRegion(getConfiguration(), getFileSystem(), regionInfo);
+  }
+
+  // ==========================================================================
+  // PUBLIC - WAL
+  // ==========================================================================
+  @Override
+  public boolean hasWALs(String serverName) throws IOException {
+    Path logDir = new Path(getRootContainer().path, new StringBuilder(
+        HConstants.HREGION_LOGDIR_NAME).append("/").append(serverName).toString());
+    Path splitDir = logDir.suffix(SPLITTING_EXT);
+
+    return checkWALs(logDir) || checkWALs(splitDir);
+  }
+
+
+  // ==========================================================================
+  // PRIVATE - WAL
+  // ==========================================================================
+
+  private boolean checkWALs(Path dir) throws IOException {
+    FileSystem fs = getFileSystem();
+
+    if (!fs.exists(dir)) {
+      LOG.debug(dir + " not found!");
+      return false;
+    } else if (!fs.getFileStatus(dir).isDirectory()) {
+      LOG.warn(dir + " is not a directory");
+      return false;
+    }
+
+    FileStatus[] files = FSUtils.listStatus(fs, dir);
+    if (files == null || files.length == 0) {
+      LOG.debug(dir + " has no files");
+      return false;
+    }
+
+    for (FileStatus dentry: files) {
+      if (dentry.isFile() && dentry.getLen() > 0) {
+        LOG.debug(dir + " has a non-empty file: " + dentry.getPath());
+        return true;
+      } else if (dentry.isDirectory() && checkWALs(dentry.getPath())) {
+        LOG.debug(dentry + " is a directory and has a non-empty file!");
+        return true;
+      }
+    }
+    LOG.debug("Found zero non-empty wal files for: " + dir);
+    return false;
   }
 
   // ==========================================================================

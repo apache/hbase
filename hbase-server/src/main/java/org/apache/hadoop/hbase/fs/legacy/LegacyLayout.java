@@ -124,4 +124,8 @@ public final class LegacyLayout {
   public static Path getBulkDir(Path rootDir) {
     return new Path(rootDir, HConstants.BULKLOAD_STAGING_DIR_NAME);
   }
+
+  public static Path getOldLogDir(final Path rootDir) {
+    return new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+  }
 }

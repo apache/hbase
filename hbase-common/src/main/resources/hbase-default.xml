@@ -122,13 +122,13 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner</value>
-    <description>A comma-separated list of BaseLogCleanerDelegate invoked by
-    the LogsCleaner service. These WAL cleaners are called in order,
-    so put the cleaner that prunes the most files in front. To
-    implement your own BaseLogCleanerDelegate, just put it in HBase's classpath
-    and add the fully qualified class name here. Always add the above
-    default log cleaners in the list.</description>
+    <value>org.apache.hadoop.hbase.fs.legacy.cleaner.TimeToLiveLogCleaner</value>
+    <description>This property is used when 'hbase.storage.type' is set to 'legacy'.
+    A comma-separated list of BaseLogCleanerDelegate invoked by the LogsCleaner
+    service. These WAL cleaners are called in order, so put the cleaner that prunes
+    the most files in front. To implement your own BaseLogCleanerDelegate, just put
+    it in HBase's classpath and add the fully qualified class name here. Always add
+    the above default log cleaners in the list.</description>
   </property>
   <property>
     <name>hbase.master.logcleaner.ttl</name>
@@ -138,14 +138,14 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
-    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
-    the HFileCleaner service. These HFiles cleaners are called in order,
-    so put the cleaner that prunes the most files in front. To
-    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
-    and add the fully qualified class name here. Always add the above
-    default log cleaners in the list as they will be overwritten in
-    hbase-site.xml.</description>
+    <value>org.apache.hadoop.hbase.fs.legacy.cleaner.TimeToLiveHFileCleaner</value>
+    <description>This property is used when 'hbase.storage.type' is set to 'legacy'.
+    A comma-separated list of BaseHFileCleanerDelegate invoked by the HFileCleaner
+    service. These HFiles cleaners are called in order, so put the cleaner that
+    prunes the most files in front. To implement your own BaseHFileCleanerDelegate,
+    just put it in HBase's classpath and add the fully qualified class name here.
+    Always add the above default log cleaners in the list as they will be
+    overwritten in hbase-site.xml.</description>
   </property>
   <property>
     <name>hbase.master.infoserver.redirect</name>

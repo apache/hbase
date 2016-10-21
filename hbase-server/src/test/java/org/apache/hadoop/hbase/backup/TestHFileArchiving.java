@@ -33,13 +33,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.junit.After;
@@ -59,8 +58,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test that the {@link HFileArchiver} correctly removes all the parts of a region when cleaning up
- * a region
+ * Test that the {@link HFileArchiver} correctly removes all the
+ * parts of a region when cleaning up a region
  */
 @Category({MediumTests.class, MiscTests.class})
 public class TestHFileArchiving {
@@ -78,7 +77,10 @@ public class TestHFileArchiving {
     UTIL.startMiniCluster();
 
     // We don't want the cleaner to remove files. The tests do that.
-    UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().cancel(true);
+    HFileCleaner chore = UTIL.getHFileCleanerChore();
+    if (chore != null) {
+      chore.cancel(true);
+    }
   }
 
   private static void setupConf(Configuration conf) {
@@ -386,8 +388,7 @@ public class TestHFileArchiving {
 
         try {
           // Try to archive the file
-          HFileArchiver.archiveRegion(fs, rootDir,
-              sourceRegionDir.getParent(), sourceRegionDir);
+          HFileArchiver.archiveRegion(fs, rootDir, sourceRegionDir.getParent(), sourceRegionDir);
 
           // The archiver succeded, the file is no longer in the original location
           // but it's in the archive location.

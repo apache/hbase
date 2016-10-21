@@ -1050,63 +1050,6 @@ public abstract class FSUtils {
     return blocksDistribution;
   }
 
-  // TODO move this method OUT of FSUtils. No dependencies to HMaster
-  /**
-   * Returns the total overall fragmentation percentage. Includes hbase:meta and
-   * -ROOT- as well.
-   *
-   * @param master  The master defining the HBase root and file system.
-   * @return A map for each table and its percentage.
-   * @throws IOException When scanning the directory fails.
-   */
-  public static int getTotalTableFragmentation(final HMaster master)
-      throws IOException {
-    Map<String, Integer> map = getTableFragmentation(master);
-    return map != null && map.size() > 0 ? map.get("-TOTAL-") : -1;
-  }
-
-  /**
-   * Runs through the HBase rootdir and checks how many stores for each table
-   * have more than one file in them. Checks -ROOT- and hbase:meta too. The total
-   * percentage across all tables is stored under the special key "-TOTAL-".
-   *
-   * @param master  The master defining the HBase root and file system.
-   * @return A map for each table and its percentage.
-   *
-   * @throws IOException When scanning the directory fails.
-   */
-  public static Map<String, Integer> getTableFragmentation(final HMaster master)
-      throws IOException {
-    final Map<String, Integer> frags = new HashMap<String, Integer>();
-    int cfCountTotal = 0;
-    int cfFragTotal = 0;
-
-    MasterStorage<? extends StorageIdentifier> ms = master.getMasterStorage();
-    for (TableName table: ms.getTables()) {
-      int cfCount = 0;
-      int cfFrag = 0;
-      for (HRegionInfo hri: ms.getRegions(table)) {
-        RegionStorage rfs = ms.getRegionStorage(hri);
-        final Collection<String> families = rfs.getFamilies();
-        for (String family: families) {
-          cfCount++;
-          cfCountTotal++;
-          if (rfs.getStoreFiles(family).size() > 1) {
-            cfFrag++;
-            cfFragTotal++;
-          }
-        }
-      }
-      // compute percentage per table and store in result list
-      frags.put(table.getNameAsString(),
-        cfCount == 0? 0: Math.round((float) cfFrag / cfCount * 100));
-    }
-    // set overall percentage for all tables
-    frags.put("-TOTAL-",
-      cfCountTotal == 0? 0: Math.round((float) cfFragTotal / cfCountTotal * 100));
-    return frags;
-  }
-
   /**
    * Returns the {@link org.apache.hadoop.fs.Path} object representing the table directory under
    * path rootdir
