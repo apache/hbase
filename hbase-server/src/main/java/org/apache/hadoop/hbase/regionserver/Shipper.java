@@ -33,5 +33,5 @@ public interface Shipper {
    * Called after a batch of rows scanned and set to be returned to client. Any in between cleanup
    * can be done here.
    */
-  void shipped() throws IOException;
+  default void shipped() throws IOException { }
 }
