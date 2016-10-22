@@ -169,7 +169,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
 
   /**
    * iff the given WALFactory is using the DefaultWALProvider for meta and/or non-meta, count the
-   * size of files (rolled and active). if either of them aren't, count 0 for that provider.
+   * size of files (only rolled). if either of them aren't, count 0 for that provider.
    */
   @Override
   public long getLogFileSize() {
@@ -183,6 +183,14 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   @VisibleForTesting
   public static int getNumRolledLogFiles(WAL wal) {
     return ((AbstractFSWAL<?>) wal).getNumRolledLogFiles();
+  }
+
+  /**
+   * returns the size of rolled WAL files.
+   */
+  @VisibleForTesting
+  public static long getLogFileSize(WAL wal) {
+    return ((AbstractFSWAL<?>) wal).getLogFileSize();
   }
 
   /**

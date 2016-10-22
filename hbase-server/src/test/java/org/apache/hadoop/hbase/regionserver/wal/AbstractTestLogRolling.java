@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -172,6 +171,14 @@ public abstract class AbstractTestLogRolling  {
     }
   }
 
+  private void assertLogFileSize(WAL log) {
+    if (AbstractFSWALProvider.getNumRolledLogFiles(log) > 0) {
+      assertTrue(AbstractFSWALProvider.getLogFileSize(log) > 0);
+    } else {
+      assertEquals(0, AbstractFSWALProvider.getLogFileSize(log));
+    }
+  }
+
   /**
    * Tests that logs are deleted
    * @throws IOException
@@ -182,23 +189,24 @@ public abstract class AbstractTestLogRolling  {
     this.tableName = getName();
     // TODO: Why does this write data take for ever?
     startAndWriteData();
-    HRegionInfo region =
-        server.getOnlineRegions(TableName.valueOf(tableName)).get(0).getRegionInfo();
+    HRegionInfo region = server.getOnlineRegions(TableName.valueOf(tableName)).get(0)
+        .getRegionInfo();
     final WAL log = server.getWAL(region);
-    LOG.info("after writing there are " + AbstractFSWALProvider.getNumRolledLogFiles(log) +
-        " log files");
+    LOG.info("after writing there are " + AbstractFSWALProvider.getNumRolledLogFiles(log) + " log files");
+    assertLogFileSize(log);
 
-      // flush all regions
-      for (Region r: server.getOnlineRegionsLocalContext()) {
-        r.flush(true);
-      }
+    // flush all regions
+    for (Region r : server.getOnlineRegionsLocalContext()) {
+      r.flush(true);
+    }
 
-      // Now roll the log
-      log.rollWriter();
+    // Now roll the log
+    log.rollWriter();
 
     int count = AbstractFSWALProvider.getNumRolledLogFiles(log);
     LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
-      assertTrue(("actual count: " + count), count <= 2);
+    assertTrue(("actual count: " + count), count <= 2);
+    assertLogFileSize(log);
   }
 
   protected String getName() {
