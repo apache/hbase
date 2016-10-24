@@ -69,6 +69,8 @@ public class HeapMemStoreLAB implements MemStoreLAB {
 
   private AtomicReference<Chunk> curChunk = new AtomicReference<Chunk>();
   // A queue of chunks from pool contained by this memstore LAB
+  // TODO: in the future, it would be better to have List implementation instead of Queue,
+  // as FIFO order is not so important here
   @VisibleForTesting
   BlockingQueue<PooledChunk> pooledChunkQueue = null;
   private final int chunkSize;
@@ -101,10 +103,10 @@ public class HeapMemStoreLAB implements MemStoreLAB {
     }
 
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
-    Preconditions.checkArgument(
-      maxAlloc <= chunkSize,
-      MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
+    Preconditions.checkArgument(maxAlloc <= chunkSize,
+        MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
   }
+
 
   @Override
   public Cell copyCellInto(Cell cell) {
@@ -236,8 +238,8 @@ public class HeapMemStoreLAB implements MemStoreLAB {
     return this.curChunk.get();
   }
 
-  @VisibleForTesting
-  BlockingQueue<PooledChunk> getChunkQueue() {
+
+  BlockingQueue<PooledChunk> getPooledChunks() {
     return this.pooledChunkQueue;
   }
 }

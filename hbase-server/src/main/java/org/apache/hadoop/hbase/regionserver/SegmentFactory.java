@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A singleton store segment factory.
@@ -46,18 +48,22 @@ public final class SegmentFactory {
 
   // create skip-list-based (non-flat) immutable segment from compacting old immutable segments
   public ImmutableSegment createImmutableSegment(final Configuration conf,
-      final CellComparator comparator, MemStoreCompactorIterator iterator) {
+      final CellComparator comparator, MemStoreSegmentsIterator iterator) {
     return new ImmutableSegment(comparator, iterator, getMemStoreLAB(conf));
   }
 
-  // create new flat immutable segment from compacting old immutable segment
-  public ImmutableSegment createImmutableSegment(final Configuration conf,
-      final CellComparator comparator, MemStoreCompactorIterator iterator, int numOfCells,
-      ImmutableSegment.Type segmentType) throws IOException {
-    Preconditions.checkArgument(segmentType != ImmutableSegment.Type.SKIPLIST_MAP_BASED,
+  // create new flat immutable segment from compacting old immutable segments
+  public ImmutableSegment createImmutableSegmentByCompaction(final Configuration conf,
+      final CellComparator comparator, MemStoreSegmentsIterator iterator, int numOfCells,
+      ImmutableSegment.Type segmentType)
+      throws IOException {
+    Preconditions.checkArgument(segmentType == ImmutableSegment.Type.ARRAY_MAP_BASED,
         "wrong immutable segment type");
-    return new ImmutableSegment(comparator, iterator, getMemStoreLAB(conf), numOfCells,
-        segmentType);
+    MemStoreLAB memStoreLAB = getMemStoreLAB(conf);
+    return
+        // the last parameter "false" means not to merge, but to compact the pipeline
+        // in order to create the new segment
+        new ImmutableSegment(comparator, iterator, memStoreLAB, numOfCells, segmentType, false);
   }
 
   // create empty immutable segment
@@ -77,6 +83,19 @@ public final class SegmentFactory {
     return generateMutableSegment(conf, comparator, memStoreLAB);
   }
 
+  // create new flat immutable segment from merging old immutable segments
+  public ImmutableSegment createImmutableSegmentByMerge(final Configuration conf,
+      final CellComparator comparator, MemStoreSegmentsIterator iterator, int numOfCells,
+      ImmutableSegment.Type segmentType, List<ImmutableSegment> segments)
+      throws IOException {
+    Preconditions.checkArgument(segmentType == ImmutableSegment.Type.ARRAY_MAP_BASED,
+        "wrong immutable segment type");
+    MemStoreLAB memStoreLAB = getMergedMemStoreLAB(conf, segments);
+    return
+        // the last parameter "true" means to merge the compaction pipeline
+        // in order to create the new segment
+        new ImmutableSegment(comparator, iterator, memStoreLAB, numOfCells, segmentType, true);
+  }
   //****** private methods to instantiate concrete store segments **********//
 
   private MutableSegment generateMutableSegment(final Configuration conf, CellComparator comparator,
@@ -96,4 +115,11 @@ public final class SegmentFactory {
     return memStoreLAB;
   }
 
+  private MemStoreLAB getMergedMemStoreLAB(Configuration conf, List<ImmutableSegment> segments) {
+    List<MemStoreLAB> mslabs = new ArrayList<MemStoreLAB>();
+    for (ImmutableSegment segment : segments) {
+      mslabs.add(segment.getMemStoreLAB());
+    }
+    return new ImmutableMemStoreLAB(mslabs);
+  }
 }

@@ -172,7 +172,7 @@ public class TestMemStoreLAB {
   public void testLABChunkQueue() throws Exception {
     HeapMemStoreLAB mslab = new HeapMemStoreLAB();
     // by default setting, there should be no chunk queue initialized
-    assertNull(mslab.getChunkQueue());
+    assertNull(mslab.getPooledChunks());
     // reset mslab with chunk pool
     Configuration conf = HBaseConfiguration.create();
     conf.setDouble(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, 0.1);
@@ -209,7 +209,7 @@ public class TestMemStoreLAB {
     // close the mslab
     mslab.close();
     // make sure all chunks reclaimed or removed from chunk queue
-    int queueLength = mslab.getChunkQueue().size();
+    int queueLength = mslab.getPooledChunks().size();
     assertTrue("All chunks in chunk queue should be reclaimed or removed"
         + " after mslab closed but actually: " + queueLength, queueLength == 0);
   }

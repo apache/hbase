@@ -130,7 +130,7 @@ public class TestPerColumnFamilyFlush {
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
       100 * 1024);
     // Intialize the region
-    Region region = initHRegion("testSelectiveFlushWhenEnabled", conf);
+    Region region = initHRegion("testSelectiveFlushWithDataCompaction", conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));

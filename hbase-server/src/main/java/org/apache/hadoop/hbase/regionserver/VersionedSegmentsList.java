@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -43,7 +44,7 @@ public class VersionedSegmentsList {
     this.version = version;
   }
 
-  public LinkedList<ImmutableSegment> getStoreSegments() {
+  public List<ImmutableSegment> getStoreSegments() {
     return storeSegments;
   }
 

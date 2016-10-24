@@ -195,9 +195,9 @@ public class CompactingMemStore extends AbstractMemStore {
     return list;
   }
 
-  public boolean swapCompactedSegments(VersionedSegmentsList versionedList,
-      ImmutableSegment result) {
-    return pipeline.swap(versionedList, result);
+  public boolean swapCompactedSegments(VersionedSegmentsList versionedList, ImmutableSegment result,
+      boolean merge) {
+    return pipeline.swap(versionedList, result, !merge);
   }
 
   /**
@@ -392,6 +392,11 @@ public class CompactingMemStore extends AbstractMemStore {
   @VisibleForTesting
   void enableCompaction() {
     allowCompaction.set(true);
+  }
+
+  @VisibleForTesting
+  void initiateType() {
+    compactor.initiateAction();
   }
 
   /**

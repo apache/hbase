@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.apache.hadoop.hbase.util.Threads;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -61,7 +62,8 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     compactingSetUp();
     Configuration conf = HBaseConfiguration.create();
 
-    conf.setLong("hbase.hregion.compacting.memstore.type", 2); // compact to CellArrayMap
+    // set memstore to do data compaction and not to use the speculative scan
+    conf.set("hbase.hregion.compacting.memstore.type", "data-compaction");
 
     this.memstore =
         new CompactingMemStore(conf, CellComparator.COMPARATOR, store,
@@ -215,18 +217,17 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
   }
 
   //////////////////////////////////////////////////////////////////////////////
-  // Flattening tests
+  // Merging tests
   //////////////////////////////////////////////////////////////////////////////
   @Test
-  public void testFlattening() throws IOException {
+  public void testMerging() throws IOException {
 
     String[] keys1 = { "A", "A", "B", "C", "F", "H"};
     String[] keys2 = { "A", "B", "D", "G", "I", "J"};
     String[] keys3 = { "D", "B", "B", "E" };
 
-    // set flattening to true
-    memstore.getConfiguration().setBoolean("hbase.hregion.compacting.memstore.flatten", true);
-
+    memstore.getConfiguration().set("hbase.hregion.compacting.memstore.type", "index-compaction");
+    ((CompactingMemStore)memstore).initiateType();
     addRowsByKeys(memstore, keys1);
 
     ((CompactingMemStore) memstore).flushInMemory(); // push keys to pipeline should not compact
@@ -238,12 +239,30 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
 
     addRowsByKeys(memstore, keys2); // also should only flatten
 
+    int counter2 = 0;
+    for ( Segment s : memstore.getSegments()) {
+      counter2 += s.getCellsCount();
+    }
+    assertEquals(12, counter2);
+
     ((CompactingMemStore) memstore).disableCompaction();
 
     ((CompactingMemStore) memstore).flushInMemory(); // push keys to pipeline without flattening
     assertEquals(0, memstore.getSnapshot().getCellsCount());
 
+    int counter3 = 0;
+    for ( Segment s : memstore.getSegments()) {
+      counter3 += s.getCellsCount();
+    }
+    assertEquals(12, counter3);
+
     addRowsByKeys(memstore, keys3);
+
+    int counter4 = 0;
+    for ( Segment s : memstore.getSegments()) {
+      counter4 += s.getCellsCount();
+    }
+    assertEquals(16, counter4);
 
     ((CompactingMemStore) memstore).enableCompaction();
 
@@ -258,7 +277,7 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     for ( Segment s : memstore.getSegments()) {
       counter += s.getCellsCount();
     }
-    assertEquals(10,counter);
+    assertEquals(16,counter);
 
     MemStoreSnapshot snapshot = memstore.snapshot(); // push keys to snapshot
     ImmutableSegment s = memstore.getSnapshot();
@@ -295,7 +314,7 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
       Threads.sleep(10);
     }
     // Just doing the cnt operation here
-    MemStoreCompactorIterator itr = new MemStoreCompactorIterator(
+    MemStoreSegmentsIterator itr = new MemStoreMergerSegmentsIterator(
         ((CompactingMemStore) memstore).getImmutableSegments().getStoreSegments(),
         CellComparator.COMPARATOR, 10, ((CompactingMemStore) memstore).getStore());
     int cnt = 0;

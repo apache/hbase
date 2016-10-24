@@ -26,47 +26,33 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 /**
- * The MemStoreCompactorIterator is designed to perform one iteration over given list of segments
- * For another iteration new instance of MemStoreCompactorIterator needs to be created
- * The iterator is not thread-safe and must have only one instance in each period of time
+ * The MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator
+ * and performs the scan for compaction operation meaning it is based on SQM
  */
 @InterfaceAudience.Private
-public class MemStoreCompactorIterator implements Iterator<Cell> {
+public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator {
 
   private List<Cell> kvs = new ArrayList<Cell>();
-
-  // scanner for full or partial pipeline (heap of segment scanners)
-  // we need to keep those scanners in order to close them at the end
-  private KeyValueScanner scanner;
+  private boolean hasMore;
+  private Iterator<Cell> kvsIterator;
 
   // scanner on top of pipeline scanner that uses ScanQueryMatcher
   private StoreScanner compactingScanner;
 
-  private final ScannerContext scannerContext;
-
-  private boolean hasMore;
-  private Iterator<Cell> kvsIterator;
-
   // C-tor
-  public MemStoreCompactorIterator(List<ImmutableSegment> segments,
-      CellComparator comparator, int compactionKVMax, Store store) throws IOException {
+  public MemStoreCompactorSegmentsIterator(
+      List<ImmutableSegment> segments,
+      CellComparator comparator, int compactionKVMax, Store store
+  ) throws IOException {
+    super(segments,comparator,compactionKVMax,store);
 
-    this.scannerContext = ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
-
-    // list of Scanners of segments in the pipeline, when compaction starts
-    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
-
-    // create the list of scanners with maximally possible read point, meaning that
-    // all KVs are going to be returned by the pipeline traversing
-    for (Segment segment : segments) {
-      scanners.add(segment.getScanner(store.getSmallestReadPoint()));
-    }
-
-    scanner = new MemStoreScanner(comparator, scanners, true);
-
+    // build the scanner based on Query Matcher
     // reinitialize the compacting scanner for each instance of iterator
     compactingScanner = createScanner(store, scanner);
 
@@ -80,17 +66,23 @@ public class MemStoreCompactorIterator implements Iterator<Cell> {
 
   @Override
   public boolean hasNext() {
+    if (kvsIterator == null)  { // for the case when the result is empty
+      return false;
+    }
     if (!kvsIterator.hasNext()) {
       // refillKVS() method should be invoked only if !kvsIterator.hasNext()
       if (!refillKVS()) {
         return false;
       }
     }
-    return (kvsIterator.hasNext() || hasMore);
+    return kvsIterator.hasNext();
   }
 
   @Override
   public Cell next()  {
+    if (kvsIterator == null)  { // for the case when the result is empty
+      return null;
+    }
     if (!kvsIterator.hasNext()) {
       // refillKVS() method should be invoked only if !kvsIterator.hasNext()
       if (!refillKVS())  return null;
@@ -128,7 +120,8 @@ public class MemStoreCompactorIterator implements Iterator<Cell> {
   }
 
 
-
+  /* Refill kev-value set (should be invoked only when KVS is empty)
+   * Returns true if KVS is non-empty */
   private boolean refillKVS() {
     kvs.clear();          // clear previous KVS, first initiated in the constructor
     if (!hasMore) {       // if there is nothing expected next in compactingScanner
@@ -153,7 +146,4 @@ public class MemStoreCompactorIterator implements Iterator<Cell> {
     }
     return hasMore;
   }
-
-
 }
-
