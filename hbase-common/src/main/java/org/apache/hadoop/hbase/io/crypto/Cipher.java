@@ -31,6 +31,14 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public abstract class Cipher {
 
+  public static final int KEY_LENGTH = 16;
+  public static final int KEY_LENGTH_BITS = KEY_LENGTH * 8;
+  public static final int BLOCK_SIZE = 16;
+  public static final int IV_LENGTH = 16;
+
+  public static final String RNG_ALGORITHM_KEY = "hbase.crypto.algorithm.rng";
+  public static final String RNG_PROVIDER_KEY = "hbase.crypto.algorithm.rng.provider";
+
   private final CipherProvider provider;
 
   public Cipher(CipherProvider provider) {

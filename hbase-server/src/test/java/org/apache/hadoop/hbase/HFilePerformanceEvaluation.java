@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.crypto.CryptoCipherProvider;
+import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
@@ -130,6 +132,23 @@ public class HFilePerformanceEvaluation {
     runWriteBenchmark(aesconf, aesfs, aesmf, "gz", "aes");
     runReadBenchmark(aesconf, aesfs, aesmf, "gz", "aes");
 
+    // Add configuration for Commons cipher
+    final Configuration cryptoconf = new Configuration();
+    cryptoconf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    cryptoconf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
+    cryptoconf.setInt("hfile.format.version", 3);
+    cryptoconf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY, CryptoCipherProvider.class.getName());
+    final FileSystem cryptofs = FileSystem.get(cryptoconf);
+    final Path cryptof = cryptofs.makeQualified(new Path("performanceevaluation.aes.mapfile"));
+
+    // codec=none cipher=aes
+    runWriteBenchmark(cryptoconf, cryptofs, aesmf, "none", "aes");
+    runReadBenchmark(cryptoconf, cryptofs, aesmf, "none", "aes");
+
+    // codec=gz cipher=aes
+    runWriteBenchmark(cryptoconf, aesfs, aesmf, "gz", "aes");
+    runReadBenchmark(cryptoconf, aesfs, aesmf, "gz", "aes");
+
     // cleanup test files
     if (fs.exists(mf)) {
       fs.delete(mf, true);
@@ -137,7 +156,10 @@ public class HFilePerformanceEvaluation {
     if (aesfs.exists(aesmf)) {
       aesfs.delete(aesmf, true);
     }
-    
+    if (cryptofs.exists(aesmf)) {
+      cryptofs.delete(cryptof, true);
+    }
+
     // Print Result Summary
     LOG.info("\n***************\n" + "Result Summary" + "\n***************\n");
     LOG.info(testSummary.toString());
@@ -160,7 +182,7 @@ public class HFilePerformanceEvaluation {
     }
 
     runBenchmark(new SequentialWriteBenchmark(conf, fs, mf, ROW_COUNT, codec, cipher),
-        ROW_COUNT, codec, cipher);
+        ROW_COUNT, codec, getCipherName(conf, cipher));
 
   }
 
@@ -179,7 +201,7 @@ public class HFilePerformanceEvaluation {
       public void run() {
         try {
           runBenchmark(new UniformRandomSmallScan(conf, fs, mf, ROW_COUNT),
-            ROW_COUNT, codec, cipher);
+            ROW_COUNT, codec, getCipherName(conf, cipher));
         } catch (Exception e) {
           testSummary.append("UniformRandomSmallScan failed " + e.getMessage());
           e.printStackTrace();
@@ -192,7 +214,7 @@ public class HFilePerformanceEvaluation {
       public void run() {
         try {
           runBenchmark(new UniformRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
-              ROW_COUNT, codec, cipher);
+              ROW_COUNT, codec, getCipherName(conf, cipher));
         } catch (Exception e) {
           testSummary.append("UniformRandomReadBenchmark failed " + e.getMessage());
           e.printStackTrace();
@@ -205,7 +227,7 @@ public class HFilePerformanceEvaluation {
       public void run() {
         try {
           runBenchmark(new GaussianRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
-              ROW_COUNT, codec, cipher);
+              ROW_COUNT, codec, getCipherName(conf, cipher));
         } catch (Exception e) {
           testSummary.append("GaussianRandomReadBenchmark failed " + e.getMessage());
           e.printStackTrace();
@@ -218,7 +240,7 @@ public class HFilePerformanceEvaluation {
       public void run() {
         try {
           runBenchmark(new SequentialReadBenchmark(conf, fs, mf, ROW_COUNT),
-              ROW_COUNT, codec, cipher);
+              ROW_COUNT, codec, getCipherName(conf, cipher));
         } catch (Exception e) {
           testSummary.append("SequentialReadBenchmark failed " + e.getMessage());
           e.printStackTrace();
@@ -529,5 +551,18 @@ public class HFilePerformanceEvaluation {
    */
   public static void main(String[] args) throws Exception {
     new HFilePerformanceEvaluation().runBenchmarks();
+  }
+
+  private String getCipherName(Configuration conf, String cipherName) {
+    if (cipherName.equals("aes")) {
+      String provider = conf.get(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY);
+      if (provider == null || provider.equals("")
+              || provider.equals(DefaultCipherProvider.class.getName())) {
+        return "aes-default";
+      } else if (provider.equals(CryptoCipherProvider.class.getName())) {
+        return "aes-commons";
+      }
+    }
+    return cipherName;
   }
 }

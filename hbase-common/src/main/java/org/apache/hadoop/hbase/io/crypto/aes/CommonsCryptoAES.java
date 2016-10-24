@@ -23,11 +23,14 @@ import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.SecureRandom;
+import java.util.Properties;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -39,32 +42,27 @@ import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
-/**
- * AES-128, provided by the JCE
- * <p>
- * Algorithm instances are pooled for reuse, so the cipher provider and mode
- * are configurable but fixed at instantiation.
- */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class AES extends Cipher {
+public class CommonsCryptoAES extends Cipher {
 
-  private static final Log LOG = LogFactory.getLog(AES.class);
+  private static final Log LOG = LogFactory.getLog(CommonsCryptoAES.class);
 
-  public static final String CIPHER_MODE_KEY = "hbase.crypto.algorithm.aes.mode";
-  public static final String CIPHER_PROVIDER_KEY = "hbase.crypto.algorithm.aes.provider";
+  public static final String CIPHER_MODE_KEY = "hbase.crypto.commons.mode";
+  public static final String CIPHER_CLASSES_KEY = "hbase.crypto.commons.cipher.classes";
+  public static final String CIPHER_JCE_PROVIDER_KEY = "hbase.crypto.commons.cipher.jce.provider";
 
-  private final String rngAlgorithm;
   private final String cipherMode;
-  private final String cipherProvider;
+  private Properties props;
+  private final String rngAlgorithm;
   private SecureRandom rng;
 
-  public AES(CipherProvider provider) {
+  public CommonsCryptoAES(CipherProvider provider) {
     super(provider);
-    // The JCE mode for Ciphers
+    // The mode for Commons Crypto Ciphers
     cipherMode = provider.getConf().get(CIPHER_MODE_KEY, "AES/CTR/NoPadding");
-    // The JCE provider, null if default
-    cipherProvider = provider.getConf().get(CIPHER_PROVIDER_KEY);
+    // Reads Commons Crypto properties from HBase conf
+    props = readCryptoProps(provider.getConf());
     // RNG algorithm
     rngAlgorithm = provider.getConf().get(RNG_ALGORITHM_KEY, "SHA1PRNG");
     // RNG provider, null if default
@@ -79,6 +77,15 @@ public class AES extends Cipher {
       LOG.warn("Could not instantiate specified RNG, falling back to default", e);
       rng = new SecureRandom();
     }
+  }
+
+  private static Properties readCryptoProps(Configuration conf) {
+    Properties props = new Properties();
+
+    props.setProperty(CryptoCipherFactory.CLASSES_KEY, conf.get(CIPHER_CLASSES_KEY, ""));
+    props.setProperty(CryptoCipherFactory.JCE_PROVIDER_KEY, conf.get(CIPHER_JCE_PROVIDER_KEY, ""));
+
+    return props;
   }
 
   @Override
@@ -105,17 +112,17 @@ public class AES extends Cipher {
 
   @Override
   public Encryptor getEncryptor() {
-    return new AESEncryptor(getJCECipherInstance(), rng);
+    return new CommonsCryptoAESEncryptor(cipherMode, props, rng);
   }
 
   @Override
   public Decryptor getDecryptor() {
-    return new AESDecryptor(getJCECipherInstance());
+    return new CommonsCryptoAESDecryptor(cipherMode, props);
   }
 
   @Override
-  public OutputStream createEncryptionStream(OutputStream out, Context context, byte[] iv)
-      throws IOException {
+  public OutputStream createEncryptionStream(OutputStream out, Context context,
+                                             byte[] iv) throws IOException {
     Preconditions.checkNotNull(context);
     Preconditions.checkState(context.getKey() != null, "Context does not have a key");
     Preconditions.checkNotNull(iv);
@@ -126,14 +133,15 @@ public class AES extends Cipher {
   }
 
   @Override
-  public OutputStream createEncryptionStream(OutputStream out, Encryptor e) throws IOException {
-    Preconditions.checkNotNull(e);
-    return e.createEncryptionStream(out);
+  public OutputStream createEncryptionStream(OutputStream out,
+                                             Encryptor encryptor) throws
+      IOException {
+    return encryptor.createEncryptionStream(out);
   }
 
   @Override
-  public InputStream createDecryptionStream(InputStream in, Context context, byte[] iv)
-      throws IOException {
+  public InputStream createDecryptionStream(InputStream in, Context context,
+                                            byte[] iv) throws IOException {
     Preconditions.checkNotNull(context);
     Preconditions.checkState(context.getKey() != null, "Context does not have a key");
     Preconditions.checkNotNull(iv);
@@ -144,25 +152,15 @@ public class AES extends Cipher {
   }
 
   @Override
-  public InputStream createDecryptionStream(InputStream in, Decryptor d) throws IOException {
-    Preconditions.checkNotNull(d);
-    return d.createDecryptionStream(in);
+  public InputStream createDecryptionStream(InputStream in,
+                                            Decryptor decryptor) throws
+      IOException {
+    Preconditions.checkNotNull(decryptor);
+    return decryptor.createDecryptionStream(in);
   }
 
   @VisibleForTesting
   SecureRandom getRNG() {
     return rng;
   }
-
-  private javax.crypto.Cipher getJCECipherInstance() {
-    try {
-      if (cipherProvider != null) {
-        return javax.crypto.Cipher.getInstance(cipherMode, cipherProvider);
-      }
-      return javax.crypto.Cipher.getInstance(cipherMode);
-    } catch (GeneralSecurityException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
 }
