@@ -1476,6 +1476,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         htd = htds.get(region.getTable());
         if (htd == null) {
           htd = regionServer.tableDescriptors.get(region.getTable());
+          if (htd == null) {
+            throw new IOException("missing table descriptor for " + region.getEncodedName());
+          }
           htds.put(region.getTable(), htd);
         }
 
