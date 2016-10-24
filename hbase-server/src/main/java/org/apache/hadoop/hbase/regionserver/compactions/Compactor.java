@@ -26,8 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.io.Closeables;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -58,6 +56,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
+import com.google.common.io.Closeables;
+
 /**
  * A compactor is a compaction algorithm associated a given policy. Base class also contains
  * reusable parts for implementing compactors (what is common and what isn't is evolving).
@@ -75,7 +75,7 @@ public abstract class Compactor<T extends CellSink> {
   protected final Compression.Algorithm compactionCompression;
 
   /** specify how many days to keep MVCC values during major compaction **/ 
-  protected final int keepSeqIdPeriod;
+  protected int keepSeqIdPeriod;
 
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(final Configuration conf, final Store store) {
@@ -435,9 +435,16 @@ public abstract class Compactor<T extends CellSink> {
           now = EnvironmentEdgeManager.currentTime();
         }
         // output to writer:
+        Cell lastCleanCell = null;
+        long lastCleanCellSeqId = 0;
         for (Cell c : cells) {
           if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
+            lastCleanCell = c;
+            lastCleanCellSeqId = c.getSequenceId();
             CellUtil.setSequenceId(c, 0);
+          } else {
+            lastCleanCell = null;
+            lastCleanCellSeqId = 0;
           }
           writer.append(c);
           int len = KeyValueUtil.length(c);
@@ -458,6 +465,10 @@ public abstract class Compactor<T extends CellSink> {
               }
             }
           }
+        }
+        if (lastCleanCell != null) {
+          // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly
+          CellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
         }
         // Log the progress of long running compactions every minute if
         // logging at DEBUG level
