@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.4 10/17/2016
+Release Notes - HBase - Version 1.2.4 11/01/2016
 
 ** Sub-task
     * [HBASE-14734] - BindException when setting up MiniKdc
@@ -25,21 +25,31 @@ Release Notes - HBase - Version 1.2.4 10/17/2016
     * [HBASE-16613] - Return the unused ByteBuffer to BoundedByteBufferPool when no cell is retrieved from the CellScanner
     * [HBASE-16649] - Truncate table with splits preserved can cause both data loss and truncated data appeared again
     * [HBASE-16662] - Fix open POODLE vulnerabilities
+    * [HBASE-16663] - JMX ConnectorServer stopped when unauthorized user try to stop HM/RS/cluster
     * [HBASE-16678] - MapReduce jobs do not update counters from ScanMetrics
     * [HBASE-16682] - Fix Shell tests failure. NoClassDefFoundError for MiniKdc
+    * [HBASE-16699] - Overflows in AverageIntervalRateLimiter's refill() and getWaitInterval()
+    * [HBASE-16701] - TestHRegion and TestHRegionWithInMemoryFlush timing out
     * [HBASE-16721] - Concurrency issue in WAL unflushed seqId tracking
     * [HBASE-16723] - RMI registry is not destroyed after stopping JMX Connector Server
     * [HBASE-16732] - Avoid possible NPE in MetaTableLocator
+    * [HBASE-16754] - Regions failing compaction due to referencing non-existent store file
+    * [HBASE-16807] - RegionServer will fail to report new active Hmaster until HMaster/RegionServer failover
+    * [HBASE-16815] - Low scan ratio in RPC queue tuning triggers divide by zero exception
+    * [HBASE-16824] - Writer.flush() can be called on already closed streams in WAL roll
+    * [HBASE-16870] - Add the metrics of replication sources which were transformed from other dead rs to ReplicationLoad
+    * [HBASE-16889] - Proc-V2: verifyTables in the IntegrationTestDDLMasterFailover test after each table DDL is incorrect
 
 ** Improvement
     * [HBASE-15315] - Remove always set super user call as high priority
-    * [HBASE-16562] - ITBLL should fail to start if misconfigured
     * [HBASE-16667] - Building with JDK 8: ignoring option MaxPermSize=256m
 
 ** Task
     * [HBASE-16340] - ensure no Xerces jars included
     * [HBASE-16518] - Remove old .arcconfig file
     * [HBASE-16748] - Release 1.2.4
+    * [HBASE-16749] - HBase root pom.xml contains repo from people.apache.org/~garyh
+
 
 Release Notes - HBase - Version 1.2.3 09/12/2016
 
