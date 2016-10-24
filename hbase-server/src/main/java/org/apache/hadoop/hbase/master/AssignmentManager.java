@@ -611,7 +611,7 @@ public class AssignmentManager {
       if (files[i].isFile() && files[i].getLen() > 0) {
         LOG.debug(dir + " has a non-empty file: " + files[i].getPath());
         return true;
-      } else if (files[i].isDirectory() && checkWals(fs, dir)) {
+      } else if (files[i].isDirectory() && checkWals(fs, files[i].getPath())) {
         LOG.debug(dir + " is a directory and has a non-empty file: " + files[i].getPath());
         return true;
       }
