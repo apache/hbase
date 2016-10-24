@@ -678,17 +678,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         Integer width = (args.length < 4) ? null : Integer.parseInt(args[3]);
         Integer wrapMultiplier = (args.length < 5) ? null : Integer.parseInt(args[4]);
         Integer numWalkers = (args.length < 6) ? null : Integer.parseInt(args[5]);
-
-        long wrap = (long)width*wrapMultiplier;
-        if (wrap < numNodes && numNodes % wrap != 0) {
-          /**
-           *  numNodes should be a multiple of width*wrapMultiplier.
-           *  If numNodes less than wrap, wrap will be set to be equal with numNodes,
-           *  See {@link GeneratorMapper#setup(Mapper.Context)}
-           * */
-          System.err.println(USAGE);
-          return 1;
-        }
         return run(numMappers, numNodes, tmpOutput, width, wrapMultiplier, numWalkers);
       } catch (NumberFormatException e) {
         System.err.println("Parsing generator arguments failed: " + e.getMessage());
