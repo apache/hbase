@@ -323,6 +323,13 @@ public abstract class ByteString implements Iterable<Byte>, Serializable {
   }
 
   /**
+   * Wraps the given bytes into a {@code ByteString}. Intended for internal only usage.
+   */
+  static ByteString wrap(ByteInput buffer, int offset, int length) {
+    return new ByteInputByteString(buffer, offset, length);
+  }
+
+  /**
    * Wraps the given bytes into a {@code ByteString}. Intended for internal only
    * usage to force a classload of ByteString before LiteralByteString.
    */

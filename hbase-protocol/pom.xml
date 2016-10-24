@@ -143,6 +143,14 @@
         </profile>
         <profile>
           <id>compile-protobuf</id>
+          <!--
+           Generate proto files. Drops generated java files under
+           src/main/java. Check in the generated files so available
+           at build time.  Run this profile/step everytime you
+           change proto files. If you add a proto, be sure to add
+           it to the list below in the hadoop-maven-plugin else
+           we won't 'see' it.
+           -->
           <activation>
             <property>
               <name>compile-protobuf</name>

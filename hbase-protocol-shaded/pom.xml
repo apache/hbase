@@ -151,37 +151,32 @@
         <surefire.skipFirstPart>true</surefire.skipFirstPart>
       </properties>
     </profile>
-    <!--
-         Generate shaded classes using proto files and
-         the protobuf lib we depend on. Drops generated
-         files under src/main/java. Check in the generated
-         files so available at build time.  Run this
-          profile/step everytime you change proto
-         files or update the protobuf version. If you add a
-         proto, be sure to add it to the list below in the
-         hadoop-maven-plugin else we won't 'see' it.
-
-         The below first generates java files from protos.
-         We then compile the generated files and make a jar
-         file.  The jar file is then passed to the shade plugin
-         which makes a new fat jar that includes the protobuf
-         lib but with all relocated given the
-         org.apache.hadoop.hbase.shaded prefix. The shading
-         step as by-product produces a jar with relocated
-         java source files in it. This jar we then unpack over
-         the src/main/java directory and we're done.
-
-         User is expected to check in the changes if they look
-         good.
-
-         TODO: Patch the protobuf lib using maven-patch-plugin
-         with changes we need.
-      -->
     <profile>
-      <id>generate-shaded-classes</id>
+      <id>compile-protobuf</id>
+      <!--
+         Generate and shade proto files. Drops generated java files
+         under src/main/java. Check in the generated files so available
+         at build time. Run this profile/step everytime you change proto
+         files or update the protobuf version. If you add a proto, be
+         sure to add it to the list below in the hadoop-maven-plugin
+         else we won't 'see' it.
+
+         The below does a bunch of ugly stuff. It purges current content
+         of the generated and shaded com.google.protobuf java files first.
+         It does this because later we apply patches later and patches
+         fail they've already been applied. We remove too because we
+         overlay the shaded protobuf and if files have been removed or
+         added, it'll be more plain if we have first done this delete.
+
+         Next up we generate protos, build a jar, shade it (which
+         includes the referenced protobuf), undo it over the src/main/java
+         directory, and then apply patches.
+
+         The result needs to be checked in.
+      -->
       <activation>
         <property>
-          <name>generate-shaded-classes</name>
+          <name>compile-protobuf</name>
         </property>
       </activation>
       <properties>
@@ -191,10 +186,35 @@
         <!--When the compile for this profile runs, make sure it makes jars that
              can be related back to this shading profile. Give them a shading prefix.
          -->
-        <jar.finalName>${profile.id}.${artifactId}-${project.version}</jar.finalName>
+        <jar.finalName>${profile.id}.${project.artifactId}-${project.version}</jar.finalName>
       </properties>
       <build>
         <plugins>
+          <plugin>
+            <artifactId>maven-clean-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>pre-compile-protoc</id>
+                  <phase>generate-sources</phase>
+                  <goals>
+                    <goal>clean</goal>
+                  </goals>
+                <configuration>
+                  <filesets>
+                    <fileset>
+                      <directory>${basedir}/src/main/java/org/apache/hadoop/hbase/shaded</directory>
+                      <includes>
+                        <include>ipc/protobuf/generated/**/*.java</include>
+                        <include>protobuf/generated/**/*.java</include>
+                        <include>com/google/protobuf/**/*.java</include>
+                      </includes>
+                      <followSymlinks>false</followSymlinks>
+                    </fileset>
+                  </filesets>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
           <plugin>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-maven-plugins</artifactId>
@@ -337,9 +357,32 @@
               </execution>
             </executions>
           </plugin>
-          <!--Patch the files here!!!
-               Use maven-patch-plugin
-               -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-patch-plugin</artifactId>
+        <version>1.2</version>
+        <configuration>
+           <!--Patches are made at top-level-->
+           <targetDirectory>${basedir}/..</targetDirectory>
+          <skipApplication>false</skipApplication>
+        </configuration>
+        <executions>
+          <execution>
+            <id>patch</id>
+            <configuration>
+               <strip>1</strip>
+              <patchDirectory>src/main/patches</patchDirectory>
+              <patchTrackingFile>${project.build.directory}/patches-applied.txt</patchTrackingFile>
+              <naturalOrderProcessing>true</naturalOrderProcessing>
+            </configuration>
+            <phase>package</phase>
+            <goals>
+              <!--This should run after the above unpack phase-->
+              <goal>apply</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
         </plugins>
       </build>
     </profile>

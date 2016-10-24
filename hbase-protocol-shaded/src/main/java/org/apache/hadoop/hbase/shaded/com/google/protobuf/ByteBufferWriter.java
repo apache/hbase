@@ -112,7 +112,7 @@ final class ByteBufferWriter {
     }
   }
 
-  private static byte[] getOrCreateBuffer(int requestedSize) {
+  static byte[] getOrCreateBuffer(int requestedSize) {
     requestedSize = max(requestedSize, MIN_CACHED_BUFFER_SIZE);
 
     byte[] buffer = getBuffer();
