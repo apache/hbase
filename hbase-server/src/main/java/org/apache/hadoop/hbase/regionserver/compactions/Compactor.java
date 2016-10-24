@@ -314,9 +314,16 @@ public abstract class Compactor {
           now = EnvironmentEdgeManager.currentTime();
         }
         // output to writer:
+        Cell lastCleanCell = null;
+        long lastCleanCellSeqId = 0;
         for (Cell c : cells) {
           if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
+            lastCleanCell = c;
+            lastCleanCellSeqId = c.getSequenceId();
             CellUtil.setSequenceId(c, 0);
+          } else {
+            lastCleanCell = null;
+            lastCleanCellSeqId = 0;
           }
           writer.append(c);
           int len = KeyValueUtil.length(c);
@@ -337,6 +344,10 @@ public abstract class Compactor {
               }
             }
           }
+        }
+        if (lastCleanCell != null) {
+          // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly
+          CellUtil.setSequenceId(lastCleanCell, lastCleanCellSeqId);
         }
         // Log the progress of long running compactions every minute if
         // logging at DEBUG level
