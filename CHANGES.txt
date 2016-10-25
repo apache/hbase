@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.4 11/01/2016
+Release Notes - HBase - Version 1.2.4
 
 ** Sub-task
     * [HBASE-14734] - BindException when setting up MiniKdc
@@ -37,8 +37,11 @@ Release Notes - HBase - Version 1.2.4 11/01/2016
     * [HBASE-16807] - RegionServer will fail to report new active Hmaster until HMaster/RegionServer failover
     * [HBASE-16815] - Low scan ratio in RPC queue tuning triggers divide by zero exception
     * [HBASE-16824] - Writer.flush() can be called on already closed streams in WAL roll
+    * [HBASE-16830] - RSRpcServices#openRegion() should handle the case where table descriptor is null
     * [HBASE-16870] - Add the metrics of replication sources which were transformed from other dead rs to ReplicationLoad
     * [HBASE-16889] - Proc-V2: verifyTables in the IntegrationTestDDLMasterFailover test after each table DDL is incorrect
+    * [HBASE-16931] - Setting cell's seqId to zero in compaction flow might cause RS down.
+    * [HBASE-16939] - ExportSnapshot: set owner and permission on right directory
 
 ** Improvement
     * [HBASE-15315] - Remove always set super user call as high priority
