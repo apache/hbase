@@ -944,6 +944,19 @@ public class ExportSnapshot extends Configured implements Tool {
     Path outputSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(targetName, outputRoot);
     Path initialOutputSnapshotDir = skipTmp ? outputSnapshotDir : snapshotTmpDir;
 
+    // Find the necessary directory which need to change owner and group
+    Path needSetOwnerDir = SnapshotDescriptionUtils.getSnapshotRootDir(outputRoot);
+    if (outputFs.exists(needSetOwnerDir)) {
+      if (skipTmp) {
+        needSetOwnerDir = outputSnapshotDir;
+      } else {
+        needSetOwnerDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(outputRoot);
+        if (outputFs.exists(needSetOwnerDir)) {
+          needSetOwnerDir = snapshotTmpDir;
+        }
+      }
+    }
+
     // Check if the snapshot already exists
     if (outputFs.exists(outputSnapshotDir)) {
       if (overwrite) {
@@ -981,15 +994,21 @@ public class ExportSnapshot extends Configured implements Tool {
     try {
       LOG.info("Copy Snapshot Manifest");
       FileUtil.copy(inputFs, snapshotDir, outputFs, initialOutputSnapshotDir, false, false, conf);
-      if (filesUser != null || filesGroup != null) {
-        setOwner(outputFs, snapshotTmpDir, filesUser, filesGroup, true);
-      }
-      if (filesMode > 0) {
-        setPermission(outputFs, snapshotTmpDir, (short)filesMode, true);
-      }
     } catch (IOException e) {
       throw new ExportSnapshotException("Failed to copy the snapshot directory: from=" +
         snapshotDir + " to=" + initialOutputSnapshotDir, e);
+    } finally {
+      if (filesUser != null || filesGroup != null) {
+        LOG.warn((filesUser == null ? "" : "Change the owner of " + needSetOwnerDir + " to "
+            + filesUser)
+            + (filesGroup == null ? "" : ", Change the group of " + needSetOwnerDir + " to "
+            + filesGroup));
+        setOwner(outputFs, needSetOwnerDir, filesUser, filesGroup, true);
+      }
+      if (filesMode > 0) {
+        LOG.warn("Change the permission of " + needSetOwnerDir + " to " + filesMode);
+        setPermission(outputFs, needSetOwnerDir, (short)filesMode, true);
+      }
     }
 
     // Write a new .snapshotinfo if the target name is different from the source name
