@@ -3025,6 +3025,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * In here we also handle replay of edits on region recover.
    * @return Change in size brought about by applying <code>batchOp</code>
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UL_UNRELEASED_LOCK",
+		  justification="Findbugs seems to be confused on this.")
   @SuppressWarnings("unchecked")
   // TODO: This needs a rewrite. Doesn't have to be this long. St.Ack 20160120
   private long doMiniBatchMutate(BatchOperation<?> batchOp) throws IOException {
