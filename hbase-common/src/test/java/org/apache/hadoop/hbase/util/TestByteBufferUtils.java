@@ -375,6 +375,21 @@ public class TestByteBufferUtils {
   }
 
   @Test
+  public void testRelativeCopyFromBuffertoBuffer() {
+    ByteBuffer bb1 = ByteBuffer.allocate(135);
+    ByteBuffer bb2 = ByteBuffer.allocate(135);
+    fillBB(bb1, (byte) 5);
+    ByteBufferUtils.copyFromBufferToBuffer(bb1, bb2);
+    assertTrue(bb1.position() == bb2.position());
+    assertTrue(bb1.limit() == bb2.limit());
+    bb1 = ByteBuffer.allocateDirect(135);
+    bb2 = ByteBuffer.allocateDirect(135);
+    fillBB(bb1, (byte) 5);
+    ByteBufferUtils.copyFromBufferToBuffer(bb1, bb2);
+    assertTrue(bb1.position() == bb2.position());
+    assertTrue(bb1.limit() == bb2.limit());
+  }
+  @Test
   public void testCompareTo() {
     ByteBuffer bb1 = ByteBuffer.allocate(135);
     ByteBuffer bb2 = ByteBuffer.allocate(135);

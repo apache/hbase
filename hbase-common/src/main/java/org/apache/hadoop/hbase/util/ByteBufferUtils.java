@@ -365,16 +365,22 @@ public final class ByteBufferUtils {
 
   /**
    * Copy one buffer's whole data to another. Write starts at the current position of 'out' buffer.
-   * Note : This will advance the position marker of {@code out} but not change the position maker
-   * for {@code in}. The position and limit of the {@code in} buffer to be set properly by caller.
+   * Note : This will advance the position marker of {@code out} and also change the position maker
+   * for {@code in}.
    * @param in source buffer
    * @param out destination buffer
    */
   public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out) {
-    if (UNSAFE_AVAIL) {
+    if (in.hasArray() && out.hasArray()) {
+      int length = in.remaining();
+      System.arraycopy(in.array(), in.arrayOffset(), out.array(), out.arrayOffset(), length);
+      out.position(out.position() + length);
+      in.position(in.limit());
+    } else if (UNSAFE_AVAIL) {
       int length = in.remaining();
       UnsafeAccess.copy(in, in.position(), out, out.position(), length);
       out.position(out.position() + length);
+      in.position(in.limit());
     } else {
       out.put(in);
     }
