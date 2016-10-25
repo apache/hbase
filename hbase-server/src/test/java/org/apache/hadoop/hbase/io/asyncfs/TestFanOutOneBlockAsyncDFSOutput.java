@@ -91,9 +91,9 @@ public class TestFanOutOneBlockAsyncDFSOutput {
     // will fail.
     for (;;) {
       try {
-        FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS,
-          new Path("/ensureDatanodeAlive"), true, true, (short) 3, FS.getDefaultBlockSize(),
-          EVENT_LOOP_GROUP.next());
+        FanOutOneBlockAsyncDFSOutput out =
+            FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, new Path("/ensureDatanodeAlive"),
+              true, true, (short) 3, FS.getDefaultBlockSize(), EVENT_LOOP_GROUP.next());
         out.close();
         break;
       } catch (IOException e) {
@@ -104,10 +104,11 @@ public class TestFanOutOneBlockAsyncDFSOutput {
 
   static void writeAndVerify(EventLoop eventLoop, DistributedFileSystem dfs, Path f,
       final FanOutOneBlockAsyncDFSOutput out)
-          throws IOException, InterruptedException, ExecutionException {
+      throws IOException, InterruptedException, ExecutionException {
     final byte[] b = new byte[10];
     ThreadLocalRandom.current().nextBytes(b);
-    final FanOutOneBlockAsyncDFSOutputFlushHandler handler = new FanOutOneBlockAsyncDFSOutputFlushHandler();
+    final FanOutOneBlockAsyncDFSOutputFlushHandler handler =
+        new FanOutOneBlockAsyncDFSOutputFlushHandler();
     eventLoop.execute(new Runnable() {
 
       @Override
@@ -143,7 +144,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop);
     final byte[] b = new byte[10];
     ThreadLocalRandom.current().nextBytes(b);
-    final FanOutOneBlockAsyncDFSOutputFlushHandler handler = new FanOutOneBlockAsyncDFSOutputFlushHandler();
+    final FanOutOneBlockAsyncDFSOutputFlushHandler handler =
+        new FanOutOneBlockAsyncDFSOutputFlushHandler();
     eventLoop.execute(new Runnable() {
 
       @Override
@@ -218,8 +220,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       InvocationTargetException, InterruptedException, NoSuchFieldException {
     Field xceiverServerDaemonField = DataNode.class.getDeclaredField("dataXceiverServer");
     xceiverServerDaemonField.setAccessible(true);
-    Class<?> xceiverServerClass = Class
-        .forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
+    Class<?> xceiverServerClass =
+        Class.forName("org.apache.hadoop.hdfs.server.datanode.DataXceiverServer");
     Method numPeersMethod = xceiverServerClass.getDeclaredMethod("getNumPeers");
     numPeersMethod.setAccessible(true);
     // make one datanode broken
@@ -242,5 +244,33 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       TEST_UTIL.getDFSCluster().restartDataNode(0);
       ensureAllDatanodeAlive();
     }
+  }
+
+  @Test
+  public void testWriteLargeChunk() throws IOException, InterruptedException, ExecutionException {
+    Path f = new Path("/" + name.getMethodName());
+    EventLoop eventLoop = EVENT_LOOP_GROUP.next();
+    final FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
+      true, false, (short) 3, 1024 * 1024 * 1024, eventLoop);
+    byte[] b = new byte[50 * 1024 * 1024];
+    ThreadLocalRandom.current().nextBytes(b);
+    FanOutOneBlockAsyncDFSOutputFlushHandler handler =
+        new FanOutOneBlockAsyncDFSOutputFlushHandler();
+    eventLoop.execute(new Runnable() {
+
+      @Override
+      public void run() {
+        out.write(b);
+        out.flush(null, handler, false);
+      }
+    });
+    assertEquals(b.length, handler.get());
+    out.close();
+    assertEquals(b.length, FS.getFileStatus(f).getLen());
+    byte[] actual = new byte[b.length];
+    try (FSDataInputStream in = FS.open(f)) {
+      in.readFully(actual);
+    }
+    assertArrayEquals(b, actual);
   }
 }

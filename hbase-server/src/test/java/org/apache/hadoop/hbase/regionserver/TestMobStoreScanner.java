@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -79,8 +78,6 @@ public class TestMobStoreScanner {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.client.keyvalue.maxsize", 100 * 1024 * 1024);
-    // TODO: AsyncFSWAL can not handle large edits right now, remove this after we fix the issue.
-    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "filesystem");
     TEST_UTIL.startMiniCluster(1);
   }
 
