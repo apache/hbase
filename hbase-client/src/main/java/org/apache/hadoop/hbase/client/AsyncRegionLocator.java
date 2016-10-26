@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.*;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * TODO: reimplement using aync connection when the scan logic is ready. The current implementation
@@ -46,6 +49,26 @@ class AsyncRegionLocator implements Closeable {
     CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
     try {
       future.complete(conn.getRegionLocation(tableName, row, reload));
+    } catch (IOException e) {
+      future.completeExceptionally(e);
+    }
+    return future;
+  }
+
+  CompletableFuture<HRegionLocation> getPreviousRegionLocation(TableName tableName,
+      byte[] startRowOfCurrentRegion, boolean reload) {
+    CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
+    byte[] toLocateRow = createClosestRowBefore(startRowOfCurrentRegion);
+    try {
+      for (;;) {
+        HRegionLocation loc = conn.getRegionLocation(tableName, toLocateRow, reload);
+        byte[] endKey = loc.getRegionInfo().getEndKey();
+        if (Bytes.equals(startRowOfCurrentRegion, endKey)) {
+          future.complete(loc);
+          break;
+        }
+        toLocateRow = endKey;
+      }
     } catch (IOException e) {
       future.completeExceptionally(e);
     }

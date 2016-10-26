@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.base.Preconditions;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import io.netty.util.HashedWheelTimer;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -54,6 +56,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private long rpcTimeoutNs = -1L;
 
+    private boolean locateToPreviousRegion;
+
     public SingleRequestCallerBuilder<T> table(TableName tableName) {
       this.tableName = tableName;
       return this;
@@ -64,8 +68,8 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public SingleRequestCallerBuilder<T> action(
-        AsyncSingleRequestRpcRetryingCaller.Callable<T> callable) {
+    public SingleRequestCallerBuilder<T>
+        action(AsyncSingleRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -80,11 +84,18 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public SingleRequestCallerBuilder<T> locateToPreviousRegion(boolean locateToPreviousRegion) {
+      this.locateToPreviousRegion = locateToPreviousRegion;
+      return this;
+    }
+
     public AsyncSingleRequestRpcRetryingCaller<T> build() {
       return new AsyncSingleRequestRpcRetryingCaller<>(retryTimer, conn,
-          Preconditions.checkNotNull(tableName, "tableName is null"),
-          Preconditions.checkNotNull(row, "row is null"),
-          Preconditions.checkNotNull(callable, "action is null"), conn.connConf.getPauseNs(),
+          checkNotNull(tableName, "tableName is null"), checkNotNull(row, "row is null"),
+          locateToPreviousRegion
+              ? (c, tn, r, re) -> c.getLocator().getPreviousRegionLocation(tn, r, re)
+              : (c, tn, r, re) -> c.getLocator().getRegionLocation(tn, r, re),
+          checkNotNull(callable, "action is null"), conn.connConf.getPauseNs(),
           conn.connConf.getMaxRetries(), operationTimeoutNs, rpcTimeoutNs,
           conn.connConf.getStartLogErrorsCnt());
     }
@@ -102,5 +113,65 @@ class AsyncRpcRetryingCallerFactory {
    */
   public <T> SingleRequestCallerBuilder<T> single() {
     return new SingleRequestCallerBuilder<>();
+  }
+
+  public class SmallScanCallerBuilder {
+
+    private TableName tableName;
+
+    private Scan scan;
+
+    private int limit;
+
+    private long scanTimeoutNs = -1L;
+
+    private long rpcTimeoutNs = -1L;
+
+    public SmallScanCallerBuilder table(TableName tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public SmallScanCallerBuilder setScan(Scan scan) {
+      this.scan = scan;
+      return this;
+    }
+
+    public SmallScanCallerBuilder limit(int limit) {
+      this.limit = limit;
+      return this;
+    }
+
+    public SmallScanCallerBuilder scanTimeout(long scanTimeout, TimeUnit unit) {
+      this.scanTimeoutNs = unit.toNanos(scanTimeout);
+      return this;
+    }
+
+    public SmallScanCallerBuilder rpcTimeout(long rpcTimeout, TimeUnit unit) {
+      this.rpcTimeoutNs = unit.toNanos(rpcTimeout);
+      return this;
+    }
+
+    public AsyncSmallScanRpcRetryingCaller build() {
+      TableName tableName = checkNotNull(this.tableName, "tableName is null");
+      Scan scan = checkNotNull(this.scan, "scan is null");
+      checkArgument(limit > 0, "invalid limit %d", limit);
+      return new AsyncSmallScanRpcRetryingCaller(conn, tableName, scan, limit, scanTimeoutNs,
+          rpcTimeoutNs);
+    }
+
+    /**
+     * Shortcut for {@code build().call()}
+     */
+    public CompletableFuture<List<Result>> call() {
+      return build().call();
+    }
+  }
+
+  /**
+   * Create retry caller for small scan.
+   */
+  public SmallScanCallerBuilder smallScan() {
+    return new SmallScanCallerBuilder();
   }
 }
