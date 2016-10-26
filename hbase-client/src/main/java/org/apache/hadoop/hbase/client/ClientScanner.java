@@ -17,7 +17,20 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowBefore;
+
 import com.google.common.annotations.VisibleForTesting;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,19 +48,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos;
-import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Implements the scanner interface for the HBase client.
@@ -56,53 +60,51 @@ import java.util.concurrent.ExecutorService;
  */
 @InterfaceAudience.Private
 public abstract class ClientScanner extends AbstractClientScanner {
-    private static final Log LOG = LogFactory.getLog(ClientScanner.class);
-    // A byte array in which all elements are the max byte, and it is used to
-    // construct closest front row
-    static byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
-    protected Scan scan;
-    protected boolean closed = false;
-    // Current region scanner is against.  Gets cleared if current region goes
-    // wonky: e.g. if it splits on us.
-    protected HRegionInfo currentRegion = null;
-    protected ScannerCallableWithReplicas callable = null;
-    protected Queue<Result> cache;
-    /**
-     * A list of partial results that have been returned from the server. This list should only
-     * contain results if this scanner does not have enough partial results to form the complete
-     * result.
-     */
-    protected final LinkedList<Result> partialResults = new LinkedList<Result>();
-    /**
-     * The row for which we are accumulating partial Results (i.e. the row of the Results stored
-     * inside partialResults). Changes to partialResultsRow and partialResults are kept in sync
-     * via the methods {@link #addToPartialResults(Result)} and {@link #clearPartialResults()}
-     */
-    protected byte[] partialResultsRow = null;
-    /**
-     * The last cell from a not full Row which is added to cache
-     */
-    protected Cell lastCellLoadedToCache = null;
-    protected final int caching;
-    protected long lastNext;
-    // Keep lastResult returned successfully in case we have to reset scanner.
-    protected Result lastResult = null;
-    protected final long maxScannerResultSize;
-    private final ClusterConnection connection;
-    private final TableName tableName;
-    protected final int scannerTimeout;
-    protected boolean scanMetricsPublished = false;
-    protected RpcRetryingCaller<Result []> caller;
-    protected RpcControllerFactory rpcControllerFactory;
-    protected Configuration conf;
-    //The timeout on the primary. Applicable if there are multiple replicas for a region
-    //In that case, we will only wait for this much timeout on the primary before going
-    //to the replicas and trying the same scan. Note that the retries will still happen
-    //on each replica and the first successful results will be taken. A timeout of 0 is
-    //disallowed.
-    protected final int primaryOperationTimeout;
-    private int retries;
-    protected final ExecutorService pool;
+  private static final Log LOG = LogFactory.getLog(ClientScanner.class);
+
+  protected Scan scan;
+  protected boolean closed = false;
+  // Current region scanner is against. Gets cleared if current region goes
+  // wonky: e.g. if it splits on us.
+  protected HRegionInfo currentRegion = null;
+  protected ScannerCallableWithReplicas callable = null;
+  protected Queue<Result> cache;
+  /**
+   * A list of partial results that have been returned from the server. This list should only
+   * contain results if this scanner does not have enough partial results to form the complete
+   * result.
+   */
+  protected final LinkedList<Result> partialResults = new LinkedList<Result>();
+  /**
+   * The row for which we are accumulating partial Results (i.e. the row of the Results stored
+   * inside partialResults). Changes to partialResultsRow and partialResults are kept in sync via
+   * the methods {@link #addToPartialResults(Result)} and {@link #clearPartialResults()}
+   */
+  protected byte[] partialResultsRow = null;
+  /**
+   * The last cell from a not full Row which is added to cache
+   */
+  protected Cell lastCellLoadedToCache = null;
+  protected final int caching;
+  protected long lastNext;
+  // Keep lastResult returned successfully in case we have to reset scanner.
+  protected Result lastResult = null;
+  protected final long maxScannerResultSize;
+  private final ClusterConnection connection;
+  private final TableName tableName;
+  protected final int scannerTimeout;
+  protected boolean scanMetricsPublished = false;
+  protected RpcRetryingCaller<Result[]> caller;
+  protected RpcControllerFactory rpcControllerFactory;
+  protected Configuration conf;
+  // The timeout on the primary. Applicable if there are multiple replicas for a region
+  // In that case, we will only wait for this much timeout on the primary before going
+  // to the replicas and trying the same scan. Note that the retries will still happen
+  // on each replica and the first successful results will be taken. A timeout of 0 is
+  // disallowed.
+  protected final int primaryOperationTimeout;
+  private int retries;
+  protected final ExecutorService pool;
 
   /**
    * Create a new ClientScanner for the specified table Note that the passed {@link Scan}'s start
@@ -447,7 +449,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
             if (scan.isReversed()) {
               scan.setStartRow(createClosestRowBefore(lastResult.getRow()));
             } else {
-              scan.setStartRow(Bytes.add(lastResult.getRow(), new byte[1]));
+              scan.setStartRow(createClosestRowAfter(lastResult.getRow()));
             }
           } else {
             // we need rescan this row because we only loaded partial row before
@@ -737,49 +739,27 @@ public abstract class ClientScanner extends AbstractClientScanner {
     }
   }
 
-    @Override
-    public void close() {
-      if (!scanMetricsPublished) writeScanMetrics();
-      if (callable != null) {
-        callable.setClose();
-        try {
-          call(callable, caller, scannerTimeout);
-        } catch (UnknownScannerException e) {
-           // We used to catch this error, interpret, and rethrow. However, we
-           // have since decided that it's not nice for a scanner's close to
-           // throw exceptions. Chances are it was just due to lease time out.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("scanner failed to close", e);
-          }
-        } catch (IOException e) {
-          /* An exception other than UnknownScanner is unexpected. */
-          LOG.warn("scanner failed to close.", e);
+  @Override
+  public void close() {
+    if (!scanMetricsPublished) writeScanMetrics();
+    if (callable != null) {
+      callable.setClose();
+      try {
+        call(callable, caller, scannerTimeout);
+      } catch (UnknownScannerException e) {
+        // We used to catch this error, interpret, and rethrow. However, we
+        // have since decided that it's not nice for a scanner's close to
+        // throw exceptions. Chances are it was just due to lease time out.
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("scanner failed to close", e);
         }
-        callable = null;
+      } catch (IOException e) {
+        /* An exception other than UnknownScanner is unexpected. */
+        LOG.warn("scanner failed to close.", e);
       }
-      closed = true;
+      callable = null;
     }
-
-  /**
-   * Create the closest row before the specified row
-   * @param row
-   * @return a new byte array which is the closest front row of the specified one
-   */
-  protected static byte[] createClosestRowBefore(byte[] row) {
-    if (row == null) {
-      throw new IllegalArgumentException("The passed row is empty");
-    }
-    if (Bytes.equals(row, HConstants.EMPTY_BYTE_ARRAY)) {
-      return MAX_BYTE_ARRAY;
-    }
-    if (row[row.length - 1] == 0) {
-      return Arrays.copyOf(row, row.length - 1);
-    } else {
-      byte[] closestFrontRow = Arrays.copyOf(row, row.length);
-      closestFrontRow[row.length - 1] = (byte) ((closestFrontRow[row.length - 1] & 0xff) - 1);
-      closestFrontRow = Bytes.add(closestFrontRow, MAX_BYTE_ARRAY);
-      return closestFrontRow;
-    }
+    closed = true;
   }
 
   @Override
