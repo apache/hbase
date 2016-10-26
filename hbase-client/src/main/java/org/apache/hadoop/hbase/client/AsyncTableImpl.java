@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -47,7 +46,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateResp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * The implementation of AsyncTable.
@@ -59,17 +57,11 @@ class AsyncTableImpl implements AsyncTable {
 
   private final TableName tableName;
 
-  private final int defaultScannerCaching;
-
-  private final long defaultScannerMaxResultSize;
-
   private long readRpcTimeoutNs;
 
   private long writeRpcTimeoutNs;
 
   private long operationTimeoutNs;
-
-  private long scanTimeoutNs;
 
   public AsyncTableImpl(AsyncConnectionImpl conn, TableName tableName) {
     this.conn = conn;
@@ -78,9 +70,6 @@ class AsyncTableImpl implements AsyncTable {
     this.writeRpcTimeoutNs = conn.connConf.getWriteRpcTimeoutNs();
     this.operationTimeoutNs = tableName.isSystemTable() ? conn.connConf.getMetaOperationTimeoutNs()
         : conn.connConf.getOperationTimeoutNs();
-    this.defaultScannerCaching = conn.connConf.getScannerCaching();
-    this.defaultScannerMaxResultSize = conn.connConf.getScannerMaxResultSize();
-    this.scanTimeoutNs = conn.connConf.getScanTimeoutNs();
   }
 
   @Override
@@ -267,8 +256,8 @@ class AsyncTableImpl implements AsyncTable {
             future.completeExceptionally(controller.getFailed());
           } else {
             try {
-              org.apache.hadoop.hbase.client.MultiResponse multiResp =
-                  ResponseConverter.getResults(req, resp, controller.cellScanner());
+              org.apache.hadoop.hbase.client.MultiResponse multiResp = ResponseConverter
+                  .getResults(req, resp, controller.cellScanner());
               Throwable ex = multiResp.getException(regionName);
               if (ex != null) {
                 future
@@ -314,38 +303,6 @@ class AsyncTableImpl implements AsyncTable {
             new BinaryComparator(value), CompareType.valueOf(compareOp.name()), rm),
           (resp) -> resp.getExists()))
         .call();
-  }
-
-  private <T> CompletableFuture<T> failedFuture(Throwable error) {
-    CompletableFuture<T> future = new CompletableFuture<>();
-    future.completeExceptionally(error);
-    return future;
-  }
-
-  private Scan setDefaultScanConfig(Scan scan) {
-    // always create a new scan object as we may reset the start row later.
-    Scan newScan = ReflectionUtils.newInstance(scan.getClass(), scan);
-    if (newScan.getCaching() <= 0) {
-      newScan.setCaching(defaultScannerCaching);
-    }
-    if (newScan.getMaxResultSize() <= 0) {
-      newScan.setMaxResultSize(defaultScannerMaxResultSize);
-    }
-    return newScan;
-  }
-
-  @Override
-  public CompletableFuture<List<Result>> smallScan(Scan scan, int limit) {
-    if (!scan.isSmall()) {
-      return failedFuture(new IllegalArgumentException("Only small scan is allowed"));
-    }
-    if (scan.getBatch() > 0 || scan.getAllowPartialResults()) {
-      return failedFuture(
-        new IllegalArgumentException("Batch and allowPartial is not allowed for small scan"));
-    }
-    return conn.callerFactory.smallScan().table(tableName).setScan(setDefaultScanConfig(scan))
-        .limit(limit).scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS)
-        .rpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS).call();
   }
 
   @Override

@@ -16,11 +16,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowBefore;
-
-import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -37,6 +35,8 @@ import org.apache.hadoop.hbase.client.ClientSmallScanner.SmallScannerCallable;
 import org.apache.hadoop.hbase.client.ClientSmallScanner.SmallScannerCallableFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>

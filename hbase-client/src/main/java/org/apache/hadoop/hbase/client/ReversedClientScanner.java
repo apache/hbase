@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowBefore;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 

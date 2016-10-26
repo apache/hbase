@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import com.google.common.base.Preconditions;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -313,26 +312,4 @@ public interface AsyncTable {
    */
   CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, RowMutations mutation);
-
-  /**
-   * Just call {@link #smallScan(Scan, int)} with {@link Integer#MAX_VALUE}.
-   * @see #smallScan(Scan, int)
-   */
-  default CompletableFuture<List<Result>> smallScan(Scan scan) {
-    return smallScan(scan, Integer.MAX_VALUE);
-  }
-
-  /**
-   * Return all the results that match the given scan object. The number of the returned results
-   * will not be greater than {@code limit}.
-   * <p>
-   * Notice that the scan must be small, and should not use batch or allowPartialResults. The
-   * {@code caching} property of the scan object is also ignored as we will use {@code limit}
-   * instead.
-   * @param scan A configured {@link Scan} object.
-   * @param limit the limit of results count
-   * @return The results of this small scan operation. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
-   */
-  CompletableFuture<List<Result>> smallScan(Scan scan, int limit);
 }
