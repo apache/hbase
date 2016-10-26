@@ -5310,16 +5310,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return getRowLock(row, false);
   }
 
-  /**
-   *
-   * Get a row lock for the specified row. All locks are reentrant.
-   *
-   * Before calling this function make sure that a region operation has already been
-   * started (the calling thread has already acquired the region-close-guard lock).
-   * @param row The row actions will be performed against
-   * @param readLock is the lock reader or writer. True indicates that a non-exlcusive
-   *                 lock is requested
-   */
   @Override
   public RowLock getRowLock(byte[] row, boolean readLock) throws IOException {
     // Make sure the row is inside of this region before getting the lock for it.
