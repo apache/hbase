@@ -134,6 +134,10 @@ public class ByteBufferListOutputStream extends ByteBufferOutputStream {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * We can be assured that the buffers returned by this method are all flipped
+   * @return list of bytebuffers
+   */
   public List<ByteBuffer> getByteBuffers() {
     if (!this.lastBufFlipped) {
       this.lastBufFlipped = true;
