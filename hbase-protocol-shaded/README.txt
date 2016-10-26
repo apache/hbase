@@ -33,7 +33,10 @@ your $PATH as in:
  $ export PATH=~/bin/protobuf-3.1.0/src:$PATH
 
 .. or pass -Dprotoc.path=PATH_TO_PROTOC when running
-the below mvn commands. You may need to download protobuf and
+the below mvn commands. NOTE: The protoc that we use internally
+is very likely NOT what is used over in the hbase-protocol
+module (here we'd use a 3.1.0 where in hbase-protocol we'll
+use something older, a 2.5.0). You may need to download protobuf and
 build protoc first.
 
 Run:
@@ -44,10 +47,9 @@ or
 
  $ mvn install -Pcompille-protobuf
 
-to build and trigger the special generate-shaded-classes
-profile. When finished, the content of
-src/main/java/org/apache/hadoop/hbase/shaded will have
-been updated. Make sure all builds and then carefully
+to build and trigger the special generate-shaded-classes profile.
+When finished, the content of src/main/java/org/apache/hadoop/hbase/shaded
+will have been updated. Make sure all builds and then carefully
 check in the changes. Files may have been added or removed
 by the steps above.
 

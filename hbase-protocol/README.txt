@@ -30,5 +30,11 @@ mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
 If you have added a new proto file, you should add it to the pom.xml file first.
 Other modules also support the maven profile.
 
+NOTE: The protoc used here is probably NOT the same as the hbase-protocol-shaded
+module uses; here we use a more palatable version -- 2.5.0 -- wherease over in
+the internal hbase-protocol-shaded module, we'd use something newer. Be conscious
+of this when running your protoc being sure to apply the appropriate version
+per module.
+
 After you've done the above, check it in and then check it in (or post a patch
 on a JIRA with your definition file changes and the generated files).

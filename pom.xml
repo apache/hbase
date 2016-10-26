@@ -797,6 +797,7 @@
               <exclude>**/rat.txt</exclude>
               <!-- exclude the shaded protobuf files -->
               <exclude>**/shaded/com/google/protobuf/**</exclude>
+              <exclude>**/src/main/patches/**</exclude>
             </excludes>
           </configuration>
         </plugin>
