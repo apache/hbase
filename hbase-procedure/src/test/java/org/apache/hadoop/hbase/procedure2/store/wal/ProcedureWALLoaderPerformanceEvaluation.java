@@ -54,7 +54,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
       "Number of WALs to write. If -ve or 0, uses " + WALProcedureStore.ROLL_THRESHOLD_CONF_KEY +
           " conf to roll the logs. Default: " + DEFAULT_NUM_WALS);
   public static int DEFAULT_STATE_SIZE = 1024;  // 1KB
-  public static Option STATE_SIZE_OPTION = new Option("size", true,
+  public static Option STATE_SIZE_OPTION = new Option("state_size", true,
       "Size of serialized state in bytes to write on update. Default: " + DEFAULT_STATE_SIZE
           + " bytes");
   public static int DEFAULT_UPDATES_PER_PROC = 5;
@@ -212,6 +212,12 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("******************************************");
     System.out.println("Load time : " + (timeTaken / 1000.0f) + "sec");
     System.out.println("******************************************");
+    System.out.println("Raw format for scripts");
+        System.out.println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, "
+                + "total_time_ms=%s]",
+        NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), serializedState.length,
+        UPDATES_PER_PROC_OPTION.getOpt(), updatesPerProc, DELETE_PROCS_FRACTION_OPTION.getOpt(),
+        deleteProcsFraction, NUM_WALS_OPTION.getOpt(), numWals, timeTaken));
   }
 
   public void tearDownProcedureStore() {
