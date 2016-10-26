@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ClientSmallScanner.SmallScannerCallableFactory;
+import org.apache.hadoop.hbase.client.ClientSmallReversedScanner.SmallReversedScannerCallableFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -102,15 +102,15 @@ public class TestClientSmallReversedScanner {
     };
   }
 
-  private SmallScannerCallableFactory getFactory(
+  private SmallReversedScannerCallableFactory getFactory(
       final ScannerCallableWithReplicas callableWithReplicas) {
-    return new SmallScannerCallableFactory() {
+    return new SmallReversedScannerCallableFactory() {
       @Override
       public ScannerCallableWithReplicas getCallable(ClusterConnection connection, TableName table,
           Scan scan, ScanMetrics scanMetrics, byte[] localStartKey, int cacheNum,
           RpcControllerFactory controllerFactory, ExecutorService pool,
           int primaryOperationTimeout, int retries, int scannerTimeout, Configuration conf,
-          RpcRetryingCaller<Result[]> caller) {
+          RpcRetryingCaller<Result[]> caller, boolean isFirstRegionToLocate) {
         return callableWithReplicas;
       }
     };
@@ -135,7 +135,7 @@ public class TestClientSmallReversedScanner {
     // Intentionally leave a "default" caching size in the Scan. No matter the value, we
     // should continue based on the server context
 
-    SmallScannerCallableFactory factory = getFactory(callableWithReplicas);
+    SmallReversedScannerCallableFactory factory = getFactory(callableWithReplicas);
 
     try (ClientSmallReversedScanner csrs = new ClientSmallReversedScanner(conf, scan,
         TableName.valueOf("table"), clusterConn, rpcFactory, controllerFactory, pool,
@@ -204,7 +204,7 @@ public class TestClientSmallReversedScanner {
     // While the server returns 2 records per batch, we expect more records.
     scan.setCaching(2);
 
-    SmallScannerCallableFactory factory = getFactory(callableWithReplicas);
+    SmallReversedScannerCallableFactory factory = getFactory(callableWithReplicas);
 
     try (ClientSmallReversedScanner csrs = new ClientSmallReversedScanner(conf, scan,
         TableName.valueOf("table"), clusterConn, rpcFactory, controllerFactory, pool,
@@ -280,7 +280,7 @@ public class TestClientSmallReversedScanner {
     // While the server return 2 records per RPC, we expect there to be more records.
     scan.setCaching(2);
 
-    SmallScannerCallableFactory factory = getFactory(callableWithReplicas);
+    SmallReversedScannerCallableFactory factory = getFactory(callableWithReplicas);
 
     try (ClientSmallReversedScanner csrs = new ClientSmallReversedScanner(conf, scan,
         TableName.valueOf("table"), clusterConn, rpcFactory, controllerFactory, pool,
@@ -316,7 +316,7 @@ public class TestClientSmallReversedScanner {
     ScannerCallableWithReplicas callableWithReplicas = Mockito
         .mock(ScannerCallableWithReplicas.class);
 
-    SmallScannerCallableFactory factory = getFactory(callableWithReplicas);
+    SmallReversedScannerCallableFactory factory = getFactory(callableWithReplicas);
 
     try (ClientSmallReversedScanner csrs = new ClientSmallReversedScanner(conf, scan,
         TableName.valueOf("table"), clusterConn, rpcFactory, controllerFactory, pool,
