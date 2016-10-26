@@ -47,7 +47,7 @@ public class MyHBaseDAO {
         Put put = createPut(obj);
         table.put(put);
     }
-    
+
     private static Put createPut(HBaseTestObj obj) {
         Put put = new Put(Bytes.toBytes(obj.getRowKey()));
         put.add(Bytes.toBytes("CF"), Bytes.toBytes("CQ-1"),
@@ -96,13 +96,14 @@ public class TestMyHbaseDAOData {
 
 These tests ensure that your `createPut` method creates, populates, and returns a `Put` object with expected values.
 Of course, JUnit can do much more than this.
-For an introduction to JUnit, see link:https://github.com/junit-team/junit/wiki/Getting-started. 
+For an introduction to JUnit, see https://github.com/junit-team/junit/wiki/Getting-started.
 
+[[mockito]]
 == Mockito
 
 Mockito is a mocking framework.
 It goes further than JUnit by allowing you to test the interactions between objects without having to replicate the entire environment.
-You can read more about Mockito at its project site, link:https://code.google.com/p/mockito/.
+You can read more about Mockito at its project site, https://code.google.com/p/mockito/.
 
 You can use Mockito to do unit testing on smaller units.
 For instance, you can mock a `org.apache.hadoop.hbase.Server` instance or a `org.apache.hadoop.hbase.master.MasterServices` interface reference rather than a full-blown `org.apache.hadoop.hbase.master.HMaster`.
@@ -133,7 +134,7 @@ public class TestMyHBaseDAO{
   Configuration config = HBaseConfiguration.create();
   @Mock
   Connection connection = ConnectionFactory.createConnection(config);
-  @Mock 
+  @Mock
   private Table table;
   @Captor
   private ArgumentCaptor putCaptor;
@@ -150,7 +151,7 @@ public class TestMyHBaseDAO{
     MyHBaseDAO.insertRecord(table, obj);
     verify(table).put(putCaptor.capture());
     Put put = putCaptor.getValue();
-  
+
     assertEquals(Bytes.toString(put.getRow()), obj.getRowKey());
     assert(put.has(Bytes.toBytes("CF"), Bytes.toBytes("CQ-1")));
     assert(put.has(Bytes.toBytes("CF"), Bytes.toBytes("CQ-2")));
@@ -182,7 +183,7 @@ public class MyReducer extends TableReducer<Text, Text, ImmutableBytesWritable> 
    public static final byte[] CF = "CF".getBytes();
    public static final byte[] QUALIFIER = "CQ-1".getBytes();
    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-     //bunch of processing to extract data to be inserted, in our case, lets say we are simply
+     //bunch of processing to extract data to be inserted, in our case, let's say we are simply
      //appending all the records we receive from the mapper for this particular
      //key and insert one record into HBase
      StringBuffer data = new StringBuffer();
@@ -197,7 +198,7 @@ public class MyReducer extends TableReducer<Text, Text, ImmutableBytesWritable> 
  }
 ----
 
-To test this code, the first step is to add a dependency to MRUnit to your Maven POM file. 
+To test this code, the first step is to add a dependency to MRUnit to your Maven POM file.
 
 [source,xml]
 ----
@@ -225,16 +226,16 @@ public class MyReducerTest {
       MyReducer reducer = new MyReducer();
       reduceDriver = ReduceDriver.newReduceDriver(reducer);
     }
-  
+
    @Test
    public void testHBaseInsert() throws IOException {
-      String strKey = "RowKey-1", strValue = "DATA", strValue1 = "DATA1", 
+      String strKey = "RowKey-1", strValue = "DATA", strValue1 = "DATA1",
 strValue2 = "DATA2";
       List<Text> list = new ArrayList<Text>();
       list.add(new Text(strValue));
       list.add(new Text(strValue1));
       list.add(new Text(strValue2));
-      //since in our case all that the reducer is doing is appending the records that the mapper   
+      //since in our case all that the reducer is doing is appending the records that the mapper
       //sends it, we should get the following back
       String expectedOutput = strValue + strValue1 + strValue2;
      //Setup Input, mimic what mapper would have passed
@@ -242,10 +243,10 @@ strValue2 = "DATA2";
       reduceDriver.withInput(new Text(strKey), list);
       //run the reducer and get its output
       List<Pair<ImmutableBytesWritable, Writable>> result = reduceDriver.run();
-    
+
       //extract key from result and verify
       assertEquals(Bytes.toString(result.get(0).getFirst().get()), strKey);
-    
+
       //extract value for CF/QUALIFIER and verify
       Put a = (Put)result.get(0).getSecond();
       String c = Bytes.toString(a.get(CF, QUALIFIER).get(0).getValue());
@@ -259,7 +260,7 @@ Your MRUnit test verifies that the output is as expected, the Put that is insert
 
 MRUnit includes a MapperDriver to test mapping jobs, and you can use MRUnit to test other operations, including reading from HBase, processing data, or writing to HDFS,
 
-== Integration Testing with a HBase Mini-Cluster
+== Integration Testing with an HBase Mini-Cluster
 
 HBase ships with HBaseTestingUtility, which makes it easy to write integration tests using a [firstterm]_mini-cluster_.
 The first step is to add some dependencies to your Maven POM file.
@@ -267,37 +268,18 @@ Check the versions to be sure they are appropriate.
 
 [source,xml]
 ----
+<properties>
+  <hbase.version>2.0.0-SNAPSHOT</hbase.version>
+</properties>
 
-<dependency>
-    <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-common</artifactId>
-    <version>2.0.0</version>
-    <type>test-jar</type>
-    <scope>test</scope>
-</dependency>
-
-<dependency>
+<dependencies>
+  <dependency>
     <groupId>org.apache.hbase</groupId>
-    <artifactId>hbase</artifactId>
-    <version>0.98.3</version>
-    <type>test-jar</type>
+    <artifactId>hbase-testing-util</artifactId>
+    <version>${hbase.version}</version>
     <scope>test</scope>
-</dependency>
-        
-<dependency>
-    <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-hdfs</artifactId>
-    <version>2.0.0</version>
-    <type>test-jar</type>
-    <scope>test</scope>
-</dependency>
-
-<dependency>
-    <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-hdfs</artifactId>
-    <version>2.0.0</version>
-    <scope>test</scope>
-</dependency>
+  </dependency>
+</dependencies>
 ----
 
 This code represents an integration test for the MyDAO insert shown in <<unit.tests,unit.tests>>.
@@ -308,8 +290,9 @@ This code represents an integration test for the MyDAO insert shown in <<unit.te
 public class MyHBaseIntegrationTest {
     private static HBaseTestingUtility utility;
     byte[] CF = "CF".getBytes();
-    byte[] QUALIFIER = "CQ-1".getBytes();
-    
+    byte[] CQ1 = "CQ-1".getBytes();
+    byte[] CQ2 = "CQ-2".getBytes();
+
     @Before
     public void setup() throws Exception {
     	utility = new HBaseTestingUtility();
@@ -318,8 +301,7 @@ public class MyHBaseIntegrationTest {
 
     @Test
         public void testInsert() throws Exception {
-       	 HTableInterface table = utility.createTable(Bytes.toBytes("MyTest"),
-       			 Bytes.toBytes("CF"));
+       	 HTableInterface table = utility.createTable(Bytes.toBytes("MyTest"), CF);
        	 HBaseTestObj obj = new HBaseTestObj();
        	 obj.setRowKey("ROWKEY-1");
        	 obj.setData1("DATA-1");
@@ -343,7 +325,7 @@ This code creates an HBase mini-cluster and starts it.
 Next, it creates a table called `MyTest` with one column family, `CF`.
 A record is inserted, a Get is performed from the same table, and the insertion is verified.
 
-NOTE: Starting the mini-cluster takes about 20-30 seconds, but that should be appropriate for integration testing. 
+NOTE: Starting the mini-cluster takes about 20-30 seconds, but that should be appropriate for integration testing.
 
 To use an HBase mini-cluster on Microsoft Windows, you need to use a Cygwin environment.
 

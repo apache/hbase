@@ -93,7 +93,7 @@ The colon character (`:`) delimits the column family from the column family _qua
 |===
 |Row Key |Time Stamp  |ColumnFamily `contents` |ColumnFamily `anchor`|ColumnFamily `people`
 |"com.cnn.www" |t9    | |anchor:cnnsi.com = "CNN"   |
-|"com.cnn.www" |t8    | |anchor:my.look.ca = "CNN.com" |  
+|"com.cnn.www" |t8    | |anchor:my.look.ca = "CNN.com" |
 |"com.cnn.www" |t6  | contents:html = "<html>..."    | |
 |"com.cnn.www" |t5  | contents:html = "<html>..."    | |
 |"com.cnn.www" |t3  | contents:html = "<html>..."    | |
@@ -171,7 +171,7 @@ For more information about the internals of how Apache HBase stores data, see <<
 A namespace is a logical grouping of tables analogous to a database in relation database systems.
 This abstraction lays the groundwork for upcoming multi-tenancy related features:
 
-* Quota Management (link:https://issues.apache.org/jira/browse/HBASE-8410[HBASE-8410]) - Restrict the amount of resources (ie regions, tables) a namespace can consume.
+* Quota Management (link:https://issues.apache.org/jira/browse/HBASE-8410[HBASE-8410]) - Restrict the amount of resources (i.e. regions, tables) a namespace can consume.
 * Namespace Security Administration (link:https://issues.apache.org/jira/browse/HBASE-9206[HBASE-9206]) - Provide another level of security administration for tenants.
 * Region server groups (link:https://issues.apache.org/jira/browse/HBASE-6721[HBASE-6721]) - A namespace/table can be pinned onto a subset of RegionServers thus guaranteeing a course level of isolation.
 
@@ -257,7 +257,7 @@ For example, the columns _courses:history_ and _courses:math_ are both members o
 The colon character (`:`) delimits the column family from the column family qualifier.
 The column family prefix must be composed of _printable_ characters.
 The qualifying tail, the column family _qualifier_, can be made of any arbitrary bytes.
-Column families must be declared up front at schema definition time whereas columns do not need to be defined at schema time but can be conjured on the fly while the table is up an running.
+Column families must be declared up front at schema definition time whereas columns do not need to be defined at schema time but can be conjured on the fly while the table is up and running.
 
 Physically, all column family members are stored together on the filesystem.
 Because tunings and storage specifications are done at the column family level, it is advised that all column family members have the same general access pattern and size characteristics.
@@ -279,7 +279,7 @@ Gets are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hba
 
 === Put
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put(org.apache.hadoop.hbase.client.Put)[Table.put] (writeBuffer) or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List, java.lang.Object[])[Table.batch] (non-writeBuffer).
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put(org.apache.hadoop.hbase.client.Put)[Table.put] (writeBuffer) or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List,%20java.lang.Object%5B%5D)[Table.batch] (non-writeBuffer).
 
 [[scan]]
 === Scans
@@ -542,6 +542,7 @@ Thus, while HBase can support not only a wide number of columns per row, but a h
 The only way to get a complete set of columns that exist for a ColumnFamily is to process all the rows.
 For more information about how HBase stores data internally, see <<keyvalue,keyvalue>>.
 
+[[joins]]
 == Joins
 
 Whether HBase supports joins is a common question on the dist-list, and there is a simple answer:  it doesn't, at not least in the way that RDBMS' support them (e.g., with equi-joins or outer-joins in SQL).  As has been illustrated in this chapter, the read data model operations in HBase are Get and Scan.
@@ -552,7 +553,7 @@ hash-joins). So which is the best approach? It depends on what you are trying to
 
 == ACID
 
-See link:http://hbase.apache.org/acid-semantics.html[ACID Semantics].
+See link:/acid-semantics.html[ACID Semantics].
 Lars Hofhansl has also written a note on link:http://hadoop-hbase.blogspot.com/2012/03/acid-in-hbase.html[ACID in HBase].
 
 ifdef::backend-docbook[]

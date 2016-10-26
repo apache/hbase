@@ -30,15 +30,14 @@
 :toc: left
 :source-language: java
 
-The Apache HBase project welcomes contributions to all aspects of the project, including the documentation.
+The Apache HBase project welcomes contributions to all aspects of the project,
+including the documentation.
 
 In HBase, documentation includes the following areas, and probably some others:
 
 * The link:http://hbase.apache.org/book.html[HBase Reference
   Guide] (this book)
 * The link:http://hbase.apache.org/[HBase website]
-* The link:http://wiki.apache.org/hadoop/Hbase[HBase
-  Wiki]
 * API documentation
 * Command-line utility output and help text
 * Web UI strings, explicit help text, context-sensitive strings, and others
@@ -46,99 +45,122 @@ In HBase, documentation includes the following areas, and probably some others:
 * Comments in source files, configuration files, and others
 * Localization of any of the above into target languages other than English
 
-No matter which area you want to help out with, the first step is almost always to download (typically by cloning the Git repository) and familiarize yourself with the HBase source code.
-The only exception in the list above is the HBase Wiki, which is edited online.
-For information on downloading and building the source, see <<developer,developer>>.
-
-=== Getting Access to the Wiki
-
-The HBase Wiki is not well-maintained and much of its content has been moved into the HBase Reference Guide (this guide). However, some pages on the Wiki are well maintained, and it would be great to have some volunteers willing to help out with the Wiki.
-To request access to the Wiki, register a new account at link:https://wiki.apache.org/hadoop/Hbase?action=newaccount[https://wiki.apache.org/hadoop/Hbase?action=newaccount].
-Contact one of the HBase committers, who can either give you access or refer you to someone who can.
+No matter which area you want to help out with, the first step is almost always
+to download (typically by cloning the Git repository) and familiarize yourself
+with the HBase source code. For information on downloading and building the source,
+see <<developer,developer>>.
 
 === Contributing to Documentation or Other Strings
 
-If you spot an error in a string in a UI, utility, script, log message, or elsewhere, or you think something could be made more clear, or you think text needs to be added where it doesn't currently exist, the first step is to file a JIRA.
-Be sure to set the component to `Documentation` in addition any other involved components.
-Most components have one or more default owners, who monitor new issues which come into those queues.
-Regardless of whether you feel able to fix the bug, you should still file bugs where you see them.
+If you spot an error in a string in a UI, utility, script, log message, or elsewhere,
+or you think something could be made more clear, or you think text needs to be added
+where it doesn't currently exist, the first step is to file a JIRA. Be sure to set
+the component to `Documentation` in addition any other involved components. Most
+components have one or more default owners, who monitor new issues which come into
+those queues. Regardless of whether you feel able to fix the bug, you should still
+file bugs where you see them.
 
 If you want to try your hand at fixing your newly-filed bug, assign it to yourself.
-You will need to clone the HBase Git repository to your local system and work on the issue there.
-When you have developed a potential fix, submit it for review.
-If it addresses the issue and is seen as an improvement, one of the HBase committers will commit it to one or more branches, as appropriate.
+You will need to clone the HBase Git repository to your local system and work on
+the issue there. When you have developed a potential fix, submit it for review.
+If it addresses the issue and is seen as an improvement, one of the HBase committers
+will commit it to one or more branches, as appropriate.
 
+[[submit_doc_patch_procedure]]
 .Procedure: Suggested Work flow for Submitting Patches
-This procedure goes into more detail than Git pros will need, but is included in this appendix so that people unfamiliar with Git can feel confident contributing to HBase while they learn.
+This procedure goes into more detail than Git pros will need, but is included
+in this appendix so that people unfamiliar with Git can feel confident contributing
+to HBase while they learn.
 
 . If you have not already done so, clone the Git repository locally.
   You only need to do this once.
-. Fairly often, pull remote changes into your local repository by using the `git pull` command, while your master branch is checked out.
+. Fairly often, pull remote changes into your local repository by using the
+`git pull` command, while your tracking branch is checked out.
 . For each issue you work on, create a new branch.
-  One convention that works well for naming the branches is to name a given branch the same as the JIRA it relates to:
+  One convention that works well for naming the branches is to name a given branch
+  the same as the JIRA it relates to:
 +
 ----
 $ git checkout -b HBASE-123456
 ----
 
-. Make your suggested changes on your branch, committing your changes to your local repository often.
-  If you need to switch to working on a different issue, remember to check out the appropriate branch.
-. When you are ready to submit your patch, first be sure that HBase builds cleanly and behaves as expected in your modified branch.
-  If you have made documentation changes, be sure the documentation and website builds by running `mvn clean site`.
-+
-NOTE: Before you use the `site` target the very first time, be sure you have built HBase at least once, in order to fetch all the Maven dependencies you need.
-+
-----
-$ mvn clean install -DskipTests               # Builds HBase
-----
-+
-----
-$ mvn clean site -DskipTests                  # Builds the website and documentation
-----
-+
-If any errors occur, address them.
-
-. If it takes you several days or weeks to implement your fix, or you know that the area of the code you are working in has had a lot of changes lately, make sure you rebase your branch against the remote master and take care of any conflicts before submitting your patch.
+. Make your suggested changes on your branch, committing your changes to your
+local repository often. If you need to switch to working on a different issue,
+remember to check out the appropriate branch.
+. When you are ready to submit your patch, first be sure that HBase builds cleanly
+and behaves as expected in your modified branch.
+. If you have made documentation changes, be sure the documentation and website
+builds by running `mvn clean site`.
+. If it takes you several days or weeks to implement your fix, or you know that
+the area of the code you are working in has had a lot of changes lately, make
+sure you rebase your branch against the remote master and take care of any conflicts
+before submitting your patch.
 +
 ----
-
 $ git checkout HBASE-123456
 $ git rebase origin/master
 ----
 
-. Generate your patch against the remote master.
-  Run the following command from the top level of your git repository (usually called `hbase`):
+. Generate your patch against the remote master. Run the following command from
+the top level of your git repository (usually called `hbase`):
 +
 ----
 $ git format-patch --stdout origin/master > HBASE-123456.patch
 ----
 +
 The name of the patch should contain the JIRA ID.
-Look over the patch file to be sure that you did not change any additional files by accident and that there are no other surprises.
-When you are satisfied, attach the patch to the JIRA and click the btn:[Patch Available] button.
-A reviewer will review your patch.
-If you need to submit a new version of the patch, leave the old one on the JIRA and add a version number to the name of the new patch.
-
+. Look over the patch file to be sure that you did not change any additional files
+by accident and that there are no other surprises.
+. When you are satisfied, attach the patch to the JIRA and click the
+btn:[Patch Available] button. A reviewer will review your patch.
+. If you need to submit a new version of the patch, leave the old one on the
+JIRA and add a version number to the name of the new patch.
 . After a change has been committed, there is no need to keep your local branch around.
-  Instead you should run `git pull` to get the new change into your master branch.
 
 === Editing the HBase Website
 
 The source for the HBase website is in the HBase source, in the _src/main/site/_ directory.
-Within this directory, source for the individual pages is in the _xdocs/_ directory, and images referenced in those pages are in the _images/_ directory.
+Within this directory, source for the individual pages is in the _xdocs/_ directory,
+and images referenced in those pages are in the _resources/images/_ directory.
 This directory also stores images used in the HBase Reference Guide.
 
-The website's pages are written in an HTML-like XML dialect called xdoc, which has a reference guide at link:http://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html.
-You can edit these files in a plain-text editor, an IDE, or an XML editor such as XML Mind XML Editor (XXE) or Oxygen XML Author. 
+The website's pages are written in an HTML-like XML dialect called xdoc, which
+has a reference guide at
+http://maven.apache.org/archives/maven-1.x/plugins/xdoc/reference/xdocs.html.
+You can edit these files in a plain-text editor, an IDE, or an XML editor such
+as XML Mind XML Editor (XXE) or Oxygen XML Author.
 
-To preview your changes, build the website using the +mvn clean site
-                -DskipTests+ command.
-The HTML output resides in the _target/site/_ directory.
-When you are satisfied with your changes, follow the procedure in <<submit_doc_patch_procedure,submit doc patch procedure>> to submit your patch.
+To preview your changes, build the website using the `mvn clean site -DskipTests`
+command. The HTML output resides in the _target/site/_ directory.
+When you are satisfied with your changes, follow the procedure in
+<<submit_doc_patch_procedure,submit doc patch procedure>> to submit your patch.
+
+[[website_publish]]
+=== Publishing the HBase Website and Documentation
+
+HBase uses the ASF's `gitpubsub` mechanism.
+. After generating the website and documentation
+artifacts using `mvn clean site site:stage`, check out the `asf-site` repository.
+
+. Remove previously-generated content using the following command:
++
+----
+rm -rf rm -rf *apidocs* *xref* *book* *.html *.pdf* css js
+----
++
+WARNING: Do not remove the `0.94/` directory. To regenerate them, you must check out
+the 0.94 branch and run `mvn clean site site:stage` from there, and then copy the
+artifacts to the 0.94/ directory of the `asf-site` branch.
+
+. Copy the contents of `target/staging` to the branch.
+
+. Add and commit your changes, and submit a patch for review.
 
 === HBase Reference Guide Style Guide and Cheat Sheet
 
-The HBase Reference Guide is written in Asciidoc and built using link:http://asciidoctor.org[AsciiDoctor]. The following cheat sheet is included for your reference. More nuanced and comprehensive documentation is available at link:http://asciidoctor.org/docs/user-manual/.
+The HBase Reference Guide is written in Asciidoc and built using link:http://asciidoctor.org[AsciiDoctor].
+The following cheat sheet is included for your reference. More nuanced and comprehensive documentation
+is available at http://asciidoctor.org/docs/user-manual/.
 
 .AsciiDoc Cheat Sheet
 [cols="1,1,a",options="header"]
@@ -147,15 +169,15 @@ The HBase Reference Guide is written in Asciidoc and built using link:http://asc
 | A paragraph | a paragraph | Just type some text with a blank line at the top and bottom.
 | Add line breaks within a paragraph without adding blank lines | Manual line breaks | This will break + at the plus sign. Or prefix the whole paragraph with a line containing '[%hardbreaks]'
 | Give a title to anything | Colored italic bold differently-sized text | .MyTitle (no space between the period and the words) on the line before the thing to be titled
-| In-Line Code or commands | monospace | \`text`  
+| In-Line Code or commands | monospace | \`text`
 | In-line literal content (things to be typed exactly as shown) | bold mono | \*\`typethis`*
 | In-line replaceable content (things to substitute with your own values) | bold italic mono | \*\_typesomething_*
-| Code blocks with highlighting | monospace, highlighted, preserve space | 
+| Code blocks with highlighting | monospace, highlighted, preserve space |
 ........
 [source,java]
----- 
-  myAwesomeCode() { 
-} 
+----
+  myAwesomeCode() {
+}
 ----
 ........
 | Code block included from a separate file | included just as though it were part of the main file |
@@ -165,51 +187,52 @@ The HBase Reference Guide is written in Asciidoc and built using link:http://asc
 include\::path/to/app.rb[]
 ----
 ................
-| Include only part of a separate file | Similar to Javadoc | See link:http://asciidoctor.org/docs/user-manual/#by-tagged-regions
+| Include only part of a separate file | Similar to Javadoc
+| See http://asciidoctor.org/docs/user-manual/#by-tagged-regions
 | Filenames, directory names, new terms | italic | \_hbase-default.xml_
-| External naked URLs | A link with the URL as link text | 
+| External naked URLs | A link with the URL as link text |
 ----
 link:http://www.google.com
 ----
 
-| External URLs with text | A link with arbitrary link text | 
+| External URLs with text | A link with arbitrary link text |
 ----
 link:http://www.google.com[Google]
 ----
 
-| Create an internal anchor to cross-reference | not rendered | 
+| Create an internal anchor to cross-reference | not rendered |
 ----
 [[anchor_name]]
 ----
-| Cross-reference an existing anchor using its default title| an internal hyperlink using the element title if available, otherwise using the anchor name | 
+| Cross-reference an existing anchor using its default title| an internal hyperlink using the element title if available, otherwise using the anchor name |
 ----
 <<anchor_name>>
 ----
-| Cross-reference an existing anchor using custom text | an internal hyperlink using arbitrary text | 
+| Cross-reference an existing anchor using custom text | an internal hyperlink using arbitrary text |
 ----
 <<anchor_name,Anchor Text>>
 ----
-| A block image | The image with alt text | 
+| A block image | The image with alt text |
 ----
-image::sunset.jpg[Alt Text] 
+image::sunset.jpg[Alt Text]
 ----
 (put the image in the src/main/site/resources/images directory)
-| An inline image | The image with alt text, as part of the text flow | 
+| An inline image | The image with alt text, as part of the text flow |
 ----
 image:sunset.jpg [Alt Text]
 ----
 (only one colon)
-| Link to a remote image | show an image hosted elsewhere | 
+| Link to a remote image | show an image hosted elsewhere |
 ----
-image::http://inkscape.org/doc/examples/tux.svg[Tux,250,350] 
+image::http://inkscape.org/doc/examples/tux.svg[Tux,250,350]
 ----
 (or `image:`)
 | Add dimensions or a URL to the image | depends | inside the brackets after the alt text, specify width, height and/or link="http://my_link.com"
-| A footnote | subscript link which takes you to the footnote | 
+| A footnote | subscript link which takes you to the footnote |
 ----
 Some text.footnote:[The footnote text.]
 ----
-| A note or warning with no title | The admonition image followed by the admonition | 
+| A note or warning with no title | The admonition image followed by the admonition |
 ----
 NOTE:My note here
 ----
@@ -217,7 +240,7 @@ NOTE:My note here
 ----
 WARNING:My warning here
 ----
-| A complex note | The note has a title and/or multiple paragraphs and/or code blocks or lists, etc | 
+| A complex note | The note has a title and/or multiple paragraphs and/or code blocks or lists, etc |
 ........
 .The Title
 [NOTE]
@@ -228,26 +251,26 @@ some source code
 ----
 ====
 ........
-| Bullet lists | bullet lists | 
+| Bullet lists | bullet lists |
 ----
 * list item 1
 ----
 (see http://asciidoctor.org/docs/user-manual/#unordered-lists)
-| Numbered lists | numbered list | 
+| Numbered lists | numbered list |
 ----
-. list item 2 
+. list item 2
 ----
 (see http://asciidoctor.org/docs/user-manual/#ordered-lists)
-| Checklists | Checked or unchecked boxes | 
+| Checklists | Checked or unchecked boxes |
 Checked:
 ----
-- [*] 
+- [*]
 ----
 Unchecked:
 ----
 - [ ]
 ----
-| Multiple levels of lists | bulleted or numbered or combo | 
+| Multiple levels of lists | bulleted or numbered or combo |
 ----
 . Numbered (1), at top level
 * Bullet (2), nested under 1
@@ -257,14 +280,18 @@ Unchecked:
 ** Bullet (6), nested under 5
 - [x] Checked (7), at top level
 ----
-| Labelled lists / variablelists | a list item title or summary followed by content | 
+| Labelled lists / variablelists | a list item title or summary followed by content |
 ----
-Title:: content 
+Title:: content
 
 Title::
   content
 ----
-| Sidebars, quotes, or other blocks of text | a block of text, formatted differently from the default | Delimited using different delimiters, see link:http://asciidoctor.org/docs/user-manual/#built-in-blocks-summary. Some of the examples above use delimiters like \...., ----,====.
+| Sidebars, quotes, or other blocks of text
+| a block of text, formatted differently from the default
+| Delimited using different delimiters,
+see http://asciidoctor.org/docs/user-manual/#built-in-blocks-summary.
+Some of the examples above use delimiters like \...., ----,====.
 ........
 [example]
 ====
@@ -288,7 +315,7 @@ ____
 ........
 
 If you want to insert literal Asciidoc content that keeps being interpreted, when in doubt, use eight dots as the delimiter at the top and bottom.
-| Nested Sections | chapter, section, sub-section, etc | 
+| Nested Sections | chapter, section, sub-section, etc |
 ----
 = Book (or chapter if the chapter can be built alone, see the leveloffset info below)
 
@@ -296,7 +323,7 @@ If you want to insert literal Asciidoc content that keeps being interpreted, whe
 
 === Section (or subsection, etc)
 
-==== Subsection 
+==== Subsection
 ----
 
 and so on up to 6 levels (think carefully about going deeper than 4 levels, maybe you can just titled paragraphs or lists instead). Note that you can include a book inside another book by adding the `:leveloffset:+1` macro directive directly before your include, and resetting it to 0 directly after. See the _book.adoc_ source for examples, as this is how this guide handles chapters. *Don't do it for prefaces, glossaries, appendixes, or other special types of chapters.*
@@ -309,7 +336,7 @@ include::[/path/to/file.adoc]
 
 For plenty of examples. see _book.adoc_.
 | A table | a table | See http://asciidoctor.org/docs/user-manual/#tables. Generally rows are separated by newlines and columns by pipes
-| Comment out a single line | A  line is skipped during rendering | 
+| Comment out a single line | A  line is skipped during rendering |
 `+//+ This line won't show up`
 | Comment out a block | A section of the file is skipped during rendering |
 ----
@@ -317,7 +344,7 @@ For plenty of examples. see _book.adoc_.
 Nothing between the slashes will show up.
 ////
 ----
-| Highlight text for review | text shows up with yellow background | 
+| Highlight text for review | text shows up with yellow background |
 ----
 Test between #hash marks# is highlighted yellow.
 ----
@@ -326,20 +353,27 @@ Test between #hash marks# is highlighted yellow.
 
 === Auto-Generated Content
 
-Some parts of the HBase Reference Guide, most notably <<config.files,config.files>>, are generated automatically, so that this area of the documentation stays in sync with the code.
-This is done by means of an XSLT transform, which you can examine in the source at _src/main/xslt/configuration_to_asciidoc_chapter.xsl_.
-This transforms the _hbase-common/src/main/resources/hbase-default.xml_            file into an Asciidoc output which can be included in the Reference Guide.
+Some parts of the HBase Reference Guide, most notably <<config.files,config.files>>,
+are generated automatically, so that this area of the documentation stays in
+sync with the code. This is done by means of an XSLT transform, which you can examine
+in the source at _src/main/xslt/configuration_to_asciidoc_chapter.xsl_. This
+transforms the _hbase-common/src/main/resources/hbase-default.xml_ file into an
+Asciidoc output which can be included in the Reference Guide.
+
 Sometimes, it is necessary to add configuration parameters or modify their descriptions.
-Make the modifications to the source file, and they will be included in the Reference Guide when it is rebuilt.
+Make the modifications to the source file, and they will be included in the
+Reference Guide when it is rebuilt.
 
-It is possible that other types of content can and will be automatically generated from HBase source files in the future.
-
+It is possible that other types of content can and will be automatically generated
+from HBase source files in the future.
 
 === Images in the HBase Reference Guide
 
-You can include images in the HBase Reference Guide. It is important to include an image title if possible, and alternate text always. 
-This allows screen readers to navigate to the image and also provides alternative text for the image.
-The following is an example of an image with a title and alternate text. Notice the double colon.
+You can include images in the HBase Reference Guide. It is important to include
+an image title if possible, and alternate text always. This allows screen readers
+to navigate to the image and also provides alternative text for the image.
+The following is an example of an image with a title and alternate text. Notice
+the double colon.
 
 [source,asciidoc]
 ----
@@ -347,42 +381,53 @@ The following is an example of an image with a title and alternate text. Notice 
 image::sunset.jpg[Alt Text]
 ----
 
-Here is an example of an inline image with alternate text. Notice the single colon. Inline images cannot have titles. They are generally small images like GUI buttons.
+Here is an example of an inline image with alternate text. Notice the single colon.
+Inline images cannot have titles. They are generally small images like GUI buttons.
 
 [source,asciidoc]
 ----
 image:sunset.jpg[Alt Text]
 ----
 
-
 When doing a local build, save the image to the _src/main/site/resources/images/_ directory.
 When you link to the image, do not include the directory portion of the path.
 The image will be copied to the appropriate target location during the build of the output.
 
-When you submit a patch which includes adding an image to the HBase Reference Guide, attach the image to the JIRA.
-If the committer asks where the image should be committed, it should go into the above directory.
+When you submit a patch which includes adding an image to the HBase Reference Guide,
+attach the image to the JIRA. If the committer asks where the image should be
+committed, it should go into the above directory.
 
 === Adding a New Chapter to the HBase Reference Guide
 
-If you want to add a new chapter to the HBase Reference Guide, the easiest way is to copy an existing chapter file, rename it, and change the ID (in double brackets) and title. Chapters are located in the _src/main/asciidoc/_chapters/_ directory.
+If you want to add a new chapter to the HBase Reference Guide, the easiest way
+is to copy an existing chapter file, rename it, and change the ID (in double
+brackets) and title. Chapters are located in the _src/main/asciidoc/_chapters/_
+directory.
 
-Delete the existing content and create the new content.
-Then open the _src/main/asciidoc/book.adoc_ file, which is the main file for the HBase Reference Guide, and copy an existing `include` element to include your new chapter in the appropriate location.
-Be sure to add your new file to your Git repository before creating your patch.
+Delete the existing content and create the new content. Then open the
+_src/main/asciidoc/book.adoc_ file, which is the main file for the HBase Reference
+Guide, and copy an existing `include` element to include your new chapter in the
+appropriate location. Be sure to add your new file to your Git repository before
+creating your patch.
 
 When in doubt, check to see how other files have been included.
 
 === Common Documentation Issues
 
-The following documentation issues come up often.
-Some of these are preferences, but others can create mysterious build errors or other problems.
+The following documentation issues come up often. Some of these are preferences,
+but others can create mysterious build errors or other problems.
 
 [qanda]
 Isolate Changes for Easy Diff Review.::
-  Be careful with pretty-printing or re-formatting an entire XML file, even if the formatting has degraded over time. If you need to reformat a file, do that in a separate JIRA where you do not change any content. Be careful because some XML editors do a bulk-reformat when you open a new file, especially if you use GUI mode in the editor.
+  Be careful with pretty-printing or re-formatting an entire XML file, even if
+  the formatting has degraded over time. If you need to reformat a file, do that
+  in a separate JIRA where you do not change any content. Be careful because some
+  XML editors do a bulk-reformat when you open a new file, especially if you use
+  GUI mode in the editor.
 
 Syntax Highlighting::
-  The HBase Reference Guide uses `coderay` for syntax highlighting. To enable syntax highlighting for a given code listing, use the following type of syntax:
+  The HBase Reference Guide uses `coderay` for syntax highlighting. To enable
+  syntax highlighting for a given code listing, use the following type of syntax:
 +
 ........
 [source,xml]
@@ -391,5 +436,6 @@ Syntax Highlighting::
 ----
 ........
 +
-Several syntax types are supported. The most interesting ones for the HBase Reference Guide are `java`, `xml`, `sql`, and `bash`.
+Several syntax types are supported. The most interesting ones for the HBase
+Reference Guide are `java`, `xml`, `sql`, and `bash`.
 

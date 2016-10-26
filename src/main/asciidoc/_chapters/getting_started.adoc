@@ -19,6 +19,7 @@
  */
 ////
 
+[[getting_started]]
 = Getting Started
 :doctype: book
 :numbered:
@@ -57,7 +58,7 @@ Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1. U
 
 .Example /etc/hosts File for Ubuntu
 ====
-The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble. 
+The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble.
 [listing]
 ----
 127.0.0.1 localhost
@@ -80,15 +81,17 @@ See <<java,Java>> for information about supported JDK versions.
   This will take you to a mirror of _HBase
   Releases_.
   Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem.
-  Be sure to choose the version that corresponds with the version of Hadoop you are likely to use later.
-  In most cases, you should choose the file for Hadoop 2, which will be called something like _hbase-0.98.3-hadoop2-bin.tar.gz_.
+  Prior to 1.x version, be sure to choose the version that corresponds with the version of Hadoop you are
+  likely to use later (in most cases, you should choose the file for Hadoop 2, which will be called
+  something like _hbase-0.98.13-hadoop2-bin.tar.gz_).
   Do not download the file ending in _src.tar.gz_ for now.
 . Extract the downloaded file, and change to the newly-created directory.
 +
+[source,subs="attributes"]
 ----
 
-$ tar xzvf hbase-<?eval ${project.version}?>-hadoop2-bin.tar.gz
-$ cd hbase-<?eval ${project.version}?>-hadoop2/
+$ tar xzvf hbase-{Version}-bin.tar.gz
+$ cd hbase-{Version}/
 ----
 
 . For HBase 0.98.5 and later, you are required to set the `JAVA_HOME` environment variable before starting HBase.
@@ -286,7 +289,7 @@ $
 === Intermediate - Pseudo-Distributed Local Install
 
 After working your way through <<quickstart,quickstart>>, you can re-configure HBase to run in pseudo-distributed mode.
-Pseudo-distributed mode means that HBase still runs completely on a single host, but each HBase daemon (HMaster, HRegionServer, and Zookeeper) runs as a separate process.
+Pseudo-distributed mode means that HBase still runs completely on a single host, but each HBase daemon (HMaster, HRegionServer, and ZooKeeper) runs as a separate process.
 By default, unless you configure the `hbase.rootdir` property as described in <<quickstart,quickstart>>, your data is still stored in _/tmp/_.
 In this walk-through, we store your data in HDFS instead, assuming you have HDFS available.
 You can skip the HDFS configuration to continue storing your data in the local filesystem.
@@ -294,9 +297,11 @@ You can skip the HDFS configuration to continue storing your data in the local f
 .Hadoop Configuration
 [NOTE]
 ====
-This procedure assumes that you have configured Hadoop and HDFS on your local system and or a remote system, and that they are running and available.
-It also assumes you are using Hadoop 2.
-Currently, the documentation on the Hadoop website does not include a quick start for Hadoop 2, but the guide at link:http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide          is a good starting point.
+This procedure assumes that you have configured Hadoop and HDFS on your local system and/or a remote
+system, and that they are running and available. It also assumes you are using Hadoop 2.
+The guide on
+link:http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html[Setting up a Single Node Cluster]
+in the Hadoop documentation is a good starting point.
 ====
 
 
@@ -425,7 +430,7 @@ You can stop HBase the same way as in the <<quickstart,quickstart>> procedure, u
 
 In reality, you need a fully-distributed configuration to fully test HBase and to use it in real-world scenarios.
 In a distributed configuration, the cluster contains multiple nodes, each of which runs one or more HBase daemon.
-These include primary and backup Master instances, multiple Zookeeper nodes, and multiple RegionServer nodes.
+These include primary and backup Master instances, multiple ZooKeeper nodes, and multiple RegionServer nodes.
 
 This advanced quickstart adds two more nodes to your cluster.
 The architecture will be as follows:

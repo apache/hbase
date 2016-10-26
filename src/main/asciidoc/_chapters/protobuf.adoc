@@ -1,0 +1,153 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[[protobuf]]
+= Protobuf in HBase
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+HBase uses Google's link:http://protobuf.protobufs[protobufs] wherever
+it persists metadata -- in the tail of hfiles or Cells written by
+HBase into the system hbase;meta table or when HBase writes znodes
+to zookeeper, etc. -- and when it passes objects over the wire making
+xref:hbase.rpc[RPCs]. HBase uses protobufs to describe the RPC
+Interfaces (Services) we expose to clients, for example the `Admin` and `Client`
+Interfaces that the RegionServer fields,
+or specifying the arbitrary extensions added by developers via our
+xref:cp[Coprocessor Endpoint] mechanism.
+In this chapter we go into detail for  developers who are looking to
+understand better how it all works. This chapter is of particular
+use to those who would amend or extend HBase functionality.
+
+== Protobuf
+
+With protobuf, you describe serializations and services in a `.protos` file.
+You then feed these descriptors to a protobuf tool, the `protoc` binary,
+to generate classes that can marshall and unmarshall the described serializations
+and field the specified Services.
+
+See the `README.txt` in the HBase sub-modules for detail on how
+to run the class generation on a per-module basis;
+e.g. see `hbase-protocol/README.txt` for how to generated protobuf classes
+in the hbase-protocol module.
+
+In HBase, `.proto` files are either in the `hbase-protocol` module, a module
+dedicated to hosting the common proto files and the protoc generated classes
+that HBase uses internally serializing metadata or, for extensions to hbase
+such as REST or Coprocessor Endpoints that need their own descriptors, their
+protos are located inside the function's hosting module: e.g. `hbase-rest`
+is home to the REST proto files and the `hbase-rsgroup` table grouping
+Coprocessor Endpoint has all protos that have to do with table grouping.
+
+Protos are hosted by the module that makes use of them. While
+this makes it so generation of protobuf classes is distributed, done
+per module, we do it this way so modules encapsulate all to do with
+the functionality they bring to hbase.
+
+Extensions whether REST or Coprocessor Endpoints will make use
+of core HBase protos found back in the hbase-protocol module. They'll
+use these core protos when they want to serialize a Cell or a Put or
+refer to a particular node via ServerName, etc., as part of providing the
+CPEP Service. Going forward, after the release of hbase-2.0.0, this
+practice needs to whither. We'll make plain why in the later
+xref:shaded.protobuf[hbase-2.0.0] section.
+
+[[shaded.protobuf]]
+=== hbase-2.0.0 and the shading of protobufs (HBASE-15638)
+
+As of hbase-2.0.0, our protobuf usage gets a little more involved. HBase
+core protobuf references are offset so as to refer to a private,
+bundled protobuf. Core stops referring to protobuf
+classes at com.google.protobuf.* and instead references protobuf at
+the HBase-specific offset
+org.apache.hadoop.hbase.shaded.com.google.protobuf.*.  We do this indirection
+so hbase core can evolve its protobuf version independent of whatever our
+dependencies rely on. For instance, HDFS serializes using protobuf.
+HDFS is on our CLASSPATH. Without the above described indirection, our
+protobuf versions would have to align. HBase would be stuck
+on the HDFS protobuf version until HDFS decided upgrade. HBase
+and HDFS verions would be tied.
+
+We had to move on from protobuf-2.5.0 because we need facilities
+added in protobuf-3.1.0; in particular being able to save on
+copies and avoiding bringing protobufs onheap for
+serialization/deserialization.
+
+In hbase-2.0.0, we introduced a new module, `hbase-protocol-shaded`
+inside which we contained all to do with protobuf and its subsequent
+relocation/shading. This module is in essence a copy of much of the old
+`hbase-protocol` but with an extra shading/relocation step (see the `README.txt`
+and the `poms.xml` in this module for more on how to trigger this
+effect and how it all works). Core was moved to depend on this new
+module.
+
+That said, a complication arises around Coprocessor Endpoints (CPEPs).
+CPEPs depend on public HBase APIs that reference protobuf classes at
+`com.google.protobuf.*` explicitly. For example, in our Table Interface
+we have the below as the means by which you obtain a CPEP Service
+to make invocations against:
+
+[source,java]
+----
+...
+  <T extends com.google.protobuf.Service,R> Map<byte[],R> coprocessorService(
+   Class<T> service, byte[] startKey, byte[] endKey,
+     org.apache.hadoop.hbase.client.coprocessor.Batch.Call<T,R> callable)
+  throws com.google.protobuf.ServiceException, Throwable
+----
+
+Existing CPEPs will have made reference to core HBase protobufs
+specifying ServerNames or carrying Mutations.
+So as to continue being able to service CPEPs and their references
+to `com.google.protobuf.*` across the upgrade to hbase-2.0.0 and beyond,
+HBase needs to be able to deal with both
+`com.google.protobuf.*` references and its internal offset
+`org.apache.hadoop.hbase.shaded.com.google.protobuf.*` protobufs.
+
+The `hbase-protocol-shaded` module hosts all
+protobufs used by HBase core as well as the internal shaded version of
+protobufs that hbase depends on. hbase-client and hbase-server, etc.,
+depend on this module.
+
+But for the vestigial CPEP references to the (non-shaded) content of
+`hbase-protocol`, we keep around most of this  module going forward
+just so it is available to CPEPs.  Retaining the most of `hbase-protocol`
+makes for overlapping, 'duplicated' proto instances where some exist as
+non-shaded/non-relocated here in their old module
+location but also in the new location, shaded under
+`hbase-protocol-shaded`. In other words, there is an instance
+of the generated protobuf class
+`org.apache.hadoop.hbase.protobuf.generated.ServerName`
+in hbase-protocol and another generated instance that is the same in all
+regards except its protobuf references are to the internal shaded
+version at `org.apache.hadoop.hbase.shaded.protobuf.generated.ServerName`
+(note the 'shaded' addition in the middle of the package name).
+
+If you extend a proto in `hbase-protocol-shaded` for  internal use,
+consider extending it also in
+`hbase-protocol` (and regenerating).
+
+Going forward, we will provide a new module of common types for use
+by CPEPs that will have the same guarantees against change as does our
+public API. TODO.
