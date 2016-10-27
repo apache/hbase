@@ -33,7 +33,6 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
@@ -58,7 +57,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * The base class for load balancers. It provides the the functions used to by
@@ -117,7 +115,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     HRegionInfo[] regions;
     Deque<RegionLoad>[] regionLoads;
     private RegionLocationFinder regionFinder;
-    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures;
 
     int[][] regionLocations; //regionIndex -> list of serverIndex sorted by locality
 
@@ -239,13 +236,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       regionIndexToTableIndex = new int[numRegions];
       regionIndexToPrimaryIndex = new int[numRegions];
       regionLoads = new Deque[numRegions];
-      regionLocationFutures = new ArrayList<ListenableFuture<HDFSBlocksDistribution>>(
-          numRegions);
-      if (regionFinder != null) {
-        for (int i = 0; i < numRegions; i++) {
-          regionLocationFutures.add(null);
-        }
-      }
       regionLocations = new int[numRegions][];
       serverIndicesSortedByRegionCount = new Integer[numServers];
       serverIndicesSortedByLocality = new Integer[numServers];
@@ -313,33 +303,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       for (HRegionInfo region : unassignedRegions) {
         registerRegion(region, regionIndex, -1, loads, regionFinder);
         regionIndex++;
-      }
-
-      if (regionFinder != null) {
-        for (int index = 0; index < regionLocationFutures.size(); index++) {
-          ListenableFuture<HDFSBlocksDistribution> future = regionLocationFutures
-              .get(index);
-          HDFSBlocksDistribution blockDistbn = null;
-          try {
-            blockDistbn = future.get();
-          } catch (InterruptedException ite) {
-          } catch (ExecutionException ee) {
-            LOG.debug(
-                "IOException during HDFSBlocksDistribution computation. for region = "
-                    + regions[index].getEncodedName(), ee);
-          } finally {
-            if (blockDistbn == null) {
-              blockDistbn = new HDFSBlocksDistribution();
-            }
-          }
-          List<ServerName> loc = regionFinder.getTopBlockLocations(blockDistbn);
-          regionLocations[index] = new int[loc.size()];
-          for (int i = 0; i < loc.size(); i++) {
-            regionLocations[index][i] = loc.get(i) == null ? -1
-                : (serversToIndex.get(loc.get(i).getHostAndPort()) == null ? -1
-                    : serversToIndex.get(loc.get(i).getHostAndPort()));
-          }
-        }
       }
 
       for (int i = 0; i < serversPerHostList.size(); i++) {
@@ -489,9 +452,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
 
       if (regionFinder != null) {
-        // region location
-        regionLocationFutures.set(regionIndex,
-            regionFinder.asyncGetBlockDistribution(region));
+        //region location
+        List<ServerName> loc = regionFinder.getTopBlockLocations(region);
+        regionLocations[regionIndex] = new int[loc.size()];
+        for (int i=0; i < loc.size(); i++) {
+          regionLocations[regionIndex][i] =
+              loc.get(i) == null ? -1 :
+                (serversToIndex.get(loc.get(i).getHostAndPort()) == null ? -1
+                    : serversToIndex.get(loc.get(i).getHostAndPort()));
+        }
       }
     }
 
