@@ -15,23 +15,21 @@ protobuf, it is obtainable from here:
 
  https://github.com/google/protobuf/releases/tag/v2.5.0
 
-HBase uses hadoop-maven-plugins:protoc goal to invoke the protoc command. You can
-compile the protoc definitions by invoking maven with profile compile-protobuf or
-passing in compile-protobuf property.
+To generate java files from protos run:
 
-mvn compile -Dcompile-protobuf
+ $ mvn compile -Dcompile-protobuf
 or
-mvn compile -Pcompile-protobuf
+ $ mvn compile -Pcompile-protobuf
 
-You may also want to define protoc.path for the protoc binary
+You may also want to define protocExecutable for the protoc binary
 
-mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
+mvn compile -Dcompile-protobuf -DprotocExecutable=/opt/local/bin/protoc
 
 If you have added a new proto file, you should add it to the pom.xml file first.
 Other modules also support the maven profile.
 
 NOTE: The protoc used here is probably NOT the same as the hbase-protocol-shaded
-module uses; here we use a more palatable version -- 2.5.0 -- wherease over in
+module uses; here we use a more palatable version -- 2.5.0 -- whereas over in
 the internal hbase-protocol-shaded module, we'd use something newer. Be conscious
 of this when running your protoc being sure to apply the appropriate version
 per module.

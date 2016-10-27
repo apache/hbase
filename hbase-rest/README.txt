@@ -1,4 +1,4 @@
-This maven module has the protobuf definition files used by regionserver grouping.
+This maven module has the protobuf definition files used by REST.
 
 The produced java classes are generated and then checked in. The reasoning is
 that they change infrequently.

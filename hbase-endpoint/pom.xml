@@ -189,44 +189,17 @@
           <build>
             <plugins>
               <plugin>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-maven-plugins</artifactId>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
                 <executions>
                   <execution>
                     <id>compile-protoc</id>
                     <phase>generate-sources</phase>
                     <goals>
-                      <goal>protoc</goal>
+                      <goal>compile</goal>
                     </goals>
                     <configuration>
-                      <imports>
-                        <!--Reference the .protos files up in hbase-protocol so don't
-                             have to copy them local here-->
-                        <param>${basedir}/src/main/protobuf</param>
-                        <param>${basedir}/../hbase-protocol/src/main/protobuf</param>
-                      </imports>
-                      <source>
-                        <!--The last directory wins so we need to for now manually run
-                             it once with the hbase-protocol pointer and then after
-                             with pointer to the local protobuf dir-->
-                        <directory>${basedir}/../hbase-protocol/src/main/protobuf</directory>
-                        <directory>${basedir}/src/main/protobuf</directory>
-                        <!-- Unfortunately, Hadoop plugin does not support *.proto.
-                             We have to individually list every proto file here -->
-                        <includes>
-                          <!--CPEPs-->
-                          <include>Aggregate.proto</include>
-                          <include>BulkDelete.proto</include>
-                          <include>DummyRegionServerEndpoint.proto</include>
-                          <include>ColumnAggregationNullResponseProtocol.proto</include>
-                          <include>ColumnAggregationProtocol.proto</include>
-                          <include>ColumnAggregationWithErrorsProtocol.proto</include>
-                          <include>IncrementCounterProcessor.proto</include>
-                          <include>SecureBulkLoad.proto</include>
-                        </includes>
-                      </source>
-                      <!--<output>${project.build.directory}/generated-sources/java</output>-->
-                     <output>${basedir}/src/main/java/</output>
+                       <protoSourceRoot>${basedir}/src/main/protobuf/,${basedir}/../hbase-protocol/src/main/protobuf</protoSourceRoot>
                     </configuration>
                   </execution>
                 </executions>
