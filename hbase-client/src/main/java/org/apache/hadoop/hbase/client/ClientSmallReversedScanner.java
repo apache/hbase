@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowBef
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
@@ -34,8 +35,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClientSmallScanner.SmallScannerCallable;
-import org.apache.hadoop.hbase.client.ClientSmallScanner.SmallScannerCallableFactory;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -49,8 +53,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class ClientSmallReversedScanner extends ReversedClientScanner {
   private static final Log LOG = LogFactory.getLog(ClientSmallReversedScanner.class);
-  private ScannerCallableWithReplicas smallScanCallable = null;
-  private SmallScannerCallableFactory callableFactory;
+  private ScannerCallableWithReplicas smallReversedScanCallable = null;
+  private SmallReversedScannerCallableFactory callableFactory;
 
   /**
    * Create a new ReversibleClientScanner for the specified table. Take note that the passed
@@ -80,7 +84,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
       RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
       throws IOException {
     this(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
-        primaryOperationTimeout, new SmallScannerCallableFactory());
+        primaryOperationTimeout, new SmallReversedScannerCallableFactory());
   }
 
   /**
@@ -112,7 +116,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
   ClientSmallReversedScanner(final Configuration conf, final Scan scan, final TableName tableName,
       ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
       RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout,
-      SmallScannerCallableFactory callableFactory) throws IOException {
+      SmallReversedScannerCallableFactory callableFactory) throws IOException {
     super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
         primaryOperationTimeout);
     this.callableFactory = callableFactory;
@@ -136,6 +140,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
     byte[] localStartKey;
     int cacheNum = nbRows;
     boolean regionChanged = true;
+    boolean isFirstRegionToLocate = false;
     // if we're at end of table, close and return false to stop iterating
     if (this.currentRegion != null && currentRegionDone) {
       byte[] startKey = this.currentRegion.getStartKey();
@@ -157,7 +162,15 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
       regionChanged = false;
       localStartKey = createClosestRowBefore(lastResult.getRow());
     } else {
+      isFirstRegionToLocate = true;
       localStartKey = this.scan.getStartRow();
+    }
+
+    if (!isFirstRegionToLocate
+        && (localStartKey == null || Bytes.equals(localStartKey, HConstants.EMPTY_BYTE_ARRAY))) {
+      // when non-firstRegion & localStartKey is empty bytes, no more rowKey should scan.
+      // otherwise, maybe infinity results with RowKey=0x00 will return.
+      return false;
     }
 
     if (LOG.isTraceEnabled()) {
@@ -165,9 +178,10 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
           + Bytes.toStringBinary(localStartKey) + "'");
     }
 
-    smallScanCallable = callableFactory.getCallable(getConnection(), getTable(), scan,
-        getScanMetrics(), localStartKey, cacheNum, rpcControllerFactory, getPool(),
-        getPrimaryOperationTimeout(), getRetries(), getScannerTimeout(), getConf(), caller);
+    smallReversedScanCallable =
+        callableFactory.getCallable(getConnection(), getTable(), scan, getScanMetrics(),
+          localStartKey, cacheNum, rpcControllerFactory, getPool(), getPrimaryOperationTimeout(),
+          getRetries(), getScannerTimeout(), getConf(), caller, isFirstRegionToLocate);
 
     if (this.scanMetrics != null && regionChanged) {
       this.scanMetrics.countOfRegions.incrementAndGet();
@@ -209,8 +223,8 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
       // exhausted current region.
       // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
       // we do a callWithRetries
-      values = this.caller.callWithoutRetries(smallScanCallable, scannerTimeout);
-      this.currentRegion = smallScanCallable.getHRegionInfo();
+      values = this.caller.callWithoutRetries(smallReversedScanCallable, scannerTimeout);
+      this.currentRegion = smallReversedScanCallable.getHRegionInfo();
       long currentTime = System.currentTimeMillis();
       if (this.scanMetrics != null) {
         this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime
@@ -229,8 +243,8 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
           this.lastResult = rs;
         }
       }
-      if (smallScanCallable.hasMoreResultsContext()) {
-        currentRegionDone = !smallScanCallable.getServerHasMoreResults();
+      if (smallReversedScanCallable.hasMoreResultsContext()) {
+        currentRegionDone = !smallReversedScanCallable.getServerHasMoreResults();
       } else {
         currentRegionDone = countdown > 0;
       }
@@ -249,8 +263,74 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
     closed = true;
   }
 
+  /**
+   * A reversed ScannerCallable which supports backward small scanning.
+   */
+  static class SmallReversedScannerCallable extends ReversedScannerCallable {
+
+    public SmallReversedScannerCallable(ClusterConnection connection, TableName table, Scan scan,
+        ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory controllerFactory,
+        int caching, int replicaId) {
+      super(connection, table, scan, scanMetrics, locateStartRow, controllerFactory, replicaId);
+      this.setCaching(caching);
+    }
+
+    @Override
+    protected Result[] rpcCall() throws Exception {
+      if (this.closed) return null;
+      if (Thread.interrupted()) {
+        throw new InterruptedIOException();
+      }
+      ClientProtos.ScanRequest request = RequestConverter.buildScanRequest(
+        getLocation().getRegionInfo().getRegionName(), getScan(), getCaching(), true);
+      ClientProtos.ScanResponse response = null;
+      response = getStub().scan(getRpcController(), request);
+      Result[] results = ResponseConverter.getResults(getRpcControllerCellScanner(), response);
+      if (response.hasMoreResultsInRegion()) {
+        setHasMoreResultsContext(true);
+        setServerHasMoreResults(response.getMoreResultsInRegion());
+      } else {
+        setHasMoreResultsContext(false);
+      }
+      // We need to update result metrics since we are overriding call()
+      updateResultsMetrics(results);
+      return results;
+    }
+
+    @Override
+    public ScannerCallable getScannerCallableForReplica(int id) {
+      return new SmallReversedScannerCallable(getConnection(), getTableName(), getScan(),
+          scanMetrics, locateStartRow, rpcControllerFactory, getCaching(), id);
+    }
+  }
+
   @VisibleForTesting
-  protected void setScannerCallableFactory(SmallScannerCallableFactory callableFactory) {
+  protected void setScannerCallableFactory(SmallReversedScannerCallableFactory callableFactory) {
     this.callableFactory = callableFactory;
+  }
+
+  protected static class SmallReversedScannerCallableFactory {
+
+    public ScannerCallableWithReplicas getCallable(ClusterConnection connection, TableName table,
+        Scan scan, ScanMetrics scanMetrics, byte[] localStartKey, int cacheNum,
+        RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout,
+        int retries, int scannerTimeout, Configuration conf, RpcRetryingCaller<Result[]> caller,
+        boolean isFirstRegionToLocate) {
+      byte[] locateStartRow = null;
+      if (isFirstRegionToLocate
+          && (localStartKey == null || Bytes.equals(localStartKey, HConstants.EMPTY_BYTE_ARRAY))) {
+        // HBASE-16886: if not setting startRow, then we will use a range [MAX_BYTE_ARRAY, +oo) to
+        // locate a region list, and the last one in region list is the region where our scan start.
+        locateStartRow = ClientScanner.MAX_BYTE_ARRAY;
+      }
+
+      scan.setStartRow(localStartKey);
+      SmallReversedScannerCallable s = new SmallReversedScannerCallable(connection, table, scan,
+          scanMetrics, locateStartRow, controllerFactory, cacheNum, 0);
+      ScannerCallableWithReplicas scannerCallableWithReplicas =
+          new ScannerCallableWithReplicas(table, connection, s, pool, primaryOperationTimeout, scan,
+              retries, scannerTimeout, cacheNum, conf, caller);
+      return scannerCallableWithReplicas;
+    }
   }
 }
