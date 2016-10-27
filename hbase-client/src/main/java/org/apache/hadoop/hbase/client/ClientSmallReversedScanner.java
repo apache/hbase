@@ -321,7 +321,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
           && (localStartKey == null || Bytes.equals(localStartKey, HConstants.EMPTY_BYTE_ARRAY))) {
         // HBASE-16886: if not setting startRow, then we will use a range [MAX_BYTE_ARRAY, +oo) to
         // locate a region list, and the last one in region list is the region where our scan start.
-        locateStartRow = ClientScanner.MAX_BYTE_ARRAY;
+        locateStartRow = ConnectionUtils.MAX_BYTE_ARRAY;
       }
 
       scan.setStartRow(localStartKey);

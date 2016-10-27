@@ -230,7 +230,7 @@ public final class ConnectionUtils {
 
   // A byte array in which all elements are the max byte, and it is used to
   // construct closest front row
-  static byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
+  public static byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
 
   /**
    * Create the closest row after the specified row
