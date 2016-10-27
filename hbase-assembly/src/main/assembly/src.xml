@@ -32,6 +32,7 @@
       <useAllReactorProjects>true</useAllReactorProjects>
       <includes>
         <include>org.apache.hbase:hbase-annotations</include>
+        <include>org.apache.hbase:hbase-archetypes</include>
         <include>org.apache.hbase:hbase-assembly</include>
         <include>org.apache.hbase:hbase-checkstyle</include>
         <include>org.apache.hbase:hbase-client</include>
