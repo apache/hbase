@@ -1,4 +1,6 @@
 Please read carefully as the 'menu options' have changed.
+What you do in here is not what you do elsewhere to generate
+proto java files.
 
 This module has proto files used by core. These protos
 overlap with protos that are used by coprocessor endpoints
@@ -20,26 +22,9 @@ Finally, this module also includes patches applied on top of
 protobuf to add functionality not yet in protobuf that we
 need now.
 
-The shaded generated java files, including the patched protobuf
-source files are all checked in.
-
 If you make changes to protos, to the protobuf version or to
-the patches you want to apply to protobuf, you must rerun this
-step.
-
-First ensure that the appropriate protobuf protoc tool is in
-your $PATH as in:
-
- $ export PATH=~/bin/protobuf-3.1.0/src:$PATH
-
-.. or pass -Dprotoc.path=PATH_TO_PROTOC when running
-the below mvn commands. NOTE: The protoc that we use internally
-is very likely NOT what is used over in the hbase-protocol
-module (here we'd use a 3.1.0 where in hbase-protocol we'll
-use something older, a 2.5.0). You may need to download protobuf and
-build protoc first.
-
-Run:
+the patches you want to apply to protobuf, you must rerun the
+below step and then check in what it generated:
 
  $ mvn install -Dcompile-protobuf
 
@@ -47,15 +32,17 @@ or
 
  $ mvn install -Pcompille-protobuf
 
-to build and trigger the special generate-shaded-classes profile.
+NOTE: 'install' above whereas other proto generation only needs 'compile'
+
 When finished, the content of src/main/java/org/apache/hadoop/hbase/shaded
 will have been updated. Make sure all builds and then carefully
 check in the changes. Files may have been added or removed
 by the steps above.
 
+The protobuf version used internally by hbase differs from what
+is used over in the CPEP hbase-protocol module but mvn takes care
+of ensuring we have the right protobuf in place so you don't have to.
+
 If you have patches for the protobuf, add them to
 src/main/patches directory. They will be applied after
 protobuf is shaded and unbundled into src/main/java.
-
-See the pom.xml under the generate-shaded-classes profile
-for more info on how this step works.
