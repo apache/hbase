@@ -811,13 +811,12 @@
           </configuration>
         </plugin>
         <plugin>
-          <groupId>org.xolstice.maven.plugins</groupId>
-          <artifactId>protobuf-maven-plugin</artifactId>
-          <version>${protobuf.plugin.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-maven-plugins</artifactId>
+          <version>${hadoop-two.version}</version>
           <configuration>
-            <protoSourceRoot>${basedir}/src/main/protobuf/</protoSourceRoot>
-            <outputDirectory>${basedir}/src/main/java/</outputDirectory>
-            <clearOutputDirectory>false</clearOutputDirectory>
+            <protocVersion>${protobuf.version}</protocVersion>
+            <protocCommand>${protoc.path}</protocCommand>
           </configuration>
         </plugin>
         <plugin>
@@ -1216,7 +1215,6 @@
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.10.8</mockito-all.version>
     <protobuf.version>2.5.0</protobuf.version>
-    <protobuf.plugin.version>0.5.0</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.9.3</thrift.version>
     <zookeeper.version>3.4.8</zookeeper.version>
