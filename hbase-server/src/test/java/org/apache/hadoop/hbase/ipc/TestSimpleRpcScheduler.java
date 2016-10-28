@@ -428,7 +428,8 @@ public class TestSimpleRpcScheduler {/*
   @Ignore @Test
   public void testCoDelScheduling() throws Exception {
     CoDelEnvironmentEdge envEdge = new CoDelEnvironmentEdge();
-    envEdge.threadNamePrefixs.add(SimpleRpcScheduler.CODEL_FASTPATH_BALANCED_Q);
+    envEdge.threadNamePrefixs.add("RpcServer.CodelFPBQ.default.handler");
+    envEdge.threadNamePrefixs.add("RpcServer.CodelRWQ.default.handler");
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 250);
     schedConf.set(SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY,
