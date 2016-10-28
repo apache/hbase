@@ -80,7 +80,9 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   public void init(String serverName) throws ReplicationException {
     this.myQueuesZnode = ZKUtil.joinZNode(this.queuesZNode, serverName);
     try {
-      ZKUtil.createWithParents(this.zookeeper, this.myQueuesZnode);
+      if (ZKUtil.checkExists(this.zookeeper, this.myQueuesZnode) < 0) {
+        ZKUtil.createWithParents(this.zookeeper, this.myQueuesZnode);
+      }
     } catch (KeeperException e) {
       throw new ReplicationException("Could not initialize replication queues.", e);
     }
