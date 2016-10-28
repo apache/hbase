@@ -18,16 +18,28 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
+import java.util.concurrent.CompletableFuture;
 
+import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * Implementations hold cluster information such as this cluster's id.
+ * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc..
+ * All stuffs that may be related to zookeeper at client side are placed here.
+ * <p>
+ * Most methods are executed asynchronously except getClusterId. It will be executed synchronously
+ * and should be called only once when initialization.
  * <p>
  * Internal use only.
  */
 @InterfaceAudience.Private
-interface ClusterRegistry extends Closeable {
+interface AsyncRegistry extends Closeable {
+
+  /**
+   * Get the location of meta region.
+   */
+  CompletableFuture<RegionLocations> getMetaRegionLocation();
 
   /**
    * Should only be called once.
@@ -36,6 +48,24 @@ interface ClusterRegistry extends Closeable {
    */
   String getClusterId();
 
+  /**
+   * Get the number of 'running' regionservers.
+   */
+  CompletableFuture<Integer> getCurrentNrHRS();
+
+  /**
+   * Get the address of HMaster.
+   */
+  CompletableFuture<ServerName> getMasterAddress();
+
+  /**
+   * Get the info port of HMaster.
+   */
+  CompletableFuture<Integer> getMasterInfoPort();
+
+  /**
+   * Closes this instance and releases any system resources associated with it
+   */
   @Override
   void close();
 }

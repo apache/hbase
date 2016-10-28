@@ -352,7 +352,7 @@ public class RecoverableZooKeeper {
       while (true) {
         try {
           byte[] revData = checkZk().getData(path, watcher, stat);
-          return this.removeMetaData(revData);
+          return removeMetaData(revData);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
@@ -384,7 +384,7 @@ public class RecoverableZooKeeper {
       while (true) {
         try {
           byte[] revData = checkZk().getData(path, watch, stat);
-          return this.removeMetaData(revData);
+          return removeMetaData(revData);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
@@ -707,7 +707,7 @@ public class RecoverableZooKeeper {
     return null;
   }
 
-  public byte[] removeMetaData(byte[] data) {
+  public static byte[] removeMetaData(byte[] data) {
     if(data == null || data.length == 0) {
       return data;
     }

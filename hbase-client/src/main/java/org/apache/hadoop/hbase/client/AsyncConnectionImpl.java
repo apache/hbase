@@ -66,7 +66,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final User user;
 
-  private final ClusterRegistry registry;
+  private final AsyncRegistry registry;
 
   private final String clusterId;
 
