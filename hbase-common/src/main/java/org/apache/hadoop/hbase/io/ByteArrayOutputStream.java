@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
@@ -50,28 +49,28 @@ public class ByteArrayOutputStream extends OutputStream implements ByteBufferSup
   }
 
   @Override
-  public void write(ByteBuffer b, int off, int len) throws IOException {
+  public void write(ByteBuffer b, int off, int len) {
     checkSizeAndGrow(len);
     ByteBufferUtils.copyFromBufferToArray(this.buf, b, off, this.pos, len);
     this.pos += len;
   }
 
   @Override
-  public void writeInt(int i) throws IOException {
+  public void writeInt(int i) {
     checkSizeAndGrow(Bytes.SIZEOF_INT);
     Bytes.putInt(this.buf, this.pos, i);
     this.pos += Bytes.SIZEOF_INT;
   }
 
   @Override
-  public void write(int b) throws IOException {
+  public void write(int b) {
     checkSizeAndGrow(Bytes.SIZEOF_BYTE);
     buf[this.pos] = (byte) b;
     this.pos++;
   }
 
   @Override
-  public void write(byte[] b, int off, int len) throws IOException {
+  public void write(byte[] b, int off, int len) {
     checkSizeAndGrow(len);
     System.arraycopy(b, off, this.buf, this.pos, len);
     this.pos += len;
@@ -109,7 +108,7 @@ public class ByteArrayOutputStream extends OutputStream implements ByteBufferSup
    * Copies the content of this Stream into a new byte array.
    * @return  the contents of this output stream, as new byte array.
    */
-  public byte toByteArray()[] {
+  public byte[] toByteArray() {
     return Arrays.copyOf(buf, pos);
   }
 

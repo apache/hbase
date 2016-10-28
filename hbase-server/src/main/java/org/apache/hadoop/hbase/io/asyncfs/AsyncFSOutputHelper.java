@@ -22,11 +22,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import io.netty.channel.EventLoop;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,6 +35,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -103,68 +103,45 @@ public final class AsyncFSOutputHelper {
         return new DatanodeInfo[0];
       }
 
-      @Override
-      public <A> void flush(final A attachment, final CompletionHandler<Long, ? super A> handler,
-          final boolean sync) {
-        flushExecutor.execute(new Runnable() {
-
-          @Override
-          public void run() {
-            try {
-              synchronized (out) {
-                out.writeTo(fsOut);
-                out.reset();
-              }
-            } catch (final IOException e) {
-              eventLoop.execute(new Runnable() {
-
-                @Override
-                public void run() {
-                  handler.failed(e, attachment);
-                }
-              });
-              return;
-            }
-            try {
-              if (sync) {
-                fsOut.hsync();
-              } else {
-                fsOut.hflush();
-              }
-              final long pos = fsOut.getPos();
-              eventLoop.execute(new Runnable() {
-
-                @Override
-                public void run() {
-                  handler.completed(pos, attachment);
-                }
-              });
-            } catch (final IOException e) {
-              eventLoop.execute(new Runnable() {
-
-                @Override
-                public void run() {
-                  handler.failed(e, attachment);
-                }
-              });
-            }
+      private <A> void flush0(A attachment, CompletionHandler<Long, ? super A> handler,
+          boolean sync) {
+        try {
+          synchronized (out) {
+            fsOut.write(out.getBuffer(), 0, out.size());
+            out.reset();
           }
-        });
+        } catch (IOException e) {
+          eventLoop.execute(() -> handler.failed(e, attachment));
+          return;
+        }
+        try {
+          if (sync) {
+            fsOut.hsync();
+          } else {
+            fsOut.hflush();
+          }
+          final long pos = fsOut.getPos();
+          eventLoop.execute(() -> handler.completed(pos, attachment));
+        } catch (final IOException e) {
+          eventLoop.execute(() -> handler.failed(e, attachment));
+        }
+      }
+
+      @Override
+      public <A> void flush(A attachment, CompletionHandler<Long, ? super A> handler,
+          boolean sync) {
+        flushExecutor.execute(() -> flush0(attachment, handler, sync));
       }
 
       @Override
       public void close() throws IOException {
         try {
-          flushExecutor.submit(new Callable<Void>() {
-
-            @Override
-            public Void call() throws Exception {
-              synchronized (out) {
-                out.writeTo(fsOut);
-                out.reset();
-              }
-              return null;
+          flushExecutor.submit(() -> {
+            synchronized (out) {
+              fsOut.write(out.getBuffer(), 0, out.size());
+              out.reset();
             }
+            return null;
           }).get();
         } catch (InterruptedException e) {
           throw new InterruptedIOException();
@@ -180,6 +157,16 @@ public final class AsyncFSOutputHelper {
       @Override
       public int buffered() {
         return out.size();
+      }
+
+      @Override
+      public void writeInt(int i) {
+        out.writeInt(i);
+      }
+
+      @Override
+      public void write(ByteBuffer bb) {
+        out.write(bb, bb.position(), bb.remaining());
       }
     };
   }

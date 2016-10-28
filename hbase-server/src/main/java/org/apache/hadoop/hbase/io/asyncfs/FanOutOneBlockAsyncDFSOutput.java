@@ -54,7 +54,6 @@ import java.util.Deque;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -349,6 +348,47 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     setupReceiver(conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT));
   }
 
+  private void writeInt0(int i) {
+    buf.ensureWritable(4);
+    if (cryptoCodec == null) {
+      buf.writeInt(i);
+    } else {
+      ByteBuffer inBuffer = ByteBuffer.allocate(4);
+      inBuffer.putInt(0, i);
+      cryptoCodec.encrypt(inBuffer, buf.nioBuffer(buf.writerIndex(), 4));
+      buf.writerIndex(buf.writerIndex() + 4);
+    }
+  }
+
+  @Override
+  public void writeInt(int i) {
+    if (eventLoop.inEventLoop()) {
+      writeInt0(i);
+    } else {
+      eventLoop.submit(() -> writeInt0(i));
+    }
+  }
+
+  private void write0(ByteBuffer bb) {
+    int len = bb.remaining();
+    buf.ensureWritable(len);
+    if (cryptoCodec == null) {
+      buf.writeBytes(bb);
+    } else {
+      cryptoCodec.encrypt(bb, buf.nioBuffer(buf.writerIndex(), len));
+      buf.writerIndex(buf.writerIndex() + len);
+    }
+  }
+
+  @Override
+  public void write(ByteBuffer bb) {
+    if (eventLoop.inEventLoop()) {
+      write0(bb);
+    } else {
+      eventLoop.submit(() -> write0(bb));
+    }
+  }
+
   @Override
   public void write(byte[] b) {
     write(b, 0, b.length);
@@ -370,13 +410,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     if (eventLoop.inEventLoop()) {
       write0(b, off, len);
     } else {
-      eventLoop.submit(new Runnable() {
-
-        @Override
-        public void run() {
-          write0(b, off, len);
-        }
-      }).syncUninterruptibly();
+      eventLoop.submit(() -> write0(b, off, len)).syncUninterruptibly();
     }
   }
 
@@ -385,13 +419,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     if (eventLoop.inEventLoop()) {
       return buf.readableBytes();
     } else {
-      return eventLoop.submit(new Callable<Integer>() {
-
-        @Override
-        public Integer call() throws Exception {
-          return buf.readableBytes();
-        }
-      }).syncUninterruptibly().getNow().intValue();
+      return eventLoop.submit(() -> buf.readableBytes()).syncUninterruptibly().getNow().intValue();
     }
   }
 
