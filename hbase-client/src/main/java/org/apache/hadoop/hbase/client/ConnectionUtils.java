@@ -252,7 +252,7 @@ public final class ConnectionUtils {
       byte[] nextRow = new byte[row.length + MAX_BYTE_ARRAY.length];
       System.arraycopy(row, 0, nextRow, 0, row.length - 1);
       nextRow[row.length - 1] = (byte) ((row[row.length - 1] & 0xFF) - 1);
-      System.arraycopy(nextRow, row.length, MAX_BYTE_ARRAY, 0, MAX_BYTE_ARRAY.length);
+      System.arraycopy(MAX_BYTE_ARRAY, 0, nextRow, row.length, MAX_BYTE_ARRAY.length);
       return nextRow;
     }
   }
