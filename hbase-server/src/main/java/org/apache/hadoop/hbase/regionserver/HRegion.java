@@ -6649,7 +6649,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param hri Spec. for daughter region to open.
    * @throws IOException
    */
-  HRegion createDaughterRegionFromSplits(final HRegionInfo hri) throws IOException {
+  public HRegion createDaughterRegionFromSplits(final HRegionInfo hri) throws IOException {
     // Move the files from the temporary .splits to the final /table/region directory
     fs.commitDaughterRegion(hri);
 

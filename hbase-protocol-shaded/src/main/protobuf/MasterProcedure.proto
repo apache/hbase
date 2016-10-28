@@ -277,6 +277,27 @@ message DispatchMergingRegionsStateData {
   optional bool forcible = 4;
 }
 
+enum SplitTableRegionState {
+  SPLIT_TABLE_REGION_PREPARE = 1;
+  SPLIT_TABLE_REGION_PRE_OPERATION = 2;
+  SPLIT_TABLE_REGION_SET_SPLITTING_TABLE_STATE = 3;
+  SPLIT_TABLE_REGION_CLOSED_PARENT_REGION = 4;
+  SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS = 5;
+  SPLIT_TABLE_REGION_PRE_OPERATION_BEFORE_PONR = 6;
+  SPLIT_TABLE_REGION_UPDATE_META = 7;
+  SPLIT_TABLE_REGION_PRE_OPERATION_AFTER_PONR = 8;
+  SPLIT_TABLE_REGION_OPEN_CHILD_REGIONS = 9;
+  SPLIT_TABLE_REGION_POST_OPERATION = 10;
+}
+
+message SplitTableRegionStateData {
+  required UserInformation user_info = 1;
+  required TableName table_name = 2;
+  required RegionInfo parent_region_info = 3;
+  optional bytes split_row = 4;
+  repeated RegionInfo child_region_info = 5;
+}
+
 message ServerCrashStateData {
   required ServerName server_name = 1;
   optional bool distributed_log_replay = 2;

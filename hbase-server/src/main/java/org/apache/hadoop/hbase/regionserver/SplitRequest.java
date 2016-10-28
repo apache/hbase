@@ -19,17 +19,15 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.DroppedSnapshotException;
-import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
 
@@ -43,7 +41,6 @@ class SplitRequest implements Runnable {
   private final byte[] midKey;
   private final HRegionServer server;
   private final User user;
-  private TableLock tableLock;
 
   SplitRequest(Region region, byte[] midKey, HRegionServer hrs, User user) {
     Preconditions.checkNotNull(hrs);
@@ -58,63 +55,48 @@ class SplitRequest implements Runnable {
     return "regionName=" + parent + ", midKey=" + Bytes.toStringBinary(midKey);
   }
 
-  private void doSplitting(User user) {
+  private void doSplitting() {
     boolean success = false;
     server.metricsRegionServer.incrSplitRequest();
     long startTime = EnvironmentEdgeManager.currentTime();
-    SplitTransactionImpl st = new SplitTransactionImpl(parent, midKey);
+
     try {
-      //acquire a shared read lock on the table, so that table schema modifications
-      //do not happen concurrently
-      tableLock = server.getTableLockManager().readLock(parent.getTableDesc().getTableName()
-          , "SPLIT_REGION:" + parent.getRegionInfo().getRegionNameAsString());
-      try {
-        tableLock.acquire();
-      } catch (IOException ex) {
-        tableLock = null;
-        throw ex;
+      long procId;
+      if (user != null && user.getUGI() != null) {
+        procId = user.getUGI().doAs (new PrivilegedAction<Long>() {
+          @Override
+          public Long run() {
+            try {
+              return server.requestRegionSplit(parent.getRegionInfo(), midKey);
+            } catch (Exception e) {
+              LOG.error("Failed to complete region split ", e);
+            }
+            return (long)-1;
+          }
+        });
+      } else {
+        procId = server.requestRegionSplit(parent.getRegionInfo(), midKey);
       }
 
-      // If prepare does not return true, for some reason -- logged inside in
-      // the prepare call -- we are not ready to split just now. Just return.
-      if (!st.prepare()) return;
-      try {
-        st.execute(this.server, this.server, user);
-        success = true;
-      } catch (Exception e) {
-        if (this.server.isStopping() || this.server.isStopped()) {
-          LOG.info(
-              "Skip rollback/cleanup of failed split of "
-                  + parent.getRegionInfo().getRegionNameAsString() + " because server is"
-                  + (this.server.isStopping() ? " stopping" : " stopped"), e);
-          return;
-        }
-        if (e instanceof DroppedSnapshotException) {
-          server.abort("Replay of WAL required. Forcing server shutdown", e);
-          return;
-        }
+      if (procId != -1) {
+        // wait for the split to complete or get interrupted.  If the split completes successfully,
+        // the procedure will return true; if the split fails, the procedure would throw exception.
+        //
         try {
-          LOG.info("Running rollback/cleanup of failed split of " +
-            parent.getRegionInfo().getRegionNameAsString() + "; " + e.getMessage(), e);
-          if (st.rollback(this.server, this.server)) {
-            LOG.info("Successful rollback of failed split of " +
-              parent.getRegionInfo().getRegionNameAsString());
-          } else {
-            this.server.abort("Abort; we got an error after point-of-no-return");
+          while (!(success = server.isProcedureFinished(procId))) {
+            try {
+              Thread.sleep(1000);
+            } catch (InterruptedException e) {
+              LOG.warn("Split region " + parent + " is still in progress.  Not waiting...");
+              break;
+            }
           }
-        } catch (RuntimeException ee) {
-          String msg = "Failed rollback of failed split of " +
-            parent.getRegionInfo().getRegionNameAsString() + " -- aborting server";
-          // If failed rollback, kill this server to avoid having a hole in table.
-          LOG.info(msg, ee);
-          this.server.abort(msg + " -- Cause: " + ee.getMessage());
+        } catch (IOException e) {
+          LOG.error("Split region " + parent + " failed.", e);
         }
-        return;
+      } else {
+        LOG.error("Fail to split region " + parent);
       }
-    } catch (IOException ex) {
-      ex = ex instanceof RemoteException ? ((RemoteException) ex).unwrapRemoteException() : ex;
-      LOG.error("Split failed " + this, ex);
-      server.checkFileSystem();
     } finally {
       if (this.parent.getCoprocessorHost() != null) {
         try {
@@ -124,24 +106,17 @@ class SplitRequest implements Runnable {
             io instanceof RemoteException ? ((RemoteException) io).unwrapRemoteException() : io);
         }
       }
+
+      // Update regionserver metrics with the split transaction total running time
+      server.metricsRegionServer.updateSplitTime(EnvironmentEdgeManager.currentTime() - startTime);
+
       if (parent.shouldForceSplit()) {
         parent.clearSplit();
       }
-      releaseTableLock();
-      long endTime = EnvironmentEdgeManager.currentTime();
-      // Update regionserver metrics with the split transaction total running time
-      server.metricsRegionServer.updateSplitTime(endTime - startTime);
+
       if (success) {
         server.metricsRegionServer.incrSplitSuccess();
-        // Log success
-        LOG.info("Region split, hbase:meta updated, and report to master. Parent="
-            + parent.getRegionInfo().getRegionNameAsString() + ", new regions: "
-            + st.getFirstDaughter().getRegionNameAsString() + ", "
-            + st.getSecondDaughter().getRegionNameAsString() + ". Split took "
-            + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTime(), startTime));
       }
-      // Always log the split transaction journal
-      LOG.info("Split transaction journal:\n\t" + StringUtils.join("\n\t", st.getJournal()));
     }
   }
 
@@ -152,19 +127,7 @@ class SplitRequest implements Runnable {
         this.server.isStopping() + " or stopped=" + this.server.isStopped());
       return;
     }
-    doSplitting(user);
-  }
 
-  protected void releaseTableLock() {
-    if (this.tableLock != null) {
-      try {
-        this.tableLock.release();
-      } catch (IOException ex) {
-        LOG.error("Could not release the table lock (something is really wrong). "
-           + "Aborting this server to avoid holding the lock forever.");
-        this.server.abort("Abort; we got an error when releasing the table lock "
-                         + "on " + parent.getRegionInfo().getRegionNameAsString());
-      }
-    }
+    doSplitting();
   }
 }

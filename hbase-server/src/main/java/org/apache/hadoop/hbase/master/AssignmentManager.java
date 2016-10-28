@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -2432,6 +2431,39 @@ public class AssignmentManager {
     return null;
   }
 
+  public void assignDaughterRegions(
+      final HRegionInfo parentHRI,
+      final HRegionInfo daughterAHRI,
+      final HRegionInfo daughterBHRI) throws InterruptedException, IOException {
+    //Offline the parent region
+    regionOffline(parentHRI, State.SPLIT);
+
+    //Set daughter regions to offline
+    regionStates.prepareAssignDaughters(daughterAHRI, daughterBHRI);
+
+    // Assign daughter regions
+    invokeAssign(daughterAHRI);
+    invokeAssign(daughterBHRI);
+
+    Callable<Object> splitReplicasCallable = new Callable<Object>() {
+      @Override
+      public Object call() {
+        doSplittingOfReplicas(parentHRI, daughterAHRI, daughterBHRI);
+        return null;
+      }
+    };
+    threadPoolExecutorService.submit(splitReplicasCallable);
+
+    // wait for assignment completion
+    ArrayList<HRegionInfo> regionAssignSet = new ArrayList<HRegionInfo>(2);
+    regionAssignSet.add(daughterAHRI);
+    regionAssignSet.add(daughterBHRI);
+    while (!waitForAssignment(regionAssignSet, true, regionAssignSet.size(),
+      Long.MAX_VALUE)) {
+      LOG.debug("some user regions are still in transition: " + regionAssignSet);
+    }
+  }
+
   private String onRegionSplit(final RegionState current, final HRegionInfo hri,
       final ServerName serverName, final RegionStateTransition transition) {
     // The region must be splitting on this server, and the daughters must be in
@@ -2866,7 +2898,7 @@ public class AssignmentManager {
    *      (d) Other scenarios should be handled similarly as for
    *        region open/close
    */
-  protected String onRegionTransition(final ServerName serverName,
+  public String onRegionTransition(final ServerName serverName,
       final RegionStateTransition transition) {
     TransitionCode code = transition.getTransitionCode();
     HRegionInfo hri = HRegionInfo.convert(transition.getRegionInfo(0));

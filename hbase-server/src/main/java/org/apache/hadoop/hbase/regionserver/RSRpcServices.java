@@ -93,6 +93,8 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -1355,6 +1357,33 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       boolean closed = regionServer.closeRegion(encodedRegionName, false, sn);
       CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder().setClosed(closed);
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
+  public CloseRegionForSplitResponse closeRegionForSplit(
+      final RpcController controller,
+      final CloseRegionForSplitRequest request) throws ServiceException {
+    try {
+      checkOpen();
+
+      final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
+
+      // Can be null if we're calling close on a region that's not online
+      final Region parentRegion = regionServer.getFromOnlineRegions(encodedRegionName);
+      if ((parentRegion != null) && (parentRegion.getCoprocessorHost() != null)) {
+        parentRegion.getCoprocessorHost().preClose(false);
+      }
+
+      requestCount.increment();
+      LOG.info("Close and offline " + encodedRegionName + " and prepare for split.");
+      boolean closed = regionServer.closeAndOfflineRegionForSplit(encodedRegionName);
+      CloseRegionForSplitResponse.Builder builder =
+          CloseRegionForSplitResponse.newBuilder().setClosed(closed);
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

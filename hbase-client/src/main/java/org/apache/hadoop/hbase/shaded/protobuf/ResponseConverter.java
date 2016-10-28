@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.SingleResponse;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
@@ -247,6 +248,18 @@ public final class ResponseConverter {
    */
   public static boolean isClosed
       (final CloseRegionResponse proto) {
+    if (proto == null || !proto.hasClosed()) return false;
+    return proto.getClosed();
+  }
+
+  /**
+   * Check if the region is closed from a CloseRegionForSplitResponse
+   *
+   * @param proto the CloseRegionForSplitResponse
+   * @return the region close state
+   */
+  public static boolean isClosed
+      (final CloseRegionForSplitResponse proto) {
     if (proto == null || !proto.hasClosed()) return false;
     return proto.getClosed();
   }

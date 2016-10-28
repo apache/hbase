@@ -83,6 +83,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
@@ -546,6 +548,22 @@ public class MasterRpcServices extends RSRpcServices
       return EnableTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public SplitTableRegionResponse splitRegion(
+      final RpcController controller,
+      final SplitTableRegionRequest request) throws ServiceException {
+    try {
+      long procId = master.splitRegion(
+        HRegionInfo.convert(request.getRegionInfo()),
+        request.getSplitRow().toByteArray(),
+        request.getNonceGroup(),
+        request.getNonce());
+      return SplitTableRegionResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
     }
   }
 

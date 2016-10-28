@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
@@ -495,7 +494,6 @@ public class TestNamespaceAuditor {
     // Make sure no regions have been added.
     List<HRegionInfo> hris = ADMIN.getTableRegions(tableOne);
     assertEquals(2, hris.size());
-    assertTrue("split completed", observer.preSplitBeforePONR.getCount() == 1);
 
     htable.close();
   }
@@ -570,7 +568,6 @@ public class TestNamespaceAuditor {
 
   public static class CustomObserver extends BaseRegionObserver{
     volatile CountDownLatch postSplit;
-    volatile CountDownLatch preSplitBeforePONR;
     volatile CountDownLatch postCompact;
 
     @Override
@@ -586,16 +583,8 @@ public class TestNamespaceAuditor {
     }
 
     @Override
-    public void preSplitBeforePONR(ObserverContext<RegionCoprocessorEnvironment> ctx,
-        byte[] splitKey, List<Mutation> metaEntries) throws IOException {
-      preSplitBeforePONR.countDown();
-    }
-
-
-    @Override
     public void start(CoprocessorEnvironment e) throws IOException {
       postSplit = new CountDownLatch(1);
-      preSplitBeforePONR = new CountDownLatch(1);
       postCompact = new CountDownLatch(1);
     }
   }

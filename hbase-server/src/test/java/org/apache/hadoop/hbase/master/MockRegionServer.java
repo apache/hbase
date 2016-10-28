@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -382,9 +384,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
     return builder.build();
   }
 
-
-
-
   @Override
   public MutateResponse mutate(RpcController controller, MutateRequest request)
       throws ServiceException {
@@ -492,6 +491,13 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
+  public CloseRegionForSplitResponse closeRegionForSplit(
+      RpcController controller,
+      CloseRegionForSplitRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
   public FlushRegionResponse flushRegion(RpcController controller,
       FlushRegionRequest request) throws ServiceException {
     // TODO Auto-generated method stub
@@ -499,9 +505,18 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
+  public long requestRegionSplit(HRegionInfo regionInfo, byte[] splitRow) {
+    return -1;
+  }
+
+  @Override
+  public boolean isProcedureFinished(final long procId) {
+    return false;
+  }
+
+  @Override
   public SplitRegionResponse splitRegion(RpcController controller,
       SplitRegionRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 

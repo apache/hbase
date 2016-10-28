@@ -181,6 +181,16 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   boolean reportRegionStateTransition(TransitionCode code, HRegionInfo... hris);
 
   /**
+   * Notify master that a region wants to be splitted.
+   */
+  long requestRegionSplit(final HRegionInfo regionInfo, final byte[] splitRow);
+
+  /**
+   * Check with master whether a procedure is completed (either succeed or fail)
+   */
+  boolean isProcedureFinished(final long procId) throws IOException;
+
+  /**
    * Returns a reference to the region server's RPC server
    */
   RpcServerInterface getRpcServer();

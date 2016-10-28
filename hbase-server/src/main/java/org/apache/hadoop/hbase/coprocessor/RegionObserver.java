@@ -359,7 +359,10 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * (e.getRegion() returns the parent region)
    * @throws IOException if an error occurred on the coprocessor
+   *
+   * Note: the logic moves to Master; it is unused in RS
    */
+  @Deprecated
   void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c, byte[] splitRow)
       throws IOException;
 
@@ -383,10 +386,12 @@ public interface RegionObserver extends Coprocessor {
    * @param splitKey
    * @param metaEntries
    * @throws IOException
-   */
+   *
+   * Note: the logic moves to Master; it is unused in RS
+  */
+  @Deprecated
   void preSplitBeforePONR(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       byte[] splitKey, List<Mutation> metaEntries) throws IOException;
-
 
   /**
    * This will be called after PONR step as part of split transaction
@@ -394,21 +399,30 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param ctx
    * @throws IOException
-   */
+   *
+   * Note: the logic moves to Master; it is unused in RS
+  */
+  @Deprecated
   void preSplitAfterPONR(final ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
 
   /**
    * This will be called before the roll back of the split region is completed
    * @param ctx
    * @throws IOException
-   */
+   *
+   * Note: the logic moves to Master; it is unused in RS
+  */
+  @Deprecated
   void preRollBackSplit(final ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
 
   /**
    * This will be called after the roll back of the split region is completed
    * @param ctx
    * @throws IOException
-   */
+   *
+   * Note: the logic moves to Master; it is unused in RS
+  */
+  @Deprecated
   void postRollBackSplit(final ObserverContext<RegionCoprocessorEnvironment> ctx)
     throws IOException;
 

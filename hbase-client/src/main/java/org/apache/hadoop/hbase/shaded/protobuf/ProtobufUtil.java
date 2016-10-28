@@ -104,6 +104,8 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -1720,6 +1722,33 @@ public final class ProtobufUtil {
   }
 
   /**
+   * A helper to close a region for split
+   * using admin protocol.
+   *
+   * @param controller RPC controller
+   * @param admin Admin service
+   * @param server the RS that hosts the target region
+   * @param parentRegionInfo the target region info
+   * @return true if the region is closed
+   * @throws IOException
+   */
+  public static boolean closeRegionForSplit(
+      final RpcController controller,
+      final AdminService.BlockingInterface admin,
+      final ServerName server,
+      final HRegionInfo parentRegionInfo) throws IOException {
+    CloseRegionForSplitRequest closeRegionForSplitRequest =
+        ProtobufUtil.buildCloseRegionForSplitRequest(server, parentRegionInfo);
+    try {
+      CloseRegionForSplitResponse response =
+          admin.closeRegionForSplit(controller, closeRegionForSplitRequest);
+      return ResponseConverter.isClosed(response);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
    * A helper to warmup a region given a region name
    * using admin protocol
    *
@@ -3059,6 +3088,23 @@ public final class ProtobufUtil {
     if (server != null) {
       builder.setServerStartCode(server.getStartcode());
     }
+    return builder.build();
+  }
+
+  /**
+   * Create a CloseRegionForSplitRequest for a given region
+   *
+   * @param server the RS server that hosts the region
+   * @param parentRegionInfo the info of the region to close
+   * @return a CloseRegionForSplitRequest
+   */
+  public static CloseRegionForSplitRequest buildCloseRegionForSplitRequest(
+      final ServerName server,
+      final HRegionInfo parentRegionInfo) {
+    CloseRegionForSplitRequest.Builder builder = CloseRegionForSplitRequest.newBuilder();
+    RegionSpecifier parentRegion = RequestConverter.buildRegionSpecifier(
+      RegionSpecifierType.REGION_NAME, parentRegionInfo.getRegionName());
+    builder.setRegion(parentRegion);
     return builder.build();
   }
 

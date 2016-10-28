@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -873,6 +874,17 @@ public class RegionStates {
     return regions == null ? false : regions.contains(hri);
   }
 
+  public void prepareAssignDaughters(HRegionInfo a, HRegionInfo b) {
+     synchronized (this) {
+       if (isRegionInState(a, State.SPLITTING_NEW)) {
+         updateRegionState(a, State.OFFLINE, null);
+       }
+       if (isRegionInState(b, State.SPLITTING_NEW)) {
+         updateRegionState(b, State.OFFLINE, null);
+       }
+     }
+   }
+
   void splitRegion(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
 
@@ -1032,7 +1044,7 @@ public class RegionStates {
     return result;
   }
 
-  protected RegionState getRegionState(final HRegionInfo hri) {
+  public RegionState getRegionState(final HRegionInfo hri) {
     return getRegionState(hri.getEncodedName());
   }
 

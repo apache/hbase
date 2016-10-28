@@ -111,6 +111,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.master.procedure.SplitTableRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -1349,6 +1350,30 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (cpHost != null) {
       cpHost.postDispatchMerge(regionInfoA, regionInfoB);
     }
+    return procId;
+  }
+
+  @Override
+  public long splitRegion(
+      final HRegionInfo regionInfo,
+      final byte[] splitRow,
+      final long nonceGroup,
+      final long nonce) throws IOException {
+    checkInitialized();
+
+    if (cpHost != null) {
+      cpHost.preSplitRegion(regionInfo.getTable(), splitRow);
+    }
+
+    LOG.info(getClientIdAuditPrefix() + " Split region " + regionInfo);
+
+    // Execute the operation asynchronously
+    long procId = this.procedureExecutor.submitProcedure(
+      new SplitTableRegionProcedure(
+        procedureExecutor.getEnvironment(), regionInfo.getTable(), regionInfo, splitRow),
+      nonceGroup,
+      nonce);
+
     return procId;
   }
 

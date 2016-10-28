@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -829,6 +830,114 @@ public class MasterCoprocessorHost
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postSetSplitOrMergeEnabled(ctx, newValue, switchType);
+      }
+    });
+  }
+
+  /**
+   * Invoked just before calling the split region procedure
+   * @param tableName the table where the region belongs to
+   * @param splitRow the split point
+   * @throws IOException
+   */
+  public void preSplitRegion(
+      final TableName tableName,
+      final byte[] splitRow) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSplitRegion(ctx, tableName, splitRow);
+      }
+    });
+  }
+
+  /**
+   * Invoked just before a split
+   * @param tableName the table where the region belongs to
+   * @param splitRow the split point
+   * @param user the user
+   * @throws IOException
+   */
+  public void preSplitRegionAction(
+      final TableName tableName,
+      final byte[] splitRow,
+      final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSplitRegionAction(ctx, tableName, splitRow);
+      }
+    });
+  }
+
+  /**
+   * Invoked just after a split
+   * @param regionInfoA the new left-hand daughter region
+   * @param regionInfoB the new right-hand daughter region
+   * @param user the user
+   * @throws IOException
+   */
+  public void postCompletedSplitRegionAction(
+      final HRegionInfo regionInfoA,
+      final HRegionInfo regionInfoB,
+      final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postCompletedSplitRegionAction(ctx, regionInfoA, regionInfoB);
+      }
+    });
+  }
+
+  /**
+   * This will be called before PONR step as part of split table region procedure.
+   * @param splitKey
+   * @param metaEntries
+   * @param user the user
+   * @throws IOException
+   */
+  public boolean preSplitBeforePONRAction(
+      final byte[] splitKey,
+      final List<Mutation> metaEntries,
+      final User user) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSplitRegionBeforePONRAction(ctx, splitKey, metaEntries);
+      }
+    });
+  }
+
+  /**
+   * This will be called after PONR step as part of split table region procedure.
+   * @param user the user
+   * @throws IOException
+   */
+  public void preSplitAfterPONRAction(final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSplitRegionAfterPONRAction(ctx);
+      }
+    });
+  }
+
+  /**
+   * Invoked just before the rollback of a failed split is started
+   * @param user the user
+   * @throws IOException
+   */
+  public void preRollBackSplitAction(final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preRollBackSplitRegionAction(ctx);
       }
     });
   }

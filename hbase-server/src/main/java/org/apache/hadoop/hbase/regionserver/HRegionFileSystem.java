@@ -480,7 +480,7 @@ public class HRegionFileSystem {
     return new Path(getRegionDir(), REGION_SPLITS_DIR);
   }
 
-  Path getSplitsDir(final HRegionInfo hri) {
+  public Path getSplitsDir(final HRegionInfo hri) {
     return new Path(getSplitsDir(), hri.getEncodedName());
   }
 
@@ -539,7 +539,7 @@ public class HRegionFileSystem {
    * @param regionInfo                 daughter {@link org.apache.hadoop.hbase.HRegionInfo}
    * @throws IOException
    */
-  Path commitDaughterRegion(final HRegionInfo regionInfo)
+  public Path commitDaughterRegion(final HRegionInfo regionInfo)
       throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
     Path daughterTmpDir = this.getSplitsDir(regionInfo);
@@ -563,7 +563,7 @@ public class HRegionFileSystem {
   /**
    * Create the region splits directory.
    */
-  void createSplitsDir() throws IOException {
+  public void createSplitsDir() throws IOException {
     Path splitdir = getSplitsDir();
     if (fs.exists(splitdir)) {
       LOG.info("The " + splitdir + " directory exists.  Hence deleting it to recreate it");
@@ -590,12 +590,15 @@ public class HRegionFileSystem {
    * @return Path to created reference.
    * @throws IOException
    */
-  Path splitStoreFile(final HRegionInfo hri, final String familyName, final StoreFile f,
+  public Path splitStoreFile(final HRegionInfo hri, final String familyName, final StoreFile f,
       final byte[] splitRow, final boolean top, RegionSplitPolicy splitPolicy)
           throws IOException {
     if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
+      if (f.getReader() == null) {
+        f.createReader();
+      }
       try {
         if (top) {
           //check if larger than last key.

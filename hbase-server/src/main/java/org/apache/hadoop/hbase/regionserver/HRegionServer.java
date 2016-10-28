@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.client.NonceGenerator;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -142,6 +143,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -153,6 +156,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -160,6 +165,7 @@ import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.JSONBean;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
@@ -2099,6 +2105,81 @@ public class HRegionServer extends HasThread implements
     return false;
   }
 
+  @Override
+  public long requestRegionSplit(final HRegionInfo regionInfo, final byte[] splitRow) {
+    NonceGenerator ng = clusterConnection.getNonceGenerator();
+    final long nonceGroup = ng.getNonceGroup();
+    final long nonce = ng.newNonce();
+    long procId = -1;
+    SplitTableRegionRequest request =
+        RequestConverter.buildSplitTableRegionRequest(regionInfo, splitRow, nonceGroup, nonce);
+
+    while (keepLooping()) {
+      RegionServerStatusService.BlockingInterface rss = rssStub;
+      try {
+        if (rss == null) {
+          createRegionServerStatusStub();
+          continue;
+        }
+        SplitTableRegionResponse response = rss.splitRegion(null, request);
+
+        //TODO: should we limit the retry number before quitting?
+        if (response == null || (procId = response.getProcId()) == -1) {
+          LOG.warn("Failed to split " + regionInfo + " retrying...");
+          continue;
+        }
+
+        break;
+      } catch (ServiceException se) {
+        // TODO: retry or just fail
+        IOException ioe = ProtobufUtil.getRemoteException(se);
+        LOG.info("Failed to split region, will retry", ioe);
+        if (rssStub == rss) {
+          rssStub = null;
+        }
+      }
+    }
+    return procId;
+  }
+
+  @Override
+  public boolean isProcedureFinished(final long procId) throws IOException {
+    GetProcedureResultRequest request =
+        GetProcedureResultRequest.newBuilder().setProcId(procId).build();
+
+    while (keepLooping()) {
+      RegionServerStatusService.BlockingInterface rss = rssStub;
+      try {
+        if (rss == null) {
+          createRegionServerStatusStub();
+          continue;
+        }
+        // TODO: find a way to get proc result
+        GetProcedureResultResponse response = rss.getProcedureResult(null, request);
+
+        if (response == null) {
+          LOG.warn("Failed to get procedure (id=" + procId + ") status.");
+          return false;
+        } else if (response.getState() == GetProcedureResultResponse.State.RUNNING) {
+          return false;
+        } else if (response.hasException()) {
+          // Procedure failed.
+          throw ForeignExceptionUtil.toIOException(response.getException());
+        }
+        // Procedure completes successfully
+        break;
+      } catch (ServiceException se) {
+        // TODO: retry or just fail
+        IOException ioe = ProtobufUtil.getRemoteException(se);
+        LOG.warn("Failed to get split region procedure result.  Retrying", ioe);
+        if (rssStub == rss) {
+          rssStub = null;
+        }
+      }
+    }
+    return true;
+  }
+
   /**
    * Trigger a flush in the primary region replica if this region is a secondary replica. Does not
    * block this thread. See RegionReplicaFlushHandler for details.
@@ -2944,6 +3025,41 @@ public class HRegionServer extends HasThread implements
     }
     this.service.submit(crh);
     return true;
+  }
+
+  /**
+   * Close and offline the region for split
+   *
+   * @param parentRegionEncodedName the name of the region to close
+   * @return True if closed the region successfully.
+   * @throws IOException
+  */
+ protected boolean closeAndOfflineRegionForSplit(
+     final String parentRegionEncodedName) throws IOException {
+   Region parentRegion = this.getFromOnlineRegions(parentRegionEncodedName);
+   if (parentRegion != null) {
+     Map<byte[], List<StoreFile>> hstoreFilesToSplit = null;
+     Exception exceptionToThrow = null;
+     try{
+       hstoreFilesToSplit = ((HRegion)parentRegion).close(false);
+     } catch (Exception e) {
+       exceptionToThrow = e;
+     }
+     if (exceptionToThrow == null && hstoreFilesToSplit == null) {
+       // The region was closed by someone else
+       exceptionToThrow =
+           new IOException("Failed to close region: already closed by another thread");
+     }
+
+     if (exceptionToThrow != null) {
+       if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
+       throw new IOException(exceptionToThrow);
+     }
+
+     // Offline the region
+     this.removeFromOnlineRegions(parentRegion, null);
+   }
+   return true;
   }
 
    /**

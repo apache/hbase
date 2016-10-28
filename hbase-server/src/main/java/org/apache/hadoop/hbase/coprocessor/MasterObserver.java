@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -1131,6 +1132,76 @@ public interface MasterObserver extends Coprocessor {
    */
   void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final boolean newValue, final MasterSwitchType switchType) throws IOException;
+
+  /**
+   * Called before the split region procedure is called.
+   * @param c the environment to interact with the framework and master
+   * @param tableName the table where the region belongs to
+   * @param splitRow split point
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void preSplitRegion(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final TableName tableName,
+      final byte[] splitRow)
+      throws IOException;
+
+  /**
+   * Called before the region is split.
+   * @param c the environment to interact with the framework and master
+   * @param tableName the table where the region belongs to
+   * @param splitRow split point
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void preSplitRegionAction(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final TableName tableName,
+      final byte[] splitRow)
+      throws IOException;
+
+  /**
+   * Called after the region is split.
+   * @param c the environment to interact with the framework and master
+   * @param regionInfoA the left daughter region
+   * @param regionInfoB the right daughter region
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void postCompletedSplitRegionAction(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final HRegionInfo regionInfoA,
+      final HRegionInfo regionInfoB) throws IOException;
+
+  /**
+   * This will be called before PONR step as part of split transaction. Calling
+   * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the split
+   * @param ctx the environment to interact with the framework and master
+   * @param splitKey
+   * @param metaEntries
+   * @throws IOException
+   */
+  void preSplitRegionBeforePONRAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] splitKey,
+      final List<Mutation> metaEntries) throws IOException;
+
+
+  /**
+   * This will be called after PONR step as part of split transaction
+   * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
+   * effect in this hook.
+   * @param ctx the environment to interact with the framework and master
+   * @throws IOException
+   */
+  void preSplitRegionAfterPONRAction(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException;
+
+  /**
+   * This will be called before the roll back of the split region is completed
+   * @param ctx the environment to interact with the framework and master
+   * @throws IOException
+   */
+  void preRollBackSplitRegionAction(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException;
 
   /**
    * Called prior to modifying the flag used to enable/disable region balancing.

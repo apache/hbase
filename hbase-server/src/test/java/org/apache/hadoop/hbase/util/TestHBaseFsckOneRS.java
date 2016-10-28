@@ -49,10 +49,10 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.SplitTableRegionProcedure;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl;
-import org.apache.hadoop.hbase.regionserver.SplitTransactionFactory;
 import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -205,7 +205,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
           HConstants.EMPTY_END_ROW, false, false, true);
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS });
 
       doFsck(conf, true);
 
@@ -236,7 +237,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       //to report error if .tableinfo is missing.
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NO_TABLEINFO_FILE });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.NO_TABLEINFO_FILE });
 
       // fix OrphanTable with default .tableinfo (htd not yet cached on master)
       hbck = doFsck(conf, true);
@@ -311,7 +313,9 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck,
-          new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.ORPHAN_HDFS_REGION, HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+          new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+              HBaseFsck.ErrorReporter.ERROR_CODE.ORPHAN_HDFS_REGION,
+              HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
               HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
 
       // fix the problem.
@@ -349,7 +353,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       TEST_UTIL.assertRegionOnServer(hriOverlap, server, REGION_ONLINE_TIMEOUT);
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
           HBaseFsck.ErrorReporter.ERROR_CODE.OVERLAP_IN_REGION_CHAIN });
       assertEquals(3, hbck.getOverlapGroups(table).size());
       assertEquals(ROWKEYS.length, countRows());
@@ -386,7 +391,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       admin.enableTable(table);
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       // holes are separate from overlap groups
       assertEquals(0, hbck.getOverlapGroups(table).size());
 
@@ -449,7 +455,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       hrs.addToOnlineRegions(r);
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.SHOULD_NOT_BE_DEPLOYED });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.SHOULD_NOT_BE_DEPLOYED });
 
       // fix this fault
       doFsck(conf, true);
@@ -678,9 +685,12 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     deleteTableDir(table);
 
     HBaseFsck hbck = doFsck(conf, false);
-    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS,
-        HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS, HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS,
-        HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS, HBaseFsck.ErrorReporter.ERROR_CODE.ORPHAN_TABLE_STATE, });
+    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+        HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS,
+        HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS,
+        HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS,
+        HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS,
+        HBaseFsck.ErrorReporter.ERROR_CODE.ORPHAN_TABLE_STATE, });
     // holes are separate from overlap groups
     assertEquals(0, hbck.getOverlapGroups(table).size());
 
@@ -705,7 +715,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
     // test
     HBaseFsck hbck = doFsck(conf, false);
-    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NO_VERSION_FILE });
+    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+        HBaseFsck.ErrorReporter.ERROR_CODE.NO_VERSION_FILE });
     // fix hbase.version missing
     doFsck(conf, true);
 
@@ -727,7 +738,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       // test
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NO_TABLE_STATE });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.NO_TABLE_STATE });
       // fix table state missing
       doFsck(conf, true);
 
@@ -763,14 +775,17 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
           false, true); // don't rm meta
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS, HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS,
+          HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS });
 
       // fix hole in table 1
       doFsck(conf, true, table1);
       // check that hole in table 1 fixed
       assertNoErrors(doFsck(conf, false, table1));
       // check that hole in table 2 still there
-      assertErrors(doFsck(conf, false, table2), new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS });
+      assertErrors(doFsck(conf, false, table2), new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS });
 
       // fix hole in table 2
       doFsck(conf, true, table2);
@@ -824,16 +839,19 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
-          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_SPLIT_PARENT, HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN});
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_SPLIT_PARENT,
+          HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN});
 
       // regular repair cannot fix lingering split parent
       hbck = doFsck(conf, true);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
-          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_SPLIT_PARENT, HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_SPLIT_PARENT,
+          HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       assertFalse(hbck.shouldRerun());
       hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
-          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_SPLIT_PARENT, HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN});
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_SPLIT_PARENT,
+          HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN});
 
       // fix lingering split parent
       hbck = new HBaseFsck(conf, hbfsckExecutorService);
@@ -897,7 +915,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         // overlapping regions
         HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, false,
             false, false, null);
-        assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {}); //no LINGERING_SPLIT_PARENT reported
+        // no LINGERING_SPLIT_PARENT reported
+        assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {});
 
         // assert that the split hbase:meta entry is still there.
         Get get = new Get(hri.getRegionName());
@@ -908,8 +927,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         assertEquals(ROWKEYS.length, countRows());
 
         // assert that we still have the split regions
-        assertEquals(rl.getStartKeys().length, SPLITS.length + 1 + 1); //SPLITS + 1 is # regions
-        // pre-split.
+        //SPLITS + 1 is # regions pre-split.
+        assertEquals(rl.getStartKeys().length, SPLITS.length + 1 + 1);
         assertNoErrors(doFsck(conf, false));
       }
     } finally {
@@ -1023,7 +1042,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       admin.enableTable(table);
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY });
       // fix hole
       doFsck(conf, true);
       // check that hole fixed
@@ -1051,7 +1071,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
           false, true);
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_HDFS });
       // fix hole
       doFsck(conf, true);
       // check that hole fixed
@@ -1080,7 +1101,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       admin.enableTable(table);
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY });
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY });
       // fix hole
       doFsck(conf, true);
       // check that hole fixed
@@ -1108,7 +1130,9 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // verify there is no other errors
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck,
-          new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_DEPLOYED, HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+          new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+              HBaseFsck.ErrorReporter.ERROR_CODE.NOT_DEPLOYED,
+              HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
 
       // verify that noHdfsChecking report the same errors
       HBaseFsck fsck = new HBaseFsck(conf, hbfsckExecutorService);
@@ -1118,7 +1142,9 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
       assertErrors(fsck,
-          new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_DEPLOYED, HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+          new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+              HBaseFsck.ErrorReporter.ERROR_CODE.NOT_DEPLOYED,
+              HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       fsck.close();
 
       // verify that fixAssignments works fine with noHdfsChecking
@@ -1161,7 +1187,9 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // verify there is no other errors
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck,
-          new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META, HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+          new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+              HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META,
+              HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
 
       // verify that noHdfsChecking report the same errors
       HBaseFsck fsck = new HBaseFsck(conf, hbfsckExecutorService);
@@ -1171,7 +1199,9 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
       assertErrors(fsck,
-          new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META, HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+          new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+              HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META,
+              HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       fsck.close();
 
       // verify that fixMeta doesn't work with noHdfsChecking
@@ -1185,7 +1215,9 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       fsck.onlineHbck();
       assertFalse(fsck.shouldRerun());
       assertErrors(fsck,
-          new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META, HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+          new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+              HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META,
+              HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       fsck.close();
 
       // fix the cluster so other tests won't be impacted
@@ -1225,7 +1257,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
-          HBaseFsck.ErrorReporter.ERROR_CODE.ORPHAN_HDFS_REGION, HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+          HBaseFsck.ErrorReporter.ERROR_CODE.ORPHAN_HDFS_REGION,
+          HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
           HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN});
 
       // verify that noHdfsChecking can't detect ORPHAN_HDFS_REGION
@@ -1235,7 +1268,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
-      assertErrors(fsck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+      assertErrors(fsck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       fsck.close();
 
       // verify that fixHdfsHoles doesn't work with noHdfsChecking
@@ -1249,7 +1283,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       fsck.setFixHdfsOrphans(true);
       fsck.onlineHbck();
       assertFalse(fsck.shouldRerun());
-      assertErrors(fsck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
+      assertErrors(fsck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       fsck.close();
     } finally {
       if (admin.isTableDisabled(table)) {
@@ -1349,7 +1384,9 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       TEST_UTIL.assertRegionOnServer(hriDupe, server, REGION_ONLINE_TIMEOUT);
 
       HBaseFsck hbck = doFsck(conf,false);
-      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.DEGENERATE_REGION, HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS,
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.DEGENERATE_REGION,
+          HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS,
           HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS });
       assertEquals(2, hbck.getOverlapGroups(table).size());
       assertEquals(ROWKEYS.length, countRows());
@@ -1405,13 +1442,15 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       meta.close();
 
       HBaseFsck hbck = doFsck(conf, false);
-      assertTrue(hbck.getErrors().getErrorList().contains(HBaseFsck.ErrorReporter.ERROR_CODE.EMPTY_META_CELL));
+      assertTrue(hbck.getErrors().getErrorList().contains(
+        HBaseFsck.ErrorReporter.ERROR_CODE.EMPTY_META_CELL));
 
       // fix reference file
       hbck = doFsck(conf, true);
 
       // check that reference file fixed
-      assertFalse(hbck.getErrors().getErrorList().contains(HBaseFsck.ErrorReporter.ERROR_CODE.EMPTY_META_CELL));
+      assertFalse(hbck.getErrors().getErrorList().contains(
+        HBaseFsck.ErrorReporter.ERROR_CODE.EMPTY_META_CELL));
     } finally {
       cleanupTable(table);
     }
@@ -1668,16 +1707,22 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       List<HRegion> regions = cluster.getRegions(desc.getTableName());
       int serverWith = cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(serverWith);
-      cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
-      SplitTransactionImpl st = (SplitTransactionImpl)
-        new SplitTransactionFactory(TEST_UTIL.getConfiguration())
-          .create(regions.get(0), Bytes.toBytes("r3"));
-      st.prepare();
-      st.stepsBeforePONR(regionServer, regionServer, false);
+      byte[] parentRegionName = regions.get(0).getRegionInfo().getRegionName();
+      cluster.getServerWith(parentRegionName);
+      // Create daughters without adding to META table
+      MasterProcedureEnv env = cluster.getMaster().getMasterProcedureExecutor().getEnvironment();
+      SplitTableRegionProcedure splitR = new SplitTableRegionProcedure(
+        env, desc.getTableName(), regions.get(0).getRegionInfo(), Bytes.toBytes("r3"));
+      splitR.prepareSplitRegion(env);
+      splitR.setRegionStateToSplitting(env);
+      splitR.closeParentRegionForSplit(env);
+      splitR.createDaughterRegions(env);
+
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
       for (RegionState state : am.getRegionStates().getRegionsInTransition()) {
         am.regionOffline(state.getRegion());
       }
+
       Map<HRegionInfo, ServerName> regionsMap = new HashMap<HRegionInfo, ServerName>();
       regionsMap.put(regions.get(0).getRegionInfo(), regionServer.getServerName());
       am.assign(regionsMap);

@@ -707,7 +707,7 @@ public class RegionCoprocessorHost
    * Invoked just before a split
    * @throws IOException
    */
-  // TODO: Deprecate this
+  @Deprecated
   public void preSplit(final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
@@ -721,7 +721,10 @@ public class RegionCoprocessorHost
   /**
    * Invoked just before a split
    * @throws IOException
+   *
+   * Note: the logic moves to Master; it is unused in RS
    */
+  @Deprecated
   public void preSplit(final byte[] splitRow, final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
@@ -737,7 +740,10 @@ public class RegionCoprocessorHost
    * @param l the new left-hand daughter region
    * @param r the new right-hand daughter region
    * @throws IOException
+   *
+   * Note: the logic moves to Master; it is unused in RS
    */
+  @Deprecated
   public void postSplit(final Region l, final Region r, final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
@@ -748,6 +754,10 @@ public class RegionCoprocessorHost
     });
   }
 
+  /**
+  * Note: the logic moves to Master; it is unused in RS
+  */
+ @Deprecated
   public boolean preSplitBeforePONR(final byte[] splitKey,
       final List<Mutation> metaEntries, final User user) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
@@ -759,6 +769,10 @@ public class RegionCoprocessorHost
     });
   }
 
+  /**
+  * Note: the logic moves to Master; it is unused in RS
+  */
+  @Deprecated
   public void preSplitAfterPONR(final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
@@ -772,7 +786,10 @@ public class RegionCoprocessorHost
   /**
    * Invoked just before the rollback of a failed split is started
    * @throws IOException
-   */
+   *
+  * Note: the logic moves to Master; it is unused in RS
+  */
+  @Deprecated
   public void preRollBackSplit(final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override
@@ -786,7 +803,10 @@ public class RegionCoprocessorHost
   /**
    * Invoked just after the rollback of a failed split is done
    * @throws IOException
-   */
+   *
+  * Note: the logic moves to Master; it is unused in RS
+  */
+  @Deprecated
   public void postRollBackSplit(final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation(user) {
       @Override

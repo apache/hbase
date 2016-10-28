@@ -163,9 +163,7 @@ public class TestCoprocessorInterface {
     private boolean postCompactCalled;
     private boolean preFlushCalled;
     private boolean postFlushCalled;
-    private boolean preSplitCalled;
     private boolean postSplitCalled;
-    private boolean preSplitWithSplitRowCalled;
     private ConcurrentMap<String, Object> sharedData;
 
     @Override
@@ -218,16 +216,6 @@ public class TestCoprocessorInterface {
       postFlushCalled = true;
     }
     @Override
-    public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) {
-      preSplitCalled = true;
-    }
-    
-    @Override
-    public void preSplit(ObserverContext<RegionCoprocessorEnvironment> c,
-        byte[] splitRow) throws IOException {
-      preSplitWithSplitRowCalled = true;
-    }
-    @Override
     public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e, Region l, Region r) {
       postSplitCalled = true;
     }
@@ -257,7 +245,7 @@ public class TestCoprocessorInterface {
       return (preCompactCalled && postCompactCalled);
     }
     boolean wasSplit() {
-      return (preSplitCalled && postSplitCalled && preSplitWithSplitRowCalled);
+      return postSplitCalled;
     }
     Map<String, Object> getSharedData() {
       return sharedData;

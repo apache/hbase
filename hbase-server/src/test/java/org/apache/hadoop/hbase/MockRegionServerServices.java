@@ -307,6 +307,16 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public long requestRegionSplit(final HRegionInfo regionInfo, final byte[] splitRow) {
+    return -1;
+  }
+
+  @Override
+  public boolean isProcedureFinished(final long procId) {
+    return false;
+  }
+
+  @Override
   public boolean registerService(Service service) {
     // TODO Auto-generated method stub
     return false;

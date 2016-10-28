@@ -106,6 +106,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -850,7 +851,7 @@ public final class RequestConverter {
    return ubuilder.build();
  }
 
- /**
+  /**
    *  Create a WarmupRegionRequest for a given region name
    *
    *  @param regionInfo Region we are warming up
@@ -1056,6 +1057,19 @@ public final class RequestConverter {
     builder.setRegionB(buildRegionSpecifier(
         RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionB));
     builder.setForcible(forcible);
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
+    return builder.build();
+  }
+
+  public static SplitTableRegionRequest buildSplitTableRegionRequest(
+      final HRegionInfo regionInfo,
+      final byte[] splitPoint,
+      final long nonceGroup,
+      final long nonce) {
+    SplitTableRegionRequest.Builder builder = SplitTableRegionRequest.newBuilder();
+    builder.setRegionInfo(HRegionInfo.convert(regionInfo));
+    builder.setSplitRow(UnsafeByteOperations.unsafeWrap(splitPoint));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();

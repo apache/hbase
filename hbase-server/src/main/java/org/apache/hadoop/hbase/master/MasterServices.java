@@ -265,6 +265,21 @@ public interface MasterServices extends Server {
       throws IOException;
 
   /**
+   * Split a region.
+   * @param regionInfo region to split
+   * @param splitRow split point
+   * @param nonceGroup used to detect duplicate
+   * @param nonce used to detect duplicate
+   * @return  procedure Id
+   * @throws IOException
+   */
+  public long splitRegion(
+      final HRegionInfo regionInfo,
+      final byte [] splitRow,
+      final long nonceGroup,
+      final long nonce) throws IOException;
+
+  /**
    * @return Return table descriptors implementation.
    */
   TableDescriptors getTableDescriptors();

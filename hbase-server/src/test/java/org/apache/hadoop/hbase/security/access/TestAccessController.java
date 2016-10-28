@@ -816,27 +816,15 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test (timeout=180000)
-  public void testSplit() throws Exception {
-    AccessTestAction action = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSplit(ObserverContext.createAndPrepare(RCP_ENV, null));
-        return null;
-      }
-    };
-
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
-  }
-
-  @Test (timeout=180000)
   public void testSplitWithSplitRow() throws Exception {
+    final TableName tname = TableName.valueOf("testSplitWithSplitRow");
+    createTestTable(tname);
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preSplit(
-            ObserverContext.createAndPrepare(RCP_ENV, null),
+        ACCESS_CONTROLLER.preSplitRegion(
+            ObserverContext.createAndPrepare(CP_ENV, null),
+            tname,
             TEST_ROW);
         return null;
       }

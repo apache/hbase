@@ -37,11 +37,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.regionserver.Region;
 
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.CONFIG})
 @InterfaceStability.Evolving
@@ -814,6 +816,44 @@ public class BaseMasterObserver implements MasterObserver {
   @Override
   public void postSetSplitOrMergeEnabled(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final boolean newValue, final MasterSwitchType switchType) throws IOException {
+  }
+
+  @Override
+  public void preSplitRegion(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final TableName tableName,
+      final byte[] splitRow) throws IOException {
+  }
+
+  @Override
+  public void preSplitRegionAction(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final TableName tableName,
+      final byte[] splitRow) throws IOException {
+  }
+
+  @Override
+  public void postCompletedSplitRegionAction(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final HRegionInfo regionInfoA,
+      final HRegionInfo regionInfoB) throws IOException {
+  }
+
+  @Override
+  public void preSplitRegionBeforePONRAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] splitKey,
+      final List<Mutation> metaEntries) throws IOException {
+  }
+
+  @Override
+  public void preSplitRegionAfterPONRAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+  }
+
+  @Override
+  public void preRollBackSplitRegionAction(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
   }
 
   @Override
