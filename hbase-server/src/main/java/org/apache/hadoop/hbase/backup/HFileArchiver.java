@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +32,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -50,12 +53,21 @@ import com.google.common.collect.Lists;
  * for a HRegion from the {@link FileSystem}. The hfiles will be archived or deleted, depending on
  * the state of the system.
  */
+@InterfaceAudience.Private
 public class HFileArchiver {
   private static final Log LOG = LogFactory.getLog(HFileArchiver.class);
   private static final String SEPARATOR = ".";
 
   /** Number of retries in case of fs operation failure */
   private static final int DEFAULT_RETRIES_NUMBER = 3;
+
+  private static final Function<File, Path> FUNC_FILE_TO_PATH =
+      new Function<File, Path>() {
+        @Override
+        public Path apply(File file) {
+          return file == null ? null : file.getPath();
+        }
+      };
 
   private HFileArchiver() {
     // hidden ctor since this is just a util
@@ -132,21 +144,16 @@ public class HFileArchiver {
     // convert the files in the region to a File
     toArchive.addAll(Lists.transform(Arrays.asList(storeDirs), getAsFile));
     LOG.debug("Archiving " + toArchive);
-    boolean success = false;
-    try {
-      success = resolveAndArchive(fs, regionArchiveDir, toArchive);
-    } catch (IOException e) {
-      LOG.error("Failed to archive " + toArchive, e);
-      success = false;
+    List<File> failedArchive = resolveAndArchive(fs, regionArchiveDir, toArchive,
+        EnvironmentEdgeManager.currentTime());
+    if (!failedArchive.isEmpty()) {
+      throw new FailedArchiveException("Failed to archive/delete all the files for region:"
+          + regionDir.getName() + " into " + regionArchiveDir
+          + ". Something is probably awry on the filesystem.",
+          Collections2.transform(failedArchive, FUNC_FILE_TO_PATH));
     }
-
     // if that was successful, then we delete the region
-    if (success) {
-      return deleteRegionWithoutArchiving(fs, regionDir);
-    }
-
-    throw new IOException("Received error when attempting to archive files (" + toArchive
-        + "), cannot delete region directory. ");
+    return deleteRegionWithoutArchiving(fs, regionDir);
   }
 
   /**
@@ -174,10 +181,13 @@ public class HFileArchiver {
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, tableDir, family);
 
     // do the actual archive
-    if (!resolveAndArchive(fs, storeArchiveDir, toArchive)) {
-      throw new IOException("Failed to archive/delete all the files for region:"
+    List<File> failedArchive = resolveAndArchive(fs, storeArchiveDir, toArchive,
+        EnvironmentEdgeManager.currentTime());
+    if (!failedArchive.isEmpty()){
+      throw new FailedArchiveException("Failed to archive/delete all the files for region:"
           + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family)
-          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
+          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.",
+          Collections2.transform(failedArchive, FUNC_FILE_TO_PATH));
     }
   }
 
@@ -192,7 +202,8 @@ public class HFileArchiver {
    * @throws IOException if the files could not be correctly disposed.
    */
   public static void archiveStoreFiles(Configuration conf, FileSystem fs, HRegionInfo regionInfo,
-      Path tableDir, byte[] family, Collection<StoreFile> compactedFiles) throws IOException {
+      Path tableDir, byte[] family, Collection<StoreFile> compactedFiles)
+      throws IOException, FailedArchiveException {
 
     // sometimes in testing, we don't have rss, so we need to check for that
     if (fs == null) {
@@ -228,10 +239,14 @@ public class HFileArchiver {
     Collection<File> storeFiles = Collections2.transform(compactedFiles, getStorePath);
 
     // do the actual archive
-    if (!resolveAndArchive(fs, storeArchiveDir, storeFiles)) {
-      throw new IOException("Failed to archive/delete all the files for region:"
+    List<File> failedArchive = resolveAndArchive(fs, storeArchiveDir, storeFiles,
+        EnvironmentEdgeManager.currentTime());
+
+    if (!failedArchive.isEmpty()){
+      throw new FailedArchiveException("Failed to archive/delete all the files for region:"
           + Bytes.toString(regionInfo.getRegionName()) + ", family:" + Bytes.toString(family)
-          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
+          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.",
+          Collections2.transform(failedArchive, FUNC_FILE_TO_PATH));
     }
   }
 
@@ -262,36 +277,6 @@ public class HFileArchiver {
           + regionInfo.getRegionNameAsString() + ", family:" + Bytes.toString(family)
           + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
     }
-  }
-
-  /**
-   * Archive the given files and resolve any conflicts with existing files via appending the time
-   * archiving started (so all conflicts in the same group have the same timestamp appended).
-   * <p>
-   * If any of the passed files to archive are directories, archives all the files under that
-   * directory. Archive directory structure for children is the base archive directory name + the
-   * parent directory and is built recursively is passed files are directories themselves.
-   * @param fs {@link FileSystem} on which to archive the files
-   * @param baseArchiveDir base archive directory to archive the given files
-   * @param toArchive files to be archived
-   * @return <tt>true</tt> on success, <tt>false</tt> otherwise
-   * @throws IOException on unexpected failure
-   */
-  private static boolean resolveAndArchive(FileSystem fs, Path baseArchiveDir,
-      Collection<File> toArchive) throws IOException {
-    if (LOG.isTraceEnabled()) LOG.trace("Starting to archive " + toArchive);
-    long start = EnvironmentEdgeManager.currentTime();
-    List<File> failures = resolveAndArchive(fs, baseArchiveDir, toArchive, start);
-
-    // notify that some files were not archived.
-    // We can't delete the files otherwise snapshots or other backup system
-    // that relies on the archiver end up with data loss.
-    if (failures.size() > 0) {
-      LOG.warn("Failed to complete archive of: " + failures +
-        ". Those files are still in the original location, and they may slow down reads.");
-      return false;
-    }
-    return true;
   }
 
   /**
@@ -423,6 +408,10 @@ public class HFileArchiver {
 
       try {
         success = currentFile.moveAndClose(archiveFile);
+      } catch (FileNotFoundException fnfe) {
+        LOG.warn("Failed to archive " + currentFile +
+            " because it does not exist! Skipping and continuing on.", fnfe);
+        success = true;
       } catch (IOException e) {
         LOG.warn("Failed to archive " + currentFile + " on try #" + i, e);
         success = false;

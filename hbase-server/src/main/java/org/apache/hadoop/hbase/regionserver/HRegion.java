@@ -1534,7 +1534,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         } catch (InterruptedException e) {
           throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         } catch (ExecutionException e) {
-          throw new IOException(e.getCause());
+          Throwable cause = e.getCause();
+          if (cause instanceof IOException) {
+            throw (IOException) cause;
+          }
+          throw new IOException(cause);
         } finally {
           storeCloserThreadPool.shutdownNow();
         }
