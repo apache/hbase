@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
@@ -2443,7 +2445,24 @@ public class HStore implements Store {
           LOG.debug("Moving the files " + filesToRemove + " to archive");
         }
         // Only if this is successful it has to be removed
-        this.fs.removeStoreFiles(this.getFamily().getNameAsString(), filesToRemove);
+        try {
+          this.fs.removeStoreFiles(this.getFamily().getNameAsString(), filesToRemove);
+        } catch (FailedArchiveException fae) {
+          // Even if archiving some files failed, we still need to clear out any of the
+          // files which were successfully archived.  Otherwise we will receive a
+          // FileNotFoundException when we attempt to re-archive them in the next go around.
+          Collection<Path> failedFiles = fae.getFailedFiles();
+          Iterator<StoreFile> iter = filesToRemove.iterator();
+          while (iter.hasNext()) {
+            if (failedFiles.contains(iter.next().getPath())) {
+              iter.remove();
+            }
+          }
+          if (!filesToRemove.isEmpty()) {
+            clearCompactedfiles(filesToRemove);
+          }
+          throw fae;
+        }
       }
     }
     if (!filesToRemove.isEmpty()) {

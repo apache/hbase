@@ -43,6 +43,7 @@ public class MockStoreFile extends StoreFile {
   boolean isMajor;
   HDFSBlocksDistribution hdfsBlocksDistribution;
   long modificationTime;
+  boolean compactedAway;
 
   MockStoreFile(HBaseTestingUtility testUtil, Path testPath,
       long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
@@ -120,6 +121,11 @@ public class MockStoreFile extends StoreFile {
   }
 
   @Override
+  public void markCompactedAway() {
+    this.compactedAway = true;
+  }
+
+  @Override
   public long getModificationTimeStamp() {
     return modificationTime;
   }
@@ -134,6 +140,7 @@ public class MockStoreFile extends StoreFile {
     final long len = this.length;
     final TimeRangeTracker timeRangeTracker = this.timeRangeTracker;
     final long entries = this.entryCount;
+    final boolean compactedAway = this.compactedAway;
     return new StoreFileReader() {
       @Override
       public long length() {
@@ -148,6 +155,16 @@ public class MockStoreFile extends StoreFile {
       @Override
       public long getEntries() {
         return entries;
+      }
+
+      @Override
+      public boolean isCompactedAway() {
+        return compactedAway;
+      }
+
+      @Override
+      public void close(boolean evictOnClose) throws IOException {
+        // no-op
       }
     };
   }
