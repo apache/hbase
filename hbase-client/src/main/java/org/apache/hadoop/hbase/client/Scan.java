@@ -128,7 +128,7 @@ public class Scan extends Query {
   static public final String SCAN_ATTRIBUTES_TABLE_NAME = "scan.attributes.table.name";
 
   /*
-   * -1 means no caching
+   * -1 means caching is not overridden in Scan so use the default configuration
    */
   private int caching = -1;
   private long maxResultSize = -1;
