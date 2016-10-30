@@ -17,11 +17,19 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
-import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.AES_CTR_NOPADDING;
-import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -38,6 +46,9 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
@@ -45,7 +56,6 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.token.TestGenerateDelegationToken;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -113,7 +123,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
     List<Object[]> params = new ArrayList<>();
     for (String protection : Arrays.asList("authentication", "integrity", "privacy")) {
       for (String encryptionAlgorithm : Arrays.asList("", "3des", "rc4")) {
-        for (String cipherSuite : Arrays.asList("", AES_CTR_NOPADDING)) {
+        for (String cipherSuite : Arrays.asList("", CipherSuite.AES_CTR_NOPADDING.getName())) {
           for (boolean useTransparentEncryption : Arrays.asList(false, true)) {
             params.add(new Object[] { protection, encryptionAlgorithm, cipherSuite,
                 useTransparentEncryption });
@@ -125,17 +135,15 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   }
 
   private static void setHdfsSecuredConfiguration(Configuration conf) throws Exception {
-    // change XXX_USER_NAME_KEY to XXX_KERBEROS_PRINCIPAL_KEY after we drop support for hadoop-2.4.1
-    conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, PRINCIPAL + "@" + KDC.getRealm());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
-    conf.set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, PRINCIPAL + "@" + KDC.getRealm());
-    conf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
-    conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-      HTTP_PRINCIPAL + "@" + KDC.getRealm());
-    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
-    conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    conf.set(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, PRINCIPAL + "@" + KDC.getRealm());
+    conf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
+    conf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, PRINCIPAL + "@" + KDC.getRealm());
+    conf.set(DFS_DATANODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
+    conf.set(DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, HTTP_PRINCIPAL + "@" + KDC.getRealm());
+    conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.set(DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
+    conf.set(DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    conf.set(DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
 
     File keystoresDir = new File(TEST_UTIL.getDataTestDir("keystore").toUri().getPath());
     keystoresDir.mkdirs();
@@ -146,32 +154,13 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
   }
 
   private static void setUpKeyProvider(Configuration conf) throws Exception {
-    Class<?> keyProviderFactoryClass;
-    try {
-      keyProviderFactoryClass = Class.forName("org.apache.hadoop.crypto.key.KeyProviderFactory");
-    } catch (ClassNotFoundException e) {
-      // should be hadoop 2.5-, give up
-      TEST_TRANSPARENT_ENCRYPTION = false;
-      return;
-    }
-
     URI keyProviderUri =
         new URI("jceks://file" + TEST_UTIL.getDataTestDir("test.jks").toUri().toString());
     conf.set("dfs.encryption.key.provider.uri", keyProviderUri.toString());
-    Method getKeyProviderMethod =
-        keyProviderFactoryClass.getMethod("get", URI.class, Configuration.class);
-    Object keyProvider = getKeyProviderMethod.invoke(null, keyProviderUri, conf);
-    Class<?> keyProviderClass = Class.forName("org.apache.hadoop.crypto.key.KeyProvider");
-    Class<?> keyProviderOptionsClass =
-        Class.forName("org.apache.hadoop.crypto.key.KeyProvider$Options");
-    Method createKeyMethod =
-        keyProviderClass.getMethod("createKey", String.class, keyProviderOptionsClass);
-    Object options = keyProviderOptionsClass.getConstructor(Configuration.class).newInstance(conf);
-    createKeyMethod.invoke(keyProvider, TEST_KEY_NAME, options);
-    Method flushMethod = keyProviderClass.getMethod("flush");
-    flushMethod.invoke(keyProvider);
-    Method closeMethod = keyProviderClass.getMethod("close");
-    closeMethod.invoke(keyProvider);
+    KeyProvider keyProvider = KeyProviderFactory.get(keyProviderUri, conf);
+    keyProvider.createKey(TEST_KEY_NAME, KeyProvider.options(conf));
+    keyProvider.flush();
+    keyProvider.close();
   }
 
   @BeforeClass
@@ -231,7 +220,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput {
       TEST_UTIL.getConfiguration().set(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuite);
     }
 
-    TEST_UTIL.startMiniDFSCluster(3);
+    TEST_UTIL.startMiniDFSCluster(1);
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
     testDirOnTestFs = new Path("/" + name.getMethodName().replaceAll("[^0-9a-zA-Z]", "_"));
     FS.mkdirs(testDirOnTestFs);

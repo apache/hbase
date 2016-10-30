@@ -107,17 +107,8 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       throws IOException, InterruptedException, ExecutionException {
     final byte[] b = new byte[10];
     ThreadLocalRandom.current().nextBytes(b);
-    final FanOutOneBlockAsyncDFSOutputFlushHandler handler =
-        new FanOutOneBlockAsyncDFSOutputFlushHandler();
-    eventLoop.execute(new Runnable() {
-
-      @Override
-      public void run() {
-        out.write(b, 0, b.length);
-        out.flush(null, handler, false);
-      }
-    });
-    assertEquals(b.length, handler.get());
+    out.write(b, 0, b.length);
+    assertEquals(b.length, out.flush(false).get().longValue());
     out.close();
     assertEquals(b.length, dfs.getFileStatus(f).getLen());
     byte[] actual = new byte[b.length];
@@ -144,31 +135,14 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop);
     final byte[] b = new byte[10];
     ThreadLocalRandom.current().nextBytes(b);
-    final FanOutOneBlockAsyncDFSOutputFlushHandler handler =
-        new FanOutOneBlockAsyncDFSOutputFlushHandler();
-    eventLoop.execute(new Runnable() {
-
-      @Override
-      public void run() {
-        out.write(b, 0, b.length);
-        out.flush(null, handler, false);
-      }
-    });
-    handler.get();
+    out.write(b, 0, b.length);
+    out.flush(false).get();
     // restart one datanode which causes one connection broken
     TEST_UTIL.getDFSCluster().restartDataNode(0);
     try {
-      handler.reset();
-      eventLoop.execute(new Runnable() {
-
-        @Override
-        public void run() {
-          out.write(b, 0, b.length);
-          out.flush(null, handler, false);
-        }
-      });
+      out.write(b, 0, b.length);
       try {
-        handler.get();
+        out.flush(false).get();
         fail("flush should fail");
       } catch (ExecutionException e) {
         // we restarted one datanode so the flush should fail
@@ -254,17 +228,9 @@ public class TestFanOutOneBlockAsyncDFSOutput {
       true, false, (short) 3, 1024 * 1024 * 1024, eventLoop);
     byte[] b = new byte[50 * 1024 * 1024];
     ThreadLocalRandom.current().nextBytes(b);
-    FanOutOneBlockAsyncDFSOutputFlushHandler handler =
-        new FanOutOneBlockAsyncDFSOutputFlushHandler();
-    eventLoop.execute(new Runnable() {
-
-      @Override
-      public void run() {
-        out.write(b);
-        out.flush(null, handler, false);
-      }
-    });
-    assertEquals(b.length, handler.get());
+    out.write(b);
+    out.flush(false);
+    assertEquals(b.length, out.flush(false).get().longValue());
     out.close();
     assertEquals(b.length, FS.getFileStatus(f).getLen());
     byte[] actual = new byte[b.length];

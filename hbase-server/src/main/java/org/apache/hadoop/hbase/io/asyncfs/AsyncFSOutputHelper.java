@@ -25,7 +25,7 @@ import io.netty.channel.EventLoop;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.CompletionHandler;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -80,11 +80,7 @@ public final class AsyncFSOutputHelper {
         if (eventLoop.inEventLoop()) {
           out.write(b, off, len);
         } else {
-          eventLoop.submit(new Runnable() {
-            public void run() {
-              out.write(b, off, len);
-            }
-          }).syncUninterruptibly();
+          eventLoop.submit(() -> out.write(b, off, len)).syncUninterruptibly();
         }
       }
 
@@ -103,15 +99,14 @@ public final class AsyncFSOutputHelper {
         return new DatanodeInfo[0];
       }
 
-      private <A> void flush0(A attachment, CompletionHandler<Long, ? super A> handler,
-          boolean sync) {
+      private void flush0(CompletableFuture<Long> future, boolean sync) {
         try {
           synchronized (out) {
             fsOut.write(out.getBuffer(), 0, out.size());
             out.reset();
           }
         } catch (IOException e) {
-          eventLoop.execute(() -> handler.failed(e, attachment));
+          eventLoop.execute(() -> future.completeExceptionally(e));
           return;
         }
         try {
@@ -120,17 +115,18 @@ public final class AsyncFSOutputHelper {
           } else {
             fsOut.hflush();
           }
-          final long pos = fsOut.getPos();
-          eventLoop.execute(() -> handler.completed(pos, attachment));
-        } catch (final IOException e) {
-          eventLoop.execute(() -> handler.failed(e, attachment));
+          long pos = fsOut.getPos();
+          eventLoop.execute(() -> future.complete(pos));
+        } catch (IOException e) {
+          eventLoop.execute(() -> future.completeExceptionally(e));
         }
       }
 
       @Override
-      public <A> void flush(A attachment, CompletionHandler<Long, ? super A> handler,
-          boolean sync) {
-        flushExecutor.execute(() -> flush0(attachment, handler, sync));
+      public CompletableFuture<Long> flush(boolean sync) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        flushExecutor.execute(() -> flush0(future, sync));
+        return future;
       }
 
       @Override

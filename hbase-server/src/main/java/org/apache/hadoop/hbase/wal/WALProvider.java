@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.channels.CompletionHandler;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -85,7 +85,7 @@ public interface WALProvider {
   }
 
   interface AsyncWriter extends Closeable {
-    <A> void sync(CompletionHandler<Long, A> handler, A attachment);
+    CompletableFuture<Long> sync();
     void append(WAL.Entry entry);
     long getLength();
   }

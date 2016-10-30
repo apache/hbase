@@ -21,7 +21,7 @@ import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.handler.timeout.IdleState.READER_IDLE;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
-import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createCryptoCodec;
+import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createEncryptor;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.trySaslNegotiate;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
@@ -66,6 +66,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.crypto.Encryptor;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemLinkResolver;
@@ -74,7 +76,6 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
-import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.CryptoCodec;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -96,7 +97,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PipelineAckProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
@@ -143,25 +143,13 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static final PipelineAckStatusGetter PIPELINE_ACK_STATUS_GETTER;
 
-  // StorageType enum is added in hadoop 2.4, but it is moved to another package in hadoop 2.6 and
-  // the setter method in OpWriteBlockProto is also added in hadoop 2.6. So we need to skip the
-  // setStorageType call if it is hadoop 2.5 or before. See createStorageTypeSetter for more
-  // details.
+  // StorageType enum is placed under o.a.h.hdfs in hadoop 2.6 and o.a.h.fs in hadoop 2.7. So here
+  // we need to use reflection to set it.See createStorageTypeSetter for more details.
   private interface StorageTypeSetter {
     OpWriteBlockProto.Builder set(OpWriteBlockProto.Builder builder, Enum<?> storageType);
   }
 
   private static final StorageTypeSetter STORAGE_TYPE_SETTER;
-
-  // helper class for calling create method on namenode. There is a supportedVersions parameter for
-  // hadoop 2.6 or after. See createFileCreater for more details.
-  private interface FileCreater {
-    HdfsFileStatus create(ClientProtocol namenode, String src, FsPermission masked,
-        String clientName, EnumSetWritable<CreateFlag> flag, boolean createParent,
-        short replication, long blockSize) throws IOException;
-  }
-
-  private static final FileCreater FILE_CREATER;
 
   // helper class for calling add block method on namenode. There is a addBlockFlags parameter for
   // hadoop 2.8 or later. See createBlockAdder for more details.
@@ -174,13 +162,11 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static final BlockAdder BLOCK_ADDER;
 
-  // helper class for add or remove lease from DFSClient. Hadoop 2.4 use src as the Map's key, and
-  // hadoop 2.5 or after use inodeId. See createLeaseManager for more details.
   private interface LeaseManager {
 
-    void begin(DFSClient client, String src, long inodeId);
+    void begin(DFSClient client, long inodeId);
 
-    void end(DFSClient client, String src, long inodeId);
+    void end(DFSClient client, long inodeId);
   }
 
   private static final LeaseManager LEASE_MANAGER;
@@ -197,7 +183,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   // helper class for convert protos.
   private interface PBHelper {
 
-    ExtendedBlockProto convert(final ExtendedBlock b);
+    ExtendedBlockProto convert(ExtendedBlock b);
 
     TokenProto convert(Token<?> tok);
   }
@@ -212,7 +198,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
   private static final ChecksumCreater CHECKSUM_CREATER;
 
   private static DFSClientAdaptor createDFSClientAdaptor() throws NoSuchMethodException {
-    final Method isClientRunningMethod = DFSClient.class.getDeclaredMethod("isClientRunning");
+    Method isClientRunningMethod = DFSClient.class.getDeclaredMethod("isClientRunning");
     isClientRunningMethod.setAccessible(true);
     return new DFSClientAdaptor() {
 
@@ -227,16 +213,16 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     };
   }
 
-  private static LeaseManager createLeaseManager25() throws NoSuchMethodException {
-    final Method beginFileLeaseMethod = DFSClient.class.getDeclaredMethod("beginFileLease",
-      long.class, DFSOutputStream.class);
+  private static LeaseManager createLeaseManager() throws NoSuchMethodException {
+    Method beginFileLeaseMethod =
+        DFSClient.class.getDeclaredMethod("beginFileLease", long.class, DFSOutputStream.class);
     beginFileLeaseMethod.setAccessible(true);
-    final Method endFileLeaseMethod = DFSClient.class.getDeclaredMethod("endFileLease", long.class);
+    Method endFileLeaseMethod = DFSClient.class.getDeclaredMethod("endFileLease", long.class);
     endFileLeaseMethod.setAccessible(true);
     return new LeaseManager() {
 
       @Override
-      public void begin(DFSClient client, String src, long inodeId) {
+      public void begin(DFSClient client, long inodeId) {
         try {
           beginFileLeaseMethod.invoke(client, inodeId, null);
         } catch (IllegalAccessException | InvocationTargetException e) {
@@ -245,7 +231,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       }
 
       @Override
-      public void end(DFSClient client, String src, long inodeId) {
+      public void end(DFSClient client, long inodeId) {
         try {
           endFileLeaseMethod.invoke(client, inodeId);
         } catch (IllegalAccessException | InvocationTargetException e) {
@@ -255,66 +241,28 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     };
   }
 
-  private static LeaseManager createLeaseManager24() throws NoSuchMethodException {
-    final Method beginFileLeaseMethod = DFSClient.class.getDeclaredMethod("beginFileLease",
-      String.class, DFSOutputStream.class);
-    beginFileLeaseMethod.setAccessible(true);
-    final Method endFileLeaseMethod = DFSClient.class.getDeclaredMethod("endFileLease",
-      String.class);
-    endFileLeaseMethod.setAccessible(true);
-    return new LeaseManager() {
-
-      @Override
-      public void begin(DFSClient client, String src, long inodeId) {
-        try {
-          beginFileLeaseMethod.invoke(client, src, null);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public void end(DFSClient client, String src, long inodeId) {
-        try {
-          endFileLeaseMethod.invoke(client, src);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    };
-  }
-
-  private static LeaseManager createLeaseManager() throws NoSuchMethodException {
-    try {
-      return createLeaseManager25();
-    } catch (NoSuchMethodException e) {
-      LOG.debug("No inodeId related lease methods found, should be hadoop 2.4-", e);
-    }
-    return createLeaseManager24();
-  }
-
   private static PipelineAckStatusGetter createPipelineAckStatusGetter27()
       throws NoSuchMethodException {
-    final Method getFlagListMethod = PipelineAckProto.class.getMethod("getFlagList");
+    Method getFlagListMethod = PipelineAckProto.class.getMethod("getFlagList");
     @SuppressWarnings("rawtypes")
     Class<? extends Enum> ecnClass;
     try {
       ecnClass = Class.forName("org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck$ECN")
           .asSubclass(Enum.class);
     } catch (ClassNotFoundException e) {
-      final String msg = "Couldn't properly initialize the PipelineAck.ECN class. Please "
+      String msg = "Couldn't properly initialize the PipelineAck.ECN class. Please "
           + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
           + "HBASE-16110 for more information.";
       LOG.error(msg, e);
       throw new Error(msg, e);
     }
     @SuppressWarnings("unchecked")
-    final Enum<?> disabledECN = Enum.valueOf(ecnClass, "DISABLED");
-    final Method getReplyMethod = PipelineAckProto.class.getMethod("getReply", int.class);
-    final Method combineHeaderMethod = PipelineAck.class.getMethod("combineHeader", ecnClass,
-      Status.class);
-    final Method getStatusFromHeaderMethod = PipelineAck.class.getMethod("getStatusFromHeader",
-      int.class);
+    Enum<?> disabledECN = Enum.valueOf(ecnClass, "DISABLED");
+    Method getReplyMethod = PipelineAckProto.class.getMethod("getReply", int.class);
+    Method combineHeaderMethod =
+        PipelineAck.class.getMethod("combineHeader", ecnClass, Status.class);
+    Method getStatusFromHeaderMethod =
+        PipelineAck.class.getMethod("getStatusFromHeader", int.class);
     return new PipelineAckStatusGetter() {
 
       @Override
@@ -339,7 +287,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static PipelineAckStatusGetter createPipelineAckStatusGetter26()
       throws NoSuchMethodException {
-    final Method getStatusMethod = PipelineAckProto.class.getMethod("getStatus", int.class);
+    Method getStatusMethod = PipelineAckProto.class.getMethod("getStatus", int.class);
     return new PipelineAckStatusGetter() {
 
       @Override
@@ -363,30 +311,18 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return createPipelineAckStatusGetter26();
   }
 
-  private static StorageTypeSetter createStorageTypeSetter() {
-    final Method setStorageTypeMethod;
-    try {
-      setStorageTypeMethod = OpWriteBlockProto.Builder.class.getMethod("setStorageType",
-        StorageTypeProto.class);
-    } catch (NoSuchMethodException e) {
-      LOG.debug("noSetStorageType method found, should be hadoop 2.5-", e);
-      return new StorageTypeSetter() {
-
-        @Override
-        public Builder set(Builder builder, Enum<?> storageType) {
-          return builder;
-        }
-      };
-    }
+  private static StorageTypeSetter createStorageTypeSetter() throws NoSuchMethodException {
+    Method setStorageTypeMethod =
+        OpWriteBlockProto.Builder.class.getMethod("setStorageType", StorageTypeProto.class);
     ImmutableMap.Builder<String, StorageTypeProto> builder = ImmutableMap.builder();
     for (StorageTypeProto storageTypeProto : StorageTypeProto.values()) {
       builder.put(storageTypeProto.name(), storageTypeProto);
     }
-    final ImmutableMap<String, StorageTypeProto> name2ProtoEnum = builder.build();
+    ImmutableMap<String, StorageTypeProto> name2ProtoEnum = builder.build();
     return new StorageTypeSetter() {
 
       @Override
-      public Builder set(Builder builder, Enum<?> storageType) {
+      public OpWriteBlockProto.Builder set(OpWriteBlockProto.Builder builder, Enum<?> storageType) {
         Object protoEnum = name2ProtoEnum.get(storageType.name());
         try {
           setStorageTypeMethod.invoke(builder, protoEnum);
@@ -398,62 +334,10 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     };
   }
 
-  private static FileCreater createFileCreater() throws ClassNotFoundException,
-      NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-    for (Method method : ClientProtocol.class.getMethods()) {
-      if (method.getName().equals("create")) {
-        final Method createMethod = method;
-        Class<?>[] paramTypes = createMethod.getParameterTypes();
-        if (paramTypes[paramTypes.length - 1] == long.class) {
-          return new FileCreater() {
-
-            @Override
-            public HdfsFileStatus create(ClientProtocol namenode, String src, FsPermission masked,
-                String clientName, EnumSetWritable<CreateFlag> flag, boolean createParent,
-                short replication, long blockSize) throws IOException {
-              try {
-                return (HdfsFileStatus) createMethod.invoke(namenode, src, masked, clientName, flag,
-                  createParent, replication, blockSize);
-              } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-              } catch (InvocationTargetException e) {
-                Throwables.propagateIfPossible(e.getTargetException(), IOException.class);
-                throw new RuntimeException(e);
-              }
-            }
-          };
-        } else {
-          Class<?> cryptoProtocolVersionClass = Class
-              .forName("org.apache.hadoop.crypto.CryptoProtocolVersion");
-          Method supportedMethod = cryptoProtocolVersionClass.getMethod("supported");
-          final Object supported = supportedMethod.invoke(null);
-          return new FileCreater() {
-
-            @Override
-            public HdfsFileStatus create(ClientProtocol namenode, String src, FsPermission masked,
-                String clientName, EnumSetWritable<CreateFlag> flag, boolean createParent,
-                short replication, long blockSize) throws IOException {
-              try {
-                return (HdfsFileStatus) createMethod.invoke(namenode, src, masked, clientName, flag,
-                  createParent, replication, blockSize, supported);
-              } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-              } catch (InvocationTargetException e) {
-                Throwables.propagateIfPossible(e.getTargetException(), IOException.class);
-                throw new RuntimeException(e);
-              }
-            }
-          };
-        }
-      }
-    }
-    throw new NoSuchMethodException("Can not find create method in ClientProtocol");
-  }
-
   private static BlockAdder createBlockAdder() throws NoSuchMethodException {
     for (Method method : ClientProtocol.class.getMethods()) {
       if (method.getName().equals("addBlock")) {
-        final Method addBlockMethod = method;
+        Method addBlockMethod = method;
         Class<?>[] paramTypes = addBlockMethod.getParameterTypes();
         if (paramTypes[paramTypes.length - 1] == String[].class) {
           return new BlockAdder() {
@@ -505,8 +389,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       LOG.debug("No PBHelperClient class found, should be hadoop 2.7-", e);
       helperClass = org.apache.hadoop.hdfs.protocolPB.PBHelper.class;
     }
-    final Method convertEBMethod = helperClass.getMethod("convert", ExtendedBlock.class);
-    final Method convertTokenMethod = helperClass.getMethod("convert", Token.class);
+    Method convertEBMethod = helperClass.getMethod("convert", ExtendedBlock.class);
+    Method convertTokenMethod = helperClass.getMethod("convert", Token.class);
     return new PBHelper() {
 
       @Override
@@ -533,7 +417,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       throws NoSuchMethodException {
     for (Method method : confClass.getMethods()) {
       if (method.getName().equals("createChecksum")) {
-        final Method createChecksumMethod = method;
+        Method createChecksumMethod = method;
         return new ChecksumCreater() {
 
           @Override
@@ -552,7 +436,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
 
   private static ChecksumCreater createChecksumCreater27(Class<?> confClass)
       throws NoSuchMethodException {
-    final Method createChecksumMethod = confClass.getDeclaredMethod("createChecksum");
+    Method createChecksumMethod = confClass.getDeclaredMethod("createChecksum");
     createChecksumMethod.setAccessible(true);
     return new ChecksumCreater() {
 
@@ -597,14 +481,13 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     try {
       PIPELINE_ACK_STATUS_GETTER = createPipelineAckStatusGetter();
       STORAGE_TYPE_SETTER = createStorageTypeSetter();
-      FILE_CREATER = createFileCreater();
       BLOCK_ADDER = createBlockAdder();
       LEASE_MANAGER = createLeaseManager();
       DFS_CLIENT_ADAPTOR = createDFSClientAdaptor();
       PB_HELPER = createPBHelper();
       CHECKSUM_CREATER = createChecksumCreater();
     } catch (Exception e) {
-      final String msg = "Couldn't properly initialize access to HDFS internals. Please "
+      String msg = "Couldn't properly initialize access to HDFS internals. Please "
           + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
           + "HBASE-16110 for more information.";
       LOG.error(msg, e);
@@ -612,12 +495,12 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     }
   }
 
-  static void beginFileLease(DFSClient client, String src, long inodeId) {
-    LEASE_MANAGER.begin(client, src, inodeId);
+  static void beginFileLease(DFSClient client, long inodeId) {
+    LEASE_MANAGER.begin(client, inodeId);
   }
 
-  static void endFileLease(DFSClient client, String src, long inodeId) {
-    LEASE_MANAGER.end(client, src, inodeId);
+  static void endFileLease(DFSClient client, long inodeId) {
+    LEASE_MANAGER.end(client, inodeId);
   }
 
   static DataChecksum createChecksum(DFSClient client) {
@@ -628,8 +511,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return PIPELINE_ACK_STATUS_GETTER.get(ack);
   }
 
-  private static void processWriteBlockResponse(Channel channel, final DatanodeInfo dnInfo,
-      final Promise<Channel> promise, final int timeoutMs) {
+  private static void processWriteBlockResponse(Channel channel, DatanodeInfo dnInfo,
+      Promise<Channel> promise, int timeoutMs) {
     channel.pipeline().addLast(new IdleStateHandler(timeoutMs, 0, 0, TimeUnit.MILLISECONDS),
       new ProtobufVarint32FrameDecoder(),
       new ProtobufDecoder(BlockOpResponseProto.getDefaultInstance()),
@@ -693,18 +576,18 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       OpWriteBlockProto.Builder writeBlockProtoBuilder) throws IOException {
     OpWriteBlockProto proto = STORAGE_TYPE_SETTER.set(writeBlockProtoBuilder, storageType).build();
     int protoLen = proto.getSerializedSize();
-    ByteBuf buffer = channel.alloc()
-        .buffer(3 + CodedOutputStream.computeRawVarint32Size(protoLen) + protoLen);
+    ByteBuf buffer =
+        channel.alloc().buffer(3 + CodedOutputStream.computeRawVarint32Size(protoLen) + protoLen);
     buffer.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
     buffer.writeByte(Op.WRITE_BLOCK.code);
     proto.writeDelimitedTo(new ByteBufOutputStream(buffer));
     channel.writeAndFlush(buffer);
   }
 
-  private static void initialize(Configuration conf, final Channel channel,
-      final DatanodeInfo dnInfo, final Enum<?> storageType,
-      final OpWriteBlockProto.Builder writeBlockProtoBuilder, final int timeoutMs, DFSClient client,
-      Token<BlockTokenIdentifier> accessToken, final Promise<Channel> promise) {
+  private static void initialize(Configuration conf, Channel channel, DatanodeInfo dnInfo,
+      Enum<?> storageType, OpWriteBlockProto.Builder writeBlockProtoBuilder, int timeoutMs,
+      DFSClient client, Token<BlockTokenIdentifier> accessToken, Promise<Channel> promise)
+      throws IOException {
     Promise<Void> saslPromise = channel.eventLoop().newPromise();
     trySaslNegotiate(conf, channel, dnInfo, timeoutMs, client, accessToken, saslPromise);
     saslPromise.addListener(new FutureListener<Void>() {
@@ -722,14 +605,14 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     });
   }
 
-  private static List<Future<Channel>> connectToDataNodes(final Configuration conf,
-      final DFSClient client, String clientName, final LocatedBlock locatedBlock, long maxBytesRcvd,
-      long latestGS, BlockConstructionStage stage, DataChecksum summer, EventLoop eventLoop) {
+  private static List<Future<Channel>> connectToDataNodes(Configuration conf, DFSClient client,
+      String clientName, LocatedBlock locatedBlock, long maxBytesRcvd, long latestGS,
+      BlockConstructionStage stage, DataChecksum summer, EventLoop eventLoop) {
     Enum<?>[] storageTypes = locatedBlock.getStorageTypes();
     DatanodeInfo[] datanodeInfos = locatedBlock.getLocations();
-    boolean connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
-      DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
-    final int timeoutMs = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT);
+    boolean connectToDnViaHostname =
+        conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME, DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
+    int timeoutMs = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT);
     ExtendedBlock blockCopy = new ExtendedBlock(locatedBlock.getBlock());
     blockCopy.setNumBytes(locatedBlock.getBlockSize());
     ClientOperationHeaderProto header = ClientOperationHeaderProto.newBuilder()
@@ -737,7 +620,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
             .setToken(PB_HELPER.convert(locatedBlock.getBlockToken())))
         .setClientName(clientName).build();
     ChecksumProto checksumProto = DataTransferProtoUtil.toProto(summer);
-    final OpWriteBlockProto.Builder writeBlockProtoBuilder = OpWriteBlockProto.newBuilder()
+    OpWriteBlockProto.Builder writeBlockProtoBuilder = OpWriteBlockProto.newBuilder()
         .setHeader(header).setStage(OpWriteBlockProto.BlockConstructionStage.valueOf(stage.name()))
         .setPipelineSize(1).setMinBytesRcvd(locatedBlock.getBlock().getNumBytes())
         .setMaxBytesRcvd(maxBytesRcvd).setLatestGenerationStamp(latestGS)
@@ -745,11 +628,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         .setCachingStrategy(CachingStrategyProto.newBuilder().setDropBehind(true).build());
     List<Future<Channel>> futureList = new ArrayList<>(datanodeInfos.length);
     for (int i = 0; i < datanodeInfos.length; i++) {
-      final DatanodeInfo dnInfo = datanodeInfos[i];
-      // Use Enum here because StoregType is moved to another package in hadoop 2.6. Use StorageType
-      // will cause compilation error for hadoop 2.5 or before.
-      final Enum<?> storageType = storageTypes[i];
-      final Promise<Channel> promise = eventLoop.newPromise();
+      DatanodeInfo dnInfo = datanodeInfos[i];
+      Enum<?> storageType = storageTypes[i];
+      Promise<Channel> promise = eventLoop.newPromise();
       futureList.add(promise);
       String dnAddr = dnInfo.getXferAddr(connectToDnViaHostname);
       new Bootstrap().group(eventLoop).channel(NioSocketChannel.class)
@@ -799,11 +680,11 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     ClientProtocol namenode = client.getNamenode();
     HdfsFileStatus stat;
     try {
-      stat = FILE_CREATER.create(namenode, src,
+      stat = namenode.create(src,
         FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), clientName,
         new EnumSetWritable<CreateFlag>(
             overwrite ? EnumSet.of(CREATE, OVERWRITE) : EnumSet.of(CREATE)),
-        createParent, replication, blockSize);
+        createParent, replication, blockSize, CryptoProtocolVersion.supported());
     } catch (Exception e) {
       if (e instanceof RemoteException) {
         throw (RemoteException) e;
@@ -811,7 +692,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         throw new NameNodeException(e);
       }
     }
-    beginFileLease(client, src, stat.getFileId());
+    beginFileLease(client, stat.getFileId());
     boolean succ = false;
     LocatedBlock locatedBlock = null;
     List<Future<Channel>> futureList = null;
@@ -827,10 +708,10 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         // layer should retry itself if needed.
         datanodeList.add(future.syncUninterruptibly().getNow());
       }
-      CryptoCodec cryptocodec = createCryptoCodec(conf, stat, client);
-      FanOutOneBlockAsyncDFSOutput output = new FanOutOneBlockAsyncDFSOutput(conf, fsUtils, dfs,
-          client, namenode, clientName, src, stat.getFileId(), locatedBlock, cryptocodec, eventLoop,
-          datanodeList, summer, ALLOC);
+      Encryptor encryptor = createEncryptor(conf, stat, client);
+      FanOutOneBlockAsyncDFSOutput output =
+          new FanOutOneBlockAsyncDFSOutput(conf, fsUtils, dfs, client, namenode, clientName, src,
+              stat.getFileId(), locatedBlock, encryptor, eventLoop, datanodeList, summer, ALLOC);
       succ = true;
       return output;
     } finally {
@@ -848,7 +729,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
             });
           }
         }
-        endFileLease(client, src, stat.getFileId());
+        endFileLease(client, stat.getFileId());
         fsUtils.recoverFileLease(dfs, new Path(src), conf, new CancelOnClose(client));
       }
     }
@@ -859,9 +740,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
    * inside {@link EventLoop}.
    * @param eventLoop all connections to datanode will use the same event loop.
    */
-  public static FanOutOneBlockAsyncDFSOutput createOutput(final DistributedFileSystem dfs, Path f,
-      final boolean overwrite, final boolean createParent, final short replication,
-      final long blockSize, final EventLoop eventLoop) throws IOException {
+  public static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, Path f,
+      boolean overwrite, boolean createParent, short replication, long blockSize,
+      EventLoop eventLoop) throws IOException {
     return new FileSystemLinkResolver<FanOutOneBlockAsyncDFSOutput>() {
 
       @Override
@@ -890,7 +771,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     for (int retry = 0;; retry++) {
       try {
         if (namenode.complete(src, clientName, block, fileId)) {
-          endFileLease(client, src, fileId);
+          endFileLease(client, fileId);
           return;
         } else {
           LOG.warn("complete file " + src + " not finished, retry = " + retry);

@@ -60,10 +60,8 @@ public class TestLocalAsyncOutput {
       fs.getDefaultReplication(f), fs.getDefaultBlockSize(f), GROUP.next());
     byte[] b = new byte[10];
     ThreadLocalRandom.current().nextBytes(b);
-    FanOutOneBlockAsyncDFSOutputFlushHandler handler = new FanOutOneBlockAsyncDFSOutputFlushHandler();
     out.write(b);
-    out.flush(null, handler, true);
-    assertEquals(b.length, handler.get());
+    assertEquals(b.length, out.flush(true).get().longValue());
     out.close();
     assertEquals(b.length, fs.getFileStatus(f).getLen());
     byte[] actual = new byte[b.length];

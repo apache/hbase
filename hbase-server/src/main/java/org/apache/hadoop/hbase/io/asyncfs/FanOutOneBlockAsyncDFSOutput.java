@@ -26,8 +26,6 @@ import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHel
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.getStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 
-import com.google.common.base.Supplier;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -39,14 +37,11 @@ import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.CompletionHandler;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
@@ -54,13 +49,15 @@ import java.util.Deque;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.Encryptor;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputHelper.CancelOnClose;
-import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.CryptoCodec;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -87,8 +84,8 @@ import org.apache.hadoop.util.DataChecksum;
  * need one thread here. But be careful, we do some blocking operations in {@link #close()} and
  * {@link #recoverAndClose(CancelableProgressable)} methods, so do not call them inside
  * {@link EventLoop}. And for {@link #write(byte[])} {@link #write(byte[], int, int)},
- * {@link #buffered()} and {@link #flush(Object, CompletionHandler, boolean)}, if you call them
- * outside {@link EventLoop}, there will be an extra context-switch.
+ * {@link #buffered()} and {@link #flush(boolean)}, if you call them outside {@link EventLoop},
+ * there will be an extra context-switch.
  * <p>
  * Advantages compare to DFSOutputStream:
  * <ol>
@@ -125,7 +122,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private final LocatedBlock locatedBlock;
 
-  private final CryptoCodec cryptoCodec;
+  private final Encryptor encryptor;
 
   private final EventLoop eventLoop;
 
@@ -151,8 +148,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       if (replicas.isEmpty()) {
         this.unfinishedReplicas = Collections.emptySet();
       } else {
-        this.unfinishedReplicas = Collections
-            .newSetFromMap(new IdentityHashMap<Channel, Boolean>(replicas.size()));
+        this.unfinishedReplicas =
+            Collections.newSetFromMap(new IdentityHashMap<Channel, Boolean>(replicas.size()));
         this.unfinishedReplicas.addAll(replicas);
       }
     }
@@ -215,13 +212,9 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     // disable further write, and fail all pending ack.
     state = State.BROKEN;
     Throwable error = errorSupplier.get();
-    for (Callback c : waitingAckQueue) {
-      c.promise.tryFailure(error);
-    }
+    waitingAckQueue.stream().forEach(c -> c.promise.tryFailure(error));
     waitingAckQueue.clear();
-    for (Channel ch : datanodeList) {
-      ch.close();
-    }
+    datanodeList.forEach(ch -> ch.close());
   }
 
   @Sharable
@@ -234,29 +227,16 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
 
     @Override
-    protected void channelRead0(final ChannelHandlerContext ctx, PipelineAckProto ack)
-        throws Exception {
-      final Status reply = getStatus(ack);
+    protected void channelRead0(ChannelHandlerContext ctx, PipelineAckProto ack) throws Exception {
+      Status reply = getStatus(ack);
       if (reply != Status.SUCCESS) {
-        failed(ctx.channel(), new Supplier<Throwable>() {
-
-          @Override
-          public Throwable get() {
-            return new IOException("Bad response " + reply + " for block " + locatedBlock.getBlock()
-                + " from datanode " + ctx.channel().remoteAddress());
-          }
-        });
+        failed(ctx.channel(), () -> new IOException("Bad response " + reply + " for block "
+            + locatedBlock.getBlock() + " from datanode " + ctx.channel().remoteAddress()));
         return;
       }
       if (PipelineAck.isRestartOOBStatus(reply)) {
-        failed(ctx.channel(), new Supplier<Throwable>() {
-
-          @Override
-          public Throwable get() {
-            return new IOException("Restart response " + reply + " for block "
-                + locatedBlock.getBlock() + " from datanode " + ctx.channel().remoteAddress());
-          }
-        });
+        failed(ctx.channel(), () -> new IOException("Restart response " + reply + " for block "
+            + locatedBlock.getBlock() + " from datanode " + ctx.channel().remoteAddress()));
         return;
       }
       if (ack.getSeqno() == HEART_BEAT_SEQNO) {
@@ -266,25 +246,14 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
 
     @Override
-    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-      failed(ctx.channel(), new Supplier<Throwable>() {
-
-        @Override
-        public Throwable get() {
-          return new IOException("Connection to " + ctx.channel().remoteAddress() + " closed");
-        }
-      });
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+      failed(ctx.channel(),
+        () -> new IOException("Connection to " + ctx.channel().remoteAddress() + " closed"));
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, final Throwable cause) throws Exception {
-      failed(ctx.channel(), new Supplier<Throwable>() {
-
-        @Override
-        public Throwable get() {
-          return cause;
-        }
-      });
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+      failed(ctx.channel(), () -> cause);
     }
 
     @Override
@@ -292,13 +261,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       if (evt instanceof IdleStateEvent) {
         IdleStateEvent e = (IdleStateEvent) evt;
         if (e.state() == READER_IDLE) {
-          failed(ctx.channel(), new Supplier<Throwable>() {
-
-            @Override
-            public Throwable get() {
-              return new IOException("Timeout(" + timeoutMs + "ms) waiting for response");
-            }
-          });
+          failed(ctx.channel(),
+            () -> new IOException("Timeout(" + timeoutMs + "ms) waiting for response"));
         } else if (e.state() == WRITER_IDLE) {
           PacketHeader heartbeat = new PacketHeader(4, 0, HEART_BEAT_SEQNO, false, 0, false);
           int len = heartbeat.getSerializedSize();
@@ -326,7 +290,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   FanOutOneBlockAsyncDFSOutput(Configuration conf, FSUtils fsUtils, DistributedFileSystem dfs,
       DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
-      LocatedBlock locatedBlock, CryptoCodec cryptoCodec, EventLoop eventLoop,
+      LocatedBlock locatedBlock, Encryptor encryptor, EventLoop eventLoop,
       List<Channel> datanodeList, DataChecksum summer, ByteBufAllocator alloc) {
     this.conf = conf;
     this.fsUtils = fsUtils;
@@ -337,7 +301,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     this.clientName = clientName;
     this.src = src;
     this.locatedBlock = locatedBlock;
-    this.cryptoCodec = cryptoCodec;
+    this.encryptor = encryptor;
     this.eventLoop = eventLoop;
     this.datanodeList = datanodeList;
     this.summer = summer;
@@ -350,14 +314,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   private void writeInt0(int i) {
     buf.ensureWritable(4);
-    if (cryptoCodec == null) {
-      buf.writeInt(i);
-    } else {
-      ByteBuffer inBuffer = ByteBuffer.allocate(4);
-      inBuffer.putInt(0, i);
-      cryptoCodec.encrypt(inBuffer, buf.nioBuffer(buf.writerIndex(), 4));
-      buf.writerIndex(buf.writerIndex() + 4);
-    }
+    buf.writeInt(i);
   }
 
   @Override
@@ -370,14 +327,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   }
 
   private void write0(ByteBuffer bb) {
-    int len = bb.remaining();
-    buf.ensureWritable(len);
-    if (cryptoCodec == null) {
-      buf.writeBytes(bb);
-    } else {
-      cryptoCodec.encrypt(bb, buf.nioBuffer(buf.writerIndex(), len));
-      buf.writerIndex(buf.writerIndex() + len);
-    }
+    buf.ensureWritable(bb.remaining());
+    buf.writeBytes(bb);
   }
 
   @Override
@@ -394,19 +345,13 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     write(b, 0, b.length);
   }
 
-  private void write0(byte[] b, final int off, final int len) {
+  private void write0(byte[] b, int off, int len) {
     buf.ensureWritable(len);
-    if (cryptoCodec == null) {
-      buf.writeBytes(b, off, len);
-    } else {
-      ByteBuffer inBuffer = ByteBuffer.wrap(b, off, len);
-      cryptoCodec.encrypt(inBuffer, buf.nioBuffer(buf.writerIndex(), len));
-      buf.writerIndex(buf.writerIndex() + len);
-    }
+    buf.writeBytes(b, off, len);
   }
 
   @Override
-  public void write(final byte[] b, final int off, final int len) {
+  public void write(byte[] b, int off, int len) {
     if (eventLoop.inEventLoop()) {
       write0(b, off, len);
     } else {
@@ -464,27 +409,40 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     return promise;
   }
 
-  private <A> void flush0(final A attachment, final CompletionHandler<Long, ? super A> handler,
-      boolean syncBlock) {
+  private void flush0(CompletableFuture<Long> future, boolean syncBlock) {
     if (state != State.STREAMING) {
-      handler.failed(new IOException("stream already broken"), attachment);
+      future.completeExceptionally(new IOException("stream already broken"));
       return;
     }
     int dataLen = buf.readableBytes();
-    final long lengthAfterFlush = nextPacketOffsetInBlock + dataLen;
+    if (encryptor != null) {
+      ByteBuf encryptBuf = alloc.directBuffer(dataLen);
+      try {
+        encryptor.encrypt(buf.nioBuffer(buf.readerIndex(), dataLen),
+          encryptBuf.nioBuffer(0, dataLen));
+      } catch (IOException e) {
+        encryptBuf.release();
+        future.completeExceptionally(e);
+        return;
+      }
+      encryptBuf.writerIndex(dataLen);
+      buf.release();
+      buf = encryptBuf;
+    }
+    long lengthAfterFlush = nextPacketOffsetInBlock + dataLen;
     if (lengthAfterFlush == locatedBlock.getBlock().getNumBytes()) {
       // no new data, just return
-      handler.completed(locatedBlock.getBlock().getNumBytes(), attachment);
+      future.complete(locatedBlock.getBlock().getNumBytes());
       return;
     }
     Callback c = waitingAckQueue.peekLast();
     if (c != null && lengthAfterFlush == c.ackedLength) {
       // just append it to the tail of waiting ack queue,, do not issue new hflush request.
-      waitingAckQueue.addLast(new Callback(eventLoop.<Void> newPromise().addListener(future -> {
-        if (future.isSuccess()) {
-          handler.completed(lengthAfterFlush, attachment);
+      waitingAckQueue.addLast(new Callback(eventLoop.<Void> newPromise().addListener(f -> {
+        if (f.isSuccess()) {
+          future.complete(lengthAfterFlush);
         } else {
-          handler.failed(future.cause(), attachment);
+          future.completeExceptionally(f.cause());
         }
       }), lengthAfterFlush, Collections.<Channel> emptyList()));
       return;
@@ -506,11 +464,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     } else {
       promise = flushBuffer(buf.retain(), nextPacketOffsetInBlock, syncBlock);
     }
-    promise.addListener(future -> {
-      if (future.isSuccess()) {
-        handler.completed(lengthAfterFlush, attachment);
+    promise.addListener(f -> {
+      if (f.isSuccess()) {
+        future.complete(lengthAfterFlush);
       } else {
-        handler.failed(future.cause(), attachment);
+        future.completeExceptionally(f.cause());
       }
     });
     int trailingPartialChunkLen = dataLen % summer.getBytesPerChecksum();
@@ -525,23 +483,17 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   /**
    * Flush the buffer out to datanodes.
-   * @param attachment will be passed to handler when completed.
-   * @param handler will set the acked length as result when completed.
    * @param syncBlock will call hsync if true, otherwise hflush.
+   * @return A CompletableFuture that hold the acked length after flushing.
    */
-  public <A> void flush(final A attachment, final CompletionHandler<Long, ? super A> handler,
-      final boolean syncBlock) {
+  public CompletableFuture<Long> flush(boolean syncBlock) {
+    CompletableFuture<Long> future = new CompletableFuture<Long>();
     if (eventLoop.inEventLoop()) {
-      flush0(attachment, handler, syncBlock);
+      flush0(future, syncBlock);
     } else {
-      eventLoop.execute(new Runnable() {
-
-        @Override
-        public void run() {
-          flush0(attachment, handler, syncBlock);
-        }
-      });
+      eventLoop.execute(() -> flush0(future, syncBlock));
     }
+    return future;
   }
 
   private void endBlock(Promise<Void> promise, long size) {
@@ -558,13 +510,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     buf.release();
     buf = null;
     int headerLen = header.getSerializedSize();
-    ByteBuf headerBuf = alloc.buffer(headerLen);
+    ByteBuf headerBuf = alloc.directBuffer(headerLen);
     header.putInBuffer(headerBuf.nioBuffer(0, headerLen));
     headerBuf.writerIndex(headerLen);
     waitingAckQueue.add(new Callback(promise, size, datanodeList));
-    for (Channel ch : datanodeList) {
-      ch.writeAndFlush(headerBuf.duplicate().retain());
-    }
+    datanodeList.forEach(ch -> ch.writeAndFlush(headerBuf.duplicate().retain()));
     headerBuf.release();
   }
 
@@ -574,10 +524,8 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   @Override
   public void recoverAndClose(CancelableProgressable reporter) throws IOException {
     assert !eventLoop.inEventLoop();
-    for (Channel ch : datanodeList) {
-      ch.closeFuture().awaitUninterruptibly();
-    }
-    endFileLease(client, src, fileId);
+    datanodeList.forEach(ch -> ch.closeFuture().awaitUninterruptibly());
+    endFileLease(client, fileId);
     fsUtils.recoverFileLease(dfs, new Path(src), conf,
       reporter == null ? new CancelOnClose(client) : reporter);
   }
@@ -589,26 +537,10 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   @Override
   public void close() throws IOException {
     assert !eventLoop.inEventLoop();
-    final Promise<Void> promise = eventLoop.newPromise();
-    eventLoop.execute(new Runnable() {
-
-      @Override
-      public void run() {
-        endBlock(promise, nextPacketOffsetInBlock + buf.readableBytes());
-      }
-    });
-    promise.addListener(new FutureListener<Void>() {
-
-      @Override
-      public void operationComplete(Future<Void> future) throws Exception {
-        for (Channel ch : datanodeList) {
-          ch.close();
-        }
-      }
-    }).syncUninterruptibly();
-    for (Channel ch : datanodeList) {
-      ch.closeFuture().awaitUninterruptibly();
-    }
+    Promise<Void> promise = eventLoop.newPromise();
+    eventLoop.execute(() -> endBlock(promise, nextPacketOffsetInBlock + buf.readableBytes()));
+    promise.addListener(f -> datanodeList.forEach(ch -> ch.close())).syncUninterruptibly();
+    datanodeList.forEach(ch -> ch.closeFuture().awaitUninterruptibly());
     completeFile(client, namenode, src, clientName, locatedBlock.getBlock(), fileId);
   }
 }

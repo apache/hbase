@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -39,8 +40,8 @@ public interface AsyncFSOutput extends Closeable {
   void write(byte[] b);
 
   /**
-   * Copy the data into the buffer. Note that you need to call
-   * {@link #flush(Object, CompletionHandler, boolean)} to flush the buffer manually.
+   * Copy the data into the buffer. Note that you need to call {@link #flush(boolean)} to flush the
+   * buffer manually.
    */
   void write(byte[] b, int off, int len);
 
@@ -66,11 +67,10 @@ public interface AsyncFSOutput extends Closeable {
 
   /**
    * Flush the buffer out.
-   * @param attachment will be passed to handler when completed.
-   * @param handler will set the acked length as result when completed.
    * @param sync persistent the data to device
+   * @return A CompletableFuture that hold the acked length after flushing.
    */
-  <A> void flush(A attachment, final CompletionHandler<Long, ? super A> handler, boolean sync);
+  CompletableFuture<Long> flush(boolean sync);
 
   /**
    * The close method when error occurred.

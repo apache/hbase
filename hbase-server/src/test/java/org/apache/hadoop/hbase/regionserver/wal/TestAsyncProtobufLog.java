@@ -17,26 +17,25 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import com.google.common.base.Throwables;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputFlushHandler;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.base.Throwables;
-
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestAsyncProtobufLog extends AbstractTestProtobufLog<WALProvider.AsyncWriter> {
@@ -68,14 +67,12 @@ public class TestAsyncProtobufLog extends AbstractTestProtobufLog<WALProvider.As
 
   @Override
   protected void sync(AsyncWriter writer) throws IOException {
-    FanOutOneBlockAsyncDFSOutputFlushHandler handler = new FanOutOneBlockAsyncDFSOutputFlushHandler();
-    writer.sync(handler, null);
     try {
-      handler.get();
+      writer.sync().get();
     } catch (InterruptedException e) {
       throw new InterruptedIOException();
     } catch (ExecutionException e) {
-      Throwables.propagateIfPossible(e.getCause(), IOException.class);
+      Throwables.propagateIfPossible(e.getCause());
       throw new IOException(e.getCause());
     }
   }

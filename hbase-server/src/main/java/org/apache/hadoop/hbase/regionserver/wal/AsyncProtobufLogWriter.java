@@ -25,7 +25,9 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.CompletionHandler;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,50 +51,6 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     implements AsyncFSWALProvider.AsyncWriter {
 
   private static final Log LOG = LogFactory.getLog(AsyncProtobufLogWriter.class);
-
-  private static final class BlockingCompletionHandler implements CompletionHandler<Long, Void> {
-
-    private long size;
-
-    private Throwable error;
-
-    private boolean finished;
-
-    @Override
-    public void completed(Long result, Void attachment) {
-      synchronized (this) {
-        size = result.longValue();
-        finished = true;
-        notifyAll();
-      }
-    }
-
-    @Override
-    public void failed(Throwable exc, Void attachment) {
-      synchronized (this) {
-        error = exc;
-        finished = true;
-        notifyAll();
-      }
-    }
-
-    public long get() throws IOException {
-      synchronized (this) {
-        while (!finished) {
-          try {
-            wait();
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException();
-          }
-        }
-        if (error != null) {
-          Throwables.propagateIfPossible(error, IOException.class);
-          throw new RuntimeException(error);
-        }
-        return size;
-      }
-    }
-  }
 
   private final EventLoop eventLoop;
 
@@ -166,8 +124,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   }
 
   @Override
-  public <A> void sync(CompletionHandler<Long, A> handler, A attachment) {
-    output.flush(attachment, handler, false);
+  public CompletableFuture<Long> sync() {
+    return output.flush(false);
   }
 
   @Override
@@ -197,10 +155,24 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 
+  private long write(Consumer<CompletableFuture<Long>> action) throws IOException {
+    CompletableFuture<Long> future = new CompletableFuture<Long>();
+    eventLoop.execute(() -> action.accept(future));
+    try {
+      return future.get().longValue();
+    } catch (InterruptedException e) {
+      InterruptedIOException ioe = new InterruptedIOException();
+      ioe.initCause(e);
+      throw ioe;
+    } catch (ExecutionException e) {
+      Throwables.propagateIfPossible(e.getCause(), IOException.class);
+      throw new RuntimeException(e.getCause());
+    }
+  }
+
   @Override
   protected long writeMagicAndWALHeader(byte[] magic, WALHeader header) throws IOException {
-    final BlockingCompletionHandler handler = new BlockingCompletionHandler();
-    eventLoop.execute(() -> {
+    return write(future -> {
       output.write(magic);
       try {
         header.writeDelimitedTo(asyncOutputWrapper);
@@ -208,16 +180,19 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
         // should not happen
         throw new AssertionError(e);
       }
-      output.flush(null, handler, false);
+      output.flush(false).whenComplete((len, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+        } else {
+          future.complete(len);
+        }
+      });
     });
-    return handler.get();
   }
 
   @Override
-  protected long writeWALTrailerAndMagic(WALTrailer trailer, final byte[] magic)
-      throws IOException {
-    final BlockingCompletionHandler handler = new BlockingCompletionHandler();
-    eventLoop.execute(() -> {
+  protected long writeWALTrailerAndMagic(WALTrailer trailer, byte[] magic) throws IOException {
+    return write(future -> {
       try {
         trailer.writeTo(asyncOutputWrapper);
       } catch (IOException e) {
@@ -226,9 +201,14 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       }
       output.writeInt(trailer.getSerializedSize());
       output.write(magic);
-      output.flush(null, handler, false);
+      output.flush(false).whenComplete((len, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+        } else {
+          future.complete(len);
+        }
+      });
     });
-    return handler.get();
   }
 
   @Override
