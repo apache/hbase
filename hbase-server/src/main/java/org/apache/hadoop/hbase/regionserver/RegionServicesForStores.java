@@ -25,8 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.hadoop.hbase.wal.WAL;
 
 /**
@@ -37,7 +35,6 @@ import org.apache.hadoop.hbase.wal.WAL;
  * take occasional lock and update size counters at the region level.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 public class RegionServicesForStores {
 
   private static final int POOL_SIZE = 10;
@@ -68,8 +65,8 @@ public class RegionServicesForStores {
     region.unblockUpdates();
   }
 
-  public long addAndGetGlobalMemstoreSize(long size) {
-    return region.addAndGetGlobalMemstoreSize(size);
+  public void addMemstoreSize(MemstoreSize size) {
+    region.addAndGetMemstoreSize(size);
   }
 
   public HRegionInfo getRegionInfo() {
@@ -91,7 +88,7 @@ public class RegionServicesForStores {
   }
 
   // methods for tests
-  long getGlobalMemstoreTotalSize() {
+  long getMemstoreSize() {
     return region.getMemstoreSize();
   }
 }

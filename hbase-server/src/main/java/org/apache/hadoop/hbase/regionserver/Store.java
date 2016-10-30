@@ -255,21 +255,44 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
 
   /**
    * @return The size of this store's memstore, in bytes
+   * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeOfMemStore()} instead.
    */
+  @Deprecated
   long getMemStoreSize();
+
+  /**
+   * @return The size of this store's memstore.
+   */
+  MemstoreSize getSizeOfMemStore();
 
   /**
    * @return The amount of memory we could flush from this memstore; usually this is equal to
    * {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the size of
    * outstanding snapshots.
+   * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeToFlush()} instead.
    */
+  @Deprecated
   long getFlushableSize();
+
+  /**
+   * @return The amount of memory we could flush from this memstore; usually this is equal to
+   * {@link #getSizeOfMemStore()} unless we are carrying snapshots and then it will be the size of
+   * outstanding snapshots.
+   */
+  MemstoreSize getSizeToFlush();
 
   /**
    * Returns the memstore snapshot size
    * @return size of the memstore snapshot
+   * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeOfSnapshot()} instead.
    */
+  @Deprecated
   long getSnapshotSize();
+
+  /**
+   * @return size of the memstore snapshot
+   */
+  MemstoreSize getSizeOfSnapshot();
 
   HColumnDescriptor getFamily();
 

@@ -381,6 +381,7 @@ public final class CellUtil {
   private static class TagRewriteCell implements ExtendedCell {
     protected Cell cell;
     protected byte[] tags;
+    private static final long HEAP_SIZE_OVERHEAD = 2 * ClassSize.REFERENCE + ClassSize.ARRAY;
 
     /**
      * @param cell The original Cell which it rewrites
@@ -551,6 +552,11 @@ public final class CellUtil {
       assert tagsLen > 0;
       offset = Bytes.putAsShort(buf, offset, tagsLen);
       System.arraycopy(this.tags, 0, buf, offset, tagsLen);
+    }
+
+    @Override
+    public long heapOverhead() {
+      return ((ExtendedCell) this.cell).heapOverhead() + HEAP_SIZE_OVERHEAD;
     }
   }
 

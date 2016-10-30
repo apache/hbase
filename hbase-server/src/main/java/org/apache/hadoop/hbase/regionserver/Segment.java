@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -55,11 +55,12 @@ public abstract class Segment {
 
   private AtomicReference<CellSet> cellSet= new AtomicReference<CellSet>();
   private final CellComparator comparator;
-  private long minSequenceId;
+  protected long minSequenceId;
   private MemStoreLAB memStoreLAB;
   // Sum of sizes of all Cells added to this Segment. Cell's heapSize is considered. This is not
   // including the heap overhead of this class.
-  protected final AtomicLong size;
+  protected final AtomicLong dataSize;
+  protected final AtomicLong heapOverhead;
   protected final TimeRangeTracker timeRangeTracker;
   protected volatile boolean tagsPresent;
 
@@ -69,7 +70,8 @@ public abstract class Segment {
     this.comparator = comparator;
     this.minSequenceId = Long.MAX_VALUE;
     this.memStoreLAB = memStoreLAB;
-    this.size = new AtomicLong(0);
+    this.dataSize = new AtomicLong(0);
+    this.heapOverhead = new AtomicLong(0);
     this.tagsPresent = false;
     this.timeRangeTracker = new TimeRangeTracker();
   }
@@ -79,7 +81,8 @@ public abstract class Segment {
     this.comparator = segment.getComparator();
     this.minSequenceId = segment.getMinSequenceId();
     this.memStoreLAB = segment.getMemStoreLAB();
-    this.size = new AtomicLong(segment.keySize());
+    this.dataSize = new AtomicLong(segment.keySize());
+    this.heapOverhead = new AtomicLong(segment.heapOverhead.get());
     this.tagsPresent = segment.isTagsPresent();
     this.timeRangeTracker = segment.getTimeRangeTracker();
   }
@@ -154,7 +157,7 @@ public abstract class Segment {
    * Get cell length after serialized in {@link KeyValue}
    */
   @VisibleForTesting
-  int getCellLength(Cell cell) {
+  static int getCellLength(Cell cell) {
     return KeyValueUtil.length(cell);
   }
 
@@ -193,19 +196,26 @@ public abstract class Segment {
    * @return Sum of all cell's size.
    */
   public long keySize() {
-    return this.size.get();
+    return this.dataSize.get();
   }
 
   /**
-   * @return the heap size of the segment
+   * @return The heap overhead of this segment.
    */
-  public abstract long size();
+  public long heapOverhead() {
+    return this.heapOverhead.get();
+  }
 
   /**
    * Updates the heap size counter of the segment by the given delta
    */
-  public void incSize(long delta) {
-    this.size.addAndGet(delta);
+  protected void incSize(long delta, long heapOverhead) {
+    this.dataSize.addAndGet(delta);
+    this.heapOverhead.addAndGet(heapOverhead);
+  }
+
+  protected void incHeapOverheadSize(long delta) {
+    this.heapOverhead.addAndGet(delta);
   }
 
   public long getMinSequenceId() {
@@ -252,36 +262,47 @@ public abstract class Segment {
     return comparator;
   }
 
-  protected long internalAdd(Cell cell, boolean mslabUsed) {
+  protected void internalAdd(Cell cell, boolean mslabUsed, MemstoreSize memstoreSize) {
     boolean succ = getCellSet().add(cell);
-    long s = updateMetaInfo(cell, succ, mslabUsed);
-    return s;
+    updateMetaInfo(cell, succ, mslabUsed, memstoreSize);
   }
 
-  protected long updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed) {
-    long s = heapSizeChange(cellToAdd, succ);
+  protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
+      MemstoreSize memstoreSize) {
+    long cellSize = 0;
     // If there's already a same cell in the CellSet and we are using MSLAB, we must count in the
     // MSLAB allocation size as well, or else there will be memory leak (occupied heap size larger
     // than the counted number)
-    if (!succ && mslabUsed) {
-      s += getCellLength(cellToAdd);
+    if (succ || mslabUsed) {
+      cellSize = getCellLength(cellToAdd);
+    }
+    long overhead = heapOverheadChange(cellToAdd, succ);
+    incSize(cellSize, overhead);
+    if (memstoreSize != null) {
+      memstoreSize.incMemstoreSize(cellSize, overhead);
     }
     getTimeRangeTracker().includeTimestamp(cellToAdd);
-    incSize(s);
     minSequenceId = Math.min(minSequenceId, cellToAdd.getSequenceId());
     // In no tags case this NoTagsKeyValue.getTagsLength() is a cheap call.
     // When we use ACL CP or Visibility CP which deals with Tags during
     // mutation, the TagRewriteCell.getTagsLength() is a cheaper call. We do not
     // parse the byte[] to identify the tags length.
-    if( cellToAdd.getTagsLength() > 0) {
+    if (cellToAdd.getTagsLength() > 0) {
       tagsPresent = true;
     }
-    return s;
   }
 
-  protected long heapSizeChange(Cell cell, boolean succ) {
-    return succ ? ClassSize
-        .align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + CellUtil.estimatedHeapSizeOf(cell)) : 0;
+  protected long heapOverheadChange(Cell cell, boolean succ) {
+    if (succ) {
+      if (cell instanceof ExtendedCell) {
+        return ClassSize
+            .align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ((ExtendedCell) cell).heapOverhead());
+      }
+      // All cells in server side will be of type ExtendedCell. If not just go with estimation on
+      // the heap overhead considering it is KeyValue.
+      return ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + KeyValue.FIXED_OVERHEAD);
+    }
+    return 0;
   }
 
   /**
@@ -314,7 +335,7 @@ public abstract class Segment {
     res += "isEmpty "+(isEmpty()?"yes":"no")+"; ";
     res += "cellCount "+getCellsCount()+"; ";
     res += "cellsSize "+keySize()+"; ";
-    res += "heapSize "+size()+"; ";
+    res += "heapOverhead "+heapOverhead()+"; ";
     res += "Min ts "+getMinTimestamp()+"; ";
     return res;
   }

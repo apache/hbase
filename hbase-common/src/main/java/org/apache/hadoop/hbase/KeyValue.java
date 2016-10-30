@@ -85,6 +85,11 @@ public class KeyValue implements ExtendedCell {
 
   private static final Log LOG = LogFactory.getLog(KeyValue.class);
 
+  public static final long FIXED_OVERHEAD = ClassSize.OBJECT + // the KeyValue object itself
+      ClassSize.REFERENCE + // pointer to "bytes"
+      2 * Bytes.SIZEOF_INT + // offset, length
+      Bytes.SIZEOF_LONG;// memstoreTS
+
   /**
    * Colon character in UTF-8
    */
@@ -2603,12 +2608,7 @@ public class KeyValue implements ExtendedCell {
    */
   @Override
   public long heapSize() {
-    int sum = 0;
-    sum += ClassSize.OBJECT;// the KeyValue object itself
-    sum += ClassSize.REFERENCE;// pointer to "bytes"
-    sum += 2 * Bytes.SIZEOF_INT;// offset, length
-    sum += Bytes.SIZEOF_LONG;// memstoreTS
-
+    long sum = FIXED_OVERHEAD;
     /*
      * Deep object overhead for this KV consists of two parts. The first part is the KV object
      * itself, while the second part is the backing byte[]. We will only count the array overhead
@@ -2812,5 +2812,15 @@ public class KeyValue implements ExtendedCell {
       // of Cell to be returned back over the RPC
       throw new IllegalStateException("A reader should never return this type of a Cell");
     }
+
+    @Override
+    public long heapOverhead() {
+      return super.heapOverhead() + Bytes.SIZEOF_SHORT;
+    }
+  }
+
+  @Override
+  public long heapOverhead() {
+    return FIXED_OVERHEAD;
   }
 }

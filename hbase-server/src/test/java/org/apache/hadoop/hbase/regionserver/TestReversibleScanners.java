@@ -638,7 +638,7 @@ public class TestReversibleScanners {
       for (int i = 0; i < ROWSIZE; i++) {
         for (int j = 0; j < QUALSIZE; j++) {
           if (i % 2 == 0) {
-            memstore.add(makeKV(i, j));
+            memstore.add(makeKV(i, j), null);
           } else {
             writers[(i + j) % writers.length].append(makeKV(i, j));
           }
@@ -669,7 +669,7 @@ public class TestReversibleScanners {
     for (int i = 0; i < ROWSIZE; i++) {
       for (int j = 0; j < QUALSIZE; j++) {
         if ((i + j) % 2 == 0) {
-          memstore.add(makeKV(i, j));
+          memstore.add(makeKV(i, j), null);
         }
       }
     }
@@ -678,7 +678,7 @@ public class TestReversibleScanners {
     for (int i = 0; i < ROWSIZE; i++) {
       for (int j = 0; j < QUALSIZE; j++) {
         if ((i + j) % 2 == 1) {
-          memstore.add(makeKV(i, j));
+          memstore.add(makeKV(i, j), null);
         }
       }
     }

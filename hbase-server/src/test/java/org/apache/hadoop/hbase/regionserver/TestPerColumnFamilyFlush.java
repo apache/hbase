@@ -128,7 +128,7 @@ public class TestPerColumnFamilyFlush {
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllLargeStoresPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
-      100 * 1024);
+      40 * 1024);
     // Intialize the region
     Region region = initHRegion("testSelectiveFlushWithDataCompaction", conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
@@ -151,9 +151,9 @@ public class TestPerColumnFamilyFlush {
     long smallestSeqCF3 = region.getOldestSeqIdOfStore(FAMILY3);
 
     // Find the sizes of the memstores of each CF.
-    long cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
-    long cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
-    long cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
+    MemstoreSize cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
+    MemstoreSize cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
+    MemstoreSize cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
 
     // Get the overall smallest LSN in the region's memstores.
     long smallestSeqInRegionCurrentMemstore = getWAL(region)
@@ -166,34 +166,33 @@ public class TestPerColumnFamilyFlush {
     // Some other sanity checks.
     assertTrue(smallestSeqCF1 < smallestSeqCF2);
     assertTrue(smallestSeqCF2 < smallestSeqCF3);
-    assertTrue(cf1MemstoreSize > 0);
-    assertTrue(cf2MemstoreSize > 0);
-    assertTrue(cf3MemstoreSize > 0);
+    assertTrue(cf1MemstoreSize.getDataSize() > 0);
+    assertTrue(cf2MemstoreSize.getDataSize() > 0);
+    assertTrue(cf3MemstoreSize.getDataSize() > 0);
 
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
-    assertEquals(
-        totalMemstoreSize + (3 * (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD)),
-        cf1MemstoreSize + cf2MemstoreSize + cf3MemstoreSize);
+    assertEquals(totalMemstoreSize, cf1MemstoreSize.getDataSize() + cf2MemstoreSize.getDataSize()
+        + cf3MemstoreSize.getDataSize());
 
     // Flush!
     region.flush(false);
 
     // Will use these to check if anything changed.
-    long oldCF2MemstoreSize = cf2MemstoreSize;
-    long oldCF3MemstoreSize = cf3MemstoreSize;
+    MemstoreSize oldCF2MemstoreSize = cf2MemstoreSize;
+    MemstoreSize oldCF3MemstoreSize = cf3MemstoreSize;
 
     // Recalculate everything
-    cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
-    cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
-    cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
+    cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
+    cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
+    cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
     totalMemstoreSize = region.getMemstoreSize();
     smallestSeqInRegionCurrentMemstore = getWAL(region)
         .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // We should have cleared out only CF1, since we chose the flush thresholds
     // and number of puts accordingly.
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize);
+    assertEquals(MemstoreSize.EMPTY_SIZE, cf1MemstoreSize);
     // Nothing should have happened to CF2, ...
     assertEquals(cf2MemstoreSize, oldCF2MemstoreSize);
     // ... or CF3
@@ -202,9 +201,7 @@ public class TestPerColumnFamilyFlush {
     // LSN in the memstore of CF2.
     assertEquals(smallestSeqInRegionCurrentMemstore, smallestSeqCF2);
     // Of course, this should hold too.
-    assertEquals(
-        totalMemstoreSize + (2 * (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD)),
-        cf2MemstoreSize + cf3MemstoreSize);
+    assertEquals(totalMemstoreSize, cf2MemstoreSize.getDataSize() + cf3MemstoreSize.getDataSize());
 
     // Now add more puts (mostly for CF2), so that we only flush CF2 this time.
     for (int i = 1200; i < 2400; i++) {
@@ -217,26 +214,25 @@ public class TestPerColumnFamilyFlush {
     }
 
     // How much does the CF3 memstore occupy? Will be used later.
-    oldCF3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
+    oldCF3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
 
     // Flush again
     region.flush(false);
 
     // Recalculate everything
-    cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
-    cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
-    cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
+    cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
+    cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
+    cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
     totalMemstoreSize = region.getMemstoreSize();
     smallestSeqInRegionCurrentMemstore = getWAL(region)
         .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // CF1 and CF2, both should be absent.
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize);
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf2MemstoreSize);
+    assertEquals(MemstoreSize.EMPTY_SIZE, cf1MemstoreSize);
+    assertEquals(MemstoreSize.EMPTY_SIZE, cf2MemstoreSize);
     // CF3 shouldn't have been touched.
     assertEquals(cf3MemstoreSize, oldCF3MemstoreSize);
-    assertEquals(totalMemstoreSize + (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD),
-        cf3MemstoreSize);
+    assertEquals(totalMemstoreSize, cf3MemstoreSize.getDataSize());
     assertEquals(smallestSeqInRegionCurrentMemstore, smallestSeqCF3);
 
     // What happens when we hit the memstore limit, but we are not able to find
@@ -288,35 +284,34 @@ public class TestPerColumnFamilyFlush {
     long totalMemstoreSize = region.getMemstoreSize();
 
     // Find the sizes of the memstores of each CF.
-    long cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
-    long cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
-    long cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
+    MemstoreSize cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
+    MemstoreSize cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
+    MemstoreSize cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
 
     // Some other sanity checks.
-    assertTrue(cf1MemstoreSize > 0);
-    assertTrue(cf2MemstoreSize > 0);
-    assertTrue(cf3MemstoreSize > 0);
+    assertTrue(cf1MemstoreSize.getDataSize() > 0);
+    assertTrue(cf2MemstoreSize.getDataSize() > 0);
+    assertTrue(cf3MemstoreSize.getDataSize() > 0);
 
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
-    assertEquals(
-        totalMemstoreSize + (3 * (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD)),
-        cf1MemstoreSize + cf2MemstoreSize + cf3MemstoreSize);
+    assertEquals(totalMemstoreSize, cf1MemstoreSize.getDataSize() + cf2MemstoreSize.getDataSize()
+        + cf3MemstoreSize.getDataSize());
 
     // Flush!
     region.flush(false);
 
-    cf1MemstoreSize = region.getStore(FAMILY1).getMemStoreSize();
-    cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
-    cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
+    cf1MemstoreSize = region.getStore(FAMILY1).getSizeOfMemStore();
+    cf2MemstoreSize = region.getStore(FAMILY2).getSizeOfMemStore();
+    cf3MemstoreSize = region.getStore(FAMILY3).getSizeOfMemStore();
     totalMemstoreSize = region.getMemstoreSize();
     long smallestSeqInRegionCurrentMemstore =
         region.getWAL().getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // Everything should have been cleared
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize);
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf2MemstoreSize);
-    assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf3MemstoreSize);
+    assertEquals(MemstoreSize.EMPTY_SIZE, cf1MemstoreSize);
+    assertEquals(MemstoreSize.EMPTY_SIZE, cf2MemstoreSize);
+    assertEquals(MemstoreSize.EMPTY_SIZE, cf3MemstoreSize);
     assertEquals(0, totalMemstoreSize);
     assertEquals(HConstants.NO_SEQNUM, smallestSeqInRegionCurrentMemstore);
     HBaseTestingUtility.closeRegionAndWAL(region);
@@ -337,10 +332,10 @@ public class TestPerColumnFamilyFlush {
 
   private void doTestLogReplay() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 20000);
+    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 10000);
     // Carefully chosen limits so that the memstore just flushes when we're done
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllLargeStoresPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 10000);
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 2500);
     final int numRegionServers = 4;
     try {
       TEST_UTIL.startMiniCluster(numRegionServers);
@@ -378,18 +373,16 @@ public class TestPerColumnFamilyFlush {
       totalMemstoreSize = desiredRegion.getMemstoreSize();
 
       // Find the sizes of the memstores of each CF.
-      cf1MemstoreSize = desiredRegion.getStore(FAMILY1).getMemStoreSize();
-      cf2MemstoreSize = desiredRegion.getStore(FAMILY2).getMemStoreSize();
-      cf3MemstoreSize = desiredRegion.getStore(FAMILY3).getMemStoreSize();
+      cf1MemstoreSize = desiredRegion.getStore(FAMILY1).getSizeOfMemStore().getDataSize();
+      cf2MemstoreSize = desiredRegion.getStore(FAMILY2).getSizeOfMemStore().getDataSize();
+      cf3MemstoreSize = desiredRegion.getStore(FAMILY3).getSizeOfMemStore().getDataSize();
 
       // CF1 Should have been flushed
-      assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD, cf1MemstoreSize);
+      assertEquals(0, cf1MemstoreSize);
       // CF2 and CF3 shouldn't have been flushed.
       assertTrue(cf2MemstoreSize > 0);
       assertTrue(cf3MemstoreSize > 0);
-      assertEquals(
-          totalMemstoreSize + (2 * (DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD)),
-          cf2MemstoreSize + cf3MemstoreSize);
+      assertEquals(totalMemstoreSize, cf2MemstoreSize + cf3MemstoreSize);
 
       // Wait for the RS report to go across to the master, so that the master
       // is aware of which sequence ids have been flushed, before we kill the RS.
@@ -526,12 +519,9 @@ public class TestPerColumnFamilyFlush {
       });
       LOG.info("Finished waiting on flush after too many WALs...");
       // Individual families should have been flushed.
-      assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD,
-          desiredRegion.getStore(FAMILY1).getMemStoreSize());
-      assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD,
-          desiredRegion.getStore(FAMILY2).getMemStoreSize());
-      assertEquals(DefaultMemStore.DEEP_OVERHEAD + MutableSegment.DEEP_OVERHEAD,
-          desiredRegion.getStore(FAMILY3).getMemStoreSize());
+      assertEquals(0, desiredRegion.getStore(FAMILY1).getMemStoreSize());
+      assertEquals(0, desiredRegion.getStore(FAMILY2).getMemStoreSize());
+      assertEquals(0, desiredRegion.getStore(FAMILY3).getMemStoreSize());
       // let WAL cleanOldLogs
       assertNull(getWAL(desiredRegion).rollWriter(true));
       assertTrue(getNumRolledLogFiles(desiredRegion) < maxLogs);

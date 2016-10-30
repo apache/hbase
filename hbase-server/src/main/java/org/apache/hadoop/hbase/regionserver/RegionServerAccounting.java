@@ -32,43 +32,57 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class RegionServerAccounting {
 
-  private final AtomicLong atomicGlobalMemstoreSize = new AtomicLong(0);
-  
+  private final AtomicLong globalMemstoreDataSize = new AtomicLong(0);
+  private final AtomicLong globalMemstoreHeapOverhead = new AtomicLong(0);
+
   // Store the edits size during replaying WAL. Use this to roll back the  
   // global memstore size once a region opening failed.
-  private final ConcurrentMap<byte[], AtomicLong> replayEditsPerRegion = 
-    new ConcurrentSkipListMap<byte[], AtomicLong>(Bytes.BYTES_COMPARATOR);
+  private final ConcurrentMap<byte[], MemstoreSize> replayEditsPerRegion =
+    new ConcurrentSkipListMap<byte[], MemstoreSize>(Bytes.BYTES_COMPARATOR);
 
   /**
    * @return the global Memstore size in the RegionServer
    */
   public long getGlobalMemstoreSize() {
-    return atomicGlobalMemstoreSize.get();
+    return globalMemstoreDataSize.get();
   }
-  
+
+  public long getGlobalMemstoreHeapOverhead() {
+    return this.globalMemstoreHeapOverhead.get();
+  }
+
   /**
    * @param memStoreSize the Memstore size will be added to 
    *        the global Memstore size 
-   * @return the global Memstore size in the RegionServer 
    */
-  public long addAndGetGlobalMemstoreSize(long memStoreSize) {
-    return atomicGlobalMemstoreSize.addAndGet(memStoreSize);
+  public void incGlobalMemstoreSize(MemstoreSize memStoreSize) {
+    globalMemstoreDataSize.addAndGet(memStoreSize.getDataSize());
+    globalMemstoreHeapOverhead.addAndGet(memStoreSize.getHeapOverhead());
   }
-  
+
+  public void decGlobalMemstoreSize(MemstoreSize memStoreSize) {
+    globalMemstoreDataSize.addAndGet(-memStoreSize.getDataSize());
+    globalMemstoreHeapOverhead.addAndGet(-memStoreSize.getHeapOverhead());
+  }
+
   /***
    * Add memStoreSize to replayEditsPerRegion.
    * 
    * @param regionName region name.
    * @param memStoreSize the Memstore size will be added to replayEditsPerRegion.
-   * @return the replay edits size for the region.
    */
-  public long addAndGetRegionReplayEditsSize(byte[] regionName, long memStoreSize) {
-    AtomicLong replayEdistsSize = replayEditsPerRegion.get(regionName);
+  public void addRegionReplayEditsSize(byte[] regionName, MemstoreSize memStoreSize) {
+    MemstoreSize replayEdistsSize = replayEditsPerRegion.get(regionName);
+    // All ops on the same MemstoreSize object is going to be done by single thread, sequentially
+    // only. First calls to this method to increment the per region reply edits size and then call
+    // to either rollbackRegionReplayEditsSize or clearRegionReplayEditsSize as per the result of
+    // the region open operation. No need to handle multi thread issues on one region's entry in
+    // this Map.
     if (replayEdistsSize == null) {
-      replayEdistsSize = new AtomicLong(0);
+      replayEdistsSize = new MemstoreSize();
       replayEditsPerRegion.put(regionName, replayEdistsSize);
     }
-    return replayEdistsSize.addAndGet(memStoreSize);
+    replayEdistsSize.incMemstoreSize(memStoreSize);
   }
 
   /**
@@ -76,16 +90,13 @@ public class RegionServerAccounting {
    * can't be opened.
    * 
    * @param regionName the region which could not open.
-   * @return the global Memstore size in the RegionServer
    */
-  public long rollbackRegionReplayEditsSize(byte[] regionName) {
-    AtomicLong replayEditsSize = replayEditsPerRegion.get(regionName);
-    long editsSizeLong = 0L;
+  public void rollbackRegionReplayEditsSize(byte[] regionName) {
+    MemstoreSize replayEditsSize = replayEditsPerRegion.get(regionName);
     if (replayEditsSize != null) {
-      editsSizeLong = -replayEditsSize.get();
       clearRegionReplayEditsSize(regionName);
+      decGlobalMemstoreSize(replayEditsSize);
     }
-    return addAndGetGlobalMemstoreSize(editsSizeLong);
   }
 
   /**
@@ -96,5 +107,4 @@ public class RegionServerAccounting {
   public void clearRegionReplayEditsSize(byte[] regionName) {
     replayEditsPerRegion.remove(regionName);
   }
-  
 }

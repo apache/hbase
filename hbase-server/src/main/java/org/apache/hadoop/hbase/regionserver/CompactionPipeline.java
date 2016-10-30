@@ -115,17 +115,28 @@ public class CompactionPipeline {
     }
     if (region != null) {
       // update the global memstore size counter
-      long suffixSize = getSegmentsKeySize(suffix);
-      long newSize = segment.keySize();
-      long delta = suffixSize - newSize;
-      assert ( closeSuffix || delta>0 ); // sanity check
-      long globalMemstoreSize = region.addAndGetGlobalMemstoreSize(-delta);
+      long suffixDataSize = getSegmentsKeySize(suffix);
+      long newDataSize = segment.keySize();
+      long dataSizeDelta = suffixDataSize - newDataSize;
+      long suffixHeapOverhead = getSegmentsHeapOverhead(suffix);
+      long newHeapOverhead = segment.heapOverhead();
+      long heapOverheadDelta = suffixHeapOverhead - newHeapOverhead;
+      region.addMemstoreSize(new MemstoreSize(-dataSizeDelta, -heapOverheadDelta));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Suffix size: " + suffixSize + " compacted item size: " + newSize
-            + " globalMemstoreSize: " + globalMemstoreSize);
+        LOG.debug("Suffix data size: " + suffixDataSize + " compacted item data size: "
+            + newDataSize + ". Suffix heap overhead: " + suffixHeapOverhead
+            + " compacted item heap overhead: " + newHeapOverhead);
       }
     }
     return true;
+  }
+
+  private static long getSegmentsHeapOverhead(List<? extends Segment> list) {
+    long res = 0;
+    for (Segment segment : list) {
+      res += segment.heapOverhead();
+    }
+    return res;
   }
 
   private static long getSegmentsKeySize(List<? extends Segment> list) {
@@ -160,16 +171,12 @@ public class CompactionPipeline {
 
       for (ImmutableSegment s : pipeline) {
         // remember the old size in case this segment is going to be flatten
-        long sizeBeforeFlat = s.keySize();
-        long globalMemstoreSize = 0;
-        if (s.flatten()) {
+        MemstoreSize memstoreSize = new MemstoreSize();
+        if (s.flatten(memstoreSize)) {
           if(region != null) {
-            long sizeAfterFlat = s.keySize();
-            long delta = sizeBeforeFlat - sizeAfterFlat;
-            globalMemstoreSize = region.addAndGetGlobalMemstoreSize(-delta);
+            region.addMemstoreSize(memstoreSize);
           }
-          LOG.debug("Compaction pipeline segment " + s + " was flattened; globalMemstoreSize: "
-              + globalMemstoreSize);
+          LOG.debug("Compaction pipeline segment " + s + " was flattened");
           return true;
         }
       }
@@ -203,9 +210,9 @@ public class CompactionPipeline {
     return minSequenceId;
   }
 
-  public long getTailSize() {
-    if (isEmpty()) return 0;
-    return pipeline.peekLast().keySize();
+  public MemstoreSize getTailSize() {
+    if (isEmpty()) return MemstoreSize.EMPTY_SIZE;
+    return new MemstoreSize(pipeline.peekLast().keySize(), pipeline.peekLast().heapOverhead());
   }
 
   private void swapSuffix(List<ImmutableSegment> suffix, ImmutableSegment segment,

@@ -129,7 +129,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       scanner.close();
     }
     LOG.info("Mob store is flushed, sequenceid=" + cacheFlushId + ", memsize="
-        + StringUtils.TraditionalBinaryPrefix.long2String(snapshot.getSize(), "", 1) +
+        + StringUtils.TraditionalBinaryPrefix.long2String(snapshot.getDataSize(), "", 1) +
         ", hasBloomFilter=" + writer.hasGeneralBloom() +
         ", into tmp file " + writer.getPath());
     result.add(writer.getPath());

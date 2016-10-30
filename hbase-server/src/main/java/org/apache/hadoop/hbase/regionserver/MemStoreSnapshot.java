@@ -28,7 +28,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class MemStoreSnapshot {
   private final long id;
   private final int cellsCount;
-  private final long size;
+  private final long dataSize;
+  private final long heapOverhead;
   private final TimeRangeTracker timeRangeTracker;
   private final KeyValueScanner scanner;
   private final boolean tagsPresent;
@@ -36,7 +37,8 @@ public class MemStoreSnapshot {
   public MemStoreSnapshot(long id, ImmutableSegment snapshot) {
     this.id = id;
     this.cellsCount = snapshot.getCellsCount();
-    this.size = snapshot.keySize();
+    this.dataSize = snapshot.keySize();
+    this.heapOverhead = snapshot.heapOverhead();
     this.timeRangeTracker = snapshot.getTimeRangeTracker();
     this.scanner = snapshot.getKeyValueScanner();
     this.tagsPresent = snapshot.isTagsPresent();
@@ -59,8 +61,12 @@ public class MemStoreSnapshot {
   /**
    * @return Total memory size occupied by this snapshot.
    */
-  public long getSize() {
-    return size;
+  public long getDataSize() {
+    return dataSize;
+  }
+
+  public long getHeapOverhead() {
+    return this.heapOverhead;
   }
 
   /**

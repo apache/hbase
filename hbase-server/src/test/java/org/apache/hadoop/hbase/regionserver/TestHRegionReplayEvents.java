@@ -955,8 +955,8 @@ public class TestHRegionReplayEvents {
       assertEquals(expectedStoreFileCount, s.getStorefilesCount());
     }
     Store store = secondaryRegion.getStore(Bytes.toBytes("cf1"));
-    long newSnapshotSize = store.getSnapshotSize();
-    assertTrue(newSnapshotSize == 0);
+    MemstoreSize newSnapshotSize = store.getSizeOfSnapshot();
+    assertTrue(newSnapshotSize.getDataSize() == 0);
 
     // assert that the region memstore is empty
     long newRegionMemstoreSize = secondaryRegion.getMemstoreSize();

@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -179,7 +180,7 @@ public class TestHMobStore {
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
     StoreFileWriter mobWriter = store.createWriterInTmp(currentDate, maxKeyCount,
-        hcd.getCompactionCompression(), region.getRegionInfo().getStartKey());
+        hcd.getCompactionCompressionType(), region.getRegionInfo().getStartKey());
     mobFilePath = mobWriter.getPath();
 
     mobWriter.append(key1);
@@ -209,12 +210,12 @@ public class TestHMobStore {
     init(name.getMethodName(), conf, false);
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, 1, value));
-    this.store.add(new KeyValue(row, family, qf2, 1, value));
-    this.store.add(new KeyValue(row, family, qf3, 1, value));
-    this.store.add(new KeyValue(row, family, qf4, 1, value));
-    this.store.add(new KeyValue(row, family, qf5, 1, value));
-    this.store.add(new KeyValue(row, family, qf6, 1, value));
+    this.store.add(new KeyValue(row, family, qf1, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf2, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf3, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf4, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf5, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf6, 1, value), null);
 
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
@@ -223,7 +224,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<Cell>();
     scanner.next(results);
-    Collections.sort(results, KeyValue.COMPARATOR);
+    Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -244,20 +245,20 @@ public class TestHMobStore {
     init(name.getMethodName(), conf, false);
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, 1, value));
-    this.store.add(new KeyValue(row, family, qf2, 1, value));
+    this.store.add(new KeyValue(row, family, qf1, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf2, 1, value), null);
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, 1, value));
-    this.store.add(new KeyValue(row, family, qf4, 1, value));
+    this.store.add(new KeyValue(row, family, qf3, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf4, 1, value), null);
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, 1, value));
-    this.store.add(new KeyValue(row, family, qf6, 1, value));
+    this.store.add(new KeyValue(row, family, qf5, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf6, 1, value), null);
     //flush
     flush(3);
 
@@ -268,7 +269,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<Cell>();
     scanner.next(results);
-    Collections.sort(results, KeyValue.COMPARATOR);
+    Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -288,20 +289,20 @@ public class TestHMobStore {
     init(name.getMethodName(), conf, false);
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, 1, value));
-    this.store.add(new KeyValue(row, family, qf2, 1, value));
+    this.store.add(new KeyValue(row, family, qf1, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf2, 1, value), null);
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, 1, value));
-    this.store.add(new KeyValue(row, family, qf4, 1, value));
+    this.store.add(new KeyValue(row, family, qf3, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf4, 1, value), null);
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, 1, value));
-    this.store.add(new KeyValue(row, family, qf6, 1, value));
+    this.store.add(new KeyValue(row, family, qf5, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf6, 1, value), null);
     //flush
     flush(3);
 
@@ -313,7 +314,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<Cell>();
     scanner.next(results);
-    Collections.sort(results, KeyValue.COMPARATOR);
+    Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -336,20 +337,20 @@ public class TestHMobStore {
     init(name.getMethodName(), conf, false);
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, 1, value));
-    this.store.add(new KeyValue(row, family, qf2, 1, value));
+    this.store.add(new KeyValue(row, family, qf1, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf2, 1, value), null);
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, 1, value));
-    this.store.add(new KeyValue(row, family, qf4, 1, value));
+    this.store.add(new KeyValue(row, family, qf3, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf4, 1, value), null);
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, 1, value));
-    this.store.add(new KeyValue(row, family, qf6, 1, value));
+    this.store.add(new KeyValue(row, family, qf5, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf6, 1, value), null);
 
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
@@ -358,7 +359,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<Cell>();
     scanner.next(results);
-    Collections.sort(results, KeyValue.COMPARATOR);
+    Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -385,20 +386,20 @@ public class TestHMobStore {
     init(name.getMethodName(), conf, hcd, false);
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, 1, value));
-    this.store.add(new KeyValue(row, family, qf2, 1, value));
+    this.store.add(new KeyValue(row, family, qf1, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf2, 1, value), null);
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, 1, value));
-    this.store.add(new KeyValue(row, family, qf4, 1, value));
+    this.store.add(new KeyValue(row, family, qf3, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf4, 1, value), null);
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, 1, value));
-    this.store.add(new KeyValue(row, family, qf6, 1, value));
+    this.store.add(new KeyValue(row, family, qf5, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf6, 1, value), null);
     //flush
     flush(3);
 
@@ -410,7 +411,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<Cell>();
     scanner.next(results);
-    Collections.sort(results, KeyValue.COMPARATOR);
+    Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
 
     //Compare
@@ -505,14 +506,14 @@ public class TestHMobStore {
 
     init(name.getMethodName(), conf, hcd, false);
 
-    this.store.add(new KeyValue(row, family, qf1, 1, value));
-    this.store.add(new KeyValue(row, family, qf2, 1, value));
-    this.store.add(new KeyValue(row, family, qf3, 1, value));
+    this.store.add(new KeyValue(row, family, qf1, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf2, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf3, 1, value), null);
     flush(1);
 
-    this.store.add(new KeyValue(row, family, qf4, 1, value));
-    this.store.add(new KeyValue(row, family, qf5, 1, value));
-    this.store.add(new KeyValue(row, family, qf6, 1, value));
+    this.store.add(new KeyValue(row, family, qf4, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf5, 1, value), null);
+    this.store.add(new KeyValue(row, family, qf6, 1, value), null);
     flush(2);
 
     Collection<StoreFile> storefiles = this.store.getStorefiles();
@@ -526,7 +527,7 @@ public class TestHMobStore {
 
     List<Cell> results = new ArrayList<Cell>();
     scanner.next(results);
-    Collections.sort(results, KeyValue.COMPARATOR);
+    Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
     Assert.assertEquals(expected.size(), results.size());
     for(int i=0; i<results.size(); i++) {

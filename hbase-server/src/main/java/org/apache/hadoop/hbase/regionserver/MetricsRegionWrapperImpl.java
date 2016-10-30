@@ -203,7 +203,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       if (region.stores != null) {
         for (Store store : region.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
-          tempMemstoreSize += store.getMemStoreSize();
+          tempMemstoreSize += store.getSizeOfMemStore().getDataSize();
           tempStoreFileSize += store.getStorefilesSize();
 
           long storeMaxStoreFileAge = store.getMaxStoreFileAge();

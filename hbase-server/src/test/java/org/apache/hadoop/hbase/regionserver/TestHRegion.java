@@ -150,7 +150,6 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -356,7 +355,7 @@ public class TestHRegion {
     } finally {
       assertTrue("The regionserver should have thrown an exception", threwIOE);
     }
-    long sz = store.getFlushableSize();
+    long sz = store.getSizeToFlush().getDataSize();
     assertTrue("flushable size should be zero, but it is " + sz, sz == 0);
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
@@ -400,7 +399,7 @@ public class TestHRegion {
     assertTrue(onePutSize > 0);
     region.flush(true);
     assertEquals("memstoreSize should be zero", 0, region.getMemstoreSize());
-    assertEquals("flushable size should be zero", 0, store.getFlushableSize());
+    assertEquals("flushable size should be zero", 0, store.getSizeToFlush().getDataSize());
 
     // save normalCPHost and replaced by mockedCPHost, which will cancel flush requests
     RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
@@ -411,13 +410,14 @@ public class TestHRegion {
     region.put(put);
     region.flush(true);
     assertEquals("memstoreSize should NOT be zero", onePutSize, region.getMemstoreSize());
-    assertEquals("flushable size should NOT be zero", onePutSize, store.getFlushableSize());
+    assertEquals("flushable size should NOT be zero", onePutSize,
+        store.getSizeToFlush().getDataSize());
 
     // set normalCPHost and flush again, the snapshot will be flushed
     region.setCoprocessorHost(normalCPHost);
     region.flush(true);
     assertEquals("memstoreSize should be zero", 0, region.getMemstoreSize());
-    assertEquals("flushable size should be zero", 0, store.getFlushableSize());
+    assertEquals("flushable size should be zero", 0, store.getSizeToFlush().getDataSize());
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
@@ -452,9 +452,10 @@ public class TestHRegion {
       fail("Should have failed with IOException");
     } catch (IOException expected) {
     }
-    long expectedSize = onePutSize * 2 - ClassSize.ARRAY;
+    long expectedSize = onePutSize * 2;
     assertEquals("memstoreSize should be incremented", expectedSize, region.getMemstoreSize());
-    assertEquals("flushable size should be incremented", expectedSize, store.getFlushableSize());
+    assertEquals("flushable size should be incremented", expectedSize,
+        store.getSizeToFlush().getDataSize());
 
     region.setCoprocessorHost(null);
     HBaseTestingUtility.closeRegionAndWAL(region);
@@ -524,14 +525,14 @@ public class TestHRegion {
           p2.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual2, 2, (byte[])null));
           p2.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual3, 3, (byte[])null));
           region.put(p2);
-          long expectedSize = sizeOfOnePut * 3- ClassSize.ARRAY;
+          long expectedSize = sizeOfOnePut * 3;
           Assert.assertEquals(expectedSize, region.getMemstoreSize());
           // Do a successful flush.  It will clear the snapshot only.  Thats how flushes work.
           // If already a snapshot, we clear it else we move the memstore to be snapshot and flush
           // it
           region.flush(true);
           // Make sure our memory accounting is right.
-          Assert.assertEquals(sizeOfOnePut * 2 - ClassSize.ARRAY, region.getMemstoreSize());
+          Assert.assertEquals(sizeOfOnePut * 2, region.getMemstoreSize());
         } finally {
           HBaseTestingUtility.closeRegionAndWAL(region);
         }

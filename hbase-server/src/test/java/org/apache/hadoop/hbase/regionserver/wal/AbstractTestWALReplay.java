@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
+import org.apache.hadoop.hbase.regionserver.MemstoreSize;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -550,7 +551,7 @@ public abstract class AbstractTestWALReplay {
     final Configuration newConf = HBaseConfiguration.create(this.conf);
     User user = HBaseTestingUtility.getDifferentUser(newConf,
       tableName.getNameAsString());
-    user.runAs(new PrivilegedExceptionAction() {
+    user.runAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
         runWALSplit(newConf);
@@ -560,10 +561,9 @@ public abstract class AbstractTestWALReplay {
         final AtomicInteger countOfRestoredEdits = new AtomicInteger(0);
         HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, hri, htd, null) {
           @Override
-          protected boolean restoreEdit(HStore s, Cell cell) {
-            boolean b = super.restoreEdit(s, cell);
+          protected void restoreEdit(HStore s, Cell cell, MemstoreSize memstoreSize) {
+            super.restoreEdit(s, cell, memstoreSize);
             countOfRestoredEdits.incrementAndGet();
-            return b;
           }
         };
         long seqid3 = region3.initialize();

@@ -298,8 +298,10 @@ public class HeapMemoryManager {
       metricsHeapMemoryManager.updateUnblockedFlushCount(unblockedFlushCnt);
       tunerContext.setCurBlockCacheUsed((float) blockCache.getCurrentSize() / maxHeapSize);
       metricsHeapMemoryManager.setCurBlockCacheSizeGauge(blockCache.getCurrentSize());
-      tunerContext.setCurMemStoreUsed((float)regionServerAccounting.getGlobalMemstoreSize() / maxHeapSize);
-      metricsHeapMemoryManager.setCurMemStoreSizeGauge(regionServerAccounting.getGlobalMemstoreSize());
+      long globalMemstoreHeapSize = regionServerAccounting.getGlobalMemstoreSize()
+          + regionServerAccounting.getGlobalMemstoreHeapOverhead();
+      tunerContext.setCurMemStoreUsed((float) globalMemstoreHeapSize / maxHeapSize);
+      metricsHeapMemoryManager.setCurMemStoreSizeGauge(globalMemstoreHeapSize);
       tunerContext.setCurBlockCacheSize(blockCachePercent);
       tunerContext.setCurMemStoreSize(globalMemStorePercent);
       TunerResult result = null;

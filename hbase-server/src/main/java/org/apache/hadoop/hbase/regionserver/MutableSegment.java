@@ -18,8 +18,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.Iterator;
+import java.util.SortedSet;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -42,10 +48,60 @@ public class MutableSegment extends Segment {
    * Adds the given cell into the segment
    * @param cell the cell to add
    * @param mslabUsed whether using MSLAB
-   * @return the change in the heap size
+   * @param memstoreSize
    */
-  public long add(Cell cell, boolean mslabUsed) {
-    return internalAdd(cell, mslabUsed);
+  public void add(Cell cell, boolean mslabUsed, MemstoreSize memstoreSize) {
+    internalAdd(cell, mslabUsed, memstoreSize);
+  }
+
+  public void upsert(Cell cell, long readpoint, MemstoreSize memstoreSize) {
+    internalAdd(cell, false, memstoreSize);
+
+    // Get the Cells for the row/family/qualifier regardless of timestamp.
+    // For this case we want to clean up any other puts
+    Cell firstCell = KeyValueUtil.createFirstOnRow(cell.getRowArray(), cell.getRowOffset(),
+        cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+    SortedSet<Cell> ss = this.tailSet(firstCell);
+    Iterator<Cell> it = ss.iterator();
+    // versions visible to oldest scanner
+    int versionsVisible = 0;
+    while (it.hasNext()) {
+      Cell cur = it.next();
+
+      if (cell == cur) {
+        // ignore the one just put in
+        continue;
+      }
+      // check that this is the row and column we are interested in, otherwise bail
+      if (CellUtil.matchingRows(cell, cur) && CellUtil.matchingQualifier(cell, cur)) {
+        // only remove Puts that concurrent scanners cannot possibly see
+        if (cur.getTypeByte() == KeyValue.Type.Put.getCode() && cur.getSequenceId() <= readpoint) {
+          if (versionsVisible >= 1) {
+            // if we get here we have seen at least one version visible to the oldest scanner,
+            // which means we can prove that no scanner will see this version
+
+            // false means there was a change, so give us the size.
+            // TODO when the removed cell ie.'cur' having its data in MSLAB, we can not release that
+            // area. Only the Cell object as such going way. We need to consider cellLen to be
+            // decreased there as 0 only. Just keeping it as existing code now. We need to know the
+            // removed cell is from MSLAB or not. Will do once HBASE-16438 is in
+            int cellLen = getCellLength(cur);
+            long heapOverheadDelta = heapOverheadChange(cur, true);
+            this.incSize(-cellLen, -heapOverheadDelta);
+            if (memstoreSize != null) {
+              memstoreSize.decMemstoreSize(cellLen, heapOverheadDelta);
+            }
+            it.remove();
+          } else {
+            versionsVisible++;
+          }
+        }
+      } else {
+        // past the row or column, done
+        break;
+      }
+    }
   }
 
   /**
@@ -66,10 +122,5 @@ public class MutableSegment extends Segment {
   @Override
   public long getMinTimestamp() {
     return this.timeRangeTracker.getMin();
-  }
-
-  @Override
-  public long size() {
-    return keySize() + DEEP_OVERHEAD;
   }
 }

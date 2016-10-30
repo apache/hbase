@@ -685,7 +685,7 @@ class MetricsRegionServerWrapperImpl
           tempNumStores += storeList.size();
           for (Store store : storeList) {
             tempNumStoreFiles += store.getStorefilesCount();
-            tempMemstoreSize += store.getMemStoreSize();
+            tempMemstoreSize += store.getSizeOfMemStore().getDataSize();
             tempStoreFileSize += store.getStorefilesSize();
 
             long storeMaxStoreFileAge = store.getMaxStoreFileAge();

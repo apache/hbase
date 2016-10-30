@@ -197,9 +197,12 @@ class MemStoreFlusher implements FlushRequester {
            ServerRegionReplicaUtil.isRegionReplicaStoreFileRefreshEnabled(conf) &&
            (bestRegionReplica.getMemstoreSize()
                > secondaryMultiplier * regionToFlush.getMemstoreSize()))) {
-        LOG.info("Refreshing storefiles of region " + bestRegionReplica +
-          " due to global heap pressure. memstore size=" + StringUtils.humanReadableInt(
-            server.getRegionServerAccounting().getGlobalMemstoreSize()));
+        LOG.info("Refreshing storefiles of region " + bestRegionReplica
+            + " due to global heap pressure. Total memstore size="
+            + StringUtils
+                .humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize())
+            + " memstore heap overhead=" + StringUtils.humanReadableInt(
+                server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead()));
         flushedOne = refreshStoreFilesAndReclaimMemory(bestRegionReplica);
         if (!flushedOne) {
           LOG.info("Excluding secondary region " + bestRegionReplica +
@@ -343,16 +346,16 @@ class MemStoreFlusher implements FlushRequester {
    * Return true if global memory usage is above the high watermark
    */
   private boolean isAboveHighWaterMark() {
-    return server.getRegionServerAccounting().
-      getGlobalMemstoreSize() >= globalMemStoreLimit;
+    return server.getRegionServerAccounting().getGlobalMemstoreSize()
+        + server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead() >= globalMemStoreLimit;
   }
 
   /**
    * Return true if we're above the high watermark
    */
   private boolean isAboveLowWaterMark() {
-    return server.getRegionServerAccounting().
-      getGlobalMemstoreSize() >= globalMemStoreLimitLowMark;
+    return server.getRegionServerAccounting().getGlobalMemstoreSize() + server
+        .getRegionServerAccounting().getGlobalMemstoreHeapOverhead() >= globalMemStoreLimitLowMark;
   }
 
   @Override
@@ -586,11 +589,13 @@ class MemStoreFlusher implements FlushRequester {
           while (isAboveHighWaterMark() && !server.isStopped()) {
             if (!blocked) {
               startTime = EnvironmentEdgeManager.currentTime();
-              LOG.info("Blocking updates on "
-                  + server.toString()
-                  + ": the global memstore size "
-                  + TraditionalBinaryPrefix.long2String(server.getRegionServerAccounting()
-                      .getGlobalMemstoreSize(), "", 1) + " is >= than blocking "
+              LOG.info("Blocking updates on " + server.toString() + ": the global memstore size "
+                  + TraditionalBinaryPrefix.long2String(
+                      server.getRegionServerAccounting().getGlobalMemstoreSize(), "", 1)
+                  + " + global memstore heap overhead "
+                  + TraditionalBinaryPrefix.long2String(
+                      server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead(), "", 1)
+                  + " is >= than blocking "
                   + TraditionalBinaryPrefix.long2String(globalMemStoreLimit, "", 1) + " size");
             }
             blocked = true;

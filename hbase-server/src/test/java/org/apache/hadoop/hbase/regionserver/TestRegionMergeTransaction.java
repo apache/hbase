@@ -24,13 +24,10 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -42,7 +39,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -177,6 +173,7 @@ public class TestRegionMergeTransaction {
     HStore storeMock = Mockito.mock(HStore.class);
     when(storeMock.hasReferences()).thenReturn(true);
     when(storeMock.getFamily()).thenReturn(new HColumnDescriptor("cf"));
+    when(storeMock.getSizeToFlush()).thenReturn(new MemstoreSize());
     when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
     this.region_a.stores.put(Bytes.toBytes(""), storeMock);
     RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(this.region_a,

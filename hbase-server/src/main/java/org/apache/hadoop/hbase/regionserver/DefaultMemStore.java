@@ -104,9 +104,20 @@ public class DefaultMemStore extends AbstractMemStore {
    * @return size of data that is going to be flushed from active set
    */
   @Override
-  public long getFlushableSize() {
-    long snapshotSize = getSnapshotSize();
-    return snapshotSize > 0 ? snapshotSize : keySize();
+  public MemstoreSize getFlushableSize() {
+    MemstoreSize snapshotSize = getSnapshotSize();
+    return snapshotSize.getDataSize() > 0 ? snapshotSize
+        : new MemstoreSize(keySize(), heapOverhead());
+  }
+
+  @Override
+  protected long keySize() {
+    return this.active.keySize();
+  }
+
+  @Override
+  protected long heapOverhead() {
+    return this.active.heapOverhead();
   }
 
   @Override
@@ -144,8 +155,8 @@ public class DefaultMemStore extends AbstractMemStore {
   }
 
   @Override
-  public long size() {
-    return this.active.size() + DEEP_OVERHEAD;
+  public MemstoreSize size() {
+    return new MemstoreSize(this.active.keySize(), this.active.heapOverhead());
   }
 
   /**
@@ -179,26 +190,30 @@ public class DefaultMemStore extends AbstractMemStore {
     LOG.info("vmInputArguments=" + runtime.getInputArguments());
     DefaultMemStore memstore1 = new DefaultMemStore();
     // TODO: x32 vs x64
-    long size = 0;
     final int count = 10000;
     byte [] fam = Bytes.toBytes("col");
     byte [] qf = Bytes.toBytes("umn");
     byte [] empty = new byte[0];
+    MemstoreSize memstoreSize = new MemstoreSize();
     for (int i = 0; i < count; i++) {
       // Give each its own ts
-      size += memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty));
+      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
     }
-    LOG.info("memstore1 estimated size=" + size);
+    LOG.info("memstore1 estimated size="
+        + (memstoreSize.getDataSize() + memstoreSize.getHeapOverhead()));
     for (int i = 0; i < count; i++) {
-      size += memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty));
+      memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
     }
-    LOG.info("memstore1 estimated size (2nd loading of same data)=" + size);
+    LOG.info("memstore1 estimated size (2nd loading of same data)="
+        + (memstoreSize.getDataSize() + memstoreSize.getHeapOverhead()));
     // Make a variably sized memstore.
     DefaultMemStore memstore2 = new DefaultMemStore();
+    memstoreSize = new MemstoreSize();
     for (int i = 0; i < count; i++) {
-      size += memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, new byte[i]));
+      memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, new byte[i]), memstoreSize);
     }
-    LOG.info("memstore2 estimated size=" + size);
+    LOG.info("memstore2 estimated size="
+        + (memstoreSize.getDataSize() + memstoreSize.getHeapOverhead()));
     final int seconds = 30;
     LOG.info("Waiting " + seconds + " seconds while heap dump is taken");
     LOG.info("Exiting.");

@@ -468,6 +468,11 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public long heapOverhead() {
+      return FIXED_OVERHEAD;
+    }
   }
 
   protected static class OffheapDecodedCell extends ByteBufferedCell implements ExtendedCell {
@@ -706,6 +711,11 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     public void write(byte[] buf, int offset) {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long heapOverhead() {
+      return FIXED_OVERHEAD;
     }
   }
 

@@ -23,7 +23,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
-import org.apache.hadoop.hbase.io.HeapSize;
 
 /**
  * The MemStore holds in-memory modifications to the Store. Modifications are {@link Cell}s.
@@ -33,7 +32,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
  * </p>
  */
 @InterfaceAudience.Private
-public interface MemStore extends HeapSize {
+public interface MemStore {
 
   /**
    * Creates a snapshot of the current memstore. Snapshot must be cleared by call to
@@ -58,56 +57,34 @@ public interface MemStore extends HeapSize {
    *
    * @return size of data that is going to be flushed
    */
-  long getFlushableSize();
+  MemstoreSize getFlushableSize();
 
   /**
    * Return the size of the snapshot(s) if any
    * @return size of the memstore snapshot
    */
-  long getSnapshotSize();
+  MemstoreSize getSnapshotSize();
 
   /**
    * Write an update
    * @param cell
-   * @return approximate size of the passed cell.
+   * @param memstoreSize The delta in memstore size will be passed back via this.
+   *        This will include both data size and heap overhead delta.
    */
-  long add(final Cell cell);
+  void add(final Cell cell, MemstoreSize memstoreSize);
 
   /**
    * Write the updates
    * @param cells
-   * @return approximate size of the passed cell.
+   * @param memstoreSize The delta in memstore size will be passed back via this.
+   *        This will include both data size and heap overhead delta.
    */
-  long add(Iterable<Cell> cells);
+  void add(Iterable<Cell> cells, MemstoreSize memstoreSize);
 
   /**
    * @return Oldest timestamp of all the Cells in the MemStore
    */
   long timeOfOldestEdit();
-
-  /**
-   * Write a delete
-   * @param deleteCell
-   * @return approximate size of the passed key and value.
-   */
-  long delete(final Cell deleteCell);
-
-  /**
-   * Given the specs of a column, update it, first by inserting a new record,
-   * then removing the old one.  Since there is only 1 KeyValue involved, the memstoreTS
-   * will be set to 0, thus ensuring that they instantly appear to anyone. The underlying
-   * store will ensure that the insert/delete each are atomic. A scanner/reader will either
-   * get the new value, or the old value and all readers will eventually only see the new
-   * value after the old was removed.
-   *
-   * @param row
-   * @param family
-   * @param qualifier
-   * @param newValue
-   * @param now
-   * @return Timestamp
-   */
-  long updateColumnValue(byte[] row, byte[] family, byte[] qualifier, long newValue, long now);
 
   /**
    * Update or insert the specified cells.
@@ -122,9 +99,10 @@ public interface MemStore extends HeapSize {
    * only see each KeyValue update as atomic.
    * @param cells
    * @param readpoint readpoint below which we can safely remove duplicate Cells.
-   * @return change in memstore size
+   * @param memstoreSize The delta in memstore size will be passed back via this.
+   *        This will include both data size and heap overhead delta.
    */
-  long upsert(Iterable<Cell> cells, long readpoint);
+  void upsert(Iterable<Cell> cells, long readpoint, MemstoreSize memstoreSize);
 
   /**
    * @return scanner over the memstore. This might include scanner over the snapshot when one is
@@ -133,13 +111,12 @@ public interface MemStore extends HeapSize {
   List<KeyValueScanner> getScanners(long readPt) throws IOException;
 
   /**
-   * @return Total memory occupied by this MemStore. This includes active segment size and heap size
-   *         overhead of this memstore but won't include any size occupied by the snapshot. We
-   *         assume the snapshot will get cleared soon. This is not thread safe and the memstore may
-   *         be changed while computing its size. It is the responsibility of the caller to make
-   *         sure this doesn't happen.
+   * @return Total memory occupied by this MemStore. This won't include any size occupied by the
+   *         snapshot. We assume the snapshot will get cleared soon. This is not thread safe and
+   *         the memstore may be changed while computing its size. It is the responsibility of the
+   *         caller to make sure this doesn't happen.
    */
-  long size();
+  MemstoreSize size();
 
   /**
    * This method is called when it is clear that the flush to disk is completed.

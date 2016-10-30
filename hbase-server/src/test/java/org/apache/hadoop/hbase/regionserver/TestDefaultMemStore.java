@@ -105,10 +105,10 @@ public class TestDefaultMemStore {
   public void testPutSameKey() {
     byte[] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
-    this.memstore.add(kv);
+    this.memstore.add(kv, null);
     byte[] other = Bytes.toBytes("somethingelse");
     KeyValue samekey = new KeyValue(bytes, bytes, bytes, other);
-    this.memstore.add(samekey);
+    this.memstore.add(samekey, null);
     Cell found = this.memstore.getActive().first();
     assertEquals(1, this.memstore.getActive().getCellsCount());
     assertTrue(Bytes.toString(found.getValueArray()), CellUtil.matchingValue(samekey, found));
@@ -118,23 +118,28 @@ public class TestDefaultMemStore {
   public void testPutSameCell() {
     byte[] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
-    long sizeChangeForFirstCell = this.memstore.add(kv);
-    long sizeChangeForSecondCell = this.memstore.add(kv);
+    MemstoreSize sizeChangeForFirstCell = new MemstoreSize();
+    this.memstore.add(kv, sizeChangeForFirstCell);
+    MemstoreSize sizeChangeForSecondCell = new MemstoreSize();
+    this.memstore.add(kv, sizeChangeForSecondCell);
     // make sure memstore size increase won't double-count MSLAB chunk size
-    assertEquals(AbstractMemStore.heapSizeChange(kv, true), sizeChangeForFirstCell);
+    assertEquals(Segment.getCellLength(kv), sizeChangeForFirstCell.getDataSize());
+    assertEquals(this.memstore.active.heapOverheadChange(kv, true),
+        sizeChangeForFirstCell.getHeapOverhead());
     Segment segment = this.memstore.getActive();
     MemStoreLAB msLab = segment.getMemStoreLAB();
     if (msLab != null) {
       // make sure memstore size increased even when writing the same cell, if using MSLAB
-      assertEquals(segment.getCellLength(kv), sizeChangeForSecondCell);
+      assertEquals(Segment.getCellLength(kv), sizeChangeForSecondCell.getDataSize());
       // make sure chunk size increased even when writing the same cell, if using MSLAB
       if (msLab instanceof HeapMemStoreLAB) {
-        assertEquals(2 * segment.getCellLength(kv),
+        assertEquals(2 * Segment.getCellLength(kv),
           ((HeapMemStoreLAB) msLab).getCurrentChunk().getNextFreeOffset());
       }
     } else {
       // make sure no memstore size change w/o MSLAB
-      assertEquals(0, sizeChangeForSecondCell);
+      assertEquals(0, sizeChangeForSecondCell.getDataSize());
+      assertEquals(0, sizeChangeForSecondCell.getHeapOverhead());
     }
   }
 
@@ -244,8 +249,8 @@ public class TestDefaultMemStore {
     final KeyValue kv2 = new KeyValue(two, f, q, v);
 
     // use case 1: both kvs in kvset
-    this.memstore.add(kv1.clone());
-    this.memstore.add(kv2.clone());
+    this.memstore.add(kv1.clone(), null);
+    this.memstore.add(kv2.clone(), null);
     verifyScanAcrossSnapshot2(kv1, kv2);
 
     // use case 2: both kvs in snapshot
@@ -254,9 +259,9 @@ public class TestDefaultMemStore {
 
     // use case 3: first in snapshot second in kvset
     this.memstore = new DefaultMemStore();
-    this.memstore.add(kv1.clone());
+    this.memstore.add(kv1.clone(), null);
     this.memstore.snapshot();
-    this.memstore.add(kv2.clone());
+    this.memstore.add(kv2.clone(), null);
     verifyScanAcrossSnapshot2(kv1, kv2);
   }
 
@@ -302,7 +307,7 @@ public class TestDefaultMemStore {
 
     KeyValue kv1 = new KeyValue(row, f, q1, v);
     kv1.setSequenceId(w.getWriteNumber());
-    memstore.add(kv1);
+    memstore.add(kv1, null);
 
     KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{});
@@ -315,7 +320,7 @@ public class TestDefaultMemStore {
     w = mvcc.begin();
     KeyValue kv2 = new KeyValue(row, f, q2, v);
     kv2.setSequenceId(w.getWriteNumber());
-    memstore.add(kv2);
+    memstore.add(kv2, null);
 
     s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv1});
@@ -347,11 +352,11 @@ public class TestDefaultMemStore {
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
     kv11.setSequenceId(w.getWriteNumber());
-    memstore.add(kv11);
+    memstore.add(kv11, null);
 
     KeyValue kv12 = new KeyValue(row, f, q2, v1);
     kv12.setSequenceId(w.getWriteNumber());
-    memstore.add(kv12);
+    memstore.add(kv12, null);
     mvcc.completeAndWait(w);
 
     // BEFORE STARTING INSERT 2, SEE FIRST KVS
@@ -362,11 +367,11 @@ public class TestDefaultMemStore {
     w = mvcc.begin();
     KeyValue kv21 = new KeyValue(row, f, q1, v2);
     kv21.setSequenceId(w.getWriteNumber());
-    memstore.add(kv21);
+    memstore.add(kv21, null);
 
     KeyValue kv22 = new KeyValue(row, f, q2, v2);
     kv22.setSequenceId(w.getWriteNumber());
-    memstore.add(kv22);
+    memstore.add(kv22, null);
 
     // BEFORE COMPLETING INSERT 2, SEE FIRST KVS
     s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
@@ -400,11 +405,11 @@ public class TestDefaultMemStore {
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
     kv11.setSequenceId(w.getWriteNumber());
-    memstore.add(kv11);
+    memstore.add(kv11, null);
 
     KeyValue kv12 = new KeyValue(row, f, q2, v1);
     kv12.setSequenceId(w.getWriteNumber());
-    memstore.add(kv12);
+    memstore.add(kv12, null);
     mvcc.completeAndWait(w);
 
     // BEFORE STARTING INSERT 2, SEE FIRST KVS
@@ -416,7 +421,7 @@ public class TestDefaultMemStore {
     KeyValue kvDel = new KeyValue(row, f, q2, kv11.getTimestamp(),
         KeyValue.Type.DeleteColumn);
     kvDel.setSequenceId(w.getWriteNumber());
-    memstore.add(kvDel);
+    memstore.add(kvDel, null);
 
     // BEFORE COMPLETING DELETE, SEE FIRST KVS
     s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
@@ -478,7 +483,7 @@ public class TestDefaultMemStore {
 
         KeyValue kv = new KeyValue(row, f, q1, i, v);
         kv.setSequenceId(w.getWriteNumber());
-        memstore.add(kv);
+        memstore.add(kv, null);
         mvcc.completeAndWait(w);
 
         // Assert that we can read back
@@ -543,9 +548,9 @@ public class TestDefaultMemStore {
     KeyValue key1 = new KeyValue(row, family, qf, stamps[1], values[1]);
     KeyValue key2 = new KeyValue(row, family, qf, stamps[2], values[2]);
 
-    m.add(key0);
-    m.add(key1);
-    m.add(key2);
+    m.add(key0, null);
+    m.add(key1, null);
+    m.add(key2, null);
 
     assertTrue("Expected memstore to hold 3 values, actually has " +
         m.getActive().getCellsCount(), m.getActive().getCellsCount() == 3);
@@ -619,16 +624,16 @@ public class TestDefaultMemStore {
     byte [] val = Bytes.toBytes("testval");
 
     //Setting up memstore
-    memstore.add(new KeyValue(row, fam, qf1, val));
-    memstore.add(new KeyValue(row, fam, qf2, val));
-    memstore.add(new KeyValue(row, fam, qf3, val));
+    memstore.add(new KeyValue(row, fam, qf1, val), null);
+    memstore.add(new KeyValue(row, fam, qf2, val), null);
+    memstore.add(new KeyValue(row, fam, qf3, val), null);
     //Creating a snapshot
     memstore.snapshot();
     assertEquals(3, memstore.getSnapshot().getCellsCount());
     //Adding value to "new" memstore
     assertEquals(0, memstore.getActive().getCellsCount());
-    memstore.add(new KeyValue(row, fam ,qf4, val));
-    memstore.add(new KeyValue(row, fam ,qf5, val));
+    memstore.add(new KeyValue(row, fam ,qf4, val), null);
+    memstore.add(new KeyValue(row, fam ,qf5, val), null);
     assertEquals(2, memstore.getActive().getCellsCount());
   }
 
@@ -648,14 +653,14 @@ public class TestDefaultMemStore {
     KeyValue put2 = new KeyValue(row, fam, qf1, ts2, val);
     long ts3 = ts2 + 1;
     KeyValue put3 = new KeyValue(row, fam, qf1, ts3, val);
-    memstore.add(put1);
-    memstore.add(put2);
-    memstore.add(put3);
+    memstore.add(put1, null);
+    memstore.add(put2, null);
+    memstore.add(put3, null);
 
     assertEquals(3, memstore.getActive().getCellsCount());
 
     KeyValue del2 = new KeyValue(row, fam, qf1, ts2, KeyValue.Type.Delete, val);
-    memstore.delete(del2);
+    memstore.add(del2, null);
 
     List<Cell> expected = new ArrayList<Cell>();
     expected.add(put3);
@@ -683,15 +688,15 @@ public class TestDefaultMemStore {
     KeyValue put2 = new KeyValue(row, fam, qf1, ts2, val);
     long ts3 = ts2 + 1;
     KeyValue put3 = new KeyValue(row, fam, qf1, ts3, val);
-    memstore.add(put1);
-    memstore.add(put2);
-    memstore.add(put3);
+    memstore.add(put1, null);
+    memstore.add(put2, null);
+    memstore.add(put3, null);
 
     assertEquals(3, memstore.getActive().getCellsCount());
 
     KeyValue del2 =
       new KeyValue(row, fam, qf1, ts2, KeyValue.Type.DeleteColumn, val);
-    memstore.delete(del2);
+    memstore.add(del2, null);
 
     List<Cell> expected = new ArrayList<Cell>();
     expected.add(put3);
@@ -721,14 +726,14 @@ public class TestDefaultMemStore {
     KeyValue put3 = new KeyValue(row, fam, qf3, ts, val);
     KeyValue put4 = new KeyValue(row, fam, qf3, ts+1, val);
 
-    memstore.add(put1);
-    memstore.add(put2);
-    memstore.add(put3);
-    memstore.add(put4);
+    memstore.add(put1, null);
+    memstore.add(put2, null);
+    memstore.add(put3, null);
+    memstore.add(put4, null);
 
     KeyValue del =
       new KeyValue(row, fam, null, ts, KeyValue.Type.DeleteFamily, val);
-    memstore.delete(del);
+    memstore.add(del, null);
 
     List<Cell> expected = new ArrayList<Cell>();
     expected.add(del);
@@ -751,9 +756,9 @@ public class TestDefaultMemStore {
     byte [] qf = Bytes.toBytes("testqualifier");
     byte [] val = Bytes.toBytes("testval");
     long ts = System.nanoTime();
-    memstore.add(new KeyValue(row, fam, qf, ts, val));
+    memstore.add(new KeyValue(row, fam, qf, ts, val), null);
     KeyValue delete = new KeyValue(row, fam, qf, ts, KeyValue.Type.Delete, val);
-    memstore.delete(delete);
+    memstore.add(delete, null);
     assertEquals(2, memstore.getActive().getCellsCount());
     assertEquals(delete, memstore.getActive().first());
   }
@@ -761,12 +766,12 @@ public class TestDefaultMemStore {
   @Test
   public void testRetainsDeleteVersion() throws IOException {
     // add a put to memstore
-    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
+    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"), null);
 
     // now process a specific delete:
     KeyValue delete = KeyValueTestUtil.create(
         "row1", "fam", "a", 100, KeyValue.Type.Delete, "dont-care");
-    memstore.delete(delete);
+    memstore.add(delete, null);
 
     assertEquals(2, memstore.getActive().getCellsCount());
     assertEquals(delete, memstore.getActive().first());
@@ -775,12 +780,12 @@ public class TestDefaultMemStore {
   @Test
   public void testRetainsDeleteColumn() throws IOException {
     // add a put to memstore
-    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
+    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"), null);
 
     // now process a specific delete:
     KeyValue delete = KeyValueTestUtil.create("row1", "fam", "a", 100,
         KeyValue.Type.DeleteColumn, "dont-care");
-    memstore.delete(delete);
+    memstore.add(delete, null);
 
     assertEquals(2, memstore.getActive().getCellsCount());
     assertEquals(delete, memstore.getActive().first());
@@ -789,62 +794,15 @@ public class TestDefaultMemStore {
   @Test
   public void testRetainsDeleteFamily() throws IOException {
     // add a put to memstore
-    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
+    memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"), null);
 
     // now process a specific delete:
     KeyValue delete = KeyValueTestUtil.create("row1", "fam", "a", 100,
         KeyValue.Type.DeleteFamily, "dont-care");
-    memstore.delete(delete);
+    memstore.add(delete, null);
 
     assertEquals(2, memstore.getActive().getCellsCount());
     assertEquals(delete, memstore.getActive().first());
-  }
-
-  ////////////////////////////////////
-  //Test for upsert with MSLAB
-  ////////////////////////////////////
-
-  /**
-   * Test a pathological pattern that shows why we can't currently
-   * use the MSLAB for upsert workloads. This test inserts data
-   * in the following pattern:
-   *
-   * - row0001 through row1000 (fills up one 2M Chunk)
-   * - row0002 through row1001 (fills up another 2M chunk, leaves one reference
-   *   to the first chunk
-   * - row0003 through row1002 (another chunk, another dangling reference)
-   *
-   * This causes OOME pretty quickly if we use MSLAB for upsert
-   * since each 2M chunk is held onto by a single reference.
-   */
-  @Test
-  public void testUpsertMSLAB() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    conf.setBoolean(SegmentFactory.USEMSLAB_KEY, true);
-    memstore = new DefaultMemStore(conf, CellComparator.COMPARATOR);
-
-    int ROW_SIZE = 2048;
-    byte[] qualifier = new byte[ROW_SIZE - 4];
-
-    MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
-    for (int i = 0; i < 3; i++) { System.gc(); }
-    long usageBefore = bean.getHeapMemoryUsage().getUsed();
-
-    long size = 0;
-    long ts=0;
-
-    for (int newValue = 0; newValue < 1000; newValue++) {
-      for (int row = newValue; row < newValue + 1000; row++) {
-        byte[] rowBytes = Bytes.toBytes(row);
-        size += memstore.updateColumnValue(rowBytes, FAMILY, qualifier, newValue, ++ts);
-      }
-    }
-    System.out.println("Wrote " + ts + " vals");
-    for (int i = 0; i < 3; i++) { System.gc(); }
-    long usageAfter = bean.getHeapMemoryUsage().getUsed();
-    System.out.println("Memory used: " + (usageAfter - usageBefore)
-        + " (heapsize: " + memstore.heapSize() +
-        " size: " + size + ")");
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -864,7 +822,7 @@ public class TestDefaultMemStore {
   public void testUpsertMemstoreSize() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     memstore = new DefaultMemStore(conf, CellComparator.COMPARATOR);
-    long oldSize = memstore.size();
+    MemstoreSize oldSize = memstore.size();
 
     List<Cell> l = new ArrayList<Cell>();
     KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
@@ -874,16 +832,16 @@ public class TestDefaultMemStore {
     kv1.setSequenceId(1); kv2.setSequenceId(1);kv3.setSequenceId(1);
     l.add(kv1); l.add(kv2); l.add(kv3);
 
-    this.memstore.upsert(l, 2);// readpoint is 2
-    long newSize = this.memstore.size();
-    assert(newSize > oldSize);
+    this.memstore.upsert(l, 2, null);// readpoint is 2
+    MemstoreSize newSize = this.memstore.size();
+    assert (newSize.getDataSize() > oldSize.getDataSize());
     //The kv1 should be removed.
     assert(memstore.getActive().getCellsCount() == 2);
 
     KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
     kv4.setSequenceId(1);
     l.clear(); l.add(kv4);
-    this.memstore.upsert(l, 3);
+    this.memstore.upsert(l, 3, null);
     assertEquals(newSize, this.memstore.size());
     //The kv2 should be removed.
     assert(memstore.getActive().getCellsCount() == 2);
@@ -910,7 +868,7 @@ public class TestDefaultMemStore {
       assertEquals(t, Long.MAX_VALUE);
 
       // test the case that the timeOfOldestEdit is updated after a KV add
-      memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"));
+      memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"), null);
       t = memstore.timeOfOldestEdit();
       assertTrue(t == 1234);
       // snapshot() will reset timeOfOldestEdit. The method will also assert the
@@ -918,7 +876,7 @@ public class TestDefaultMemStore {
       t = runSnapshot(memstore);
 
       // test the case that the timeOfOldestEdit is updated after a KV delete
-      memstore.delete(KeyValueTestUtil.create("r", "f", "q", 100, "v"));
+      memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, KeyValue.Type.Delete, "v"), null);
       t = memstore.timeOfOldestEdit();
       assertTrue(t == 1234);
       t = runSnapshot(memstore);
@@ -928,7 +886,7 @@ public class TestDefaultMemStore {
       KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
       kv1.setSequenceId(100);
       l.add(kv1);
-      memstore.upsert(l, 1000);
+      memstore.upsert(l, 1000, null);
       t = memstore.timeOfOldestEdit();
       assertTrue(t == 1234);
     } finally {
@@ -1041,7 +999,7 @@ public class TestDefaultMemStore {
       for (int ii = 0; ii < QUALIFIER_COUNT; ii++) {
         byte [] row = Bytes.toBytes(i);
         byte [] qf = makeQualifier(i, ii);
-        hmc.add(new KeyValue(row, FAMILY, qf, timestamp, qf));
+        hmc.add(new KeyValue(row, FAMILY, qf, timestamp, qf), null);
       }
     }
     return ROW_COUNT;
@@ -1088,7 +1046,7 @@ public class TestDefaultMemStore {
       for (int ii = 0; ii < QUALIFIER_COUNT ; ii++) {
         byte [] row = Bytes.toBytes(i);
         byte [] qf = makeQualifier(i, ii);
-        mem.add(new KeyValue(row, FAMILY, qf, timestamp, qf));
+        mem.add(new KeyValue(row, FAMILY, qf, timestamp, qf), null);
       }
     }
   }

@@ -42,7 +42,7 @@ public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
   private final boolean hasTags;
   // TODO : See if famLen can be cached or not?
 
-  private static final int FIXED_HEAP_SIZE_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
+  private static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
       + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT
       + Bytes.SIZEOF_BOOLEAN + Bytes.SIZEOF_LONG;
 
@@ -235,7 +235,7 @@ public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
 
   @Override
   public long heapSize() {
-    return ClassSize.align(FIXED_HEAP_SIZE_OVERHEAD + ClassSize.align(length));
+    return ClassSize.align(FIXED_OVERHEAD + ClassSize.align(length));
   }
 
   @Override
@@ -275,5 +275,10 @@ public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
     // This Cell implementation is not yet used in write path.
     // TODO when doing HBASE-15179
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public long heapOverhead() {
+    return FIXED_OVERHEAD;
   }
 }

@@ -32,7 +32,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS")
 public class SizeCachedKeyValue extends KeyValue {
-  private static final int HEAP_SIZE_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
+  // Overhead in this class alone. Parent's overhead will be considered in usage places by calls to
+  // super. methods
+  private static final int FIXED_OVERHEAD = Bytes.SIZEOF_SHORT + Bytes.SIZEOF_INT;
 
   private short rowLen;
   private int keyLen;
@@ -58,6 +60,11 @@ public class SizeCachedKeyValue extends KeyValue {
 
   @Override
   public long heapSize() {
-    return super.heapSize() + HEAP_SIZE_OVERHEAD;
+    return super.heapSize() + FIXED_OVERHEAD;
+  }
+
+  @Override
+  public long heapOverhead() {
+    return super.heapOverhead() + FIXED_OVERHEAD;
   }
 }

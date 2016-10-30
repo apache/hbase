@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
@@ -30,9 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -78,18 +73,6 @@ public abstract class AbstractMemStore implements MemStore {
     this.timeOfOldestEdit = Long.MAX_VALUE;
   }
 
-  /*
-  * Calculate how the MemStore size has changed.  Includes overhead of the
-  * backing Map.
-  * @param cell
-  * @param notPresent True if the cell was NOT present in the set.
-  * @return change in size
-  */
-  static long heapSizeChange(final Cell cell, final boolean notPresent) {
-    return notPresent ? ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY
-        + CellUtil.estimatedHeapSizeOf(cell)) : 0;
-  }
-
   /**
    * Updates the wal with the lowest sequence id (oldest entry) that is still in memory
    * @param onlyIfMoreRecent a flag that marks whether to update the sequence id no matter what or
@@ -98,22 +81,14 @@ public abstract class AbstractMemStore implements MemStore {
   public abstract void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent);
 
   @Override
-  public long add(Iterable<Cell> cells) {
-    long size = 0;
+  public void add(Iterable<Cell> cells, MemstoreSize memstoreSize) {
     for (Cell cell : cells) {
-      size += add(cell);
+      add(cell, memstoreSize);
     }
-    return size;
   }
-  
-  /**
-   * Write an update
-   * @param cell the cell to be added
-   * @return approximate size of the passed cell & newly added cell which maybe different than the
-   *         passed-in cell
-   */
+
   @Override
-  public long add(Cell cell) {
+  public void add(Cell cell, MemstoreSize memstoreSize) {
     Cell toAdd = maybeCloneWithAllocator(cell);
     boolean mslabUsed = (toAdd != cell);
     // This cell data is backed by the same byte[] where we read request in RPC(See HBASE-15180). By
@@ -128,7 +103,7 @@ public abstract class AbstractMemStore implements MemStore {
     if (!mslabUsed) {
       toAdd = deepCopyIfNeeded(toAdd);
     }
-    return internalAdd(toAdd, mslabUsed);
+    internalAdd(toAdd, mslabUsed, memstoreSize);
   }
 
   private static Cell deepCopyIfNeeded(Cell cell) {
@@ -141,31 +116,11 @@ public abstract class AbstractMemStore implements MemStore {
     return cell;
   }
 
-  /**
-   * Update or insert the specified Cells.
-   * <p>
-   * For each Cell, insert into MemStore.  This will atomically upsert the
-   * value for that row/family/qualifier.  If a Cell did already exist,
-   * it will then be removed.
-   * <p>
-   * Currently the memstoreTS is kept at 0 so as each insert happens, it will
-   * be immediately visible.  May want to change this so it is atomic across
-   * all Cells.
-   * <p>
-   * This is called under row lock, so Get operations will still see updates
-   * atomically.  Scans will only see each Cell update as atomic.
-   *
-   * @param cells the cells to be updated
-   * @param readpoint readpoint below which we can safely remove duplicate KVs
-   * @return change in memstore size
-   */
   @Override
-  public long upsert(Iterable<Cell> cells, long readpoint) {
-    long size = 0;
+  public void upsert(Iterable<Cell> cells, long readpoint, MemstoreSize memstoreSize) {
     for (Cell cell : cells) {
-      size += upsert(cell, readpoint);
+      upsert(cell, readpoint, memstoreSize);
     }
-    return size;
   }
 
   /**
@@ -174,18 +129,6 @@ public abstract class AbstractMemStore implements MemStore {
   @Override
   public long timeOfOldestEdit() {
     return timeOfOldestEdit;
-  }
-
-
-  /**
-   * Write a delete
-   * @param deleteCell the cell to be deleted
-   * @return approximate size of the passed key and value.
-   */
-  @Override
-  public long delete(Cell deleteCell) {
-    // Delete operation just adds the delete marker cell coming here.
-    return add(deleteCell);
   }
 
   /**
@@ -210,18 +153,9 @@ public abstract class AbstractMemStore implements MemStore {
     oldSnapshot.close();
   }
 
-  /**
-   * Get the entire heap usage for this MemStore not including keys in the
-   * snapshot.
-   */
   @Override
-  public long heapSize() {
-    return size();
-  }
-
-  @Override
-  public long getSnapshotSize() {
-    return this.snapshot.keySize();
+  public MemstoreSize getSnapshotSize() {
+    return new MemstoreSize(this.snapshot.keySize(), this.snapshot.heapOverhead());
   }
 
   @Override
@@ -249,7 +183,7 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
 
-  /**
+  /*
    * Inserts the specified Cell into MemStore and deletes any existing
    * versions of the same row/family/qualifier as the specified Cell.
    * <p>
@@ -262,9 +196,9 @@ public abstract class AbstractMemStore implements MemStore {
    *
    * @param cell the cell to be updated
    * @param readpoint readpoint below which we can safely remove duplicate KVs
-   * @return change in size of MemStore
+   * @param memstoreSize
    */
-  private long upsert(Cell cell, long readpoint) {
+  private void upsert(Cell cell, long readpoint, MemstoreSize memstoreSize) {
     // Add the Cell to the MemStore
     // Use the internalAdd method here since we (a) already have a lock
     // and (b) cannot safely use the MSLAB here without potentially
@@ -275,50 +209,9 @@ public abstract class AbstractMemStore implements MemStore {
     // must do below deep copy. Or else we will keep referring to the bigger chunk of memory and
     // prevent it from getting GCed.
     cell = deepCopyIfNeeded(cell);
-    long addedSize = internalAdd(cell, false);
-
-    // Get the Cells for the row/family/qualifier regardless of timestamp.
-    // For this case we want to clean up any other puts
-    Cell firstCell = CellUtil.createFirstOnRow(
-        cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
-        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
-        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
-    SortedSet<Cell> ss = active.tailSet(firstCell);
-    Iterator<Cell> it = ss.iterator();
-    // versions visible to oldest scanner
-    int versionsVisible = 0;
-    while (it.hasNext()) {
-      Cell cur = it.next();
-
-      if (cell == cur) {
-        // ignore the one just put in
-        continue;
-      }
-      // check that this is the row and column we are interested in, otherwise bail
-      if (CellUtil.matchingRow(cell, cur) && CellUtil.matchingQualifier(cell, cur)) {
-        // only remove Puts that concurrent scanners cannot possibly see
-        if (cur.getTypeByte() == KeyValue.Type.Put.getCode() &&
-            cur.getSequenceId() <= readpoint) {
-          if (versionsVisible >= 1) {
-            // if we get here we have seen at least one version visible to the oldest scanner,
-            // which means we can prove that no scanner will see this version
-
-            // false means there was a change, so give us the size.
-            long delta = heapSizeChange(cur, true);
-            addedSize -= delta;
-            active.incSize(-delta);
-            it.remove();
-            setOldestEditTimeToNow();
-          } else {
-            versionsVisible++;
-          }
-        }
-      } else {
-        // past the row or column, done
-        break;
-      }
-    }
-    return addedSize;
+    this.active.upsert(cell, readpoint, memstoreSize);
+    setOldestEditTimeToNow();
+    checkActiveSize();
   }
 
   /*
@@ -359,75 +252,23 @@ public abstract class AbstractMemStore implements MemStore {
     return result;
   }
 
-  /**
-   * Given the specs of a column, update it, first by inserting a new record,
-   * then removing the old one.  Since there is only 1 KeyValue involved, the memstoreTS
-   * will be set to 0, thus ensuring that they instantly appear to anyone. The underlying
-   * store will ensure that the insert/delete each are atomic. A scanner/reader will either
-   * get the new value, or the old value and all readers will eventually only see the new
-   * value after the old was removed.
-   */
-  @VisibleForTesting
-  @Override
-  public long updateColumnValue(byte[] row, byte[] family, byte[] qualifier,
-      long newValue, long now) {
-    Cell firstCell = KeyValueUtil.createFirstOnRow(row, family, qualifier);
-    // Is there a Cell in 'snapshot' with the same TS? If so, upgrade the timestamp a bit.
-    Cell snc = snapshot.getFirstAfter(firstCell);
-    if(snc != null) {
-      // is there a matching Cell in the snapshot?
-      if (CellUtil.matchingRow(snc, firstCell) && CellUtil.matchingQualifier(snc, firstCell)) {
-        if (snc.getTimestamp() == now) {
-          now += 1;
-        }
-      }
-    }
-    // logic here: the new ts MUST be at least 'now'. But it could be larger if necessary.
-    // But the timestamp should also be max(now, mostRecentTsInMemstore)
-
-    // so we cant add the new Cell w/o knowing what's there already, but we also
-    // want to take this chance to delete some cells. So two loops (sad)
-
-    SortedSet<Cell> ss = this.active.tailSet(firstCell);
-    for (Cell cell : ss) {
-      // if this isnt the row we are interested in, then bail:
-      if (!CellUtil.matchingColumn(cell, family, qualifier)
-          || !CellUtil.matchingRow(cell, firstCell)) {
-        break; // rows dont match, bail.
-      }
-
-      // if the qualifier matches and it's a put, just RM it out of the active.
-      if (cell.getTypeByte() == KeyValue.Type.Put.getCode() &&
-          cell.getTimestamp() > now && CellUtil.matchingQualifier(firstCell, cell)) {
-        now = cell.getTimestamp();
-      }
-    }
-
-    // create or update (upsert) a new Cell with
-    // 'now' and a 0 memstoreTS == immediately visible
-    List<Cell> cells = new ArrayList<Cell>(1);
-    cells.add(new KeyValue(row, family, qualifier, now, Bytes.toBytes(newValue)));
-    return upsert(cells, 1L);
-  }
-
   private Cell maybeCloneWithAllocator(Cell cell) {
     return active.maybeCloneWithAllocator(cell);
   }
 
-  /**
+  /*
    * Internal version of add() that doesn't clone Cells with the
    * allocator, and doesn't take the lock.
    *
    * Callers should ensure they already have the read lock taken
    * @param toAdd the cell to add
    * @param mslabUsed whether using MSLAB
-   * @return the heap size change in bytes
+   * @param memstoreSize
    */
-  private long internalAdd(final Cell toAdd, final boolean mslabUsed) {
-    long s = active.add(toAdd, mslabUsed);
+  private void internalAdd(final Cell toAdd, final boolean mslabUsed, MemstoreSize memstoreSize) {
+    active.add(toAdd, mslabUsed, memstoreSize);
     setOldestEditTimeToNow();
     checkActiveSize();
-    return s;
   }
 
   private void setOldestEditTimeToNow() {
@@ -437,11 +278,15 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   /**
-   * @return The size of the active segment. Means sum of all cell's size.
+   * @return The total size of cells in this memstore. We will not consider cells in the snapshot
    */
-  protected long keySize() {
-    return this.active.keySize();
-  }
+  protected abstract long keySize();
+
+  /**
+   * @return The total heap overhead of cells in this memstore. We will not consider cells in the
+   *         snapshot
+   */
+  protected abstract long heapOverhead();
 
   protected CellComparator getComparator() {
     return comparator;

@@ -66,4 +66,9 @@ public interface ExtendedCell extends Cell, SettableSequenceId, SettableTimestam
    * @param offset The offset within buffer, to write the Cell.
    */
   void write(byte[] buf, int offset);
+
+  /**
+   * @return The heap size overhead associated with this Cell.
+   */
+  long heapOverhead();
 }
