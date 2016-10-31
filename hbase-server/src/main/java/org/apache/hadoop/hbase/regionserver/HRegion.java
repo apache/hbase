@@ -7282,7 +7282,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         WALEdit walEdit = reckonDeltas(op, mutation, effectiveDurability, forMemStore, results);
         // Actually write to WAL now if a walEdit to apply.
         if (walEdit != null && !walEdit.isEmpty()) {
-          writeEntry = doWALAppend(walEdit, durability, nonceGroup, nonce);
+          writeEntry = doWALAppend(walEdit, effectiveDurability, nonceGroup, nonce);
         } else {
           // If walEdits is empty, it means we skipped the WAL; update LongAdders and start an mvcc
           // transaction.
