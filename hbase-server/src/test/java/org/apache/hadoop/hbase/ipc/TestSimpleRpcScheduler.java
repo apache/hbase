@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -425,7 +424,7 @@ public class TestSimpleRpcScheduler {/*
   // fastpath thread to: new FastPathBalancedQueueRpcExecutor("CodelFPBQ.default", handlerCount, numCallQueues...
   // Codel is hard to test. This test is going to be flakey given it all timer-based. Disabling for now till chat
   // with authors.
-  @Ignore @Test
+  @Test
   public void testCoDelScheduling() throws Exception {
     CoDelEnvironmentEdge envEdge = new CoDelEnvironmentEdge();
     envEdge.threadNamePrefixs.add("RpcServer.CodelFPBQ.default.handler");
