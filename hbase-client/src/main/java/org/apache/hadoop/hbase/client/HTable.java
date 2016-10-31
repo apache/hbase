@@ -529,8 +529,7 @@ public class HTable implements Table {
         return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
       }
     };
-    List<Row> rows = new ArrayList<Row>();
-    rows.add(delete);
+    List<Delete> rows = Collections.singletonList(delete);
     AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rows,
         null, null, callable, writeRpcTimeout);
     ars.waitUntilDone();
@@ -762,21 +761,8 @@ public class HTable implements Table {
    */
   @Override
   public boolean checkAndDelete(final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Delete delete)
-  throws IOException {
-    ClientServiceCallable<Boolean> callable = new ClientServiceCallable<Boolean>(this.connection, getName(), row,
-        this.rpcControllerFactory.newController()) {
-      @Override
-      protected Boolean rpcCall() throws Exception {
-        MutateRequest request = RequestConverter.buildMutateRequest(
-          getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
-          new BinaryComparator(value), CompareType.EQUAL, delete);
-        MutateResponse response = doMutate(request);
-        return Boolean.valueOf(response.getProcessed());
-      }
-    };
-    return rpcCallerFactory.<Boolean> newCaller(this.writeRpcTimeout).
-        callWithRetries(callable, this.operationTimeout);
+      final byte [] value, final Delete delete) throws IOException {
+    return checkAndDelete(row, family, qualifier, CompareOp.EQUAL, value, delete);
   }
 
   /**
@@ -801,9 +787,7 @@ public class HTable implements Table {
         return ResponseConverter.getResult(request, response, getRpcControllerCellScanner());
       }
     };
-    List<Row> rows = new ArrayList<Row>();
-    rows.add(delete);
-
+    List<Delete> rows = Collections.singletonList(delete);
     Object[] results = new Object[1];
     AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rows,
         null, results, callable, -1);
