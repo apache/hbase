@@ -124,7 +124,7 @@ public class ZNodeClearer {
       new File(fileName).delete();
     }
   }
-  
+
   /**
    * See HBASE-14861. We are extracting master ServerName from rsZnodePath
    * example: "/hbase/rs/server.example.com,16020,1448266496481"
