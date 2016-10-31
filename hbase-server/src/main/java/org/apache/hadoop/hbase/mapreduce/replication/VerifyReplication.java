@@ -181,7 +181,8 @@ public class VerifyReplication extends Configured implements Tool {
             Result.compareResults(value, currentCompareRowInPeerTable);
             context.getCounter(Counters.GOODROWS).increment(1);
             if (verbose) {
-              LOG.info("Good row key: " + delimiter + Bytes.toString(value.getRow()) + delimiter);
+              LOG.info("Good row key: " + delimiter
+                  + Bytes.toStringBinary(value.getRow()) + delimiter);
             }
           } catch (Exception e) {
             logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value);
