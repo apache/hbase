@@ -30,7 +30,7 @@ below step and then check in what it generated:
 
 or
 
- $ mvn install -Pcompille-protobuf
+ $ mvn install -Pcompile-protobuf
 
 NOTE: 'install' above whereas other proto generation only needs 'compile'
 
