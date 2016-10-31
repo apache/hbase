@@ -101,4 +101,18 @@ public class RegionCoprocessorServiceExec implements Row {
     Row other = (Row) obj;
     return compareTo(other) == 0;
   }
+
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append("region:")
+           .append(Bytes.toStringBinary(region))
+           .append(", startKey:")
+           .append(Bytes.toStringBinary(startKey))
+           .append(", method:")
+           .append(method.getFullName())
+           .append(", request:")
+           .append(request);
+    return builder.toString();
+  }
 }
