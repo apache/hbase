@@ -35,7 +35,7 @@
            -->
     <internal.protobuf.version>3.1.0</internal.protobuf.version>
     <!--The Default target dir-->
-    <classes.dir>${basedir}/target</classes.dir>
+    <classes.dir>${project.build.directory}/classes</classes.dir>
     <!--The Default location for sources-->
     <sources.dir>src/main/java</sources.dir>
   </properties>
