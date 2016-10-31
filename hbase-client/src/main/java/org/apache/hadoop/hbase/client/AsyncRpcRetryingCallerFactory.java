@@ -68,8 +68,8 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public SingleRequestCallerBuilder<T>
-        action(AsyncSingleRequestRpcRetryingCaller.Callable<T> callable) {
+    public SingleRequestCallerBuilder<T> action(
+        AsyncSingleRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -92,12 +92,9 @@ class AsyncRpcRetryingCallerFactory {
     public AsyncSingleRequestRpcRetryingCaller<T> build() {
       return new AsyncSingleRequestRpcRetryingCaller<>(retryTimer, conn,
           checkNotNull(tableName, "tableName is null"), checkNotNull(row, "row is null"),
-          locateToPreviousRegion
-              ? (c, tn, r, re) -> c.getLocator().getPreviousRegionLocation(tn, r, re)
-              : (c, tn, r, re) -> c.getLocator().getRegionLocation(tn, r, re),
-          checkNotNull(callable, "action is null"), conn.connConf.getPauseNs(),
-          conn.connConf.getMaxRetries(), operationTimeoutNs, rpcTimeoutNs,
-          conn.connConf.getStartLogErrorsCnt());
+          locateToPreviousRegion, checkNotNull(callable, "action is null"),
+          conn.connConf.getPauseNs(), conn.connConf.getMaxRetries(), operationTimeoutNs,
+          rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
     }
 
     /**

@@ -60,12 +60,6 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
         ClientService.Interface stub);
   }
 
-  @FunctionalInterface
-  public interface RegionLocator {
-    CompletableFuture<HRegionLocation> locate(AsyncConnectionImpl conn, TableName tableName,
-        byte[] row, boolean reload);
-  }
-
   private final HashedWheelTimer retryTimer;
 
   private final AsyncConnectionImpl conn;
@@ -74,7 +68,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
 
   private final byte[] row;
 
-  private final RegionLocator locator;
+  private final Supplier<CompletableFuture<HRegionLocation>> locate;
 
   private final Callable<T> callable;
 
@@ -97,13 +91,18 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
   private final long startNs;
 
   public AsyncSingleRequestRpcRetryingCaller(HashedWheelTimer retryTimer, AsyncConnectionImpl conn,
-      TableName tableName, byte[] row, RegionLocator locator, Callable<T> callable, long pauseNs,
-      int maxRetries, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+      TableName tableName, byte[] row, boolean locateToPreviousRegion, Callable<T> callable,
+      long pauseNs, int maxRetries, long operationTimeoutNs, long rpcTimeoutNs,
+      int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.tableName = tableName;
     this.row = row;
-    this.locator = locator;
+    if (locateToPreviousRegion) {
+      this.locate = this::locatePrevious;
+    } else {
+      this.locate = this::locate;
+    }
     this.callable = callable;
     this.pauseNs = pauseNs;
     this.maxAttempts = retries2Attempts(maxRetries);
@@ -145,8 +144,9 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
     if (tries > startLogErrorsCnt) {
       LOG.warn(errMsg.get(), error);
     }
-    RetriesExhaustedException.ThrowableWithExtraContext qt = new RetriesExhaustedException.ThrowableWithExtraContext(
-        error, EnvironmentEdgeManager.currentTime(), "");
+    RetriesExhaustedException.ThrowableWithExtraContext qt =
+        new RetriesExhaustedException.ThrowableWithExtraContext(error,
+            EnvironmentEdgeManager.currentTime(), "");
     exceptions.add(qt);
     if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
       completeExceptionally();
@@ -194,8 +194,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
             + " failed, tries = " + tries + ", maxAttempts = " + maxAttempts + ", timeout = "
             + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs) + " ms, time elapsed = "
             + elapsedMs() + " ms",
-        err -> conn.getLocator().updateCachedLocations(tableName,
-          loc.getRegionInfo().getRegionName(), row, err, loc.getServerName()));
+        err -> conn.getLocator().updateCachedLocation(loc, err));
       return;
     }
     resetController();
@@ -207,8 +206,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
               + tries + ", maxAttempts = " + maxAttempts + ", timeout = "
               + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs) + " ms, time elapsed = "
               + elapsedMs() + " ms",
-          err -> conn.getLocator().updateCachedLocations(tableName,
-            loc.getRegionInfo().getRegionName(), row, err, loc.getServerName()));
+          err -> conn.getLocator().updateCachedLocation(loc, err));
         return;
       }
       future.complete(result);
@@ -216,7 +214,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
   }
 
   private void locateThenCall() {
-    locator.locate(conn, tableName, row, tries > 1).whenComplete((loc, error) -> {
+    locate.get().whenComplete((loc, error) -> {
       if (error != null) {
         onError(error,
           () -> "Locate '" + Bytes.toStringBinary(row) + "' in " + tableName + " failed, tries = "
@@ -229,6 +227,14 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
       }
       call(loc);
     });
+  }
+
+  private CompletableFuture<HRegionLocation> locate() {
+    return conn.getLocator().getRegionLocation(tableName, row);
+  }
+
+  private CompletableFuture<HRegionLocation> locatePrevious() {
+    return conn.getLocator().getPreviousRegionLocation(tableName, row);
   }
 
   public CompletableFuture<T> call() {

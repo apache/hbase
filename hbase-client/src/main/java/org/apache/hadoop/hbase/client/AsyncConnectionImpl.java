@@ -66,7 +66,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final User user;
 
-  private final AsyncRegistry registry;
+  final AsyncRegistry registry;
 
   private final String clusterId;
 
@@ -87,15 +87,11 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
 
   @SuppressWarnings("deprecation")
-  public AsyncConnectionImpl(Configuration conf, User user) throws IOException {
+  public AsyncConnectionImpl(Configuration conf, User user) {
     this.conf = conf;
     this.user = user;
-
     this.connConf = new AsyncConnectionConfiguration(conf);
-
-    this.locator = new AsyncRegionLocator(conf);
-
-    // action below will not throw exception so no need to catch and close.
+    this.locator = new AsyncRegionLocator(this);
     this.registry = ClusterRegistryFactory.getRegistry(conf);
     this.clusterId = Optional.ofNullable(registry.getClusterId()).orElseGet(() -> {
       if (LOG.isDebugEnabled()) {
@@ -122,7 +118,6 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public void close() {
-    IOUtils.closeQuietly(locator);
     IOUtils.closeQuietly(rpcClient);
     IOUtils.closeQuietly(registry);
   }
