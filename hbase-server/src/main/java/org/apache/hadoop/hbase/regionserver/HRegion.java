@@ -133,8 +133,10 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -174,8 +176,7 @@ import org.apache.hadoop.hbase.regionserver.wal.ReplayHLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -3664,7 +3665,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void addRegionToSnapshot(SnapshotDescription desc,
       ForeignExceptionSnare exnSnare) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+    Path snapshotDir = LegacyLayout.getWorkingSnapshotDir(rootDir, desc);
 
     SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
             snapshotDir, desc, exnSnare);
@@ -6426,17 +6427,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return r.openHRegion(reporter);
   }
 
-  /**
-   * TODO remove after refactoring TableSnapshotScanner and TableSnapshotInputFormatImpl to use a RegionStorage impl instead of specifying a different root dir manually.
-   */
-  public static HRegion openHRegion(final FileSystem fs, final Path rootDir, final HRegionInfo info,
-      HTableDescriptor htd, Configuration conf) throws IOException {
+  public static HRegion openHRegion(final MasterStorage<? extends StorageIdentifier> masterStorage,
+      final HRegionInfo info, HTableDescriptor htd) throws IOException {
     if (info == null) throw new IllegalArgumentException("Passed region info is null");
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
-    RegionStorage rfs = RegionStorage.open(conf, fs, new LegacyPathIdentifier(rootDir), info, false);
-    HRegion r = newHRegion(rfs, htd, null, null);
+    RegionStorage<? extends StorageIdentifier> regionStorage = masterStorage.getRegionStorage(info);
+    HRegion r = newHRegion(regionStorage, htd, null, null);
     return r.openHRegion(null);
   }
 

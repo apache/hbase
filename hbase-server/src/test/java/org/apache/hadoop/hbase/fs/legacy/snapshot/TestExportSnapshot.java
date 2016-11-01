@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.snapshot;
+package org.apache.hadoop.hbase.fs.legacy.snapshot;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -40,9 +40,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageContext;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -305,33 +311,35 @@ public class TestExportSnapshot {
       new Path(HConstants.SNAPSHOT_DIR_NAME, snapshotName));
     final Set<String> snapshotFiles = new HashSet<String>();
     final Path exportedArchive = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    SnapshotReferenceUtil.visitReferencedFiles(conf, fs, exportedSnapshot,
-          new SnapshotReferenceUtil.SnapshotVisitor() {
-        @Override
-        public void storeFile(final HRegionInfo regionInfo, final String family,
-            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          if (bypassregionPredicate != null && bypassregionPredicate.evaluate(regionInfo))
-            return;
+    MasterStorage<? extends StorageIdentifier> masterStorage = MasterStorage.open(conf, false);
+    SnapshotDescription desc = masterStorage.getSnapshot(snapshotName);
+    masterStorage.visitSnapshotStoreFiles(desc, StorageContext.DATA,
+        new MasterStorage.SnapshotStoreFileVisitor() {
+          @Override
+          public void visitSnapshotStoreFile(SnapshotDescription snapshot, StorageContext ctx,
+              HRegionInfo hri, String familyName, SnapshotRegionManifest.StoreFile storeFile)
+              throws IOException {
+            if (bypassregionPredicate != null && bypassregionPredicate.evaluate(hri))
+              return;
 
-          String hfile = storeFile.getName();
-          snapshotFiles.add(hfile);
-          if (storeFile.hasReference()) {
-            // Nothing to do here, we have already the reference embedded
-          } else {
-            verifyNonEmptyFile(new Path(exportedArchive,
-              new Path(FSUtils.getTableDir(new Path("./"), tableName),
-                  new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
+            String hfile = storeFile.getName();
+            snapshotFiles.add(hfile);
+            if (storeFile.hasReference()) {
+              // Nothing to do here, we have already the reference embedded
+            } else {
+              verifyNonEmptyFile(new Path(exportedArchive,
+                  new Path(FSUtils.getTableDir(new Path("./"), tableName),
+                      new Path(hri.getEncodedName(), new Path(familyName, hfile)))));
+            }
           }
-        }
 
-        private void verifyNonEmptyFile(final Path path) throws IOException {
-          assertTrue(path + " should exists", fs.exists(path));
-          assertTrue(path + " should not be empty", fs.getFileStatus(path).getLen() > 0);
-        }
-    });
+          private void verifyNonEmptyFile(final Path path) throws IOException {
+            assertTrue(path + " should exists", fs.exists(path));
+            assertTrue(path + " should not be empty", fs.getFileStatus(path).getLen() > 0);
+          }
+        });
 
     // Verify Snapshot description
-    SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, exportedSnapshot);
     assertTrue(desc.getName().equals(snapshotName));
     assertTrue(desc.getTable().equals(tableName.getNameAsString()));
     return snapshotFiles;

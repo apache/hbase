@@ -51,8 +51,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.RestoreSnapshotState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotRestoreMetaChanges;
 import org.apache.hadoop.hbase.util.Pair;
 
 @InterfaceAudience.Private
@@ -331,8 +330,9 @@ public class RestoreSnapshotProcedure
 
     if (!getTableName().isSystemTable()) {
       // Table already exist. Check and update the region quota for this table namespace.
-      SnapshotManifest manifest = SnapshotManifest.open(env.getMasterConfiguration(), snapshot);
-      int snapshotRegionCount = manifest.getRegionManifestsMap().size();
+      MasterStorage<? extends StorageIdentifier> masterStorage =
+          env.getMasterServices().getMasterStorage();
+      int snapshotRegionCount = masterStorage.getSnapshotRegions(snapshot).size();
       int tableRegionCount =
           ProcedureSyncWait.getMasterQuotaManager(env).getRegionCountOfTable(tableName);
 
@@ -362,13 +362,10 @@ public class RestoreSnapshotProcedure
 
     LOG.info("Starting restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot));
     try {
-      SnapshotManifest manifest = SnapshotManifest.open(env.getMasterServices().getConfiguration(),
-          snapshot);
-      RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
-          env.getMasterServices().getConfiguration(), manifest, modifiedHTableDescriptor,
-          monitorException, getMonitorStatus());
-
-      RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreStorageRegions();
+      MasterStorage<? extends StorageIdentifier> masterStorage =
+          env.getMasterServices().getMasterStorage();
+      SnapshotRestoreMetaChanges metaChanges = masterStorage.restoreSnapshot(snapshot,
+          modifiedHTableDescriptor, monitorException, getMonitorStatus());
       regionsToRestore = metaChanges.getRegionsToRestore();
       regionsToRemove = metaChanges.getRegionsToRemove();
       regionsToAdd = metaChanges.getRegionsToAdd();
@@ -437,9 +434,8 @@ public class RestoreSnapshotProcedure
           modifiedHTableDescriptor.getRegionReplication());
       }
 
-      RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
-        new RestoreSnapshotHelper.RestoreMetaChanges(
-          modifiedHTableDescriptor, parentsToChildrenPairMap);
+      SnapshotRestoreMetaChanges metaChanges =
+        new SnapshotRestoreMetaChanges(modifiedHTableDescriptor, parentsToChildrenPairMap);
       metaChanges.updateMetaParentRegions(conn, regionsToAdd);
 
       // At this point the restore is complete.

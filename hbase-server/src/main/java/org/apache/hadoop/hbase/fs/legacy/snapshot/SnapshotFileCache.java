@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -89,6 +90,7 @@ public class SnapshotFileCache implements Stoppable {
   private static final Log LOG = LogFactory.getLog(SnapshotFileCache.class);
   private volatile boolean stop = false;
   private final FileSystem fs;
+  private final Path rootDir;
   private final SnapshotFileInspector fileInspector;
   private final Path snapshotDir;
   private final Set<String> cache = new HashSet<String>();
@@ -133,8 +135,9 @@ public class SnapshotFileCache implements Stoppable {
   public SnapshotFileCache(FileSystem fs, Path rootDir, long cacheRefreshPeriod,
       long cacheRefreshDelay, String refreshThreadName, SnapshotFileInspector inspectSnapshotFiles) {
     this.fs = fs;
+    this.rootDir = rootDir;
     this.fileInspector = inspectSnapshotFiles;
-    this.snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
+    this.snapshotDir = LegacyLayout.getSnapshotDir(rootDir);
     // periodically refresh the file cache to make sure we aren't superfluously saving files.
     this.refreshTimer = new Timer(refreshThreadName, true);
     this.refreshTimer.scheduleAtFixedRate(new RefreshCacheTask(), cacheRefreshDelay,
@@ -224,7 +227,7 @@ public class SnapshotFileCache implements Stoppable {
     // get the status of the snapshots temporary directory and check if it has changes
     // The top-level directory timestamp is not updated, so we have to check the inner-level.
     try {
-      Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
+      Path snapshotTmpDir = LegacyLayout.getWorkingSnapshotDir(rootDir);
       FileStatus tempDirStatus = fs.getFileStatus(snapshotTmpDir);
       lastTimestamp = Math.min(lastTimestamp, tempDirStatus.getModificationTime());
       hasChanges |= (lastTimestamp >= lastModifiedTime);
@@ -273,7 +276,7 @@ public class SnapshotFileCache implements Stoppable {
     for (FileStatus snapshot : snapshots) {
       String name = snapshot.getPath().getName();
       // its not the tmp dir,
-      if (!name.equals(SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME)) {
+      if (!name.equals(LegacyLayout.SNAPSHOT_TMP_DIR_NAME)) {
         SnapshotDirectoryInfo files = this.snapshots.remove(name);
         // 3.1.1 if we don't know about the snapshot or its been modified, we need to update the
         // files the latter could occur where I create a snapshot, then delete it, and then make a
@@ -300,7 +303,7 @@ public class SnapshotFileCache implements Stoppable {
     final SnapshotManager snapshotManager) throws IOException {
     List<String> snapshotInProgress = Lists.newArrayList();
     // only add those files to the cache, but not to the known snapshots
-    Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
+    Path snapshotTmpDir = LegacyLayout.getWorkingSnapshotDir(rootDir);
     // only add those files to the cache, but not to the known snapshots
     FileStatus[] running = FSUtils.listStatus(fs, snapshotTmpDir);
     if (running != null) {

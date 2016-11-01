@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.snapshot;
+package org.apache.hadoop.hbase.fs.legacy.snapshot;
 
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
@@ -49,6 +49,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageContext;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
+import org.apache.hadoop.hbase.fs.legacy.LegacyMasterStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.fs.legacy.io.FileLink;
 import org.apache.hadoop.hbase.fs.legacy.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
@@ -57,6 +62,8 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.snapshot.ExportSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -532,41 +539,42 @@ public class ExportSnapshot extends Configured implements Tool {
    * @return list of files referenced by the snapshot (pair of path and size)
    */
   private static List<Pair<SnapshotFileInfo, Long>> getSnapshotFiles(final Configuration conf,
-      final FileSystem fs, final Path snapshotDir) throws IOException {
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+      final FileSystem fs, final String snapshotName, StorageContext ctx) throws IOException {
+    LegacyMasterStorage lms = new LegacyMasterStorage(conf, fs,
+        new LegacyPathIdentifier(FSUtils.getRootDir(conf)));
+    SnapshotDescription snapshotDesc = lms.getSnapshot(snapshotName, ctx);
 
     final List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>();
     final TableName table = TableName.valueOf(snapshotDesc.getTable());
 
     // Get snapshot files
     LOG.info("Loading Snapshot '" + snapshotDesc.getName() + "' hfile list");
-    SnapshotReferenceUtil.visitReferencedFiles(conf, fs, snapshotDir, snapshotDesc,
-      new SnapshotReferenceUtil.SnapshotVisitor() {
-        @Override
-        public void storeFile(final HRegionInfo regionInfo, final String family,
-            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          // for storeFile.hasReference() case, copied as part of the manifest
-          if (!storeFile.hasReference()) {
-            String region = regionInfo.getEncodedName();
-            String hfile = storeFile.getName();
-            Path path = HFileLink.createPath(table, region, family, hfile);
+    lms.visitSnapshotStoreFiles(snapshotDesc, ctx, new MasterStorage.SnapshotStoreFileVisitor() {
+      @Override
+      public void visitSnapshotStoreFile(SnapshotDescription snapshot, StorageContext ctx,
+          HRegionInfo hri, String familyName, SnapshotRegionManifest.StoreFile storeFile)
+          throws IOException {
+        // for storeFile.hasReference() case, copied as part of the manifest
+        if (!storeFile.hasReference()) {
+          String region = hri.getEncodedName();
+          String hfile = storeFile.getName();
+          Path path = HFileLink.createPath(table, region, familyName, hfile);
 
-            SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
+          SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
               .setType(SnapshotFileInfo.Type.HFILE)
               .setHfile(path.toString())
               .build();
 
-            long size;
-            if (storeFile.hasFileSize()) {
-              size = storeFile.getFileSize();
-            } else {
-              size = HFileLink.buildFromHFileLinkPattern(conf, path).getFileStatus(fs).getLen();
-            }
-            files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
+          long size;
+          if (storeFile.hasFileSize()) {
+            size = storeFile.getFileSize();
+          } else {
+            size = HFileLink.buildFromHFileLinkPattern(conf, path).getFileStatus(fs).getLen();
           }
+          files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
         }
+      }
     });
-
     return files;
   }
 
@@ -643,10 +651,12 @@ public class ExportSnapshot extends Configured implements Tool {
     @Override
     public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException {
       Configuration conf = context.getConfiguration();
+      String snapshotName = conf.get(CONF_SNAPSHOT_NAME);
       Path snapshotDir = new Path(conf.get(CONF_SNAPSHOT_DIR));
       FileSystem fs = FileSystem.get(snapshotDir.toUri(), conf);
 
-      List<Pair<SnapshotFileInfo, Long>> snapshotFiles = getSnapshotFiles(conf, fs, snapshotDir);
+      List<Pair<SnapshotFileInfo, Long>> snapshotFiles = getSnapshotFiles(conf, fs, snapshotName,
+          StorageContext.DATA);
       int mappers = conf.getInt(CONF_NUM_SPLITS, 0);
       if (mappers == 0 && snapshotFiles.size() > 0) {
         mappers = 1 + (snapshotFiles.size() / conf.getInt(CONF_MAP_GROUP, 10));
@@ -811,13 +821,16 @@ public class ExportSnapshot extends Configured implements Tool {
   }
 
   private void verifySnapshot(final Configuration baseConf,
-      final FileSystem fs, final Path rootDir, final Path snapshotDir) throws IOException {
+      final FileSystem fs, final Path rootDir, final String snapshotName, StorageContext ctx)
+      throws IOException {
     // Update the conf with the current root dir, since may be a different cluster
     Configuration conf = new Configuration(baseConf);
     FSUtils.setRootDir(conf, rootDir);
     FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    SnapshotReferenceUtil.verifySnapshot(conf, fs, snapshotDir, snapshotDesc);
+    LegacyMasterStorage lms =
+        new LegacyMasterStorage(baseConf, fs, new LegacyPathIdentifier(rootDir));
+    SnapshotDescription snapshotDesc = lms.getSnapshot(snapshotName, ctx);
+    SnapshotReferenceUtil.verifySnapshot(lms, snapshotDesc, ctx);
   }
 
   /**
@@ -934,28 +947,34 @@ public class ExportSnapshot extends Configured implements Tool {
 
     boolean skipTmp = conf.getBoolean(CONF_SKIP_TMP, false);
 
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
-    Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(targetName, outputRoot);
-    Path outputSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(targetName, outputRoot);
+    LegacyMasterStorage srcMasterStorage = new LegacyMasterStorage(srcConf, inputFs,
+        new LegacyPathIdentifier(inputRoot));
+    LegacyMasterStorage destMasterStorage = new LegacyMasterStorage(destConf, outputFs,
+        new LegacyPathIdentifier(outputRoot));
+    StorageContext destCtx = skipTmp ? StorageContext.TEMP : StorageContext.DATA;
+
+    Path snapshotDir = LegacyLayout.getCompletedSnapshotDir(inputRoot, snapshotName);
+    Path snapshotTmpDir = LegacyLayout.getWorkingSnapshotDir(outputRoot, targetName);
+    Path outputSnapshotDir = LegacyLayout.getCompletedSnapshotDir(outputRoot, targetName);
     Path initialOutputSnapshotDir = skipTmp ? outputSnapshotDir : snapshotTmpDir;
 
     // Check if the snapshot already exists
-    if (outputFs.exists(outputSnapshotDir)) {
+    if (destMasterStorage.snapshotExists(targetName)) {
       if (overwrite) {
-        if (!outputFs.delete(outputSnapshotDir, true)) {
-          System.err.println("Unable to remove existing snapshot directory: " + outputSnapshotDir);
+        if (!destMasterStorage.deleteSnapshot(targetName)) {
+          System.err.println("Unable to remove existing snapshot '" + targetName + "'.");
           return 1;
         }
       } else {
-        System.err.println("The snapshot '" + targetName +
-          "' already exists in the destination: " + outputSnapshotDir);
+        System.err.println("The snapshot '" + targetName + "' already exists in the destination: " +
+            LegacyLayout.getCompletedSnapshotDir(outputRoot, targetName));
         return 1;
       }
     }
 
     if (!skipTmp) {
       // Check if the snapshot already in-progress
-      if (outputFs.exists(snapshotTmpDir)) {
+      if (destMasterStorage.snapshotExists(targetName, destCtx)) {
         if (overwrite) {
           if (!outputFs.delete(snapshotTmpDir, true)) {
             System.err.println("Unable to remove existing snapshot tmp directory: "+snapshotTmpDir);
@@ -989,12 +1008,11 @@ public class ExportSnapshot extends Configured implements Tool {
 
     // Write a new .snapshotinfo if the target name is different from the source name
     if (!targetName.equals(snapshotName)) {
-      SnapshotDescription snapshotDesc =
-        SnapshotDescriptionUtils.readSnapshotInfo(inputFs, snapshotDir)
+      SnapshotDescription snapshotDesc = srcMasterStorage.getSnapshot(snapshotName)
           .toBuilder()
           .setName(targetName)
           .build();
-      SnapshotDescriptionUtils.writeSnapshotInfo(snapshotDesc, snapshotTmpDir, outputFs);
+      destMasterStorage.writeSnapshotInfo(snapshotDesc, snapshotTmpDir);
     }
 
     // Step 2 - Start MR Job to copy files
@@ -1016,7 +1034,7 @@ public class ExportSnapshot extends Configured implements Tool {
       // Step 4 - Verify snapshot integrity
       if (verifyTarget) {
         LOG.info("Verify snapshot integrity");
-        verifySnapshot(destConf, outputFs, outputRoot, outputSnapshotDir);
+        verifySnapshot(destConf, outputFs, outputRoot, targetName, StorageContext.DATA);
       }
 
       LOG.info("Export Completed: " + targetName);

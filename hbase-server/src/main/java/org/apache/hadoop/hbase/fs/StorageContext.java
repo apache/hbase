@@ -23,6 +23,5 @@ public enum StorageContext {
   TEMP,
   DATA,
   ARCHIVE,
-  SNAPSHOT,
   SIDELINE,
 }

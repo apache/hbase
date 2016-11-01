@@ -23,16 +23,15 @@ import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.RestoreSnapshotHelper;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.ConfigurationUtil;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 import java.io.IOException;
 import java.util.AbstractMap;
@@ -70,14 +69,11 @@ public class MultiTableSnapshotInputFormatImpl {
    */
   public void setInput(Configuration conf, Map<String, Collection<Scan>> snapshotScans,
       Path restoreDir) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = rootDir.getFileSystem(conf);
-
     setSnapshotToScans(conf, snapshotScans);
     Map<String, Path> restoreDirs =
         generateSnapshotToRestoreDirMapping(snapshotScans.keySet(), restoreDir);
     setSnapshotDirs(conf, restoreDirs);
-    restoreSnapshots(conf, restoreDirs, fs);
+    restoreSnapshots(MasterStorage.open(conf, false), restoreDirs);
   }
 
   /**
@@ -91,8 +87,7 @@ public class MultiTableSnapshotInputFormatImpl {
    */
   public List<TableSnapshotInputFormatImpl.InputSplit> getSplits(Configuration conf)
       throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = rootDir.getFileSystem(conf);
+    MasterStorage<? extends StorageIdentifier> masterStorage = MasterStorage.open(conf, false);
 
     List<TableSnapshotInputFormatImpl.InputSplit> rtn = Lists.newArrayList();
 
@@ -103,14 +98,13 @@ public class MultiTableSnapshotInputFormatImpl {
 
       Path restoreDir = snapshotsToRestoreDirs.get(snapshotName);
 
-      SnapshotManifest manifest =
-          TableSnapshotInputFormatImpl.getSnapshotManifest(conf, snapshotName, rootDir, fs);
-      List<HRegionInfo> regionInfos =
-          TableSnapshotInputFormatImpl.getRegionInfosFromManifest(manifest);
+      HBaseProtos.SnapshotDescription snapshot = masterStorage.getSnapshot(snapshotName);
 
       for (Scan scan : entry.getValue()) {
         List<TableSnapshotInputFormatImpl.InputSplit> splits =
-            TableSnapshotInputFormatImpl.getSplits(scan, manifest, regionInfos, restoreDir, conf);
+            TableSnapshotInputFormatImpl.getSplits(scan,
+                masterStorage.getTableDescriptorForSnapshot(snapshot),
+                masterStorage.getSnapshotRegions(snapshot).values(), restoreDir, conf);
         rtn.addAll(splits);
       }
     }
@@ -225,28 +219,25 @@ public class MultiTableSnapshotInputFormatImpl {
   /**
    * Restore each (snapshot name, restore directory) pair in snapshotToDir
    *
-   * @param conf          configuration to restore with
+   * @param masterStorage {@link MasterStorage} to use
    * @param snapshotToDir mapping from snapshot names to restore directories
-   * @param fs            filesystem to do snapshot restoration on
    * @throws IOException
    */
-  public void restoreSnapshots(Configuration conf, Map<String, Path> snapshotToDir, FileSystem fs)
-      throws IOException {
+  public void restoreSnapshots(final MasterStorage<? extends StorageIdentifier> masterStorage,
+      Map<String, Path> snapshotToDir) throws IOException {
     // TODO: restore from record readers to parallelize.
-    Path rootDir = FSUtils.getRootDir(conf);
-
     for (Map.Entry<String, Path> entry : snapshotToDir.entrySet()) {
       String snapshotName = entry.getKey();
       Path restoreDir = entry.getValue();
       LOG.info("Restoring snapshot " + snapshotName + " into " + restoreDir
           + " for MultiTableSnapshotInputFormat");
-      restoreSnapshot(conf, snapshotName, rootDir, restoreDir, fs);
+      restoreSnapshot(masterStorage, snapshotName, restoreDir);
     }
   }
 
-  void restoreSnapshot(Configuration conf, String snapshotName, Path rootDir, Path restoreDir,
-      FileSystem fs) throws IOException {
-    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+  void restoreSnapshot(final MasterStorage<? extends StorageIdentifier> masterStorage,
+      String snapshotName, Path restoreDir) throws IOException {
+    RestoreSnapshotHelper.copySnapshotForScanner(masterStorage, restoreDir, snapshotName);
   }
 
 }

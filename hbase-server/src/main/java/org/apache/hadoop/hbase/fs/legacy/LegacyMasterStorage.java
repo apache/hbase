@@ -24,7 +24,9 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,9 +34,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
@@ -45,12 +49,24 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.fs.legacy.cleaner.LogCleaner;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotHFileCleaner;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.SnapshotRestoreMetaChanges;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.StorageContext;
@@ -65,10 +81,13 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 
 @InterfaceAudience.Private
 public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
+  // TODO: Modify all APIs to use ExecutorService and support parallel HDFS queries
+
   private static final Log LOG = LogFactory.getLog(LegacyMasterStorage.class);
 
   private final Path sidelineDir;
   private final Path snapshotDir;
+  private final Path tmpSnapshotDir;
   private final Path archiveDataDir;
   private final Path archiveDir;
   private final Path tmpDataDir;
@@ -102,6 +121,7 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
     // base directories
     this.sidelineDir = LegacyLayout.getSidelineDir(rootDir.path);
     this.snapshotDir = LegacyLayout.getSnapshotDir(rootDir.path);
+    this.tmpSnapshotDir = LegacyLayout.getWorkingSnapshotDir(rootDir.path);
     this.archiveDir = LegacyLayout.getArchiveDir(rootDir.path);
     this.archiveDataDir = LegacyLayout.getDataDir(this.archiveDir);
     this.dataDir = LegacyLayout.getDataDir(rootDir.path);
@@ -126,39 +146,6 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
         LegacyLayout.getArchiveDir(getRootContainer().path), params));
 
     return chores;
-  }
-
-  /**
-   * This method modifies chores configuration for snapshots. Please call this method before
-   * instantiating and scheduling list of chores with {@link #getChores(Stoppable, Map)}.
-   */
-  @Override
-  public void enableSnapshots() {
-    super.enableSnapshots();
-    if (!isSnapshotsEnabled()) {
-      // Extract cleaners from conf
-      Set<String> hfileCleaners = new HashSet<>();
-      String[] cleaners = getConfiguration().getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
-      if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
-
-      // add snapshot related cleaners
-      hfileCleaners.add(SnapshotHFileCleaner.class.getName());
-      hfileCleaners.add(HFileLinkCleaner.class.getName());
-
-      // Set cleaners conf
-      getConfiguration().setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-          hfileCleaners.toArray(new String[hfileCleaners.size()]));
-    }
-  }
-
-  @Override
-  public boolean isSnapshotsEnabled() {
-    // Extract cleaners from conf
-    Set<String> hfileCleaners = new HashSet<>();
-    String[] cleaners = getConfiguration().getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
-    if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
-    return hfileCleaners.contains(SnapshotHFileCleaner.class.getName()) &&
-        hfileCleaners.contains(HFileLinkCleaner.class.getName());
   }
 
   // ==========================================================================
@@ -329,6 +316,367 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
       LOG.debug("Archiving region '" + regionInfo.getRegionNameAsString() + "' from storage.");
     }
     HFileArchiver.archiveRegion(getConfiguration(), getFileSystem(), regionInfo);
+  }
+
+  // ==========================================================================
+  //  Methods - Snapshot related
+  // ==========================================================================
+
+  /**
+   * Filter that only accepts completed snapshot directories
+   */
+  public static class CompletedSnapshotDirectoriesFilter extends FSUtils.BlackListDirFilter {
+    /**
+     * @param fs
+     */
+    public CompletedSnapshotDirectoriesFilter(FileSystem fs) {
+      super(fs, Collections.singletonList(LegacyLayout.SNAPSHOT_TMP_DIR_NAME));
+    }
+  }
+
+  /**
+   * This method modifies chores configuration for snapshots. Please call this method before
+   * instantiating and scheduling list of chores with {@link #getChores(Stoppable, Map)}.
+   */
+  @Override
+  public void enableSnapshots() throws IOException {
+    super.enableSnapshots();
+
+    // check if an older version of snapshot directory was present
+    Path oldSnapshotDir = new Path(getRootContainer().path, HConstants.OLD_SNAPSHOT_DIR_NAME);
+    List<SnapshotDescription> oldSnapshots = getSnapshotDescriptions(oldSnapshotDir,
+        new CompletedSnapshotDirectoriesFilter(getFileSystem()));
+    if (oldSnapshots != null && !oldSnapshots.isEmpty()) {
+      LOG.error("Snapshots from an earlier release were found under '" + oldSnapshotDir + "'.");
+      LOG.error("Please rename the directory ");
+    }
+
+    // TODO: add check for old snapshot dir that existed just before HBASE-14439
+
+    if (!isSnapshotsEnabled()) {
+      // Extract cleaners from conf
+      Set<String> hfileCleaners = new HashSet<>();
+      String[] cleaners = getConfiguration().getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+      if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
+
+      // add snapshot related cleaners
+      hfileCleaners.add(SnapshotHFileCleaner.class.getName());
+      hfileCleaners.add(HFileLinkCleaner.class.getName());
+
+      // Set cleaners conf
+      getConfiguration().setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
+          hfileCleaners.toArray(new String[hfileCleaners.size()]));
+    }
+  }
+
+  @Override
+  public boolean isSnapshotsEnabled() {
+    // Extract cleaners from conf
+    Set<String> hfileCleaners = new HashSet<>();
+    String[] cleaners = getConfiguration().getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+    if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
+    return hfileCleaners.contains(SnapshotHFileCleaner.class.getName()) &&
+        hfileCleaners.contains(HFileLinkCleaner.class.getName());
+  }
+
+  private List<SnapshotDescription> getSnapshotDescriptions(final Path dir,
+      final PathFilter filter) throws IOException {
+    List<SnapshotDescription> snapshotDescs = new ArrayList<>();
+    if (!FSUtils.isExists(getFileSystem(), dir)) {
+      return snapshotDescs;
+    }
+
+    for (FileStatus fileStatus : FSUtils.listStatus(getFileSystem(), dir, filter)) {
+      Path info = new Path(fileStatus.getPath(), LegacyLayout.SNAPSHOTINFO_FILE);
+      if (!FSUtils.isExists(getFileSystem(), info)) {
+        LOG.error("Snapshot information for '" + fileStatus.getPath() + "' doesn't exist!");
+        continue;
+      }
+
+      FSDataInputStream in = null;
+      try {
+        in = getFileSystem().open(info);
+        SnapshotDescription desc = SnapshotDescription.parseFrom(in);
+        snapshotDescs.add(desc);
+      } catch (IOException e) {
+        LOG.warn("Found a corrupted snapshot '" + fileStatus.getPath() + "'.", e);
+      } finally {
+        if (in != null) {
+          in.close();
+        }
+      }
+    }
+    return snapshotDescs;
+  }
+
+  @Override
+  public List<SnapshotDescription> getSnapshots(StorageContext ctx) throws IOException {
+    return getSnapshotDescriptions(getSnapshotDirFromContext(ctx),
+        new CompletedSnapshotDirectoriesFilter(getFileSystem()));
+  }
+
+  @Override
+  public SnapshotDescription getSnapshot(String snapshotName, StorageContext ctx)
+      throws IOException {
+    SnapshotDescription retSnapshot = null;
+
+    Path snapshotDir = getSnapshotDirFromContext(ctx, snapshotName);
+    Path info = new Path(snapshotDir, LegacyLayout.SNAPSHOTINFO_FILE);
+    if (!FSUtils.isExists(getFileSystem(), info)) {
+      LOG.warn("Snapshot information for '" + snapshotName + "' doesn't exist!");
+      return retSnapshot;
+    }
+
+    FSDataInputStream in = null;
+    try {
+      in = getFileSystem().open(info);
+      retSnapshot = SnapshotDescription.parseFrom(in);
+    } catch (IOException e) {
+      LOG.warn("Found a corrupted snapshot '" + snapshotName + "'.", e);
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+    }
+
+    return retSnapshot;
+  }
+
+  @Override
+  public void visitSnapshots(final SnapshotVisitor visitor) throws IOException {
+    visitSnapshots(StorageContext.DATA, visitor);
+  }
+
+  @Override
+  public void visitSnapshots(StorageContext ctx, final SnapshotVisitor visitor) throws IOException {
+    for (SnapshotDescription s : getSnapshots(ctx)) {
+      visitor.visitSnapshot(s.getName(), s, ctx);
+    }
+  }
+
+  private SnapshotManifest getSnapshotManifest(SnapshotDescription snapshot, StorageContext ctx)
+    throws IOException {
+    Path snapshotDir = getSnapshotDirFromContext(ctx, snapshot.getName());
+    return SnapshotManifest.open(getConfiguration(), getFileSystem(), snapshotDir, snapshot);
+  }
+
+  @Override
+  public HTableDescriptor getTableDescriptorForSnapshot(SnapshotDescription snapshot,
+      StorageContext ctx) throws IOException {
+    SnapshotManifest manifest = getSnapshotManifest(snapshot, ctx);
+    return manifest.getTableDescriptor();
+  }
+
+  private List<SnapshotRegionManifest> getSnapshotRegionManifests(SnapshotDescription snapshot,
+      StorageContext ctx) throws IOException {
+    SnapshotManifest manifest = getSnapshotManifest(snapshot, ctx);
+    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
+    if (regionManifests == null) {
+      regionManifests = new ArrayList<>();
+    }
+    return regionManifests;
+  }
+
+  @Override
+  public Map<String, HRegionInfo> getSnapshotRegions(SnapshotDescription snapshot,
+      StorageContext ctx) throws IOException {
+    Map<String, HRegionInfo> retRegions = new HashMap<>();
+    for (SnapshotRegionManifest regionManifest: getSnapshotRegionManifests(snapshot, ctx)) {
+      HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
+      retRegions.put(hri.getEncodedName(), hri);
+    }
+    return retRegions;
+  }
+
+  /**
+   * Utility function for visiting/ listing store files for a snapshot.
+   * @param snapshot
+   * @param ctx
+   * @param regionName If not null, then store files for the matching region are visited/ returned
+   * @param familyName If not null, then store files for the matching family are visited/ returned
+   * @param visitor If not null, visitor is call on each store file entry
+   * @return List of store files base on suggested filters
+   * @throws IOException
+   */
+  private List<SnapshotRegionManifest.StoreFile> visitAndGetSnapshotStoreFiles(
+      SnapshotDescription snapshot, StorageContext ctx, String regionName, String familyName,
+      SnapshotStoreFileVisitor visitor) throws IOException {
+    List<SnapshotRegionManifest.StoreFile> snapshotStoreFiles = new ArrayList<>();
+
+    for (SnapshotRegionManifest regionManifest: getSnapshotRegionManifests(snapshot, ctx)) {
+      HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
+
+      // check for region name
+      if (regionName != null) {
+        if (!hri.getEncodedName().equals(regionName)) {
+          continue;
+        }
+      }
+
+      for (SnapshotRegionManifest.FamilyFiles familyFiles: regionManifest.getFamilyFilesList()) {
+        String family = familyFiles.getFamilyName().toStringUtf8();
+        // check for family name
+        if (familyName != null && !familyName.equals(family)) {
+          continue;
+        }
+
+        List<SnapshotRegionManifest.StoreFile> storeFiles = familyFiles.getStoreFilesList();
+        snapshotStoreFiles.addAll(storeFiles);
+
+        if (visitor != null) {
+          for(SnapshotRegionManifest.StoreFile storeFile: storeFiles) {
+            visitor.visitSnapshotStoreFile(snapshot, ctx, hri, family, storeFile);
+          }
+        }
+      }
+    }
+
+    return snapshotStoreFiles;
+  }
+
+  @Override
+  public void visitSnapshotStoreFiles(SnapshotDescription snapshot, StorageContext ctx,
+      SnapshotStoreFileVisitor visitor) throws IOException {
+    visitAndGetSnapshotStoreFiles(snapshot, ctx, null, null, visitor);
+  }
+
+  @Override
+  public boolean snapshotExists(SnapshotDescription snapshot, StorageContext ctx)
+      throws IOException {
+    return snapshotExists(snapshot.getName(), ctx);
+  }
+
+  @Override
+  public boolean snapshotExists(String snapshotName, StorageContext ctx) throws IOException {
+    return getSnapshot(snapshotName, ctx) != null;
+  }
+
+  @Override
+  public void deleteAllSnapshots(StorageContext ctx) throws IOException {
+    Path snapshotDir = getSnapshotDirFromContext(ctx);
+    if (!FSUtils.deleteDirectory(getFileSystem(), snapshotDir)) {
+      LOG.warn("Couldn't delete working snapshot directory '" + snapshotDir + ".");
+    }
+  }
+
+  private void deleteSnapshotDir(Path snapshotDir) throws IOException {
+    LOG.debug("Deleting snapshot directory '" + snapshotDir + "'.");
+    if (!FSUtils.deleteDirectory(getFileSystem(), snapshotDir)) {
+      throw new HBaseSnapshotException("Failed to delete snapshot directory '" +
+          snapshotDir + "'.");
+    }
+  }
+
+  @Override
+  public boolean deleteSnapshot(final SnapshotDescription snapshot, final StorageContext ctx)
+      throws IOException {
+    return deleteSnapshot(snapshot.getName(), ctx);
+  }
+
+  @Override
+  public boolean deleteSnapshot(final String snapshotName, final StorageContext ctx)
+      throws IOException {
+    deleteSnapshotDir(getSnapshotDirFromContext(ctx, snapshotName));
+    return false;
+  }
+
+  @Override
+  public void prepareSnapshot(SnapshotDescription snapshot) throws IOException {
+    if (snapshot == null) return;
+    deleteSnapshot(snapshot);
+    Path snapshotDir = getSnapshotDirFromContext(StorageContext.TEMP, snapshot.getName());
+    if (getFileSystem().mkdirs(snapshotDir)) {
+      throw new SnapshotCreationException("Couldn't create working directory '" + snapshotDir +
+          "' for snapshot", ProtobufUtil.createSnapshotDesc(snapshot));
+    }
+  }
+
+  @Override
+  public void initiateSnapshot(HTableDescriptor htd, SnapshotDescription snapshot,
+                               final ForeignExceptionSnare monitor, StorageContext ctx) throws IOException {
+    Path snapshotDir = getSnapshotDirFromContext(ctx, snapshot.getName());
+
+    // write down the snapshot info in the working directory
+    writeSnapshotInfo(snapshot, snapshotDir);
+
+    // create manifest
+    SnapshotManifest manifest = SnapshotManifest.create(getConfiguration(), getFileSystem(),
+        snapshotDir, snapshot, monitor);
+    manifest.addTableDescriptor(htd);
+  }
+
+  @Override
+  public void consolidateSnapshot(SnapshotDescription snapshot, StorageContext ctx)
+      throws IOException {
+    SnapshotManifest manifest = getSnapshotManifest(snapshot, ctx);
+    manifest.consolidate();
+  }
+
+  @Override
+  public boolean changeSnapshotContext(SnapshotDescription snapshot, StorageContext src,
+      StorageContext dest) throws IOException {
+    Path srcDir = getSnapshotDirFromContext(src, snapshot.getName());
+    Path destDir = getSnapshotDirFromContext(dest, snapshot.getName());
+    return getFileSystem().rename(srcDir, destDir);
+  }
+
+  @Override
+  public void addRegionToSnapshot(SnapshotDescription snapshot, HRegionInfo hri,
+                                  StorageContext ctx) throws IOException {
+    SnapshotManifest manifest = getSnapshotManifest(snapshot, ctx);
+    Path tableDir = LegacyLayout.getTableDir(LegacyLayout.getDataDir(getRootContainer().path),
+        hri.getTable());
+    manifest.addRegion(tableDir, hri);
+  }
+
+  @Override
+  public void addRegionsToSnapshot(SnapshotDescription snapshot, Collection<HRegionInfo> regions,
+      StorageContext ctx) throws IOException {
+    // TODO: use ExecutorService to add regions
+    for (HRegionInfo r: regions) {
+      addRegionToSnapshot(snapshot, r, ctx);
+    }
+  }
+
+  @Override
+  public SnapshotRestoreMetaChanges restoreSnapshot(final SnapshotDescription snapshot,
+      final StorageContext snapshotCtx, final HTableDescriptor destHtd,
+      final ForeignExceptionDispatcher monitor, final MonitoredTask status) throws IOException {
+    // TODO: currently snapshotCtx is not used, modify RestoreSnapshotHelper to take ctx as an input
+    RestoreSnapshotHelper restoreSnapshotHelper = new RestoreSnapshotHelper(this, snapshot,
+        destHtd, monitor, status);
+    return restoreSnapshotHelper.restoreStorageRegions();
+  }
+
+  /**
+   * Write the snapshot description into the working directory of a snapshot
+   *
+   * @param snapshot description of the snapshot being taken
+   * @param workingDir working directory of the snapshot
+   * @throws IOException if we can't reach the filesystem and the file cannot be cleaned up on
+   *           failure
+   */
+  // TODO: After ExportSnapshot refactoring make this private if not referred from outside package
+  public void writeSnapshotInfo(SnapshotDescription snapshot, Path workingDir)
+      throws IOException {
+    FsPermission perms = FSUtils.getFilePermissions(getFileSystem(), getFileSystem().getConf(),
+        HConstants.DATA_FILE_UMASK_KEY);
+    Path snapshotInfo = new Path(workingDir, LegacyLayout.SNAPSHOTINFO_FILE);
+    try {
+      FSDataOutputStream out = FSUtils.create(getFileSystem(), snapshotInfo, perms, true);
+      try {
+        snapshot.writeTo(out);
+      } finally {
+        out.close();
+      }
+    } catch (IOException e) {
+      // if we get an exception, try to remove the snapshot info
+      if (!getFileSystem().delete(snapshotInfo, false)) {
+        String msg = "Couldn't delete snapshot info file: " + snapshotInfo;
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+    }
   }
 
   // ==========================================================================
@@ -653,12 +1001,27 @@ public class LegacyMasterStorage extends MasterStorage<LegacyPathIdentifier> {
     return new LegacyPathIdentifier(tmpDir);
   }
 
+  protected Path getSnapshotDirFromContext(StorageContext ctx, String snapshot) {
+    switch(ctx) {
+      case TEMP: return LegacyLayout.getWorkingSnapshotDir(getRootContainer().path, snapshot);
+      case DATA: return LegacyLayout.getCompletedSnapshotDir(getRootContainer().path, snapshot);
+      default: throw new RuntimeException("Invalid context: " + ctx);
+    }
+  }
+
+  protected Path getSnapshotDirFromContext(StorageContext ctx) {
+    switch (ctx) {
+      case TEMP: return tmpSnapshotDir;
+      case DATA: return snapshotDir;
+      default: throw new RuntimeException("Invalid context: " + ctx);
+    }
+  }
+
   protected Path getBaseDirFromContext(StorageContext ctx) {
     switch (ctx) {
       case TEMP: return tmpDataDir;
       case DATA: return dataDir;
       case ARCHIVE: return archiveDataDir;
-      case SNAPSHOT: return snapshotDir;
       case SIDELINE: return sidelineDir;
       default: throw new RuntimeException("Invalid context: " + ctx);
     }

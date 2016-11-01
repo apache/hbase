@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure.CreateStorageRegions;
@@ -48,12 +49,11 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CloneSnapshotState;
+import org.apache.hadoop.hbase.snapshot.SnapshotRestoreMetaChanges;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 
 import com.google.common.base.Preconditions;
 
@@ -301,12 +301,10 @@ public class CloneSnapshotProcedure
       throws IOException, InterruptedException {
     if (!getTableName().isSystemTable()) {
       // Check and update namespace quota
-      final MasterStorage ms = env.getMasterServices().getMasterStorage();
+      final MasterStorage masterStorage = env.getMasterServices().getMasterStorage();
 
-      SnapshotManifest manifest = SnapshotManifest.open(env.getMasterConfiguration(), snapshot);
-
-      ProcedureSyncWait.getMasterQuotaManager(env)
-        .checkNamespaceTableAndRegionQuota(getTableName(), manifest.getRegionManifestsMap().size());
+      ProcedureSyncWait.getMasterQuotaManager(env).checkNamespaceTableAndRegionQuota(getTableName(),
+          masterStorage.getSnapshotRegions(snapshot).size());
     }
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
@@ -354,11 +352,10 @@ public class CloneSnapshotProcedure
 
         try {
           // 1. Execute the on-disk Clone
-          SnapshotManifest manifest = SnapshotManifest.open(conf, snapshot);
-          RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, manifest,
+          MasterStorage<? extends StorageIdentifier> masterStorage =
+              env.getMasterServices().getMasterStorage();
+          SnapshotRestoreMetaChanges metaChanges = masterStorage.restoreSnapshot(snapshot,
               hTableDescriptor, monitorException, monitorStatus);
-          RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
-              restoreHelper.restoreStorageRegions();
 
           // Clone operation should not have stuff to restore or remove
           Preconditions.checkArgument(
@@ -399,15 +396,15 @@ public class CloneSnapshotProcedure
     final HTableDescriptor hTableDescriptor,
     List<HRegionInfo> newRegions,
     final CreateStorageRegions storageRegionHandler) throws IOException {
-    final MasterStorage ms = env.getMasterServices().getMasterStorage();
+    final MasterStorage masterStorage = env.getMasterServices().getMasterStorage();
 
-    // 1. Delete existing artifacts (dir, files etc) for the table
-    ms.deleteTable(hTableDescriptor.getTableName());
+    // 1. Delete existing storage artifacts (dir, files etc) for the table
+    masterStorage.deleteTable(hTableDescriptor.getTableName());
 
     // 2. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     HTableDescriptor underConstruction = new HTableDescriptor(hTableDescriptor);
-    ms.createTableDescriptor(underConstruction, true);
+    masterStorage.createTableDescriptor(underConstruction, true);
 
     // 3. Create Regions
     newRegions = storageRegionHandler.createRegionsOnStorage(env, hTableDescriptor.getTableName(),
@@ -424,9 +421,8 @@ public class CloneSnapshotProcedure
   private void addRegionsToMeta(final MasterProcedureEnv env) throws IOException {
     newRegions = CreateTableProcedure.addTableToMeta(env, hTableDescriptor, newRegions);
 
-    RestoreSnapshotHelper.RestoreMetaChanges metaChanges =
-        new RestoreSnapshotHelper.RestoreMetaChanges(
-          hTableDescriptor, parentsToChildrenPairMap);
+    SnapshotRestoreMetaChanges metaChanges =
+        new SnapshotRestoreMetaChanges(hTableDescriptor, parentsToChildrenPairMap);
     metaChanges.updateMetaParentRegions(env.getMasterServices().getConnection(), newRegions);
   }
 

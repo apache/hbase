@@ -41,7 +41,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageContext;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -66,12 +71,14 @@ public class TestSnapshotFileCache {
   private static long sequenceId = 0;
   private static FileSystem fs;
   private static Path rootDir;
+  private static MasterStorage<? extends StorageIdentifier> masterStorage;
 
   @BeforeClass
   public static void startCluster() throws Exception {
     UTIL.startMiniDFSCluster(1);
     fs = UTIL.getDFSCluster().getFileSystem();
     rootDir = UTIL.getDefaultRootDirPath();
+    masterStorage = MasterStorage.open(UTIL.getConfiguration(), false);
   }
 
   @AfterClass
@@ -82,7 +89,7 @@ public class TestSnapshotFileCache {
   @After
   public void cleanupFiles() throws Exception {
     // cleanup the snapshot directory
-    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
+    Path snapshotDir = LegacyLayout.getSnapshotDir(rootDir);
     fs.delete(snapshotDir, true);
   }
 
@@ -183,15 +190,16 @@ public class TestSnapshotFileCache {
   private List<FileStatus> getStoreFilesForSnapshot(SnapshotMock.SnapshotBuilder builder)
       throws IOException {
     final List<FileStatus> allStoreFiles = Lists.newArrayList();
-    SnapshotReferenceUtil
-        .visitReferencedFiles(UTIL.getConfiguration(), fs, builder.getSnapshotsDir(),
-            new SnapshotReferenceUtil.SnapshotVisitor() {
-              @Override public void storeFile(HRegionInfo regionInfo, String familyName,
-                  SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-                FileStatus status = mockStoreFile(storeFile.getName());
-                allStoreFiles.add(status);
-              }
-            });
+    masterStorage.visitSnapshotStoreFiles(builder.getSnapshotDescription(), StorageContext.DATA,
+        new MasterStorage.SnapshotStoreFileVisitor() {
+          @Override
+          public void visitSnapshotStoreFile(HBaseProtos.SnapshotDescription snapshot,
+              StorageContext ctx, HRegionInfo hri, String familyName,
+              SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+            FileStatus status = mockStoreFile(storeFile.getName());
+            allStoreFiles.add(status);
+          }
+        });
     return allStoreFiles;
   }
 
@@ -206,7 +214,7 @@ public class TestSnapshotFileCache {
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
       Collection<String> files =  new HashSet<String>();
-      files.addAll(SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotDir));
+      files.addAll(SnapshotReferenceUtil.getHFileNames(masterStorage, snapshotDir.getName()));
       return files;
     }
   };

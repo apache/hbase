@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.snapshot;
+package org.apache.hadoop.hbase.fs.legacy.snapshot;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

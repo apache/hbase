@@ -49,7 +49,7 @@ import java.util.List;
  * wals, etc) directly to provide maximum performance. The snapshot is not required to be
  * restored to the live cluster or cloned. This also allows to run the mapreduce job from an
  * online or offline hbase cluster. The snapshot files can be exported by using the
- * {@link org.apache.hadoop.hbase.snapshot.ExportSnapshot} tool, to a pure-hdfs cluster, 
+ * {@link org.apache.hadoop.hbase.fs.legacy.snapshot.ExportSnapshot} tool, to a pure-hdfs cluster,
  * and this InputFormat can be used to run the mapreduce job directly over the snapshot files. 
  * The snapshot should not be deleted while there are jobs reading from snapshot files.
  * <p>

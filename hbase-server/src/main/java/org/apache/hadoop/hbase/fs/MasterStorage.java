@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -38,9 +39,16 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.fs.legacy.LegacyMasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage.StoreFileVisitor;
 import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
+import org.apache.hadoop.hbase.snapshot.SnapshotRestoreMetaChanges;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -83,22 +91,6 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
     return new ArrayList<>();
   }
 
-  /**
-   * This method should be called to prepare storage implementation/s for snapshots. The default
-   * implementation does nothing. MasterStorage subclasses need to override this method to
-   * provide specific preparatory steps.
-   */
-  public void enableSnapshots() {
-    return;
-  }
-
-  /**
-   * Returns true if MasterStorage is prepared for snapshots
-   */
-  public boolean isSnapshotsEnabled() {
-    return true;
-  }
-
   // ==========================================================================
   //  PUBLIC Interfaces - Visitors
   // ==========================================================================
@@ -112,6 +104,17 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
 
   public interface RegionVisitor {
     void visitRegion(HRegionInfo regionInfo) throws IOException;
+  }
+
+  public interface SnapshotVisitor {
+    void visitSnapshot(final String snapshotName, final SnapshotDescription snapshot,
+        StorageContext ctx);
+  }
+
+  public interface SnapshotStoreFileVisitor {
+    // TODO: Instead of SnapshotRegionManifest.StoreFile return common object across all
+    void visitSnapshotStoreFile(SnapshotDescription snapshot, StorageContext ctx, HRegionInfo hri,
+        String familyName, final SnapshotRegionManifest.StoreFile storeFile) throws IOException;
   }
 
   // ==========================================================================
@@ -199,7 +202,7 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
   }
 
   /**
-   * Archives specified table and all it's regions
+   * Archives a table and all it's regions
    * @param tableName
    * @throws IOException
    */
@@ -208,7 +211,7 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
   }
 
   /**
-   * Archives specified table and all it's regions
+   * Archives a table and all it's regions
    * @param ctx Storage context of the table.
    * @param tableName
    * @throws IOException
@@ -301,11 +304,232 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
   }
 
   /**
-   * Archives the specified region's storage artifacts (files, directories etc)
+   * Archives region's storage artifacts (files, directories etc)
    * @param regionInfo
    * @throws IOException
    */
   public abstract void archiveRegion(HRegionInfo regionInfo) throws IOException;
+
+  // ==========================================================================
+  //  PUBLIC Methods - Snapshot related
+  // ==========================================================================
+  /**
+   * This method should be called to prepare storage implementation/s for snapshots. The default
+   * implementation does nothing. MasterStorage subclasses need to override this method to
+   * provide specific preparatory steps.
+   */
+  public void enableSnapshots() throws IOException {
+    return;
+  }
+
+  /**
+   * Returns true if MasterStorage is prepared for snapshots
+   */
+  public boolean isSnapshotsEnabled() {
+    return true;
+  }
+
+  /**
+   * Gets the list of all snapshots.
+   * @return list of SnapshotDescriptions
+   * @throws IOException Storage exception
+   */
+  public List<SnapshotDescription> getSnapshots() throws IOException {
+    return getSnapshots(StorageContext.DATA);
+  }
+
+  public abstract List<SnapshotDescription> getSnapshots(StorageContext ctx) throws IOException;
+
+  /**
+   * Gets snapshot description of a snapshot
+   * @return Snapshot description of a snapshot if found, null otherwise
+   * @throws IOException
+   */
+  public SnapshotDescription getSnapshot(final String snapshotName)
+      throws IOException {
+    return getSnapshot(snapshotName, StorageContext.DATA);
+  }
+
+  public abstract SnapshotDescription getSnapshot(final String snapshotName, StorageContext ctx)
+    throws IOException;
+
+  /**
+   * @return {@link HTableDescriptor} for a snapshot
+   * @param snapshot
+   * @throws IOException if can't read from the storage
+   */
+  public HTableDescriptor getTableDescriptorForSnapshot(final SnapshotDescription snapshot)
+      throws IOException {
+    return getTableDescriptorForSnapshot(snapshot, StorageContext.DATA);
+  }
+
+  public abstract HTableDescriptor getTableDescriptorForSnapshot(final SnapshotDescription
+    snapshot, StorageContext ctx) throws IOException;
+
+  /**
+   * Returns all {@link HRegionInfo} for a snapshot
+   *
+   * @param snapshot
+   * @return
+   * @throws IOException
+   */
+  public Map<String, HRegionInfo> getSnapshotRegions(final SnapshotDescription snapshot)
+      throws IOException {
+    return getSnapshotRegions(snapshot, StorageContext.DATA);
+  }
+
+  public abstract Map<String, HRegionInfo> getSnapshotRegions(final SnapshotDescription snapshot,
+      StorageContext ctx) throws IOException;
+
+  /**
+   * Check to see if the snapshot is one of the currently snapshots on the storage.
+   *
+   * @param snapshot
+   * @throws IOException
+   */
+  public boolean snapshotExists(SnapshotDescription snapshot) throws IOException {
+    return snapshotExists(snapshot, StorageContext.DATA);
+  }
+
+  public abstract boolean snapshotExists(SnapshotDescription snapshot, StorageContext ctx)
+      throws IOException;
+
+  public boolean snapshotExists(String snapshotName) throws IOException {
+    return snapshotExists(snapshotName, StorageContext.DATA);
+  }
+
+  public abstract boolean snapshotExists(String snapshotName, StorageContext ctx) throws
+      IOException;
+
+  /**
+   * Cleans up all snapshots.
+   *
+   * @throws IOException if can't reach the storage
+   */
+  public void deleteAllSnapshots() throws IOException {
+    deleteAllSnapshots(StorageContext.DATA);
+  }
+
+  public abstract void deleteAllSnapshots(StorageContext ctx) throws IOException;
+
+  /**
+   * Deletes a snapshot
+   * @param snapshot
+   * @throws SnapshotDoesNotExistException If the specified snapshot does not exist.
+   * @throws IOException For storage IOExceptions
+   */
+  public boolean deleteSnapshot(final SnapshotDescription snapshot) throws IOException {
+    return deleteSnapshot(snapshot, StorageContext.DATA) &&
+        deleteSnapshot(snapshot, StorageContext.TEMP);
+  }
+
+  public boolean deleteSnapshot(final String snapshotName) throws IOException {
+    return deleteSnapshot(snapshotName, StorageContext.DATA) &&
+        deleteSnapshot(snapshotName, StorageContext.TEMP);
+  }
+
+  public abstract boolean deleteSnapshot(final SnapshotDescription snapshot,
+      final StorageContext ctx) throws IOException;
+
+  public abstract boolean deleteSnapshot(final String snapshotName, final StorageContext ctx)
+      throws IOException;
+
+  /**
+   * Deletes old in-progress and/ or completed snapshot and prepares for new one with the same
+   * description
+   *
+   * @param snapshot
+   * @throws IOException for storage IOExceptions
+   */
+  public abstract void prepareSnapshot(SnapshotDescription snapshot) throws IOException;
+
+  /**
+   * In general snapshot is created with following steps:
+   * <ul>
+   *   <li>Initiate a snapshot for a table in TEMP context</li>
+   *   <li>Snapshot and add regions to the snapshot in TEMP</li>
+   *   <li>Consolidate snapshot</li>
+   *   <li>Change context of a snapshot from TEMP to DATA</li>
+   * </ul>
+   * @param htd
+   * @param snapshot
+   * @param monitor
+   * @throws IOException
+   */
+  public void initiateSnapshot(HTableDescriptor htd, SnapshotDescription snapshot, final
+      ForeignExceptionSnare monitor) throws IOException {
+    initiateSnapshot(htd, snapshot, monitor, StorageContext.DATA);
+  }
+
+  public abstract void initiateSnapshot(HTableDescriptor htd, SnapshotDescription snapshot,
+                                        final ForeignExceptionSnare monitor, StorageContext ctx) throws IOException;
+
+  /**
+   * Consolidates added regions and verifies snapshot
+   * @param snapshot
+   * @throws IOException
+   */
+  public void consolidateSnapshot(SnapshotDescription snapshot) throws IOException {
+    consolidateSnapshot(snapshot, StorageContext.DATA);
+  }
+
+  public abstract void consolidateSnapshot(SnapshotDescription snapshot, StorageContext ctx)
+      throws IOException;
+
+  /**
+   * Changes {@link StorageContext} of a snapshot from src to dest
+   *
+   * @param snapshot
+   * @param src Source {@link StorageContext}
+   * @param dest Destination {@link StorageContext}
+   * @return
+   * @throws IOException
+   */
+  public abstract boolean changeSnapshotContext(SnapshotDescription snapshot, StorageContext src,
+                                                StorageContext dest) throws IOException;
+
+  /**
+   * Adds given region to the snapshot.
+   *
+   * @param snapshot
+   * @param hri
+   * @throws IOException
+   */
+  public void addRegionToSnapshot(SnapshotDescription snapshot, HRegionInfo hri)
+      throws IOException {
+    addRegionToSnapshot(snapshot, hri, StorageContext.DATA);
+  }
+
+  public abstract void addRegionToSnapshot(SnapshotDescription snapshot, HRegionInfo hri,
+      StorageContext ctx) throws IOException;
+
+  public void addRegionsToSnapshot(SnapshotDescription snapshot, Collection<HRegionInfo> regions)
+      throws IOException {
+    addRegionsToSnapshot(snapshot, regions, StorageContext.DATA);
+  }
+
+  public abstract void addRegionsToSnapshot(SnapshotDescription snapshot,
+      Collection<HRegionInfo> regions, StorageContext ctx) throws IOException;
+
+  /**
+   * Restore snapshot to dest table and returns instance of {@link SnapshotRestoreMetaChanges}
+   * describing changes required for META.
+   * @param snapshot
+   * @param destHtd
+   * @param monitor
+   * @param status
+   * @return
+   * @throws IOException
+   */
+  public SnapshotRestoreMetaChanges restoreSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor destHtd, final ForeignExceptionDispatcher monitor,
+      final MonitoredTask status) throws IOException {
+    return restoreSnapshot(snapshot, StorageContext.DATA, destHtd, monitor, status);
+  }
+
+  public abstract SnapshotRestoreMetaChanges restoreSnapshot(final SnapshotDescription snapshot,
+      final StorageContext snapshotCtx, final HTableDescriptor destHtd,
+      final ForeignExceptionDispatcher monitor, final MonitoredTask status) throws IOException;
 
   // ==========================================================================
   // PUBLIC Methods - WAL
@@ -320,6 +544,8 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
   // ==========================================================================
   //  PUBLIC Methods - visitors
   // ==========================================================================
+  // TODO: remove implementations. How to visit store files is up to implementation, may use
+  // threadpool etc.
   public void visitStoreFiles(StoreFileVisitor visitor)
       throws IOException {
     visitStoreFiles(StorageContext.DATA, visitor);
@@ -355,6 +581,28 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
       RegionStorage.open(conf, hri, false).visitStoreFiles(visitor);
     }
   }
+
+  /**
+   * Visit all snapshots on a storage with visitor instance
+   * @param visitor
+   * @throws IOException
+   */
+  public abstract void visitSnapshots(final SnapshotVisitor visitor) throws IOException;
+
+  public abstract void visitSnapshots(StorageContext ctx, final SnapshotVisitor visitor)
+      throws IOException;
+
+  /**
+   * Visit all store files of a snapshot with visitor instance
+   *
+   * @param snapshot
+   * @param ctx
+   * @param visitor
+   * @throws IOException
+   */
+  public abstract void visitSnapshotStoreFiles(SnapshotDescription snapshot, StorageContext ctx,
+                                               SnapshotStoreFileVisitor visitor) throws IOException;
+
 
   // ==========================================================================
   //  PUBLIC Methods - bootstrap

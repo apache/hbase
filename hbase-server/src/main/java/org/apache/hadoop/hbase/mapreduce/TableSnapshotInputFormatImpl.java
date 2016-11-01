@@ -22,7 +22,6 @@ import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -35,15 +34,16 @@ import org.apache.hadoop.hbase.client.ClientSideRegionScanner;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.RestoreSnapshotHelper;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
@@ -53,6 +53,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -198,7 +199,7 @@ public class TableSnapshotInputFormatImpl {
       this.split = split;
       HTableDescriptor htd = split.htd;
       HRegionInfo hri = this.split.getRegionInfo();
-      FileSystem fs = FSUtils.getCurrentFileSystem(conf);
+      MasterStorage<? extends StorageIdentifier> masterStorage = MasterStorage.open(conf, false);
 
 
       // region is immutable, this should be fine,
@@ -207,8 +208,8 @@ public class TableSnapshotInputFormatImpl {
       // disable caching of data blocks
       scan.setCacheBlocks(false);
 
-      scanner =
-          new ClientSideRegionScanner(conf, fs, new Path(split.restoreDir), htd, hri, scan, null);
+      scanner = new ClientSideRegionScanner(masterStorage, new Path(split.restoreDir), htd, hri,
+          scan, null);
     }
 
     public boolean nextKeyValue() throws IOException {
@@ -251,19 +252,16 @@ public class TableSnapshotInputFormatImpl {
   public static List<InputSplit> getSplits(Configuration conf) throws IOException {
     String snapshotName = getSnapshotName(conf);
 
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = rootDir.getFileSystem(conf);
-
-    SnapshotManifest manifest = getSnapshotManifest(conf, snapshotName, rootDir, fs);
-
-    List<HRegionInfo> regionInfos = getRegionInfosFromManifest(manifest);
+    MasterStorage<? extends StorageIdentifier> masterStorage = MasterStorage.open(conf, false);
+    SnapshotDescription snapshot = masterStorage.getSnapshot(snapshotName);
 
     // TODO: mapred does not support scan as input API. Work around for now.
     Scan scan = extractScanFromConf(conf);
     // the temp dir where the snapshot is restored
     Path restoreDir = new Path(conf.get(RESTORE_DIR_KEY));
 
-    return getSplits(scan, manifest, regionInfos, restoreDir, conf);
+    return getSplits(scan, masterStorage.getTableDescriptorForSnapshot(snapshot),
+        masterStorage.getSnapshotRegions(snapshot).values(), restoreDir, conf);
   }
 
   public static List<HRegionInfo> getRegionInfosFromManifest(SnapshotManifest manifest) {
@@ -278,13 +276,6 @@ public class TableSnapshotInputFormatImpl {
       regionInfos.add(HRegionInfo.convert(regionManifest.getRegionInfo()));
     }
     return regionInfos;
-  }
-
-  public static SnapshotManifest getSnapshotManifest(Configuration conf, String snapshotName,
-      Path rootDir, FileSystem fs) throws IOException {
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    return SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
   }
 
   public static Scan extractScanFromConf(Configuration conf) throws IOException {
@@ -304,15 +295,12 @@ public class TableSnapshotInputFormatImpl {
     return scan;
   }
 
-  public static List<InputSplit> getSplits(Scan scan, SnapshotManifest manifest,
-      List<HRegionInfo> regionManifests, Path restoreDir, Configuration conf) throws IOException {
-    // load table descriptor
-    HTableDescriptor htd = manifest.getTableDescriptor();
-
+  public static List<InputSplit> getSplits(Scan scan, HTableDescriptor htd,
+      Collection<HRegionInfo> regionInfos, Path restoreDir, Configuration conf) throws IOException {
     Path tableDir = FSUtils.getTableDir(restoreDir, htd.getTableName());
 
     List<InputSplit> splits = new ArrayList<InputSplit>();
-    for (HRegionInfo hri : regionManifests) {
+    for (HRegionInfo hri : regionInfos) {
       // load region descriptor
 
       if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
@@ -395,13 +383,12 @@ public class TableSnapshotInputFormatImpl {
       throws IOException {
     conf.set(SNAPSHOT_NAME_KEY, snapshotName);
 
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = rootDir.getFileSystem(conf);
+    MasterStorage<? extends StorageIdentifier> masterStorage = MasterStorage.open(conf, false);
 
     restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
 
     // TODO: restore from record readers to parallelize.
-    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+    RestoreSnapshotHelper.copySnapshotForScanner(masterStorage, restoreDir, snapshotName);
 
     conf.set(RESTORE_DIR_KEY, restoreDir.toString());
   }

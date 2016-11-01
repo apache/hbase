@@ -97,7 +97,8 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
           "snapshot-hfile-cleaner-cache-refresher", new SnapshotFileCache.SnapshotFileInspector() {
             public Collection<String> filesUnderSnapshot(final Path snapshotDir)
                 throws IOException {
-              return SnapshotReferenceUtil.getHFileNames(conf, fs, snapshotDir);
+              return SnapshotReferenceUtil.getHFileNames(master.getMasterStorage(),
+                  snapshotDir.getName());
             }
           });
     } catch (IOException e) {

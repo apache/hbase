@@ -24,8 +24,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -33,6 +31,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 
@@ -49,7 +49,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   RegionScanner scanner;
   List<Cell> values;
 
-  public ClientSideRegionScanner(Configuration conf, FileSystem fs,
+  public ClientSideRegionScanner(MasterStorage<? extends StorageIdentifier> masterStorage,
       Path rootDir, HTableDescriptor htd, HRegionInfo hri, Scan scan, ScanMetrics scanMetrics)
           throws IOException {
 
@@ -57,7 +57,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
 
     // open region from the snapshot directory
-    this.region = HRegion.openHRegion(fs, rootDir, hri, htd, conf);
+    this.region = HRegion.openHRegion(masterStorage, hri, htd);
 
     // create an internal region scanner
     this.scanner = region.getScanner(scan);

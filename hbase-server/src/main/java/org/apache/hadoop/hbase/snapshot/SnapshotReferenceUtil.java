@@ -38,10 +38,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageContext;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.fs.legacy.io.HFileLink;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -53,207 +59,110 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 public final class SnapshotReferenceUtil {
   private static final Log LOG = LogFactory.getLog(SnapshotReferenceUtil.class);
 
-  public interface StoreFileVisitor {
-    void storeFile(final HRegionInfo regionInfo, final String familyName,
-       final SnapshotRegionManifest.StoreFile storeFile) throws IOException;
-  }
-
-  public interface SnapshotVisitor extends StoreFileVisitor {
-  }
-
   private SnapshotReferenceUtil() {
     // private constructor for utility class
   }
 
   /**
-   * Iterate over the snapshot store files
-   *
-   * @param conf The current {@link Configuration} instance.
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory
-   * @param visitor callback object to get the referenced files
-   * @throws IOException if an error occurred while scanning the directory
-   */
-  public static void visitReferencedFiles(final Configuration conf, final FileSystem fs,
-      final Path snapshotDir, final SnapshotVisitor visitor)
-      throws IOException {
-    SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    visitReferencedFiles(conf, fs, snapshotDir, desc, visitor);
-  }
-
-  /**
-   * Iterate over the snapshot store files, restored.edits and logs
-   *
-   * @param conf The current {@link Configuration} instance.
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory
-   * @param desc the {@link SnapshotDescription} of the snapshot to verify
-   * @param visitor callback object to get the referenced files
-   * @throws IOException if an error occurred while scanning the directory
-   */
-  public static void visitReferencedFiles(final Configuration conf, final FileSystem fs,
-      final Path snapshotDir, final SnapshotDescription desc, final SnapshotVisitor visitor)
-      throws IOException {
-    visitTableStoreFiles(conf, fs, snapshotDir, desc, visitor);
-  }
-
-  /**©
-   * Iterate over the snapshot store files
-   *
-   * @param conf The current {@link Configuration} instance.
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory
-   * @param desc the {@link SnapshotDescription} of the snapshot to verify
-   * @param visitor callback object to get the store files
-   * @throws IOException if an error occurred while scanning the directory
-   */
-  static void visitTableStoreFiles(final Configuration conf, final FileSystem fs,
-      final Path snapshotDir, final SnapshotDescription desc, final StoreFileVisitor visitor)
-      throws IOException {
-    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, desc);
-    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
-    if (regionManifests == null || regionManifests.size() == 0) {
-      LOG.debug("No manifest files present: " + snapshotDir);
-      return;
-    }
-
-    for (SnapshotRegionManifest regionManifest: regionManifests) {
-      visitRegionStoreFiles(regionManifest, visitor);
-    }
-  }
-
-  /**
-   * Iterate over the snapshot store files in the specified region
-   *
-   * @param manifest snapshot manifest to inspect
-   * @param visitor callback object to get the store files
-   * @throws IOException if an error occurred while scanning the directory
-   */
-  static void visitRegionStoreFiles(final SnapshotRegionManifest manifest,
-      final StoreFileVisitor visitor) throws IOException {
-    HRegionInfo regionInfo = HRegionInfo.convert(manifest.getRegionInfo());
-    for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
-      String familyName = familyFiles.getFamilyName().toStringUtf8();
-      for (SnapshotRegionManifest.StoreFile storeFile: familyFiles.getStoreFilesList()) {
-        visitor.storeFile(regionInfo, familyName, storeFile);
-      }
-    }
-  }
-
-  /**
    * Verify the validity of the snapshot
    *
-   * @param conf The current {@link Configuration} instance.
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory of the snapshot to verify
-   * @param snapshotDesc the {@link SnapshotDescription} of the snapshot to verify
+   * @param masterStorage {@link MasterStorage} for a snapshot
+   * @param snapshot the {@link SnapshotDescription} of the snapshot to verify
+   * @param ctx {@link StorageContext} of a snapshot
    * @throws CorruptedSnapshotException if the snapshot is corrupted
    * @throws IOException if an error occurred while scanning the directory
    */
-  public static void verifySnapshot(final Configuration conf, final FileSystem fs,
-      final Path snapshotDir, final SnapshotDescription snapshotDesc) throws IOException {
-    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
-    verifySnapshot(conf, fs, manifest);
-  }
-
-  /**
-   * Verify the validity of the snapshot
-   *
-   * @param conf The current {@link Configuration} instance.
-   * @param fs {@link FileSystem}
-   * @param manifest snapshot manifest to inspect
-   * @throws CorruptedSnapshotException if the snapshot is corrupted
-   * @throws IOException if an error occurred while scanning the directory
-   */
-  public static void verifySnapshot(final Configuration conf, final FileSystem fs,
-      final SnapshotManifest manifest) throws IOException {
-    final SnapshotDescription snapshotDesc = manifest.getSnapshotDescription();
-    final Path snapshotDir = manifest.getSnapshotDir();
-    concurrentVisitReferencedFiles(conf, fs, manifest, "VerifySnapshot", new StoreFileVisitor() {
-      @Override
-      public void storeFile(final HRegionInfo regionInfo, final String family,
-          final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-        verifyStoreFile(conf, fs, snapshotDir, snapshotDesc, regionInfo, family, storeFile);
-      }
+  public static void verifySnapshot(final MasterStorage<? extends StorageIdentifier> masterStorage,
+      final SnapshotDescription snapshot, StorageContext ctx) throws IOException {
+    masterStorage.visitSnapshotStoreFiles(snapshot, ctx,
+        new MasterStorage.SnapshotStoreFileVisitor() {
+          @Override
+          public void visitSnapshotStoreFile(SnapshotDescription snapshot, StorageContext ctx,
+              HRegionInfo hri, String familyName, SnapshotRegionManifest.StoreFile storeFile)
+              throws IOException {
+            verifyStoreFile(masterStorage, snapshot, ctx, hri, familyName, storeFile);
+          }
     });
   }
 
-  public static void concurrentVisitReferencedFiles(final Configuration conf, final FileSystem fs,
-      final SnapshotManifest manifest, final String desc, final StoreFileVisitor visitor)
-      throws IOException {
+  // TODO modify master storage to use ExecutorService and run concurrent queries to HDFS NN and
+  // remove the commented out code below.
 
-    final Path snapshotDir = manifest.getSnapshotDir();
-    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
-    if (regionManifests == null || regionManifests.size() == 0) {
-      LOG.debug("No manifest files present: " + snapshotDir);
-      return;
-    }
-
-    ExecutorService exec = SnapshotManifest.createExecutor(conf, desc);
-
-    try {
-      concurrentVisitReferencedFiles(conf, fs, manifest, exec, visitor);
-    } finally {
-      exec.shutdown();
-    }
-  }
-
-  public static void concurrentVisitReferencedFiles(final Configuration conf, final FileSystem fs,
-      final SnapshotManifest manifest, final ExecutorService exec, final StoreFileVisitor visitor)
-      throws IOException {
-    final SnapshotDescription snapshotDesc = manifest.getSnapshotDescription();
-    final Path snapshotDir = manifest.getSnapshotDir();
-
-    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
-    if (regionManifests == null || regionManifests.size() == 0) {
-      LOG.debug("No manifest files present: " + snapshotDir);
-      return;
-    }
-
-    final ExecutorCompletionService<Void> completionService =
-      new ExecutorCompletionService<Void>(exec);
-
-    for (final SnapshotRegionManifest regionManifest : regionManifests) {
-      completionService.submit(new Callable<Void>() {
-        @Override public Void call() throws IOException {
-          visitRegionStoreFiles(regionManifest, visitor);
-          return null;
-        }
-      });
-    }
-    try {
-      for (int i = 0; i < regionManifests.size(); ++i) {
-        completionService.take().get();
-      }
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException(e.getMessage());
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof CorruptedSnapshotException) {
-        throw new CorruptedSnapshotException(e.getCause().getMessage(),
-            ProtobufUtil.createSnapshotDesc(snapshotDesc));
-      } else {
-        IOException ex = new IOException();
-        ex.initCause(e.getCause());
-        throw ex;
-      }
-    }
-  }
+//  public static void concurrentVisitReferencedFiles(final Configuration conf, final FileSystem fs,
+//      final SnapshotManifest manifest, final String desc, final StoreFileVisitor visitor)
+//      throws IOException {
+//
+//    final Path snapshotDir = manifest.getSnapshotDir();
+//    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
+//    if (regionManifests == null || regionManifests.size() == 0) {
+//      LOG.debug("No manifest files present: " + snapshotDir);
+//      return;
+//    }
+//
+//    ExecutorService exec = SnapshotManifest.createExecutor(conf, desc);
+//
+//    try {
+//      concurrentVisitReferencedFiles(conf, fs, manifest, exec, visitor);
+//    } finally {
+//      exec.shutdown();
+//    }
+//  }
+//
+//  public static void concurrentVisitReferencedFiles(final Configuration conf, final FileSystem fs,
+//      final SnapshotManifest manifest, final ExecutorService exec, final StoreFileVisitor visitor)
+//      throws IOException {
+//    final SnapshotDescription snapshotDesc = manifest.getSnapshotDescription();
+//    final Path snapshotDir = manifest.getSnapshotDir();
+//
+//    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
+//    if (regionManifests == null || regionManifests.size() == 0) {
+//      LOG.debug("No manifest files present: " + snapshotDir);
+//      return;
+//    }
+//
+//    final ExecutorCompletionService<Void> completionService =
+//      new ExecutorCompletionService<Void>(exec);
+//
+//    for (final SnapshotRegionManifest regionManifest : regionManifests) {
+//      completionService.submit(new Callable<Void>() {
+//        @Override public Void call() throws IOException {
+//          visitRegionStoreFiles(regionManifest, visitor);
+//          return null;
+//        }
+//      });
+//    }
+//    try {
+//      for (int i = 0; i < regionManifests.size(); ++i) {
+//        completionService.take().get();
+//      }
+//    } catch (InterruptedException e) {
+//      throw new InterruptedIOException(e.getMessage());
+//    } catch (ExecutionException e) {
+//      if (e.getCause() instanceof CorruptedSnapshotException) {
+//        throw new CorruptedSnapshotException(e.getCause().getMessage(),
+//            ProtobufUtil.createSnapshotDesc(snapshotDesc));
+//      } else {
+//        IOException ex = new IOException();
+//        ex.initCause(e.getCause());
+//        throw ex;
+//      }
+//    }
+//  }
 
   /**
    * Verify the validity of the snapshot store file
    *
-   * @param conf The current {@link Configuration} instance.
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory of the snapshot to verify
+   * @param masterStorage (@link MasterStorage} for the snapshot
    * @param snapshot the {@link SnapshotDescription} of the snapshot to verify
+   * @param ctx {@link StorageContext} of a snapshot
    * @param regionInfo {@link HRegionInfo} of the region that contains the store file
    * @param family family that contains the store file
    * @param storeFile the store file to verify
    * @throws CorruptedSnapshotException if the snapshot is corrupted
    * @throws IOException if an error occurred while scanning the directory
    */
-  private static void verifyStoreFile(final Configuration conf, final FileSystem fs,
-      final Path snapshotDir, final SnapshotDescription snapshot, final HRegionInfo regionInfo,
+  private static void verifyStoreFile(final MasterStorage<? extends StorageIdentifier> masterStorage,
+      final SnapshotDescription snapshot, StorageContext ctx, final HRegionInfo regionInfo,
       final String family, final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
     TableName table = TableName.valueOf(snapshot.getTable());
     String fileName = storeFile.getName();
@@ -265,7 +174,8 @@ public final class SnapshotReferenceUtil {
       refPath = StoreFileInfo.getReferredToFile(refPath);
       String refRegion = refPath.getParent().getParent().getName();
       refPath = HFileLink.createPath(table, refRegion, family, refPath.getName());
-      if (!HFileLink.buildFromHFileLinkPattern(conf, refPath).exists(fs)) {
+      if (!HFileLink.buildFromHFileLinkPattern(masterStorage.getConfiguration(), refPath)
+          .exists(masterStorage.getFileSystem())) {
         throw new CorruptedSnapshotException(
             "Missing parent hfile for: " + fileName + " path=" + refPath,
             ProtobufUtil.createSnapshotDesc(snapshot));
@@ -292,14 +202,15 @@ public final class SnapshotReferenceUtil {
     HFileLink link = null;
     if (MobUtils.isMobRegionInfo(regionInfo)) {
       // for mob region
-      link = HFileLink.buildFromHFileLinkPattern(MobUtils.getQualifiedMobRootDir(conf),
-          HFileArchiveUtil.getArchivePath(conf), linkPath);
+      link = HFileLink.buildFromHFileLinkPattern(MobUtils.getQualifiedMobRootDir(
+          masterStorage.getConfiguration()), HFileArchiveUtil.getArchivePath(
+          masterStorage.getConfiguration()), linkPath);
     } else {
       // not mob region
-      link = HFileLink.buildFromHFileLinkPattern(conf, linkPath);
+      link = HFileLink.buildFromHFileLinkPattern(masterStorage.getConfiguration(), linkPath);
     }
     try {
-      FileStatus fstat = link.getFileStatus(fs);
+      FileStatus fstat = link.getFileStatus(masterStorage.getFileSystem());
       if (storeFile.hasFileSize() && storeFile.getFileSize() != fstat.getLen()) {
         String msg = "hfile: " + fileName + " size does not match with the expected one. " +
           " found=" + fstat.getLen() + " expected=" + storeFile.getFileSize();
@@ -320,43 +231,47 @@ public final class SnapshotReferenceUtil {
   /**
    * Returns the store file names in the snapshot.
    *
-   * @param conf The current {@link Configuration} instance.
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory
+   * @param masterStorage {@link MasterStorage} for a snapshot.
+   * @param snapshotName Name of the snapshot
    * @throws IOException if an error occurred while scanning the directory
    * @return the names of hfiles in the specified snaphot
    */
-  public static Set<String> getHFileNames(final Configuration conf, final FileSystem fs,
-      final Path snapshotDir) throws IOException {
-    SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    return getHFileNames(conf, fs, snapshotDir, desc);
+  public static Set<String> getHFileNames(final MasterStorage<? extends StorageIdentifier>
+      masterStorage, final String snapshotName) throws IOException {
+    return getHFileNames(masterStorage, snapshotName, StorageContext.DATA);
+  }
+
+  public static Set<String> getHFileNames(final MasterStorage<? extends StorageIdentifier>
+      masterStorage, final String snapshotName, StorageContext ctx) throws IOException {
+    SnapshotDescription desc = masterStorage.getSnapshot(snapshotName, ctx);
+    return getHFileNames(masterStorage, desc, ctx);
   }
 
   /**
    * Returns the store file names in the snapshot.
    *
-   * @param conf The current {@link Configuration} instance.
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory
-   * @param snapshotDesc the {@link SnapshotDescription} of the snapshot to inspect
+   * @param masterStorage {@link MasterStorage} for a snapshot
+   * @param snapshot the {@link SnapshotDescription} of the snapshot to inspect
+   * @param ctx {@link StorageContext} for a snapshot
    * @throws IOException if an error occurred while scanning the directory
    * @return the names of hfiles in the specified snaphot
    */
-  private static Set<String> getHFileNames(final Configuration conf, final FileSystem fs,
-      final Path snapshotDir, final SnapshotDescription snapshotDesc)
-      throws IOException {
+  private static Set<String> getHFileNames(final MasterStorage<? extends StorageIdentifier>
+      masterStorage,final SnapshotDescription snapshot, StorageContext ctx) throws IOException {
     final Set<String> names = new HashSet<String>();
-    visitTableStoreFiles(conf, fs, snapshotDir, snapshotDesc, new StoreFileVisitor() {
-      @Override
-      public void storeFile(final HRegionInfo regionInfo, final String family,
-            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-        String hfile = storeFile.getName();
-        if (HFileLink.isHFileLink(hfile)) {
-          names.add(HFileLink.getReferencedHFileName(hfile));
-        } else {
-          names.add(hfile);
-        }
-      }
+    masterStorage.visitSnapshotStoreFiles(snapshot, ctx,
+        new MasterStorage.SnapshotStoreFileVisitor() {
+          @Override
+          public void visitSnapshotStoreFile(SnapshotDescription snapshot, StorageContext ctx,
+              HRegionInfo hri, String familyName, SnapshotRegionManifest.StoreFile storeFile)
+              throws IOException {
+            String hfile = storeFile.getName();
+            if (HFileLink.isHFileLink(hfile)) {
+              names.add(HFileLink.getReferencedHFileName(hfile));
+            } else {
+              names.add(hfile);
+            }
+          }
     });
     return names;
   }

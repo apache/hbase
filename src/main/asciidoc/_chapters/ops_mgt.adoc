@@ -2063,7 +2063,7 @@ To copy a snapshot called MySnapshot to an HBase cluster srv2 (hdfs:///srv2:8082
 
 [source,bourne]
 ----
-$ bin/hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16
+$ bin/hbase org.apache.hadoop.hbase.fs.legacy.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16
 ----
 
 .Limiting Bandwidth Consumption
@@ -2072,7 +2072,7 @@ The following example limits the above example to 200 MB/sec.
 
 [source,bourne]
 ----
-$ bin/hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200
+$ bin/hbase org.apache.hadoop.hbase.fs.legacy.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200
 ----
 
 [[snapshots_s3]]
@@ -2091,12 +2091,12 @@ and `s3://` protocols have various limitations and do not use the Amazon AWS SDK
 the commands to export and restore the snapshot.
 
 After you have fulfilled the prerequisites, take the snapshot like you normally would.
-Afterward, you can export it using the `org.apache.hadoop.hbase.snapshot.ExportSnapshot`
+Afterward, you can export it using the `org.apache.hadoop.hbase.fs.legacy.snapshot.ExportSnapshot`
 command like the one below, substituting your own `s3a://` path in the `copy-from`
 or `copy-to` directive and substituting or modifying other options as required:
 
 ----
-$ hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot \
+$ hbase org.apache.hadoop.hbase.fs.legacy.snapshot.ExportSnapshot \
     -snapshot MySnapshot \
     -copy-from hdfs://srv2:8082/hbase \
     -copy-to s3a://<bucket>/<namespace>/hbase \
@@ -2107,7 +2107,7 @@ $ hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot \
 ----
 
 ----
-$ hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot \
+$ hbase org.apache.hadoop.hbase.fs.legacy.snapshot.ExportSnapshot \
     -snapshot MySnapshot
     -copy-from s3a://<bucket>/<namespace>/hbase \
     -copy-to hdfs://srv2:8082/hbase \

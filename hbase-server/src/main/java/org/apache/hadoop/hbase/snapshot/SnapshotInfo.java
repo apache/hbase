@@ -36,14 +36,20 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageContext;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -53,7 +59,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.fs.legacy.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -135,24 +140,21 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     private final HBaseProtos.SnapshotDescription snapshot;
     private final TableName snapshotTable;
-    private final Configuration conf;
-    private final FileSystem fs;
+    private final MasterStorage<? extends StorageIdentifier> masterStorage;
 
-    SnapshotStats(final Configuration conf, final FileSystem fs,
+    SnapshotStats(final MasterStorage<? extends StorageIdentifier> masterStorage,
         final SnapshotDescription snapshot)
     {
       this.snapshot = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
       this.snapshotTable = TableName.valueOf(snapshot.getTable());
-      this.conf = conf;
-      this.fs = fs;
+      this.masterStorage = masterStorage;
     }
 
-    SnapshotStats(final Configuration conf, final FileSystem fs,
+    SnapshotStats(final MasterStorage<? extends StorageIdentifier> masterStorage,
         final HBaseProtos.SnapshotDescription snapshot) {
       this.snapshot = snapshot;
       this.snapshotTable = TableName.valueOf(snapshot.getTable());
-      this.conf = conf;
-      this.fs = fs;
+      this.masterStorage = masterStorage;
     }
 
 
@@ -225,7 +227,7 @@ public final class SnapshotInfo extends Configured implements Tool {
      *    with other snapshots and tables
      *
      *    This is only calculated when
-     *  {@link #getSnapshotStats(Configuration, HBaseProtos.SnapshotDescription, Map)}
+     *    {@link #getSnapshotStats(Configuration, HBaseProtos.SnapshotDescription, Map)}
      *    is called with a non-null Map
      */
     public long getNonSharedArchivedStoreFilesSize() {
@@ -265,7 +267,7 @@ public final class SnapshotInfo extends Configured implements Tool {
         Path parentDir = filePath.getParent();
         Path backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
         try {
-          if (FSUtils.listStatus(fs, backRefDir) == null) {
+          if (FSUtils.listStatus(masterStorage.getFileSystem(), backRefDir) == null) {
             return false;
           }
         } catch (IOException e) {
@@ -287,6 +289,8 @@ public final class SnapshotInfo extends Configured implements Tool {
     FileInfo addStoreFile(final HRegionInfo region, final String family,
         final SnapshotRegionManifest.StoreFile storeFile,
         final Map<Path, Integer> filesMap) throws IOException {
+      Configuration conf = masterStorage.getConfiguration();
+      FileSystem fs = masterStorage.getFileSystem();
       HFileLink link = HFileLink.build(conf, snapshotTable, region.getEncodedName(),
               family, storeFile.getName());
       boolean isCorrupted = false;
@@ -328,10 +332,10 @@ public final class SnapshotInfo extends Configured implements Tool {
      * @return the log information
      */
     FileInfo addLogFile(final String server, final String logfile) throws IOException {
-      WALLink logLink = new WALLink(conf, server, logfile);
+      WALLink logLink = new WALLink(masterStorage.getConfiguration(), server, logfile);
       long size = -1;
       try {
-        size = logLink.getFileStatus(fs).getLen();
+        size = logLink.getFileStatus(masterStorage.getFileSystem()).getLen();
         logSize.addAndGet(size);
         logsCount.incrementAndGet();
       } catch (FileNotFoundException e) {
@@ -342,10 +346,10 @@ public final class SnapshotInfo extends Configured implements Tool {
   }
 
   private boolean printSizeInBytes = false;
-  private FileSystem fs;
-  private Path rootDir;
+  private MasterStorage<? extends StorageIdentifier> masterStorage;
 
-  private SnapshotManifest snapshotManifest;
+  private HBaseProtos.SnapshotDescription snapshotDesc;
+  private HTableDescriptor snapshotTable;
 
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
@@ -391,11 +395,14 @@ public final class SnapshotInfo extends Configured implements Tool {
       }
     }
 
+    // instantiate MasterStorage
+    masterStorage = MasterStorage.open(conf, false);
+
     // List Available Snapshots
     if (listSnapshots) {
       SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
       System.out.printf("%-20s | %-20s | %s%n", "SNAPSHOT", "CREATION TIME", "TABLE NAME");
-      for (SnapshotDescription desc: getSnapshotList(conf)) {
+      for (SnapshotDescription desc: getSnapshotList(masterStorage)) {
         System.out.printf("%-20s | %20s | %s%n",
                           desc.getName(),
                           df.format(new Date(desc.getCreationTime())),
@@ -410,9 +417,8 @@ public final class SnapshotInfo extends Configured implements Tool {
       return 1;
     }
 
-    rootDir = FSUtils.getRootDir(conf);
-    fs = FileSystem.get(rootDir.toUri(), conf);
-    LOG.debug("fs=" + fs.getUri().toString() + " root=" + rootDir);
+    LOG.debug("fs=" + masterStorage.getFileSystem().getUri().toString() + " root=" +
+        ((LegacyPathIdentifier)masterStorage.getRootContainer()).path);
 
     // Load snapshot information
     if (!loadSnapshotInfo(snapshotName)) {
@@ -433,15 +439,8 @@ public final class SnapshotInfo extends Configured implements Tool {
    * @return false if snapshot is not found
    */
   private boolean loadSnapshotInfo(final String snapshotName) throws IOException {
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    if (!fs.exists(snapshotDir)) {
-      LOG.warn("Snapshot '" + snapshotName + "' not found in: " + snapshotDir);
-      return false;
-    }
-
-    HBaseProtos.SnapshotDescription snapshotDesc =
-        SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    snapshotManifest = SnapshotManifest.open(getConf(), fs, snapshotDir, snapshotDesc);
+    snapshotDesc = masterStorage.getSnapshot(snapshotName);
+    snapshotTable = masterStorage.getTableDescriptorForSnapshot(snapshotDesc);
     return true;
   }
 
@@ -449,7 +448,6 @@ public final class SnapshotInfo extends Configured implements Tool {
    * Dump the {@link SnapshotDescription}
    */
   private void printInfo() {
-    HBaseProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     System.out.println("Snapshot Info");
     System.out.println("----------------------------------------");
@@ -468,7 +466,7 @@ public final class SnapshotInfo extends Configured implements Tool {
   private void printSchema() {
     System.out.println("Table Descriptor");
     System.out.println("----------------------------------------");
-    System.out.println(snapshotManifest.getTableDescriptor().toString());
+    System.out.println(snapshotTable.toString());
     System.out.println();
   }
 
@@ -483,30 +481,30 @@ public final class SnapshotInfo extends Configured implements Tool {
     }
 
     // Collect information about hfiles and logs in the snapshot
-    final HBaseProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     final String table = snapshotDesc.getTable();
     SnapshotDescription desc = new SnapshotDescription(snapshotDesc.getName(),
         snapshotDesc.getTable(), ProtobufUtil.createSnapshotType(snapshotDesc.getType()),
         snapshotDesc.getOwner(), snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
-    final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, desc);
-    SnapshotReferenceUtil.concurrentVisitReferencedFiles(getConf(), fs, snapshotManifest,
-        "SnapshotInfo",
-      new SnapshotReferenceUtil.SnapshotVisitor() {
-        @Override
-        public void storeFile(final HRegionInfo regionInfo, final String family,
-            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          if (storeFile.hasReference()) return;
+    final SnapshotStats stats = new SnapshotStats(masterStorage, desc);
+    // TODO: add concurrent API to MasterStorage
+    masterStorage.visitSnapshotStoreFiles(snapshotDesc, StorageContext.DATA,
+        new MasterStorage.SnapshotStoreFileVisitor() {
+          @Override
+          public void visitSnapshotStoreFile(HBaseProtos.SnapshotDescription snapshot,
+              StorageContext ctx, HRegionInfo hri, String familyName,
+              SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+            if (storeFile.hasReference()) return;
 
-          SnapshotStats.FileInfo info = stats.addStoreFile(regionInfo, family, storeFile, null);
-          if (showFiles) {
-            String state = info.getStateToString();
-            System.out.printf("%8s %s/%s/%s/%s %s%n",
-              (info.isMissing() ? "-" : fileSizeToString(info.getSize())),
-              table, regionInfo.getEncodedName(), family, storeFile.getName(),
-              state == null ? "" : "(" + state + ")");
+            SnapshotStats.FileInfo info = stats.addStoreFile(hri, familyName, storeFile, null);
+            if (showFiles) {
+              String state = info.getStateToString();
+              System.out.printf("%8s %s/%s/%s/%s %s%n",
+                  (info.isMissing() ? "-" : fileSizeToString(info.getSize())),
+                  table, hri.getEncodedName(), familyName, storeFile.getName(),
+                  state == null ? "" : "(" + state + ")");
+            }
           }
-        }
-    });
+        });
 
     // Dump the stats
     System.out.println();
@@ -569,7 +567,8 @@ public final class SnapshotInfo extends Configured implements Tool {
     HBaseProtos.SnapshotDescription snapshotDesc = ProtobufUtil.createHBaseProtosSnapshotDesc(
         snapshot);
 
-    return getSnapshotStats(conf, snapshotDesc, null);
+    MasterStorage<? extends StorageIdentifier> masterStorage = MasterStorage.open(conf, false);
+    return getSnapshotStats(masterStorage.getConfiguration(), snapshotDesc, null);
   }
 
   /**
@@ -579,53 +578,43 @@ public final class SnapshotInfo extends Configured implements Tool {
    * @param filesMap {@link Map} store files map for all snapshots, it may be null
    * @return the snapshot stats
    */
-  public static SnapshotStats getSnapshotStats(final Configuration conf,
-      final HBaseProtos.SnapshotDescription snapshotDesc,
+  public static SnapshotStats getSnapshotStats(
+      final Configuration conf, final HBaseProtos.SnapshotDescription snapshotDesc,
       final Map<Path, Integer> filesMap) throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDesc, rootDir);
-    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
-    final SnapshotStats stats = new SnapshotStats(conf, fs, snapshotDesc);
-    SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest,
-        "SnapshotsStatsAggregation", new SnapshotReferenceUtil.SnapshotVisitor() {
+    MasterStorage<? extends StorageIdentifier> masterStorage = MasterStorage.open(conf, false);
+    final SnapshotStats stats = new SnapshotStats(masterStorage, snapshotDesc);
+    masterStorage.visitSnapshotStoreFiles(snapshotDesc, StorageContext.DATA,
+        new MasterStorage.SnapshotStoreFileVisitor() {
           @Override
-          public void storeFile(final HRegionInfo regionInfo, final String family,
-              final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          public void visitSnapshotStoreFile(HBaseProtos.SnapshotDescription snapshot,
+              StorageContext ctx, HRegionInfo hri, String familyName,
+              SnapshotRegionManifest.StoreFile storeFile) throws IOException {
             if (!storeFile.hasReference()) {
-              stats.addStoreFile(regionInfo, family, storeFile, filesMap);
+              stats.addStoreFile(hri, familyName, storeFile, filesMap);
             }
-          }});
+          }
+        });
     return stats;
   }
 
   /**
    * Returns the list of available snapshots in the specified location
-   * @param conf the {@link Configuration} to use
+   * @param masterStorage the {@link MasterStorage} to use
    * @return the list of snapshots
    */
-  public static List<SnapshotDescription> getSnapshotList(final Configuration conf)
-      throws IOException {
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
-    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
-    FileStatus[] snapshots = fs.listStatus(snapshotDir,
-        new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
-    List<SnapshotDescription> snapshotLists =
-      new ArrayList<SnapshotDescription>(snapshots.length);
-    for (FileStatus snapshotDirStat: snapshots) {
-      HBaseProtos.SnapshotDescription snapshotDesc =
-          SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath());
-      snapshotLists.add(new SnapshotDescription(snapshotDesc.getName(),
-          snapshotDesc.getTable(), ProtobufUtil.createSnapshotType(snapshotDesc.getType()),
-          snapshotDesc.getOwner(), snapshotDesc.getCreationTime(), snapshotDesc.getVersion()));
+  public static List<SnapshotDescription> getSnapshotList(
+      final MasterStorage<? extends StorageIdentifier> masterStorage) throws IOException {
+    List<HBaseProtos.SnapshotDescription> descriptions = masterStorage.getSnapshots();
+    List<SnapshotDescription> snapshotLists = new ArrayList(descriptions.size());
+    for (HBaseProtos.SnapshotDescription desc: masterStorage.getSnapshots()) {
+      snapshotLists.add(ProtobufUtil.createSnapshotDesc(desc));
     }
     return snapshotLists;
   }
 
   /**
    * Gets the store files map for snapshot
-   * @param conf the {@link Configuration} to use
+   * @param masterStorage the {@link MasterStorage} to use
    * @param snapshot {@link SnapshotDescription} to get stats from
    * @param exec the {@link ExecutorService} to use
    * @param filesMap {@link Map} the map to put the mapping entries
@@ -634,33 +623,32 @@ public final class SnapshotInfo extends Configured implements Tool {
    * @param uniqueHFilesMobSize {@link AtomicLong} the accumulated mob store file size shared
    * @return the snapshot stats
    */
-  private static void getSnapshotFilesMap(final Configuration conf,
+  private static void getSnapshotFilesMap(
+      final MasterStorage<? extends StorageIdentifier> masterStorage,
       final SnapshotDescription snapshot, final ExecutorService exec,
       final ConcurrentHashMap<Path, Integer> filesMap,
       final AtomicLong uniqueHFilesArchiveSize, final AtomicLong uniqueHFilesSize,
       final AtomicLong uniqueHFilesMobSize) throws IOException {
     HBaseProtos.SnapshotDescription snapshotDesc = ProtobufUtil.createHBaseProtosSnapshotDesc(
         snapshot);
-    Path rootDir = FSUtils.getRootDir(conf);
-    final FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
-
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotDesc, rootDir);
-    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
-    SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest, exec,
-        new SnapshotReferenceUtil.SnapshotVisitor() {
-          @Override public void storeFile(final HRegionInfo regionInfo, final String family,
-              final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+    masterStorage.visitSnapshotStoreFiles(snapshotDesc, StorageContext.DATA,
+        new MasterStorage.SnapshotStoreFileVisitor() {
+          @Override
+          public void visitSnapshotStoreFile(HBaseProtos.SnapshotDescription snapshot,
+              StorageContext ctx, HRegionInfo hri, String familyName,
+              SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+            Configuration conf = masterStorage.getConfiguration();
+            FileSystem fs = masterStorage.getFileSystem();
             if (!storeFile.hasReference()) {
-              HFileLink link = HFileLink
-                  .build(conf, TableName.valueOf(snapshot.getTable()), regionInfo.getEncodedName(),
-                      family, storeFile.getName());
+              HFileLink link = HFileLink.build(conf, TableName.valueOf(snapshot.getTable()),
+                  hri.getEncodedName(), familyName, storeFile.getName());
               long size;
               Integer count;
               Path p;
               AtomicLong al;
               int c = 0;
 
-              if (fs.exists(link.getArchivePath())) {
+              if (masterStorage.getFileSystem().exists(link.getArchivePath())) {
                 p = link.getArchivePath();
                 al = uniqueHFilesArchiveSize;
                 size = fs.getFileStatus(p).getLen();
@@ -685,7 +673,7 @@ public final class SnapshotInfo extends Configured implements Tool {
               filesMap.put(p, ++c);
             }
           }
-        });
+    });
   }
 
   /**
@@ -699,7 +687,8 @@ public final class SnapshotInfo extends Configured implements Tool {
   public static Map<Path, Integer> getSnapshotsFilesMap(final Configuration conf,
       AtomicLong uniqueHFilesArchiveSize, AtomicLong uniqueHFilesSize,
       AtomicLong uniqueHFilesMobSize) throws IOException {
-    List<SnapshotDescription> snapshotList = getSnapshotList(conf);
+    MasterStorage<? extends StorageIdentifier> masterStorage = MasterStorage.open(conf, false);
+    List<SnapshotDescription> snapshotList = getSnapshotList(masterStorage);
 
 
     if (snapshotList.size() == 0) {
@@ -712,7 +701,7 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     try {
       for (final SnapshotDescription snapshot : snapshotList) {
-        getSnapshotFilesMap(conf, snapshot, exec, fileMap, uniqueHFilesArchiveSize,
+        getSnapshotFilesMap(masterStorage, snapshot, exec, fileMap, uniqueHFilesArchiveSize,
             uniqueHFilesSize, uniqueHFilesMobSize);
       }
     } finally {

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.snapshot;
+package org.apache.hadoop.hbase.fs.legacy.snapshot;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

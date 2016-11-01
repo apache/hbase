@@ -32,13 +32,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.executor.ExecutorType;
+import org.apache.hadoop.hbase.fs.StorageContext;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
@@ -96,17 +96,7 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
       LOG.info(msg);
       status.setStatus(msg);
 
-      ThreadPoolExecutor exec = SnapshotManifest.createExecutor(conf, "DisabledTableSnapshot");
-      try {
-        ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
-          @Override
-          public void editRegion(final HRegionInfo regionInfo) throws IOException {
-            snapshotManifest.addRegion(FSUtils.getTableDir(rootDir, snapshotTable), regionInfo);
-          }
-        });
-      } finally {
-        exec.shutdown();
-      }
+      masterStorage.addRegionsToSnapshot(snapshot, regions, StorageContext.TEMP);
     } catch (Exception e) {
       // make sure we capture the exception to propagate back to the client later
       String reason = "Failed snapshot " + ClientSnapshotDescriptionUtils.toString(snapshot)

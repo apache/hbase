@@ -16,13 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.snapshot;
+package org.apache.hadoop.hbase.fs.legacy.snapshot;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,19 +34,19 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
 import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.fs.legacy.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.snapshot.SnapshotRestoreMetaChanges;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -127,23 +127,27 @@ public class RestoreSnapshotHelper {
   private final HTableDescriptor tableDesc;
   private final Path tableDir;
 
+
   private final Configuration conf;
   private final FileSystem fs;
+  private final MasterStorage<? extends StorageIdentifier> masterStorage;
   private final boolean createBackRefs;
 
-  public RestoreSnapshotHelper(final Configuration conf, final SnapshotManifest manifest,
-      final HTableDescriptor tableDescriptor, final ForeignExceptionDispatcher monitor,
-      final MonitoredTask status) throws IOException {
-    this(conf, manifest, tableDescriptor, monitor, status, true);
+  public RestoreSnapshotHelper(final MasterStorage<? extends StorageIdentifier> masterStorage,
+      final SnapshotDescription snapshotDesc, final HTableDescriptor tableDescriptor,
+      final ForeignExceptionDispatcher monitor, final MonitoredTask status) throws IOException {
+    this(masterStorage, snapshotDesc, tableDescriptor, monitor, status, true);
   }
 
-  public RestoreSnapshotHelper(final Configuration conf, final SnapshotManifest manifest,
-      final HTableDescriptor tableDescriptor, final ForeignExceptionDispatcher monitor,
-      final MonitoredTask status, final boolean createBackRefs) throws IOException {
-    this.fs = FSUtils.getCurrentFileSystem(conf);
-    this.conf = conf;
-    this.snapshotManifest = manifest;
-    this.snapshotDesc = manifest.getSnapshotDescription();
+  public RestoreSnapshotHelper(final MasterStorage<? extends StorageIdentifier> masterStorage,
+      final SnapshotDescription snapshotDesc, final HTableDescriptor tableDescriptor,
+      final ForeignExceptionDispatcher monitor, final MonitoredTask status,
+      final boolean createBackRefs) throws IOException {
+    this.masterStorage = masterStorage;
+    this.conf = masterStorage.getConfiguration();
+    this.fs = masterStorage.getFileSystem();
+    this.snapshotDesc = snapshotDesc;
+    this.snapshotManifest = SnapshotManifest.open(conf, snapshotDesc);
     this.snapshotTable = TableName.valueOf(snapshotDesc.getTable());
     this.tableDesc = tableDescriptor;
     this.tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableDesc.getTableName());
@@ -156,7 +160,7 @@ public class RestoreSnapshotHelper {
    * Restore the on-disk table to a specified snapshot state.
    * @return the set of regions touched by the restore operation
    */
-  public RestoreMetaChanges restoreStorageRegions() throws IOException {
+  public SnapshotRestoreMetaChanges restoreStorageRegions() throws IOException {
     ThreadPoolExecutor exec = SnapshotManifest.createExecutor(conf, "RestoreSnapshot");
     try {
       return restoreHdfsRegions(exec);
@@ -165,7 +169,7 @@ public class RestoreSnapshotHelper {
     }
   }
 
-  private RestoreMetaChanges restoreHdfsRegions(final ThreadPoolExecutor exec) throws IOException {
+  private SnapshotRestoreMetaChanges restoreHdfsRegions(final ThreadPoolExecutor exec) throws IOException {
     LOG.info("starting restore table regions using snapshot=" + snapshotDesc);
 
     Map<String, SnapshotRegionManifest> regionManifests = snapshotManifest.getRegionManifestsMap();
@@ -174,7 +178,7 @@ public class RestoreSnapshotHelper {
       return null;
     }
 
-    RestoreMetaChanges metaChanges = new RestoreMetaChanges(tableDesc, parentsMap);
+    SnapshotRestoreMetaChanges metaChanges = new SnapshotRestoreMetaChanges(tableDesc, parentsMap);
 
     // Take a copy of the manifest.keySet() since we are going to modify
     // this instance, by removing the regions already present in the restore dir.
@@ -245,144 +249,6 @@ public class RestoreSnapshotHelper {
     LOG.info("finishing restore table regions using snapshot=" + snapshotDesc);
 
     return metaChanges;
-  }
-
-  /**
-   * Describe the set of operations needed to update hbase:meta after restore.
-   */
-  public static class RestoreMetaChanges {
-    private final Map<String, Pair<String, String> > parentsMap;
-    private final HTableDescriptor htd;
-
-    private List<HRegionInfo> regionsToRestore = null;
-    private List<HRegionInfo> regionsToRemove = null;
-    private List<HRegionInfo> regionsToAdd = null;
-
-    public RestoreMetaChanges(HTableDescriptor htd, Map<String, Pair<String, String> > parentsMap) {
-      this.parentsMap = parentsMap;
-      this.htd = htd;
-    }
-
-    public HTableDescriptor getTableDescriptor() {
-      return htd;
-    }
-
-    /**
-     * Returns the map of parent-children_pair.
-     * @return the map
-     */
-    public Map<String, Pair<String, String>> getParentToChildrenPairMap() {
-      return this.parentsMap;
-    }
-
-    /**
-     * @return true if there're new regions
-     */
-    public boolean hasRegionsToAdd() {
-      return this.regionsToAdd != null && this.regionsToAdd.size() > 0;
-    }
-
-    /**
-     * Returns the list of new regions added during the on-disk restore.
-     * The caller is responsible to add the regions to META.
-     * e.g MetaTableAccessor.addRegionsToMeta(...)
-     * @return the list of regions to add to META
-     */
-    public List<HRegionInfo> getRegionsToAdd() {
-      return this.regionsToAdd;
-    }
-
-    /**
-     * @return true if there're regions to restore
-     */
-    public boolean hasRegionsToRestore() {
-      return this.regionsToRestore != null && this.regionsToRestore.size() > 0;
-    }
-
-    /**
-     * Returns the list of 'restored regions' during the on-disk restore.
-     * The caller is responsible to add the regions to hbase:meta if not present.
-     * @return the list of regions restored
-     */
-    public List<HRegionInfo> getRegionsToRestore() {
-      return this.regionsToRestore;
-    }
-
-    /**
-     * @return true if there're regions to remove
-     */
-    public boolean hasRegionsToRemove() {
-      return this.regionsToRemove != null && this.regionsToRemove.size() > 0;
-    }
-
-    /**
-     * Returns the list of regions removed during the on-disk restore.
-     * The caller is responsible to remove the regions from META.
-     * e.g. MetaTableAccessor.deleteRegions(...)
-     * @return the list of regions to remove from META
-     */
-    public List<HRegionInfo> getRegionsToRemove() {
-      return this.regionsToRemove;
-    }
-
-    void setNewRegions(final HRegionInfo[] hris) {
-      if (hris != null) {
-        regionsToAdd = Arrays.asList(hris);
-      } else {
-        regionsToAdd = null;
-      }
-    }
-
-    void addRegionToRemove(final HRegionInfo hri) {
-      if (regionsToRemove == null) {
-        regionsToRemove = new LinkedList<HRegionInfo>();
-      }
-      regionsToRemove.add(hri);
-    }
-
-    void addRegionToRestore(final HRegionInfo hri) {
-      if (regionsToRestore == null) {
-        regionsToRestore = new LinkedList<HRegionInfo>();
-      }
-      regionsToRestore.add(hri);
-    }
-
-    public void updateMetaParentRegions(Connection connection,
-        final List<HRegionInfo> regionInfos) throws IOException {
-      if (regionInfos == null || parentsMap.isEmpty()) return;
-
-      // Extract region names and offlined regions
-      Map<String, HRegionInfo> regionsByName = new HashMap<String, HRegionInfo>(regionInfos.size());
-      List<HRegionInfo> parentRegions = new LinkedList<>();
-      for (HRegionInfo regionInfo: regionInfos) {
-        if (regionInfo.isSplitParent()) {
-          parentRegions.add(regionInfo);
-        } else {
-          regionsByName.put(regionInfo.getEncodedName(), regionInfo);
-        }
-      }
-
-      // Update Offline parents
-      for (HRegionInfo regionInfo: parentRegions) {
-        Pair<String, String> daughters = parentsMap.get(regionInfo.getEncodedName());
-        if (daughters == null) {
-          // The snapshot contains an unreferenced region.
-          // It will be removed by the CatalogJanitor.
-          LOG.warn("Skip update of unreferenced offline parent: " + regionInfo);
-          continue;
-        }
-
-        // One side of the split is already compacted
-        if (daughters.getSecond() == null) {
-          daughters.setSecond(daughters.getFirst());
-        }
-
-        LOG.debug("Update splits parent " + regionInfo.getEncodedName() + " -> " + daughters);
-        MetaTableAccessor.addRegionToMeta(connection, regionInfo,
-          regionsByName.get(daughters.getFirst()),
-          regionsByName.get(daughters.getSecond()));
-      }
-    }
   }
 
   /**
@@ -781,15 +647,16 @@ public class RestoreSnapshotHelper {
 
   /**
    * Copy the snapshot files for a snapshot scanner, discards meta changes.
-   * @param conf
-   * @param fs
-   * @param rootDir
+   * @param masterStorage the {@link MasterStorage} to use
    * @param restoreDir
    * @param snapshotName
    * @throws IOException
    */
-  public static RestoreMetaChanges copySnapshotForScanner(Configuration conf, FileSystem fs,
-      Path rootDir, Path restoreDir, String snapshotName) throws IOException {
+  public static SnapshotRestoreMetaChanges copySnapshotForScanner(
+      final MasterStorage<? extends StorageIdentifier> masterStorage, Path restoreDir,
+      String snapshotName) throws IOException {
+    Configuration conf = masterStorage.getConfiguration();
+    Path rootDir = ((LegacyPathIdentifier)masterStorage.getRootContainer()).path;
     // ensure that restore dir is not under root dir
     if (!restoreDir.getFileSystem(conf).getUri().equals(rootDir.getFileSystem(conf).getUri())) {
       throw new IllegalArgumentException("Filesystems for restore directory and HBase root " +
@@ -800,9 +667,8 @@ public class RestoreSnapshotHelper {
           "root directory. RootDir: " + rootDir + ", restoreDir: " + restoreDir);
     }
 
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
+    SnapshotDescription snapshotDesc = masterStorage.getSnapshot(snapshotName);
+    HTableDescriptor htd = masterStorage.getTableDescriptorForSnapshot(snapshotDesc);
 
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Restoring  snapshot '" + snapshotName + "' to directory " + restoreDir);
@@ -810,13 +676,13 @@ public class RestoreSnapshotHelper {
 
     // we send createBackRefs=false so that restored hfiles do not create back reference links
     // in the base hbase root dir.
-    RestoreSnapshotHelper helper = new RestoreSnapshotHelper(conf,
-        manifest, manifest.getTableDescriptor(), monitor, status, false);
-    RestoreMetaChanges metaChanges = helper.restoreStorageRegions(); // TODO: parallelize.
+    RestoreSnapshotHelper helper = new RestoreSnapshotHelper(masterStorage, snapshotDesc, htd,
+        monitor, status, false);
+    SnapshotRestoreMetaChanges metaChanges = helper.restoreStorageRegions(); // TODO: parallelize.
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Restored table dir:" + restoreDir);
-      FSUtils.logFileSystemState(fs, restoreDir, LOG);
+      FSUtils.logFileSystemState(masterStorage.getFileSystem(), restoreDir, LOG);
     }
     return metaChanges;
   }

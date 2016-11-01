@@ -26,16 +26,16 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.StorageIdentifier;
+import org.apache.hadoop.hbase.snapshot.SnapshotRestoreMetaChanges;
+import org.apache.hadoop.hbase.fs.legacy.snapshot.RestoreSnapshotHelper;
 
 /**
  * A Scanner which performs a scan over snapshot files. Using this class requires copying the
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * <p>
  * This also allows one to run the scan from an
  * online or offline hbase cluster. The snapshot files can be exported by using the
- * {@link org.apache.hadoop.hbase.snapshot.ExportSnapshot} tool,
+ * {@link org.apache.hadoop.hbase.fs.legacy.snapshot.ExportSnapshot} tool,
  * to a pure-hdfs cluster, and this scanner can be used to
  * run the scan directly over the snapshot files. The snapshot should not be deleted while there
  * are open scanners reading from snapshot files.
@@ -70,10 +70,8 @@ public class TableSnapshotScanner extends AbstractClientScanner {
 
   private static final Log LOG = LogFactory.getLog(TableSnapshotScanner.class);
 
-  private Configuration conf;
+  private MasterStorage<? extends StorageIdentifier> masterStorage;
   private String snapshotName;
-  private FileSystem fs;
-  private Path rootDir;
   private Path restoreDir;
   private Scan scan;
   private ArrayList<HRegionInfo> regions;
@@ -84,7 +82,7 @@ public class TableSnapshotScanner extends AbstractClientScanner {
 
   /**
    * Creates a TableSnapshotScanner.
-   * @param conf the configuration
+   * @param masterStorage the {@link MasterStorage} to use
    * @param restoreDir a temporary directory to copy the snapshot files into. Current user should
    * have write permissions to this directory, and this should not be a subdirectory of rootdir.
    * The scanner deletes the contents of the directory once the scanner is closed.
@@ -92,38 +90,20 @@ public class TableSnapshotScanner extends AbstractClientScanner {
    * @param scan a Scan representing scan parameters
    * @throws IOException in case of error
    */
-  public TableSnapshotScanner(Configuration conf, Path restoreDir,
-      String snapshotName, Scan scan) throws IOException {
-    this(conf, FSUtils.getRootDir(conf), restoreDir, snapshotName, scan);
-  }
-
-  /**
-   * Creates a TableSnapshotScanner.
-   * @param conf the configuration
-   * @param rootDir root directory for HBase.
-   * @param restoreDir a temporary directory to copy the snapshot files into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * The scanner deletes the contents of the directory once the scanner is closed.
-   * @param snapshotName the name of the snapshot to read from
-   * @param scan a Scan representing scan parameters
-   * @throws IOException in case of error
-   */
-  public TableSnapshotScanner(Configuration conf, Path rootDir,
+  public TableSnapshotScanner(MasterStorage<? extends StorageIdentifier> masterStorage,
       Path restoreDir, String snapshotName, Scan scan) throws IOException {
-    this.conf = conf;
+    this.masterStorage = masterStorage;
     this.snapshotName = snapshotName;
-    this.rootDir = rootDir;
     // restoreDir will be deleted in close(), use a unique sub directory
     this.restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
     this.scan = scan;
-    this.fs = rootDir.getFileSystem(conf);
     init();
   }
 
   private void init() throws IOException {
-    final RestoreSnapshotHelper.RestoreMetaChanges meta =
-      RestoreSnapshotHelper.copySnapshotForScanner(
-        conf, fs, rootDir, restoreDir, snapshotName);
+    // TODO: whats needed is temporary copy of a snapshot for scanning. Is separate API required?
+    final SnapshotRestoreMetaChanges meta = RestoreSnapshotHelper.copySnapshotForScanner(
+        masterStorage, restoreDir, snapshotName);
     final List<HRegionInfo> restoredRegions = meta.getRegionsToAdd();
 
     htd = meta.getTableDescriptor();
@@ -151,8 +131,8 @@ public class TableSnapshotScanner extends AbstractClientScanner {
         }
 
         HRegionInfo hri = regions.get(currentRegion);
-        currentRegionScanner = new ClientSideRegionScanner(conf, fs,
-          restoreDir, htd, hri, scan, scanMetrics);
+        currentRegionScanner = new ClientSideRegionScanner(masterStorage, restoreDir, htd, hri,
+            scan, scanMetrics);
         if (this.scanMetrics != null) {
           this.scanMetrics.countOfRegions.incrementAndGet();
         }
@@ -178,7 +158,8 @@ public class TableSnapshotScanner extends AbstractClientScanner {
       currentRegionScanner.close();
     }
     try {
-      fs.delete(this.restoreDir, true);
+      // TODO: same as above
+      masterStorage.getFileSystem().delete(this.restoreDir, true);
     } catch (IOException ex) {
       LOG.warn("Could not delete restore directory for the snapshot:" + ex);
     }
