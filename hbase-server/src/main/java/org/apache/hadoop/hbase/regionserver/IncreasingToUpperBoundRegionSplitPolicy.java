@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionSplitPolicy {
 
   private static final Log LOG = LogFactory.getLog(IncreasingToUpperBoundRegionSplitPolicy.class);
-  private long initialSize;
+  protected long initialSize;
 
   @Override
   protected void configureForRegion(HRegion region) {
@@ -116,7 +116,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
   }
 
   /**
-   * @return Region max size or {@code count of regions cubed * flushsize},
+   * @return Region max size or {@code count of regions cubed * 2 * flushsize},
    * which ever is smaller; guard against there being zero regions on this server.
    */
   protected long getSizeToCheck(final int tableRegionsCount) {
