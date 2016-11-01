@@ -67,7 +67,7 @@ public class TestStoreFileInfo {
   @Test
   public void testEqualsWithLink() throws IOException {
     Path origin = new Path("/origin");
-    Path tmp = new Path("/tmp");
+    Path tmp = TEST_UTIL.getDataTestDir();
     Path mob = new Path("/mob");
     Path archive = new Path("/archive");
     HFileLink link1 = new HFileLink(new Path(origin, "f1"), new Path(tmp, "f1"),
