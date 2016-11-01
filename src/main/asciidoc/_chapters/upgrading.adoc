@@ -226,6 +226,17 @@ NOTE: You cannot do a <<hbase.rolling.upgrade,rolling upgrade>> from 0.96.x to 1
 
 There are no known issues running a <<hbase.rolling.upgrade,rolling upgrade>> from HBase 0.98.x to HBase 1.0.0.
 
+[[upgrade1.0.scanner.caching]]
+==== Scanner Caching has Changed
+.From 0.98.x to 1.x
+In hbase-1.x, the default Scan caching 'number of rows' changed.
+Where in 0.98.x, it defaulted to 100, in later HBase versions, the
+default became Integer.MAX_VALUE. Not setting a cache size can make
+for Scans that run for a long time server-side, especially if 
+they are running with stringent filtering.  See
+link:https://issues.apache.org/jira/browse/HBASE-16973[Revisiting default value for hbase.client.scanner.caching]; 
+for further discussion.
+
 [[upgrade1.0.from.0.94]]
 ==== Upgrading to 1.0 from 0.94
 You cannot rolling upgrade from 0.94.x to 1.x.x.  You must stop your cluster, install the 1.x.x software, run the migration described at <<executing.the.0.96.upgrade>> (substituting 1.x.x. wherever we make mention of 0.96.x in the section below), and then restart. Be sure to upgrade your ZooKeeper if it is a version less than the required 3.4.x.
