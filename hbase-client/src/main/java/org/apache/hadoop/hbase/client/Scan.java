@@ -127,8 +127,9 @@ public class Scan extends Query {
   // scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName))
   static public final String SCAN_ATTRIBUTES_TABLE_NAME = "scan.attributes.table.name";
 
-  /*
-   * -1 means no caching
+  /**
+   * -1 means no caching specified and the value of {@link HConstants#HBASE_CLIENT_SCANNER_CACHING}
+   * (default to {@link HConstants#DEFAULT_HBASE_CLIENT_SCANNER_CACHING}) will be used
    */
   private int caching = -1;
   private long maxResultSize = -1;
