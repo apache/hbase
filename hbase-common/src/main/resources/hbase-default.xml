@@ -312,7 +312,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.regionserver.region.split.policy</name>
-    <value>org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy</value>
+    <value>org.apache.hadoop.hbase.regionserver.SteppingSplitPolicy</value>
     <description>
       A split policy determines when a region should be split. The various other split policies that
       are available currently are BusyRegionSplitPolicy, ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy,
