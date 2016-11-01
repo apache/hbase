@@ -43,7 +43,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy
 extends ConstantSizeRegionSplitPolicy {
   static final Log LOG =
     LogFactory.getLog(IncreasingToUpperBoundRegionSplitPolicy.class);
-  protected long initialSize;
+  private long initialSize;
 
   @Override
   protected void configureForRegion(HRegion region) {
@@ -93,7 +93,7 @@ extends ConstantSizeRegionSplitPolicy {
   }
 
   /**
-   * @return Region max size or <code>count of regions cubed * flushsize * 2, which ever is
+   * @return Region max size or <code>count of regions squared * flushsize, which ever is
    * smaller; guard against there being zero regions on this server.
    */
   protected long getSizeToCheck(final int tableRegionsCount) {
