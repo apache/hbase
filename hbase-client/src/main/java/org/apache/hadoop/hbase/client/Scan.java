@@ -135,8 +135,9 @@ public class Scan extends Query {
   @Deprecated
   public static final String HINT_LOOKAHEAD = "_look_ahead_";
 
-  /*
-   * -1 means no caching
+  /**
+   * -1 means no caching specified and the value of {@link HConstants#HBASE_CLIENT_SCANNER_CACHING}
+   * (default to {@link HConstants#DEFAULT_HBASE_CLIENT_SCANNER_CACHING}) will be used
    */
   private int caching = -1;
   private long maxResultSize = -1;
