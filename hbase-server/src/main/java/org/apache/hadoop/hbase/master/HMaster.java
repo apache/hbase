@@ -673,7 +673,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
 
     isActiveMaster = true;
-    Thread zombieDetector = new Thread(new InitializationMonitor(this));
+    Thread zombieDetector = new Thread(new InitializationMonitor(this),
+        "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
     zombieDetector.start();
 
     /*

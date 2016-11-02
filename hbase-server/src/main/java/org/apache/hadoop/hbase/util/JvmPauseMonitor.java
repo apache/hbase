@@ -83,9 +83,8 @@ public class JvmPauseMonitor {
   
   public void start() {
     Preconditions.checkState(monitorThread == null, "Already started");
-    monitorThread = new Thread(new Monitor());
+    monitorThread = new Thread(new Monitor(), "JvmPauseMonitor");
     monitorThread.setDaemon(true);
-    monitorThread.setName("JvmPauseMonitor");
     monitorThread.start();
   }
 

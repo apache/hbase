@@ -68,6 +68,7 @@ public class Leases extends HasThread {
    *          (milliseconds)
    */
   public Leases(final int leaseCheckFrequency) {
+    super("RegionServerLeases");  // thread name
     this.leaseCheckFrequency = leaseCheckFrequency;
     setDaemon(true);
   }

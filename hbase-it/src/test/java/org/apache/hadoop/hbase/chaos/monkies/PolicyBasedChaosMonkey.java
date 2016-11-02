@@ -113,7 +113,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
     for (int i=0; i<policies.length; i++) {
       policies[i].init(new Policy.PolicyContext(this.util));
-      Thread monkeyThread = new Thread(policies[i]);
+      Thread monkeyThread = new Thread(policies[i], "ChaosMonkeyThread");
       monkeyThread.start();
       monkeyThreads[i] = monkeyThread;
     }
