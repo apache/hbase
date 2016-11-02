@@ -583,16 +583,7 @@ public class HRegionServer extends HasThread implements
       }
     };
 
-    // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else
-    // underlying hadoop hdfs accessors will be going against wrong filesystem
-    // (unless all is set to defaults).
-    FSUtils.setFsDefault(this.conf, FSUtils.getRootDir(this.conf));
-    // Get fs instance used by this RS.  Do we use checksum verification in the hbase? If hbase
-    // checksum verification enabled, then automatically switch off hdfs checksum verification.
-    boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
-    this.fs = new HFileSystem(this.conf, useHBaseChecksum);
-    this.rootDir = FSUtils.getRootDir(this.conf);
-    this.tableDescriptors = getFsTableDescriptors();
+    initializeFileSystem();
 
     service = new ExecutorService(getServerName().toShortString());
     spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
@@ -646,6 +637,19 @@ public class HRegionServer extends HasThread implements
     this.compactedFileDischarger =
         new CompactedHFilesDischarger(cleanerInterval, (Stoppable)this, (RegionServerServices)this);
     choreService.scheduleChore(compactedFileDischarger);
+  }
+
+  private void initializeFileSystem() throws IOException {
+    // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else
+    // underlying hadoop hdfs accessors will be going against wrong filesystem
+    // (unless all is set to defaults).
+    FSUtils.setFsDefault(this.conf, FSUtils.getRootDir(this.conf));
+    // Get fs instance used by this RS.  Do we use checksum verification in the hbase? If hbase
+    // checksum verification enabled, then automatically switch off hdfs checksum verification.
+    boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
+    this.fs = new HFileSystem(this.conf, useHBaseChecksum);
+    this.rootDir = FSUtils.getRootDir(this.conf);
+    this.tableDescriptors = getFsTableDescriptors();
   }
 
   protected TableDescriptors getFsTableDescriptors() throws IOException {
@@ -1386,6 +1390,7 @@ public class HRegionServer extends HasThread implements
   protected void handleReportForDutyResponse(final RegionServerStartupResponse c)
   throws IOException {
     try {
+      boolean updateRootDir = false;
       for (NameStringPair e : c.getMapEntriesList()) {
         String key = e.getName();
         // The hostname the master sees us as.
@@ -1408,11 +1413,23 @@ public class HRegionServer extends HasThread implements
           }
           continue;
         }
+
         String value = e.getValue();
+        if (key.equals(HConstants.HBASE_DIR)) {
+          if (value != null && !value.equals(conf.get(HConstants.HBASE_DIR))) {
+            updateRootDir = true;
+          }
+        }
+
         if (LOG.isDebugEnabled()) {
-          LOG.info("Config from master: " + key + "=" + value);
+          LOG.debug("Config from master: " + key + "=" + value);
         }
         this.conf.set(key, value);
+      }
+
+      if (updateRootDir) {
+        // initialize file system by the config fs.defaultFS and hbase.rootdir from master
+        initializeFileSystem();
       }
 
       // hack! Maps DFSClient => RegionServer for logs.  HDFS made this

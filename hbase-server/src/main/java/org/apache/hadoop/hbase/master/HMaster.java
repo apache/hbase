@@ -406,7 +406,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
-    LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
+    LOG.info("hbase.rootdir=" + getRootDir() +
       ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
 
     // Disable usage of meta replicas in the master
