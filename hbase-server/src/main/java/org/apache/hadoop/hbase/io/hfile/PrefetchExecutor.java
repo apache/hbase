@@ -63,8 +63,8 @@ public class PrefetchExecutor {
       new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
-          Thread t = new Thread(r);
-          t.setName("hfile-prefetch-" + System.currentTimeMillis());
+          String name = "hfile-prefetch-" + System.currentTimeMillis();
+          Thread t = new Thread(r, name);
           t.setDaemon(true);
           return t;
         }
