@@ -90,7 +90,7 @@ public class LogRoller extends HasThread {
 
   /** @param server */
   public LogRoller(final Server server, final RegionServerServices services) {
-    super();
+    super("LogRoller");
     this.server = server;
     this.services = services;
     this.rollperiod = this.server.getConfiguration().

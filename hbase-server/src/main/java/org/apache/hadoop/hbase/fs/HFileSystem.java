@@ -273,7 +273,7 @@ public class HFileSystem extends FilterFileSystem {
       ClientProtocol cp1 = createReorderingProxy(namenode, lrb, conf);
       nf.set(dfsc, cp1);
       LOG.info("Added intercepting call to namenode#getBlockLocations so can do block reordering" +
-        " using class " + lrb.getClass());
+        " using class " + lrb.getClass().getName());
     } catch (NoSuchFieldException e) {
       LOG.warn("Can't modify the DFSClient#namenode field to add the location reorder.", e);
       return false;

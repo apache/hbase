@@ -44,11 +44,9 @@ public class RegionServicesForStores {
           new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
-              Thread t = new Thread(r);
-              t.setName(Thread.currentThread().getName()
-                  + "-inmemoryCompactions-"
-                  + System.currentTimeMillis());
-              return t;
+              String name = Thread.currentThread().getName() + "-inmemoryCompactions-" +
+                  System.currentTimeMillis();
+              return new Thread(r, name);
             }
           });
   private final HRegion region;

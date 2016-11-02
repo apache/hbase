@@ -233,8 +233,7 @@ public abstract class ModifyRegionUtils {
 
           @Override
           public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, threadNamePrefix + "-" + count++);
-            return t;
+            return new Thread(r, threadNamePrefix + "-" + count++);
           }
         });
     return regionOpenAndInitThreadPool;
