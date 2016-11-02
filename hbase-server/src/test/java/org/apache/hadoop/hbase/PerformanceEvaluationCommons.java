@@ -69,9 +69,7 @@ public class PerformanceEvaluationCommons {
     long now = System.currentTimeMillis();
     List<Thread> threads = new ArrayList<Thread>(count);
     for (int i = 0; i < count; i++) {
-      Thread t = new Thread(r);
-      t.setName("" + i);
-      threads.add(t);
+      threads.add(new Thread(r, "concurrentRead-" + i));
     }
     for (Thread t: threads) {
       t.start();
