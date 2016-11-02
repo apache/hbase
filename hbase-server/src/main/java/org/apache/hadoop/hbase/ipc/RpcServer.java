@@ -99,7 +99,9 @@ import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -304,6 +306,12 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   private final ByteBufferPool reservoir;
 
   private volatile boolean allowFallbackToSimpleAuth;
+
+  /**
+   * Used to get details for scan with a scanner_id<br/>
+   * TODO try to figure out a better way and remove reference from regionserver package later.
+   */
+  private RSRpcServices rsRpcServices;
 
   /**
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -2554,6 +2562,16 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     responseInfo.put("method", methodName);
     responseInfo.put("call", call);
     responseInfo.put("param", ProtobufUtil.getShortTextFormat(param));
+    if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
+      ClientProtos.ScanRequest request = ((ClientProtos.ScanRequest) param);
+      if (request.hasScannerId()) {
+        long scannerId = request.getScannerId();
+        String scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
+        if (scanDetails != null) {
+          responseInfo.put("scandetails", scanDetails);
+        }
+      }
+    }
     LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
   }
 
@@ -2885,6 +2903,11 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   @Override
   public RpcScheduler getScheduler() {
     return scheduler;
+  }
+
+  @Override
+  public void setRsRpcServices(RSRpcServices rsRpcServices) {
+    this.rsRpcServices = rsRpcServices;
   }
 
   private class ConnectionManager {

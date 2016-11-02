@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 
@@ -83,4 +84,6 @@ public interface RpcServerInterface {
   void refreshAuthManager(PolicyProvider pp);
 
   RpcScheduler getScheduler();
+
+  void setRsRpcServices(RSRpcServices rsRpcServices);
 }

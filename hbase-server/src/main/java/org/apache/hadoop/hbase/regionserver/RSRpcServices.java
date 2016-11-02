@@ -1065,6 +1065,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           bindAddress, // use final bindAddress for this server.
           rs.conf,
           rpcSchedulerFactory.create(rs.conf, this, rs));
+      rpcServer.setRsRpcServices(this);
     } catch (BindException be) {
       String configName = (this instanceof MasterRpcServices) ? HConstants.MASTER_PORT :
           HConstants.REGIONSERVER_PORT;
@@ -1128,6 +1129,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       return scannerHolder.s;
     }
     return null;
+  }
+
+  public String getScanDetailsWithId(long scannerId) {
+    RegionScanner scanner = getScanner(scannerId);
+    if (scanner == null) {
+      return null;
+    }
+    StringBuilder builder = new StringBuilder();
+    builder.append("table: ").append(scanner.getRegionInfo().getTable().getNameAsString());
+    builder.append(" region: ").append(scanner.getRegionInfo().getRegionNameAsString());
+    return builder.toString();
   }
 
   /**
