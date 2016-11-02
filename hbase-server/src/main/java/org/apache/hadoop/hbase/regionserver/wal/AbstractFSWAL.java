@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DELIMITER;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.management.ManagementFactory;
@@ -55,6 +53,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -70,6 +69,8 @@ import org.apache.htrace.NullScope;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS. Only one
@@ -103,6 +104,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
   private static final Log LOG = LogFactory.getLog(AbstractFSWAL.class);
 
   protected static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
+
+  private static final int DEFAULT_WAL_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // in ms, 5min
 
   /**
    * file system instance
@@ -161,6 +164,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
   protected final DrainBarrier closeBarrier = new DrainBarrier();
 
   protected final int slowSyncNs;
+
+  private final long walSyncTimeout;
 
   // If > than this size, roll the log.
   protected final long logrollsize;
@@ -381,6 +386,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
         + walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
     this.slowSyncNs =
         1000000 * conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS);
+    this.walSyncTimeout = conf.getLong("hbase.regionserver.hlog.sync.timeout",
+        DEFAULT_WAL_SYNC_TIMEOUT_MS);
     int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
     // Presize our map of SyncFutures by handler objects.
     this.syncFuturesByHandler = new ConcurrentHashMap<Thread, SyncFuture>(maxHandlersCount);
@@ -659,8 +666,14 @@ public abstract class AbstractFSWAL<W> implements WAL {
   protected Span blockOnSync(final SyncFuture syncFuture) throws IOException {
     // Now we have published the ringbuffer, halt the current thread until we get an answer back.
     try {
-      syncFuture.get();
+      syncFuture.get(walSyncTimeout);
       return syncFuture.getSpan();
+    } catch (TimeoutIOException tioe) {
+      // SyncFuture reuse by thread, if TimeoutIOException happens, ringbuffer
+      // still refer to it, so if this thread use it next time may get a wrong
+      // result.
+      this.syncFuturesByHandler.remove(Thread.currentThread());
+      throw tioe;
     } catch (InterruptedException ie) {
       LOG.warn("Interrupted", ie);
       throw convertInterruptedExceptionToIOException(ie);

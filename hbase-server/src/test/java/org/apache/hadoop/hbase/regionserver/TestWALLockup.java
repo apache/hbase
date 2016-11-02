@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -33,14 +32,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.wal.DamagedWALException;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
+import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,6 +55,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -285,6 +293,291 @@ public class TestWALLockup {
         LOG.info("On way out", e);
       }
     }
+  }
+
+  /**
+   * Reproduce locking up that happens when there's no further syncs after
+   * append fails, and causing an isolated sync then infinite wait. See
+   * HBASE-16960. If below is broken, we will see this test timeout because it
+   * is locked up.
+   * <p/>
+   * Steps for reproduce:<br/>
+   * 1. Trigger server abort through dodgyWAL1<br/>
+   * 2. Add a {@link DummyWALActionsListener} to dodgyWAL2 to cause ringbuffer
+   * event handler thread sleep for a while thus keeping {@code endOfBatch}
+   * false<br/>
+   * 3. Publish a sync then an append which will throw exception, check whether
+   * the sync could return
+   */
+  @Test(timeout = 20000)
+  public void testLockup16960() throws IOException {
+    // A WAL that we can have throw exceptions when a flag is set.
+    class DodgyFSLog extends FSHLog {
+      // Set this when want the WAL to start throwing exceptions.
+      volatile boolean throwException = false;
+
+      public DodgyFSLog(FileSystem fs, Path root, String logDir,
+          Configuration conf) throws IOException {
+        super(fs, root, logDir, conf);
+      }
+
+      @Override
+      protected Writer createWriterInstance(Path path) throws IOException {
+        final Writer w = super.createWriterInstance(path);
+        return new Writer() {
+          @Override
+          public void close() throws IOException {
+            w.close();
+          }
+
+          @Override
+          public void sync() throws IOException {
+            if (throwException) {
+              throw new IOException(
+                  "FAKE! Failed to replace a bad datanode...SYNC");
+            }
+            w.sync();
+          }
+
+          @Override
+          public void append(Entry entry) throws IOException {
+            if (throwException) {
+              throw new IOException(
+                  "FAKE! Failed to replace a bad datanode...APPEND");
+            }
+            w.append(entry);
+          }
+
+          @Override
+          public long getLength() throws IOException {
+            return w.getLength();
+          }
+        };
+      }
+
+      @Override
+      protected long doReplaceWriter(Path oldPath, Path newPath,
+          Writer nextWriter) throws IOException {
+        if (throwException) {
+          throw new FailedLogCloseException("oldPath=" + oldPath + ", newPath="
+              + newPath);
+        }
+        long oldFileLen = 0L;
+        oldFileLen = super.doReplaceWriter(oldPath, newPath, nextWriter);
+        return oldFileLen;
+      }
+    }
+
+    // Mocked up server and regionserver services. Needed below.
+    Server server = new DummyServer(CONF, ServerName.valueOf(
+        "hostname1.example.org", 1234, 1L).toString());
+    RegionServerServices services = Mockito.mock(RegionServerServices.class);
+
+    CONF.setLong("hbase.regionserver.hlog.sync.timeout", 10000);
+
+    // OK. Now I have my mocked up Server & RegionServerServices and dodgy WAL,
+    // go ahead with test.
+    FileSystem fs = FileSystem.get(CONF);
+    Path rootDir = new Path(dir + getName());
+    DodgyFSLog dodgyWAL1 = new DodgyFSLog(fs, rootDir, getName(), CONF);
+
+    Path rootDir2 = new Path(dir + getName() + "2");
+    final DodgyFSLog dodgyWAL2 = new DodgyFSLog(fs, rootDir2, getName() + "2",
+        CONF);
+    // Add a listener to force ringbuffer event handler sleep for a while
+    dodgyWAL2.registerWALActionsListener(new DummyWALActionsListener());
+
+    // I need a log roller running.
+    LogRoller logRoller = new LogRoller(server, services);
+    logRoller.addWAL(dodgyWAL1);
+    logRoller.addWAL(dodgyWAL2);
+    // There is no 'stop' once a logRoller is running.. it just dies.
+    logRoller.start();
+    // Now get a region and start adding in edits.
+    HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
+    final HRegion region = initHRegion(tableName, null, null, dodgyWAL1);
+    byte[] bytes = Bytes.toBytes(getName());
+    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+        Bytes.BYTES_COMPARATOR);
+    scopes.put(COLUMN_FAMILY_BYTES, 0);
+    try {
+      Put put = new Put(bytes);
+      put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
+      WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
+          htd.getTableName(), scopes);
+      WALEdit edit = new WALEdit();
+      CellScanner CellScanner = put.cellScanner();
+      assertTrue(CellScanner.advance());
+      edit.add(CellScanner.current());
+
+      LOG.info("SET throwing of exception on append");
+      dodgyWAL1.throwException = true;
+      // This append provokes a WAL roll request
+      dodgyWAL1.append(region.getRegionInfo(), key, edit, true);
+      boolean exception = false;
+      try {
+        dodgyWAL1.sync();
+      } catch (Exception e) {
+        exception = true;
+      }
+      assertTrue("Did not get sync exception", exception);
+
+      // LogRoller call dodgyWAL1.rollWriter get FailedLogCloseException and
+      // cause server abort.
+      try {
+        // wait LogRoller exit.
+        Thread.sleep(50);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+
+      final CountDownLatch latch = new CountDownLatch(1);
+
+      // make RingBufferEventHandler sleep 1s, so the following sync
+      // endOfBatch=false
+      key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
+          TableName.valueOf("sleep"), scopes);
+      dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
+
+      Thread t = new Thread("Sync") {
+        public void run() {
+          try {
+            dodgyWAL2.sync();
+          } catch (IOException e) {
+            LOG.info("In sync", e);
+          }
+          latch.countDown();
+          LOG.info("Sync exiting");
+        };
+      };
+      t.setDaemon(true);
+      t.start();
+      try {
+        // make sure sync have published.
+        Thread.sleep(100);
+      } catch (InterruptedException e1) {
+        e1.printStackTrace();
+      }
+      // make append throw DamagedWALException
+      key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
+          TableName.valueOf("DamagedWALException"), scopes);
+      dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
+
+      while (latch.getCount() > 0) {
+        Threads.sleep(100);
+      }
+      assertTrue(server.isAborted());
+    } finally {
+      if (logRoller != null) {
+        logRoller.interrupt();
+      }
+      try {
+        if (region != null) {
+          region.close();
+        }
+        if (dodgyWAL1 != null) {
+          dodgyWAL1.close();
+        }
+        if (dodgyWAL2 != null) {
+          dodgyWAL2.close();
+        }
+      } catch (Exception e) {
+        LOG.info("On way out", e);
+      }
+    }
+  }
+
+  static class DummyServer implements Server {
+    private Configuration conf;
+    private String serverName;
+    private boolean isAborted = false;
+
+    public DummyServer(Configuration conf, String serverName) {
+      this.conf = conf;
+      this.serverName = serverName;
+    }
+
+    @Override
+    public Configuration getConfiguration() {
+      return conf;
+    }
+
+    @Override
+    public ZooKeeperWatcher getZooKeeper() {
+      return null;
+    }
+
+    @Override
+    public CoordinatedStateManager getCoordinatedStateManager() {
+      return null;
+    }
+
+    @Override
+    public ClusterConnection getConnection() {
+      return null;
+    }
+
+    @Override
+    public MetaTableLocator getMetaTableLocator() {
+      return null;
+    }
+
+    @Override
+    public ServerName getServerName() {
+      return ServerName.valueOf(this.serverName);
+    }
+
+    @Override
+    public void abort(String why, Throwable e) {
+      LOG.info("Aborting " + serverName);
+      this.isAborted = true;
+    }
+
+    @Override
+    public boolean isAborted() {
+      return this.isAborted;
+    }
+
+    @Override
+    public void stop(String why) {
+      this.isAborted = true;
+    }
+
+    @Override
+    public boolean isStopped() {
+      return this.isAborted;
+    }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
+    }
+
+    @Override
+    public ClusterConnection getClusterConnection() {
+      return null;
+    }
+
+  }
+
+  static class DummyWALActionsListener extends WALActionsListener.Base {
+
+    @Override
+    public void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit)
+        throws IOException {
+      if (logKey.getTablename().getNameAsString().equalsIgnoreCase("sleep")) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      if (logKey.getTablename().getNameAsString()
+          .equalsIgnoreCase("DamagedWALException")) {
+        throw new DamagedWALException("Failed appending");
+      }
+    }
+
   }
 
   /**

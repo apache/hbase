@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Span;
 
 /**
@@ -96,6 +98,7 @@ class SyncFuture {
     this.doneTxid = NOT_DONE;
     this.txid = txid;
     this.span = span;
+    this.throwable = null;
     return this;
   }
 
@@ -154,9 +157,16 @@ class SyncFuture {
     throw new UnsupportedOperationException();
   }
 
-  synchronized long get() throws InterruptedException, ExecutionException {
+  synchronized long get(long timeout) throws InterruptedException,
+      ExecutionException, TimeoutIOException {
+    final long done = EnvironmentEdgeManager.currentTime() + timeout;
     while (!isDone()) {
       wait(1000);
+      if (EnvironmentEdgeManager.currentTime() >= done) {
+        throw new TimeoutIOException("Failed to get sync result after "
+            + timeout + " ms for txid=" + this.txid
+            + ", WAL system stuck?");
+      }
     }
     if (this.throwable != null) {
       throw new ExecutionException(this.throwable);

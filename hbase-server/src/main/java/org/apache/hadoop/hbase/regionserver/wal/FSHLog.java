@@ -1042,6 +1042,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           } catch (Exception e) {
             // Failed append. Record the exception.
             this.exception = e;
+            // invoking cleanupOutstandingSyncsOnException when append failed with exception,
+            // it will cleanup existing sync requests recorded in syncFutures but not offered to SyncRunner yet,
+            // so there won't be any sync future left over if no further truck published to disruptor.
+            cleanupOutstandingSyncsOnException(sequence,
+                this.exception instanceof DamagedWALException ? this.exception
+                    : new DamagedWALException("On sync", this.exception));
             // Return to keep processing events coming off the ringbuffer
             return;
           } finally {
