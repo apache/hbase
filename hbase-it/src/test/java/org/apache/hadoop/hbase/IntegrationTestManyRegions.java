@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -30,11 +29,11 @@ import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 
 /**
  * An integration test to detect regressions in HBASE-7220. Create
@@ -44,14 +43,12 @@ import static org.junit.Assert.fail;
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestManyRegions {
-
   private static final String CLASS_NAME
     = IntegrationTestManyRegions.class.getSimpleName();
 
   protected static final Log LOG
     = LogFactory.getLog(IntegrationTestManyRegions.class);
   protected static final TableName TABLE_NAME = TableName.valueOf(CLASS_NAME);
-  protected static final String COLUMN_NAME = "f";
   protected static final String REGION_COUNT_KEY
     = String.format("hbase.%s.regions", CLASS_NAME);
   protected static final String REGIONSERVER_COUNT_KEY
@@ -59,29 +56,36 @@ public class IntegrationTestManyRegions {
   protected static final String TIMEOUT_MINUTES_KEY
     = String.format("hbase.%s.timeoutMinutes", CLASS_NAME);
 
-  protected static final int DEFAULT_REGION_COUNT = 1000;
-  protected static final int DEFAULT_REGIONSERVER_COUNT = 1;
-  // running this test on my laptop consistently takes about 2.5
-  // minutes. A timeout of 4 minutes should be reasonably safe.
-  protected static final int DEFAULT_TIMEOUT_MINUTES = 4;
-  protected static final IntegrationTestingUtility util
+  protected static final IntegrationTestingUtility UTIL
     = new IntegrationTestingUtility();
 
-  protected static final int REGION_COUNT = util.getConfiguration()
+  protected static final int DEFAULT_REGION_COUNT = 1000;
+  protected static final int REGION_COUNT = UTIL.getConfiguration()
     .getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
-  protected static final int REGION_SERVER_COUNT = util.getConfiguration()
+  protected static final int DEFAULT_REGIONSERVER_COUNT = 1;
+  protected static final int REGION_SERVER_COUNT = UTIL.getConfiguration()
     .getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
-  protected static final int TIMEOUT_MINUTES = util.getConfiguration()
-    .getInt(TIMEOUT_MINUTES_KEY, DEFAULT_TIMEOUT_MINUTES);
+  // running on laptop, consistently takes about 2.5 minutes.
+  // A timeout of 5 minutes should be reasonably safe.
+  protected static final int DEFAULT_TIMEOUT_MINUTES = 5;
+  protected static final int TIMEOUT_MINUTES = UTIL.getConfiguration()
+      .getInt(TIMEOUT_MINUTES_KEY, DEFAULT_TIMEOUT_MINUTES);
+// This timeout is suitable since there is only single testcase in this test.
+  @ClassRule
+  public static final TestRule timeout = Timeout.builder()
+      .withTimeout(TIMEOUT_MINUTES, TimeUnit.MINUTES).withLookingForStuckThread(true)
+      .build();
+
+  private Admin admin;
 
   @Before
   public void setUp() throws Exception {
     LOG.info(String.format("Initializing cluster with %d region servers.",
       REGION_SERVER_COUNT));
-    util.initializeCluster(REGION_SERVER_COUNT);
+    UTIL.initializeCluster(REGION_SERVER_COUNT);
     LOG.info("Cluster initialized");
 
-    Admin admin = util.getHBaseAdmin();
+    admin = UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE_NAME)) {
       LOG.info(String.format("Deleting existing table %s.", TABLE_NAME));
       if (admin.isTableEnabled(TABLE_NAME)) admin.disableTable(TABLE_NAME);
@@ -94,69 +98,30 @@ public class IntegrationTestManyRegions {
   @After
   public void tearDown() throws IOException {
     LOG.info("Cleaning up after test.");
-    Admin admin = util.getHBaseAdmin();
     if (admin.tableExists(TABLE_NAME)) {
       if (admin.isTableEnabled(TABLE_NAME)) admin.disableTable(TABLE_NAME);
       admin.deleteTable(TABLE_NAME);
     }
     LOG.info("Restoring cluster.");
-    util.restoreCluster();
+    UTIL.restoreCluster();
     LOG.info("Cluster restored.");
   }
 
   @Test
   public void testCreateTableWithRegions() throws Exception {
-    CountDownLatch doneSignal = new CountDownLatch(1);
-    Worker worker = new Worker(doneSignal, util.getHBaseAdmin());
-    Thread t = new Thread(worker);
+    HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
+    desc.addFamily(new HColumnDescriptor("cf"));
+    SplitAlgorithm algo = new RegionSplitter.HexStringSplit();
+    byte[][] splits = algo.split(REGION_COUNT);
 
-    LOG.info("Launching worker thread to create the table.");
-    t.start();
-    boolean workerComplete = false;
-    workerComplete = doneSignal.await(TIMEOUT_MINUTES, TimeUnit.MINUTES);
-    if (!workerComplete) {
-      t.interrupt();
-      fail("Timeout limit expired.");
-    }
-    assertTrue("Table creation failed.", worker.isSuccess());
-  }
-
-  private static class Worker implements Runnable {
-    private final CountDownLatch doneSignal;
-    private final Admin admin;
-    private boolean success = false;
-
-    public Worker(final CountDownLatch doneSignal, final Admin admin) {
-      this.doneSignal = doneSignal;
-      this.admin = admin;
-    }
-
-    public boolean isSuccess() {
-      return this.success;
-    }
-
-    @Override
-    public void run() {
-      long startTime, endTime;
-      HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
-      desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
-      SplitAlgorithm algo = new RegionSplitter.HexStringSplit();
-      byte[][] splits = algo.split(REGION_COUNT);
-
-      LOG.info(String.format("Creating table %s with %d splits.",
-        TABLE_NAME, REGION_COUNT));
-      startTime = System.currentTimeMillis();
-      try {
-        admin.createTable(desc, splits);
-        endTime = System.currentTimeMillis();
-        success = true;
-        LOG.info(String.format("Pre-split table created successfully in %dms.",
-          (endTime - startTime)));
-      } catch (IOException e) {
-        LOG.error("Failed to create table", e);
-      } finally {
-        doneSignal.countDown();
-      }
+    LOG.info(String.format("Creating table %s with %d splits.", TABLE_NAME, REGION_COUNT));
+    long startTime = System.currentTimeMillis();
+    try {
+      admin.createTable(desc, splits);
+      LOG.info(String.format("Pre-split table created successfully in %dms.",
+          (System.currentTimeMillis() - startTime)));
+    } catch (IOException e) {
+      LOG.error("Failed to create table", e);
     }
   }
 }
