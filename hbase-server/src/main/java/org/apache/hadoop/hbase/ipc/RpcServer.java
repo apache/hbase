@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
@@ -94,6 +95,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
@@ -274,6 +276,12 @@ public class RpcServer implements RpcServerInterface {
 
   private final BoundedByteBufferPool reservoir;
 
+
+  /**
+   * Used to get details for scan with a scanner_id<br/>
+   * TODO try to figure out a better way and remove reference from regionserver package later.
+   */
+  private RSRpcServices rsRpcServices;
 
   /**
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
@@ -2207,6 +2215,16 @@ public class RpcServer implements RpcServerInterface {
     responseInfo.put("method", methodName);
     responseInfo.put("call", call);
     responseInfo.put("param", ProtobufUtil.getShortTextFormat(param));
+    if (param instanceof ClientProtos.ScanRequest && rsRpcServices != null) {
+      ClientProtos.ScanRequest request = ((ClientProtos.ScanRequest) param);
+      if (request.hasScannerId()) {
+        long scannerId = request.getScannerId();
+        String scanDetails = rsRpcServices.getScanDetailsWithId(scannerId);
+        if (scanDetails != null) {
+          responseInfo.put("scandetails", scanDetails);
+        }
+      }
+    }
     LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
   }
 
@@ -2529,5 +2547,10 @@ public class RpcServer implements RpcServerInterface {
   @Override
   public RpcScheduler getScheduler() {
     return scheduler;
+  }
+
+  @Override
+  public void setRsRpcServices(RSRpcServices rsRpcServices) {
+    this.rsRpcServices = rsRpcServices;
   }
 }
