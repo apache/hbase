@@ -157,7 +157,8 @@ public abstract class MultiThreadedAction {
     this.startKey = startKey;
     this.endKey = endKey;
     this.numThreads = numThreads;
-    (new Thread(new ProgressReporter(actionLetter))).start();
+    (new Thread(new ProgressReporter(actionLetter),
+        "MultiThreadedAction-ProgressReporter-" + System.currentTimeMillis())).start();
   }
 
   private static String formatTime(long elapsedTime) {

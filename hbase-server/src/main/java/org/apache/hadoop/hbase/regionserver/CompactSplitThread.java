@@ -118,9 +118,8 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
         new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setName(n + "-longCompactions-" + System.currentTimeMillis());
-            return t;
+            String name = n + "-longCompactions-" + System.currentTimeMillis();
+            return new Thread(r, name);
           }
       });
     this.longCompactions.setRejectedExecutionHandler(new Rejection());
@@ -129,9 +128,8 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
         new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setName(n + "-shortCompactions-" + System.currentTimeMillis());
-            return t;
+            String name = n + "-shortCompactions-" + System.currentTimeMillis();
+            return new Thread(r, name);
           }
       });
     this.shortCompactions
@@ -141,9 +139,8 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
             new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setName(n + "-splits-" + System.currentTimeMillis());
-            return t;
+            String name = n + "-splits-" + System.currentTimeMillis();
+            return new Thread(r, name);
           }
       });
     int mergeThreads = conf.getInt(MERGE_THREADS, MERGE_THREADS_DEFAULT);
@@ -151,9 +148,8 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
         mergeThreads, new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setName(n + "-merges-" + System.currentTimeMillis());
-            return t;
+            String name = n + "-merges-" + System.currentTimeMillis();
+            return new Thread(r, name);
           }
         });
   }

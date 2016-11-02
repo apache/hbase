@@ -722,6 +722,7 @@ public class BucketCache implements BlockCache, HeapSize {
     private volatile boolean writerEnabled = true;
 
     WriterThread(BlockingQueue<RAMQueueEntry> queue) {
+      super("BucketCacheWriterThread");
       this.inputQueue = queue;
     }
 

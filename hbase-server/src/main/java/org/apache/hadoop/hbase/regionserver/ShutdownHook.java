@@ -119,7 +119,8 @@ public class ShutdownHook {
             if (refs == 1) {
               LOG.info("Starting fs shutdown hook thread.");
               Thread fsShutdownHookThread = (fsShutdownHook instanceof Thread) ?
-                (Thread)fsShutdownHook : new Thread(fsShutdownHook);
+                (Thread)fsShutdownHook : new Thread(fsShutdownHook,
+                  fsShutdownHook.getClass().getSimpleName() + "-shutdown-hook");
               fsShutdownHookThread.start();
               Threads.shutdown(fsShutdownHookThread,
               this.conf.getLong(FS_SHUTDOWN_HOOK_WAIT, 30000));
