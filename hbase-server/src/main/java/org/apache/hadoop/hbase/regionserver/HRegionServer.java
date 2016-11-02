@@ -493,9 +493,6 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Starts a HRegionServer at the default location.
-   * @param conf
-   * @throws IOException
-   * @throws InterruptedException
    */
   public HRegionServer(Configuration conf) throws IOException, InterruptedException {
     this(conf, CoordinatedStateManagerFactory.getCoordinatedStateManager(conf));
@@ -503,13 +500,11 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Starts a HRegionServer at the default location
-   * @param conf
    * @param csm implementation of CoordinatedStateManager to be used
-   * @throws IOException
-   * @throws InterruptedException
    */
   public HRegionServer(Configuration conf, CoordinatedStateManager csm)
       throws IOException, InterruptedException {
+    super("RegionServer");  // thread name
     this.fsOk = true;
     this.conf = conf;
     checkCodecs(this.conf);

@@ -603,7 +603,7 @@ public final class Canary implements Tool {
         // Do monitor !!
         try {
           monitor = this.newMonitor(connection, index, args);
-          monitorThread = new Thread(monitor);
+          monitorThread = new Thread(monitor, "CanaryMonitor-" + System.currentTimeMillis());
           startTime = System.currentTimeMillis();
           monitorThread.start();
           while (!monitor.isDone()) {
