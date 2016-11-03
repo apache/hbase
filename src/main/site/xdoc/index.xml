@@ -77,7 +77,7 @@ Apache HBase is an open-source, distributed, versioned, non-relational database 
    <dd><p>The HBase distribution includes cryptographic software. See the export control notice <a href="export_control.html">here</a>
    </p></dd>
      <dt>Code Of Conduct</dt>
-   <dd><p>We expect participants in discussions on the HBase project mailing lists, IRC channels, and JIRA issues to abide by the Apache Software Foundation's <a href="http://apache.org/foundation/policies/conduct.html">Code of Conduct</a>. More information can be found <a href="coc.html">here</a>.
+   <dd><p>We expect participants in discussions on the HBase project mailing lists, Slack and IRC channels, and JIRA issues to abide by the Apache Software Foundation's <a href="http://apache.org/foundation/policies/conduct.html">Code of Conduct</a>. More information can be found <a href="coc.html">here</a>.
    </p></dd>
  </dl>
 </section>
