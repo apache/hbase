@@ -27,12 +27,16 @@ cxx_library(
         # TODO: move this out of exported
         # Once meta lookup works
         "meta-utils.h",
+        "get.h",
+        "time_range.h",
     ],
     srcs=[
         "cell.cc",
         "client.cc",
         "location-cache.cc",
         "meta-utils.cc",
+        "get.cc",
+        "time_range.cc",
     ],
     deps=[
         "//connection:connection",
@@ -56,6 +60,18 @@ cxx_test(name="location-cache-test",
 cxx_test(name="cell-test",
          srcs=[
              "cell-test.cc",
+         ],
+         deps=[":core", ],
+         run_test_separately=True, )
+cxx_test(name="get-test",
+         srcs=[
+             "get-test.cc",
+         ],
+         deps=[":core", ],
+         run_test_separately=True, )
+cxx_test(name="time_range-test",
+         srcs=[
+             "time_range-test.cc",
          ],
          deps=[":core", ],
          run_test_separately=True, )
