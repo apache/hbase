@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -182,6 +183,7 @@ public class TestSerialReplication {
   }
 
   @Test
+  @Ignore
   public void testRegionSplit() throws Exception {
     TableName tableName = TableName.valueOf("testRegionSplit");
     HTableDescriptor table = new HTableDescriptor(tableName);
@@ -271,6 +273,7 @@ public class TestSerialReplication {
   }
 
   @Test
+  @Ignore
   public void testRegionMerge() throws Exception {
     TableName tableName = TableName.valueOf("testRegionMerge");
     HTableDescriptor table = new HTableDescriptor(tableName);
