@@ -1015,7 +1015,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     @Override
     public void run() {
-      LOG.info(getName() + ": starting");
+      LOG.debug(getName() + ": starting");
       try {
         doRunLoop();
       } finally {

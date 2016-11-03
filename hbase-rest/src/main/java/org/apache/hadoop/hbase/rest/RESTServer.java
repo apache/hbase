@@ -213,6 +213,7 @@ public class RESTServer implements Constants {
    * @throws Exception exception
    */
   public static void main(String[] args) throws Exception {
+    LOG.info("***** STARTING service '" + RESTServer.class.getSimpleName() + "' *****");
     VersionInfo.logVersion();
     Configuration conf = HBaseConfiguration.create();
     UserProvider userProvider = UserProvider.instantiate(conf);
@@ -313,5 +314,6 @@ public class RESTServer implements Constants {
     // start server
     server.start();
     server.join();
+    LOG.info("***** STOPPING service '" + RESTServer.class.getSimpleName() + "' *****");
   }
 }

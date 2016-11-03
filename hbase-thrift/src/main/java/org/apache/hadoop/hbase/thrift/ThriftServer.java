@@ -235,11 +235,15 @@ public class ThriftServer {
    * @throws Exception
    */
   public static void main(String [] args) throws Exception {
+    LOG.info("***** STARTING service '" + ThriftServer.class.getSimpleName() + "' *****");
     VersionInfo.logVersion();
+    int exitCode = 0;
     try {
       new ThriftServer(HBaseConfiguration.create()).doMain(args);
     } catch (ExitCodeException ex) {
-      System.exit(ex.getExitCode());
+      exitCode = ex.getExitCode();
     }
+    LOG.info("***** STOPPING service '" + ThriftServer.class.getSimpleName() + "' *****");
+    System.exit(exitCode);
   }
 }

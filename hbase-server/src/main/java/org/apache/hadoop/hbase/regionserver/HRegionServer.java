@@ -1953,6 +1953,7 @@ public class HRegionServer extends HasThread implements
   @Override
   public void stop(final String msg) {
     if (!this.stopped) {
+      LOG.info("***** STOPPING region server '" + this + "' *****");
       try {
         if (this.rsHost != null) {
           this.rsHost.preStop(msg);
@@ -2226,7 +2227,7 @@ public class HRegionServer extends HasThread implements
    */
   @Override
   public void abort(String reason, Throwable cause) {
-    String msg = "ABORTING region server " + this + ": " + reason;
+    String msg = "***** ABORTING region server " + this + ": " + reason + " *****";
     if (cause != null) {
       LOG.fatal(msg, cause);
     } else {
@@ -2851,6 +2852,7 @@ public class HRegionServer extends HasThread implements
    * @see org.apache.hadoop.hbase.regionserver.HRegionServerCommandLine
    */
   public static void main(String[] args) throws Exception {
+    LOG.info("***** STARTING service '" + HRegionServer.class.getSimpleName() + "' *****");
     VersionInfo.logVersion();
     Configuration conf = HBaseConfiguration.create();
     @SuppressWarnings("unchecked")
