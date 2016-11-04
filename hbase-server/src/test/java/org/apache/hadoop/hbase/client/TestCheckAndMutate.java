@@ -77,7 +77,7 @@ public class TestCheckAndMutate {
           Bytes.toString(result.getValue(family, Bytes.toBytes("C"))).equals("c"));
 
       // put the same row again with C column deleted
-      RowMutations rm = new RowMutations(rowKey);
+      RowMutations rm = new RowMutations(rowKey, 2);
       put = new Put(rowKey);
       put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
       put.addColumn(family, Bytes.toBytes("B"), Bytes.toBytes("b"));

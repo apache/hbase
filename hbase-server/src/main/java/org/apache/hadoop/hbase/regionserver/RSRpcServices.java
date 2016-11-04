@@ -521,7 +521,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       MutationType type = action.getMutation().getMutateType();
       if (rm == null) {
-        rm = new RowMutations(action.getMutation().getRow().toByteArray());
+        rm = new RowMutations(action.getMutation().getRow().toByteArray(), actions.size());
       }
       switch (type) {
         case PUT:
@@ -573,7 +573,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       MutationType type = action.getMutation().getMutateType();
       if (rm == null) {
-        rm = new RowMutations(action.getMutation().getRow().toByteArray());
+        rm = new RowMutations(action.getMutation().getRow().toByteArray(), actions.size());
       }
       switch (type) {
         case PUT:

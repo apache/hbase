@@ -40,19 +40,25 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class RowMutations implements Row {
-  private final List<Mutation> mutations = new ArrayList<Mutation>();
-  private byte [] row;
+  private final List<Mutation> mutations;
+  private final byte [] row;
 
-  /** Constructor for Writable. DO NOT USE */
-  public RowMutations() {}
-
+  public RowMutations(byte [] row) {
+    this(row, -1);
+  }
   /**
    * Create an atomic mutation for the specified row.
    * @param row row key
+   * @param initialCapacity the initial capacity of the RowMutations
    */
-  public RowMutations(byte [] row) {
+  public RowMutations(byte [] row, int initialCapacity) {
     Mutation.checkRow(row);
     this.row = Bytes.copy(row);
+    if (initialCapacity <= 0) {
+      this.mutations = new ArrayList<>();
+    } else {
+      this.mutations = new ArrayList<>(initialCapacity);
+    }
   }
 
   /**

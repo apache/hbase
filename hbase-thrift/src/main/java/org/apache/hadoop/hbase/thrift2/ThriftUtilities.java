@@ -367,8 +367,8 @@ public class ThriftUtilities {
    * @return converted <code>RowMutations</code>
    */
   public static RowMutations rowMutationsFromThrift(TRowMutations in) throws IOException {
-    RowMutations out = new RowMutations(in.getRow());
     List<TMutation> mutations = in.getMutations();
+    RowMutations out = new RowMutations(in.getRow(), mutations.size());
     for (TMutation mutation : mutations) {
       if (mutation.isSetPut()) {
         out.add(putFromThrift(mutation.getPut()));
