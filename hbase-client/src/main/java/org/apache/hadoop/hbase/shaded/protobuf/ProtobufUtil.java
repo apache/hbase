@@ -2871,8 +2871,8 @@ public final class ProtobufUtil {
   public static HBaseProtos.SnapshotDescription
       createHBaseProtosSnapshotDesc(SnapshotDescription snapshotDesc) {
     HBaseProtos.SnapshotDescription.Builder builder = HBaseProtos.SnapshotDescription.newBuilder();
-    if (snapshotDesc.getTable() != null) {
-      builder.setTable(snapshotDesc.getTable());
+    if (snapshotDesc.getTableName() != null) {
+      builder.setTable(snapshotDesc.getTableNameAsString());
     }
     if (snapshotDesc.getName() != null) {
       builder.setName(snapshotDesc.getName());
@@ -2900,7 +2900,8 @@ public final class ProtobufUtil {
    */
   public static SnapshotDescription
       createSnapshotDesc(HBaseProtos.SnapshotDescription snapshotDesc) {
-    return new SnapshotDescription(snapshotDesc.getName(), snapshotDesc.getTable(),
+    return new SnapshotDescription(snapshotDesc.getName(),
+        snapshotDesc.hasTable() ? TableName.valueOf(snapshotDesc.getTable()) : null,
         createSnapshotType(snapshotDesc.getType()), snapshotDesc.getOwner(),
         snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
   }
@@ -3176,7 +3177,7 @@ public final class ProtobufUtil {
    * has a serialized {@link ServerName} in it.
    * @return Returns null if <code>data</code> is null else converts passed data
    * to a ServerName instance.
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   public static ServerName parseServerNameFrom(final byte [] data) throws DeserializationException {
     if (data == null || data.length <= 0) return null;

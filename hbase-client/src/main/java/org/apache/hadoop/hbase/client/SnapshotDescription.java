@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
+
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
@@ -25,30 +27,63 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class SnapshotDescription {
-  private String name;
-  private String table;
-  private SnapshotType snapShotType = SnapshotType.DISABLED;
-  private String owner;
-  private long creationTime = -1L;
-  private int version = -1;
+  private final String name;
+  private final TableName table;
+  private final SnapshotType snapShotType;
+  private final String owner;
+  private final long creationTime;
+  private final int version;
 
   public SnapshotDescription(String name) {
-    this(name, null);
+    this(name, (TableName)null);
   }
 
+  /**
+   * @deprecated Use the version with the TableName instance instead
+   */
+  @Deprecated
   public SnapshotDescription(String name, String table) {
+    this(name, TableName.valueOf(table));
+  }
+
+  public SnapshotDescription(String name, TableName table) {
     this(name, table, SnapshotType.DISABLED, null);
   }
 
+  /**
+   * @deprecated Use the version with the TableName instance instead
+   */
+  @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type) {
+    this(name, TableName.valueOf(table), type);
+  }
+
+  public SnapshotDescription(String name, TableName table, SnapshotType type) {
     this(name, table, type, null);
   }
 
+  /**
+   * @deprecated Use the version with the TableName instance instead
+   */
+  @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type, String owner) {
+    this(name, TableName.valueOf(table), type, owner);
+  }
+
+  public SnapshotDescription(String name, TableName table, SnapshotType type, String owner) {
     this(name, table, type, owner, -1, -1);
   }
 
+  /**
+   * @deprecated Use the version with the TableName instance instead
+   */
+  @Deprecated
   public SnapshotDescription(String name, String table, SnapshotType type, String owner,
+      long creationTime, int version) {
+    this(name, TableName.valueOf(table), type, owner, creationTime, version);
+  }
+
+  public SnapshotDescription(String name, TableName table, SnapshotType type, String owner,
       long creationTime, int version) {
     this.name = name;
     this.table = table;
@@ -62,7 +97,19 @@ public class SnapshotDescription {
     return this.name;
   }
 
+  /**
+   * @deprecated Use getTableName() or getTableNameAsString() instead.
+   */
+  @Deprecated
   public String getTable() {
+    return getTableNameAsString();
+  }
+
+  public String getTableNameAsString() {
+    return this.table.getNameAsString();
+  }
+
+  public TableName getTableName() {
     return this.table;
   }
 

@@ -486,7 +486,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
     <%for SnapshotDescription snapshotDesc : snapshots%>
     <%java>
-        TableName snapshotTable = TableName.valueOf(snapshotDesc.getTable());
+        TableName snapshotTable = snapshotDesc.getTableName();
     </%java>
     <tr>
         <td><a href="snapshot.jsp?name=<% snapshotDesc.getName() %>"><% snapshotDesc.getName() %></a> </td>

@@ -41,7 +41,7 @@
       if (snapshotName.equals(snapshotDesc.getName())) {
         snapshot = snapshotDesc;
         stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
-        snapshotTable = TableName.valueOf(snapshot.getTable());
+        snapshotTable = snapshot.getTableName();
         tableExists = admin.tableExists(snapshotTable);
         break;
       }

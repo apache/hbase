@@ -114,8 +114,7 @@ public final class SnapshotTestingUtils {
 
     List<SnapshotDescription> returnedSnapshots = new ArrayList<SnapshotDescription>();
     for (SnapshotDescription sd : snapshots) {
-      if (snapshotName.equals(sd.getName()) &&
-          tableName.equals(TableName.valueOf(sd.getTable()))) {
+      if (snapshotName.equals(sd.getName()) && tableName.equals(sd.getTableName())) {
         returnedSnapshots.add(sd);
       }
     }
@@ -129,8 +128,7 @@ public final class SnapshotTestingUtils {
    */
   public static void assertOneSnapshotThatMatches(Admin admin,
       HBaseProtos.SnapshotDescription snapshot) throws IOException {
-    assertOneSnapshotThatMatches(admin, snapshot.getName(),
-        TableName.valueOf(snapshot.getTable()));
+    assertOneSnapshotThatMatches(admin, snapshot.getName(), TableName.valueOf(snapshot.getTable()));
   }
 
   /**
@@ -145,7 +143,7 @@ public final class SnapshotTestingUtils {
 
     assertEquals("Should only have 1 snapshot", 1, snapshots.size());
     assertEquals(snapshotName, snapshots.get(0).getName());
-    assertEquals(tableName, TableName.valueOf(snapshots.get(0).getTable()));
+    assertEquals(tableName, snapshots.get(0).getTableName());
 
     return snapshots;
   }
@@ -271,7 +269,7 @@ public final class SnapshotTestingUtils {
    * @param snapshot: the snapshot to check
    * @param sleep: amount to sleep between checks to see if the snapshot is done
    * @throws ServiceException if the snapshot fails
-   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException 
+   * @throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException
    */
   public static void waitForSnapshotToComplete(HMaster master,
       HBaseProtos.SnapshotDescription snapshot, long sleep)
@@ -301,7 +299,7 @@ public final class SnapshotTestingUtils {
     CorruptedSnapshotException lastEx = null;
     while (tries++ < numTries) {
       try {
-        admin.snapshot(new SnapshotDescription(snapshotName, tableName,
+        admin.snapshot(new SnapshotDescription(snapshotName, TableName.valueOf(tableName),
             SnapshotType.valueOf(type.toString())));
         return;
       } catch (CorruptedSnapshotException cse) {

@@ -147,10 +147,10 @@ public class TestSnapshotFromAdmin {
     failSnapshotStart(admin, new SnapshotDescription("snap$hot"));
     failSnapshotStart(admin, new SnapshotDescription("snap:hot"));
     // check the table name also get verified
-    failSnapshotStart(admin, new SnapshotDescription("snapshot", ".table"));
-    failSnapshotStart(admin, new SnapshotDescription("snapshot", "-table"));
-    failSnapshotStart(admin, new SnapshotDescription("snapshot", "table fails"));
-    failSnapshotStart(admin, new SnapshotDescription("snapshot", "tab%le"));
+    failSnapshotDescriptorCreation("snapshot", ".table");
+    failSnapshotDescriptorCreation("snapshot", "-table");
+    failSnapshotDescriptorCreation("snapshot", "table fails");
+    failSnapshotDescriptorCreation("snapshot", "tab%le");
 
     // mock the master connection
     MasterKeepAliveConnection master = Mockito.mock(MasterKeepAliveConnection.class);
@@ -165,7 +165,7 @@ public class TestSnapshotFromAdmin {
           Mockito.any(IsSnapshotDoneRequest.class))).thenReturn(doneResponse);
 
       // make sure that we can use valid names
-    admin.snapshot(new SnapshotDescription("snapshot", "table"));
+    admin.snapshot(new SnapshotDescription("snapshot", TableName.valueOf("table")));
   }
 
   private void failSnapshotStart(Admin admin, SnapshotDescription snapshot)
@@ -175,6 +175,15 @@ public class TestSnapshotFromAdmin {
       fail("Snapshot should not have succeed with name:" + snapshot.getName());
     } catch (IllegalArgumentException e) {
       LOG.debug("Correctly failed to start snapshot:" + e.getMessage());
+    }
+  }
+
+  private void failSnapshotDescriptorCreation(final String snapshotName, final String tableName) {
+    try {
+      new SnapshotDescription(snapshotName, tableName);
+      fail("SnapshotDescription should not have succeed with name:" + snapshotName);
+    } catch (IllegalArgumentException e) {
+      LOG.debug("Correctly failed to create SnapshotDescription:" + e.getMessage());
     }
   }
 }

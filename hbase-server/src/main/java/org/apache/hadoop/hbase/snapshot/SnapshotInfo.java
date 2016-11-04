@@ -142,7 +142,7 @@ public final class SnapshotInfo extends Configured implements Tool {
         final SnapshotDescription snapshot)
     {
       this.snapshot = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
-      this.snapshotTable = TableName.valueOf(snapshot.getTable());
+      this.snapshotTable = snapshot.getTableName();
       this.conf = conf;
       this.fs = fs;
     }
@@ -158,9 +158,7 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     /** @return the snapshot descriptor */
     public SnapshotDescription getSnapshotDescription() {
-      return new SnapshotDescription(this.snapshot.getName(), this.snapshot.getTable(),
-          ProtobufUtil.createSnapshotType(this.snapshot.getType()), this.snapshot.getOwner(),
-          this.snapshot.getCreationTime(), this.snapshot.getVersion());
+      return ProtobufUtil.createSnapshotDesc(this.snapshot);
     }
 
     /** @return true if the snapshot is corrupted */
@@ -399,7 +397,7 @@ public final class SnapshotInfo extends Configured implements Tool {
         System.out.printf("%-20s | %20s | %s%n",
                           desc.getName(),
                           df.format(new Date(desc.getCreationTime())),
-                          desc.getTable());
+                          desc.getTableNameAsString());
       }
       return 0;
     }
@@ -485,9 +483,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     // Collect information about hfiles and logs in the snapshot
     final HBaseProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     final String table = snapshotDesc.getTable();
-    SnapshotDescription desc = new SnapshotDescription(snapshotDesc.getName(),
-        snapshotDesc.getTable(), ProtobufUtil.createSnapshotType(snapshotDesc.getType()),
-        snapshotDesc.getOwner(), snapshotDesc.getCreationTime(), snapshotDesc.getVersion());
+    final SnapshotDescription desc = ProtobufUtil.createSnapshotDesc(snapshotDesc);
     final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, desc);
     SnapshotReferenceUtil.concurrentVisitReferencedFiles(getConf(), fs, snapshotManifest,
         "SnapshotInfo",
@@ -566,9 +562,8 @@ public final class SnapshotInfo extends Configured implements Tool {
    */
   public static SnapshotStats getSnapshotStats(final Configuration conf,
       final SnapshotDescription snapshot) throws IOException {
-    HBaseProtos.SnapshotDescription snapshotDesc = ProtobufUtil.createHBaseProtosSnapshotDesc(
-        snapshot);
-
+    HBaseProtos.SnapshotDescription snapshotDesc =
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
     return getSnapshotStats(conf, snapshotDesc, null);
   }
 
@@ -616,9 +611,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     for (FileStatus snapshotDirStat: snapshots) {
       HBaseProtos.SnapshotDescription snapshotDesc =
           SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath());
-      snapshotLists.add(new SnapshotDescription(snapshotDesc.getName(),
-          snapshotDesc.getTable(), ProtobufUtil.createSnapshotType(snapshotDesc.getType()),
-          snapshotDesc.getOwner(), snapshotDesc.getCreationTime(), snapshotDesc.getVersion()));
+      snapshotLists.add(ProtobufUtil.createSnapshotDesc(snapshotDesc));
     }
     return snapshotLists;
   }
@@ -639,8 +632,8 @@ public final class SnapshotInfo extends Configured implements Tool {
       final ConcurrentHashMap<Path, Integer> filesMap,
       final AtomicLong uniqueHFilesArchiveSize, final AtomicLong uniqueHFilesSize,
       final AtomicLong uniqueHFilesMobSize) throws IOException {
-    HBaseProtos.SnapshotDescription snapshotDesc = ProtobufUtil.createHBaseProtosSnapshotDesc(
-        snapshot);
+    HBaseProtos.SnapshotDescription snapshotDesc =
+        ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
     Path rootDir = FSUtils.getRootDir(conf);
     final FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
 
@@ -651,9 +644,8 @@ public final class SnapshotInfo extends Configured implements Tool {
           @Override public void storeFile(final HRegionInfo regionInfo, final String family,
               final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
             if (!storeFile.hasReference()) {
-              HFileLink link = HFileLink
-                  .build(conf, TableName.valueOf(snapshot.getTable()), regionInfo.getEncodedName(),
-                      family, storeFile.getName());
+              HFileLink link = HFileLink.build(conf, snapshot.getTableName(),
+                  regionInfo.getEncodedName(), family, storeFile.getName());
               long size;
               Integer count;
               Path p;

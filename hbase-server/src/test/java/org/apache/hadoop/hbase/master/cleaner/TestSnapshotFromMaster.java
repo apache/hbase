@@ -206,9 +206,7 @@ public class TestSnapshotFromMaster {
 
     // then create a snapshot to the fs and make sure that we can find it when checking done
     snapshotName = "completed";
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    desc = desc.toBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnapshotInfo(desc, snapshotDir, fs);
+    desc = createSnapshot(snapshotName);
 
     builder.setSnapshot(desc);
     response = master.getMasterRpcServices().isSnapshotDone(null, builder.build());
@@ -225,9 +223,7 @@ public class TestSnapshotFromMaster {
 
     // write one snapshot to the fs
     String snapshotName = "completed";
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
+    SnapshotDescription snapshot = createSnapshot(snapshotName);
 
     // check that we get one snapshot
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
@@ -238,9 +234,7 @@ public class TestSnapshotFromMaster {
 
     // write a second snapshot
     snapshotName = "completed_two";
-    snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
+    snapshot = createSnapshot(snapshotName);
     expected.add(snapshot);
 
     // check that we get one snapshot
@@ -266,8 +260,7 @@ public class TestSnapshotFromMaster {
     }
 
     // write one snapshot to the fs
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
+    createSnapshot(snapshotName);
 
     // then delete the existing snapshot,which shouldn't cause an exception to be thrown
     master.getMasterRpcServices().deleteSnapshot(null, request);
@@ -404,5 +397,14 @@ public class TestSnapshotFromMaster {
    */
   private static void ensureHFileCleanersRun() {
     UTIL.getHBaseCluster().getMaster().getHFileCleaner().chore();
+  }
+
+  private SnapshotDescription createSnapshot(final String snapshotName) throws IOException {
+    SnapshotTestingUtils.SnapshotMock snapshotMock =
+      new SnapshotTestingUtils.SnapshotMock(UTIL.getConfiguration(), fs, rootDir);
+    SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder =
+      snapshotMock.createSnapshotV2(snapshotName, "test", 0);
+    builder.commit();
+    return builder.getSnapshotDescription();
   }
 }

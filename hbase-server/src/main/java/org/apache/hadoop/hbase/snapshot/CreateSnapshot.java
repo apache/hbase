@@ -34,7 +34,7 @@ import java.util.Arrays;
  * This is a command line class that will snapshot a given table.
  */
 public class CreateSnapshot extends AbstractHBaseTool {
-    private String tableName = null;
+    private TableName tableName = null;
     private String snapshotName = null;
     private String snapshotType = null;
 
@@ -53,7 +53,7 @@ public class CreateSnapshot extends AbstractHBaseTool {
 
     @Override
     protected void processOptions(CommandLine cmd) {
-        this.tableName = cmd.getOptionValue('t');
+        this.tableName = TableName.valueOf(cmd.getOptionValue('t'));
         this.snapshotName = cmd.getOptionValue('n');
         this.snapshotType = cmd.getOptionValue('s');
 

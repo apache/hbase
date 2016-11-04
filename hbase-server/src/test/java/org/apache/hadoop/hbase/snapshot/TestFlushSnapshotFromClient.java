@@ -282,7 +282,7 @@ public class TestFlushSnapshotFromClient {
 
     // take the snapshot async
     admin.takeSnapshotAsync(
-      new SnapshotDescription("asyncSnapshot", TABLE_NAME.getNameAsString(),
+      new SnapshotDescription("asyncSnapshot", TABLE_NAME,
         ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH)));
 
     // constantly loop, looking for the snapshot to complete
@@ -456,10 +456,10 @@ public class TestFlushSnapshotFromClient {
       HBaseProtos.SnapshotDescription.Builder builder =
           HBaseProtos.SnapshotDescription.newBuilder();
       if(i %2 ==0) {
-        descs[i] = new SnapshotDescription("ss" + i, TABLE_NAME.getNameAsString(),
+        descs[i] = new SnapshotDescription("ss" + i, TABLE_NAME,
           ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
       } else {
-        descs[i] = new SnapshotDescription("ss" + i, TABLE2_NAME.getNameAsString(),
+        descs[i] = new SnapshotDescription("ss" + i, TABLE2_NAME,
           ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
       }
     }
@@ -504,9 +504,9 @@ public class TestFlushSnapshotFromClient {
     int t1SnapshotsCount = 0;
     int t2SnapshotsCount = 0;
     for (SnapshotDescription ss : taken) {
-      if (TableName.valueOf(ss.getTable()).equals(TABLE_NAME)) {
+      if (ss.getTableName().equals(TABLE_NAME)) {
         t1SnapshotsCount++;
-      } else if (TableName.valueOf(ss.getTable()).equals(TABLE2_NAME)) {
+      } else if (ss.getTableName().equals(TABLE2_NAME)) {
         t2SnapshotsCount++;
       }
     }
