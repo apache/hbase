@@ -33,18 +33,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerLoad;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -484,6 +484,102 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     Delete delete = new Delete(put.getRow());
     htable2.delete(delete);
     runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
+  }
+
+  /**
+   * Load a row into a table, make sure the data is really the same,
+   * delete the row, make sure the delete marker is replicated,
+   * run verify replication with and without raw to check the results.
+   * @throws Exception
+   */
+  @Test(timeout=300000)
+  public void testVerifyRepJobWithRawOptions() throws Exception {
+    LOG.info("testVerifyRepJobWithRawOptions");
+
+    TableName tablename = TableName.valueOf("test_raw");
+    byte[] familyname = Bytes.toBytes("fam_raw");
+    byte[] row = Bytes.toBytes("row_raw");
+
+    HTableInterface lHtable1 = null;
+    HTableInterface lHtable2 = null;
+
+    try {
+      HTableDescriptor table = new HTableDescriptor(tablename);
+      HColumnDescriptor fam = new HColumnDescriptor(familyname);
+      fam.setMaxVersions(100);
+      fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
+      table.addFamily(fam);
+
+      HBaseAdmin admin1 = new HBaseAdmin(conf1);
+      try {
+        admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      } finally {
+        admin1.close();
+      }
+      utility1.waitUntilAllRegionsAssigned(tablename);
+
+      HBaseAdmin admin2 = new HBaseAdmin(conf2);
+      try {
+        admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      } finally {
+        admin2.close();
+      }
+      utility2.waitUntilAllRegionsAssigned(tablename);
+
+      lHtable1 = HConnectionManager.createConnection(conf1).getTable(tablename);
+      lHtable2 = HConnectionManager.createConnection(conf2).getTable(tablename);
+
+      Put put = new Put(row);
+      put.add(familyname, row, row);
+      lHtable1.put(put);
+
+      Get get = new Get(row);
+      for (int i = 0; i < NB_RETRIES; i++) {
+        if (i==NB_RETRIES-1) {
+          fail("Waited too much time for put replication");
+        }
+        Result res = lHtable2.get(get);
+        if (res.size() == 0) {
+          LOG.info("Row not available");
+          Thread.sleep(SLEEP_TIME);
+        } else {
+          assertArrayEquals(res.value(), row);
+          break;
+        }
+      }
+
+      Delete del = new Delete(row);
+      lHtable1.delete(del);
+
+      get = new Get(row);
+      for (int i = 0; i < NB_RETRIES; i++) {
+        if (i==NB_RETRIES-1) {
+          fail("Waited too much time for del replication");
+        }
+        Result res = lHtable2.get(get);
+        if (res.size() >= 1) {
+          LOG.info("Row not deleted");
+          Thread.sleep(SLEEP_TIME);
+        } else {
+          break;
+        }
+      }
+
+      // Checking verifyReplication for the default behavior.
+      String[] argsWithoutRaw = new String[] {PEER_ID, tablename.getNameAsString()};
+      runVerifyReplication(argsWithoutRaw, 0, 0);
+
+      // Checking verifyReplication with raw
+      String[] argsWithRawAsTrue = new String[] {"--raw", PEER_ID, tablename.getNameAsString()};
+      runVerifyReplication(argsWithRawAsTrue, 1, 0);
+    } finally {
+      if (lHtable1 != null) {
+        lHtable1.close();
+      }
+      if (lHtable2 != null) {
+        lHtable2.close();
+      }
+    }
   }
 
   private void runVerifyReplication(String[] args, int expectedGoodRows, int expectedBadRows)
