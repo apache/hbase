@@ -87,6 +87,7 @@ public class VerifyReplication extends Configured implements Tool {
   static String rowPrefixes = null;
   static int sleepMsBeforeReCompare = 0;
   static boolean verbose = false;
+  static boolean includeDeletedCells = false;
 
   /**
    * Map-only comparator for 2 tables
@@ -135,6 +136,8 @@ public class VerifyReplication extends Configured implements Tool {
             scan.addFamily(Bytes.toBytes(fam));
           }
         }
+        boolean includeDeletedCells = conf.getBoolean(NAME + ".includeDeletedCells", false);
+        scan.setRaw(includeDeletedCells);
         String rowPrefixes = conf.get(NAME + ".rowPrefixes", null);
         setRowPrefixFilter(scan, rowPrefixes);
         scan.setTimeRange(startTime, endTime);
@@ -314,6 +317,7 @@ public class VerifyReplication extends Configured implements Tool {
     conf.setInt(NAME +".sleepMsBeforeReCompare", sleepMsBeforeReCompare);
     conf.set(NAME + ".delimiter", delimiter);
     conf.setBoolean(NAME +".verbose", verbose);
+    conf.setBoolean(NAME +".includeDeletedCells", includeDeletedCells);
     if (families != null) {
       conf.set(NAME+".families", families);
     }
@@ -338,6 +342,7 @@ public class VerifyReplication extends Configured implements Tool {
 
     Scan scan = new Scan();
     scan.setTimeRange(startTime, endTime);
+    scan.setRaw(includeDeletedCells);
     if (versions >= 0) {
       scan.setMaxVersions(versions);
       LOG.info("Number of versions set to " + versions);
@@ -415,6 +420,12 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
+        final String includeDeletedCellsArgKey = "--raw";
+        if (cmd.equals(includeDeletedCellsArgKey)) {
+          includeDeletedCells = true;
+          continue;
+        }
+
         final String versionsArgKey = "--versions=";
         if (cmd.startsWith(versionsArgKey)) {
           versions = Integer.parseInt(cmd.substring(versionsArgKey.length()));
@@ -485,6 +496,7 @@ public class VerifyReplication extends Configured implements Tool {
     families = null;
     peerId = null;
     rowPrefixes = null;
+    includeDeletedCells = false;
   }
 
   /*
@@ -503,6 +515,7 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println("              without endtime means from starttime to forever");
     System.err.println(" endtime      end of the time range");
     System.err.println(" versions     number of cell versions to verify");
+    System.err.println(" raw          includes raw scan if given in options");
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println(" row-prefixes comma-separated list of row key prefixes to filter on ");
     System.err.println(" delimiter    the delimiter used in display around rowkey");
