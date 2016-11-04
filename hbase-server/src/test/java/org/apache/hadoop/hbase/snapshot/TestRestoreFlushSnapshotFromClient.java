@@ -26,10 +26,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -115,8 +114,7 @@ public class TestRestoreFlushSnapshotFromClient {
     logFSTree();
 
     // take a snapshot
-    admin.snapshot(Bytes.toString(snapshotName0), tableName,
-      ProtobufUtil.createSnapshotType(SnapshotDescription.Type.FLUSH));
+    admin.snapshot(Bytes.toString(snapshotName0), tableName, SnapshotType.FLUSH);
 
     LOG.info("=== after snapshot with 500 rows");
     logFSTree();
@@ -128,8 +126,7 @@ public class TestRestoreFlushSnapshotFromClient {
     logFSTree();
 
     // take a snapshot of the updated table
-    admin.snapshot(Bytes.toString(snapshotName1), tableName,
-      ProtobufUtil.createSnapshotType(SnapshotDescription.Type.FLUSH));
+    admin.snapshot(Bytes.toString(snapshotName1), tableName, SnapshotType.FLUSH);
     LOG.info("=== after snapshot with 1000 rows");
     logFSTree();
     table.close();
@@ -194,8 +191,7 @@ public class TestRestoreFlushSnapshotFromClient {
     TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(UTIL, clonedTableName, snapshot0Rows);
-    admin.snapshot(Bytes.toString(snapshotName2), clonedTableName,
-      ProtobufUtil.createSnapshotType(SnapshotDescription.Type.FLUSH));
+    admin.snapshot(Bytes.toString(snapshotName2), clonedTableName, SnapshotType.FLUSH);
     UTIL.deleteTable(clonedTableName);
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);

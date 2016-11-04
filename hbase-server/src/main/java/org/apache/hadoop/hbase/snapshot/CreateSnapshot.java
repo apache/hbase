@@ -18,25 +18,27 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
+import java.util.Arrays;
+import java.util.Locale;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import java.util.Arrays;
-
 
 /**
  * This is a command line class that will snapshot a given table.
  */
 public class CreateSnapshot extends AbstractHBaseTool {
+    private SnapshotType snapshotType = SnapshotType.FLUSH;
     private TableName tableName = null;
     private String snapshotName = null;
-    private String snapshotType = null;
 
     public static void main(String[] args) {
         new CreateSnapshot().doStaticMain(args);
@@ -48,15 +50,18 @@ public class CreateSnapshot extends AbstractHBaseTool {
         this.addRequiredOptWithArg("n", "name", "The name of the created snapshot");
         this.addOptWithArg("s", "snapshot_type",
                 "Snapshot Type. FLUSH is default. Posible values are "
-                + Arrays.toString(HBaseProtos.SnapshotDescription.Type.values()));
+                + Arrays.toString(SnapshotType.values()));
     }
 
     @Override
     protected void processOptions(CommandLine cmd) {
         this.tableName = TableName.valueOf(cmd.getOptionValue('t'));
         this.snapshotName = cmd.getOptionValue('n');
-        this.snapshotType = cmd.getOptionValue('s');
-
+        String snapshotTypeName = cmd.getOptionValue('s');
+        if (snapshotTypeName != null) {
+          snapshotTypeName = snapshotTypeName.toUpperCase(Locale.ROOT);
+          this.snapshotType = SnapshotType.valueOf(snapshotTypeName);
+        }
     }
 
     @Override
@@ -66,13 +71,9 @@ public class CreateSnapshot extends AbstractHBaseTool {
         try {
             connection = ConnectionFactory.createConnection(getConf());
             admin = connection.getAdmin();
-            HBaseProtos.SnapshotDescription.Type type = HBaseProtos.SnapshotDescription.Type.FLUSH;
-            if (snapshotType != null) {
-                type = ProtobufUtil.createProtosSnapShotDescType(snapshotName);
-            }
-            admin.snapshot(new SnapshotDescription(snapshotName, tableName,
-              ProtobufUtil.createSnapshotType(type)));
+            admin.snapshot(new SnapshotDescription(snapshotName, tableName, snapshotType));
         } catch (Exception e) {
+            System.err.println("failed to take the snapshot: " + e.getMessage());
             return -1;
         } finally {
             if (admin != null) {

@@ -292,15 +292,13 @@ public final class SnapshotTestingUtils {
    * Take snapshot with maximum of numTries attempts, ignoring CorruptedSnapshotException
    * except for the last CorruptedSnapshotException
    */
-  public static void snapshot(Admin admin,
-      final String snapshotName, final String tableName,
-      HBaseProtos.SnapshotDescription.Type type, int numTries) throws IOException {
+  public static void snapshot(Admin admin, final String snapshotName, final TableName tableName,
+      final SnapshotType type, final int numTries) throws IOException {
     int tries = 0;
     CorruptedSnapshotException lastEx = null;
     while (tries++ < numTries) {
       try {
-        admin.snapshot(new SnapshotDescription(snapshotName, TableName.valueOf(tableName),
-            SnapshotType.valueOf(type.toString())));
+        admin.snapshot(snapshotName, tableName, type);
         return;
       } catch (CorruptedSnapshotException cse) {
         LOG.warn("Got CorruptedSnapshotException", cse);

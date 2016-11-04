@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -150,8 +151,7 @@ public class TestFlushSnapshotFromClient {
     // take a snapshot of the enabled table
     String snapshotString = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
-    admin.snapshot(snapshotString, TABLE_NAME,
-      ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
+    admin.snapshot(snapshotString, TABLE_NAME, SnapshotType.FLUSH);
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
@@ -186,8 +186,7 @@ public class TestFlushSnapshotFromClient {
     // take a snapshot of the enabled table
     String snapshotString = "skipFlushTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
-    admin.snapshot(snapshotString, TABLE_NAME,
-      ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.SKIPFLUSH));
+    admin.snapshot(snapshotString, TABLE_NAME, SnapshotType.SKIPFLUSH);
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
@@ -266,8 +265,7 @@ public class TestFlushSnapshotFromClient {
 
     // snapshot the non-existant table
     try {
-      admin.snapshot("fail", tableName,
-        ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
+      admin.snapshot("fail", tableName, SnapshotType.FLUSH);
       fail("Snapshot succeeded even though there is not table.");
     } catch (SnapshotCreationException e) {
       LOG.info("Correctly failed to snapshot a non-existant table:" + e.getMessage());
@@ -282,8 +280,7 @@ public class TestFlushSnapshotFromClient {
 
     // take the snapshot async
     admin.takeSnapshotAsync(
-      new SnapshotDescription("asyncSnapshot", TABLE_NAME,
-        ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH)));
+      new SnapshotDescription("asyncSnapshot", TABLE_NAME, SnapshotType.FLUSH));
 
     // constantly loop, looking for the snapshot to complete
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
@@ -305,8 +302,7 @@ public class TestFlushSnapshotFromClient {
 
     // Take a snapshot
     String snapshotBeforeMergeName = "snapshotBeforeMerge";
-    admin.snapshot(snapshotBeforeMergeName, TABLE_NAME,
-      ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
+    admin.snapshot(snapshotBeforeMergeName, TABLE_NAME, SnapshotType.FLUSH);
 
     // Clone the table
     TableName cloneBeforeMergeName = TableName.valueOf("cloneBeforeMerge");
@@ -374,8 +370,7 @@ public class TestFlushSnapshotFromClient {
 
     // Take a snapshot
     String snapshotName = "snapshotAfterMerge";
-    SnapshotTestingUtils.snapshot(admin, snapshotName, TABLE_NAME.getNameAsString(),
-      HBaseProtos.SnapshotDescription.Type.FLUSH, 3);
+    SnapshotTestingUtils.snapshot(admin, snapshotName, TABLE_NAME, SnapshotType.FLUSH, 3);
 
     // Clone the table
     TableName cloneName = TableName.valueOf("cloneMerge");
@@ -453,14 +448,10 @@ public class TestFlushSnapshotFromClient {
     // build descriptions
     SnapshotDescription[] descs = new SnapshotDescription[ssNum];
     for (int i = 0; i < ssNum; i++) {
-      HBaseProtos.SnapshotDescription.Builder builder =
-          HBaseProtos.SnapshotDescription.newBuilder();
-      if(i %2 ==0) {
-        descs[i] = new SnapshotDescription("ss" + i, TABLE_NAME,
-          ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
+      if(i % 2 ==0) {
+        descs[i] = new SnapshotDescription("ss" + i, TABLE_NAME, SnapshotType.FLUSH);
       } else {
-        descs[i] = new SnapshotDescription("ss" + i, TABLE2_NAME,
-          ProtobufUtil.createSnapshotType(HBaseProtos.SnapshotDescription.Type.FLUSH));
+        descs[i] = new SnapshotDescription("ss" + i, TABLE2_NAME, SnapshotType.FLUSH);
       }
     }
 
