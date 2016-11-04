@@ -1121,7 +1121,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
 
     public synchronized boolean hasParentLock(final Procedure proc) {
-      return proc.hasParent() && isLockOwner(proc.getParentProcId());
+      return proc.hasParent() &&
+        (isLockOwner(proc.getParentProcId()) || isLockOwner(proc.getRootProcId()));
     }
 
     public synchronized boolean hasLockAccess(final Procedure proc) {
@@ -1159,7 +1160,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     @Override
     public String toString() {
       return String.format("%s(%s, suspended=%s xlock=%s sharedLock=%s size=%s)",
-        getClass().getSimpleName(), key, isSuspended(), hasExclusiveLock(), sharedLock, size());
+          getClass().getSimpleName(), key, isSuspended(),
+          hasExclusiveLock() ? "true (" + exclusiveLockProcIdOwner + ")" : "false",
+          sharedLock, size());
     }
   }
 

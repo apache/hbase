@@ -570,27 +570,57 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
   }
 
-  @Test
-  public void testParentXLockAndChildrenSharedLock() throws Exception {
-    final TableName tableName = TableName.valueOf("testParentXLockAndChildrenSharedLock");
-    final HRegionInfo[] regions = new HRegionInfo[] {
+  private static HRegionInfo[] generateRegionInfo(final TableName tableName) {
+    return new HRegionInfo[] {
       new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b")),
       new HRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c")),
       new HRegionInfo(tableName, Bytes.toBytes("c"), Bytes.toBytes("d")),
     };
+  }
 
-    queue.addBack(new TestTableProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.CREATE));
+  @Test
+  public void testParentXLockAndChildrenSharedLock() throws Exception {
+    final TableName tableName = TableName.valueOf("testParentXLockAndChildrenSharedLock");
+    final HRegionInfo[] regions = generateRegionInfo(tableName);
+    final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
+    for (int i = 0; i < regions.length; ++i) {
+      childProcs[i] = new TestRegionProcedure(1, 2 + i, tableName,
+          TableProcedureInterface.TableOperationType.ASSIGN, regions[i]);
+    }
+    testInheritedXLockAndChildrenSharedLock(tableName,
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.CREATE),
+      childProcs
+    );
+  }
+
+  @Test
+  public void testRootXLockAndChildrenSharedLock() throws Exception {
+    final TableName tableName = TableName.valueOf("testRootXLockAndChildrenSharedLock");
+    final HRegionInfo[] regions = generateRegionInfo(tableName);
+    final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
+    for (int i = 0; i < regions.length; ++i) {
+      childProcs[i] = new TestRegionProcedure(1, 2, 3 + i, tableName,
+          TableProcedureInterface.TableOperationType.ASSIGN, regions[i]);
+    }
+    testInheritedXLockAndChildrenSharedLock(tableName,
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.CREATE),
+      childProcs
+    );
+  }
+
+  private void testInheritedXLockAndChildrenSharedLock(final TableName tableName,
+      final TestTableProcedure rootProc, final TestRegionProcedure[] childProcs)
+      throws Exception {
+    queue.addBack(rootProc);
 
     // fetch and acquire first xlock proc
     Procedure parentProc = queue.poll();
-    assertEquals(1, parentProc.getProcId());
+    assertEquals(rootProc, parentProc);
     assertTrue(queue.tryAcquireTableExclusiveLock(parentProc, tableName));
 
     // add child procedure
-    for (int i = 0; i < regions.length; ++i) {
-      queue.addFront(new TestRegionProcedure(1, 1 + i, tableName,
-          TableProcedureInterface.TableOperationType.ASSIGN, regions[i]));
+    for (int i = 0; i < childProcs.length; ++i) {
+      queue.addFront(childProcs[i]);
     }
 
     // add another xlock procedure (no parent)
@@ -598,13 +628,11 @@ public class TestMasterProcedureScheduler {
         TableProcedureInterface.TableOperationType.EDIT));
 
     // fetch and execute child
-    for (int i = 0; i < regions.length; ++i) {
-      final int regionIdx = regions.length - i - 1;
-      Procedure childProc = queue.poll();
+    for (int i = 0; i < childProcs.length; ++i) {
+      TestRegionProcedure childProc = (TestRegionProcedure)queue.poll();
       LOG.debug("fetch children " + childProc);
-      assertEquals(1 + regionIdx, childProc.getProcId());
-      assertEquals(false, queue.waitRegion(childProc, regions[regionIdx]));
-      queue.wakeRegion(childProc, regions[regionIdx]);
+      assertEquals(false, queue.waitRegions(childProc, tableName, childProc.getRegionInfo()));
+      queue.wakeRegions(childProc, tableName, childProc.getRegionInfo());
     }
 
     // nothing available, until xlock release
@@ -623,22 +651,37 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testParentXLockAndChildrenXLock() throws Exception {
     final TableName tableName = TableName.valueOf("testParentXLockAndChildrenXLock");
+    testInheritedXLockAndChildrenXLock(tableName,
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
+      new TestTableProcedure(1, 2, tableName, TableProcedureInterface.TableOperationType.EDIT)
+    );
+  }
 
-    queue.addBack(new TestTableProcedure(1, tableName,
-        TableProcedureInterface.TableOperationType.EDIT));
+  @Test
+  public void testRootXLockAndChildrenXLock() throws Exception {
+    final TableName tableName = TableName.valueOf("testRootXLockAndChildrenXLock");
+    // simulate 3 procedures: 1 (root), (2) child of root, (3) child of proc-2
+    testInheritedXLockAndChildrenXLock(tableName,
+      new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
+      new TestTableProcedure(1, 2, 3, tableName, TableProcedureInterface.TableOperationType.EDIT)
+    );
+  }
+
+  private void testInheritedXLockAndChildrenXLock(final TableName tableName,
+      final TestTableProcedure rootProc, final TestTableProcedure childProc) throws Exception {
+    queue.addBack(rootProc);
 
     // fetch and acquire first xlock proc
     Procedure parentProc = queue.poll();
-    assertEquals(1, parentProc.getProcId());
+    assertEquals(rootProc, parentProc);
     assertTrue(queue.tryAcquireTableExclusiveLock(parentProc, tableName));
 
     // add child procedure
-    queue.addFront(new TestTableProcedure(1, 2, tableName,
-      TableProcedureInterface.TableOperationType.EDIT));
+    queue.addFront(childProc);
 
     // fetch the other xlock proc
     Procedure proc = queue.poll();
-    assertEquals(2, proc.getProcId());
+    assertEquals(childProc, proc);
     assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
     queue.releaseTableExclusiveLock(proc, tableName);
 
@@ -734,7 +777,12 @@ public class TestMasterProcedureScheduler {
 
     public TestTableProcedure(long parentProcId, long procId, TableName tableName,
         TableOperationType opType) {
-      super(procId, parentProcId);
+      this(-1, parentProcId, procId, tableName, opType);
+    }
+
+    public TestTableProcedure(long rootProcId, long parentProcId, long procId, TableName tableName,
+        TableOperationType opType) {
+      super(procId, parentProcId, rootProcId, null);
       this.tableName = tableName;
       this.opType = opType;
     }
@@ -784,7 +832,12 @@ public class TestMasterProcedureScheduler {
 
     public TestRegionProcedure(long parentProcId, long procId, TableName tableName,
         TableOperationType opType, HRegionInfo... regionInfo) {
-      super(parentProcId, procId, tableName, opType);
+      this(-1, parentProcId, procId, tableName, opType, regionInfo);
+    }
+
+    public TestRegionProcedure(long rootProcId, long parentProcId, long procId, TableName tableName,
+        TableOperationType opType, HRegionInfo... regionInfo) {
+      super(rootProcId, parentProcId, procId, tableName, opType);
       this.regionInfo = regionInfo;
     }
 

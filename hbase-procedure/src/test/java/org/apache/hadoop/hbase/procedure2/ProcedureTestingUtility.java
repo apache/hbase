@@ -349,10 +349,17 @@ public class ProcedureTestingUtility {
     }
 
     public TestProcedure(long procId, long parentId, byte[] data) {
+      this(procId, parentId, parentId, data);
+    }
+
+    public TestProcedure(long procId, long parentId, long rootId, byte[] data) {
       setData(data);
       setProcId(procId);
       if (parentId > 0) {
         setParentProcId(parentId);
+      }
+      if (rootId > 0 || parentId > 0) {
+        setRootProcId(rootId);
       }
     }
 
