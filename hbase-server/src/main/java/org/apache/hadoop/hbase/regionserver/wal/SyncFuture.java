@@ -21,6 +21,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Span;
 
 /**
@@ -105,6 +107,7 @@ class SyncFuture {
     this.doneSequence = NOT_DONE;
     this.ringBufferSequence = sequence;
     this.span = span;
+    this.throwable = null;
     return this;
   }
 
@@ -162,9 +165,16 @@ class SyncFuture {
     throw new UnsupportedOperationException();
   }
 
-  public synchronized long get() throws InterruptedException, ExecutionException {
+  public synchronized long get(long timeout) throws InterruptedException,
+      ExecutionException, TimeoutIOException {
+    final long done = EnvironmentEdgeManager.currentTime() + timeout;
     while (!isDone()) {
       wait(1000);
+      if (EnvironmentEdgeManager.currentTime() >= done) {
+        throw new TimeoutIOException("Failed to get sync result after "
+            + timeout + " ms for ringBufferSequence=" + this.ringBufferSequence
+            + ", WAL system stuck?");
+      }
     }
     if (this.throwable != null) throw new ExecutionException(this.throwable);
     return this.doneSequence;
