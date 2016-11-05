@@ -343,10 +343,10 @@ public class TestMasterFailoverWithProcedures {
     UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // validate the table regions and layout
+    regions = UTIL.getHBaseAdmin().getTableRegions(tableName).toArray(new HRegionInfo[0]);
     if (preserveSplits) {
-      assertEquals(1 + splitKeys.length, UTIL.getHBaseAdmin().getTableRegions(tableName).size());
+      assertEquals(1 + splitKeys.length, regions.length);
     } else {
-      regions = UTIL.getHBaseAdmin().getTableRegions(tableName).toArray(new HRegionInfo[1]);
       assertEquals(1, regions.length);
     }
     MasterProcedureTestingUtility.validateTableCreation(
