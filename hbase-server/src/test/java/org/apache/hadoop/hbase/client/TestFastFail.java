@@ -306,7 +306,7 @@ public class TestFastFail {
   }
 
   @Test
-  public void testCallQueueTooBigException() throws Exception {
+  public void testCallQueueTooBigExceptionDoesntTriggerPffe() throws Exception {
     Admin admin = TEST_UTIL.getHBaseAdmin();
 
     final String tableName = "testCallQueueTooBigException";
@@ -340,7 +340,8 @@ public class TestFastFail {
     } catch (Throwable ex) {
     }
 
-    assertEquals("There should have been 1 hit", 1,
+    assertEquals("We should have not entered PFFE mode on CQTBE, but we did;"
+      + " number of times this mode should have been entered:", 0,
       CallQueueTooBigPffeInterceptor.numCallQueueTooBig.get());
 
     newConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
