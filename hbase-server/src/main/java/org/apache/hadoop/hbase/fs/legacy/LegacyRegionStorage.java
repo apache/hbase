@@ -795,10 +795,10 @@ public class LegacyRegionStorage extends RegionStorage<LegacyPathIdentifier> {
     cleanupMergesContainer();
 
     // if it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
-    checkRegionInfoOnFilesystem();
+    checkRegionInfoOnStorage();
   }
 
-  public void checkRegionInfoOnFilesystem() throws IOException {
+  public void checkRegionInfoOnStorage() throws IOException {
     writeRegionInfoFileContent(getConfiguration(), getFileSystem(),
       LegacyLayout.getRegionInfoFile(getRegionContainer().path),
       getRegionInfoFileContent(getRegionInfo()));
@@ -807,5 +807,10 @@ public class LegacyRegionStorage extends RegionStorage<LegacyPathIdentifier> {
   @Override
   protected void destroy() throws IOException {
     fsWithRetries.deleteDir(regionDir);
+  }
+
+  @Override
+  public HRegionInfo getRegionInfoFromStorage() {
+    return regionInfoForFs;
   }
 }

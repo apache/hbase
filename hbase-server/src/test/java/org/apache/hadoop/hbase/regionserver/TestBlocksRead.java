@@ -27,7 +27,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -55,18 +54,17 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 @Category({RegionServerTests.class, MediumTests.class})
-public class TestBlocksRead  {
+public class TestBlocksRead {
   private static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
   @Rule public TestName testName = new TestName();
 
-  static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static BlockCache blockCache;
+
+  private static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
       BloomType.ROW, BloomType.NONE };
 
-  private static BlockCache blockCache;
   Region region = null;
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
-  private Configuration conf = TEST_UTIL.getConfiguration();
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -80,16 +78,10 @@ public class TestBlocksRead  {
   }
 
   /**
-   * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
-   * @param tableName
-   * @param callingMethod
-   * @param conf
-   * @param family
-   * @throws IOException
+   * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(Region)}
    * @return created and initialized region.
    */
-  private Region initHRegion(byte[] tableName, String callingMethod,
-      Configuration conf, String family) throws IOException {
+  private Region initHRegion(byte[] tableName, String family) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor familyDesc;
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
@@ -101,9 +93,8 @@ public class TestBlocksRead  {
     }
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    Path path = new Path(DIR + callingMethod);
-    Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
-    blockCache = new CacheConfig(conf).getBlockCache();
+    Region r = TEST_UTIL.createLocalHRegion(info, htd);
+    blockCache = new CacheConfig(TEST_UTIL.getConfiguration()).getBlockCache();
     return r;
   }
 
@@ -213,7 +204,7 @@ public class TestBlocksRead  {
     byte[] TABLE = Bytes.toBytes("testBlocksRead");
     String FAMILY = "cf1";
     Cell kvs[];
-    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, FAMILY);
 
     try {
       putData(FAMILY, "row", "col1", 1);
@@ -269,7 +260,7 @@ public class TestBlocksRead  {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
     String FAMILY = "cf1";
     Cell kvs[];
-    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, FAMILY);
 
     try {
       // File 1
@@ -376,7 +367,7 @@ public class TestBlocksRead  {
     byte [] TABLE = Bytes.toBytes("testBlocksReadWhenCachingDisabled");
     String FAMILY = "cf1";
 
-    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, FAMILY);
 
     try {
       putData(FAMILY, "row", "col1", 1);
@@ -420,7 +411,7 @@ public class TestBlocksRead  {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
     String FAMILY = "cf1";
     Cell kvs[];
-    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, FAMILY);
     try {
       deleteFamily(FAMILY, "row", 200);
       for (int i = 0; i < 100; i++) {

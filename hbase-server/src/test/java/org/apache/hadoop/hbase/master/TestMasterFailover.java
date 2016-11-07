@@ -62,17 +62,15 @@ import org.junit.experimental.categories.Category;
 public class TestMasterFailover {
   private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
 
-  HRegion createRegion(final HRegionInfo  hri, final Path rootdir, final Configuration c,
-      final HTableDescriptor htd)
+  void createRegion(HBaseTestingUtility hbtu, final HRegionInfo  hri, final HTableDescriptor htd)
   throws IOException {
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, rootdir, c, htd);
+    Region r = hbtu.createLocalHRegion(hri, htd);
     // The above call to create a region will create an wal file.  Each
     // log file create will also create a running thread to do syncing.  We need
     // to close out this log else we will have a running thread trying to sync
     // the file system continuously which is ugly when dfs is taken away at the
     // end of the test.
     HBaseTestingUtility.closeRegionAndWAL(r);
-    return r;
   }
 
   // TODO: Next test to add is with testing permutations of the RIT or the RS
@@ -233,7 +231,7 @@ public class TestMasterFailover {
     fstd.createTableDescriptor(offlineTable);
 
     HRegionInfo hriOffline = new HRegionInfo(offlineTable.getTableName(), null, null);
-    createRegion(hriOffline, rootdir, conf, offlineTable);
+    createRegion(TEST_UTIL, hriOffline, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), hriOffline);
 
     log("Regions in hbase:meta and namespace have been created");
@@ -263,7 +261,7 @@ public class TestMasterFailover {
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
 
     HRegionInfo failedClose = new HRegionInfo(offlineTable.getTableName(), null, null);
-    createRegion(failedClose, rootdir, conf, offlineTable);
+    createRegion(TEST_UTIL, failedClose, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedClose);
 
     oldState = new RegionState(failedClose, State.PENDING_CLOSE);
@@ -271,7 +269,7 @@ public class TestMasterFailover {
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
 
     HRegionInfo failedOpen = new HRegionInfo(offlineTable.getTableName(), null, null);
-    createRegion(failedOpen, rootdir, conf, offlineTable);
+    createRegion(TEST_UTIL, failedOpen, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedOpen);
 
     // Simulate a region transitioning to failed open when the region server reports the
@@ -282,7 +280,7 @@ public class TestMasterFailover {
 
     HRegionInfo failedOpenNullServer = new HRegionInfo(offlineTable.getTableName(), null, null);
     LOG.info("Failed open NUll server " + failedOpenNullServer.getEncodedName());
-    createRegion(failedOpenNullServer, rootdir, conf, offlineTable);
+    createRegion(TEST_UTIL, failedOpenNullServer, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedOpenNullServer);
 
     // Simulate a region transitioning to failed open when the master couldn't find a plan for

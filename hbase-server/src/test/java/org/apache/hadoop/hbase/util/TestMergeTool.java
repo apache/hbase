@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -149,14 +150,13 @@ public class TestMergeTool extends HBaseTestCase {
     try {
       // Create meta region
       createMetaRegion();
-      new FSTableDescriptors(this.conf, this.fs, testDir).createTableDescriptor(this.desc);
+      MasterStorage masterStorage = MasterStorage.open(conf, true);
+      masterStorage.createTableDescriptor(desc, false);
       /*
        * Create the regions we will merge
        */
       for (int i = 0; i < sourceRegions.length; i++) {
-        regions[i] =
-          HBaseTestingUtility.createRegionAndWAL(this.sourceRegions[i], testDir, this.conf,
-              this.desc);
+        regions[i] = TEST_UTIL.createLocalHRegion(sourceRegions[i], desc);
         /*
          * Insert data
          */

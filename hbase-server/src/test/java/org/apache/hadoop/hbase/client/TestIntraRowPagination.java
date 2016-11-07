@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -44,12 +44,9 @@ public class TestIntraRowPagination {
 
   /**
    * Test from client side for scan with maxResultPerCF set
-   *
-   * @throws Exception
    */
   @Test
   public void testScanLimitAndOffset() throws Exception {
-    //byte [] TABLE = HTestConst.DEFAULT_TABLE_BYTES;
     byte [][] ROWS = HTestConst.makeNAscii(HTestConst.DEFAULT_ROW_BYTES, 2);
     byte [][] FAMILIES = HTestConst.makeNAscii(HTestConst.DEFAULT_CF_BYTES, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(HTestConst.DEFAULT_QUALIFIER_BYTES, 10);
@@ -60,8 +57,7 @@ public class TestIntraRowPagination {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
     }
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    Region region = TEST_UTIL.createLocalHRegion(info, htd);
     try {
       Put put;
       Scan scan;
@@ -101,7 +97,7 @@ public class TestIntraRowPagination {
       TestScannersFromClientSide.verifyResult(result, kvListExp, toLog,
           "Testing scan with storeOffset and storeLimit");
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      TEST_UTIL.destroyRegion(region);
     }
   }
 

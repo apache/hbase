@@ -44,9 +44,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({CoprocessorTests.class, SmallTests.class})
 public class TestRegionObserverStacking extends TestCase {
-  private static HBaseTestingUtility TEST_UTIL
-    = new HBaseTestingUtility();
-  static final Path DIR = TEST_UTIL.getDataTestDir();
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   public static class ObserverA extends BaseRegionObserver {
     long id;
@@ -94,15 +92,14 @@ public class TestRegionObserverStacking extends TestCase {
     }
   }
 
-  HRegion initHRegion (byte [] tableName, String callingMethod,
-      Configuration conf, byte [] ... families) throws IOException {
+  private HRegion initHRegion(byte [] tableName, Configuration conf, byte [] ... families)
+      throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    Path path = new Path(DIR + callingMethod);
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    HRegion r = TEST_UTIL.createLocalHRegion(info, htd);
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
@@ -119,8 +116,7 @@ public class TestRegionObserverStacking extends TestCase {
     byte[][] FAMILIES = new byte[][] { A } ;
 
     Configuration conf = HBaseConfiguration.create();
-    HRegion region = initHRegion(TABLE, getClass().getName(),
-      conf, FAMILIES);
+    HRegion region = initHRegion(TABLE, conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(ObserverA.class, Coprocessor.PRIORITY_HIGHEST, conf);
     h.load(ObserverB.class, Coprocessor.PRIORITY_USER, conf);

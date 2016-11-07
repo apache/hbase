@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -46,7 +45,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestSeekBeforeWithReverseScan {
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private Region region;
 
@@ -59,14 +58,12 @@ public class TestSeekBeforeWithReverseScan {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(cfName).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF));
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    Path path = testUtil.getDataTestDir(getClass().getSimpleName());
-    region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
+    region = TEST_UTIL.createLocalHRegion(info, htd);
   }
 
   @After
   public void tearDown() throws Exception {
-    HBaseTestingUtility.closeRegionAndWAL(region);
-    testUtil.cleanupTestDir();
+    TEST_UTIL.destroyRegion(region);
   }
 
   @Test

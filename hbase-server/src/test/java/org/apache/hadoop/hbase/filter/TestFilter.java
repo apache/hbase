@@ -144,8 +144,7 @@ public class TestFilter {
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[1]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    this.region = TEST_UTIL.createLocalHRegion(info, htd);
 
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {
@@ -219,7 +218,7 @@ public class TestFilter {
 
   @After
   public void tearDown() throws Exception {
-    HBaseTestingUtility.closeRegionAndWAL(region);
+    TEST_UTIL.destroyRegion(region);
   }
 
   @Test
@@ -556,8 +555,6 @@ public class TestFilter {
    * {@link Filter#filterRow()} method.
    *
    * See HBASE-2258.
-   *
-   * @throws Exception
    */
   @Test
   public void testWhileMatchFilterWithFilterRow() throws Exception {
@@ -1493,8 +1490,7 @@ public class TestFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    Region testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    Region testRegion = TEST_UTIL.createLocalHRegion(info, htd);
 
     for(int i=0; i<5; i++) {
       Put p = new Put(Bytes.toBytes((char)('a'+i) + "row"));
@@ -2054,8 +2050,7 @@ public class TestFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testNestedFilterListWithSCVF"));
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    Region testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    Region testRegion = TEST_UTIL.createLocalHRegion(info, htd);
     for(int i=0; i<10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
       p.setDurability(Durability.SKIP_WAL);

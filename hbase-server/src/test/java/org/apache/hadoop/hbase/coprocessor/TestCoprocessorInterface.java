@@ -38,7 +38,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -77,7 +76,6 @@ public class TestCoprocessorInterface {
   @Rule public TestName name = new TestName();
   private static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
-  static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {
 
@@ -294,8 +292,7 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initSplit();
-    Region region = initHRegion(tableName, name.getMethodName(), hc,
-      new Class<?>[]{}, families);
+    Region region = initHRegion(tableName, hc, new Class<?>[]{}, families);
 
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
@@ -372,8 +369,7 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initSplit();
-    Region region = initHRegion(tableName, name.getMethodName(), hc,
-      new Class<?>[]{CoprocessorImpl.class}, families);
+    Region region = initHRegion(tableName, hc, new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
       region.flush(true);
@@ -446,16 +442,14 @@ public class TestCoprocessorInterface {
     return r;
   }
 
-  Region initHRegion (TableName tableName, String callingMethod,
-      Configuration conf, Class<?> [] implClasses, byte [][] families)
-      throws IOException {
+  private Region initHRegion(TableName tableName, Configuration conf, Class<?> [] implClasses,
+      byte [][] families) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    Path path = new Path(DIR + callingMethod);
-    Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    Region r = TEST_UTIL.createLocalHRegion(info, htd, conf);
 
     // this following piece is a hack.
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);

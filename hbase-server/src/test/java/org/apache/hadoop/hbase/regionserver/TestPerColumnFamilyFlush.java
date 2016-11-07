@@ -21,7 +21,6 @@ import com.google.common.hash.Hashing;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -69,8 +68,6 @@ public class TestPerColumnFamilyFlush {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static final Path DIR = TEST_UTIL.getDataTestDir("TestHRegion");
-
   public static final TableName TABLENAME = TableName.valueOf("TestPerColumnFamilyFlush", "t1");
 
   public static final byte[][] FAMILIES = { Bytes.toBytes("f1"), Bytes.toBytes("f2"),
@@ -82,14 +79,13 @@ public class TestPerColumnFamilyFlush {
 
   public static final byte[] FAMILY3 = FAMILIES[2];
 
-  private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
+  private HRegion initHRegion(Configuration conf) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     for (byte[] family : FAMILIES) {
       htd.addFamily(new HColumnDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
-    Path path = new Path(DIR, callingMethod);
-    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    return TEST_UTIL.createLocalHRegion(info, htd, conf);
   }
 
   // A helper function to create puts.
@@ -130,7 +126,7 @@ public class TestPerColumnFamilyFlush {
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
       100 * 1024);
     // Intialize the region
-    Region region = initHRegion("testSelectiveFlushWhenEnabled", conf);
+    Region region = initHRegion(conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));
@@ -273,7 +269,7 @@ public class TestPerColumnFamilyFlush {
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllStoresPolicy.class.getName());
 
     // Intialize the HRegion
-    HRegion region = initHRegion("testSelectiveFlushWhenNotEnabled", conf);
+    HRegion region = initHRegion(conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));

@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 
 import org.apache.hadoop.hbase.regionserver.*;
+import org.junit.Before;
 
 @InterfaceAudience.Private
 public abstract class RegionStorage<IDENTIFIER extends StorageIdentifier> {
@@ -139,8 +140,8 @@ public abstract class RegionStorage<IDENTIFIER extends StorageIdentifier> {
   // ==========================================================================
   //  NOOOOO
   // ==========================================================================
-  // TODO refactor to checkRegionInfoInStorage or remove
-  public abstract void checkRegionInfoOnFilesystem() throws IOException;
+  // TODO refactor to checkRegionInfoInStorage (done) or remove
+  public abstract void checkRegionInfoOnStorage() throws IOException;
   /**
    * Get an opaque handle to the backing storage associated with this region.
    *
@@ -151,7 +152,7 @@ public abstract class RegionStorage<IDENTIFIER extends StorageIdentifier> {
 
   public abstract IDENTIFIER getTempContainer();
 
-  public HRegionInfo getRegionInfoForFS() { return hri; }
+  public HRegionInfo getRegionInfoFromStorage() { return hri; }
 
   /**
    * If region exists on the Storage
@@ -161,7 +162,8 @@ public abstract class RegionStorage<IDENTIFIER extends StorageIdentifier> {
   public abstract boolean exists() throws IOException;
 
   /**
-   * Retrieve a referene to the backing storage associated with a particular family within this region.
+   * Retrieve a reference to the backing storage associated with a particular family within this
+   * region.
    */
   public abstract IDENTIFIER getStoreContainer(final String familyName);
    
@@ -252,14 +254,14 @@ public abstract class RegionStorage<IDENTIFIER extends StorageIdentifier> {
       LOG.debug("skipping override of the default FS, since the root container is not a LegacyPathIdentifier.");
     }
 
-    RegionStorage rfs = getInstance(conf, fs, rootContainer, regionInfo);
+    RegionStorage regionStorage = getInstance(conf, fs, rootContainer, regionInfo);
     if (bootstrap) {
       // TODO: are bootstrap and create two different things?
       // should switch to bootstrap & read-only
       // legacy region wants to recover the .regioninfo :(
-      rfs.bootstrap();
+      regionStorage.bootstrap();
     }
-    return rfs;
+    return regionStorage;
   }
 
   public static void destroy(Configuration conf, HRegionInfo regionInfo) throws IOException {

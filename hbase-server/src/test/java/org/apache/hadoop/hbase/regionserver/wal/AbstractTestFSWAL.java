@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -164,8 +165,6 @@ public abstract class AbstractTestFSWAL {
 
   /**
    * helper method to simulate region flush for a WAL.
-   * @param wal
-   * @param regionEncodedName
    */
   protected void flushRegion(WAL wal, byte[] regionEncodedName, Set<byte[]> flushedFamilyNames) {
     wal.startCacheFlush(regionEncodedName, flushedFamilyNames);
@@ -175,7 +174,6 @@ public abstract class AbstractTestFSWAL {
   /**
    * tests the log comparator. Ensure that we are not mixing meta logs with non-meta logs (throws
    * exception if we do). Comparison is based on the timestamp present in the wal name.
-   * @throws Exception
    */
   @Test
   public void testWALComparator() throws Exception {
@@ -343,7 +341,6 @@ public abstract class AbstractTestFSWAL {
    * slowing appends in the background ring buffer thread while in foreground we call flush. The
    * addition of the sync over HRegion in flush should fix an issue where flush was returning before
    * all of its appends had made it out to the WAL (HBASE-11109).
-   * @throws IOException
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-11109">HBASE-11109</a>
    */
   @Test
@@ -354,8 +351,7 @@ public abstract class AbstractTestFSWAL {
     final byte[] rowName = tableName.getName();
     final HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("f"));
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, TEST_UTIL.getDefaultRootDirPath(),
-      TEST_UTIL.getConfiguration(), htd);
+    Region r = TEST_UTIL.createLocalHRegion(hri, htd);
     HBaseTestingUtility.closeRegionAndWAL(r);
     final int countPerFamily = 10;
     final AtomicBoolean goslow = new AtomicBoolean(false);
@@ -375,9 +371,7 @@ public abstract class AbstractTestFSWAL {
           }
         }
       });
-//    HRegion region = HRegion.openHRegion(TEST_UTIL.getConfiguration(),
-//      TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(), hri, htd, wal);
-    HRegion region = null;
+    HRegion region = HRegion.openHRegion(hri, htd, wal, TEST_UTIL.getConfiguration());
     EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
     try {
       List<Put> puts = null;

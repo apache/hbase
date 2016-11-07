@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -40,22 +39,20 @@ import java.io.IOException;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestRowTooBig {
-  private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
-  private static Path rootRegionDir;
+  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static final HTableDescriptor TEST_HTD =
     new HTableDescriptor(TableName.valueOf(TestRowTooBig.class.getSimpleName()));
 
   @BeforeClass
   public static void before() throws Exception {
-    HTU.startMiniCluster();
-    HTU.getConfiguration().setLong(HConstants.TABLE_MAX_ROWSIZE_KEY,
+    TEST_UTIL.startMiniCluster();
+    TEST_UTIL.getConfiguration().setLong(HConstants.TABLE_MAX_ROWSIZE_KEY,
       10 * 1024 * 1024L);
-    rootRegionDir = HTU.getDataTestDirOnTestFS("TestRowTooBig");
   }
 
   @AfterClass
   public static void after() throws Exception {
-    HTU.shutdownMiniCluster();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   /**
@@ -67,7 +64,6 @@ public class TestRowTooBig {
    * OOME happened before we actually get to reading results, but
    * during seeking, as each StoreFile gets it's own scanner,
    * and each scanner seeks after the first KV.
-   * @throws IOException
    */
   @Test(expected = RowTooBigException.class)
   public void testScannersSeekOnFewLargeCells() throws IOException {
@@ -85,8 +81,7 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    Region region =
-        HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
+    Region region = TEST_UTIL.createLocalHRegion(hri, htd);
     try {
       // Add 5 cells to memstore
       for (int i = 0; i < 5 ; i++) {
@@ -101,7 +96,7 @@ public class TestRowTooBig {
       Get get = new Get(row1);
       region.get(get);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      TEST_UTIL.destroyRegion(region);
     }
   }
 
@@ -113,8 +108,6 @@ public class TestRowTooBig {
    *  - try to Get whole row.
    *
    *  OOME happened in StoreScanner.next(..).
-   *
-   * @throws IOException
    */
   @Test(expected = RowTooBigException.class)
   public void testScanAcrossManySmallColumns() throws IOException {
@@ -132,8 +125,7 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    Region region =
-        HBaseTestingUtility.createRegionAndWAL(hri, rootRegionDir, HTU.getConfiguration(), htd);
+    Region region = TEST_UTIL.createLocalHRegion(hri, htd);
     try {
       // Add to memstore
       for (int i = 0; i < 10; i++) {
@@ -150,7 +142,7 @@ public class TestRowTooBig {
       Get get = new Get(row1);
       region.get(get);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      TEST_UTIL.destroyRegion(region);
     }
   }
 }

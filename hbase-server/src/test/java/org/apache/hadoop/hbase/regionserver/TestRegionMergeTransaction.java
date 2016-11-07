@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.fs.RegionStorage;
 import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -81,38 +82,28 @@ public class TestRegionMergeTransaction {
 
   @Before
   public void setup() throws IOException {
-    this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    this.fs.delete(this.testdir, true);
+    fs = FileSystem.get(TEST_UTIL.getConfiguration());
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
     FSUtils.setRootDir(walConf, this.testdir);
     this.wals = new WALFactory(walConf, null, TestRegionMergeTransaction.class.getName());
-    this.region_a = createRegion(this.testdir, this.wals, STARTROW_A, STARTROW_B);
-    this.region_b = createRegion(this.testdir, this.wals, STARTROW_B, STARTROW_C);
-    this.region_c = createRegion(this.testdir, this.wals, STARTROW_C, ENDROW);
+    this.region_a = createRegion(STARTROW_A, STARTROW_B);
+    this.region_b = createRegion(STARTROW_B, STARTROW_C);
+    this.region_c = createRegion(STARTROW_C, ENDROW);
     assert region_a != null && region_b != null && region_c != null;
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster", true);
   }
 
   @After
   public void teardown() throws IOException {
-//    for (HRegion region : new HRegion[] { region_a, region_b, region_c }) {
-//      if (region != null && !region.isClosed()) region.close();
-//      if (this.fs.exists(region.getRegionStorage().getRegionDir())
-//          && !this.fs.delete(region.getRegionStorage().getRegionDir(), true)) {
-//        throw new IOException("Failed deleting of "
-//            + region.getRegionStorage().getRegionDir());
-//      }
-//    }
-//    if (this.wals != null) {
-//      this.wals.close();
-//    }
-//    this.fs.delete(this.testdir, true);
+    TEST_UTIL.destroyRegion(region_a);
+    TEST_UTIL.destroyRegion(region_b);
+    TEST_UTIL.destroyRegion(region_c);
+    TEST_UTIL.cleanupTestDir();
   }
 
   /**
    * Test straight prepare works. Tries to merge on {@link #region_a} and
    * {@link #region_b}
-   * @throws IOException
    */
   @Test
   public void testPrepare() throws IOException {
@@ -258,7 +249,7 @@ public class TestRegionMergeTransaction {
     Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
     HRegion mergedRegion = (HRegion)mt.execute(mockServer, null);
     // Do some assertions about execution.
-    // TODO move tests to rely on RegionStorage
+    // TODO(fsredo) move tests to rely on RegionStorage
     final Path mergesdir = ((LegacyPathIdentifier)mt.getMergesDir()).path;
     assertTrue(this.fs.exists(mergesdir));
     // Assert region_a and region_b is closed.
@@ -379,11 +370,8 @@ public class TestRegionMergeTransaction {
     // Make sure that merged region is still in the filesystem, that
     // they have not been removed; this is supposed to be the case if we go
     // past point of no return.
-//    Path tableDir = this.region_a.getRegionStorage().getRegionDir()
-//        .getParent();
-//    Path mergedRegionDir = new Path(tableDir, mt.getMergedRegionInfo()
-//        .getEncodedName());
-//    assertTrue(TEST_UTIL.getTestFileSystem().exists(mergedRegionDir));
+    assertTrue(RegionStorage.open(TEST_UTIL.getConfiguration(), mt.getMergedRegionInfo(), false)
+        .exists());
   }
 
   @Test
@@ -435,21 +423,17 @@ public class TestRegionMergeTransaction {
   private class MockedFailedMergedRegionOpen extends IOException {
   }
 
-  private HRegion createRegion(final Path testdir, final WALFactory wals,
-      final byte[] startrow, final byte[] endrow)
-      throws IOException {
+  private HRegion createRegion(final byte[] startrow, final byte[] endrow) throws IOException {
     // Make a region with start and end keys.
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
     HColumnDescriptor hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), startrow, endrow);
-    HRegion a = HBaseTestingUtility.createRegionAndWAL(hri, testdir,
-        TEST_UTIL.getConfiguration(), htd);
+    Region a = TEST_UTIL.createLocalHRegion(hri, htd);
     HBaseTestingUtility.closeRegionAndWAL(a);
-//    return HRegion.openHRegion(testdir, hri, htd,
-//      wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()),
-//      TEST_UTIL.getConfiguration());
-    return null;
+    return HRegion.openHRegion(hri, htd,
+      wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()),
+      TEST_UTIL.getConfiguration());
   }
 
   private int countRows(final HRegion r) throws IOException {
@@ -472,11 +456,8 @@ public class TestRegionMergeTransaction {
   /**
    * Load region with rows from 'aaa' to 'zzz', skip the rows which are out of
    * range of the region
-   * @param r Region
-   * @param f Family
    * @param flush flush the cache if true
    * @return Count of rows loaded.
-   * @throws IOException
    */
   private int loadRegion(final HRegion r, final byte[] f, final boolean flush)
       throws IOException {

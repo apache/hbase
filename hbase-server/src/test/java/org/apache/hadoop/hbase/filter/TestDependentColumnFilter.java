@@ -87,14 +87,13 @@ public class TestDependentColumnFilter {
     hcd1.setMaxVersions(3);
     htd.addFamily(hcd1);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    this.region = TEST_UTIL.createLocalHRegion(info, htd);
     addData();
   }
 
   @After
   public void tearDown() throws Exception {
-    HBaseTestingUtility.closeRegionAndWAL(this.region);
+    TEST_UTIL.destroyRegion(region);
   }
 
   private void addData() throws IOException {
@@ -138,11 +137,6 @@ public class TestDependentColumnFilter {
   /**
    * This shouldn't be confused with TestFilter#verifyScan
    * as expectedKeys is not the per row total, but the scan total
-   *
-   * @param s
-   * @param expectedRows
-   * @param expectedCells
-   * @throws IOException
    */
   private void verifyScan(Scan s, long expectedRows, long expectedCells)
   throws IOException {
@@ -225,8 +219,6 @@ public class TestDependentColumnFilter {
 
   /**
    * Test that the filter correctly drops rows without a corresponding timestamp
-   *
-   * @throws Exception
    */
   @Test
   public void testFilterDropping() throws Exception {

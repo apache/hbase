@@ -62,7 +62,7 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion{
 
   /**
    * @return A region on which you must call
-   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
+   *         {@link HBaseTestingUtility#closeRegionAndWAL(Region)} when done.
    */
   @Override
   public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
@@ -78,8 +78,6 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion{
 
   /**
    * Splits twice and verifies getting from each of the split regions.
-   *
-   * @throws Exception
    */
   @Override
   public void testBasicSplit() throws Exception {

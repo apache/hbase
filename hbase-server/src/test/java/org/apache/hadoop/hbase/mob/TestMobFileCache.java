@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
 public class TestMobFileCache extends TestCase {
   static final Log LOG = LogFactory.getLog(TestMobFileCache.class);
   private HBaseTestingUtility UTIL;
-  private HRegion region;
+  private Region region;
   private Configuration conf;
   private MobCacheConfig mobCacheConf;
   private MobFileCache mobFileCache;
@@ -95,8 +95,7 @@ public class TestMobFileCache extends TestCase {
 
   @Override
   protected void tearDown() throws Exception {
-    region.close();
-    region.getFilesystem().delete(UTIL.getDataTestDir(), true);
+    UTIL.destroyRegion(region);
   }
 
   /**

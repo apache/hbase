@@ -110,16 +110,13 @@ public class TestMajorCompaction {
 
   @After
   public void tearDown() throws Exception {
-    WAL wal = ((HRegion)r).getWAL();
-    ((HRegion)r).close();
-    wal.close();
+    UTIL.destroyRegion(r);
   }
 
   /**
    * Test that on a major compaction, if all cells are expired or deleted, then
    * we'll end up with no product.  Make sure scanner over region returns
    * right answer in this case - and that it just basically works.
-   * @throws IOException
    */
   @Test
   public void testMajorCompactingToNoOutput() throws IOException {

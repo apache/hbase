@@ -136,7 +136,6 @@ public abstract class HBaseTestCase extends TestCase {
 
   /**
    * @see HBaseTestingUtility#getBaseTestDir
-   * @param testName
    * @return directory to use for this test
    */
     protected Path getUnitTestdir(String testName) {
@@ -145,12 +144,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   /**
    * You must call close on the returned region and then close on the log file it created. Do
-   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to close both the region and the WAL.
-   * @param desc
-   * @param startKey
-   * @param endKey
-   * @return An {@link HRegion}
-   * @throws IOException
+   * {@link HBaseTestingUtility#closeRegionAndWAL(Region)} to close both the region and the WAL.
    */
   public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
       byte [] endKey)
@@ -162,7 +156,7 @@ public abstract class HBaseTestCase extends TestCase {
       byte [] endKey, Configuration conf)
   throws IOException {
     HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
-    return HBaseTestingUtility.createRegionAndWAL(hri, testDir, conf, desc);
+    return testUtil.createRegionAndWAL(hri, desc, conf, testDir);
   }
 
   protected HRegion openClosedRegion(final HRegion closedRegion)
@@ -171,7 +165,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * Create a table of name <code>name</code> with {@link #COLUMNS} for
    * families.
    * @param name Name to give table.
    * @return Column descriptor.
@@ -181,7 +175,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * Create a table of name <code>name</code> with {@link #COLUMNS} for
    * families.
    * @param name Name to give table.
    * @param versions How many versions to allow per column.
@@ -194,7 +188,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * Create a table of name <code>name</code> with {@link #COLUMNS} for
    * families.
    * @param name Name to give table.
    * @param versions How many versions to allow per column.
@@ -422,8 +416,8 @@ public abstract class HBaseTestCase extends TestCase {
    */
   protected void createMetaRegion() throws IOException {
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(conf);
-    meta = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
+    meta = testUtil.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
+        fsTableDescriptors.get(TableName.META_TABLE_NAME), conf, testDir);
   }
 
   protected void closeRootAndMeta() throws IOException {

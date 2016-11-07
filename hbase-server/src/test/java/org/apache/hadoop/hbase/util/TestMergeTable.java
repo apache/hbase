@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.fs.MasterStorage;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -63,9 +64,9 @@ public class TestMergeTable {
    * Hand-makes regions of a mergeable size and adds the hand-made regions to
    * hand-made meta.  The hand-made regions are created offline.  We then start
    * up mini cluster, disables the hand-made table and starts in on merging.
-   * @throws Exception
    */
-  @Test (timeout=300000) public void testMergeTable() throws Exception {
+  @Test (timeout=300000)
+  public void testMergeTable() throws Exception {
     // Table we are manually creating offline.
     HTableDescriptor desc = new HTableDescriptor(org.apache.hadoop.hbase.TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
@@ -77,13 +78,7 @@ public class TestMergeTable {
     // Startup hdfs.  Its in here we'll be putting our manually made regions.
     UTIL.startMiniDFSCluster(1);
     // Create hdfs hbase rootdir.
-    Path rootdir = UTIL.createRootDir();
-    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    if (fs.exists(rootdir)) {
-      if (fs.delete(rootdir, true)) {
-        LOG.info("Cleaned up existing " + rootdir);
-      }
-    }
+    UTIL.createRootDir();
 
     // Now create three data regions: The first is too large to merge since it
     // will be > 64 MB in size. The second two will be smaller and will be
@@ -96,16 +91,17 @@ public class TestMergeTable {
 
     // Create regions and populate them at same time.  Create the tabledir
     // for them first.
-    new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir).createTableDescriptor(desc);
+    MasterStorage masterStorage = MasterStorage.open(UTIL.getConfiguration(), true);
+    masterStorage.createTableDescriptor(desc, false);
     HRegion [] regions = {
-      createRegion(desc, null, row_70001, 1, 70000, rootdir),
-      createRegion(desc, row_70001, row_80001, 70001, 10000, rootdir),
-      createRegion(desc, row_80001, null, 80001, 11000, rootdir)
+      createRegion(desc, null, row_70001, 1, 70000),
+      createRegion(desc, row_70001, row_80001, 70001, 10000),
+      createRegion(desc, row_80001, null, 80001, 11000)
     };
 
     // Now create the root and meta regions and insert the data regions
     // created above into hbase:meta
-    setupMeta(rootdir, regions);
+    setupMeta(regions);
     try {
       LOG.info("Starting mini zk cluster");
       UTIL.startMiniZKCluster();
@@ -137,11 +133,10 @@ public class TestMergeTable {
   }
 
   private HRegion createRegion(final HTableDescriptor desc,
-      byte [] startKey, byte [] endKey, int firstRow, int nrows, Path rootdir)
+      byte [] startKey, byte [] endKey, int firstRow, int nrows)
   throws IOException {
     HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootdir, UTIL.getConfiguration(),
-        desc);
+    HRegion region = UTIL.createLocalHRegion(hri, desc);
     LOG.info("Created region " + region.getRegionInfo().getRegionNameAsString());
     for(int i = firstRow; i < firstRow + nrows; i++) {
       Put put = new Put(Bytes.toBytes("row_" + String.format("%1$05d", i)));
@@ -157,16 +152,13 @@ public class TestMergeTable {
     return region;
   }
 
-  protected void setupMeta(Path rootdir, final HRegion [] regions)
-  throws IOException {
-    HRegion meta =
-      HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO, rootdir,
-          UTIL.getConfiguration(), UTIL.getMetaTableDescriptor());
-    for (HRegion r: regions) {
+  protected void setupMeta(final HRegion[] regions) throws IOException {
+    HRegion meta = UTIL.createLocalHRegion(HRegionInfo.FIRST_META_REGIONINFO,
+        UTIL.getMetaTableDescriptor());
+    for (HRegion r : regions) {
       HRegion.addRegionToMETA(meta, r);
     }
     HBaseTestingUtility.closeRegionAndWAL(meta);
   }
-
 }
 

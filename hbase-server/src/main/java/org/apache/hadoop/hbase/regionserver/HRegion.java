@@ -290,7 +290,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final AtomicLong compactionNumBytesCompacted = new AtomicLong(0L);
 
   private final WAL wal;
-  private final RegionStorage fs;
+  private final RegionStorage regionStorage;
   protected final Configuration conf;
   private final Configuration baseConf;
   private final int rowLockWaitDuration;
@@ -601,53 +601,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * extensions.  Instances of HRegion should be instantiated with the
    * {@link HRegion#createHRegion} or {@link HRegion#openHRegion} method.
    *
-   * @param tableDir qualified path of directory where region should be located,
-   * usually the table directory.
    * @param wal The WAL is the outbound log for any updates to the HRegion
    * The wal file is a logfile from the previous execution that's
    * custom-computed for this HRegion. The HRegionServer computes and sorts the
    * appropriate wal info for this HRegion. If there is a previous wal file
    * (implying that the HRegion has been written-to before), then read it from
    * the supplied path.
-   * @param fs is the filesystem.
-   * @param confParam is global configuration settings.
-   * @param regionInfo - HRegionInfo that describes the region
-   * is new), then read them from the supplied path.
-   * @param htd the table descriptor
-   * @param rsServices reference to {@link RegionServerServices} or null
-   * @deprecated Use other constructors.
-   */
-  @Deprecated
-  @VisibleForTesting
-  private HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
-      final Configuration confParam, final HRegionInfo regionInfo,
-      final HTableDescriptor htd, final RegionServerServices rsServices)
-      throws IOException {
-    this(RegionStorage.open(confParam, fs, new LegacyPathIdentifier(tableDir), regionInfo, false), htd, wal, rsServices);
-  }
-
-  /**
-   * HRegion constructor. This constructor should only be used for testing and
-   * extensions.  Instances of HRegion should be instantiated with the
-   * {@link HRegion#createHRegion} or {@link HRegion#openHRegion} method.
-   *
-   * @param fs is the filesystem.
-   * @param wal The WAL is the outbound log for any updates to the HRegion
-   * The wal file is a logfile from the previous execution that's
-   * custom-computed for this HRegion. The HRegionServer computes and sorts the
-   * appropriate wal info for this HRegion. If there is a previous wal file
-   * (implying that the HRegion has been written-to before), then read it from
-   * the supplied path.
-   * @param confParam is global configuration settings.
    * @param htd the table descriptor
    * @param rsServices reference to {@link RegionServerServices} or null
    */
-  public HRegion(final RegionStorage rfs, final HTableDescriptor htd, final WAL wal,
+  public HRegion(final RegionStorage regionStorage, final HTableDescriptor htd, final WAL wal,
       final RegionServerServices rsServices) {
-    this(rfs, wal, rfs.getConfiguration(), htd, rsServices);
+    this(regionStorage, wal, regionStorage.getConfiguration(), htd, rsServices);
   }
 
-  private HRegion(final RegionStorage fs, final WAL wal, final Configuration confParam,
+  private HRegion(final RegionStorage regionStorage, final WAL wal, final Configuration confParam,
       final HTableDescriptor htd, final RegionServerServices rsServices) {
     if (htd == null) {
       throw new IllegalArgumentException("Need table descriptor");
@@ -658,7 +626,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     this.wal = wal;
-    this.fs = fs;
+    this.regionStorage = regionStorage;
 
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
@@ -827,14 +795,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Write HRI to a file in case we need to recover hbase:meta
     status.setStatus("Writing region info on filesystem");
-    fs.checkRegionInfoOnFilesystem();
+    regionStorage.checkRegionInfoOnStorage();
 
     // Initialize all the HStores
     status.setStatus("Initializing all the Stores");
     long maxSeqId = initializeStores(reporter, status);
     this.mvcc.advanceTo(maxSeqId);
     if (ServerRegionReplicaUtil.shouldReplayRecoveredEdits(this)) {
-      final StorageIdentifier regionContainer = this.fs.getRegionContainer();
+      final StorageIdentifier regionContainer = this.regionStorage.getRegionContainer();
       /* 
        * TODO either move wal replay stuff to not rely on details from RegionStorage,
        *      implement a WALStorage abstraction, or make a "Recovered Edits visitor".
@@ -842,13 +810,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (regionContainer instanceof LegacyPathIdentifier) {
         // Recover any edits if available.
         maxSeqId = Math.max(maxSeqId,
-            replayRecoveredEditsIfAny(((LegacyPathIdentifier)this.fs.getRegionContainer()).path, maxSeqIdInStores,
+            replayRecoveredEditsIfAny(((LegacyPathIdentifier)this.regionStorage.getRegionContainer()).path, maxSeqIdInStores,
             reporter, status));
         // Make sure mvcc is up to max.
         this.mvcc.advanceTo(maxSeqId);
       } else {
-        LOG.debug("Skipping check for recovered edits, because RegionStorage implementation '" + this.fs.getClass() +
-            "' doesn't return Paths for the region container.");
+        LOG.debug("Skipping check for recovered edits, because RegionStorage implementation '" +
+            this.regionStorage.getClass() + "' doesn't return Paths for the region container.");
       }
     }
     this.lastReplayedOpenRegionSeqId = maxSeqId;
@@ -860,14 +828,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.writestate.writesEnabled) {
       // Remove temporary data left over from old regions
       status.setStatus("Cleaning up temporary data from old regions");
-      fs.cleanupTempContainer();
+      regionStorage.cleanupTempContainer();
 
       status.setStatus("Cleaning up detritus from prior splits");
       // Get rid of any splits or merges that were lost in-progress.  Clean out
       // these directories here on open.  We may be opening a region that was
       // being split but we crashed in the middle of it all.
-      fs.cleanupAnySplitDetritus();
-      fs.cleanupMergesContainer();
+      regionStorage.cleanupAnySplitDetritus();
+      regionStorage.cleanupMergesContainer();
     }
 
     // Initialize split policy
@@ -889,17 +857,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // is opened before recovery completes. So we add a safety bumper to avoid new sequence number
     // overlaps used sequence numbers
     if (this.writestate.writesEnabled) {
-      final StorageIdentifier regionContainer = this.fs.getRegionContainer();
+      final StorageIdentifier regionContainer = this.regionStorage.getRegionContainer();
       /* 
        * TODO more WAL replay stuff that needs to get pulled out of the notion of region storage
        */
       if (regionContainer instanceof LegacyPathIdentifier) {
-        nextSeqid = WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(),
+        nextSeqid = WALSplitter.writeRegionSequenceIdFile(this.regionStorage.getFileSystem(),
             ((LegacyPathIdentifier)regionContainer).path, nextSeqid,
             (this.recovering ? (this.flushPerChanges + 10000000) : 1));
       } else {
         LOG.debug("Skipping region sequence id checkpointing, because RegionStorage implementation '" +
-            this.fs.getClass() + "' doesn't return Paths for the region container.");
+            this.regionStorage.getClass() + "' doesn't return Paths for the region container.");
         nextSeqid++;
       }
     } else {
@@ -1051,7 +1019,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALUtil.writeRegionEventMarker(wal, getReplicationScope(), getRegionInfo(), regionEventDesc,
         mvcc);
 
-    final StorageIdentifier regionContainer = this.fs.getRegionContainer();
+    final StorageIdentifier regionContainer = this.regionStorage.getRegionContainer();
     /*
      * TODO more WAL stuff to move out of region storage
      */
@@ -1059,13 +1027,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Store SeqId in HDFS when a region closes
       // checking region folder exists is due to many tests which delete the table folder while a
       // table is still online
-      if (this.fs.getFileSystem().exists(((LegacyPathIdentifier)regionContainer).path)) {
-        WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(), ((LegacyPathIdentifier)regionContainer).path,
+      if (this.regionStorage.getFileSystem().exists(((LegacyPathIdentifier)regionContainer).path)) {
+        WALSplitter.writeRegionSequenceIdFile(this.regionStorage.getFileSystem(), ((LegacyPathIdentifier)regionContainer).path,
           mvcc.getReadPoint(), 0);
       }
     } else {
       LOG.debug("skipping WAL sequence ID checkpointing because the RegionStorage implementation, '" +
-          this.fs.getClass() + "' doesn't return Paths for the region container.");
+          this.regionStorage.getClass() + "' doesn't return Paths for the region container.");
     }
   }
 
@@ -1175,7 +1143,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public HRegionInfo getRegionInfo() {
-    return this.fs.getRegionInfo();
+    return this.regionStorage.getRegionInfo();
   }
 
   /**
@@ -1741,12 +1709,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /** @return {@link FileSystem} being used by this region */
   public FileSystem getFilesystem() {
-    return fs.getFileSystem();
+    return regionStorage.getFileSystem();
   }
 
   /** @return the {@link RegionStorage} used by this region */
   public RegionStorage getRegionStorage() {
-    return this.fs;
+    return this.regionStorage;
   }
 
   @Override
@@ -4011,7 +3979,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     long seqid = minSeqIdForTheRegion;
 
-    FileSystem fs = this.fs.getFileSystem();
+    FileSystem fs = this.regionStorage.getFileSystem();
     NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(fs, regiondir);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Found " + (files == null ? 0 : files.size())
@@ -4113,7 +4081,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     String msg = "Replaying edits from " + edits;
     LOG.info(msg);
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
-    FileSystem fs = this.fs.getFileSystem();
+    FileSystem fs = this.regionStorage.getFileSystem();
 
     status.setStatus("Opening recovered edits");
     WAL.Reader reader = null;
@@ -4944,7 +4912,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           for (String storeFile : storeFiles) {
             StoreFileInfo storeFileInfo = null;
             try {
-              storeFileInfo = fs.getStoreFileInfo(Bytes.toString(family), storeFile);
+              storeFileInfo = regionStorage.getStoreFileInfo(Bytes.toString(family), storeFile);
               store.bulkLoadHFile(storeFileInfo);
             } catch(FileNotFoundException ex) {
               LOG.warn(getRegionInfo().getEncodedName() + " : "
@@ -5119,7 +5087,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     if (!RegionReplicaUtil.isDefaultReplica(this.getRegionInfo()) &&
         Bytes.equals(encodedRegionName,
-          this.fs.getRegionInfoForFS().getEncodedNameAsBytes())) {
+          this.regionStorage.getRegionInfoFromStorage().getEncodedNameAsBytes())) {
       return;
     }
 
@@ -5143,7 +5111,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /*
-   * @param fs
    * @param p File to check.
    * @return True if file was zero-length (and if so, we'll delete it in here).
    * @throws IOException
@@ -5557,7 +5524,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // Note the size of the store file
           try {
-            storeFilesSizes.put(name, this.fs.getStoreFileLen(commitedStoreFile));
+            storeFilesSizes.put(name, this.regionStorage.getStoreFileLen(commitedStoreFile));
           } catch (IOException e) {
             LOG.warn("Failed to find the size of hfile " + commitedStoreFile);
             storeFilesSizes.put(name, 0L);
@@ -6339,14 +6306,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   static HRegion newHRegion(Configuration conf,
       HTableDescriptor htd, HRegionInfo regionInfo, WAL wal, RegionServerServices rsServices)
       throws IOException {
-    RegionStorage rfs = RegionStorage.open(conf, regionInfo, false);
-    return newHRegion(rfs, htd, wal, rsServices);
+    RegionStorage regionStorage = RegionStorage.open(conf, regionInfo, false);
+    return newHRegion(regionStorage, htd, wal, rsServices);
   }
 
-  private static HRegion newHRegion(RegionStorage rfs, HTableDescriptor htd, WAL wal,
+  private static HRegion newHRegion(RegionStorage regionStorage, HTableDescriptor htd, WAL wal,
       RegionServerServices rsServices) throws IOException {
     try {
-      Configuration conf = rfs.getConfiguration();
+      Configuration conf = regionStorage.getConfiguration();
 
       @SuppressWarnings("unchecked")
       Class<? extends HRegion> regionClass =
@@ -6356,7 +6323,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           regionClass.getConstructor(RegionStorage.class, HTableDescriptor.class,
               WAL.class, RegionServerServices.class);
 
-      return c.newInstance(rfs, htd, wal, rsServices);
+      return c.newInstance(regionStorage, htd, wal, rsServices);
     } catch (Throwable e) {
       // todo: what should I throw here?
       throw new IllegalStateException("Could not instantiate a region instance.", e);
@@ -6367,7 +6334,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Convenience method creating new HRegions. Used by createTable.
    *
    * @param info Info for region to create.
-   * @param rootDir Root directory for HBase instance
    * @param wal shared WAL
    * @param initialize - true to initialize the region
    * @return new HRegion
@@ -6379,8 +6345,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     LOG.info("creating HRegion " + info.getTable().getNameAsString()
         + " HTD == " + hTableDescriptor +
         " Table name == " + info.getTable().getNameAsString());
-    RegionStorage rfs = RegionStorage.open(conf, info, true);
-    HRegion region = HRegion.newHRegion(rfs, hTableDescriptor, wal, null);
+    RegionStorage regionStorage = RegionStorage.open(conf, info, true);
+    HRegion region = HRegion.newHRegion(regionStorage, hTableDescriptor, wal, null);
+    if (initialize) region.initialize(null);
+    return region;
+  }
+
+  @VisibleForTesting
+  public static HRegion createHRegion(final Configuration conf,
+        final HTableDescriptor hTableDescriptor, final HRegionInfo info,
+        final Path dir, final WAL wal, final boolean initialize) throws IOException {
+    LOG.info("creating HRegion " + info.getTable().getNameAsString()
+        + " HTD == " + hTableDescriptor +
+        " Table name == " + info.getTable().getNameAsString());
+    RegionStorage regionStorage = RegionStorage.open(conf, FSUtils.getCurrentFileSystem(conf),
+        new LegacyPathIdentifier(dir), info, true);
+    HRegion region = HRegion.newHRegion(regionStorage, hTableDescriptor, wal, null);
     if (initialize) region.initialize(null);
     return region;
   }
@@ -6436,8 +6416,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public static HRegion openHRegion(final HRegionInfo info,
     final HTableDescriptor htd, final WAL wal, final Configuration conf,
-    final RegionServerServices rsServices,
-    final CancelableProgressable reporter)
+    final RegionServerServices rsServices, final CancelableProgressable reporter)
   throws IOException {
     if (info == null) throw new IllegalArgumentException("Passed region info is null");
     if (LOG.isDebugEnabled()) {
@@ -6450,7 +6429,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * TODO remove after refactoring TableSnapshotScanner and TableSnapshotInputFormatImpl to use a RegionStorage impl instead of specifying a different root dir manually.
    */
-  public static HRegion openHRegion(final FileSystem fs, final Path rootDir, final HRegionInfo info, HTableDescriptor htd, Configuration conf) throws IOException {
+  public static HRegion openHRegion(final FileSystem fs, final Path rootDir, final HRegionInfo info,
+      HTableDescriptor htd, Configuration conf) throws IOException {
     if (info == null) throw new IllegalArgumentException("Passed region info is null");
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
@@ -6552,7 +6532,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   HRegion createDaughterRegionFromSplits(final HRegionInfo hri) throws IOException {
     // Move the files from the temporary .splits to the final /table/region directory
-    fs.commitDaughterRegion(hri);
+    regionStorage.commitDaughterRegion(hri);
 
     // Create the daughter HRegion instance
     HRegion r = HRegion.newHRegion(this.getBaseConf(),
@@ -6580,7 +6560,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     r.writeRequestsCount.add(this.getWriteRequestsCount()
 
         + region_b.getWriteRequestsCount());
-    this.fs.commitMergedRegion(mergedRegionInfo);
+    this.regionStorage.commitMergedRegion(mergedRegionInfo);
     return r;
   }
 

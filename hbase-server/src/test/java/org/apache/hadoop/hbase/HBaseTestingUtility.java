@@ -81,6 +81,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.fs.RegionStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyPathIdentifier;
 import org.apache.hadoop.hbase.fs.legacy.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -361,20 +363,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Close both the region {@code r} and it's underlying WAL. For use in tests.
+   * Close both the region {@code region} and it's underlying WAL.
+   * To also delete the data, use {@link #destroyRegion} instead.
    */
-  public static void closeRegionAndWAL(final Region r) throws IOException {
-    closeRegionAndWAL((HRegion)r);
-  }
-
-  /**
-   * Close both the HRegion {@code r} and it's underlying WAL. For use in tests.
-   */
-  public static void closeRegionAndWAL(final HRegion r) throws IOException {
+  public static void closeRegionAndWAL(final Region region) throws IOException {
+    HRegion r = (HRegion) region;
     if (r == null) return;
     r.close();
     if (r.getWAL() == null) return;
     r.getWAL().close();
+  }
+
+  /**
+   * Closes the region to clean up resources and also destroys the data.
+   * To only close the region but not delete data, use {@link #closeRegionAndWAL(Region)}.
+   */
+  public void destroyRegion(final Region r) throws IOException {
+    closeRegionAndWAL(r);
+    RegionStorage.destroy(getConfiguration(), r.getRegionInfo());
   }
 
   /**
@@ -1120,7 +1126,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Starts the hbase cluster up again after shutting it down previously in a
    * test.  Use this if you want to keep dfs/zk up and just stop/start hbase.
    * @param servers number of region servers
-   * @throws IOException
    */
   public void restartHBaseCluster(int servers) throws IOException, InterruptedException {
     if(connection != null){
@@ -1266,7 +1271,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Note : Directory will be made irrespective of whether path has been fetched or not.
    * If directory already exists, it will be overwritten
    * @return Fully qualified path to hbase root dir
-   * @throws IOException
    */
   public Path createRootDir(boolean create) throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
@@ -1281,7 +1285,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Same as {@link HBaseTestingUtility#createRootDir(boolean create)}
    * except that <code>create</code> flag is false.
    * @return Fully qualified path to hbase root dir
-   * @throws IOException
    */
   public Path createRootDir() throws IOException {
     return createRootDir(false);
@@ -1300,7 +1303,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Flushes all caches in the mini hbase cluster
-   * @throws IOException
    */
   public void flush() throws IOException {
     getMiniHBaseCluster().flushcache();
@@ -1308,7 +1310,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Flushes all caches in the mini hbase cluster
-   * @throws IOException
    */
   public void flush(TableName tableName) throws IOException {
     getMiniHBaseCluster().flushcache(tableName);
@@ -1316,7 +1317,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Compact all regions in the mini hbase cluster
-   * @throws IOException
    */
   public void compact(boolean major) throws IOException {
     getMiniHBaseCluster().compact(major);
@@ -1324,7 +1324,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Compact all of a table's reagion in the mini hbase cluster
-   * @throws IOException
    */
   public void compact(TableName tableName, boolean major) throws IOException {
     getMiniHBaseCluster().compact(tableName, major);
@@ -1332,10 +1331,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, String family)
   throws IOException{
@@ -1344,10 +1340,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, String[] families)
   throws IOException {
@@ -1360,10 +1353,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[] family)
   throws IOException{
@@ -1372,11 +1362,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table with multiple regions.
-   * @param tableName
-   * @param family
-   * @param numRegions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[] family, int numRegions)
       throws IOException {
@@ -1390,10 +1376,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families)
   throws IOException {
@@ -1402,10 +1385,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table with multiple regions.
-   * @param tableName
-   * @param families
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[][] families) throws IOException {
     return createTable(tableName, families, KEYS_FOR_HBA_CREATE_TABLE);
@@ -1413,11 +1393,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param splitKeys
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys)
       throws IOException {
@@ -1438,11 +1414,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param htd
-   * @param families
-   * @param c Configuration to use
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(HTableDescriptor htd, byte[][] families, Configuration c)
   throws IOException {
@@ -1451,12 +1423,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param htd
-   * @param families
-   * @param splitKeys
-   * @param c Configuration to use
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(HTableDescriptor htd, byte[][] families, byte[][] splitKeys,
       Configuration c) throws IOException {
@@ -1477,10 +1444,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param htd
-   * @param splitRows
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(HTableDescriptor htd, byte[][] splitRows)
       throws IOException {
@@ -1493,12 +1457,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param splitKeys
-   * @param c Configuration to use
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys,
       final Configuration c) throws IOException {
@@ -1507,11 +1466,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[] family, int numVersions)
   throws IOException {
@@ -1520,11 +1475,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, int numVersions)
       throws IOException {
@@ -1533,12 +1484,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
-   * @param splitKeys
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families, int numVersions,
       byte[][] splitKeys) throws IOException {
@@ -1556,11 +1502,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table with multiple regions.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[][] families, int numVersions)
       throws IOException {
@@ -1569,12 +1511,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
-   * @param blockSize
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families,
     int numVersions, int blockSize) throws IOException {
@@ -1613,11 +1550,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[][] families,
       int[] numVersions)
@@ -1639,11 +1572,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
-   * @param tableName
-   * @param family
-   * @param splitRows
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createTable(TableName tableName, byte[] family, byte[][] splitRows)
       throws IOException {
@@ -1659,10 +1588,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table with multiple regions.
-   * @param tableName
-   * @param family
    * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public Table createMultiRegionTable(TableName tableName, byte[] family) throws IOException {
     return createTable(tableName, family, KEYS_FOR_HBA_CREATE_TABLE);
@@ -1809,73 +1735,45 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create an HRegion that writes to the local tmp dirs
-   * @param desc
-   * @param startKey
-   * @param endKey
-   * @return
-   * @throws IOException
    */
-  public HRegion createLocalHRegion(HTableDescriptor desc, byte [] startKey,
-      byte [] endKey)
-  throws IOException {
+  public HRegion createLocalHRegion(HTableDescriptor desc, byte [] startKey, byte [] endKey)
+      throws IOException {
     HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
     return createLocalHRegion(hri, desc);
   }
 
   /**
    * Create an HRegion that writes to the local tmp dirs. Creates the WAL for you. Be sure to call
-   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when you're finished with it.
+   * {@link HBaseTestingUtility#closeRegionAndWAL(Region)} when you're finished with it.
    */
   public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc) throws IOException {
-    return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), desc);
+    return createLocalHRegion(info, desc, conf);
+  }
+
+  /**
+   * Create an HRegion that writes to the local tmp dirs. Creates the WAL for you. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(Region)} when you're finished with it.
+   */
+  public HRegion createLocalHRegion(final HRegionInfo info, final HTableDescriptor htd,
+      Configuration conf) throws IOException {
+    // TODO: maybe we can change it to not necessarily have the wal within region dir.
+    Path dir =
+        ((LegacyPathIdentifier)RegionStorage.open(conf, info, false).getRegionContainer()).path;
+    WAL wal = createWal(conf, dir, info);
+    return HRegion.createHRegion(conf, htd, info, wal, true);
   }
 
   /**
    * Create an HRegion that writes to the local tmp dirs with specified wal
-   * @param info regioninfo
-   * @param desc table descriptor
-   * @param wal wal for this region.
-   * @return created hregion
-   * @throws IOException
    */
   public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc, WAL wal)
       throws IOException {
-//    return HRegion.createHRegion(getConfiguration(), getDataTestDir(), desc, info, wal);
-    return null;
+    return HRegion.createHRegion(getConfiguration(), desc, info, wal, true);
   }
 
   /**
-   * @param tableName
-   * @param startKey
-   * @param stopKey
-   * @param callingMethod
-   * @param conf
-   * @param isReadOnly
-   * @param families
-   * @throws IOException
    * @return A region on which you must call
-   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
-   * @deprecated use
-   * {@link #createLocalHRegion(TableName, byte[], byte[], boolean, Durability, WAL, byte[]...)}
-   */
-  @Deprecated
-  public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
-    return this
-        .createLocalHRegion(TableName.valueOf(tableName), startKey, stopKey, isReadOnly, durability,
-            wal, families);
-  }
-
-  /**
-   * @param tableName
-   * @param startKey
-   * @param stopKey
-   * @param isReadOnly
-   * @param families
-   * @return A region on which you must call
-   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
-   * @throws IOException
+   * {@link HBaseTestingUtility#closeRegionAndWAL(Region)} when done.
    */
   public HRegion createLocalHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
       boolean isReadOnly, Durability durability, WAL wal, byte[]... families) throws IOException {
@@ -1884,10 +1782,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   public HRegion createLocalHRegionWithInMemoryFlags(TableName tableName, byte[] startKey,
-      byte[] stopKey,
-      boolean isReadOnly, Durability durability, WAL wal, boolean[] compactedMemStore,
-      byte[]... families)
-      throws IOException {
+      byte[] stopKey, boolean isReadOnly, Durability durability, WAL wal,
+      boolean[] compactedMemStore, byte[]... families) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setReadOnly(isReadOnly);
     int i=0;
@@ -1917,7 +1813,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Scans the table and issues a delete for each row read.
    * @param tableName existing table
    * @return HTable to that new table
-   * @throws IOException
    */
   public Table deleteTableData(TableName tableName) throws IOException {
     Table table = getConnection().getTable(tableName);
@@ -2312,11 +2207,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create rows in hbase:meta for regions of the specified table with the specified
    * start keys.  The first startKey should be a 0 length byte array if you
    * want to form a proper range of regions.
-   * @param conf
-   * @param htd
-   * @param startKeys
    * @return list of region info for regions added to meta
-   * @throws IOException
    */
   public List<HRegionInfo> createMultiRegionsInMeta(final Configuration conf,
       final HTableDescriptor htd, byte [][] startKeys)
@@ -2354,25 +2245,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
   }
 
-  /**
-   * Create a region with it's own WAL. Be sure to call
-   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
-   */
-  public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
-      final Configuration conf, final HTableDescriptor htd) throws IOException {
-    return createRegionAndWAL(info, rootDir, conf, htd, true);
-  }
 
   /**
    * Create a region with it's own WAL. Be sure to call
-   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   * {@link HBaseTestingUtility#closeRegionAndWAL(Region)} to clean up all resources.
    */
-  public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
-      final Configuration conf, final HTableDescriptor htd, boolean initialize)
-      throws IOException {
-    WAL wal = createWal(conf, rootDir, info);
-//    return HRegion.createHRegion(conf, rootDir, htd, info, wal, initialize);
-    return null;
+  // TODO: should be gone when fsredo phase 1 is complete.
+  public HRegion createRegionAndWAL(final HRegionInfo info, final HTableDescriptor htd,
+      Configuration conf, Path dir) throws IOException {
+    WAL wal = createWal(conf, dir, info);
+    return HRegion.createHRegion(conf, htd, info, dir, wal, true);
   }
 
   /**
@@ -3842,7 +3724,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     htd.addFamily(hcd);
     HRegionInfo info =
         new HRegionInfo(TableName.valueOf(tableName), null, null, false);
-    return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), htd);
+    return createLocalHRegion(info, htd);
   }
 
   public void setFileSystemURI(String fsURI) {

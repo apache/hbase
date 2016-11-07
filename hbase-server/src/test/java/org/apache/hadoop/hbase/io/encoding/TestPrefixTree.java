@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -49,6 +48,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestPrefixTree {
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final String row4 = "a-b-B-2-1402397300-1402416535";
   private static final byte[] row4_bytes = Bytes.toBytes(row4);
@@ -63,7 +63,6 @@ public class TestPrefixTree {
   private final static byte[] qual1 = Bytes.toBytes("qf_1");
   private final static byte[] qual2 = Bytes.toBytes("qf_2");
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
   private Region region;
 
@@ -73,14 +72,12 @@ public class TestPrefixTree {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(fam).setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE));
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    Path path = testUtil.getDataTestDir(getClass().getSimpleName());
-    region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
+    region = TEST_UTIL.createLocalHRegion(info, htd);
   }
 
   @After
   public void tearDown() throws Exception {
-    HBaseTestingUtility.closeRegionAndWAL(region);
-    testUtil.cleanupTestDir();
+    TEST_UTIL.destroyRegion(region);
   }
 
   @Test

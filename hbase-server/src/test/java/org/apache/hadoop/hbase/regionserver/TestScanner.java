@@ -104,7 +104,7 @@ public class TestScanner {
 
   private static final long START_CODE = Long.MAX_VALUE;
 
-  private HRegion region;
+  private Region region;
 
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
   final private byte[] col1;
@@ -123,7 +123,6 @@ public class TestScanner {
 
   /**
    * Test basic stop row filter works.
-   * @throws Exception
    */
   @Test
   public void testStopRow() throws Exception {

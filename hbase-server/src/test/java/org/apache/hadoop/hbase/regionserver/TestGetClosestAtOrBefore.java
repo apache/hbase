@@ -24,9 +24,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -43,7 +40,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -72,17 +68,14 @@ public class TestGetClosestAtOrBefore  {
   private static final byte[] T40 = Bytes.toBytes("040");
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static Configuration conf = UTIL.getConfiguration();
 
   @Test
   public void testUsingMetaAndBinary() throws IOException {
-    FileSystem filesystem = FileSystem.get(conf);
-    Path rootdir = UTIL.getDataTestDirOnTestFS();
     // Up flush size else we bind up when we use default catalog flush of 16k.
     UTIL.getMetaTableDescriptor().setMemStoreFlushSize(64 * 1024 * 1024);
 
-    Region mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
-        rootdir, this.conf, UTIL.getMetaTableDescriptor());
+    Region mr = UTIL.createLocalHRegion(HRegionInfo.FIRST_META_REGIONINFO,
+        UTIL.getMetaTableDescriptor());
     try {
     // Write rows for three tables 'A', 'B', and 'C'.
     for (char c = 'A'; c < 'D'; c++) {
@@ -144,7 +137,7 @@ public class TestGetClosestAtOrBefore  {
     findRow(mr, 'C', 46, -1);
     findRow(mr, 'C', 43, -1);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(mr);
+      UTIL.destroyRegion(mr);
     }
   }
 
@@ -162,9 +155,7 @@ public class TestGetClosestAtOrBefore  {
     TableName tableb = TableName.valueOf("" + table);
     // Find the row.
     byte [] tofindBytes = Bytes.toBytes((short)rowToFind);
-    byte [] metaKey = HRegionInfo.createRegionName(
-        tableb, tofindBytes,
-      HConstants.NINES, false);
+    byte [] metaKey = HRegionInfo.createRegionName( tableb, tofindBytes, HConstants.NINES, false);
     LOG.info("find=" + new String(metaKey));
     Result r = UTIL.getClosestRowBefore(mr, metaKey, HConstants.CATALOG_FAMILY);
     if (answer == -1) {
@@ -291,9 +282,7 @@ public class TestGetClosestAtOrBefore  {
     } finally {
       if (region != null) {
         try {
-          WAL wal = ((HRegion)region).getWAL();
-          ((HRegion)region).close();
-          wal.close();
+          UTIL.destroyRegion(region);
         } catch (Exception e) {
           e.printStackTrace();
         }
@@ -349,9 +338,7 @@ public class TestGetClosestAtOrBefore  {
     } finally {
       if (region != null) {
         try {
-          WAL wal = ((HRegion)region).getWAL();
-          ((HRegion)region).close();
-          wal.close();
+          UTIL.destroyRegion(region);
         } catch (Exception e) {
           e.printStackTrace();
         }

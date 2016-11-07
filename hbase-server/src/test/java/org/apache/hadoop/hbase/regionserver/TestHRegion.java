@@ -19,9 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.security.PrivilegedExceptionAction;
@@ -31,7 +29,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -49,8 +46,6 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
@@ -102,17 +97,10 @@ import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ServerProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.StoreFlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
@@ -120,12 +108,10 @@ import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestStore.FaultyFileSystem;
 import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -139,14 +125,11 @@ import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FaultyFSLog;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
-import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -252,7 +235,6 @@ public class TestHRegion {
 
   /**
    * Test that I can use the max flushed sequence id after the close.
-   * @throws IOException
    */
   @Test
   public void testSequenceId() throws IOException {
@@ -287,7 +269,6 @@ public class TestHRegion {
    * case previous flush fails and leaves some data in snapshot. The bug could cause loss of data
    * in current memstore. The fix is removing all conditions except abort check so we ensure 2
    * flushes for region close."
-   * @throws IOException
    */
   @Test
   public void testCloseCarryingSnapshot() throws IOException {
@@ -475,7 +456,6 @@ public class TestHRegion {
    * much smaller than expected. In extreme case, if the error accumulates to even bigger than
    * HRegion's memstore size limit, any further flush is skipped because flush does not do anything
    * if memstoreSize is not larger than 0."
-   * @throws Exception
    */
   @Test
   public void testFlushSizeAccounting() throws Exception {
@@ -4251,7 +4231,7 @@ public class TestHRegion {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = TEST_UTIL.createLocalHRegion(info, htd);
+    Region region = TEST_UTIL.createLocalHRegion(info, htd);
     try {
       int num_unique_rows = 10;
       int duplicate_multiplier = 2;
@@ -4293,8 +4273,7 @@ public class TestHRegion {
         assertEquals(num_unique_rows, reader.getFilterEntries());
       }
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
+      TEST_UTIL.destroyRegion(region);
     }
   }
 
@@ -4309,7 +4288,7 @@ public class TestHRegion {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = TEST_UTIL.createLocalHRegion(info, htd);
+    Region region = TEST_UTIL.createLocalHRegion(info, htd);
     try {
       // For row:0, col:0: insert versions 1 through 5.
       byte row[] = Bytes.toBytes("row:" + 0);
@@ -4336,8 +4315,7 @@ public class TestHRegion {
       checkOneCell(kvs[2], FAMILY, 0, 0, 2);
       checkOneCell(kvs[3], FAMILY, 0, 0, 1);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
+      TEST_UTIL.destroyRegion(region);
     }
   }
 
@@ -4357,7 +4335,7 @@ public class TestHRegion {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = TEST_UTIL.createLocalHRegion(info, htd);
+    Region region = TEST_UTIL.createLocalHRegion(info, htd);
     try {
       // Insert some data
       byte row[] = Bytes.toBytes("row1");
@@ -4379,8 +4357,7 @@ public class TestHRegion {
       Cell[] keyValues = region.get(get).rawCells();
       assertTrue(keyValues.length == 0);
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
+      TEST_UTIL.destroyRegion(region);
     }
   }
 
@@ -4993,14 +4970,6 @@ public class TestHRegion {
 //    }
 //  }
 
-  static WALFactory createWALFactory(Configuration conf, Path rootDir) throws IOException {
-    Configuration confForWAL = new Configuration(conf);
-    confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    return new WALFactory(confForWAL,
-        Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-        "hregion-" + RandomStringUtils.randomNumeric(8));
-  }
-
 //  @Test
 //  public void testCompactionFromPrimary() throws IOException {
 //    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
@@ -5203,7 +5172,7 @@ public class TestHRegion {
 
   /**
    * @return A region on which you must call
-   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
+   *         {@link HBaseTestingUtility#closeRegionAndWAL(Region)} when done.
    */
   protected HRegion initHRegion(TableName tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
@@ -5212,7 +5181,7 @@ public class TestHRegion {
 
   /**
    * @return A region on which you must call
-   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
+   *         {@link HBaseTestingUtility#closeRegionAndWAL(Region)} when done.
    */
   protected HRegion initHRegion(TableName tableName, String callingMethod, Configuration conf,
       boolean isReadOnly, byte[]... families) throws IOException {
@@ -5231,7 +5200,7 @@ public class TestHRegion {
 
   /**
    * @return A region on which you must call
-   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
+   *         {@link HBaseTestingUtility#closeRegionAndWAL(Region)} when done.
    */
   public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
@@ -6042,9 +6011,7 @@ public class TestHRegion {
       HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
 
     // open the region w/o rss and wal and flush some files
-    HRegion region =
-         HBaseTestingUtility.createRegionAndWAL(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL
-             .getConfiguration(), htd);
+    Region region = TEST_UTIL.createLocalHRegion(hri, htd);
     assertNotNull(region);
 
     // create a file in fam1 for the region before opening in OpenRegionHandler
@@ -6094,7 +6061,7 @@ public class TestHRegion {
       assertEquals(0, store.getStoreFileCount()); // no store files
 
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      TEST_UTIL.destroyRegion(region);
     }
   }
 
@@ -6112,21 +6079,23 @@ public class TestHRegion {
 
   @Test
   public void testFlushedFileWithNoTags() throws Exception {
-    TableName tableName = TableName.valueOf(getClass().getSimpleName());
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    htd.addFamily(new HColumnDescriptor(fam1));
-    HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    Path path = TEST_UTIL.getDataTestDir(getClass().getSimpleName());
-    region = HBaseTestingUtility.createRegionAndWAL(info, path, TEST_UTIL.getConfiguration(), htd);
-    Put put = new Put(Bytes.toBytes("a-b-0-0"));
-    put.addColumn(fam1, qual1, Bytes.toBytes("c1-value"));
-    region.put(put);
-    region.flush(true);
-    Store store = region.getStore(fam1);
-    Collection<StoreFile> storefiles = store.getStorefiles();
-    for (StoreFile sf : storefiles) {
-      assertFalse("Tags should not be present "
-          ,sf.getReader().getHFileReader().getFileContext().isIncludesTags());
+    try {
+      TableName tableName = TableName.valueOf(getClass().getSimpleName());
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor(fam1));
+      HRegionInfo info = new HRegionInfo(tableName, null, null, false);
+      Region region = TEST_UTIL.createLocalHRegion(info, htd);
+      Put put = new Put(Bytes.toBytes("a-b-0-0"));
+      put.addColumn(fam1, qual1, Bytes.toBytes("c1-value"));
+      region.put(put);
+      region.flush(true);
+      Store store = region.getStore(fam1);
+      Collection<StoreFile> storefiles = store.getStorefiles();
+      for (StoreFile sf : storefiles) {
+        assertFalse("Tags should not be present ", sf.getReader().getHFileReader().getFileContext().isIncludesTags());
+      }
+    } finally {
+      TEST_UTIL.destroyRegion(region);
     }
   }
 
@@ -6146,9 +6115,7 @@ public class TestHRegion {
       HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
 
     // open the region w/o rss and wal and flush some files
-    HRegion region =
-         HBaseTestingUtility.createRegionAndWAL(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL
-             .getConfiguration(), htd);
+    Region region = TEST_UTIL.createLocalHRegion(hri, htd);
     assertNotNull(region);
 
     // create a file in fam1 for the region before opening in OpenRegionHandler
@@ -6215,15 +6182,13 @@ public class TestHRegion {
       assertEquals(0, store.getStoreFileCount()); // no store files
 
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      TEST_UTIL.destroyRegion(region);
     }
   }
 
   /**
    * Utility method to setup a WAL mock.
    * Needs to do the bit where we close latch on the WALKey on append else test hangs.
-   * @return
-   * @throws IOException
    */
   private WAL mockWAL() throws IOException {
     WAL wal = mock(WAL.class);
@@ -6373,9 +6338,9 @@ public class TestHRegion {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
 
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(new HRegionInfo(htd.getTableName(),
+    Region region = TEST_UTIL.createLocalHRegion(new HRegionInfo(htd.getTableName(),
             HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
-        TEST_UTIL.getDataTestDir(), conf, htd);
+        htd, conf);
     assertNotNull(region);
     try {
       long now = EnvironmentEdgeManager.currentTime();
@@ -6452,7 +6417,7 @@ public class TestHRegion {
       // Increment with a TTL of 5 seconds
       Increment incr = new Increment(row).addColumn(fam1, q1, 1L);
       incr.setTTL(5000);
-      region.increment(incr); // 2
+      region.increment(incr, HConstants.NO_NONCE, HConstants.NO_NONCE); // 2
 
       // New value should be 2
       r = region.get(new Get(row));
@@ -6477,7 +6442,7 @@ public class TestHRegion {
       assertNull(r.getValue(fam1, q1));
 
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      TEST_UTIL.destroyRegion(region);
     }
   }
 

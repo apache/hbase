@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -60,7 +60,7 @@ public class TestScannerFromBucketCache {
   @Rule
   public TestName name = new TestName();
 
-  HRegion region = null;
+  Region region = null;
   private HBaseTestingUtility test_util;
   public Configuration conf;
   private final int MAX_VERSIONS = 2;
@@ -334,37 +334,15 @@ public class TestScannerFromBucketCache {
     return actual;
   }
 
-  private static HRegion initHRegion(TableName tableName, String callingMethod, Configuration conf,
-      HBaseTestingUtility test_util, byte[]... families) throws IOException {
-    return initHRegion(tableName, null, null, callingMethod, conf, test_util, false, families);
-  }
-
-  private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, HBaseTestingUtility test_util, boolean isReadOnly,
-      byte[]... families) throws IOException {
-    Path logDir = test_util.getDataTestDirOnTestFS(callingMethod + ".log");
-    HRegionInfo hri = new HRegionInfo(tableName, startKey, stopKey);
-    final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);
-    return initHRegion(tableName, startKey, stopKey, callingMethod, conf, test_util, isReadOnly,
-      Durability.SYNC_WAL, wal, families);
-  }
-
   /**
-   * @param tableName
-   * @param startKey
-   * @param stopKey
-   * @param callingMethod
-   * @param conf
-   * @param isReadOnly
-   * @param families
-   * @throws IOException
-   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
-   *         when done.
+   * Be sure to call {@link HBaseTestingUtility#closeRegionAndWAL(Region)} to clean up resources.
    */
-  private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, HBaseTestingUtility test_util, boolean isReadOnly,
-      Durability durability, WAL wal, byte[]... families) throws IOException {
-    return test_util.createLocalHRegion(tableName, startKey, stopKey, isReadOnly, durability, wal,
-      families);
+  private static Region initHRegion(TableName tableName, String callingMethod, Configuration conf,
+      HBaseTestingUtility test_util, byte[]... families) throws IOException {
+    Path logDir = test_util.getDataTestDirOnTestFS(callingMethod + ".log");
+    HRegionInfo hri = new HRegionInfo(tableName);
+    final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);
+    return test_util.createLocalHRegion(tableName, null, null, false, Durability.SYNC_WAL, wal,
+        families);
   }
 }

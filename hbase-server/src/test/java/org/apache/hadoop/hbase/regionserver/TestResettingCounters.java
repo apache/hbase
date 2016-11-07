@@ -41,7 +41,6 @@ public class TestResettingCounters {
 
   @Test
   public void testResettingCounters() throws Exception {
-
     HBaseTestingUtility htu = new HBaseTestingUtility();
     Configuration conf = htu.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
@@ -62,14 +61,7 @@ public class TestResettingCounters {
     for (byte [] family : families) htd.addFamily(new HColumnDescriptor(family));
 
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), null, null, false);
-    String testDir = htu.getDataTestDir() + "/TestResettingCounters/";
-    Path path = new Path(testDir);
-    if (fs.exists(path)) {
-      if (!fs.delete(path, true)) {
-        throw new IOException("Failed delete of " + path);
-      }
-    }
-    Region region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, htd);
+    Region region = htu.createLocalHRegion(hri, htd);
     try {
       Increment odd = new Increment(rows[0]);
       odd.setDurability(Durability.SKIP_WAL);
@@ -100,9 +92,8 @@ public class TestResettingCounters {
         assertEquals(6, Bytes.toLong(CellUtil.cloneValue(kvs[i])));
       }
     } finally {
-      HBaseTestingUtility.closeRegionAndWAL(region);
+      htu.destroyRegion(region);
     }
-    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
 }

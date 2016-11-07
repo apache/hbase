@@ -69,8 +69,7 @@ public class TestInvocationRecordFilter {
         TableName.valueOf(TABLE_NAME_BYTES));
     htd.addFamily(new HColumnDescriptor(FAMILY_NAME_BYTES));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+    this.region = TEST_UTIL.createLocalHRegion(info, htd);
 
     Put put = new Put(ROW_BYTES);
     for (int i = 0; i < 10; i += 2) {
@@ -80,6 +79,11 @@ public class TestInvocationRecordFilter {
     }
     this.region.put(put);
     this.region.flush(true);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    TEST_UTIL.destroyRegion(region);
   }
 
   @Test
@@ -147,13 +151,6 @@ public class TestInvocationRecordFilter {
     Assert.assertTrue("Actual values " + actualValues
         + " differ from the expected values:" + expectedValues,
         expectedValues.equals(actualValues));
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    WAL wal = ((HRegion)region).getWAL();
-    ((HRegion)region).close();
-    wal.close();
   }
 
   /**

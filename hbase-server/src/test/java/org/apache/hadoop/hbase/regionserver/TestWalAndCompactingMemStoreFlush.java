@@ -63,7 +63,7 @@ public class TestWalAndCompactingMemStoreFlush {
   public static final byte[] FAMILY2 = FAMILIES[1];
   public static final byte[] FAMILY3 = FAMILIES[2];
 
-  private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
+  private HRegion initHRegion(Configuration conf) throws IOException {
     int i=0;
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     for (byte[] family : FAMILIES) {
@@ -75,8 +75,7 @@ public class TestWalAndCompactingMemStoreFlush {
     }
 
     HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
-    Path path = new Path(DIR, callingMethod);
-    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    return TEST_UTIL.createLocalHRegion(info, htd, conf);
   }
 
   // A helper function to create puts.
@@ -132,7 +131,7 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.25);
 
     // Intialize the region
-    Region region = initHRegion("testSelectiveFlushWhenEnabled", conf);
+    Region region = initHRegion(conf);
 
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
@@ -385,7 +384,7 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setInt("hbase.hregion.compacting.memstore.type",1);
 
     // Intialize the region
-    Region region = initHRegion("testSelectiveFlushWhenEnabled", conf);
+    Region region = initHRegion(conf);
 
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
@@ -629,7 +628,7 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
 
     // Intialize the HRegion
-    HRegion region = initHRegion("testSelectiveFlushWhenNotEnabled", conf);
+    HRegion region = initHRegion(conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));
