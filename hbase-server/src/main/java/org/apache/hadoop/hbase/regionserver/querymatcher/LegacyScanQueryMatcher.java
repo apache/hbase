@@ -173,7 +173,7 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
     long mvccVersion = cell.getSequenceId();
     int qualifierOffset = cell.getQualifierOffset();
     int qualifierLength = cell.getQualifierLength();
-    if (CellUtil.isDelete(cell)) {
+    if (CellUtil.isDelete(typeByte)) {
       if (keepDeletedCells == KeepDeletedCells.FALSE
           || (keepDeletedCells == KeepDeletedCells.TTL && timestamp < oldestUnexpiredTS)) {
         // first ignore delete markers if the scanner can do so, and the
