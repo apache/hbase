@@ -44,9 +44,11 @@ public class RawScanQueryMatcher extends UserScanQueryMatcher {
     if (returnCode != null) {
       return returnCode;
     }
+    long timestamp = cell.getTimestamp();
+    byte typeByte = cell.getTypeByte();
     // For a raw scan, we do not filter out any cells by delete marker, and delete marker is also
     // returned, so we do not need to track delete.
-    return matchColumn(cell);
+    return matchColumn(cell, timestamp, typeByte);
   }
 
   @Override
