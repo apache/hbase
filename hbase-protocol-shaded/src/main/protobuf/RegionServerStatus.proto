@@ -141,6 +141,22 @@ message SplitTableRegionResponse {
   optional uint64 proc_id = 1;
 }
 
+message RegionSpaceUse {
+  optional RegionInfo region = 1; // A region identifier
+  optional uint64 size = 2; // The size in bytes of the region
+}
+
+/**
+ * Reports filesystem usage for regions.
+ */
+message RegionSpaceUseReportRequest {
+  repeated RegionSpaceUse space_use = 1;
+}
+
+message RegionSpaceUseReportResponse {
+
+}
+
 service RegionServerStatusService {
   /** Called when a region server first starts. */
   rpc RegionServerStartup(RegionServerStartupRequest)
@@ -182,4 +198,10 @@ service RegionServerStatusService {
    */
   rpc getProcedureResult(GetProcedureResultRequest)
     returns(GetProcedureResultResponse);
+
+  /**
+   * Reports Region filesystem space use
+   */
+  rpc ReportRegionSpaceUse(RegionSpaceUseReportRequest)
+    returns(RegionSpaceUseReportResponse);
 }

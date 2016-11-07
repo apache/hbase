@@ -19,7 +19,10 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,6 +65,7 @@ public class MasterQuotaManager implements RegionStateListener {
   private NamedLock<String> userLocks;
   private boolean enabled = false;
   private NamespaceAuditor namespaceQuotaManager;
+  private ConcurrentHashMap<HRegionInfo, Long> regionSizes;
 
   public MasterQuotaManager(final MasterServices masterServices) {
     this.masterServices = masterServices;
@@ -85,6 +89,7 @@ public class MasterQuotaManager implements RegionStateListener {
     namespaceLocks = new NamedLock<>();
     tableLocks = new NamedLock<>();
     userLocks = new NamedLock<>();
+    regionSizes = new ConcurrentHashMap<>();
 
     namespaceQuotaManager = new NamespaceAuditor(masterServices);
     namespaceQuotaManager.start();
@@ -514,6 +519,16 @@ public class MasterQuotaManager implements RegionStateListener {
     if (enabled) {
       this.namespaceQuotaManager.removeRegionFromNamespaceUsage(hri);
     }
+  }
+
+  public void addRegionSize(HRegionInfo hri, long size) {
+    // TODO Make proper API
+    regionSizes.put(hri, size);
+  }
+
+  public Map<HRegionInfo, Long> snapshotRegionSizes() {
+    // TODO Make proper API
+    return new HashMap<>(regionSizes);
   }
 }
 

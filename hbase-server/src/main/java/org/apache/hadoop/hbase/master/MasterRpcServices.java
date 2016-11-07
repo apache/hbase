@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -94,6 +95,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseReportRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseReportResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
@@ -1898,6 +1902,21 @@ public class MasterRpcServices extends RSRpcServices
             .setLockStatus(LockHeartbeatResponse.LockStatus.UNLOCKED).build();
       }
     } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RegionSpaceUseReportResponse reportRegionSpaceUse(RpcController controller,
+      RegionSpaceUseReportRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      MasterQuotaManager quotaManager = this.master.getMasterQuotaManager();
+      for (RegionSpaceUse report : request.getSpaceUseList()) {
+        quotaManager.addRegionSize(HRegionInfo.convert(report.getRegion()), report.getSize());
+      }
+      return RegionSpaceUseReportResponse.newBuilder().build();
+    } catch (Exception e) {
       throw new ServiceException(e);
     }
   }
