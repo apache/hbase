@@ -110,7 +110,7 @@ public class MiniBatchOperationInProgress<T> {
    * Add more Mutations corresponding to the Mutation at the given index to be committed atomically
    * in the same batch. These mutations are applied to the WAL and applied to the memstore as well.
    * The timestamp of the cells in the given Mutations MUST be obtained from the original mutation.
-   *
+   * <b>Note:</b> The durability from CP will be replaced by the durability of corresponding mutation.
    * @param index the index that corresponds to the original mutation index in the batch
    * @param newOperations the Mutations to add
    */
