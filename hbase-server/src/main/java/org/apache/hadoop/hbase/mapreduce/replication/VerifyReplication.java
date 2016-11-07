@@ -210,18 +210,19 @@ public class VerifyReplication extends Configured implements Tool {
           if (!sourceResult.isEmpty()) {
             context.getCounter(Counters.GOODROWS).increment(1);
             if (verbose) {
-              LOG.info("Good row key: " + delimiter + Bytes.toString(row.getRow()) + delimiter);
+              LOG.info("Good row key (with recompare): " + delimiter + Bytes.toStringBinary(row.getRow())
+              + delimiter);
             }
           }
           return;
         } catch (Exception e) {
           LOG.error("recompare fail after sleep, rowkey=" + delimiter +
-              Bytes.toString(row.getRow()) + delimiter);
+              Bytes.toStringBinary(row.getRow()) + delimiter);
         }
       }
       context.getCounter(counter).increment(1);
       context.getCounter(Counters.BADROWS).increment(1);
-      LOG.error(counter.toString() + ", rowkey=" + delimiter + Bytes.toString(row.getRow()) +
+      LOG.error(counter.toString() + ", rowkey=" + delimiter + Bytes.toStringBinary(row.getRow()) +
           delimiter);
     }
 
