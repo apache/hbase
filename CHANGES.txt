@@ -1,7 +1,7 @@
 HBase Change Log
 
 
-Release Notes - HBase - Version 1.2.4
+Release Notes - HBase - Version 1.2.4 11/07/2016
 
 ** Sub-task
     * [HBASE-14734] - BindException when setting up MiniKdc
