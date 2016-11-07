@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
@@ -2395,6 +2396,77 @@ public class TestHRegion {
       HRegion.closeHRegion(this.region);
       this.region = null;
     }
+  }
+
+  @Test
+  public void testDataInMemoryWithoutWAL() throws IOException {
+    FileSystem fs = FileSystem.get(CONF);
+    Path rootDir = new Path(dir + "testDataInMemoryWithoutWAL");
+    FSHLog hLog = new FSHLog(fs, rootDir, "testDataInMemoryWithoutWAL", CONF);
+    HRegion region = initHRegion(tableName, null, null, name.getMethodName(),
+        CONF, false, Durability.SYNC_WAL, hLog, COLUMN_FAMILY_BYTES);
+
+    Cell originalCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
+      System.currentTimeMillis(), KeyValue.Type.Put.getCode(), value1);
+    final long originalSize = KeyValueUtil.length(originalCell);
+
+    Cell addCell = CellUtil.createCell(row, COLUMN_FAMILY_BYTES, qual1,
+      System.currentTimeMillis(), KeyValue.Type.Put.getCode(), Bytes.toBytes("xxxxxxxxxx"));
+    final long addSize = KeyValueUtil.length(addCell);
+
+    LOG.info("originalSize:" + originalSize
+      + ", addSize:" + addSize);
+    // start test. We expect that the addPut's durability will be replaced
+    // by originalPut's durability.
+
+    // case 1:
+    testDataInMemoryWithoutWAL(region,
+            new Put(row).add(originalCell).setDurability(Durability.SKIP_WAL),
+            new Put(row).add(addCell).setDurability(Durability.SKIP_WAL),
+            originalSize + addSize);
+
+    // case 2:
+    testDataInMemoryWithoutWAL(region,
+            new Put(row).add(originalCell).setDurability(Durability.SKIP_WAL),
+            new Put(row).add(addCell).setDurability(Durability.SYNC_WAL),
+            originalSize + addSize);
+
+    // case 3:
+    testDataInMemoryWithoutWAL(region,
+            new Put(row).add(originalCell).setDurability(Durability.SYNC_WAL),
+            new Put(row).add(addCell).setDurability(Durability.SKIP_WAL),
+            0);
+
+    // case 4:
+    testDataInMemoryWithoutWAL(region,
+            new Put(row).add(originalCell).setDurability(Durability.SYNC_WAL),
+            new Put(row).add(addCell).setDurability(Durability.SYNC_WAL),
+            0);
+  }
+
+  private static void testDataInMemoryWithoutWAL(HRegion region, Put originalPut,
+          final Put addPut, long delta) throws IOException {
+    final long initSize = region.getDataInMemoryWithoutWAL();
+    // save normalCPHost and replaced by mockedCPHost
+    RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
+    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
+    Answer<Boolean> answer = new Answer<Boolean>() {
+      @Override
+      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+        MiniBatchOperationInProgress<Mutation> mb = invocation.getArgumentAt(0,
+                MiniBatchOperationInProgress.class);
+        mb.addOperationsFromCP(0, new Mutation[]{addPut});
+        return false;
+      }
+    };
+    when(mockedCPHost.preBatchMutate(Mockito.isA(MiniBatchOperationInProgress.class)))
+      .then(answer);
+    region.setCoprocessorHost(mockedCPHost);
+    region.put(originalPut);
+    region.setCoprocessorHost(normalCPHost);
+    final long finalSize = region.getDataInMemoryWithoutWAL();
+    assertEquals("finalSize:" + finalSize + ", initSize:"
+      + initSize + ", delta:" + delta,finalSize, initSize + delta);
   }
 
   @Test

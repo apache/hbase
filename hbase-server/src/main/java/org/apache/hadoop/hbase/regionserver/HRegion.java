@@ -3227,10 +3227,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               // Acquire row locks. If not, the whole batch will fail.
               acquiredRowLocks.add(getRowLockInternal(cpMutation.getRow(), true));
 
-              if (cpMutation.getDurability() == Durability.SKIP_WAL) {
-                recordMutationWithoutWal(cpFamilyMap);
-              }
-
               // Returned mutations from coprocessor correspond to the Mutation at index i. We can
               // directly add the cells from those mutations to the familyMaps of this mutation.
               mergeFamilyMaps(familyMaps[i], cpFamilyMap); // will get added to the memstore later
@@ -3254,6 +3250,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (tmpDur.ordinal() > durability.ordinal()) {
           durability = tmpDur;
         }
+        // we use durability of the original mutation for the mutation passed by CP.
         if (tmpDur == Durability.SKIP_WAL) {
           recordMutationWithoutWal(m.getFamilyCellMap());
           continue;
@@ -3366,7 +3363,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // 2) If no WAL, FSWALEntry won't be used
         // 3) If mvcc preassigned, the asynchronous append may still hasn't run to
         // FSWALEntry#stampRegionSequenceId and the cell seqId will be 0. So we need to update
-        // before apply to memstore to avoid scan return incorrect value
+        // before apply to memstore to avoid scan return incorrect value.
+        // we use durability of the original mutation for the mutation passed by CP.
         boolean updateSeqId = isInReplay
             || batchOp.getMutation(i).getDurability() == Durability.SKIP_WAL || mvccPreAssign;
         if (updateSeqId) {
@@ -8410,7 +8408,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       for (int i=0; i < listSize; i++) {
         Cell cell = cells.get(i);
         // TODO we need include tags length also here.
-        mutationSize += KeyValueUtil.keyLength(cell) + cell.getValueLength();
+        mutationSize += KeyValueUtil.length(cell);
       }
     }
 
