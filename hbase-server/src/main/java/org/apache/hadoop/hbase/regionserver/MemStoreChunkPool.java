@@ -57,7 +57,7 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
   private static final Log LOG = LogFactory.getLog(MemStoreChunkPool.class);
   final static String CHUNK_POOL_MAXSIZE_KEY = "hbase.hregion.memstore.chunkpool.maxsize";
   final static String CHUNK_POOL_INITIALSIZE_KEY = "hbase.hregion.memstore.chunkpool.initialsize";
-  final static float POOL_MAX_SIZE_DEFAULT = 0.0f;
+  final static float POOL_MAX_SIZE_DEFAULT = 1.0f;
   final static float POOL_INITIAL_SIZE_DEFAULT = 0.0f;
 
   // Static reference to the MemStoreChunkPool
