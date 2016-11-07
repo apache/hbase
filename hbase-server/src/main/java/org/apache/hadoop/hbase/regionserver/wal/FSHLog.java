@@ -1242,6 +1242,7 @@ public class FSHLog implements WAL {
           && takeSyncFuture == null;
     }
 
+    @Override
     public void run() {
       long currentSequence;
       while (!isInterrupted()) {
@@ -1666,7 +1667,9 @@ public class FSHLog implements WAL {
     SyncFuture waitSafePoint(final SyncFuture syncFuture)
     throws InterruptedException, FailedSyncBeforeLogCloseException {
       while (true) {
-        if (this.safePointAttainedLatch.await(1, TimeUnit.NANOSECONDS)) break;
+        if (this.safePointAttainedLatch.await(1, TimeUnit.MILLISECONDS)) {
+          break;
+        }
         if (syncFuture.isThrowable()) {
           throw new FailedSyncBeforeLogCloseException(syncFuture.getThrowable());
         }
