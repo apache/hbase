@@ -88,8 +88,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     }
   }
 
-  protected final MatchCode matchColumn(Cell cell) throws IOException {
-    long timestamp = cell.getTimestamp();
+  protected final MatchCode matchColumn(Cell cell, long timestamp, byte typeByte)
+      throws IOException {
     int tsCmp = tr.compare(timestamp);
     if (tsCmp > 0) {
       return MatchCode.SKIP;
@@ -97,7 +97,6 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     if (tsCmp < 0) {
       return columns.getNextRowOrNextColumn(cell);
     }
-    byte typeByte = cell.getTypeByte();
     // STEP 1: Check if the column is part of the requested columns
     MatchCode colChecker = columns.checkColumn(cell, typeByte);
     if (colChecker != MatchCode.INCLUDE) {

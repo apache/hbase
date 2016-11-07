@@ -55,7 +55,8 @@ public class StripeCompactionScanQueryMatcher extends DropDeletesCompactionScanQ
       return returnCode;
     }
     long mvccVersion = cell.getSequenceId();
-    if (CellUtil.isDelete(cell)) {
+    byte typeByte = cell.getTypeByte();
+    if (CellUtil.isDelete(typeByte)) {
       if (mvccVersion > maxReadPointToTrackVersions) {
         return MatchCode.INCLUDE;
       }
@@ -77,7 +78,7 @@ public class StripeCompactionScanQueryMatcher extends DropDeletesCompactionScanQ
       }
     }
     // Skip checking column since we do not remove column during compaction.
-    return columns.checkVersions(cell, cell.getTimestamp(), cell.getTypeByte(),
+    return columns.checkVersions(cell, cell.getTimestamp(), typeByte,
       mvccVersion > maxReadPointToTrackVersions);
   }
 
