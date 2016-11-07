@@ -60,8 +60,7 @@ public class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
       return returnCode;
     }
     long timestamp = cell.getTimestamp();
-    byte typeByte = cell.getTypeByte();
-    if (CellUtil.isDelete(typeByte)) {
+    if (CellUtil.isDelete(cell)) {
       boolean includeDeleteMarker = seePastDeleteMarkers ? tr.withinTimeRange(timestamp)
           : tr.withinOrAfterTimeRange(timestamp);
       if (includeDeleteMarker) {
@@ -73,7 +72,7 @@ public class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     if (returnCode != null) {
       return returnCode;
     }
-    return matchColumn(cell, timestamp, typeByte);
+    return matchColumn(cell);
   }
 
   @Override

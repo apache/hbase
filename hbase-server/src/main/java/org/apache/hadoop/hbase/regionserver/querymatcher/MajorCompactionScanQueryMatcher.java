@@ -43,7 +43,6 @@ public class MajorCompactionScanQueryMatcher extends DropDeletesCompactionScanQu
     }
     long timestamp = cell.getTimestamp();
     long mvccVersion = cell.getSequenceId();
-    byte typeByte = cell.getTypeByte();
 
     // The delete logic is pretty complicated now.
     // This is corroborated by the following:
@@ -57,7 +56,7 @@ public class MajorCompactionScanQueryMatcher extends DropDeletesCompactionScanQu
     // 7. Delete marker need to be version counted together with puts
     // they affect
     //
-    if (CellUtil.isDelete(typeByte)) {
+    if (CellUtil.isDelete(cell)) {
       if (mvccVersion > maxReadPointToTrackVersions) {
         // We can not drop this delete marker yet, and also we should not use this delete marker to
         // mask any cell yet.
@@ -76,7 +75,7 @@ public class MajorCompactionScanQueryMatcher extends DropDeletesCompactionScanQu
     }
     // Skip checking column since we do not remove column during compaction.
     return columns.checkVersions(cell.getQualifierArray(), cell.getQualifierOffset(),
-      cell.getQualifierLength(), timestamp, typeByte,
+      cell.getQualifierLength(), timestamp, cell.getTypeByte(),
       mvccVersion > maxReadPointToTrackVersions);
   }
 }
