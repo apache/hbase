@@ -288,6 +288,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * methods like rollWriter().
    * @return Writer instance
    */
+  @Override
   protected Writer createWriterInstance(final Path path) throws IOException {
     Writer writer = FSHLogProvider.createWriter(conf, fs, path, false);
     if (writer instanceof ProtobufLogWriter) {
@@ -598,6 +599,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           && takeSyncFuture == null;
     }
 
+    @Override
     public void run() {
       long currentSequence;
       while (!isInterrupted()) {
@@ -771,6 +773,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
    * Therefore, if this function returns 0, it means you are not properly running with the HDFS-826
    * patch.
    */
+  @Override
   @VisibleForTesting
   int getLogReplication() {
     try {
@@ -882,7 +885,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     SyncFuture waitSafePoint(final SyncFuture syncFuture) throws InterruptedException,
         FailedSyncBeforeLogCloseException {
       while (true) {
-        if (this.safePointAttainedLatch.await(1, TimeUnit.NANOSECONDS)) {
+        if (this.safePointAttainedLatch.await(1, TimeUnit.MILLISECONDS)) {
           break;
         }
         if (syncFuture.isThrowable()) {
