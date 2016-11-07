@@ -171,8 +171,8 @@ public class TestMemStoreLAB {
   @Test
   public void testLABChunkQueue() throws Exception {
     HeapMemStoreLAB mslab = new HeapMemStoreLAB();
-    // by default setting, there should be no chunk queue initialized
-    assertNull(mslab.getPooledChunks());
+    // by default setting, there should be no chunks initialized in the pool
+    assertTrue(mslab.getPooledChunks().isEmpty());
     // reset mslab with chunk pool
     Configuration conf = HBaseConfiguration.create();
     conf.setDouble(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, 0.1);
