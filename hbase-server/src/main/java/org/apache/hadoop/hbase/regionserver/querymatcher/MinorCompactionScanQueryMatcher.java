@@ -42,8 +42,7 @@ public class MinorCompactionScanQueryMatcher extends CompactionScanQueryMatcher 
       return returnCode;
     }
     long mvccVersion = cell.getSequenceId();
-    byte typeByte = cell.getTypeByte();
-    if (CellUtil.isDelete(typeByte)) {
+    if (CellUtil.isDelete(cell)) {
       if (mvccVersion > maxReadPointToTrackVersions) {
         // we should not use this delete marker to mask any cell yet.
         return MatchCode.INCLUDE;
@@ -56,7 +55,7 @@ public class MinorCompactionScanQueryMatcher extends CompactionScanQueryMatcher 
       return returnCode;
     }
     // Skip checking column since we do not remove column during compaction.
-    return columns.checkVersions(cell, cell.getTimestamp(), typeByte,
+    return columns.checkVersions(cell, cell.getTimestamp(), cell.getTypeByte(),
       mvccVersion > maxReadPointToTrackVersions);
   }
 }
