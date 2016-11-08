@@ -286,7 +286,10 @@ function hbaseprotoc_rebuild
   start_clock
 
   personality_modules patch hbaseprotoc
-  modules_workers patch hbaseprotoc compile -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
+  # Need to run 'install' instead of 'compile' because shading plugin
+  # is hooked-up to 'install'; else hbase-protocol-shaded is left with
+  # half of its process done.
+  modules_workers patch hbaseprotoc install -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
 
   # shellcheck disable=SC2153
   until [[ $i -eq "${#MODULE[@]}" ]]; do
