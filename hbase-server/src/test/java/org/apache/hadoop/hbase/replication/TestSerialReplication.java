@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
@@ -112,7 +113,7 @@ public class TestSerialReplication {
     rpc.setClusterKey(utility2.getClusterKey());
     admin1.addPeer("1", rpc, null);
 
-    utility1.startMiniCluster(1, 3);
+    utility1.startMiniCluster(1, 10);
     utility2.startMiniCluster(1, 1);
 
     utility1.getHBaseAdmin().setBalancerRunning(false, true);
@@ -174,16 +175,10 @@ public class TestSerialReplication {
         return;
       }
       throw new Exception("Not all logs have been pushed");
-    } finally {
-      utility1.getHBaseAdmin().disableTable(tableName);
-      utility2.getHBaseAdmin().disableTable(tableName);
-      utility1.getHBaseAdmin().deleteTable(tableName);
-      utility2.getHBaseAdmin().deleteTable(tableName);
     }
   }
 
   @Test
-  @Ignore
   public void testRegionSplit() throws Exception {
     TableName tableName = TableName.valueOf("testRegionSplit");
     HTableDescriptor table = new HTableDescriptor(tableName);
@@ -201,14 +196,8 @@ public class TestSerialReplication {
         t1.put(put);
       }
       utility1.getHBaseAdmin().split(tableName, ROWS[50]);
-      Thread.sleep(5000L);
+      waitTableHasRightNumberOfRegions(tableName, 2);
       for (int i = 11; i < 100; i += 10) {
-        Put put = new Put(ROWS[i]);
-        put.addColumn(famName, VALUE, VALUE);
-        t1.put(put);
-      }
-      balanceTwoRegions(t1);
-      for (int i = 12; i < 100; i += 10) {
         Put put = new Put(ROWS[i]);
         put.addColumn(famName, VALUE, VALUE);
         t1.put(put);
@@ -226,54 +215,40 @@ public class TestSerialReplication {
           }
         }
         List<Integer> listOfNumbers = getRowNumbers(list);
-        List<Integer> list0 = new ArrayList<>();
         List<Integer> list1 = new ArrayList<>();
         List<Integer> list21 = new ArrayList<>();
         List<Integer> list22 = new ArrayList<>();
         for (int num : listOfNumbers) {
           if (num % 10 == 0) {
-            list0.add(num);
-          } else if (num % 10 == 1) {
             list1.add(num);
-          } else if (num < 50) { //num%10==2
+          }else if (num < 50) { //num%10==1
             list21.add(num);
           } else { // num%10==1&&num>50
             list22.add(num);
           }
         }
 
-        LOG.info(Arrays.toString(list0.toArray()));
         LOG.info(Arrays.toString(list1.toArray()));
         LOG.info(Arrays.toString(list21.toArray()));
         LOG.info(Arrays.toString(list22.toArray()));
-        assertIntegerList(list0, 10, 10);
-        assertIntegerList(list1, 11, 10);
-        assertIntegerList(list21, 12, 10);
-        assertIntegerList(list22, 52, 10);
-        if (!list1.isEmpty()) {
-          assertEquals(9, list0.size());
-        }
+        assertIntegerList(list1, 10, 10);
+        assertIntegerList(list21, 11, 10);
+        assertIntegerList(list22, 51, 10);
         if (!list21.isEmpty() || !list22.isEmpty()) {
           assertEquals(9, list1.size());
         }
 
-        if (list.size() == 27) {
+        if (list.size() == 18) {
           return;
         }
         LOG.info("Waiting all logs pushed to slave. Expected 27 , actual " + list.size());
         Thread.sleep(200);
       }
       throw new Exception("Not all logs have been pushed");
-    } finally {
-      utility1.getHBaseAdmin().disableTable(tableName);
-      utility2.getHBaseAdmin().disableTable(tableName);
-      utility1.getHBaseAdmin().deleteTable(tableName);
-      utility2.getHBaseAdmin().deleteTable(tableName);
     }
   }
 
   @Test
-  @Ignore
   public void testRegionMerge() throws Exception {
     TableName tableName = TableName.valueOf("testRegionMerge");
     HTableDescriptor table = new HTableDescriptor(tableName);
@@ -282,8 +257,9 @@ public class TestSerialReplication {
     table.addFamily(fam);
     utility1.getHBaseAdmin().createTable(table);
     utility2.getHBaseAdmin().createTable(table);
+    Threads.sleep(5000);
     utility1.getHBaseAdmin().split(tableName, ROWS[50]);
-    Thread.sleep(5000L);
+    waitTableHasRightNumberOfRegions(tableName, 2);
 
     try(Table t1 = utility1.getConnection().getTable(tableName);
         Table t2 = utility2.getConnection().getTable(tableName)) {
@@ -294,9 +270,9 @@ public class TestSerialReplication {
       }
       List<Pair<HRegionInfo, ServerName>> regions =
           MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), tableName);
-      assertEquals(2, regions.size());
       utility1.getHBaseAdmin().mergeRegions(regions.get(0).getFirst().getRegionName(),
           regions.get(1).getFirst().getRegionName(), true);
+      waitTableHasRightNumberOfRegions(tableName, 1);
       for (int i = 11; i < 100; i += 10) {
         Put put = new Put(ROWS[i]);
         put.addColumn(famName, VALUE, VALUE);
@@ -326,7 +302,6 @@ public class TestSerialReplication {
         }
         LOG.info(Arrays.toString(list0.toArray()));
         LOG.info(Arrays.toString(list1.toArray()));
-        assertIntegerList(list0, 10, 10);
         assertIntegerList(list1, 11, 10);
         if (!list1.isEmpty()) {
           assertEquals(9, list0.size());
@@ -338,11 +313,6 @@ public class TestSerialReplication {
         Thread.sleep(200);
       }
 
-    } finally {
-      utility1.getHBaseAdmin().disableTable(tableName);
-      utility2.getHBaseAdmin().disableTable(tableName);
-      utility1.getHBaseAdmin().deleteTable(tableName);
-      utility2.getHBaseAdmin().deleteTable(tableName);
     }
   }
 
@@ -370,10 +340,13 @@ public class TestSerialReplication {
     ServerName name = utility1.getHBaseCluster().getRegionServer(index).getServerName();
     utility1.getAdmin()
         .move(regionInfo.getEncodedNameAsBytes(), Bytes.toBytes(name.getServerName()));
-    try {
-      Thread.sleep(5000L); // wait to complete
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+    while (true) {
+      regions =
+          MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), table.getName());
+      if (regions.get(0).getSecond().equals(name)) {
+        break;
+      }
+      Threads.sleep(100);
     }
   }
 
@@ -387,16 +360,34 @@ public class TestSerialReplication {
     ServerName name2 = utility1.getHBaseCluster().getRegionServer(1).getServerName();
     utility1.getAdmin()
         .move(regionInfo1.getEncodedNameAsBytes(), Bytes.toBytes(name1.getServerName()));
-    Thread.sleep(5000L);
     utility1.getAdmin()
         .move(regionInfo2.getEncodedNameAsBytes(), Bytes.toBytes(name2.getServerName()));
-    Thread.sleep(5000L);
+    while (true) {
+      regions =
+          MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), table.getName());
+      if (regions.get(0).getSecond().equals(name1) && regions.get(1).getSecond().equals(name2)) {
+        break;
+      }
+      Threads.sleep(100);
+    }
+  }
+
+  private void waitTableHasRightNumberOfRegions(TableName tableName, int num) throws IOException {
+    while (true) {
+      List<Pair<HRegionInfo, ServerName>> regions =
+          MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), tableName);
+      if (regions.size() == num) {
+        return;
+      }
+      Threads.sleep(100);
+    }
+
   }
 
   private void assertIntegerList(List<Integer> list, int start, int step) {
     int size = list.size();
     for (int i = 0; i < size; i++) {
-      assertTrue(list.get(i) == start + step * i);
+      assertEquals(start + step * i, list.get(i).intValue());
     }
   }
 }

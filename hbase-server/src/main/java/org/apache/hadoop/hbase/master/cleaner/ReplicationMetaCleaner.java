@@ -140,6 +140,7 @@ public class ReplicationMetaCleaner extends ScheduledChore {
           Delete delete = new Delete(encodedBytes);
           delete.addFamily(HConstants.REPLICATION_POSITION_FAMILY);
           delete.addFamily(HConstants.REPLICATION_BARRIER_FAMILY);
+          delete.addFamily(HConstants.REPLICATION_META_FAMILY);
           try (Table metaTable = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
             metaTable.delete(delete);
           }

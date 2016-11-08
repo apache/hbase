@@ -860,8 +860,8 @@ public class ReplicationSourceManager implements ReplicationListener {
      *    It is mainly because we alter REPLICATION_SCOPE = 2. We can not guarantee the
      *    order of logs that is written before altering.
      * 3) This entry is in the first interval of barriers. We can push them because it is the
-     *    start of a region. Splitting/merging regions are also ok because the first section of
-     *    daughter region is in same region of parents and the order in one RS is guaranteed.
+     *    start of a region. But if the region is created by region split, we should check
+     *    if the parent regions are fully pushed.
      * 4) If the entry's seq id and the position are in same section, or the pos is the last
      *    number of previous section. Because when open a region we put a barrier the number
      *    is the last log's id + 1.
@@ -879,7 +879,40 @@ public class ReplicationSourceManager implements ReplicationListener {
     }
     if (interval == 1) {
       // Case 3
-      return;
+      // Check if there are parent regions
+      String parentValue = MetaTableAccessor.getSerialReplicationParentRegion(connection,
+          encodedName);
+      if (parentValue == null) {
+        // This region has no parent or the parent's log entries are fully pushed.
+        return;
+      }
+      while (true) {
+        boolean allParentDone = true;
+        String[] parentRegions = parentValue.split(",");
+        for (String parent : parentRegions) {
+          byte[] region = Bytes.toBytes(parent);
+          long pos = MetaTableAccessor.getReplicationPositionForOnePeer(connection, region, peerId);
+          List<Long> parentBarriers = MetaTableAccessor.getReplicationBarriers(connection, region);
+          if (parentBarriers.size() > 0
+              && parentBarriers.get(parentBarriers.size() - 1) - 1 > pos) {
+            allParentDone = false;
+            // For a closed region, we will write a close event marker to WAL whose sequence id is
+            // larger than final barrier but still smaller than next region's openSeqNum.
+            // So if the pos is larger than last barrier, we can say we have read the event marker
+            // which means the parent region has been fully pushed.
+            LOG.info(Bytes.toString(encodedName) + " can not start pushing because parent region's"
+                + " log has not been fully pushed: parent=" + Bytes.toString(region) + " pos=" + pos
+                + " barriers=" + Arrays.toString(barriers.toArray()));
+            break;
+          }
+        }
+        if (allParentDone) {
+          return;
+        } else {
+          Thread.sleep(replicationWaitTime);
+        }
+      }
+
     }
 
     while (true) {

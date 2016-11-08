@@ -123,27 +123,30 @@ public class MetaTableAccessor {
    * The actual layout of meta should be encapsulated inside MetaTableAccessor methods,
    * and should not leak out of it (through Result objects, etc)
    *
-   * For replication serially, there are two column families "rep_barrier", "rep_position" whose
-   * row key is encodedRegionName.
+   * For replication serially, there are three column families "rep_barrier", "rep_position" and
+   * "rep_meta" whose row key is encodedRegionName.
    * rep_barrier:{seqid}      => in each time a RS opens a region, it saves the open sequence
    *                                  id in this region
    * rep_position:{peerid}    => to save the max sequence id we have pushed for each peer
-   * rep_position:_TABLENAME_ => a special cell to save this region's table name, will used when
+   * rep_meta:_TABLENAME_     => a special cell to save this region's table name, will used when
    *                             we clean old data
-   * rep_position:_DAUGHTER_  => a special cell to present this region is split or merged, in this
+   * rep_meta:_DAUGHTER_      => a special cell to present this region is split or merged, in this
    *                             cell the value is merged encoded name or two split encoded names
+   *                             separated by ","
+   * rep_meta:_PARENT_        => a special cell to present this region's parent region(s), in this
+   *                             cell the value is encoded name of one or two parent regions
    *                             separated by ","
    */
 
   private static final Log LOG = LogFactory.getLog(MetaTableAccessor.class);
   private static final Log METALOG = LogFactory.getLog("org.apache.hadoop.hbase.META");
 
-  // Save its daughter region(s) when split/merge
-  private static final byte[] daughterNamePosCq = Bytes.toBytes("_DAUGHTER_");
+  // Save its daughter/parent region(s) when split/merge
+  private static final byte[] daughterNameCq = Bytes.toBytes("_DAUGHTER_");
+  private static final byte[] parentNameCq = Bytes.toBytes("_PARENT_");
 
   // Save its table name because we only know region's encoded name
-  private static final String tableNamePeer = "_TABLENAME_";
-  private static final byte[] tableNamePosCq = Bytes.toBytes(tableNamePeer);
+  private static final byte[] tableNameCq = Bytes.toBytes("_TABLENAME_");
 
   static final byte [] META_REGION_PREFIX;
   static {
@@ -1343,13 +1346,18 @@ public class MetaTableAccessor {
     byte[] seqBytes = Bytes.toBytes(seq);
     return new Put(encodedRegionName)
         .addImmutable(HConstants.REPLICATION_BARRIER_FAMILY, seqBytes, seqBytes)
-        .addImmutable(HConstants.REPLICATION_POSITION_FAMILY, tableNamePosCq, tableName);
+        .addImmutable(HConstants.REPLICATION_META_FAMILY, tableNameCq, tableName);
   }
 
 
-  public static Put makeSerialDaughterPut(byte[] encodedRegionName, byte[] value) {
-    return new Put(encodedRegionName).addImmutable(HConstants.REPLICATION_POSITION_FAMILY,
-        daughterNamePosCq, value);
+  public static Put makeDaughterPut(byte[] encodedRegionName, byte[] value) {
+    return new Put(encodedRegionName).addImmutable(HConstants.REPLICATION_META_FAMILY,
+        daughterNameCq, value);
+  }
+
+  public static Put makeParentPut(byte[] encodedRegionName, byte[] value) {
+    return new Put(encodedRegionName).addImmutable(HConstants.REPLICATION_META_FAMILY,
+        parentNameCq, value);
   }
 
   /**
@@ -1374,7 +1382,7 @@ public class MetaTableAccessor {
    * @param puts Put to add to hbase:meta
    * @throws IOException
    */
-  static void putToMetaTable(final Connection connection, final Put... puts)
+  public static void putToMetaTable(final Connection connection, final Put... puts)
     throws IOException {
     put(getMetaHTable(connection), Arrays.asList(puts));
   }
@@ -1674,10 +1682,10 @@ public class MetaTableAccessor {
         + HConstants.DELIMITER);
       Mutation[] mutations;
       if (saveBarrier) {
-        Put putBarrierA = makeSerialDaughterPut(regionA.getEncodedNameAsBytes(),
-            Bytes.toBytes(mergedRegion.getEncodedName()));
-        Put putBarrierB = makeSerialDaughterPut(regionB.getEncodedNameAsBytes(),
-            Bytes.toBytes(mergedRegion.getEncodedName()));
+        Put putBarrierA = makeDaughterPut(regionA.getEncodedNameAsBytes(),
+            mergedRegion.getEncodedNameAsBytes());
+        Put putBarrierB = makeDaughterPut(regionB.getEncodedNameAsBytes(),
+            mergedRegion.getEncodedNameAsBytes());
         mutations = new Mutation[] { putOfMerged, deleteA, deleteB, putBarrierA, putBarrierB };
       } else {
         mutations = new Mutation[] { putOfMerged, deleteA, deleteB };
@@ -1729,10 +1737,14 @@ public class MetaTableAccessor {
 
       Mutation[] mutations;
       if (saveBarrier) {
-        Put putBarrier = makeSerialDaughterPut(parent.getEncodedNameAsBytes(),
-            Bytes
-                .toBytes(splitA.getEncodedName() + HConstants.DELIMITER + splitB.getEncodedName()));
-        mutations = new Mutation[]{putParent, putA, putB, putBarrier};
+        Put parentPut = makeDaughterPut(parent.getEncodedNameAsBytes(),
+            Bytes.toBytes(splitA.getEncodedName() + "," + splitB.getEncodedName()));
+        Put daughterPutA = makeParentPut(splitA.getEncodedNameAsBytes(),
+            parent.getEncodedNameAsBytes());
+        Put daughterPutB = makeParentPut(splitB.getEncodedNameAsBytes(),
+            parent.getEncodedNameAsBytes());
+
+        mutations = new Mutation[]{putParent, putA, putB, parentPut, daughterPutA, daughterPutB};
       } else {
         mutations = new Mutation[]{putParent, putA, putB};
       }
@@ -2112,14 +2124,9 @@ public class MetaTableAccessor {
     Result r = get(getMetaHTable(connection), get);
     Map<String, Long> map = new HashMap<>((int) (r.size() / 0.75 + 1));
     for (Cell c : r.listCells()) {
-      if (!Bytes.equals(tableNamePosCq, 0, tableNamePosCq.length, c.getQualifierArray(),
-          c.getQualifierOffset(), c.getQualifierLength()) &&
-          !Bytes.equals(daughterNamePosCq, 0, daughterNamePosCq.length, c.getQualifierArray(),
-          c.getQualifierOffset(), c.getQualifierLength())) {
-        map.put(
-            Bytes.toString(c.getQualifierArray(), c.getQualifierOffset(), c.getQualifierLength()),
-            Bytes.toLong(c.getValueArray(), c.getValueOffset(), c.getValueLength()));
-      }
+      map.put(
+          Bytes.toString(c.getQualifierArray(), c.getQualifierOffset(), c.getQualifierLength()),
+          Bytes.toLong(c.getValueArray(), c.getValueOffset(), c.getValueLength()));
     }
     return map;
   }
@@ -2172,12 +2179,32 @@ public class MetaTableAccessor {
 
   /**
    * Get daughter region(s) for a region, only used in serial replication.
+   * @param connection connection we're using
+   * @param encodedName region's encoded name
    * @throws IOException
    */
   public static String getSerialReplicationDaughterRegion(Connection connection, byte[] encodedName)
       throws IOException {
     Get get = new Get(encodedName);
-    get.addColumn(HConstants.REPLICATION_POSITION_FAMILY, daughterNamePosCq);
+    get.addColumn(HConstants.REPLICATION_META_FAMILY, daughterNameCq);
+    Result result = get(getMetaHTable(connection), get);
+    if (!result.isEmpty()) {
+      Cell c = result.rawCells()[0];
+      return Bytes.toString(c.getValueArray(), c.getValueOffset(), c.getValueLength());
+    }
+    return null;
+  }
+
+  /**
+   * Get parent region(s) for a region, only used in serial replication.
+   * @param connection connection we're using
+   * @param encodedName region's encoded name
+   * @throws IOException
+   */
+  public static String getSerialReplicationParentRegion(Connection connection, byte[] encodedName)
+      throws IOException {
+    Get get = new Get(encodedName);
+    get.addColumn(HConstants.REPLICATION_META_FAMILY, parentNameCq);
     Result result = get(getMetaHTable(connection), get);
     if (!result.isEmpty()) {
       Cell c = result.rawCells()[0];
@@ -2188,12 +2215,14 @@ public class MetaTableAccessor {
 
   /**
    * Get the table name for a region, only used in serial replication.
+   * @param connection connection we're using
+   * @param encodedName region's encoded name
    * @throws IOException
    */
   public static String getSerialReplicationTableName(Connection connection, byte[] encodedName)
       throws IOException {
     Get get = new Get(encodedName);
-    get.addColumn(HConstants.REPLICATION_POSITION_FAMILY, tableNamePosCq);
+    get.addColumn(HConstants.REPLICATION_META_FAMILY, tableNameCq);
     Result result = get(getMetaHTable(connection), get);
     if (!result.isEmpty()) {
       Cell c = result.rawCells()[0];

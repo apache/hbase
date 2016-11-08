@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.NonceGenerator;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
@@ -3052,7 +3053,25 @@ public class HRegionServer extends HasThread implements
        if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
        throw new IOException(exceptionToThrow);
      }
-
+     if (parentRegion.getTableDesc().hasSerialReplicationScope()) {
+       // For serial replication, we need add a final barrier on this region. But the splitting may
+       // be reverted, so we should make sure if we reopen this region, the open barrier is same as
+       // this final barrier
+       long seq = parentRegion.getMaxFlushedSeqId();
+       if (seq == HConstants.NO_SEQNUM) {
+         // No edits in WAL for this region; get the sequence number when the region was opened.
+         seq = parentRegion.getOpenSeqNum();
+         if (seq == HConstants.NO_SEQNUM) {
+           // This region has no data
+           seq = 0;
+         }
+       } else {
+         seq++;
+       }
+       Put finalBarrier = MetaTableAccessor.makeBarrierPut(Bytes.toBytes(parentRegionEncodedName),
+           seq, parentRegion.getTableDesc().getTableName().getName());
+       MetaTableAccessor.putToMetaTable(getConnection(), finalBarrier);
+     }
      // Offline the region
      this.removeFromOnlineRegions(parentRegion, null);
    }
