@@ -464,7 +464,7 @@ public interface MasterObserver extends Coprocessor {
    * @param ctx the environment to interact with the framework and master
    * @throws IOException
    */
-  public void preAbortProcedure(
+  void preAbortProcedure(
       ObserverContext<MasterCoprocessorEnvironment> ctx,
       final ProcedureExecutor<MasterProcedureEnv> procEnv,
       final long procId) throws IOException;
@@ -473,7 +473,7 @@ public interface MasterObserver extends Coprocessor {
    * Called after a abortProcedure request has been processed.
    * @param ctx the environment to interact with the framework and master
    */
-  public void postAbortProcedure(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  void postAbortProcedure(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException;
 
   /**
