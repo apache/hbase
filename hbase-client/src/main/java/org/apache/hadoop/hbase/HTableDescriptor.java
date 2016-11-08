@@ -1796,6 +1796,18 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               // Enable cache of data blocks in L1 if more than one caching tier deployed:
               // e.g. if using CombinedBlockCache (BucketCache).
               .setCacheDataInL1(true),
+          new HColumnDescriptor(HConstants.REPLICATION_META_FAMILY)
+              .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+                  HConstants.DEFAULT_HBASE_META_VERSIONS))
+              .setInMemory(true)
+              .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+                  HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+              // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+              .setBloomFilterType(BloomType.NONE)
+              // Enable cache of data blocks in L1 if more than one caching tier deployed:
+              // e.g. if using CombinedBlockCache (BucketCache).
+              .setCacheDataInL1(true),
       });
     metaDescriptor.addCoprocessor(
       "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
