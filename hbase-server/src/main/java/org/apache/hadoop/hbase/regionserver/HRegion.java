@@ -252,7 +252,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   protected volatile long lastReplayedOpenRegionSeqId = -1L;
   protected volatile long lastReplayedCompactionSeqId = -1L;
-  
+
   // collects Map(s) of Store to sequence Id when handleFileNotFound() is involved
   protected List<Map> storeSeqIds = new ArrayList<>();
 
@@ -7044,11 +7044,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   void metricsUpdateForGet(List<Cell> results, long before) {
     if (this.metricsRegion != null) {
-      long totalSize = 0L;
-      for (Cell cell : results) {
-        totalSize += CellUtil.estimatedSerializedSizeOf(cell);
-      }
-      this.metricsRegion.updateGetSize(totalSize);
       this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
 

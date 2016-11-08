@@ -157,7 +157,7 @@ public class TestRegionServerMetrics {
             "_table_"+tableNameString +
             "_region_" + i.getEncodedName()+
             "_metric";
-        metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
+        metricsHelper.assertCounter(prefix + "_getCount", 10, agg);
         metricsHelper.assertCounter(prefix + "_mutateCount", 31, agg);
       }
     }
@@ -229,8 +229,8 @@ public class TestRegionServerMetrics {
           "_table_"+tableNameString +
           "_region_" + i.getEncodedName()+
           "_metric";
-        metricsHelper.assertCounter(prefix + "_getSizeNumOps", 10, agg);
-        metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
+        metricsHelper.assertCounter(prefix + "_getCount", 10, agg);
+        metricsHelper.assertCounter(prefix + "_getCount", 10, agg);
       }
       metricsHelper.assertCounterGt("Get_num_ops", 10, serverSource);
     }
@@ -446,7 +446,7 @@ public class TestRegionServerMetrics {
             "_table_"+tableNameString +
             "_region_" + i.getEncodedName()+
             "_metric";
-        metricsHelper.assertCounter(prefix + "_scanSizeNumOps", NUM_SCAN_NEXT, agg);
+        metricsHelper.assertCounter(prefix + "_scanCount", NUM_SCAN_NEXT, agg);
       }
       metricsHelper.assertCounterGt("ScanSize_num_ops", numScanNext, serverSource);
     }
@@ -496,7 +496,7 @@ public class TestRegionServerMetrics {
           "_table_"+tableNameString +
           "_region_" + i.getEncodedName()+
           "_metric";
-        metricsHelper.assertCounter(prefix + "_scanTimeNumOps", NUM_SCAN_NEXT, agg);
+        metricsHelper.assertCounter(prefix + "_scanCount", NUM_SCAN_NEXT, agg);
       }
       metricsHelper.assertCounterGt("ScanTime_num_ops", numScanNext, serverSource);
     }
@@ -548,7 +548,7 @@ public class TestRegionServerMetrics {
             "_table_"+tableNameString +
             "_region_" + i.getEncodedName()+
             "_metric";
-        metricsHelper.assertCounter(prefix + "_scanSizeNumOps", NUM_SCAN_NEXT, agg);
+        metricsHelper.assertCounter(prefix + "_scanCount", NUM_SCAN_NEXT, agg);
       }
       metricsHelper.assertCounterGt("ScanSize_num_ops", numScanNext, serverSource);
     }

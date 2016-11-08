@@ -316,7 +316,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   String BLOCK_CACHE_GENERAL_BLOOM_META_HIT_COUNT = "blockCacheGeneralBloomMetaHitCount";
   String BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT = "blockCacheDeleteFamilyBloomHitCount";
   String BLOCK_CACHE_TRAILER_HIT_COUNT = "blockCacheTrailerHitCount";
-  
+
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";
@@ -335,6 +335,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MUTATE_KEY = "mutate";
   String APPEND_KEY = "append";
   String REPLAY_KEY = "replay";
+  String SCAN_KEY = "scan";
   String SCAN_SIZE_KEY = "scanSize";
   String SCAN_TIME_KEY = "scanTime";
 
@@ -446,6 +447,6 @@ public interface MetricsRegionServerSource extends BaseSource {
   String RPC_MUTATE_REQUEST_COUNT_DESC =
       "Number of rpc mutation requests this region server has answered.";
   String AVERAGE_REGION_SIZE = "averageRegionSize";
-  String AVERAGE_REGION_SIZE_DESC = 
+  String AVERAGE_REGION_SIZE_DESC =
       "Average region size over the region server including memstore and storefile sizes.";
 }
