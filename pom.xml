@@ -1196,7 +1196,7 @@
     <compat.module>hbase-hadoop2-compat</compat.module>
     <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
     <!-- end HBASE-15925 default hadoop compatibility values -->
-    <commons-cli.version>1.2</commons-cli.version>
+    <commons-cli.version>1.3.1</commons-cli.version>
     <commons-codec.version>1.9</commons-codec.version>
     <!-- pretty outdated -->
     <commons-io.version>2.4</commons-io.version>
