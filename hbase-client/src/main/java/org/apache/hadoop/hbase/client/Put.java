@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.IndividualBytesFieldCell;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -227,12 +228,18 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * for usage internal HBase to and for advanced client applications.
    */
   public Put addImmutable(byte [] family, byte [] qualifier, long ts, byte [] value) {
+    // Family can not be null, otherwise NullPointerException is thrown when putting the cell into familyMap
+    if (family == null) {
+      throw new IllegalArgumentException("Family cannot be null");
+    }
+
+    // Check timestamp
     if (ts < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
     }
+
     List<Cell> list = getCellList(family);
-    KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
-    list.add(kv);
+    list.add(new IndividualBytesFieldCell(this.row, family, qualifier, ts, KeyValue.Type.Put, value));
     familyMap.put(family, list);
     return this;
   }
