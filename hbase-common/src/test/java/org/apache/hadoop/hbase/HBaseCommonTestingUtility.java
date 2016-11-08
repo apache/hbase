@@ -108,10 +108,7 @@ public class HBaseCommonTestingUtility {
           dataTestDir.getAbsolutePath());
       return null;
     }
-
-    String randomStr = UUID.randomUUID().toString();
-    Path testPath = new Path(getBaseTestDir(), randomStr);
-
+    Path testPath = getRandomDir();
     this.dataTestDir = new File(testPath.toString()).getAbsoluteFile();
     // Set this property so if mapreduce jobs run, they will use this as their home dir.
     System.setProperty("test.build.dir", this.dataTestDir.toString());
@@ -120,6 +117,14 @@ public class HBaseCommonTestingUtility {
     createSubDir("hbase.local.dir", testPath, "hbase-local-dir");
 
     return testPath;
+  }
+
+  /**
+   * @return A dir with a random (uuid) name under the test dir
+   * @see #getBaseTestDir()
+   */
+  public Path getRandomDir() {
+    return new Path(getBaseTestDir(), UUID.randomUUID().toString());
   }
 
   protected void createSubDir(String propertyName, Path parent, String subDirName) {
