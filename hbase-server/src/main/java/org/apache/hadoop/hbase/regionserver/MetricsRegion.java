@@ -49,16 +49,8 @@ public class MetricsRegion {
     source.updateDelete();
   }
 
-  public void updateGetSize(final long getSize) {
-    source.updateGetSize(getSize);
-  }
-
   public void updateGet(final long t) {
     source.updateGet(t);
-  }
-
-  public void updateScanSize(final long scanSize) {
-    source.updateScanSize(scanSize);
   }
 
   public void updateScanTime(final long t) {
