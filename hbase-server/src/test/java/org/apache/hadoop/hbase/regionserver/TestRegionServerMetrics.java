@@ -231,7 +231,7 @@ public class TestRegionServerMetrics {
     assertCounter("readRequestCount", readRequests + 10);
     assertCounter("writeRequestCount", writeRequests + 30);
 
-    assertRegionMetrics("getNumOps", 10);
+    assertRegionMetrics("getCount", 10);
     assertRegionMetrics("mutateCount", 31);
 
     doNGets(10, true);  // true = batch
@@ -254,8 +254,7 @@ public class TestRegionServerMetrics {
     // Do a first put to be sure that the connection is established, meta is there and so on.
     doNPuts(1, false);
     doNGets(10, false);
-    assertRegionMetrics("getNumOps", 10);
-    assertRegionMetrics("getSizeNumOps", 10);
+    assertRegionMetrics("getCount", 10);
     metricsHelper.assertCounterGt("Get_num_ops", 10, serverSource);
   }
 
@@ -360,7 +359,7 @@ public class TestRegionServerMetrics {
       assertEquals(1, result.size());
     }
     numScanNext += NUM_SCAN_NEXT;
-    assertRegionMetrics("scanSizeNumOps", NUM_SCAN_NEXT);
+    assertRegionMetrics("scanCount", NUM_SCAN_NEXT);
     assertCounter("ScanSize_num_ops", numScanNext);
   }
 
@@ -378,7 +377,7 @@ public class TestRegionServerMetrics {
       assertEquals(1, result.size());
     }
     numScanNext += NUM_SCAN_NEXT;
-    assertRegionMetrics("scanTimeNumOps", NUM_SCAN_NEXT);
+    assertRegionMetrics("scanCount", NUM_SCAN_NEXT);
     assertCounter("ScanTime_num_ops", numScanNext);
   }
 
@@ -396,7 +395,7 @@ public class TestRegionServerMetrics {
       assertEquals(1, result.size());
     }
     numScanNext += NUM_SCAN_NEXT;
-    assertRegionMetrics("scanSizeNumOps", NUM_SCAN_NEXT);
+    assertRegionMetrics("scanCount", NUM_SCAN_NEXT);
     assertCounter("ScanSize_num_ops", numScanNext);
   }
 

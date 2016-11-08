@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.Interns;
-import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
@@ -48,21 +47,22 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final String regionNamePrefix;
   private final String regionPutKey;
   private final String regionDeleteKey;
-  private final String regionGetSizeKey;
   private final String regionGetKey;
   private final String regionIncrementKey;
   private final String regionAppendKey;
-  private final String regionScanSizeKey;
-  private final String regionScanTimeKey;
+  private final String regionScanKey;
 
+  /*
+   * Implementation note: Do not put histograms per region. With hundreds of regions in a server
+   * histograms allocate too many counters. See HBASE-17016.
+   */
   private final MutableFastCounter regionPut;
   private final MutableFastCounter regionDelete;
   private final MutableFastCounter regionIncrement;
   private final MutableFastCounter regionAppend;
-  private final MetricHistogram regionGetSize;
-  private final MetricHistogram regionGet;
-  private final MetricHistogram regionScanSize;
-  private final MetricHistogram regionScanTime;
+  private final MutableFastCounter regionGet;
+  private final MutableFastCounter regionScan;
+
   private final int hashCode;
 
   public MetricsRegionSourceImpl(MetricsRegionWrapper regionWrapper,
@@ -95,17 +95,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     regionAppendKey = regionNamePrefix + MetricsRegionServerSource.APPEND_KEY + suffix;
     regionAppend = registry.getCounter(regionAppendKey, 0L);
 
-    regionGetSizeKey = regionNamePrefix + MetricsRegionServerSource.GET_SIZE_KEY;
-    regionGetSize = registry.newSizeHistogram(regionGetSizeKey);
+    regionGetKey = regionNamePrefix + MetricsRegionServerSource.GET_KEY + suffix;
+    regionGet = registry.getCounter(regionGetKey, 0L);
 
-    regionGetKey = regionNamePrefix + MetricsRegionServerSource.GET_KEY;
-    regionGet = registry.newTimeHistogram(regionGetKey);
-
-    regionScanSizeKey = regionNamePrefix + MetricsRegionServerSource.SCAN_SIZE_KEY;
-    regionScanSize = registry.newSizeHistogram(regionScanSizeKey);
-
-    regionScanTimeKey = regionNamePrefix + MetricsRegionServerSource.SCAN_TIME_KEY;
-    regionScanTime = registry.newTimeHistogram(regionScanTimeKey);
+    regionScanKey = regionNamePrefix + MetricsRegionServerSource.SCAN_KEY + suffix;
+    regionScan = registry.getCounter(regionScanKey, 0L);
 
     hashCode = regionWrapper.getRegionHashCode();
   }
@@ -134,14 +128,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       registry.removeMetric(regionDeleteKey);
       registry.removeMetric(regionIncrementKey);
       registry.removeMetric(regionAppendKey);
-      registry.removeMetric(regionGetSizeKey);
       registry.removeMetric(regionGetKey);
-      registry.removeMetric(regionScanSizeKey);
-      registry.removeMetric(regionScanTimeKey);
-      registry.removeHistogramMetrics(regionGetSizeKey);
-      registry.removeHistogramMetrics(regionGetKey);
-      registry.removeHistogramMetrics(regionScanSizeKey);
-      registry.removeHistogramMetrics(regionScanTimeKey);
+      registry.removeMetric(regionScanKey);
 
       regionWrapper = null;
     }
@@ -158,23 +146,13 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   }
 
   @Override
-  public void updateGetSize(long getSize) {
-    regionGetSize.add(getSize);
-  }
-
-  @Override
   public void updateGet(long mills) {
-    regionGet.add(mills);
-  }
-
-  @Override
-  public void updateScanSize(long scanSize) {
-    regionScanSize.add(scanSize);
+    regionGet.incr();
   }
 
   @Override
   public void updateScanTime(long mills) {
-    regionScanTime.add(mills);
+    regionScan.incr();
   }
 
   @Override

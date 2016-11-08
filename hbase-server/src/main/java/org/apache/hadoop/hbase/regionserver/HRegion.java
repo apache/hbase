@@ -237,7 +237,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   protected volatile long lastReplayedOpenRegionSeqId = -1L;
   protected volatile long lastReplayedCompactionSeqId = -1L;
-  
+
   // collects Map(s) of Store to sequence Id when handleFileNotFound() is involved
   protected List<Map> storeSeqIds = new ArrayList<>();
 
@@ -6953,13 +6953,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   void metricsUpdateForGet(List<Cell> results, long before) {
     if (this.metricsRegion != null) {
-      long totalSize = 0L;
-      for (Cell cell : results) {
-        // This should give an estimate of the cell in the result. Why do we need
-        // to know the serialization of how the codec works with it??
-        totalSize += CellUtil.estimatedSerializedSizeOf(cell);
-      }
-      this.metricsRegion.updateGetSize(totalSize);
       this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
   }
@@ -7304,7 +7297,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         writeEntry = null;
       } finally {
         this.updatesLock.readLock().unlock();
-        // For increment/append, a region scanner for doing a get operation could throw 
+        // For increment/append, a region scanner for doing a get operation could throw
         // FileNotFoundException. So we call dropMemstoreContents() in finally block
         // after releasing read lock
         dropMemstoreContents();
