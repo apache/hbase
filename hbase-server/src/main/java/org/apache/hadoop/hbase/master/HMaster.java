@@ -1370,10 +1370,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // Execute the operation asynchronously
     long procId = this.procedureExecutor.submitProcedure(
-      new SplitTableRegionProcedure(
-        procedureExecutor.getEnvironment(), regionInfo.getTable(), regionInfo, splitRow),
-      nonceGroup,
-      nonce);
+      new SplitTableRegionProcedure(procedureExecutor.getEnvironment(), regionInfo, splitRow),
+      nonceGroup, nonce);
 
     return procId;
   }

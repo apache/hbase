@@ -21127,60 +21127,38 @@ public final class MasterProcedureProtos {
     org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder();
 
     /**
-     * <code>required .hbase.pb.TableName table_name = 2;</code>
-     */
-    boolean hasTableName();
-    /**
-     * <code>required .hbase.pb.TableName table_name = 2;</code>
-     */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName getTableName();
-    /**
-     * <code>required .hbase.pb.TableName table_name = 2;</code>
-     */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
-
-    /**
-     * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+     * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
      */
     boolean hasParentRegionInfo();
     /**
-     * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+     * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
      */
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo getParentRegionInfo();
     /**
-     * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+     * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
      */
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getParentRegionInfoOrBuilder();
 
     /**
-     * <code>optional bytes split_row = 4;</code>
-     */
-    boolean hasSplitRow();
-    /**
-     * <code>optional bytes split_row = 4;</code>
-     */
-    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getSplitRow();
-
-    /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo> 
         getChildRegionInfoList();
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo getChildRegionInfo(int index);
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     int getChildRegionInfoCount();
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
         getChildRegionInfoOrBuilderList();
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getChildRegionInfoOrBuilder(
         int index);
@@ -21197,7 +21175,6 @@ public final class MasterProcedureProtos {
       super(builder);
     }
     private SplitTableRegionStateData() {
-      splitRow_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
       childRegionInfo_ = java.util.Collections.emptyList();
     }
 
@@ -21243,21 +21220,8 @@ public final class MasterProcedureProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000002) == 0x00000002)) {
-                subBuilder = tableName_.toBuilder();
-              }
-              tableName_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(tableName_);
-                tableName_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000002;
-              break;
-            }
-            case 26: {
               org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000004) == 0x00000004)) {
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = parentRegionInfo_.toBuilder();
               }
               parentRegionInfo_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.PARSER, extensionRegistry);
@@ -21265,18 +21229,13 @@ public final class MasterProcedureProtos {
                 subBuilder.mergeFrom(parentRegionInfo_);
                 parentRegionInfo_ = subBuilder.buildPartial();
               }
-              bitField0_ |= 0x00000004;
+              bitField0_ |= 0x00000002;
               break;
             }
-            case 34: {
-              bitField0_ |= 0x00000008;
-              splitRow_ = input.readBytes();
-              break;
-            }
-            case 42: {
-              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
                 childRegionInfo_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo>();
-                mutable_bitField0_ |= 0x00000010;
+                mutable_bitField0_ |= 0x00000004;
               }
               childRegionInfo_.add(
                   input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.PARSER, extensionRegistry));
@@ -21290,7 +21249,7 @@ public final class MasterProcedureProtos {
         throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
           childRegionInfo_ = java.util.Collections.unmodifiableList(childRegionInfo_);
         }
         this.unknownFields = unknownFields.build();
@@ -21331,92 +21290,56 @@ public final class MasterProcedureProtos {
       return userInfo_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance() : userInfo_;
     }
 
-    public static final int TABLE_NAME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName tableName_;
+    public static final int PARENT_REGION_INFO_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo parentRegionInfo_;
     /**
-     * <code>required .hbase.pb.TableName table_name = 2;</code>
+     * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
      */
-    public boolean hasTableName() {
+    public boolean hasParentRegionInfo() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .hbase.pb.TableName table_name = 2;</code>
-     */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName getTableName() {
-      return tableName_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance() : tableName_;
-    }
-    /**
-     * <code>required .hbase.pb.TableName table_name = 2;</code>
-     */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
-      return tableName_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance() : tableName_;
-    }
-
-    public static final int PARENT_REGION_INFO_FIELD_NUMBER = 3;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo parentRegionInfo_;
-    /**
-     * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
-     */
-    public boolean hasParentRegionInfo() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    /**
-     * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+     * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo getParentRegionInfo() {
       return parentRegionInfo_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance() : parentRegionInfo_;
     }
     /**
-     * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+     * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
      */
     public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getParentRegionInfoOrBuilder() {
       return parentRegionInfo_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance() : parentRegionInfo_;
     }
 
-    public static final int SPLIT_ROW_FIELD_NUMBER = 4;
-    private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString splitRow_;
-    /**
-     * <code>optional bytes split_row = 4;</code>
-     */
-    public boolean hasSplitRow() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    /**
-     * <code>optional bytes split_row = 4;</code>
-     */
-    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getSplitRow() {
-      return splitRow_;
-    }
-
-    public static final int CHILD_REGION_INFO_FIELD_NUMBER = 5;
+    public static final int CHILD_REGION_INFO_FIELD_NUMBER = 3;
     private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo> childRegionInfo_;
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo> getChildRegionInfoList() {
       return childRegionInfo_;
     }
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
         getChildRegionInfoOrBuilderList() {
       return childRegionInfo_;
     }
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     public int getChildRegionInfoCount() {
       return childRegionInfo_.size();
     }
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo getChildRegionInfo(int index) {
       return childRegionInfo_.get(index);
     }
     /**
-     * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+     * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
      */
     public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getChildRegionInfoOrBuilder(
         int index) {
@@ -21433,19 +21356,11 @@ public final class MasterProcedureProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!hasTableName()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
       if (!hasParentRegionInfo()) {
         memoizedIsInitialized = 0;
         return false;
       }
       if (!getUserInfo().isInitialized()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!getTableName().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -21469,16 +21384,10 @@ public final class MasterProcedureProtos {
         output.writeMessage(1, getUserInfo());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeMessage(2, getTableName());
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeMessage(3, getParentRegionInfo());
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeBytes(4, splitRow_);
+        output.writeMessage(2, getParentRegionInfo());
       }
       for (int i = 0; i < childRegionInfo_.size(); i++) {
-        output.writeMessage(5, childRegionInfo_.get(i));
+        output.writeMessage(3, childRegionInfo_.get(i));
       }
       unknownFields.writeTo(output);
     }
@@ -21494,19 +21403,11 @@ public final class MasterProcedureProtos {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, getTableName());
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, getParentRegionInfo());
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeBytesSize(4, splitRow_);
+          .computeMessageSize(2, getParentRegionInfo());
       }
       for (int i = 0; i < childRegionInfo_.size(); i++) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(5, childRegionInfo_.get(i));
+          .computeMessageSize(3, childRegionInfo_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -21530,20 +21431,10 @@ public final class MasterProcedureProtos {
         result = result && getUserInfo()
             .equals(other.getUserInfo());
       }
-      result = result && (hasTableName() == other.hasTableName());
-      if (hasTableName()) {
-        result = result && getTableName()
-            .equals(other.getTableName());
-      }
       result = result && (hasParentRegionInfo() == other.hasParentRegionInfo());
       if (hasParentRegionInfo()) {
         result = result && getParentRegionInfo()
             .equals(other.getParentRegionInfo());
-      }
-      result = result && (hasSplitRow() == other.hasSplitRow());
-      if (hasSplitRow()) {
-        result = result && getSplitRow()
-            .equals(other.getSplitRow());
       }
       result = result && getChildRegionInfoList()
           .equals(other.getChildRegionInfoList());
@@ -21562,17 +21453,9 @@ public final class MasterProcedureProtos {
         hash = (37 * hash) + USER_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getUserInfo().hashCode();
       }
-      if (hasTableName()) {
-        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
-        hash = (53 * hash) + getTableName().hashCode();
-      }
       if (hasParentRegionInfo()) {
         hash = (37 * hash) + PARENT_REGION_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getParentRegionInfo().hashCode();
-      }
-      if (hasSplitRow()) {
-        hash = (37 * hash) + SPLIT_ROW_FIELD_NUMBER;
-        hash = (53 * hash) + getSplitRow().hashCode();
       }
       if (getChildRegionInfoCount() > 0) {
         hash = (37 * hash) + CHILD_REGION_INFO_FIELD_NUMBER;
@@ -21693,7 +21576,6 @@ public final class MasterProcedureProtos {
         if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
           getUserInfoFieldBuilder();
-          getTableNameFieldBuilder();
           getParentRegionInfoFieldBuilder();
           getChildRegionInfoFieldBuilder();
         }
@@ -21706,23 +21588,15 @@ public final class MasterProcedureProtos {
           userInfoBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (tableNameBuilder_ == null) {
-          tableName_ = null;
-        } else {
-          tableNameBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000002);
         if (parentRegionInfoBuilder_ == null) {
           parentRegionInfo_ = null;
         } else {
           parentRegionInfoBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000004);
-        splitRow_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000002);
         if (childRegionInfoBuilder_ == null) {
           childRegionInfo_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000010);
+          bitField0_ = (bitField0_ & ~0x00000004);
         } else {
           childRegionInfoBuilder_.clear();
         }
@@ -21761,27 +21635,15 @@ public final class MasterProcedureProtos {
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        if (tableNameBuilder_ == null) {
-          result.tableName_ = tableName_;
-        } else {
-          result.tableName_ = tableNameBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
         if (parentRegionInfoBuilder_ == null) {
           result.parentRegionInfo_ = parentRegionInfo_;
         } else {
           result.parentRegionInfo_ = parentRegionInfoBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        result.splitRow_ = splitRow_;
         if (childRegionInfoBuilder_ == null) {
-          if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
             childRegionInfo_ = java.util.Collections.unmodifiableList(childRegionInfo_);
-            bitField0_ = (bitField0_ & ~0x00000010);
+            bitField0_ = (bitField0_ & ~0x00000004);
           }
           result.childRegionInfo_ = childRegionInfo_;
         } else {
@@ -21832,20 +21694,14 @@ public final class MasterProcedureProtos {
         if (other.hasUserInfo()) {
           mergeUserInfo(other.getUserInfo());
         }
-        if (other.hasTableName()) {
-          mergeTableName(other.getTableName());
-        }
         if (other.hasParentRegionInfo()) {
           mergeParentRegionInfo(other.getParentRegionInfo());
-        }
-        if (other.hasSplitRow()) {
-          setSplitRow(other.getSplitRow());
         }
         if (childRegionInfoBuilder_ == null) {
           if (!other.childRegionInfo_.isEmpty()) {
             if (childRegionInfo_.isEmpty()) {
               childRegionInfo_ = other.childRegionInfo_;
-              bitField0_ = (bitField0_ & ~0x00000010);
+              bitField0_ = (bitField0_ & ~0x00000004);
             } else {
               ensureChildRegionInfoIsMutable();
               childRegionInfo_.addAll(other.childRegionInfo_);
@@ -21858,7 +21714,7 @@ public final class MasterProcedureProtos {
               childRegionInfoBuilder_.dispose();
               childRegionInfoBuilder_ = null;
               childRegionInfo_ = other.childRegionInfo_;
-              bitField0_ = (bitField0_ & ~0x00000010);
+              bitField0_ = (bitField0_ & ~0x00000004);
               childRegionInfoBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getChildRegionInfoFieldBuilder() : null;
@@ -21876,16 +21732,10 @@ public final class MasterProcedureProtos {
         if (!hasUserInfo()) {
           return false;
         }
-        if (!hasTableName()) {
-          return false;
-        }
         if (!hasParentRegionInfo()) {
           return false;
         }
         if (!getUserInfo().isInitialized()) {
-          return false;
-        }
-        if (!getTableName().isInitialized()) {
           return false;
         }
         if (!getParentRegionInfo().isInitialized()) {
@@ -22036,135 +21886,17 @@ public final class MasterProcedureProtos {
         return userInfoBuilder_;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName tableName_ = null;
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      public boolean hasTableName() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName getTableName() {
-        if (tableNameBuilder_ == null) {
-          return tableName_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance() : tableName_;
-        } else {
-          return tableNameBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      public Builder setTableName(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName value) {
-        if (tableNameBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          tableName_ = value;
-          onChanged();
-        } else {
-          tableNameBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      public Builder setTableName(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
-        if (tableNameBuilder_ == null) {
-          tableName_ = builderForValue.build();
-          onChanged();
-        } else {
-          tableNameBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      public Builder mergeTableName(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName value) {
-        if (tableNameBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              tableName_ != null &&
-              tableName_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
-            tableName_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
-          } else {
-            tableName_ = value;
-          }
-          onChanged();
-        } else {
-          tableNameBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      public Builder clearTableName() {
-        if (tableNameBuilder_ == null) {
-          tableName_ = null;
-          onChanged();
-        } else {
-          tableNameBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000002);
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return getTableNameFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
-        if (tableNameBuilder_ != null) {
-          return tableNameBuilder_.getMessageOrBuilder();
-        } else {
-          return tableName_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance() : tableName_;
-        }
-      }
-      /**
-       * <code>required .hbase.pb.TableName table_name = 2;</code>
-       */
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
-          getTableNameFieldBuilder() {
-        if (tableNameBuilder_ == null) {
-          tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
-                  getTableName(),
-                  getParentForChildren(),
-                  isClean());
-          tableName_ = null;
-        }
-        return tableNameBuilder_;
-      }
-
       private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo parentRegionInfo_ = null;
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> parentRegionInfoBuilder_;
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       public boolean hasParentRegionInfo() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo getParentRegionInfo() {
         if (parentRegionInfoBuilder_ == null) {
@@ -22174,7 +21906,7 @@ public final class MasterProcedureProtos {
         }
       }
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       public Builder setParentRegionInfo(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo value) {
         if (parentRegionInfoBuilder_ == null) {
@@ -22186,11 +21918,11 @@ public final class MasterProcedureProtos {
         } else {
           parentRegionInfoBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000002;
         return this;
       }
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       public Builder setParentRegionInfo(
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
@@ -22200,15 +21932,15 @@ public final class MasterProcedureProtos {
         } else {
           parentRegionInfoBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000002;
         return this;
       }
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       public Builder mergeParentRegionInfo(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo value) {
         if (parentRegionInfoBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) == 0x00000004) &&
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
               parentRegionInfo_ != null &&
               parentRegionInfo_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance()) {
             parentRegionInfo_ =
@@ -22220,11 +21952,11 @@ public final class MasterProcedureProtos {
         } else {
           parentRegionInfoBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000002;
         return this;
       }
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       public Builder clearParentRegionInfo() {
         if (parentRegionInfoBuilder_ == null) {
@@ -22233,19 +21965,19 @@ public final class MasterProcedureProtos {
         } else {
           parentRegionInfoBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder getParentRegionInfoBuilder() {
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000002;
         onChanged();
         return getParentRegionInfoFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getParentRegionInfoOrBuilder() {
         if (parentRegionInfoBuilder_ != null) {
@@ -22256,7 +21988,7 @@ public final class MasterProcedureProtos {
         }
       }
       /**
-       * <code>required .hbase.pb.RegionInfo parent_region_info = 3;</code>
+       * <code>required .hbase.pb.RegionInfo parent_region_info = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
@@ -22272,47 +22004,12 @@ public final class MasterProcedureProtos {
         return parentRegionInfoBuilder_;
       }
 
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString splitRow_ = org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.EMPTY;
-      /**
-       * <code>optional bytes split_row = 4;</code>
-       */
-      public boolean hasSplitRow() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
-      }
-      /**
-       * <code>optional bytes split_row = 4;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getSplitRow() {
-        return splitRow_;
-      }
-      /**
-       * <code>optional bytes split_row = 4;</code>
-       */
-      public Builder setSplitRow(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
-        splitRow_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional bytes split_row = 4;</code>
-       */
-      public Builder clearSplitRow() {
-        bitField0_ = (bitField0_ & ~0x00000008);
-        splitRow_ = getDefaultInstance().getSplitRow();
-        onChanged();
-        return this;
-      }
-
       private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo> childRegionInfo_ =
         java.util.Collections.emptyList();
       private void ensureChildRegionInfoIsMutable() {
-        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
           childRegionInfo_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo>(childRegionInfo_);
-          bitField0_ |= 0x00000010;
+          bitField0_ |= 0x00000004;
          }
       }
 
@@ -22320,7 +22017,7 @@ public final class MasterProcedureProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> childRegionInfoBuilder_;
 
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo> getChildRegionInfoList() {
         if (childRegionInfoBuilder_ == null) {
@@ -22330,7 +22027,7 @@ public final class MasterProcedureProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public int getChildRegionInfoCount() {
         if (childRegionInfoBuilder_ == null) {
@@ -22340,7 +22037,7 @@ public final class MasterProcedureProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo getChildRegionInfo(int index) {
         if (childRegionInfoBuilder_ == null) {
@@ -22350,7 +22047,7 @@ public final class MasterProcedureProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder setChildRegionInfo(
           int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo value) {
@@ -22367,7 +22064,7 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder setChildRegionInfo(
           int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
@@ -22381,7 +22078,7 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder addChildRegionInfo(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo value) {
         if (childRegionInfoBuilder_ == null) {
@@ -22397,7 +22094,7 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder addChildRegionInfo(
           int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo value) {
@@ -22414,7 +22111,7 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder addChildRegionInfo(
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
@@ -22428,7 +22125,7 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder addChildRegionInfo(
           int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
@@ -22442,7 +22139,7 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder addAllChildRegionInfo(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo> values) {
@@ -22457,12 +22154,12 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder clearChildRegionInfo() {
         if (childRegionInfoBuilder_ == null) {
           childRegionInfo_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000010);
+          bitField0_ = (bitField0_ & ~0x00000004);
           onChanged();
         } else {
           childRegionInfoBuilder_.clear();
@@ -22470,7 +22167,7 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public Builder removeChildRegionInfo(int index) {
         if (childRegionInfoBuilder_ == null) {
@@ -22483,14 +22180,14 @@ public final class MasterProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder getChildRegionInfoBuilder(
           int index) {
         return getChildRegionInfoFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getChildRegionInfoOrBuilder(
           int index) {
@@ -22500,7 +22197,7 @@ public final class MasterProcedureProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
            getChildRegionInfoOrBuilderList() {
@@ -22511,14 +22208,14 @@ public final class MasterProcedureProtos {
         }
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder addChildRegionInfoBuilder() {
         return getChildRegionInfoFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder addChildRegionInfoBuilder(
           int index) {
@@ -22526,7 +22223,7 @@ public final class MasterProcedureProtos {
             index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
       }
       /**
-       * <code>repeated .hbase.pb.RegionInfo child_region_info = 5;</code>
+       * <code>repeated .hbase.pb.RegionInfo child_region_info = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder> 
            getChildRegionInfoBuilderList() {
@@ -22539,7 +22236,7 @@ public final class MasterProcedureProtos {
           childRegionInfoBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
               org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder>(
                   childRegionInfo_,
-                  ((bitField0_ & 0x00000010) == 0x00000010),
+                  ((bitField0_ & 0x00000004) == 0x00000004),
                   getParentForChildren(),
                   isClean());
           childRegionInfo_ = null;
@@ -24385,125 +24082,124 @@ public final class MasterProcedureProtos {
       "e.pb.UserInformation\022\'\n\ntable_name\030\002 \002(\013" +
       "2\023.hbase.pb.TableName\022)\n\013region_info\030\003 \003" +
       "(\0132\024.hbase.pb.RegionInfo\022\020\n\010forcible\030\004 \001" +
-      "(\010\"\350\001\n\031SplitTableRegionStateData\022,\n\tuser",
-      "_info\030\001 \002(\0132\031.hbase.pb.UserInformation\022\'" +
-      "\n\ntable_name\030\002 \002(\0132\023.hbase.pb.TableName\022" +
-      "0\n\022parent_region_info\030\003 \002(\0132\024.hbase.pb.R" +
-      "egionInfo\022\021\n\tsplit_row\030\004 \001(\014\022/\n\021child_re" +
-      "gion_info\030\005 \003(\0132\024.hbase.pb.RegionInfo\"\201\002" +
-      "\n\024ServerCrashStateData\022)\n\013server_name\030\001 " +
-      "\002(\0132\024.hbase.pb.ServerName\022\036\n\026distributed" +
-      "_log_replay\030\002 \001(\010\0227\n\031regions_on_crashed_" +
-      "server\030\003 \003(\0132\024.hbase.pb.RegionInfo\022.\n\020re" +
-      "gions_assigned\030\004 \003(\0132\024.hbase.pb.RegionIn",
-      "fo\022\025\n\rcarrying_meta\030\005 \001(\010\022\036\n\020should_spli" +
-      "t_wal\030\006 \001(\010:\004true*\330\001\n\020CreateTableState\022\036" +
-      "\n\032CREATE_TABLE_PRE_OPERATION\020\001\022 \n\034CREATE" +
-      "_TABLE_WRITE_FS_LAYOUT\020\002\022\034\n\030CREATE_TABLE" +
-      "_ADD_TO_META\020\003\022\037\n\033CREATE_TABLE_ASSIGN_RE" +
-      "GIONS\020\004\022\"\n\036CREATE_TABLE_UPDATE_DESC_CACH" +
-      "E\020\005\022\037\n\033CREATE_TABLE_POST_OPERATION\020\006*\207\002\n" +
-      "\020ModifyTableState\022\030\n\024MODIFY_TABLE_PREPAR" +
-      "E\020\001\022\036\n\032MODIFY_TABLE_PRE_OPERATION\020\002\022(\n$M" +
-      "ODIFY_TABLE_UPDATE_TABLE_DESCRIPTOR\020\003\022&\n",
-      "\"MODIFY_TABLE_REMOVE_REPLICA_COLUMN\020\004\022!\n" +
-      "\035MODIFY_TABLE_DELETE_FS_LAYOUT\020\005\022\037\n\033MODI" +
-      "FY_TABLE_POST_OPERATION\020\006\022#\n\037MODIFY_TABL" +
-      "E_REOPEN_ALL_REGIONS\020\007*\212\002\n\022TruncateTable" +
-      "State\022 \n\034TRUNCATE_TABLE_PRE_OPERATION\020\001\022" +
-      "#\n\037TRUNCATE_TABLE_REMOVE_FROM_META\020\002\022\"\n\036" +
-      "TRUNCATE_TABLE_CLEAR_FS_LAYOUT\020\003\022#\n\037TRUN" +
-      "CATE_TABLE_CREATE_FS_LAYOUT\020\004\022\036\n\032TRUNCAT" +
-      "E_TABLE_ADD_TO_META\020\005\022!\n\035TRUNCATE_TABLE_" +
-      "ASSIGN_REGIONS\020\006\022!\n\035TRUNCATE_TABLE_POST_",
-      "OPERATION\020\007*\337\001\n\020DeleteTableState\022\036\n\032DELE" +
-      "TE_TABLE_PRE_OPERATION\020\001\022!\n\035DELETE_TABLE" +
-      "_REMOVE_FROM_META\020\002\022 \n\034DELETE_TABLE_CLEA" +
-      "R_FS_LAYOUT\020\003\022\"\n\036DELETE_TABLE_UPDATE_DES" +
-      "C_CACHE\020\004\022!\n\035DELETE_TABLE_UNASSIGN_REGIO" +
-      "NS\020\005\022\037\n\033DELETE_TABLE_POST_OPERATION\020\006*\320\001" +
-      "\n\024CreateNamespaceState\022\034\n\030CREATE_NAMESPA" +
-      "CE_PREPARE\020\001\022%\n!CREATE_NAMESPACE_CREATE_" +
-      "DIRECTORY\020\002\022)\n%CREATE_NAMESPACE_INSERT_I" +
-      "NTO_NS_TABLE\020\003\022\036\n\032CREATE_NAMESPACE_UPDAT",
-      "E_ZK\020\004\022(\n$CREATE_NAMESPACE_SET_NAMESPACE" +
-      "_QUOTA\020\005*z\n\024ModifyNamespaceState\022\034\n\030MODI" +
-      "FY_NAMESPACE_PREPARE\020\001\022$\n MODIFY_NAMESPA" +
-      "CE_UPDATE_NS_TABLE\020\002\022\036\n\032MODIFY_NAMESPACE" +
-      "_UPDATE_ZK\020\003*\332\001\n\024DeleteNamespaceState\022\034\n" +
-      "\030DELETE_NAMESPACE_PREPARE\020\001\022)\n%DELETE_NA" +
-      "MESPACE_DELETE_FROM_NS_TABLE\020\002\022#\n\037DELETE" +
-      "_NAMESPACE_REMOVE_FROM_ZK\020\003\022\'\n#DELETE_NA" +
-      "MESPACE_DELETE_DIRECTORIES\020\004\022+\n\'DELETE_N" +
-      "AMESPACE_REMOVE_NAMESPACE_QUOTA\020\005*\331\001\n\024Ad",
-      "dColumnFamilyState\022\035\n\031ADD_COLUMN_FAMILY_" +
-      "PREPARE\020\001\022#\n\037ADD_COLUMN_FAMILY_PRE_OPERA" +
-      "TION\020\002\022-\n)ADD_COLUMN_FAMILY_UPDATE_TABLE" +
-      "_DESCRIPTOR\020\003\022$\n ADD_COLUMN_FAMILY_POST_" +
-      "OPERATION\020\004\022(\n$ADD_COLUMN_FAMILY_REOPEN_" +
-      "ALL_REGIONS\020\005*\353\001\n\027ModifyColumnFamilyStat" +
-      "e\022 \n\034MODIFY_COLUMN_FAMILY_PREPARE\020\001\022&\n\"M" +
-      "ODIFY_COLUMN_FAMILY_PRE_OPERATION\020\002\0220\n,M" +
-      "ODIFY_COLUMN_FAMILY_UPDATE_TABLE_DESCRIP" +
-      "TOR\020\003\022\'\n#MODIFY_COLUMN_FAMILY_POST_OPERA",
-      "TION\020\004\022+\n\'MODIFY_COLUMN_FAMILY_REOPEN_AL" +
-      "L_REGIONS\020\005*\226\002\n\027DeleteColumnFamilyState\022" +
-      " \n\034DELETE_COLUMN_FAMILY_PREPARE\020\001\022&\n\"DEL" +
-      "ETE_COLUMN_FAMILY_PRE_OPERATION\020\002\0220\n,DEL" +
-      "ETE_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTO" +
-      "R\020\003\022)\n%DELETE_COLUMN_FAMILY_DELETE_FS_LA" +
-      "YOUT\020\004\022\'\n#DELETE_COLUMN_FAMILY_POST_OPER" +
-      "ATION\020\005\022+\n\'DELETE_COLUMN_FAMILY_REOPEN_A" +
-      "LL_REGIONS\020\006*\350\001\n\020EnableTableState\022\030\n\024ENA" +
-      "BLE_TABLE_PREPARE\020\001\022\036\n\032ENABLE_TABLE_PRE_",
-      "OPERATION\020\002\022)\n%ENABLE_TABLE_SET_ENABLING" +
-      "_TABLE_STATE\020\003\022$\n ENABLE_TABLE_MARK_REGI" +
-      "ONS_ONLINE\020\004\022(\n$ENABLE_TABLE_SET_ENABLED" +
-      "_TABLE_STATE\020\005\022\037\n\033ENABLE_TABLE_POST_OPER" +
-      "ATION\020\006*\362\001\n\021DisableTableState\022\031\n\025DISABLE" +
-      "_TABLE_PREPARE\020\001\022\037\n\033DISABLE_TABLE_PRE_OP" +
-      "ERATION\020\002\022+\n\'DISABLE_TABLE_SET_DISABLING" +
-      "_TABLE_STATE\020\003\022&\n\"DISABLE_TABLE_MARK_REG" +
-      "IONS_OFFLINE\020\004\022*\n&DISABLE_TABLE_SET_DISA" +
-      "BLED_TABLE_STATE\020\005\022 \n\034DISABLE_TABLE_POST",
-      "_OPERATION\020\006*\346\001\n\022CloneSnapshotState\022 \n\034C" +
-      "LONE_SNAPSHOT_PRE_OPERATION\020\001\022\"\n\036CLONE_S" +
-      "NAPSHOT_WRITE_FS_LAYOUT\020\002\022\036\n\032CLONE_SNAPS" +
-      "HOT_ADD_TO_META\020\003\022!\n\035CLONE_SNAPSHOT_ASSI" +
-      "GN_REGIONS\020\004\022$\n CLONE_SNAPSHOT_UPDATE_DE" +
-      "SC_CACHE\020\005\022!\n\035CLONE_SNAPSHOT_POST_OPERAT" +
-      "ION\020\006*\260\001\n\024RestoreSnapshotState\022\"\n\036RESTOR" +
-      "E_SNAPSHOT_PRE_OPERATION\020\001\022,\n(RESTORE_SN" +
-      "APSHOT_UPDATE_TABLE_DESCRIPTOR\020\002\022$\n REST" +
-      "ORE_SNAPSHOT_WRITE_FS_LAYOUT\020\003\022 \n\034RESTOR",
-      "E_SNAPSHOT_UPDATE_META\020\004*\376\001\n\033DispatchMer" +
-      "gingRegionsState\022$\n DISPATCH_MERGING_REG" +
-      "IONS_PREPARE\020\001\022*\n&DISPATCH_MERGING_REGIO" +
-      "NS_PRE_OPERATION\020\002\0223\n/DISPATCH_MERGING_R" +
-      "EGIONS_MOVE_REGION_TO_SAME_RS\020\003\022+\n\'DISPA" +
-      "TCH_MERGING_REGIONS_DO_MERGE_IN_RS\020\004\022+\n\'" +
-      "DISPATCH_MERGING_REGIONS_POST_OPERATION\020" +
-      "\005*\305\003\n\025SplitTableRegionState\022\036\n\032SPLIT_TAB" +
-      "LE_REGION_PREPARE\020\001\022$\n SPLIT_TABLE_REGIO" +
-      "N_PRE_OPERATION\020\002\0220\n,SPLIT_TABLE_REGION_",
-      "SET_SPLITTING_TABLE_STATE\020\003\022+\n\'SPLIT_TAB" +
-      "LE_REGION_CLOSED_PARENT_REGION\020\004\022.\n*SPLI" +
-      "T_TABLE_REGION_CREATE_DAUGHTER_REGIONS\020\005" +
-      "\0220\n,SPLIT_TABLE_REGION_PRE_OPERATION_BEF" +
-      "ORE_PONR\020\006\022\"\n\036SPLIT_TABLE_REGION_UPDATE_" +
-      "META\020\007\022/\n+SPLIT_TABLE_REGION_PRE_OPERATI" +
-      "ON_AFTER_PONR\020\010\022)\n%SPLIT_TABLE_REGION_OP" +
-      "EN_CHILD_REGIONS\020\t\022%\n!SPLIT_TABLE_REGION" +
-      "_POST_OPERATION\020\n*\234\002\n\020ServerCrashState\022\026" +
-      "\n\022SERVER_CRASH_START\020\001\022\035\n\031SERVER_CRASH_P",
-      "ROCESS_META\020\002\022\034\n\030SERVER_CRASH_GET_REGION" +
-      "S\020\003\022\036\n\032SERVER_CRASH_NO_SPLIT_LOGS\020\004\022\033\n\027S" +
-      "ERVER_CRASH_SPLIT_LOGS\020\005\022#\n\037SERVER_CRASH" +
-      "_PREPARE_LOG_REPLAY\020\006\022\027\n\023SERVER_CRASH_AS" +
-      "SIGN\020\010\022\037\n\033SERVER_CRASH_WAIT_ON_ASSIGN\020\t\022" +
-      "\027\n\023SERVER_CRASH_FINISH\020dBR\n1org.apache.h" +
-      "adoop.hbase.shaded.protobuf.generatedB\025M" +
-      "asterProcedureProtosH\001\210\001\001\240\001\001"
+      "(\010\"\254\001\n\031SplitTableRegionStateData\022,\n\tuser",
+      "_info\030\001 \002(\0132\031.hbase.pb.UserInformation\0220" +
+      "\n\022parent_region_info\030\002 \002(\0132\024.hbase.pb.Re" +
+      "gionInfo\022/\n\021child_region_info\030\003 \003(\0132\024.hb" +
+      "ase.pb.RegionInfo\"\201\002\n\024ServerCrashStateDa" +
+      "ta\022)\n\013server_name\030\001 \002(\0132\024.hbase.pb.Serve" +
+      "rName\022\036\n\026distributed_log_replay\030\002 \001(\010\0227\n" +
+      "\031regions_on_crashed_server\030\003 \003(\0132\024.hbase" +
+      ".pb.RegionInfo\022.\n\020regions_assigned\030\004 \003(\013" +
+      "2\024.hbase.pb.RegionInfo\022\025\n\rcarrying_meta\030" +
+      "\005 \001(\010\022\036\n\020should_split_wal\030\006 \001(\010:\004true*\330\001",
+      "\n\020CreateTableState\022\036\n\032CREATE_TABLE_PRE_O" +
+      "PERATION\020\001\022 \n\034CREATE_TABLE_WRITE_FS_LAYO" +
+      "UT\020\002\022\034\n\030CREATE_TABLE_ADD_TO_META\020\003\022\037\n\033CR" +
+      "EATE_TABLE_ASSIGN_REGIONS\020\004\022\"\n\036CREATE_TA" +
+      "BLE_UPDATE_DESC_CACHE\020\005\022\037\n\033CREATE_TABLE_" +
+      "POST_OPERATION\020\006*\207\002\n\020ModifyTableState\022\030\n" +
+      "\024MODIFY_TABLE_PREPARE\020\001\022\036\n\032MODIFY_TABLE_" +
+      "PRE_OPERATION\020\002\022(\n$MODIFY_TABLE_UPDATE_T" +
+      "ABLE_DESCRIPTOR\020\003\022&\n\"MODIFY_TABLE_REMOVE" +
+      "_REPLICA_COLUMN\020\004\022!\n\035MODIFY_TABLE_DELETE",
+      "_FS_LAYOUT\020\005\022\037\n\033MODIFY_TABLE_POST_OPERAT" +
+      "ION\020\006\022#\n\037MODIFY_TABLE_REOPEN_ALL_REGIONS" +
+      "\020\007*\212\002\n\022TruncateTableState\022 \n\034TRUNCATE_TA" +
+      "BLE_PRE_OPERATION\020\001\022#\n\037TRUNCATE_TABLE_RE" +
+      "MOVE_FROM_META\020\002\022\"\n\036TRUNCATE_TABLE_CLEAR" +
+      "_FS_LAYOUT\020\003\022#\n\037TRUNCATE_TABLE_CREATE_FS" +
+      "_LAYOUT\020\004\022\036\n\032TRUNCATE_TABLE_ADD_TO_META\020" +
+      "\005\022!\n\035TRUNCATE_TABLE_ASSIGN_REGIONS\020\006\022!\n\035" +
+      "TRUNCATE_TABLE_POST_OPERATION\020\007*\337\001\n\020Dele" +
+      "teTableState\022\036\n\032DELETE_TABLE_PRE_OPERATI",
+      "ON\020\001\022!\n\035DELETE_TABLE_REMOVE_FROM_META\020\002\022" +
+      " \n\034DELETE_TABLE_CLEAR_FS_LAYOUT\020\003\022\"\n\036DEL" +
+      "ETE_TABLE_UPDATE_DESC_CACHE\020\004\022!\n\035DELETE_" +
+      "TABLE_UNASSIGN_REGIONS\020\005\022\037\n\033DELETE_TABLE" +
+      "_POST_OPERATION\020\006*\320\001\n\024CreateNamespaceSta" +
+      "te\022\034\n\030CREATE_NAMESPACE_PREPARE\020\001\022%\n!CREA" +
+      "TE_NAMESPACE_CREATE_DIRECTORY\020\002\022)\n%CREAT" +
+      "E_NAMESPACE_INSERT_INTO_NS_TABLE\020\003\022\036\n\032CR" +
+      "EATE_NAMESPACE_UPDATE_ZK\020\004\022(\n$CREATE_NAM" +
+      "ESPACE_SET_NAMESPACE_QUOTA\020\005*z\n\024ModifyNa",
+      "mespaceState\022\034\n\030MODIFY_NAMESPACE_PREPARE" +
+      "\020\001\022$\n MODIFY_NAMESPACE_UPDATE_NS_TABLE\020\002" +
+      "\022\036\n\032MODIFY_NAMESPACE_UPDATE_ZK\020\003*\332\001\n\024Del" +
+      "eteNamespaceState\022\034\n\030DELETE_NAMESPACE_PR" +
+      "EPARE\020\001\022)\n%DELETE_NAMESPACE_DELETE_FROM_" +
+      "NS_TABLE\020\002\022#\n\037DELETE_NAMESPACE_REMOVE_FR" +
+      "OM_ZK\020\003\022\'\n#DELETE_NAMESPACE_DELETE_DIREC" +
+      "TORIES\020\004\022+\n\'DELETE_NAMESPACE_REMOVE_NAME" +
+      "SPACE_QUOTA\020\005*\331\001\n\024AddColumnFamilyState\022\035" +
+      "\n\031ADD_COLUMN_FAMILY_PREPARE\020\001\022#\n\037ADD_COL",
+      "UMN_FAMILY_PRE_OPERATION\020\002\022-\n)ADD_COLUMN" +
+      "_FAMILY_UPDATE_TABLE_DESCRIPTOR\020\003\022$\n ADD" +
+      "_COLUMN_FAMILY_POST_OPERATION\020\004\022(\n$ADD_C" +
+      "OLUMN_FAMILY_REOPEN_ALL_REGIONS\020\005*\353\001\n\027Mo" +
+      "difyColumnFamilyState\022 \n\034MODIFY_COLUMN_F" +
+      "AMILY_PREPARE\020\001\022&\n\"MODIFY_COLUMN_FAMILY_" +
+      "PRE_OPERATION\020\002\0220\n,MODIFY_COLUMN_FAMILY_" +
+      "UPDATE_TABLE_DESCRIPTOR\020\003\022\'\n#MODIFY_COLU" +
+      "MN_FAMILY_POST_OPERATION\020\004\022+\n\'MODIFY_COL" +
+      "UMN_FAMILY_REOPEN_ALL_REGIONS\020\005*\226\002\n\027Dele",
+      "teColumnFamilyState\022 \n\034DELETE_COLUMN_FAM" +
+      "ILY_PREPARE\020\001\022&\n\"DELETE_COLUMN_FAMILY_PR" +
+      "E_OPERATION\020\002\0220\n,DELETE_COLUMN_FAMILY_UP" +
+      "DATE_TABLE_DESCRIPTOR\020\003\022)\n%DELETE_COLUMN" +
+      "_FAMILY_DELETE_FS_LAYOUT\020\004\022\'\n#DELETE_COL" +
+      "UMN_FAMILY_POST_OPERATION\020\005\022+\n\'DELETE_CO" +
+      "LUMN_FAMILY_REOPEN_ALL_REGIONS\020\006*\350\001\n\020Ena" +
+      "bleTableState\022\030\n\024ENABLE_TABLE_PREPARE\020\001\022" +
+      "\036\n\032ENABLE_TABLE_PRE_OPERATION\020\002\022)\n%ENABL" +
+      "E_TABLE_SET_ENABLING_TABLE_STATE\020\003\022$\n EN",
+      "ABLE_TABLE_MARK_REGIONS_ONLINE\020\004\022(\n$ENAB" +
+      "LE_TABLE_SET_ENABLED_TABLE_STATE\020\005\022\037\n\033EN" +
+      "ABLE_TABLE_POST_OPERATION\020\006*\362\001\n\021DisableT" +
+      "ableState\022\031\n\025DISABLE_TABLE_PREPARE\020\001\022\037\n\033" +
+      "DISABLE_TABLE_PRE_OPERATION\020\002\022+\n\'DISABLE" +
+      "_TABLE_SET_DISABLING_TABLE_STATE\020\003\022&\n\"DI" +
+      "SABLE_TABLE_MARK_REGIONS_OFFLINE\020\004\022*\n&DI" +
+      "SABLE_TABLE_SET_DISABLED_TABLE_STATE\020\005\022 " +
+      "\n\034DISABLE_TABLE_POST_OPERATION\020\006*\346\001\n\022Clo" +
+      "neSnapshotState\022 \n\034CLONE_SNAPSHOT_PRE_OP",
+      "ERATION\020\001\022\"\n\036CLONE_SNAPSHOT_WRITE_FS_LAY" +
+      "OUT\020\002\022\036\n\032CLONE_SNAPSHOT_ADD_TO_META\020\003\022!\n" +
+      "\035CLONE_SNAPSHOT_ASSIGN_REGIONS\020\004\022$\n CLON" +
+      "E_SNAPSHOT_UPDATE_DESC_CACHE\020\005\022!\n\035CLONE_" +
+      "SNAPSHOT_POST_OPERATION\020\006*\260\001\n\024RestoreSna" +
+      "pshotState\022\"\n\036RESTORE_SNAPSHOT_PRE_OPERA" +
+      "TION\020\001\022,\n(RESTORE_SNAPSHOT_UPDATE_TABLE_" +
+      "DESCRIPTOR\020\002\022$\n RESTORE_SNAPSHOT_WRITE_F" +
+      "S_LAYOUT\020\003\022 \n\034RESTORE_SNAPSHOT_UPDATE_ME" +
+      "TA\020\004*\376\001\n\033DispatchMergingRegionsState\022$\n ",
+      "DISPATCH_MERGING_REGIONS_PREPARE\020\001\022*\n&DI" +
+      "SPATCH_MERGING_REGIONS_PRE_OPERATION\020\002\0223" +
+      "\n/DISPATCH_MERGING_REGIONS_MOVE_REGION_T" +
+      "O_SAME_RS\020\003\022+\n\'DISPATCH_MERGING_REGIONS_" +
+      "DO_MERGE_IN_RS\020\004\022+\n\'DISPATCH_MERGING_REG" +
+      "IONS_POST_OPERATION\020\005*\305\003\n\025SplitTableRegi" +
+      "onState\022\036\n\032SPLIT_TABLE_REGION_PREPARE\020\001\022" +
+      "$\n SPLIT_TABLE_REGION_PRE_OPERATION\020\002\0220\n" +
+      ",SPLIT_TABLE_REGION_SET_SPLITTING_TABLE_" +
+      "STATE\020\003\022+\n\'SPLIT_TABLE_REGION_CLOSED_PAR",
+      "ENT_REGION\020\004\022.\n*SPLIT_TABLE_REGION_CREAT" +
+      "E_DAUGHTER_REGIONS\020\005\0220\n,SPLIT_TABLE_REGI" +
+      "ON_PRE_OPERATION_BEFORE_PONR\020\006\022\"\n\036SPLIT_" +
+      "TABLE_REGION_UPDATE_META\020\007\022/\n+SPLIT_TABL" +
+      "E_REGION_PRE_OPERATION_AFTER_PONR\020\010\022)\n%S" +
+      "PLIT_TABLE_REGION_OPEN_CHILD_REGIONS\020\t\022%" +
+      "\n!SPLIT_TABLE_REGION_POST_OPERATION\020\n*\234\002" +
+      "\n\020ServerCrashState\022\026\n\022SERVER_CRASH_START" +
+      "\020\001\022\035\n\031SERVER_CRASH_PROCESS_META\020\002\022\034\n\030SER" +
+      "VER_CRASH_GET_REGIONS\020\003\022\036\n\032SERVER_CRASH_",
+      "NO_SPLIT_LOGS\020\004\022\033\n\027SERVER_CRASH_SPLIT_LO" +
+      "GS\020\005\022#\n\037SERVER_CRASH_PREPARE_LOG_REPLAY\020" +
+      "\006\022\027\n\023SERVER_CRASH_ASSIGN\020\010\022\037\n\033SERVER_CRA" +
+      "SH_WAIT_ON_ASSIGN\020\t\022\027\n\023SERVER_CRASH_FINI" +
+      "SH\020dBR\n1org.apache.hadoop.hbase.shaded.p" +
+      "rotobuf.generatedB\025MasterProcedureProtos" +
+      "H\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -24620,7 +24316,7 @@ public final class MasterProcedureProtos {
     internal_static_hbase_pb_SplitTableRegionStateData_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SplitTableRegionStateData_descriptor,
-        new java.lang.String[] { "UserInfo", "TableName", "ParentRegionInfo", "SplitRow", "ChildRegionInfo", });
+        new java.lang.String[] { "UserInfo", "ParentRegionInfo", "ChildRegionInfo", });
     internal_static_hbase_pb_ServerCrashStateData_descriptor =
       getDescriptor().getMessageTypes().get(17);
     internal_static_hbase_pb_ServerCrashStateData_fieldAccessorTable = new

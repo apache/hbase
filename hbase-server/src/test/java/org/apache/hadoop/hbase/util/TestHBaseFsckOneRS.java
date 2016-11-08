@@ -1712,7 +1712,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // Create daughters without adding to META table
       MasterProcedureEnv env = cluster.getMaster().getMasterProcedureExecutor().getEnvironment();
       SplitTableRegionProcedure splitR = new SplitTableRegionProcedure(
-        env, desc.getTableName(), regions.get(0).getRegionInfo(), Bytes.toBytes("r3"));
+        env, regions.get(0).getRegionInfo(), Bytes.toBytes("r3"));
       splitR.prepareSplitRegion(env);
       splitR.setRegionStateToSplitting(env);
       splitR.closeParentRegionForSplit(env);

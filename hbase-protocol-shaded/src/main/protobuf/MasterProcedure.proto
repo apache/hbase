@@ -292,10 +292,8 @@ enum SplitTableRegionState {
 
 message SplitTableRegionStateData {
   required UserInformation user_info = 1;
-  required TableName table_name = 2;
-  required RegionInfo parent_region_info = 3;
-  optional bytes split_row = 4;
-  repeated RegionInfo child_region_info = 5;
+  required RegionInfo parent_region_info = 2;
+  repeated RegionInfo child_region_info = 3;
 }
 
 message ServerCrashStateData {

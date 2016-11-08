@@ -91,7 +91,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.After;
@@ -481,23 +480,6 @@ public class TestSplitTransactionOnCluster {
   }
 
   /**
-   * Noop Abortable implementation used below in tests.
-   */
-  static class UselessTestAbortable implements Abortable {
-    boolean aborted = false;
-    @Override
-    public void abort(String why, Throwable e) {
-      LOG.warn("ABORTED (But nothing to abort): why=" + why, e);
-      aborted = true;
-    }
-
-    @Override
-    public boolean isAborted() {
-      return this.aborted;
-    }
-  }
-
-  /**
    * Verifies HBASE-5806.  Here the case is that splitting is completed but before the
    * CJ could remove the parent region the master is killed and restarted.
    * @throws IOException
@@ -523,8 +505,6 @@ public class TestSplitTransactionOnCluster {
     this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(t.getConfiguration(),
-      "testMasterRestartAtRegionSplitPendingCatalogJanitor", new UselessTestAbortable());
     try {
       // Add a bit of load up into the table so splittable.
       TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY, false);
@@ -552,7 +532,6 @@ public class TestSplitTransactionOnCluster {
       this.admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
-      zkw.close();
     }
   }
 

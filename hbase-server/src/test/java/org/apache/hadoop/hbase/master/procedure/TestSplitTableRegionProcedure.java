@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -129,8 +131,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(
-        procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
     // Wait the completion
@@ -155,8 +156,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(
-        procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
     // Wait the completion
@@ -184,8 +184,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(
-        procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
     // Wait the completion
@@ -212,8 +211,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(
-        procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
     // Wait the completion
@@ -245,8 +243,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(
-        procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
     // Wait the completion
@@ -286,14 +283,12 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId1 = procExec.submitProcedure(
-      new SplitTableRegionProcedure(
-        procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
     // Split region of the table with the same nonce
     long procId2 = procExec.submitProcedure(
-      new SplitTableRegionProcedure(
-        procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
 
@@ -323,15 +318,16 @@ public class TestSplitTableRegionProcedure {
     assertTrue("not able to find a splittable region", regions.length == 1);
 
     // Split region of the table with null split key
-    long procId1 = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), tableName, regions[0], null),
-      nonceGroup,
-      nonce);
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureInfo result = procExec.getResult(procId1);
-    assertTrue(result.isFailed());
-    LOG.debug("Split failed with exception: " + result.getExceptionFullMessage());
-    assertTrue(UTIL.getMiniHBaseCluster().getRegions(tableName).size() == 1);
+    try {
+      long procId1 = procExec.submitProcedure(
+        new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], null),
+        nonceGroup,
+        nonce);
+      ProcedureTestingUtility.waitProcedure(procExec, procId1);
+      fail("unexpected procedure start with invalid split-key");
+    } catch (DoNotRetryIOException e) {
+      LOG.debug("Expected Split procedure construction failure: " + e.getMessage());
+    }
   }
 
   @Test(timeout = 600000)
@@ -352,7 +348,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
 
@@ -385,7 +381,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), tableName, regions[0], splitKey),
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
       nonceGroup,
       nonce);
 
