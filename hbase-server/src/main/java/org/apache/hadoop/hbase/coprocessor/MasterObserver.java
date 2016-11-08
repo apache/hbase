@@ -991,7 +991,7 @@ public interface MasterObserver extends Coprocessor {
    * @param procId the Id of the procedure
    * @throws IOException if something went wrong
    */
-  public void preAbortProcedure(
+  void preAbortProcedure(
       ObserverContext<MasterCoprocessorEnvironment> ctx,
       final ProcedureExecutor<MasterProcedureEnv> procEnv,
       final long procId) throws IOException;
@@ -1001,7 +1001,7 @@ public interface MasterObserver extends Coprocessor {
    * @param ctx the environment to interact with the framework and master
    * @throws IOException if something went wrong
    */
-  public void postAbortProcedure(ObserverContext<MasterCoprocessorEnvironment> ctx)
+  void postAbortProcedure(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException;
 
   /**
@@ -1637,7 +1637,7 @@ public interface MasterObserver extends Coprocessor {
    * @param regionB second region to be merged
    * @throws IOException if an error occurred on the coprocessor
    */
-  public void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+  void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo regionA, HRegionInfo regionB) throws IOException;
   
   /**
