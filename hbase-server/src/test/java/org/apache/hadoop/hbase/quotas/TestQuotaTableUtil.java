@@ -23,14 +23,11 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
@@ -50,7 +47,6 @@ import org.junit.rules.TestName;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestQuotaTableUtil {
-  private static final Log LOG = LogFactory.getLog(TestQuotaTableUtil.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Connection connection;

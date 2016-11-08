@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.Queue;
 
 import org.apache.commons.logging.Log;
@@ -54,11 +55,23 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   private Connection connection;
   private Table table;
 
-  private QuotaRetriever() {
+  /**
+   * Should QutoaRetriever manage the state of the connection, or leave it be.
+   */
+  private boolean isManagedConnection = false;
+
+  QuotaRetriever() {
   }
 
   void init(final Configuration conf, final Scan scan) throws IOException {
-    this.connection = ConnectionFactory.createConnection(conf);
+    // Set this before creating the connection and passing it down to make sure
+    // it's cleaned up if we fail to construct the Scanner.
+    this.isManagedConnection = true;
+    init(ConnectionFactory.createConnection(conf), scan);
+  }
+
+  void init(final Connection conn, final Scan scan) throws IOException {
+    this.connection = Objects.requireNonNull(conn);
     this.table = this.connection.getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
     try {
       scanner = table.getScanner(scan);
@@ -77,10 +90,14 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
       this.table.close();
       this.table = null;
     }
-    if (this.connection != null) {
-      this.connection.close();
-      this.connection = null;
+    // Null out the connection on close() even if we didn't explicitly close it
+    // to maintain typical semantics.
+    if (isManagedConnection) {
+      if (this.connection != null) {
+        this.connection.close();
+      }
     }
+    this.connection = null;
   }
 
   public QuotaSettings next() throws IOException {
