@@ -64,7 +64,8 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
 
   @Before
   public void setUp() throws Exception {
-    this.restoreDir = TEST_UTIL.getRandomDir();
+    this.restoreDir = TEST_UTIL.getDataTestDir();
+
   }
 
   @Override
