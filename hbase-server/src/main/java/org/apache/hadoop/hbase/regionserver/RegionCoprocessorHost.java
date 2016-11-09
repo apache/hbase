@@ -520,18 +520,19 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long, InternalScanner, CompactionRequest)}
+   * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long,
+   *   InternalScanner, CompactionRequest, long)}
    */
   public InternalScanner preCompactScannerOpen(final Store store,
       final List<StoreFileScanner> scanners, final ScanType scanType, final long earliestPutTs,
-      final CompactionRequest request) throws IOException {
+      final CompactionRequest request, final long readPoint) throws IOException {
     return execOperationWithResult(null,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
         setResult(oserver.preCompactScannerOpen(ctx, store, scanners, scanType,
-          earliestPutTs, getResult(), request));
+          earliestPutTs, getResult(), request, readPoint));
       }
     });
   }
@@ -649,16 +650,16 @@ public class RegionCoprocessorHost
   /**
    * See
    * {@link RegionObserver#preFlushScannerOpen(ObserverContext,
-   *    Store, KeyValueScanner, InternalScanner)}
+   *    Store, KeyValueScanner, InternalScanner, long)}
    */
   public InternalScanner preFlushScannerOpen(final Store store,
-      final KeyValueScanner memstoreScanner) throws IOException {
+      final KeyValueScanner memstoreScanner, final long readPoint) throws IOException {
     return execOperationWithResult(null,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<InternalScanner>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        setResult(oserver.preFlushScannerOpen(ctx, store, memstoreScanner, getResult()));
+        setResult(oserver.preFlushScannerOpen(ctx, store, memstoreScanner, getResult(), readPoint));
       }
     });
   }
