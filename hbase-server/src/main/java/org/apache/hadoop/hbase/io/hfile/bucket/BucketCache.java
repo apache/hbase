@@ -53,6 +53,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -68,6 +69,9 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
@@ -248,9 +252,11 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         retrieveFromFile(bucketSizes);
       } catch (IOException ioex) {
-        LOG.error("Can't restore from file because of", ioex);
+        LOG.error("Can't restore cache from persisted file " + persistencePath +
+          "; file removed; cache is cold!", ioex);
       } catch (ClassNotFoundException cnfe) {
-        LOG.error("Can't restore from file in rebuild because can't deserialise",cnfe);
+        LOG.error("Can't restore cache from persisted file in rebuild "
+            + "because can't deserialise; file removed; cache is cold!", cnfe);
         throw new RuntimeException(cnfe);
       }
     }
@@ -945,6 +951,11 @@ public class BucketCache implements BlockCache, HeapSize {
     return receptacle;
   }
 
+  /**
+   * The current version of the persisted cache file.
+   */
+  private static final int PERSISTED_CACHE_VERSION = 0;
+
   private void persistToFile() throws IOException {
     assert !cacheEnabled;
     FileOutputStream fos = null;
@@ -954,6 +965,13 @@ public class BucketCache implements BlockCache, HeapSize {
         throw new IOException("Attempt to persist non-persistent cache mappings!");
       }
       fos = new FileOutputStream(persistencePath, false);
+      // Write out a metdata protobuf block in case we change format at later date, etc.
+      // Add our magic as preamble.
+      fos.write(ProtobufMagic.PB_MAGIC, 0, ProtobufMagic.lengthOfPBMagic());
+      BucketCacheProtos.PersistedCacheMetadata metadata =
+          BucketCacheProtos.PersistedCacheMetadata.newBuilder().
+          setVersion(PERSISTED_CACHE_VERSION).build();
+      metadata.writeDelimitedTo(fos);
       oos = new ObjectOutputStream(fos);
       oos.writeLong(cacheCapacity);
       oos.writeUTF(ioEngine.getClass().getName());
@@ -966,9 +984,12 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  /**
+   * @see #persistToFile()
+   */
   @SuppressWarnings("unchecked")
-  private void retrieveFromFile(int[] bucketSizes) throws IOException, BucketAllocatorException,
-      ClassNotFoundException {
+  private void retrieveFromFile(int[] bucketSizes)
+  throws IOException, BucketAllocatorException, ClassNotFoundException {
     File persistenceFile = new File(persistencePath);
     if (!persistenceFile.exists()) {
       return;
@@ -977,10 +998,35 @@ public class BucketCache implements BlockCache, HeapSize {
     FileInputStream fis = null;
     ObjectInputStream ois = null;
     try {
-      if (!ioEngine.isPersistent())
-        throw new IOException(
-            "Attempt to restore non-persistent cache mappings!");
+      if (!ioEngine.isPersistent()) {
+        throw new IOException("Attempt to restore non-persistent cache mappings!");
+      }
       fis = new FileInputStream(persistencePath);
+      // Read protobuf magic and then metadata. See persistToFile for where we wrote
+      // out metadata for format.
+      byte [] pbmagic = new byte [ProtobufMagic.lengthOfPBMagic()];
+      int len = fis.read(pbmagic, 0, pbmagic.length);
+      if (len != pbmagic.length || !ProtobufMagic.isPBMagicPrefix(pbmagic)) {
+        // Throw exception. In finally we remove the file ALWAYS.
+        throw new HBaseIOException("Failed read of protobuf magic ("
+            + Bytes.toString(pbmagic)+ "); old format (HBASE-16993)? "
+            + "Failed read of persisted cache file=" + persistencePath);
+      }
+      BucketCacheProtos.PersistedCacheMetadata metadata = null;
+      try {
+        metadata =
+            BucketCacheProtos.PersistedCacheMetadata.parseDelimitedFrom(fis);
+      } catch (IOException e) {
+        // Throw exception if failed parse. In finally we remove the
+        throw new HBaseIOException("Failed read of persisted cache metadata file=" +
+            persistencePath, e);
+      }
+      if (metadata.getVersion() != PERSISTED_CACHE_VERSION) {
+        throw new HBaseIOException("Unexpected version of persisted cache metadata file=" +
+            persistencePath + "; expected=" + PERSISTED_CACHE_VERSION + " but read=" +
+            metadata.getVersion());
+      }
+      // Ok. Read metadata. All seems good. Go ahead and pull in the persisted cache.
       ois = new ObjectInputStream(fis);
       long capacitySize = ois.readLong();
       if (capacitySize != cacheCapacity)
@@ -1010,6 +1056,8 @@ public class BucketCache implements BlockCache, HeapSize {
       if (!persistenceFile.delete()) {
         throw new IOException("Failed deleting persistence file "
             + persistenceFile.getAbsolutePath());
+      } else {
+        LOG.info("Deleted persisted cache file " + persistencePath);
       }
     }
   }
@@ -1130,10 +1178,7 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Item in cache. We expect this to be where most memory goes. Java uses 8
    * bytes just for object headers; after this, we want to use as little as
-   * possible - so we only use 8 bytes, but in order to do so we end up messing
-   * around with all this Java casting stuff. Offset stored as 5 bytes that make
-   * up the long. Doubt we'll see devices this big for ages. Offsets are divided
-   * by 256. So 5 bytes gives us 256TB or so.
+   * possible.
    */
   static class BucketEntry implements Serializable {
     private static final long serialVersionUID = -6741504807982257534L;
@@ -1147,15 +1192,14 @@ public class BucketCache implements BlockCache, HeapSize {
       }
     };
 
-    private int offsetBase;
     private int length;
-    private byte offset1;
     byte deserialiserIndex;
     private volatile long accessCounter;
     private BlockPriority priority;
     // Set this when we were not able to forcefully evict the block
     private volatile boolean markedForEvict;
     private AtomicInteger refCount = new AtomicInteger(0);
+    private long offset;
 
     /**
      * Time this block was cached.  Presumes we are created just before we are added to the cache.
@@ -1173,17 +1217,12 @@ public class BucketCache implements BlockCache, HeapSize {
       }
     }
 
-    long offset() { // Java has no unsigned numbers
-      long o = ((long) offsetBase) & 0xFFFFFFFF;
-      o += (((long) (offset1)) & 0xFF) << 32;
-      return o << 8;
+    long offset() {
+      return this.offset;
     }
 
     private void setOffset(long value) {
-      assert (value & 0xFF) == 0;
-      value >>= 8;
-      offsetBase = (int) value;
-      offset1 = (byte) (value >> 32);
+      this.offset = value;
     }
 
     public int getLength() {

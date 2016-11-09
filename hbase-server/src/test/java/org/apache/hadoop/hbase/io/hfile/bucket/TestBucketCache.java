@@ -18,8 +18,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -60,12 +59,11 @@ public class TestBucketCache {
   @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
-        { 8192, null }, // TODO: why is 8k the default blocksize for these tests?
-        {
-            16 * 1024,
-            new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
-                28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-                128 * 1024 + 1024 } } });
+      {44600, null}, // Random size here and below to demo no need for multiple of 256 (HBASE-16993)
+      {16 * 1024,
+         new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 15000, 46000, 49152, 51200, 8 * 1024 + 1024,
+            16 * 1024 + 1024, 28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
+            128 * 1024 + 1024 } } });
   }
 
   @Parameterized.Parameter(0)
@@ -229,10 +227,11 @@ public class TestBucketCache {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
-
-    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, testDir
-            + "/bucket.persistence");
+    Path persistFile = new Path(testDir, "bucketcache.persist.file");
+    String persistFileStr = persistFile.toString();
+    String engine = "file:/" + persistFile.toString();
+    BucketCache bucketCache = new BucketCache(engine, capacitySize,
+        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, persistFileStr);
     long usedSize = bucketCache.getAllocator().getUsedSize();
     assertTrue(usedSize == 0);
 
@@ -246,26 +245,28 @@ public class TestBucketCache {
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
     assertTrue(usedSize != 0);
-    // persist cache to file
+    // Persist cache to file
     bucketCache.shutdown();
 
-    // restore cache from file
-    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, testDir
-            + "/bucket.persistence");
+    // Restore cache from file
+    bucketCache = new BucketCache(engine, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistFileStr);
     assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
+    // Assert file is no longer present.
+    assertFalse(TEST_UTIL.getTestFileSystem().exists(persistFile));
     // persist cache to file
     bucketCache.shutdown();
 
     // reconfig buckets sizes, the biggest bucket is small than constructedBlockSize (8k or 16k)
     // so it can't restore cache from file
-    int[] smallBucketSizes = new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024 };
-    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, smallBucketSizes, writeThreads,
-        writerQLen, testDir + "/bucket.persistence");
+    // Throw in a few random sizes to demo don't have to be multiple of 256 (HBASE-16993)
+    int[] smallBucketSizes = new int[] {2 * 1024 + 1024, 3600, 4 * 1024 + 1024, 47000 };
+    bucketCache = new BucketCache(engine, capacitySize, constructedBlockSize, smallBucketSizes,
+        writeThreads, writerQLen, persistFileStr);
     assertEquals(0, bucketCache.getAllocator().getUsedSize());
     assertEquals(0, bucketCache.backingMap.size());
-
+    // The above should have failed reading he cache file and then cleaned it up.
+    assertFalse(TEST_UTIL.getTestFileSystem().exists(persistFile));
     TEST_UTIL.cleanupTestDir();
   }
 }
