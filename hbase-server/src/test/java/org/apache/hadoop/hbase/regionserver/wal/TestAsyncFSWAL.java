@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
@@ -42,7 +43,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    GROUP = new NioEventLoopGroup();
+    GROUP = new NioEventLoopGroup(1, Threads.newDaemonThreadFactory("TestAsyncFSWAL"));
     AbstractTestFSWAL.setUpBeforeClass();
   }
 

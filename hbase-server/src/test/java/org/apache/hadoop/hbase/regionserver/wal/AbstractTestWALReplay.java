@@ -374,12 +374,12 @@ public abstract class AbstractTestWALReplay {
     Path f =  new Path(basedir, "hfile");
     HFileTestUtil.createHFile(this.conf, fs, f, family, family, Bytes.toBytes(""),
         Bytes.toBytes("z"), 10);
-    List <Pair<byte[],String>>  hfs= new ArrayList<Pair<byte[],String>>(1);
+    List<Pair<byte[], String>> hfs = new ArrayList<Pair<byte[], String>>(1);
     hfs.add(Pair.newPair(family, f.toString()));
     region.bulkLoadHFiles(hfs, true, null);
 
     // Add an edit so something in the WAL
-    byte [] row = tableName.getName();
+    byte[] row = tableName.getName();
     region.put((new Put(row)).addColumn(family, family, family));
     wal.sync();
     final int rowsInsertedCount = 11;

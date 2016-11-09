@@ -20,13 +20,12 @@
 package org.apache.hadoop.hbase.wal;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -38,7 +37,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A Write Ahead Log (WAL) provides service for reading, writing waledits. This interface provides

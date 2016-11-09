@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.htrace.Span;
 
 /**
  * A WAL Entry for {@link AbstractFSWAL} implementation.  Immutable.
@@ -54,6 +55,9 @@ class FSWALEntry extends Entry {
   // In the new WAL logic, we will rewrite failed WAL entries to new WAL file, so we need to avoid
   // calling stampRegionSequenceId again.
   private transient boolean stamped = false;
+
+  // The tracing span for this entry when writing WAL.
+  private transient Span span;
 
   FSWALEntry(final long txid, final WALKey key, final WALEdit edit,
       final HRegionInfo hri, final boolean inMemstore) {
@@ -141,5 +145,15 @@ class FSWALEntry extends Entry {
    */
   Set<byte[]> getFamilyNames() {
     return familyNames;
+  }
+
+  void attachSpan(Span span) {
+    this.span = span;
+  }
+
+  Span detachSpan() {
+    Span span = this.span;
+    this.span = null;
+    return span;
   }
 }
