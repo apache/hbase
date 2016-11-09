@@ -103,6 +103,13 @@ public class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
+  public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, final KeyValueScanner memstoreScanner, final InternalScanner s,
+      final long readPoint) throws IOException {
+    return preFlushScannerOpen(c, store, memstoreScanner, s);
+  }
+
+  @Override
   public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
   }
 
@@ -209,6 +216,13 @@ public class BaseRegionObserver implements RegionObserver {
       List<? extends KeyValueScanner> scanners, final ScanType scanType, final long earliestPutTs,
       final InternalScanner s, CompactionRequest request) throws IOException {
     return preCompactScannerOpen(c, store, scanners, scanType, earliestPutTs, s);
+  }
+
+  @Override
+  public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
+      Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
+      InternalScanner s, CompactionRequest request, long readPoint) throws IOException {
+    return preCompactScannerOpen(c, store, scanners, scanType, earliestPutTs, s, request);
   }
 
   @Override

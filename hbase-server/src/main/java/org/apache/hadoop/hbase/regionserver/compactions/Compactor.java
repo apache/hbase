@@ -294,7 +294,8 @@ public abstract class Compactor<T extends CellSink> {
     try {
       /* Include deletes, unless we are doing a major compaction */
       ScanType scanType = scannerFactory.getScanType(request);
-      scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners, user);
+      scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners, user,
+        smallestReadPoint);
       if (scanner == null) {
         scanner = scannerFactory.createScanner(scanners, scanType, fd, smallestReadPoint);
       }
@@ -345,16 +346,17 @@ public abstract class Compactor<T extends CellSink> {
    * @param earliestPutTs Earliest put ts.
    * @param scanners File scanners for compaction files.
    * @param user the User
+   * @param readPoint the read point to help create scanner by Coprocessor if required.
    * @return Scanner override by coprocessor; null if not overriding.
    */
   protected InternalScanner preCreateCoprocScanner(final CompactionRequest request,
       final ScanType scanType, final long earliestPutTs, final List<StoreFileScanner> scanners,
-      User user) throws IOException {
+      User user, final long readPoint) throws IOException {
     if (store.getCoprocessorHost() == null) {
       return null;
     }
     return store.getCoprocessorHost().preCompactScannerOpen(store, scanners, scanType,
-        earliestPutTs, request, user);
+        earliestPutTs, request, user, readPoint);
   }
 
   /**

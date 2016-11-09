@@ -82,7 +82,8 @@ abstract class StoreFlusher {
       long smallestReadPoint) throws IOException {
     InternalScanner scanner = null;
     if (store.getCoprocessorHost() != null) {
-      scanner = store.getCoprocessorHost().preFlushScannerOpen(store, snapshotScanner);
+      scanner = store.getCoprocessorHost().preFlushScannerOpen(store, snapshotScanner,
+          smallestReadPoint);
     }
     if (scanner == null) {
       Scan scan = new Scan();
