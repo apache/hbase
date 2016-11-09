@@ -286,7 +286,7 @@ public abstract class Compactor<T extends CellSink> {
     try {
       /* Include deletes, unless we are doing a major compaction */
       ScanType scanType = scannerFactory.getScanType(request);
-      scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners);
+      scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners, user);
       if (scanner == null) {
         scanner = scannerFactory.createScanner(scanners, scanType, fd, smallestReadPoint);
       }
@@ -336,13 +336,9 @@ public abstract class Compactor<T extends CellSink> {
    * @param scanType Scan type.
    * @param earliestPutTs Earliest put ts.
    * @param scanners File scanners for compaction files.
+   * @param user the User
    * @return Scanner override by coprocessor; null if not overriding.
    */
-  protected InternalScanner preCreateCoprocScanner(final CompactionRequest request,
-      ScanType scanType, long earliestPutTs,  List<StoreFileScanner> scanners) throws IOException {
-    return preCreateCoprocScanner(request, scanType, earliestPutTs, scanners, null);
-  }
-
   protected InternalScanner preCreateCoprocScanner(final CompactionRequest request,
       final ScanType scanType, final long earliestPutTs, final List<StoreFileScanner> scanners,
       User user) throws IOException {
