@@ -212,13 +212,6 @@ public interface WAL extends Closeable {
   String toString();
 
   /**
-   * In some WAL implementation, we will write WAL entries to new file if sync failed, which means,
-   * the fail recovery is depended on log roller. So here we tell the WAL that log roller has
-   * already been exited so the WAL cloud give up recovery.
-   */
-  void logRollerExited();
-
-  /**
    * When outside clients need to consume persisted WALs, they rely on a provided
    * Reader.
    */

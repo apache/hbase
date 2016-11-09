@@ -245,7 +245,7 @@ public class TestFailedAppendAndSync {
     } finally {
       // To stop logRoller, its server has to say it is stopped.
       Mockito.when(server.isStopped()).thenReturn(true);
-      if (logRoller != null) logRoller.interrupt();
+      if (logRoller != null) logRoller.close();
       if (region != null) {
         try {
           region.close(true);

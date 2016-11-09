@@ -795,10 +795,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     }
   }
 
-  @Override
-  public void logRollerExited() {
-  }
-
   @VisibleForTesting
   boolean isLowReplicationRollEnabled() {
     return lowReplicationRollEnabled;

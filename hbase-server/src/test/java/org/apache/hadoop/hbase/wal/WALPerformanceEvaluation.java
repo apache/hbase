@@ -382,7 +382,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         }
         if (null != roller) {
           LOG.info("shutting down log roller.");
-          Threads.shutdown(roller.getThread());
+          roller.close();
         }
         wals.shutdown();
         // Remove the root dir for this test region

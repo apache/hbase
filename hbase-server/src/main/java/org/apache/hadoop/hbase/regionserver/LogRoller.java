@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,7 +50,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @VisibleForTesting
-public class LogRoller extends HasThread {
+public class LogRoller extends HasThread implements Closeable {
   private static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
@@ -61,6 +62,8 @@ public class LogRoller extends HasThread {
   // Period to roll log.
   private final long rollperiod;
   private final int threadWakeFrequency;
+
+  private volatile boolean running = true;
 
   public void addWAL(final WAL wal) {
     if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
@@ -110,7 +113,7 @@ public class LogRoller extends HasThread {
 
   @Override
   public void run() {
-    while (!server.isStopped()) {
+    while (running) {
       long now = System.currentTimeMillis();
       boolean periodic = false;
       if (!rollLog.get()) {
@@ -167,9 +170,6 @@ public class LogRoller extends HasThread {
         }
       }
     }
-    for (WAL wal : walNeedsRoll.keySet()) {
-      wal.logRollerExited();
-    }
     LOG.info("LogRoller exiting.");
   }
 
@@ -207,5 +207,11 @@ public class LogRoller extends HasThread {
       }
     }
     return true;
+  }
+
+  @Override
+  public void close() {
+    running = false;
+    interrupt();
   }
 }

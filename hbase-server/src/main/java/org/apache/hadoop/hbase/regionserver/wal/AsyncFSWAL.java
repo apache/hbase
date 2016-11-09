@@ -25,7 +25,6 @@ import com.lmax.disruptor.Sequence;
 import com.lmax.disruptor.Sequencer;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.io.IOException;
@@ -40,7 +39,6 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -143,10 +141,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   public static final String ASYNC_WAL_CREATE_MAX_RETRIES = "hbase.wal.async.create.retries";
   public static final int DEFAULT_ASYNC_WAL_CREATE_MAX_RETRIES = 10;
 
-  public static final String ASYNC_WAL_LOG_ROLLER_EXITED_CHECK_INTERVAL_MS =
-      "hbase.wal.async.logroller.exited.check.interval.ms";
-  public static final long DEFAULT_ASYNC_WAL_LOG_ROLLER_EXITED_CHECK_INTERVAL_MS = 1000;
-
   private final EventLoop eventLoop;
 
   private final Lock consumeLock = new ReentrantLock();
@@ -176,8 +170,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final int createMaxRetries;
 
-  private final long logRollerExitedCheckIntervalMs;
-
   private final ExecutorService closeExecutor = Executors.newCachedThreadPool(
     new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Close-WAL-Writer-%d").build());
 
@@ -195,85 +187,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   // file length when we issue last sync request on the writer
   private long fileLengthAtLastSync;
-
-  private volatile boolean logRollerExited;
-
-  private final class LogRollerExitedChecker implements Runnable {
-
-    private boolean cancelled;
-
-    private ScheduledFuture<?> future;
-
-    public synchronized void setFuture(ScheduledFuture<?> future) {
-      this.future = future;
-    }
-
-    // See the comments in syncFailed why we need to do this.
-    private void cleanup() {
-      unackedAppends.clear();
-      toWriteAppends.forEach(entry -> {
-        try {
-          entry.stampRegionSequenceId();
-        } catch (IOException e) {
-          throw new AssertionError("should not happen", e);
-        }
-      });
-      toWriteAppends.clear();
-      IOException error = new IOException("sync failed but log roller exited");
-      for (SyncFuture sync; (sync = syncFutures.peek()) != null;) {
-        sync.done(sync.getTxid(), error);
-        syncFutures.remove();
-      }
-      long nextCursor = waitingConsumePayloadsGatingSequence.get() + 1;
-      for (long cursorBound =
-          waitingConsumePayloads.getCursor(); nextCursor <= cursorBound; nextCursor++) {
-        if (!waitingConsumePayloads.isPublished(nextCursor)) {
-          break;
-        }
-        RingBufferTruck truck = waitingConsumePayloads.get(nextCursor);
-        switch (truck.type()) {
-          case APPEND:
-            try {
-              truck.unloadAppend().stampRegionSequenceId();
-            } catch (IOException e) {
-              throw new AssertionError("should not happen", e);
-            }
-            break;
-          case SYNC:
-            SyncFuture sync = truck.unloadSync();
-            sync.done(sync.getTxid(), error);
-            break;
-          default:
-            LOG.warn("RingBufferTruck with unexpected type: " + truck.type());
-            break;
-        }
-        waitingConsumePayloadsGatingSequence.set(nextCursor);
-      }
-    }
-
-    @Override
-    public void run() {
-      if (!logRollerExited) {
-        return;
-      }
-      // rollWriter is called in the log roller thread, and logRollerExited will be set just before
-      // the log rolled exit. So here we can confirm that no one could cancel us if the 'canceled'
-      // check passed. So it is safe to release the lock after checking 'canceled' flag.
-      synchronized (this) {
-        if (cancelled) {
-          return;
-        }
-      }
-      cleanup();
-    }
-
-    public synchronized void cancel() {
-      future.cancel(false);
-      cancelled = true;
-    }
-  }
-
-  private LogRollerExitedChecker logRollerExitedChecker;
 
   public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
@@ -312,8 +225,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     batchSize = conf.getLong(WAL_BATCH_SIZE, DEFAULT_WAL_BATCH_SIZE);
     createMaxRetries =
         conf.getInt(ASYNC_WAL_CREATE_MAX_RETRIES, DEFAULT_ASYNC_WAL_CREATE_MAX_RETRIES);
-    logRollerExitedCheckIntervalMs = conf.getLong(ASYNC_WAL_LOG_ROLLER_EXITED_CHECK_INTERVAL_MS,
-      DEFAULT_ASYNC_WAL_LOG_ROLLER_EXITED_CHECK_INTERVAL_MS);
     rollWriter();
   }
 
@@ -357,14 +268,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       if (writerBroken) {
         return;
       }
-      // schedule a periodical task to check if log roller is exited. Otherwise the the sync
-      // request maybe blocked forever since we are still waiting for a new writer to write the
-      // pending data and sync it...
-      logRollerExitedChecker = new LogRollerExitedChecker();
-      // we are currently in the EventLoop thread, so it is safe to set the future after
-      // schedule it since the task can not be executed before we release the thread.
-      logRollerExitedChecker.setFuture(eventLoop.scheduleAtFixedRate(logRollerExitedChecker,
-        logRollerExitedCheckIntervalMs, logRollerExitedCheckIntervalMs, TimeUnit.MILLISECONDS));
       writerBroken = true;
       if (waitingRoll) {
         readyForRolling = true;
@@ -708,11 +611,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   @Override
-  public void logRollerExited() {
-    logRollerExited = true;
-  }
-
-  @Override
   protected AsyncWriter createWriterInstance(Path path) throws IOException {
     boolean overwrite = false;
     for (int retry = 0;; retry++) {
@@ -779,10 +677,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     try {
       consumerScheduled.set(true);
       writerBroken = waitingRoll = false;
-      if (logRollerExitedChecker != null) {
-        logRollerExitedChecker.cancel();
-        logRollerExitedChecker = null;
-      }
       eventLoop.execute(consumer);
     } finally {
       consumeLock.unlock();
