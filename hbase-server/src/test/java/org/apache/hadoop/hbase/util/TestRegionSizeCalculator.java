@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -39,8 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_REGIONSERVER_PORT;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @Category({MiscTests.class, SmallTests.class})
@@ -48,6 +46,8 @@ public class TestRegionSizeCalculator {
 
   private Configuration configuration = new Configuration();
   private final long megabyte = 1024L * 1024L;
+  private final ServerName sn = ServerName.valueOf("local-rs", DEFAULT_REGIONSERVER_PORT,
+      ServerName.NON_STARTCODE);
 
   @Test
   public void testSimpleTestCase() throws Exception {
@@ -55,14 +55,9 @@ public class TestRegionSizeCalculator {
     RegionLocator regionLocator = mockRegionLocator("region1", "region2", "region3");
 
     Admin admin = mockAdmin(
-      mockServer(
         mockRegion("region1", 123),
-        mockRegion("region3", 1232)
-      ),
-      mockServer(
-        mockRegion("region2",  54321),
-        mockRegion("otherTableRegion", 110)
-      )
+        mockRegion("region3", 1232),
+        mockRegion("region2",  54321)
     );
 
     RegionSizeCalculator calculator = new RegionSizeCalculator(regionLocator, admin);
@@ -70,7 +65,7 @@ public class TestRegionSizeCalculator {
     assertEquals(123 * megabyte, calculator.getRegionSize("region1".getBytes()));
     assertEquals(54321 * megabyte, calculator.getRegionSize("region2".getBytes()));
     assertEquals(1232 * megabyte, calculator.getRegionSize("region3".getBytes()));
-    // if region is not inside our table, it should return 0
+    // if regionCalculator does not know about a region, it should return 0
     assertEquals(0 * megabyte, calculator.getRegionSize("otherTableRegion".getBytes()));
 
     assertEquals(3, calculator.getRegionSizeMap().size());
@@ -87,9 +82,7 @@ public class TestRegionSizeCalculator {
     RegionLocator regionLocator = mockRegionLocator("largeRegion");
 
     Admin admin = mockAdmin(
-      mockServer(
         mockRegion("largeRegion", Integer.MAX_VALUE)
-      )
     );
 
     RegionSizeCalculator calculator = new RegionSizeCalculator(regionLocator, admin);
@@ -104,9 +97,7 @@ public class TestRegionSizeCalculator {
     RegionLocator table = mockRegionLocator(regionName);
 
     Admin admin = mockAdmin(
-      mockServer(
         mockRegion(regionName, 999)
-      )
     );
 
     //first request on enabled calculator
@@ -133,21 +124,23 @@ public class TestRegionSizeCalculator {
     for (String regionName : regionNames) {
       HRegionInfo info = Mockito.mock(HRegionInfo.class);
       when(info.getRegionName()).thenReturn(regionName.getBytes());
-      regionLocations.add(new HRegionLocation(info, null));//we are not interested in values
+      regionLocations.add(new HRegionLocation(info, sn));
     }
 
     return mockedTable;
   }
 
   /**
-   * Creates mock returning ClusterStatus info about given servers.
+   * Creates mock returning RegionLoad info about given servers.
   */
-  private Admin mockAdmin(ServerLoad... servers) throws Exception {
-    //get clusterstatus
+  private Admin mockAdmin(RegionLoad... regionLoadArray) throws Exception {
     Admin mockAdmin = Mockito.mock(Admin.class);
-    ClusterStatus clusterStatus = mockCluster(servers);
+    Map<byte[], RegionLoad> regionLoads = new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+    for (RegionLoad regionLoad : regionLoadArray) {
+      regionLoads.put(regionLoad.getName(), regionLoad);
+    }
     when(mockAdmin.getConfiguration()).thenReturn(configuration);
-    when(mockAdmin.getClusterStatus()).thenReturn(clusterStatus);
+    when(mockAdmin.getRegionLoad(sn, TableName.valueOf("sizeTestTable"))).thenReturn(regionLoads);
     return mockAdmin;
   }
 
@@ -163,35 +156,4 @@ public class TestRegionSizeCalculator {
     when(region.getStorefileSizeMB()).thenReturn(fileSizeMb);
     return region;
   }
-
-  private ClusterStatus mockCluster(ServerLoad[] servers) {
-    List<ServerName> serverNames = new ArrayList<ServerName>();
-
-    ClusterStatus clusterStatus = Mockito.mock(ClusterStatus.class);
-    when(clusterStatus.getServers()).thenReturn(serverNames);
-
-    int serverCounter = 0;
-    for (ServerLoad server : servers) {
-      ServerName serverName = mock(ServerName.class);
-      when(serverName.getServerName()).thenReturn("server" + (serverCounter++));
-      serverNames.add(serverName);
-      when(clusterStatus.getLoad(serverName)).thenReturn(server);
-    }
-
-    return clusterStatus;
-  }
-
-  /** Creates mock of region server with given regions*/
-  private ServerLoad mockServer(RegionLoad... regions) {
-    ServerLoad serverLoad = Mockito.mock(ServerLoad.class);
-    Map<byte[], RegionLoad> regionMap = new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
-
-    for (RegionLoad regionName : regions) {
-      regionMap.put(regionName.getName(), regionName);
-    }
-
-    when(serverLoad.getRegionsLoad()).thenReturn(regionMap);
-    return serverLoad;
-  }
-
 }

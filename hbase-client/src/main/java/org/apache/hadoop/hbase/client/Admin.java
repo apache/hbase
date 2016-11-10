@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.ProcedureInfo;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -1019,6 +1020,25 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   ClusterStatus getClusterStatus() throws IOException;
+
+  /**
+   * Get {@link RegionLoad} of all regions hosted on a regionserver.
+   *
+   * @param sn region server from which regionload is required.
+   * @return region load map of all regions hosted on a region server
+   * @throws IOException if a remote or network exception occurs
+   */
+  Map<byte[], RegionLoad> getRegionLoad(ServerName sn) throws IOException;
+
+  /**
+   * Get {@link RegionLoad} of all regions hosted on a regionserver for a table.
+   *
+   * @param sn region server from which regionload is required.
+   * @param tableName get region load of regions belonging to the table
+   * @return region load map of all regions of a table hosted on a region server
+   * @throws IOException if a remote or network exception occurs
+   */
+  Map<byte[], RegionLoad> getRegionLoad(ServerName sn, TableName tableName) throws IOException;
 
   /**
    * @return Configuration used by the instance.

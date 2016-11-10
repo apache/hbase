@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
@@ -448,6 +450,13 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
       GetRegionInfoRequest request) throws ServiceException {
     GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
     builder.setRegionInfo(HRegionInfo.convert(HRegionInfo.FIRST_META_REGIONINFO));
+    return builder.build();
+  }
+
+  @Override
+  public GetRegionLoadResponse getRegionLoad(RpcController controller,
+      GetRegionLoadRequest request) throws ServiceException {
+    GetRegionLoadResponse.Builder builder = GetRegionLoadResponse.newBuilder();
     return builder.build();
   }
 

@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -1877,6 +1879,24 @@ public class HBaseAdmin implements Admin {
             getClusterStatus());
       }
     });
+  }
+
+  @Override
+  public Map<byte[], RegionLoad> getRegionLoad(final ServerName sn) throws IOException {
+    return getRegionLoad(sn, null);
+  }
+
+  @Override
+  public Map<byte[], RegionLoad> getRegionLoad(final ServerName sn, final TableName tableName)
+      throws IOException {
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    HBaseRpcController controller = rpcControllerFactory.newController();
+    List<RegionLoad> regionLoads = ProtobufUtil.getRegionLoad(controller, admin, tableName);
+    Map<byte[], RegionLoad> resultMap = new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+    for (RegionLoad regionLoad : regionLoads) {
+      resultMap.put(regionLoad.getName(), regionLoad);
+    }
+    return resultMap;
   }
 
   @Override

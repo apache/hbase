@@ -103,6 +103,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
@@ -160,6 +162,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -1548,6 +1552,34 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
+  }
+
+  @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
+  public GetRegionLoadResponse getRegionLoad(RpcController controller,
+      GetRegionLoadRequest request) throws ServiceException {
+
+    List<Region> regions;
+    if (request.hasTableName()) {
+      TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+      regions = regionServer.getOnlineRegions(tableName);
+    } else {
+      regions = regionServer.getOnlineRegions();
+    }
+    List<RegionLoad> rLoads = new ArrayList<RegionLoad>(regions.size());
+    RegionLoad.Builder regionLoadBuilder = ClusterStatusProtos.RegionLoad.newBuilder();
+    RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
+
+    try {
+      for (Region region : regions) {
+        rLoads.add(regionServer.createRegionLoad(region, regionLoadBuilder, regionSpecifier));
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    GetRegionLoadResponse.Builder builder = GetRegionLoadResponse.newBuilder();
+    builder.addAllRegionLoads(rLoads);
+    return builder.build();
   }
 
   /**

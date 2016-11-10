@@ -19,21 +19,18 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLoad;
-import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -59,6 +56,7 @@ public class RegionSizeCalculator {
   private final Map<byte[], Long> sizeMap = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
   static final String ENABLE_REGIONSIZECALCULATOR = "hbase.regionsizecalculator.enable";
+  private static final long MEGABYTE = 1024L * 1024L;
 
   /**
    * Computes size of each region for table and given column families.
@@ -95,36 +93,34 @@ public class RegionSizeCalculator {
 
     LOG.info("Calculating region sizes for table \"" + regionLocator.getName() + "\".");
 
-    //get regions for table
-    List<HRegionLocation> tableRegionInfos = regionLocator.getAllRegionLocations();
-    Set<byte[]> tableRegions = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    for (HRegionLocation regionInfo : tableRegionInfos) {
-      tableRegions.add(regionInfo.getRegionInfo().getRegionName());
-    }
+    // Get the servers which host regions of the table
+    Set<ServerName> tableServers = getRegionServersOfTable(regionLocator);
 
-    ClusterStatus clusterStatus = admin.getClusterStatus();
-    Collection<ServerName> servers = clusterStatus.getServers();
-    final long megaByte = 1024L * 1024L;
+    for (ServerName tableServerName : tableServers) {
+      Map<byte[], RegionLoad> regionLoads =
+          admin.getRegionLoad(tableServerName, regionLocator.getName());
+      for (RegionLoad regionLoad : regionLoads.values()) {
 
-    //iterate all cluster regions, filter regions from our table and compute their size
-    for (ServerName serverName: servers) {
-      ServerLoad serverLoad = clusterStatus.getLoad(serverName);
-
-      for (RegionLoad regionLoad: serverLoad.getRegionsLoad().values()) {
         byte[] regionId = regionLoad.getName();
+        long regionSizeBytes = regionLoad.getStorefileSizeMB() * MEGABYTE;
+        sizeMap.put(regionId, regionSizeBytes);
 
-        if (tableRegions.contains(regionId)) {
-
-          long regionSizeBytes = regionLoad.getStorefileSizeMB() * megaByte;
-          sizeMap.put(regionId, regionSizeBytes);
-
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Region " + regionLoad.getNameAsString() + " has size " + regionSizeBytes);
-          }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Region " + regionLoad.getNameAsString() + " has size " + regionSizeBytes);
         }
       }
     }
     LOG.debug("Region sizes calculated");
+  }
+
+  private Set<ServerName> getRegionServersOfTable(RegionLocator regionLocator)
+      throws IOException {
+
+    Set<ServerName> tableServers = Sets.newHashSet();
+    for (HRegionLocation regionLocation : regionLocator.getAllRegionLocations()) {
+      tableServers.add(regionLocation.getServerName());
+    }
+    return tableServers;
   }
 
   boolean enabled(Configuration configuration) {

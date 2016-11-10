@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
@@ -746,6 +748,20 @@ public final class RequestConverter {
     builder.setRegion(region);
     if (includeCompactionState) {
       builder.setCompactionState(includeCompactionState);
+    }
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer GetRegionLoadRequest for all regions/regions of a table.
+   *
+   * @param tableName the table for which regionLoad should be obtained from RS
+   * @return a protocol buffer GetRegionLoadRequest
+   */
+  public static GetRegionLoadRequest buildGetRegionLoadRequest(final TableName tableName) {
+    GetRegionLoadRequest.Builder builder = GetRegionLoadRequest.newBuilder();
+    if (tableName != null) {
+      builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
     return builder.build();
   }

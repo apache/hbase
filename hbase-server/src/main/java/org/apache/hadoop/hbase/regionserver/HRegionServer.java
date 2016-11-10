@@ -1514,7 +1514,7 @@ public class HRegionServer extends HasThread implements
    *
    * @throws IOException
    */
-  private RegionLoad createRegionLoad(final Region r, RegionLoad.Builder regionLoadBldr,
+  RegionLoad createRegionLoad(final Region r, RegionLoad.Builder regionLoadBldr,
       RegionSpecifier.Builder regionSpecifier) throws IOException {
     byte[] name = r.getRegionInfo().getRegionName();
     int stores = 0;

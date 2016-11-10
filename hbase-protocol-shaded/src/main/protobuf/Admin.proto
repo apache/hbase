@@ -25,6 +25,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "ClusterStatus.proto";
 import "HBase.proto";
 import "WAL.proto";
 
@@ -267,6 +268,14 @@ message UpdateConfigurationRequest {
 message UpdateConfigurationResponse {
 }
 
+message GetRegionLoadRequest {
+  optional TableName table_name = 1;
+}
+
+message GetRegionLoadResponse {
+  repeated RegionLoad region_loads = 1;
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -321,4 +330,7 @@ service AdminService {
 
   rpc UpdateConfiguration(UpdateConfigurationRequest)
     returns(UpdateConfigurationResponse);
+
+  rpc GetRegionLoad(GetRegionLoadRequest)
+    returns(GetRegionLoadResponse);
 }
