@@ -29,14 +29,11 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.TestMobSnapshotCloneIndependence;
-import org.apache.hadoop.hbase.master.procedure.TestMasterFailoverWithProcedures;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
 
@@ -66,8 +63,7 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion{
    */
   @Override
   public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      WAL wal, byte[]... families) throws IOException {
+      boolean isReadOnly, Durability durability, WAL wal, byte[]... families) throws IOException {
     boolean[] inMemory = new boolean[families.length];
     for(int i = 0; i < inMemory.length; i++) {
       inMemory[i] = true;
@@ -87,7 +83,6 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion{
 
     Configuration hc = initSplit();
     // Setting up region
-    String method = this.getName();
     this.region = initHRegion(tableName, method, hc, families);
 
     try {
