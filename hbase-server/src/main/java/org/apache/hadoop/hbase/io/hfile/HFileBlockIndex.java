@@ -426,7 +426,8 @@ public class HFileBlockIndex {
           ByteBuff b = midLeafBlock.getBufferWithoutHeader();
           int numDataBlocks = b.getIntAfterPosition(0);
           int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 1));
-          int keyLen = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 2)) - keyRelOffset;
+          int keyLen = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 2)) - keyRelOffset
+              - SECONDARY_INDEX_ENTRY_OVERHEAD;
           int keyOffset =
               Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset
                   + SECONDARY_INDEX_ENTRY_OVERHEAD;
