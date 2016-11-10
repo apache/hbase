@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -121,8 +123,8 @@ public class TestRegionLocationFinder {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
       for (Region region : server.getOnlineRegions(tableName)) {
-        List<ServerName> servers = finder.getTopBlockLocations(finder
-            .getBlockDistribution(region.getRegionInfo()));
+        List<ServerName> servers = finder.getTopBlockLocations(region
+            .getRegionInfo());
         // test table may have empty region
         if (region.getHDFSBlocksDistribution().getUniqueBlocksTotalWeight() == 0) {
           continue;
@@ -136,6 +138,26 @@ public class TestRegionLocationFinder {
           ServerName serverName = cluster.getRegionServer(j).getServerName();
           assertTrue(servers.contains(serverName));
         }
+      }
+    }
+  }
+
+  @Test
+  public void testRefreshAndWait() throws Exception {
+    finder.getCache().invalidateAll();
+    for (int i = 0; i < ServerNum; i++) {
+      HRegionServer server = cluster.getRegionServer(i);
+      List<Region> regions = server.getOnlineRegions(tableName);
+      if (regions.size() <= 0) {
+        continue;
+      }
+      List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>(regions.size());
+      for (Region region : regions) {
+        regionInfos.add(region.getRegionInfo());
+      }
+      finder.refreshAndWait(regionInfos);
+      for (HRegionInfo regionInfo : regionInfos) {
+        assertNotNull(finder.getCache().getIfPresent(regionInfo));
       }
     }
   }

@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,17 +45,15 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This will find where data for a region is located in HDFS. It ranks
@@ -70,7 +70,8 @@ class RegionLocationFinder {
   private volatile ClusterStatus status;
   private MasterServices services;
   private final ListeningExecutorService executor;
-  private long lastFullRefresh = 0;
+  // Do not scheduleFullRefresh at master startup
+  private long lastFullRefresh = EnvironmentEdgeManager.currentTime();
 
   private CacheLoader<HRegionInfo, HDFSBlocksDistribution> loader =
       new CacheLoader<HRegionInfo, HDFSBlocksDistribution>() {
@@ -167,9 +168,8 @@ class RegionLocationFinder {
     return includesUserTables;
   }
 
-  protected List<ServerName> getTopBlockLocations(
-      HDFSBlocksDistribution blocksDistribution) {
-    List<String> topHosts = blocksDistribution.getTopHosts();
+  protected List<ServerName> getTopBlockLocations(HRegionInfo region) {
+    List<String> topHosts = getBlockDistribution(region).getTopHosts();
     return mapHostNameToServerName(topHosts);
   }
 
@@ -299,12 +299,40 @@ class RegionLocationFinder {
     }
   }
 
-  public ListenableFuture<HDFSBlocksDistribution> asyncGetBlockDistribution(
+  private ListenableFuture<HDFSBlocksDistribution> asyncGetBlockDistribution(
       HRegionInfo hri) {
     try {
       return loader.reload(hri, EMPTY_BLOCK_DISTRIBUTION);
     } catch (Exception e) {
       return Futures.immediateFuture(EMPTY_BLOCK_DISTRIBUTION);
     }
+  }
+
+  public void refreshAndWait(Collection<HRegionInfo> hris) {
+    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures =
+        new ArrayList<ListenableFuture<HDFSBlocksDistribution>>(hris.size());
+    for (HRegionInfo hregionInfo : hris) {
+      regionLocationFutures.add(asyncGetBlockDistribution(hregionInfo));
+    }
+    int index = 0;
+    for (HRegionInfo hregionInfo : hris) {
+      ListenableFuture<HDFSBlocksDistribution> future = regionLocationFutures
+          .get(index);
+      try {
+        cache.put(hregionInfo, future.get());
+      } catch (InterruptedException ite) {
+        Thread.currentThread().interrupt();
+      } catch (ExecutionException ee) {
+        LOG.debug(
+            "ExecutionException during HDFSBlocksDistribution computation. for region = "
+                + hregionInfo.getEncodedName(), ee);
+      }
+      index++;
+    }
+  }
+
+  // For test
+  LoadingCache<HRegionInfo, HDFSBlocksDistribution> getCache() {
+    return cache;
   }
 }

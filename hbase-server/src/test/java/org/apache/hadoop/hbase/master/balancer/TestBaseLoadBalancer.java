@@ -37,7 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -57,8 +56,6 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestBaseLoadBalancer extends BalancerTestBase {
@@ -451,49 +448,17 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
     // mock block locality for some regions
     RegionLocationFinder locationFinder = mock(RegionLocationFinder.class);
-    HDFSBlocksDistribution emptyBlockDistribution = new HDFSBlocksDistribution();
-    ListenableFuture<HDFSBlocksDistribution> defaultFuture = Futures
-        .immediateFuture(emptyBlockDistribution);
-    for (HRegionInfo regionInfo : regions) {
-      when(locationFinder.asyncGetBlockDistribution(regionInfo)).thenReturn(
-          defaultFuture);
-    }
     // block locality: region:0   => {server:0}
     //                 region:1   => {server:0, server:1}
     //                 region:42 => {server:4, server:9, server:5}
-    HDFSBlocksDistribution region0BlockDistribution = new HDFSBlocksDistribution();
-    ListenableFuture<HDFSBlocksDistribution> future0 = Futures
-        .immediateFuture(region0BlockDistribution);
-    when(locationFinder.asyncGetBlockDistribution(regions.get(0))).thenReturn(
-        future0);
-    when(locationFinder.getTopBlockLocations(region0BlockDistribution))
-        .thenReturn(Lists.newArrayList(servers.get(0)));
-
-    HDFSBlocksDistribution region1BlockDistribution = new HDFSBlocksDistribution();
-    ListenableFuture<HDFSBlocksDistribution> future1 = Futures
-        .immediateFuture(region1BlockDistribution);
-    when(locationFinder.asyncGetBlockDistribution(regions.get(1))).thenReturn(
-        future1);
-    when(locationFinder.getTopBlockLocations(region1BlockDistribution))
-        .thenReturn(Lists.newArrayList(servers.get(0), servers.get(1)));
-
-    HDFSBlocksDistribution region42BlockDistribution = new HDFSBlocksDistribution();
-    ListenableFuture<HDFSBlocksDistribution> future42 = Futures
-        .immediateFuture(region42BlockDistribution);
-    when(locationFinder.asyncGetBlockDistribution(regions.get(42))).thenReturn(
-        future42);
-    when(locationFinder.getTopBlockLocations(region42BlockDistribution))
-        .thenReturn(
-            Lists.newArrayList(servers.get(4), servers.get(9), servers.get(5)));
-
-    HDFSBlocksDistribution region43BlockDistribution = new HDFSBlocksDistribution();
-    ListenableFuture<HDFSBlocksDistribution> future43 = Futures
-        .immediateFuture(region43BlockDistribution);
-    when(locationFinder.asyncGetBlockDistribution(regions.get(43))).thenReturn(
-        future43);
-    // this server does not exists in clusterStatus
-    when(locationFinder.getTopBlockLocations(region43BlockDistribution))
-        .thenReturn(Lists.newArrayList(ServerName.valueOf("foo", 0, 0)));
+    when(locationFinder.getTopBlockLocations(regions.get(0))).thenReturn(
+        Lists.newArrayList(servers.get(0)));
+    when(locationFinder.getTopBlockLocations(regions.get(1))).thenReturn(
+        Lists.newArrayList(servers.get(0), servers.get(1)));
+    when(locationFinder.getTopBlockLocations(regions.get(42))).thenReturn(
+        Lists.newArrayList(servers.get(4), servers.get(9), servers.get(5)));
+    when(locationFinder.getTopBlockLocations(regions.get(43))).thenReturn(
+        Lists.newArrayList(ServerName.valueOf("foo", 0, 0))); // this server does not exists in clusterStatus
 
     BaseLoadBalancer.Cluster cluster = new Cluster(clusterState, null, locationFinder, null);
 
