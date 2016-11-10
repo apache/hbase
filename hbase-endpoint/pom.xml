@@ -199,7 +199,9 @@
                       <goal>compile</goal>
                     </goals>
                     <configuration>
-                       <protoSourceRoot>${basedir}/src/main/protobuf/,${basedir}/../hbase-protocol/src/main/protobuf</protoSourceRoot>
+                      <additionalProtoPathElements>
+                        <additionalProtoPathElement>${basedir}/../hbase-protocol/src/main/protobuf</additionalProtoPathElement>
+                      </additionalProtoPathElements>
                     </configuration>
                   </execution>
                 </executions>

@@ -228,6 +228,7 @@
                 <configuration>
                   <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
                   <outputDirectory>${sources.dir}</outputDirectory>
+                  <attachProtoSources>false</attachProtoSources>
                 </configuration>
               </execution>
             </executions>
