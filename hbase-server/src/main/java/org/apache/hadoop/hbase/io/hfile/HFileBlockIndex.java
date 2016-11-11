@@ -353,7 +353,7 @@ public class HFileBlockIndex {
         int numDataBlocks = b.getInt();
         int keyRelOffset = b.getInt(Bytes.SIZEOF_INT * (midKeyEntry + 1));
         int keyLen = b.getInt(Bytes.SIZEOF_INT * (midKeyEntry + 2)) -
-            keyRelOffset;
+            keyRelOffset - SECONDARY_INDEX_ENTRY_OVERHEAD;
         int keyOffset = Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset
             + SECONDARY_INDEX_ENTRY_OVERHEAD;
         targetMidKey = ByteBufferUtils.toBytes(b, keyOffset, keyLen);
