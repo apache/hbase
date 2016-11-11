@@ -24,11 +24,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,11 +39,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Utility used by client connections.
@@ -263,5 +268,26 @@ public final class ConnectionUtils {
 
   static boolean isEmptyStopRow(byte[] row) {
     return Bytes.equals(row, EMPTY_END_ROW);
+  }
+
+  static void resetController(HBaseRpcController controller, long timeoutNs) {
+    controller.reset();
+    if (timeoutNs >= 0) {
+      controller.setCallTimeout(
+        (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
+    }
+  }
+
+  static Throwable translateException(Throwable t) {
+    if (t instanceof UndeclaredThrowableException && t.getCause() != null) {
+      t = t.getCause();
+    }
+    if (t instanceof RemoteException) {
+      t = ((RemoteException) t).unwrapRemoteException();
+    }
+    if (t instanceof ServiceException && t.getCause() != null) {
+      t = translateException(t.getCause());
+    }
+    return t;
   }
 }

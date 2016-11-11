@@ -92,7 +92,7 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.user = user;
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.locator = new AsyncRegionLocator(this);
-    this.registry = ClusterRegistryFactory.getRegistry(conf);
+    this.registry = AsyncRegistryFactory.getRegistry(conf);
     this.clusterId = Optional.ofNullable(registry.getClusterId()).orElseGet(() -> {
       if (LOG.isDebugEnabled()) {
         LOG.debug("cluster id came back null, using default " + CLUSTER_ID_DEFAULT);

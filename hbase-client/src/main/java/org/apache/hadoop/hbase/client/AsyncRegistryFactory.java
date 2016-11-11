@@ -25,11 +25,11 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  * Get instance of configured Registry.
  */
 @InterfaceAudience.Private
-final class ClusterRegistryFactory {
+final class AsyncRegistryFactory {
 
   static final String REGISTRY_IMPL_CONF_KEY = "hbase.client.registry.impl";
 
-  private ClusterRegistryFactory() {
+  private AsyncRegistryFactory() {
   }
 
   /**

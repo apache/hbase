@@ -52,6 +52,8 @@ class AsyncConnectionConfiguration {
 
   private final long metaOperationTimeoutNs;
 
+  // timeout for a whole operation such as get, put or delete. Notice that scan will not be effected
+  // by this value, see scanTimeoutNs.
   private final long operationTimeoutNs;
 
   // timeout for each read rpc request
@@ -67,6 +69,10 @@ class AsyncConnectionConfiguration {
   /** How many retries are allowed before we start to log */
   private final int startLogErrorsCnt;
 
+  // As now we have heartbeat support for scan, ideally a scan will never timeout unless the RS is
+  // crash. The RS will always return something before the rpc timeout or scan timeout to tell the
+  // client that it is still alive. The scan timeout is used as operation timeout for every
+  // operations in a scan, such as openScanner or next.
   private final long scanTimeoutNs;
 
   private final int scannerCaching;
@@ -125,15 +131,15 @@ class AsyncConnectionConfiguration {
     return startLogErrorsCnt;
   }
 
-  public long getScanTimeoutNs() {
+  long getScanTimeoutNs() {
     return scanTimeoutNs;
   }
 
-  public int getScannerCaching() {
+  int getScannerCaching() {
     return scannerCaching;
   }
 
-  public long getScannerMaxResultSize() {
+  long getScannerMaxResultSize() {
     return scannerMaxResultSize;
   }
 }

@@ -100,6 +100,21 @@ public interface AsyncTable {
   long getOperationTimeout(TimeUnit unit);
 
   /**
+   * Set timeout of a single operation in a scan, such as openScanner and next. Will override the
+   * value {@code hbase.client.scanner.timeout.period} in configuration.
+   * <p>
+   * Generally a scan will never timeout after we add heartbeat support unless the region is
+   * crashed. The {@code scanTimeout} works like the {@code operationTimeout} for each single
+   * operation in a scan.
+   */
+  void setScanTimeout(long timeout, TimeUnit unit);
+
+  /**
+   * Get the timeout of a single operation in a scan.
+   */
+  long getScanTimeout(TimeUnit unit);
+
+  /**
    * Test for the existence of columns in the table, as specified by the Get.
    * <p>
    * This will return true if the Get matches one or more keys, false if not.
@@ -335,4 +350,26 @@ public interface AsyncTable {
    *         {@link CompletableFuture}.
    */
   CompletableFuture<List<Result>> smallScan(Scan scan, int limit);
+
+  /**
+   * The basic scan API uses the observer pattern. All results that match the given scan object will
+   * be passed to the given {@code consumer} by calling {@link ScanResultConsumer#onNext(Result[])}.
+   * {@link ScanResultConsumer#onComplete()} means the scan is finished, and
+   * {@link ScanResultConsumer#onError(Throwable)} means we hit an unrecoverable error and the scan
+   * is terminated. {@link ScanResultConsumer#onHeartbeat()} means the RS is still working but we
+   * can not get a valid result to call {@link ScanResultConsumer#onNext(Result[])}. This is usually
+   * because the matched results are too sparse, for example, a filter which almost filters out
+   * everything is specified.
+   * <p>
+   * Notice that, the methods of the given {@code consumer} will be called directly in the rpc
+   * framework's callback thread, so typically you should not do any time consuming work inside
+   * these methods, otherwise you will be likely to block at least one connection to RS(even more if
+   * the rpc framework uses NIO).
+   * <p>
+   * This method is only for experts, do <strong>NOT</strong> use this method if you have other
+   * choice.
+   * @param scan A configured {@link Scan} object.
+   * @param consumer the consumer used to receive results.
+   */
+  void scan(Scan scan, ScanResultConsumer consumer);
 }

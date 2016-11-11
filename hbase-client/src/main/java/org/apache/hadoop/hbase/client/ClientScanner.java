@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public abstract class ClientScanner extends AbstractClientScanner {
+
   private static final Log LOG = LogFactory.getLog(ClientScanner.class);
 
   protected Scan scan;

@@ -25,6 +25,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -54,6 +56,8 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 class AsyncTableImpl implements AsyncTable {
+
+  private static final Log LOG = LogFactory.getLog(AsyncTableImpl.class);
 
   private final AsyncConnectionImpl conn;
 
@@ -348,6 +352,20 @@ class AsyncTableImpl implements AsyncTable {
         .rpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS).call();
   }
 
+  public void scan(Scan scan, ScanResultConsumer consumer) {
+    if (scan.isSmall()) {
+      if (scan.getBatch() > 0 || scan.getAllowPartialResults()) {
+        consumer.onError(
+          new IllegalArgumentException("Batch and allowPartial is not allowed for small scan"));
+      } else {
+        LOG.warn("This is small scan " + scan + ", consider using smallScan directly?");
+      }
+    }
+    scan = setDefaultScanConfig(scan);
+    new AsyncClientScanner(scan, consumer, tableName, conn, scanTimeoutNs, readRpcTimeoutNs)
+        .start();
+  }
+
   @Override
   public void setReadRpcTimeout(long timeout, TimeUnit unit) {
     this.readRpcTimeoutNs = unit.toNanos(timeout);
@@ -376,5 +394,15 @@ class AsyncTableImpl implements AsyncTable {
   @Override
   public long getOperationTimeout(TimeUnit unit) {
     return unit.convert(operationTimeoutNs, TimeUnit.NANOSECONDS);
+  }
+
+  @Override
+  public void setScanTimeout(long timeout, TimeUnit unit) {
+    this.scanTimeoutNs = unit.toNanos(timeout);
+  }
+
+  @Override
+  public long getScanTimeout(TimeUnit unit) {
+    return TimeUnit.NANOSECONDS.convert(scanTimeoutNs, unit);
   }
 }
