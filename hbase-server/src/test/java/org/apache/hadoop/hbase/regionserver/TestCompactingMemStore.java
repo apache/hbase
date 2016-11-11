@@ -86,7 +86,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   protected void compactingSetUp() throws Exception {
     super.internalSetUp();
     Configuration conf = new Configuration();
-    conf.setBoolean(SegmentFactory.USEMSLAB_KEY, true);
+    conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
     conf.setFloat(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 1000);
     HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);

@@ -35,8 +35,6 @@ import java.util.List;
 @InterfaceAudience.Private
 public final class SegmentFactory {
 
-  static final String USEMSLAB_KEY = "hbase.hregion.memstore.mslab.enabled";
-  static final boolean USEMSLAB_DEFAULT = true;
   static final String MSLAB_CLASS_NAME = "hbase.regionserver.mslab.class";
 
   private SegmentFactory() {}
@@ -107,7 +105,7 @@ public final class SegmentFactory {
 
   private MemStoreLAB getMemStoreLAB(Configuration conf) {
     MemStoreLAB memStoreLAB = null;
-    if (conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT)) {
+    if (conf.getBoolean(MemStoreLAB.USEMSLAB_KEY, MemStoreLAB.USEMSLAB_DEFAULT)) {
       String className = conf.get(MSLAB_CLASS_NAME, HeapMemStoreLAB.class.getName());
       memStoreLAB = ReflectionUtils.instantiateWithCustomCtor(className,
           new Class[] { Configuration.class }, new Object[] { conf });

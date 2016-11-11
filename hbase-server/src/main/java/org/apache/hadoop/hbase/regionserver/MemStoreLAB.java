@@ -44,6 +44,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public interface MemStoreLAB {
 
+  String USEMSLAB_KEY = "hbase.hregion.memstore.mslab.enabled";
+  boolean USEMSLAB_DEFAULT = true;
+
   /**
    * Allocates slice in this LAB and copy the passed Cell into this area. Returns new Cell instance
    * over the copied the data. When this MemStoreLAB can not copy this Cell, it returns null.
@@ -64,4 +67,5 @@ public interface MemStoreLAB {
    * Called when closing a scanner on the data of this MemStoreLAB
    */
   void decScannerCount();
+
 }

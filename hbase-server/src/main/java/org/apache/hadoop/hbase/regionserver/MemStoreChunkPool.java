@@ -202,6 +202,11 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
     synchronized (MemStoreChunkPool.class) {
       if (chunkPoolDisabled) return null;
       if (GLOBAL_INSTANCE != null) return GLOBAL_INSTANCE;
+      // When MSLAB is turned OFF no need to init chunk pool at all.
+      if (!conf.getBoolean(MemStoreLAB.USEMSLAB_KEY, MemStoreLAB.USEMSLAB_DEFAULT)) {
+        chunkPoolDisabled = true;
+        return null;
+      }
       float poolSizePercentage = conf.getFloat(CHUNK_POOL_MAXSIZE_KEY, POOL_MAX_SIZE_DEFAULT);
       if (poolSizePercentage <= 0) {
         chunkPoolDisabled = true;

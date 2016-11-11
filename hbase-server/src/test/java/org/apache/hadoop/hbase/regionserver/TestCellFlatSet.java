@@ -72,7 +72,7 @@ public class TestCellFlatSet extends TestCase {
     ascCbOnHeap = new CellArrayMap(CellComparator.COMPARATOR,ascCells,0,NUM_OF_CELLS,false);
     descCells = new Cell[] {kv4,kv3,kv2,kv1};
     descCbOnHeap = new CellArrayMap(CellComparator.COMPARATOR,descCells,0,NUM_OF_CELLS,true);
-    CONF.setBoolean(SegmentFactory.USEMSLAB_KEY, true);
+    CONF.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
     CONF.setFloat(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
     MemStoreChunkPool.chunkPoolDisabled = false;
     mslab = new HeapMemStoreLAB(CONF);
