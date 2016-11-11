@@ -76,11 +76,18 @@ class HBaseConnectionCacheSuite extends FunSuite with Logging {
     testWithPressureWithClose()
   }
 
-  def testBasic() {
-    HBaseConnectionCache.setTimeout(1 * 1000)
+  def cleanEnv() {
     HBaseConnectionCache.connectionMap.synchronized {
       HBaseConnectionCache.connectionMap.clear()
+      HBaseConnectionCache.cacheStat.numActiveConnections = 0
+      HBaseConnectionCache.cacheStat.numActualConnectionsCreated = 0
+      HBaseConnectionCache.cacheStat.numTotalRequests = 0
     }
+  }
+
+  def testBasic() {
+    cleanEnv()
+    HBaseConnectionCache.setTimeout(1 * 1000)
 
     val connKeyMocker1 = new HBaseConnectionKeyMocker(1)
     val connKeyMocker1a = new HBaseConnectionKeyMocker(1)
@@ -88,11 +95,20 @@ class HBaseConnectionCacheSuite extends FunSuite with Logging {
 
     val c1 = HBaseConnectionCache
       .getConnection(connKeyMocker1, new ConnectionMocker)
+
+    assert(HBaseConnectionCache.connectionMap.size === 1)
+    assert(HBaseConnectionCache.getStat.numTotalRequests === 1)
+    assert(HBaseConnectionCache.getStat.numActualConnectionsCreated === 1)
+    assert(HBaseConnectionCache.getStat.numActiveConnections === 1)
+
     val c1a = HBaseConnectionCache
       .getConnection(connKeyMocker1a, new ConnectionMocker)
 
     HBaseConnectionCache.connectionMap.synchronized {
       assert(HBaseConnectionCache.connectionMap.size === 1)
+      assert(HBaseConnectionCache.getStat.numTotalRequests === 2)
+      assert(HBaseConnectionCache.getStat.numActualConnectionsCreated === 1)
+      assert(HBaseConnectionCache.getStat.numActiveConnections === 1)
     }
 
     val c2 = HBaseConnectionCache
@@ -100,16 +116,21 @@ class HBaseConnectionCacheSuite extends FunSuite with Logging {
 
     HBaseConnectionCache.connectionMap.synchronized {
       assert(HBaseConnectionCache.connectionMap.size === 2)
+      assert(HBaseConnectionCache.getStat.numTotalRequests === 3)
+      assert(HBaseConnectionCache.getStat.numActualConnectionsCreated === 2)
+      assert(HBaseConnectionCache.getStat.numActiveConnections === 2)
     }
 
     c1.close()
     HBaseConnectionCache.connectionMap.synchronized {
       assert(HBaseConnectionCache.connectionMap.size === 2)
+      assert(HBaseConnectionCache.getStat.numActiveConnections === 2)
     }
 
     c1a.close()
     HBaseConnectionCache.connectionMap.synchronized {
       assert(HBaseConnectionCache.connectionMap.size === 2)
+      assert(HBaseConnectionCache.getStat.numActiveConnections === 2)
     }
 
     Thread.sleep(3 * 1000) // Leave housekeeping thread enough time
@@ -117,12 +138,15 @@ class HBaseConnectionCacheSuite extends FunSuite with Logging {
       assert(HBaseConnectionCache.connectionMap.size === 1)
       assert(HBaseConnectionCache.connectionMap.iterator.next()._1
         .asInstanceOf[HBaseConnectionKeyMocker].confId === 2)
+      assert(HBaseConnectionCache.getStat.numActiveConnections === 1)
     }
 
     c2.close()
   }
 
   def testWithPressureWithoutClose() {
+    cleanEnv()
+
     class TestThread extends Runnable {
       override def run() {
         for (i <- 0 to 999) {
@@ -147,6 +171,10 @@ class HBaseConnectionCacheSuite extends FunSuite with Logging {
     Thread.sleep(1000)
     HBaseConnectionCache.connectionMap.synchronized {
       assert(HBaseConnectionCache.connectionMap.size === 10)
+      assert(HBaseConnectionCache.getStat.numTotalRequests === 100 * 1000)
+      assert(HBaseConnectionCache.getStat.numActualConnectionsCreated === 10)
+      assert(HBaseConnectionCache.getStat.numActiveConnections === 10)
+
       var totalRc : Int = 0
       HBaseConnectionCache.connectionMap.foreach {
         x => totalRc += x._2.refCount
@@ -161,9 +189,13 @@ class HBaseConnectionCacheSuite extends FunSuite with Logging {
     }
     Thread.sleep(1000)
     assert(HBaseConnectionCache.connectionMap.size === 0)
+    assert(HBaseConnectionCache.getStat.numActualConnectionsCreated === 10)
+    assert(HBaseConnectionCache.getStat.numActiveConnections === 0)
   }
 
   def testWithPressureWithClose() {
+    cleanEnv()
+
     class TestThread extends Runnable {
       override def run() {
         for (i <- 0 to 999) {
@@ -189,11 +221,16 @@ class HBaseConnectionCacheSuite extends FunSuite with Logging {
 
     HBaseConnectionCache.connectionMap.synchronized {
       assert(HBaseConnectionCache.connectionMap.size === 10)
+      assert(HBaseConnectionCache.getStat.numTotalRequests === 100 * 1000)
+      assert(HBaseConnectionCache.getStat.numActualConnectionsCreated === 10)
+      assert(HBaseConnectionCache.getStat.numActiveConnections === 10)
     }
 
     Thread.sleep(6 * 1000)
     HBaseConnectionCache.connectionMap.synchronized {
       assert(HBaseConnectionCache.connectionMap.size === 0)
+      assert(HBaseConnectionCache.getStat.numActualConnectionsCreated === 10)
+      assert(HBaseConnectionCache.getStat.numActiveConnections === 0)
     }
   }
 }
