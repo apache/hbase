@@ -20,15 +20,14 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.math.BigInteger;
+
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -458,12 +457,12 @@ public class RegionSplitter {
       // requests to the same RS can stall the outstanding split queue.
       // To fix, group the regions into an RS pool and round-robin through it
       LOG.debug("Bucketing regions by regionserver...");
-      TreeMap<String, LinkedList<Pair<byte[], byte[]>>> daughterRegions =
+      TreeMap<ServerName, LinkedList<Pair<byte[], byte[]>>> daughterRegions =
           Maps.newTreeMap();
       // Get a regionLocator.  Need it in below.
       try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
         for (Pair<byte[], byte[]> dr : tmpRegionSet) {
-          String rsLocation = regionLocator.getRegionLocation(dr.getSecond()).getHostnamePort();
+          ServerName rsLocation = regionLocator.getRegionLocation(dr.getSecond()).getServerName();
           if (!daughterRegions.containsKey(rsLocation)) {
             LinkedList<Pair<byte[], byte[]>> entry = Lists.newLinkedList();
             daughterRegions.put(rsLocation, entry);
@@ -497,22 +496,16 @@ public class RegionSplitter {
                 }
               }
 
-              // Sort the ServerNames by the number of regions they have
-              List<String> serversLeft = Lists.newArrayList(daughterRegions .keySet());
-              Collections.sort(serversLeft, new Comparator<String>() {
-                public int compare(String o1, String o2) {
-                  return rsSizes.get(o1).compareTo(rsSizes.get(o2));
-                }
-              });
-
               // Round-robin through the ServerName list. Choose the lightest-loaded servers
               // first to keep the master from load-balancing regions as we split.
-              for (String rsLoc : serversLeft) {
+              for (Map.Entry<ServerName, LinkedList<Pair<byte[], byte[]>>> daughterRegion :
+                      daughterRegions.entrySet()) {
                 Pair<byte[], byte[]> dr = null;
+                ServerName rsLoc = daughterRegion.getKey();
+                LinkedList<Pair<byte[], byte[]>> regionList = daughterRegion.getValue();
 
                 // Find a region in the ServerName list that hasn't been moved
                 LOG.debug("Finding a region on " + rsLoc);
-                LinkedList<Pair<byte[], byte[]>> regionList = daughterRegions.get(rsLoc);
                 while (!regionList.isEmpty()) {
                   dr = regionList.pop();
 
@@ -521,7 +514,7 @@ public class RegionSplitter {
                   HRegionLocation regionLoc = regionLocator.getRegionLocation(split);
 
                   // if this region moved locations
-                  String newRs = regionLoc.getHostnamePort();
+                  ServerName newRs = regionLoc.getServerName();
                   if (newRs.compareTo(rsLoc) != 0) {
                     LOG.debug("Region with " + splitAlgo.rowToStr(split)
                         + " moved to " + newRs + ". Relocating...");
