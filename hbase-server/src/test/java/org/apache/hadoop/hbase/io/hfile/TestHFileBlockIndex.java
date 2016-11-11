@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
@@ -500,6 +501,73 @@ public class TestHFileBlockIndex {
       assertEquals(expected, actual);
     }
   }
+
+  /**
+  * to check if looks good when midKey on a leaf index block boundary
+  * @throws IOException
+  */
+  @Test
+ public void testMidKeyOnLeafIndexBlockBoundary() throws IOException {
+   Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
+       "hfile_for_midkey");
+   int maxChunkSize = 512;
+   conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize);
+   // should open hfile.block.index.cacheonwrite
+   conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, true);
+
+   CacheConfig cacheConf = new CacheConfig(conf);
+   BlockCache blockCache = cacheConf.getBlockCache();
+   // Evict all blocks that were cached-on-write by the previous invocation.
+   blockCache.evictBlocksByHfileName(hfilePath.getName());
+   // Write the HFile
+   {
+     HFileContext meta = new HFileContextBuilder()
+                         .withBlockSize(SMALL_BLOCK_SIZE)
+                         .withCompression(Algorithm.NONE)
+                         .withDataBlockEncoding(DataBlockEncoding.NONE)
+                         .build();
+     HFile.Writer writer =
+           HFile.getWriterFactory(conf, cacheConf)
+               .withPath(fs, hfilePath)
+               .withFileContext(meta)
+               .create();
+     Random rand = new Random(19231737);
+     byte[] family = Bytes.toBytes("f");
+     byte[] qualifier = Bytes.toBytes("q");
+     int kvNumberToBeWritten = 16;
+     // the new generated hfile will contain 2 leaf-index blocks and 16 data blocks,
+     // midkey is just on the boundary of the first leaf-index block
+     for (int i = 0; i < kvNumberToBeWritten; ++i) {
+       byte[] row = TestHFileWriterV2.randomOrderedFixedLengthKey(rand, i, 30);
+
+       // Key will be interpreted by KeyValue.KEY_COMPARATOR
+       KeyValue kv =
+             new KeyValue(row, family, qualifier, EnvironmentEdgeManager.currentTime(),
+                 TestHFileWriterV2.randomFixedLengthValue(rand, SMALL_BLOCK_SIZE));
+       writer.append(kv);
+     }
+     writer.close();
+   }
+
+   // close hfile.block.index.cacheonwrite
+   conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, false);
+
+   // Read the HFile
+   HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf, conf);
+
+   boolean hasArrayIndexOutOfBoundsException = false;
+   try {
+     // get the mid-key.
+     reader.midkey();
+   } catch (ArrayIndexOutOfBoundsException e) {
+     hasArrayIndexOutOfBoundsException = true;
+   } finally {
+     reader.close();
+   }
+
+   // to check if ArrayIndexOutOfBoundsException occured
+   assertFalse(hasArrayIndexOutOfBoundsException);
+ }
 
   /**
    * Testing block index through the HFile writer/reader APIs. Allows to test
