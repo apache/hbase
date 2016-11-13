@@ -629,7 +629,9 @@ public class TestReplicationSourceManager {
         List<String> queues = rq.getUnClaimedQueueIds(deadRsZnode);
         for(String queue:queues){
           Pair<String, SortedSet<String>> pair = rq.claimQueue(deadRsZnode, queue);
-          logZnodesMap.put(pair.getFirst(), pair.getSecond());
+          if (pair != null) {
+            logZnodesMap.put(pair.getFirst(), pair.getSecond());
+          }
         }
         server.abort("Done with testing", null);
       } catch (Exception e) {
