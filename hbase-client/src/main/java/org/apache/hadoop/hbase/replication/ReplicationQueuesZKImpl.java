@@ -282,10 +282,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   /**
-   * It "atomically" copies all the hlogs queues from another region server and returns them all
-   * sorted per peer cluster (appended with the dead server's znode).
+   * It "atomically" copies one peer's wals queue from another dead region server and returns them
+   * all sorted. The new peer id is equal to the old peer id appended with the dead server's znode.
    * @param znode pertaining to the region server to copy the queues from
-   * @return HLog queues sorted per peer cluster
+   * @peerId peerId pertaining to the queue need to be copied
    */
   private SortedMap<String, SortedSet<String>> copyQueuesFromRSUsingMulti(String znode) {
     SortedMap<String, SortedSet<String>> queues = new TreeMap<String, SortedSet<String>>();
@@ -298,22 +298,27 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       if (peerIdsToProcess == null) return queues; // node already processed
       for (String peerId : peerIdsToProcess) {
         ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
-        if (!peerExists(replicationQueueInfo.getPeerId())) {
-          // the orphaned queues must be moved, otherwise the delete op of dead rs will fail,
-          // this will cause the whole multi op fail.
-          // NodeFailoverWorker will skip the orphaned queues.
-          LOG.warn("Peer " + peerId
-              + " didn't exist, will move its queue to avoid the failure of multi op");
-        }
+
         String newPeerId = peerId + "-" + znode;
         String newPeerZnode = ZKUtil.joinZNode(this.myQueuesZnode, newPeerId);
         // check the logs queue for the old peer cluster
         String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
         List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
-        if (hlogs == null || hlogs.size() == 0) {
+
+        if (!peerExists(replicationQueueInfo.getPeerId())) {
+          LOG.warn("Peer " + replicationQueueInfo.getPeerId() +
+              " didn't exist, will move its queue to avoid the failure of multi op");
+          if (hlogs != null) {
+            for (String wal : hlogs) {
+              String oldWalZnode = ZKUtil.joinZNode(oldClusterZnode, wal);
+              listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldWalZnode));
+            }
+          }
           listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
-          continue; // empty log queue.
+          ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
+          return null;
         }
+
         // create the new cluster znode
         SortedSet<String> logQueue = new TreeSet<String>();
         queues.put(newPeerId, logQueue);
@@ -332,14 +337,14 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
         }
         // add delete op for peer
         listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
+        LOG.info("Atomically moved " + znode + "/" + peerId + "'s WALs to my queue");
       }
+
       // add delete op for dead rs, this will update the cversion of the parent.
       // The reader will make optimistic locking with this to get a consistent
       // snapshot
       listOfOps.add(ZKUtilOp.deleteNodeFailSilent(deadRSZnodePath));
-      LOG.debug(" The multi list size is: " + listOfOps.size());
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
-      LOG.info("Atomically moved the dead regionserver logs. ");
     } catch (KeeperException e) {
       // Multi call failed; it looks like some other regionserver took away the logs.
       LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);
