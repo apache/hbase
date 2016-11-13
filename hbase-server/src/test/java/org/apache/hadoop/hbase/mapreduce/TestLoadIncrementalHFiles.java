@@ -24,7 +24,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles.LoadQueueItem;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -349,9 +352,13 @@ public class TestLoadIncrementalHFiles {
     String [] args= {dir.toString(), tableName.toString()};
     if (useMap) {
       fs.delete(last);
-      List<String> missingHFiles = loader.run(null, map, tableName);
+      Map<LoadQueueItem, ByteBuffer> loaded = loader.run(null, map, tableName);
       expectedRows -= 1000;
-      assertTrue(missingHFiles.contains(last.getName()));
+      for (LoadQueueItem item : loaded.keySet()) {
+        if (item.hfilePath.getName().equals(last.getName())) {
+          fail(last + " should be missing");
+        }
+      }
     } else {
       loader.run(args);
     }
