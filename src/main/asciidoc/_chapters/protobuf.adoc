@@ -27,6 +27,8 @@
 :icons: font
 :experimental:
 
+
+== Protobuf
 HBase uses Google's link:http://protobuf.protobufs[protobufs] wherever
 it persists metadata -- in the tail of hfiles or Cells written by
 HBase into the system hbase;meta table or when HBase writes znodes
@@ -36,11 +38,10 @@ Interfaces (Services) we expose to clients, for example the `Admin` and `Client`
 Interfaces that the RegionServer fields,
 or specifying the arbitrary extensions added by developers via our
 xref:cp[Coprocessor Endpoint] mechanism.
+
 In this chapter we go into detail for  developers who are looking to
 understand better how it all works. This chapter is of particular
 use to those who would amend or extend HBase functionality.
-
-== Protobuf
 
 With protobuf, you describe serializations and services in a `.protos` file.
 You then feed these descriptors to a protobuf tool, the `protoc` binary,
