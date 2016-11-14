@@ -3861,17 +3861,31 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.info("Failed to record merged region " + p.getShortNameToLog());
         return "Failed to record the merging in meta";
       }
-    } else {
-      mergingRegions.remove(encodedName);
-      regionOnline(a, sn);
-      regionOnline(b, sn);
-      regionOffline(p);
-
-      if (isTableDisabledOrDisabling(p.getTable())) {
-        invokeUnAssign(a);
-        invokeUnAssign(b);
-      }
     }
+    return null;
+  }
+
+  private String onRegionMergeReverted(ServerName sn, TransitionCode code,
+	      final HRegionInfo p, final HRegionInfo a, final HRegionInfo b) {
+    RegionState rs_p = regionStates.getRegionState(p);
+    String encodedName = p.getEncodedName();
+    mergingRegions.remove(encodedName);
+
+    // Always bring the children back online. Even if they are not offline
+    // there's no harm in making them online again.
+    regionOnline(a, sn);
+    regionOnline(b, sn);
+
+    // Only offline the merging region if it is known to exist.
+    if (rs_p != null) {
+      regionOffline(p);
+    }
+
+    if (isTableDisabledOrDisabling(p.getTable())) {
+      invokeUnAssign(a);
+      invokeUnAssign(b);
+    }
+
     return null;
   }
 
@@ -4249,10 +4263,14 @@ public class AssignmentManager extends ZooKeeperListener {
     case READY_TO_MERGE:
     case MERGE_PONR:
     case MERGED:
-    case MERGE_REVERTED:
       errorMsg = onRegionMerge(serverName, code, hri,
         HRegionInfo.convert(transition.getRegionInfo(1)),
         HRegionInfo.convert(transition.getRegionInfo(2)));
+      break;
+    case MERGE_REVERTED:
+        errorMsg = onRegionMergeReverted(serverName, code, hri,
+                HRegionInfo.convert(transition.getRegionInfo(1)),
+                HRegionInfo.convert(transition.getRegionInfo(2)));
       break;
 
     default:
