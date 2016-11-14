@@ -26,13 +26,13 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 
 /**
- * Our extension of DataOutputStream which implements ByteBufferSupportOutputStream
+ * Our extension of DataOutputStream which implements ByteBufferWriter
  */
 @InterfaceAudience.Private
-public class ByteBufferSupportDataOutputStream extends DataOutputStream
-    implements ByteBufferSupportOutputStream {
+public class ByteBufferWriterDataOutputStream extends DataOutputStream
+    implements ByteBufferWriter {
 
-  public ByteBufferSupportDataOutputStream(OutputStream out) {
+  public ByteBufferWriterDataOutputStream(OutputStream out) {
     super(out);
   }
 

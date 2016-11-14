@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.codec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.ByteBufferInputStream;
+import org.apache.hadoop.hbase.io.ByteBuffInputStream;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -118,8 +118,8 @@ public class CellCodec implements Codec {
   }
 
   @Override
-  public Decoder getDecoder(ByteBuffer buf) {
-    return getDecoder(new ByteBufferInputStream(buf));
+  public Decoder getDecoder(ByteBuff buf) {
+    return getDecoder(new ByteBuffInputStream(buf));
   }
 
   @Override

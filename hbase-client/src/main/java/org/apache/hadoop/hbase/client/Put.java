@@ -29,6 +29,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -319,9 +320,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     byte [] family = CellUtil.cloneFamily(kv);
     List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
-    int res = Bytes.compareTo(this.row, 0, row.length,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength());
-    if (res != 0) {
+    if (!CellUtil.matchingRow(kv, this.row)) {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }

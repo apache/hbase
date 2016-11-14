@@ -21,7 +21,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
@@ -35,10 +37,13 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -238,15 +243,15 @@ class CellBlockBuilder {
   public CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
       final byte[] cellBlock) throws IOException {
     // Use this method from Client side to create the CellScanner
-    ByteBuffer cellBlockBuf = ByteBuffer.wrap(cellBlock);
     if (compressor != null) {
-      cellBlockBuf = decompress(compressor, cellBlockBuf);
+      ByteBuffer cellBlockBuf = decompress(compressor, cellBlock);
+      return codec.getDecoder(new ByteBufferInputStream(cellBlockBuf));
     }
     // Not making the Decoder over the ByteBuffer purposefully. The Decoder over the BB will
     // make Cells directly over the passed BB. This method is called at client side and we don't
     // want the Cells to share the same byte[] where the RPC response is being read. Caching of any
     // of the Cells at user's app level will make it not possible to GC the response byte[]
-    return codec.getDecoder(new ByteBufferInputStream(cellBlockBuf));
+    return codec.getDecoder(new ByteArrayInputStream(cellBlock));
   }
 
   /**
@@ -258,7 +263,7 @@ class CellBlockBuilder {
    * @throws IOException if cell encoding fails
    */
   public CellScanner createCellScannerReusingBuffers(final Codec codec,
-      final CompressionCodec compressor, ByteBuffer cellBlock) throws IOException {
+      final CompressionCodec compressor, ByteBuff cellBlock) throws IOException {
     // Use this method from HRS to create the CellScanner
     // If compressed, decompress it first before passing it on else we will leak compression
     // resources if the stream is not closed properly after we let it out.
@@ -268,27 +273,38 @@ class CellBlockBuilder {
     return codec.getDecoder(cellBlock);
   }
 
-  private ByteBuffer decompress(CompressionCodec compressor, ByteBuffer cellBlock)
+  private ByteBuffer decompress(CompressionCodec compressor, byte[] compressedCellBlock)
       throws IOException {
+    ByteBuffer cellBlock = decompress(compressor, new ByteArrayInputStream(compressedCellBlock),
+        compressedCellBlock.length * this.cellBlockDecompressionMultiplier);
+    return cellBlock;
+  }
+
+  private ByteBuff decompress(CompressionCodec compressor, ByteBuff compressedCellBlock)
+      throws IOException {
+    ByteBuffer cellBlock = decompress(compressor, new ByteBuffInputStream(compressedCellBlock),
+        compressedCellBlock.remaining() * this.cellBlockDecompressionMultiplier);
+    return new SingleByteBuff(cellBlock);
+  }
+
+  private ByteBuffer decompress(CompressionCodec compressor, InputStream cellBlockStream,
+      int osInitialSize) throws IOException {
     // GZIPCodec fails w/ NPE if no configuration.
     if (compressor instanceof Configurable) {
       ((Configurable) compressor).setConf(this.conf);
     }
     Decompressor poolDecompressor = CodecPool.getDecompressor(compressor);
-    CompressionInputStream cis = compressor.createInputStream(new ByteBufferInputStream(cellBlock),
-      poolDecompressor);
+    CompressionInputStream cis = compressor.createInputStream(cellBlockStream, poolDecompressor);
     ByteBufferOutputStream bbos;
     try {
       // TODO: This is ugly. The buffer will be resized on us if we guess wrong.
       // TODO: Reuse buffers.
-      bbos = new ByteBufferOutputStream(
-          cellBlock.remaining() * this.cellBlockDecompressionMultiplier);
+      bbos = new ByteBufferOutputStream(osInitialSize);
       IOUtils.copy(cis, bbos);
       bbos.close();
-      cellBlock = bbos.getByteBuffer();
+      return bbos.getByteBuffer();
     } finally {
       CodecPool.returnDecompressor(poolDecompressor);
     }
-    return cellBlock;
   }
 }

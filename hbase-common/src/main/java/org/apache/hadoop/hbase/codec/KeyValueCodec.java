@@ -27,8 +27,10 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NoTagsKeyValue;
+import org.apache.hadoop.hbase.OffheapKeyValue;
 import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -76,24 +78,28 @@ public class KeyValueCodec implements Codec {
     }
   }
 
-  public static class ByteBufferedKeyValueDecoder implements Codec.Decoder {
+  public static class ByteBuffKeyValueDecoder implements Codec.Decoder {
 
-    protected final ByteBuffer buf;
+    protected final ByteBuff buf;
     protected Cell current = null;
 
-    public ByteBufferedKeyValueDecoder(ByteBuffer buf) {
+    public ByteBuffKeyValueDecoder(ByteBuff buf) {
       this.buf = buf;
     }
 
     @Override
     public boolean advance() throws IOException {
-      if (this.buf.remaining() <= 0) {
+      if (!this.buf.hasRemaining()) {
         return false;
       }
-      int len = ByteBufferUtils.toInt(buf);
-      assert buf.hasArray();
-      this.current = createCell(buf.array(), buf.arrayOffset() + buf.position(), len);
-      buf.position(buf.position() + len);
+      int len = buf.getInt();
+      ByteBuffer bb = buf.asSubByteBuffer(len);
+      if (bb.isDirect()) {
+        this.current = createCell(bb, bb.position(), len);
+      } else {
+        this.current = createCell(bb.array(), bb.arrayOffset() + bb.position(), len);
+      }
+      buf.skip(len);
       return true;
     }
 
@@ -104,6 +110,11 @@ public class KeyValueCodec implements Codec {
 
     protected Cell createCell(byte[] buf, int offset, int len) {
       return new ShareableMemoryNoTagsKeyValue(buf, offset, len);
+    }
+
+    protected Cell createCell(ByteBuffer bb, int pos, int len) {
+      // We know there is not going to be any tags.
+      return new ShareableMemoryOffheapKeyValue(bb, pos, len, false, 0);
     }
 
     static class ShareableMemoryKeyValue extends KeyValue implements ShareableMemory {
@@ -133,6 +144,31 @@ public class KeyValueCodec implements Codec {
         return kv;
       }
     }
+
+    static class ShareableMemoryOffheapKeyValue extends OffheapKeyValue implements ShareableMemory {
+      public ShareableMemoryOffheapKeyValue(ByteBuffer buf, int offset, int length) {
+        super(buf, offset, length);
+      }
+
+      public ShareableMemoryOffheapKeyValue(ByteBuffer buf, int offset, int length, boolean hasTags,
+          long seqId) {
+        super(buf, offset, length, hasTags, seqId);
+      }
+
+      @Override
+      public Cell cloneToCell() {
+        byte[] copy = new byte[this.length];
+        ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
+        KeyValue kv;
+        if (this.hasTags) {
+          kv = new KeyValue(copy, 0, copy.length);
+        } else {
+          kv = new NoTagsKeyValue(copy, 0, copy.length);
+        }
+        kv.setSequenceId(this.getSequenceId());
+        return kv;
+      }
+    }
   }
 
   /**
@@ -144,8 +180,8 @@ public class KeyValueCodec implements Codec {
   }
 
   @Override
-  public Decoder getDecoder(ByteBuffer buf) {
-    return new ByteBufferedKeyValueDecoder(buf);
+  public Decoder getDecoder(ByteBuff buf) {
+    return new ByteBuffKeyValueDecoder(buf);
   }
 
   @Override

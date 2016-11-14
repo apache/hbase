@@ -33,7 +33,6 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
@@ -315,7 +315,7 @@ public abstract class AbstractTestIPC {
       }
 
       @Override
-      protected void processRequest(ByteBuffer buf) throws IOException, InterruptedException {
+      protected void processRequest(ByteBuff buf) throws IOException, InterruptedException {
         // this will throw exception after the connection header is read, and an RPC is sent
         // from client
         throw new DoNotRetryIOException("Failing for test");

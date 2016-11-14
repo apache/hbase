@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hbase.nio;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import sun.nio.ch.DirectBuffer;
 
@@ -313,6 +317,11 @@ public class SingleByteBuff extends ByteBuff {
   }
 
   @Override
+  public int read(ReadableByteChannel channel) throws IOException {
+    return channelRead(channel, buf);
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if(!(obj instanceof SingleByteBuff)) return false;
     return this.buf.equals(((SingleByteBuff)obj).buf);
@@ -326,7 +335,8 @@ public class SingleByteBuff extends ByteBuff {
   /**
    * @return the ByteBuffer which this wraps.
    */
-  ByteBuffer getEnclosingByteBuffer() {
+  @VisibleForTesting
+  public ByteBuffer getEnclosingByteBuffer() {
     return this.buf;
   }
 }

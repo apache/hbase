@@ -21,7 +21,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -33,9 +32,12 @@ import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
-import org.apache.hadoop.hbase.io.ByteBufferInputStream;
+import org.apache.hadoop.hbase.io.ByteBuffInputStream;
+import org.apache.hadoop.hbase.io.ByteBufferWriter;
+import org.apache.hadoop.hbase.io.ByteBufferWriterOutputStream;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -356,14 +358,18 @@ public class WALCellCodec implements Codec {
   }
 
   @Override
-  public Decoder getDecoder(ByteBuffer buf) {
-    return getDecoder(new ByteBufferInputStream(buf));
+  public Decoder getDecoder(ByteBuff buf) {
+    return getDecoder(new ByteBuffInputStream(buf));
   }
 
   @Override
   public Encoder getEncoder(OutputStream os) {
-    return (compression == null)
-        ? new EnsureKvEncoder(os) : new CompressedKvEncoder(os, compression);
+    if (compression == null) {
+      os = (os instanceof ByteBufferWriter) ? os
+          : new ByteBufferWriterOutputStream(os);
+      return new EnsureKvEncoder(os);
+    }
+    return new CompressedKvEncoder(os, compression);
   }
 
   public ByteStringCompressor getByteStringCompressor() {

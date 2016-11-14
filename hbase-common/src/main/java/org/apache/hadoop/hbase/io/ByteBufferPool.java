@@ -140,7 +140,7 @@ public class ByteBufferPool {
     buffers.offer(buf);
   }
 
-  int getBufferSize() {
+  public int getBufferSize() {
     return this.bufferSize;
   }
 
@@ -148,7 +148,7 @@ public class ByteBufferPool {
    * @return Number of free buffers
    */
   @VisibleForTesting
-  int getQueueSize() {
+  public int getQueueSize() {
     return buffers.size();
   }
 }

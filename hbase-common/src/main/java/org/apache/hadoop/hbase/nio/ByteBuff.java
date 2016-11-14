@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.nio;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -34,7 +36,10 @@ import org.apache.hadoop.io.WritableUtils;
  * helps us in the read path.
  */
 @InterfaceAudience.Private
+// TODO to have another name. This can easily get confused with netty's ByteBuf
 public abstract class ByteBuff {
+  private static final int NIO_BUFFER_LIMIT = 64 * 1024; // should not be more than 64KB.
+
   /**
    * @return this ByteBuff's current position
    */
@@ -356,6 +361,14 @@ public abstract class ByteBuff {
   public abstract long getLongAfterPosition(int offset);
 
   /**
+   * Copy the content from this ByteBuff to a byte[].
+   * @return byte[] with the copied contents from this ByteBuff.
+   */
+  public byte[] toBytes() {
+    return toBytes(0, this.limit());
+  }
+
+  /**
    * Copy the content from this ByteBuff to a byte[] based on the given offset and
    * length
    *
@@ -389,7 +402,39 @@ public abstract class ByteBuff {
    */
   public abstract ByteBuff put(int offset, ByteBuff src, int srcOffset, int length);
 
+  /**
+   * Reads bytes from the given channel into this ByteBuff
+   * @param channel
+   * @return The number of bytes read from the channel
+   * @throws IOException
+   */
+  public abstract int read(ReadableByteChannel channel) throws IOException;
+
   // static helper methods
+  public static int channelRead(ReadableByteChannel channel, ByteBuffer buf) throws IOException {
+    if (buf.remaining() <= NIO_BUFFER_LIMIT) {
+      return channel.read(buf);
+    }
+    int originalLimit = buf.limit();
+    int initialRemaining = buf.remaining();
+    int ret = 0;
+
+    while (buf.remaining() > 0) {
+      try {
+        int ioSize = Math.min(buf.remaining(), NIO_BUFFER_LIMIT);
+        buf.limit(buf.position() + ioSize);
+        ret = channel.read(buf);
+        if (ret < ioSize) {
+          break;
+        }
+      } finally {
+        buf.limit(originalLimit);
+      }
+    }
+    int nBytes = initialRemaining - buf.remaining();
+    return (nBytes > 0) ? nBytes : ret;
+  }
+
   /**
    * Read integer from ByteBuff coded in 7 bits and increment position.
    * @return Read integer.

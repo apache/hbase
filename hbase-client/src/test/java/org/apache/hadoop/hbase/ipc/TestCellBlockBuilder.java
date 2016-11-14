@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -78,7 +79,8 @@ public class TestCellBlockBuilder {
     CellScanner cellScanner = sized ? getSizedCellScanner(cells)
         : CellUtil.createCellScanner(Arrays.asList(cells).iterator());
     ByteBuffer bb = builder.buildCellBlock(codec, compressor, cellScanner);
-    cellScanner = builder.createCellScannerReusingBuffers(codec, compressor, bb);
+    cellScanner = builder.createCellScannerReusingBuffers(codec, compressor,
+        new SingleByteBuff(bb));
     int i = 0;
     while (cellScanner.advance()) {
       i++;

@@ -78,7 +78,7 @@ public class TestTagCompressionContext {
   @Test
   public void testCompressUncompressTagsWithOffheapKeyValue1() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutputStream daos = new ByteBufferSupportDataOutputStream(baos);
+    DataOutputStream daos = new ByteBufferWriterDataOutputStream(baos);
     TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
     ByteBufferedCell kv1 = (ByteBufferedCell)createOffheapKVWithTags(2);
     int tagsLength1 = kv1.getTagsLength();
@@ -127,7 +127,7 @@ public class TestTagCompressionContext {
   @Test
   public void testCompressUncompressTagsWithOffheapKeyValue2() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutputStream daos = new ByteBufferSupportDataOutputStream(baos);
+    DataOutputStream daos = new ByteBufferWriterDataOutputStream(baos);
     TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
     ByteBufferedCell kv1 = (ByteBufferedCell)createOffheapKVWithTags(1);
     int tagsLength1 = kv1.getTagsLength();

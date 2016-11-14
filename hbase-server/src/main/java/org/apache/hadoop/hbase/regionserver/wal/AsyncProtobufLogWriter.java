@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.ByteBufferSupportOutputStream;
+import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
@@ -57,7 +57,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   private AsyncFSOutput output;
 
   private static final class OutputStreamWrapper extends OutputStream
-      implements ByteBufferSupportOutputStream {
+      implements ByteBufferWriter {
 
     private final AsyncFSOutput out;
 

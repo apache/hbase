@@ -5201,9 +5201,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private HStore getHStore(Cell cell) {
     for (Map.Entry<byte[], Store> famStore : stores.entrySet()) {
-      if (Bytes.equals(
-          cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
-          famStore.getKey(), 0, famStore.getKey().length)) {
+      if (CellUtil.matchingFamily(cell, famStore.getKey(), 0, famStore.getKey().length)) {
         return (HStore) famStore.getValue();
       }
     }

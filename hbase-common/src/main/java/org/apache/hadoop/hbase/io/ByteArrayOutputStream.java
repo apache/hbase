@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * supports writing ByteBuffer directly to it.
  */
 @InterfaceAudience.Private
-public class ByteArrayOutputStream extends OutputStream implements ByteBufferSupportOutputStream {
+public class ByteArrayOutputStream extends OutputStream implements ByteBufferWriter {
 
   // Borrowed from openJDK:
   // http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/8-b132/java/util/ArrayList.java#221

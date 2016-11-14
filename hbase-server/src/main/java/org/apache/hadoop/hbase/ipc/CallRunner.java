@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.ipc;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -45,7 +43,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class CallRunner {
-  private static final Log LOG = LogFactory.getLog(CallRunner.class);
 
   private static final CallDroppedException CALL_DROPPED_EXCEPTION
     = new CallDroppedException();
@@ -143,6 +140,8 @@ public class CallRunner {
           sucessful = true;
         }
       }
+      // return back the RPC request read BB we can do here. It is done by now.
+      call.cleanup();
       // Set the response
       Message param = resultPair != null ? resultPair.getFirst() : null;
       CellScanner cells = resultPair != null ? resultPair.getSecond() : null;

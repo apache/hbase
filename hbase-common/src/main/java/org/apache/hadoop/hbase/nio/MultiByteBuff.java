@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hbase.nio;
 
+import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.InvalidMarkException;
+import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Provides a unified view of all the underlying ByteBuffers and will look as if a bigger
@@ -1071,6 +1075,28 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   @Override
+  public int read(ReadableByteChannel channel) throws IOException {
+    int total = 0;
+    while (true) {
+      // Read max possible into the current BB
+      int len = channelRead(channel, this.curItem);
+      if (len > 0)
+        total += len;
+      if (this.curItem.hasRemaining()) {
+        // We were not able to read enough to fill the current BB itself. Means there is no point in
+        // doing more reads from Channel. Only this much there for now.
+        break;
+      } else {
+        if (this.curItemIndex >= this.limitedItemIndex)
+          break;
+        this.curItemIndex++;
+        this.curItem = this.items[this.curItemIndex];
+      }
+    }
+    return total;
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (!(obj instanceof MultiByteBuff)) return false;
     if (this == obj) return true;
@@ -1090,5 +1116,13 @@ public class MultiByteBuff extends ByteBuff {
       hash += b.hashCode();
     }
     return hash;
+  }
+
+  /**
+   * @return the ByteBuffers which this wraps.
+   */
+  @VisibleForTesting
+  public ByteBuffer[] getEnclosingByteBuffers() {
+    return this.items;
   }
 }

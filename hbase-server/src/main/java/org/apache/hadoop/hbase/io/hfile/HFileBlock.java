@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
-import org.apache.hadoop.hbase.io.ByteBufferSupportDataOutputStream;
+import org.apache.hadoop.hbase.io.ByteBufferWriterDataOutputStream;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
@@ -962,7 +962,7 @@ public class HFileBlock implements Cacheable {
       state = State.WRITING;
 
       // We will compress it later in finishBlock()
-      userDataStream = new ByteBufferSupportDataOutputStream(baosInMemory);
+      userDataStream = new ByteBufferWriterDataOutputStream(baosInMemory);
       if (newBlockType == BlockType.DATA) {
         this.dataBlockEncoder.startBlockEncoding(dataBlockEncodingCtx, userDataStream);
       }

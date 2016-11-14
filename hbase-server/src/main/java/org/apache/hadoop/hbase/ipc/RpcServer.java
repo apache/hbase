@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.ByteArrayInputStream;
@@ -99,6 +100,9 @@ import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -146,6 +150,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteInput;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -304,6 +309,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   private UserProvider userProvider;
 
   private final ByteBufferPool reservoir;
+  // The requests and response will use buffers from ByteBufferPool, when the size of the
+  // request/response is at least this size.
+  // We make this to be 1/6th of the pool buffer size.
+  private final int minSizeForReservoirUse;
 
   private volatile boolean allowFallbackToSimpleAuth;
 
@@ -344,10 +353,11 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     protected boolean isError;
     protected TraceInfo tinfo;
     private ByteBufferListOutputStream cellBlockStream = null;
+    private CallCleanup reqCleanup = null;
 
     private User user;
     private InetAddress remoteAddress;
-    private RpcCallback callback;
+    private RpcCallback rpcCallback;
 
     private long responseCellSize = 0;
     private long responseBlockSize = 0;
@@ -357,7 +367,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         justification="Can't figure why this complaint is happening... see below")
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
-         long size, TraceInfo tinfo, final InetAddress remoteAddress, int timeout) {
+         long size, TraceInfo tinfo, final InetAddress remoteAddress, int timeout,
+         CallCleanup reqCleanup) {
       this.id = id;
       this.service = service;
       this.md = md;
@@ -377,6 +388,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           connection == null? null: connection.retryImmediatelySupported;
       this.timeout = timeout;
       this.deadline = this.timeout > 0 ? this.timestamp + this.timeout : Long.MAX_VALUE;
+      this.reqCleanup = reqCleanup;
     }
 
     /**
@@ -391,7 +403,16 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
                                                 // got from pool.
         this.cellBlockStream = null;
       }
+      cleanup();// If the call was run successfuly, we might have already returned the
+                             // BB back to pool. No worries..Then inputCellBlock will be null
       this.connection.decRpcCount();  // Say that we're done with this call.
+    }
+
+    protected void cleanup() {
+      if (this.reqCleanup != null) {
+        this.reqCleanup.run();
+        this.reqCleanup = null;
+      }
     }
 
     @Override
@@ -515,9 +536,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.response = bc;
       // Once a response message is created and set to this.response, this Call can be treated as
       // done. The Responder thread will do the n/w write of this message back to client.
-      if (this.callback != null) {
+      if (this.rpcCallback != null) {
         try {
-          this.callback.run();
+          this.rpcCallback.run();
         } catch (Exception e) {
           // Don't allow any exception here to kill this handler thread.
           LOG.warn("Exception while running the Rpc Callback.", e);
@@ -722,13 +743,18 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     @Override
     public synchronized void setCallBack(RpcCallback callback) {
-      this.callback = callback;
+      this.rpcCallback = callback;
     }
 
     @Override
     public boolean isRetryImmediatelySupported() {
       return retryImmediatelySupported;
     }
+  }
+
+  @FunctionalInterface
+  static interface CallCleanup {
+    void run();
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
@@ -1289,7 +1315,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     // If the connection header has been read or not.
     private boolean connectionHeaderRead = false;
     protected SocketChannel channel;
-    private ByteBuffer data;
+    private ByteBuff data;
+    private CallCleanup callCleanup;
     private ByteBuffer dataLengthBuffer;
     protected final ConcurrentLinkedDeque<Call> responseQueue = new ConcurrentLinkedDeque<Call>();
     private final Lock responseWriteLock = new ReentrantLock();
@@ -1327,17 +1354,17 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     // Fake 'call' for failed authorization response
     private static final int AUTHORIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall = new Call(AUTHORIZATION_FAILED_CALLID, null, null, null,
-        null, null, this, null, 0, null, null, 0);
+        null, null, this, null, 0, null, null, 0, null);
     private ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
     private final Call saslCall = new Call(SASL_CALLID, null, null, null, null, null, this, null,
-        0, null, null, 0);
+        0, null, null, 0, null);
     // Fake 'call' for connection header response
     private static final int CONNECTION_HEADER_RESPONSE_CALLID = -34;
     private final Call setConnectionHeaderResponseCall = new Call(CONNECTION_HEADER_RESPONSE_CALLID,
-        null, null, null, null, null, this, null, 0, null, null, 0);
+        null, null, null, null, null, this, null, 0, null, null, 0, null);
 
     // was authentication allowed with a fallback to simple auth
     private boolean authenticatedWithFallback;
@@ -1352,6 +1379,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.channel = channel;
       this.lastContact = lastContact;
       this.data = null;
+      this.callCleanup = null;
       this.dataLengthBuffer = ByteBuffer.allocate(4);
       this.socket = channel.socket();
       this.addr = socket.getInetAddress();
@@ -1437,7 +1465,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       return authorizedUgi;
     }
 
-    private void saslReadAndProcess(ByteBuffer saslToken) throws IOException,
+    private void saslReadAndProcess(ByteBuff saslToken) throws IOException,
         InterruptedException {
       if (saslContextEstablished) {
         if (LOG.isTraceEnabled())
@@ -1447,13 +1475,13 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         if (!useWrap) {
           processOneRpc(saslToken);
         } else {
-          byte[] b = saslToken.array();
+          byte[] b = saslToken.hasArray() ? saslToken.array() : saslToken.toBytes();
           byte [] plaintextData;
           if (useCryptoAesWrap) {
             // unwrap with CryptoAES
-            plaintextData = cryptoAES.unwrap(b, saslToken.position(), saslToken.limit());
+            plaintextData = cryptoAES.unwrap(b, 0, b.length);
           } else {
-            plaintextData = saslServer.unwrap(b, saslToken.position(), saslToken.limit());
+            plaintextData = saslServer.unwrap(b, 0, b.length);
           }
           processUnwrappedData(plaintextData);
         }
@@ -1506,7 +1534,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             LOG.debug("Have read input token of size " + saslToken.limit()
                 + " for processing by saslServer.evaluateResponse()");
           }
-          replyToken = saslServer.evaluateResponse(saslToken.array());
+          replyToken = saslServer
+              .evaluateResponse(saslToken.hasArray() ? saslToken.array() : saslToken.toBytes());
         } catch (IOException e) {
           IOException sendToClient = e;
           Throwable cause = e;
@@ -1759,7 +1788,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
             // Notify the client about the offending request
             Call reqTooBig = new Call(header.getCallId(), this.service, null, null, null,
-                null, this, responder, 0, null, this.addr,0);
+                null, this, responder, 0, null, this.addr, 0, null);
             metrics.exception(REQUEST_TOO_BIG_EXCEPTION);
             // Make sure the client recognizes the underlying exception
             // Otherwise, throw a DoNotRetryIOException.
@@ -1779,7 +1808,11 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           return -1;
         }
 
-        data = ByteBuffer.allocate(dataLength);
+        // Initialize this.data with a ByteBuff.
+        // This call will allocate a ByteBuff to read request into and assign to this.data
+        // Also when we use some buffer(s) from pool, it will create a CallCleanup instance also and
+        // assign to this.callCleanup
+        initByteBuffToReadInto(dataLength);
 
         // Increment the rpc count. This counter will be decreased when we write
         //  the response.  If we want the connection to be detected as idle properly, we
@@ -1787,7 +1820,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         incRpcCount();
       }
 
-      count = channelRead(channel, data);
+      count = channelDataRead(channel, data);
 
       if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
         process();
@@ -1796,11 +1829,41 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       return count;
     }
 
+    // It creates the ByteBuff and CallCleanup and assign to Connection instance.
+    private void initByteBuffToReadInto(int length) {
+      // We create random on heap buffers are read into those when
+      // 1. ByteBufferPool is not there.
+      // 2. When the size of the req is very small. Using a large sized (64 KB) buffer from pool is
+      // waste then. Also if all the reqs are of this size, we will be creating larger sized
+      // buffers and pool them permanently. This include Scan/Get request and DDL kind of reqs like
+      // RegionOpen.
+      // 3. If it is an initial handshake signal or initial connection request. Any way then
+      // condition 2 itself will match
+      // 4. When SASL use is ON.
+      if (reservoir == null || skipInitialSaslHandshake || !connectionHeaderRead || useSasl
+          || length < minSizeForReservoirUse) {
+        this.data = new SingleByteBuff(ByteBuffer.allocate(length));
+      } else {
+        Pair<ByteBuff, CallCleanup> pair = RpcServer.allocateByteBuffToReadInto(reservoir,
+            minSizeForReservoirUse, length);
+        this.data = pair.getFirst();
+        this.callCleanup = pair.getSecond();
+      }
+    }
+
+    protected int channelDataRead(ReadableByteChannel channel, ByteBuff buf) throws IOException {
+      int count = buf.read(channel);
+      if (count > 0) {
+        metrics.receivedBytes(count);
+      }
+      return count;
+    }
+
     /**
      * Process the data buffer and clean the connection state for the next call.
      */
     private void process() throws IOException, InterruptedException {
-      data.flip();
+      data.rewind();
       try {
         if (skipInitialSaslHandshake) {
           skipInitialSaslHandshake = false;
@@ -1816,6 +1879,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       } finally {
         dataLengthBuffer.clear(); // Clean for the next call
         data = null; // For the GC
+        this.callCleanup = null;
       }
     }
 
@@ -1831,7 +1895,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     private int doBadPreambleHandling(final String msg, final Exception e) throws IOException {
       LOG.warn(msg);
-      Call fakeCall = new Call(-1, null, null, null, null, null, this, responder, -1, null, null,0);
+      Call fakeCall = new Call(-1, null, null, null, null, null, this, responder, -1, null, null, 0,
+          null);
       setupResponse(null, fakeCall, e, msg);
       responder.doRespond(fakeCall);
       // Returning -1 closes out the connection.
@@ -1839,9 +1904,15 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     // Reads the connection header following version
-    private void processConnectionHeader(ByteBuffer buf) throws IOException {
-      this.connectionHeader = ConnectionHeader.parseFrom(
-        new ByteBufferInputStream(buf));
+    private void processConnectionHeader(ByteBuff buf) throws IOException {
+      if (buf.hasArray()) {
+        this.connectionHeader = ConnectionHeader.parseFrom(buf.array());
+      } else {
+        CodedInputStream cis = CodedInputStream
+            .newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
+        cis.enableAliasing(true);
+        this.connectionHeader = ConnectionHeader.parseFrom(cis);
+      }
       String serviceName = connectionHeader.getServiceName();
       if (serviceName == null) throw new EmptyServiceNameException();
       this.service = getService(services, serviceName);
@@ -2043,13 +2114,13 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         if (unwrappedData.remaining() == 0) {
           unwrappedDataLengthBuffer.clear();
           unwrappedData.flip();
-          processOneRpc(unwrappedData);
+          processOneRpc(new SingleByteBuff(unwrappedData));
           unwrappedData = null;
         }
       }
     }
 
-    private void processOneRpc(ByteBuffer buf) throws IOException, InterruptedException {
+    private void processOneRpc(ByteBuff buf) throws IOException, InterruptedException {
       if (connectionHeaderRead) {
         processRequest(buf);
       } else {
@@ -2071,12 +2142,18 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
      * @throws IOException
      * @throws InterruptedException
      */
-    protected void processRequest(ByteBuffer buf) throws IOException, InterruptedException {
+    protected void processRequest(ByteBuff buf) throws IOException, InterruptedException {
       long totalRequestSize = buf.limit();
       int offset = 0;
       // Here we read in the header.  We avoid having pb
       // do its default 4k allocation for CodedInputStream.  We force it to use backing array.
-      CodedInputStream cis = CodedInputStream.newInstance(buf.array(), offset, buf.limit());
+      CodedInputStream cis;
+      if (buf.hasArray()) {
+        cis = CodedInputStream.newInstance(buf.array(), offset, buf.limit());
+      } else {
+        cis = CodedInputStream.newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
+        cis.enableAliasing(true);
+      }
       int headerSize = cis.readRawVarint32();
       offset = cis.getTotalBytesRead();
       Message.Builder builder = RequestHeader.newBuilder();
@@ -2093,7 +2170,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       if ((totalRequestSize + callQueueSizeInBytes.sum()) > maxQueueSizeInBytes) {
         final Call callTooBig =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null, null, 0);
+            responder, totalRequestSize, null, null, 0, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         metrics.exception(CALL_QUEUE_TOO_BIG_EXCEPTION);
         setupResponse(responseBuffer, callTooBig, CALL_QUEUE_TOO_BIG_EXCEPTION,
@@ -2127,7 +2204,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
         if (header.hasCellBlockMeta()) {
           buf.position(offset);
-          cellScanner = cellBlockBuilder.createCellScannerReusingBuffers(this.codec, this.compressionCodec, buf);
+          ByteBuff dup = buf.duplicate();
+          dup.limit(offset + header.getCellBlockMeta().getLength());
+          cellScanner = cellBlockBuilder.createCellScannerReusingBuffers(this.codec,
+              this.compressionCodec, dup);
         }
       } catch (Throwable t) {
         InetSocketAddress address = getListenerAddress();
@@ -2148,7 +2228,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
         final Call readParamsFailedCall =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null, null, 0);
+            responder, totalRequestSize, null, null, 0, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, readParamsFailedCall, t,
           msg + "; " + t.getMessage());
@@ -2164,7 +2244,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         timeout = Math.max(minClientRequestTimeout, header.getTimeout());
       }
       Call call = new Call(id, this.service, md, header, param, cellScanner, this, responder,
-              totalRequestSize, traceInfo, this.addr, timeout);
+          totalRequestSize, traceInfo, this.addr, timeout, this.callCleanup);
 
       if (!scheduler.dispatch(new CallRunner(RpcServer.this, call))) {
         callQueueSizeInBytes.add(-1 * call.getSize());
@@ -2211,6 +2291,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     protected synchronized void close() {
       disposeSasl();
       data = null;
+      callCleanup = null;
       if (!channel.isOpen())
         return;
       try {socket.shutdownOutput();} catch(Exception ignored) {
@@ -2301,8 +2382,10 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           conf.getInt(ByteBufferPool.MAX_POOL_SIZE_KEY,
               conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
                   HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2));
+      this.minSizeForReservoirUse = getMinSizeForReservoirUse(this.reservoir);
     } else {
       reservoir = null;
+      this.minSizeForReservoirUse = Integer.MAX_VALUE;// reservoir itself not in place.
     }
     this.server = server;
     this.services = services;
@@ -2345,6 +2428,11 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     this.scheduler = scheduler;
     this.scheduler.init(new RpcSchedulerContext(this));
+  }
+
+  @VisibleForTesting
+  static int getMinSizeForReservoirUse(ByteBufferPool pool) {
+    return pool.getBufferSize() / 6;
   }
 
   @Override
@@ -2755,6 +2843,55 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   }
 
   /**
+   * This is extracted to a static method for better unit testing. We try to get buffer(s) from pool
+   * as much as possible.
+   *
+   * @param pool The ByteBufferPool to use
+   * @param minSizeForPoolUse Only for buffer size above this, we will try to use pool. Any buffer
+   *           need of size below this, create on heap ByteBuffer.
+   * @param reqLen Bytes count in request
+   */
+  @VisibleForTesting
+  static Pair<ByteBuff, CallCleanup> allocateByteBuffToReadInto(ByteBufferPool pool,
+      int minSizeForPoolUse, int reqLen) {
+    ByteBuff resultBuf;
+    List<ByteBuffer> bbs = new ArrayList<ByteBuffer>((reqLen / pool.getBufferSize()) + 1);
+    int remain = reqLen;
+    ByteBuffer buf = null;
+    while (remain >= minSizeForPoolUse && (buf = pool.getBuffer()) != null) {
+      bbs.add(buf);
+      remain -= pool.getBufferSize();
+    }
+    ByteBuffer[] bufsFromPool = null;
+    if (bbs.size() > 0) {
+      bufsFromPool = new ByteBuffer[bbs.size()];
+      bbs.toArray(bufsFromPool);
+    }
+    if (remain > 0) {
+      bbs.add(ByteBuffer.allocate(remain));
+    }
+    if (bbs.size() > 1) {
+      ByteBuffer[] items = new ByteBuffer[bbs.size()];
+      bbs.toArray(items);
+      resultBuf = new MultiByteBuff(items);
+    } else {
+      // We are backed by single BB
+      resultBuf = new SingleByteBuff(bbs.get(0));
+    }
+    resultBuf.limit(reqLen);
+    if (bufsFromPool != null) {
+      final ByteBuffer[] bufsFromPoolFinal = bufsFromPool;
+      return new Pair<ByteBuff, RpcServer.CallCleanup>(resultBuf, () -> {
+        // Return back all the BBs to pool
+        for (int i = 0; i < bufsFromPoolFinal.length; i++) {
+          pool.putbackBuffer(bufsFromPoolFinal[i]);
+        }
+      });
+    }
+    return new Pair<ByteBuff, RpcServer.CallCleanup>(resultBuf, null);
+  }
+
+  /**
    * Needed for features such as delayed calls.  We need to be able to store the current call
    * so that we can complete it later or ask questions of what is supported by the current ongoing
    * call.
@@ -3052,6 +3189,46 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
       };
       idleScanTimer.schedule(idleScanTask, idleScanInterval);
+    }
+  }
+
+  private static class ByteBuffByteInput extends ByteInput {
+
+    private ByteBuff buf;
+    private int offset;
+    private int length;
+
+    ByteBuffByteInput(ByteBuff buf, int offset, int length) {
+      this.buf = buf;
+      this.offset = offset;
+      this.length = length;
+    }
+
+    @Override
+    public byte read(int offset) {
+      return this.buf.get(getAbsoluteOffset(offset));
+    }
+
+    private int getAbsoluteOffset(int offset) {
+      return this.offset + offset;
+    }
+
+    @Override
+    public int read(int offset, byte[] out, int outOffset, int len) {
+      this.buf.get(getAbsoluteOffset(offset), out, outOffset, len);
+      return len;
+    }
+
+    @Override
+    public int read(int offset, ByteBuffer out) {
+      int len = out.remaining();
+      this.buf.get(out, getAbsoluteOffset(offset), len);
+      return len;
+    }
+
+    @Override
+    public int size() {
+      return this.length;
     }
   }
 }

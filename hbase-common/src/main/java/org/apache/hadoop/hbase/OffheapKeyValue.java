@@ -36,10 +36,10 @@ public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
   protected final ByteBuffer buf;
   protected final int offset;
   protected final int length;
+  protected final boolean hasTags;
   private final short rowLen;
   private final int keyLen;
   private long seqId = 0;
-  private final boolean hasTags;
   // TODO : See if famLen can be cached or not?
 
   private static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
@@ -55,6 +55,18 @@ public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
     keyLen = ByteBufferUtils.toInt(this.buf, this.offset);
     this.hasTags = hasTags;
     this.seqId = seqId;
+  }
+
+  public OffheapKeyValue(ByteBuffer buf, int offset, int length) {
+    assert buf.isDirect();
+    this.buf = buf;
+    this.offset = offset;
+    this.length = length;
+    rowLen = ByteBufferUtils.toShort(this.buf, this.offset + KeyValue.ROW_OFFSET);
+    keyLen = ByteBufferUtils.toInt(this.buf, this.offset);
+    int tagsLen = this.length
+        - (this.keyLen + getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
+    this.hasTags = tagsLen > 0;
   }
 
   @Override
@@ -265,16 +277,19 @@ public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
 
   @Override
   public void setTimestamp(long ts) throws IOException {
-    // This Cell implementation is not yet used in write path.
-    // TODO when doing HBASE-15179
-    throw new UnsupportedOperationException();
+    ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), Bytes.toBytes(ts), 0,
+        Bytes.SIZEOF_LONG);
+  }
+
+  private int getTimestampOffset() {
+    return this.offset + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + this.keyLen
+        - KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 
   @Override
   public void setTimestamp(byte[] ts, int tsOffset) throws IOException {
-    // This Cell implementation is not yet used in write path.
-    // TODO when doing HBASE-15179
-    throw new UnsupportedOperationException();
+    ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), ts, tsOffset,
+        Bytes.SIZEOF_LONG);
   }
 
   @Override

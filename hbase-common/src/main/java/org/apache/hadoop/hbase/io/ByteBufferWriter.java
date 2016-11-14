@@ -23,29 +23,31 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * Interface adds support for writing {@link ByteBuffer} into OutputStream.
+ * This interface marks a class to support writing ByteBuffers into it.
+ * @see ByteArrayOutputStream
+ * @see ByteBufferOutputStream
  */
 @InterfaceAudience.Private
-public interface ByteBufferSupportOutputStream {
+public interface ByteBufferWriter {
 
   /**
    * Writes <code>len</code> bytes from the specified ByteBuffer starting at offset <code>off</code>
-   * to this output stream.
    *
    * @param b the data.
    * @param off the start offset in the data.
    * @param len the number of bytes to write.
-   * @exception IOException
-   *              if an I/O error occurs. In particular, an <code>IOException</code> is thrown if
-   *              the output stream is closed.
+   * @exception IOException if an I/O error occurs.
    */
   void write(ByteBuffer b, int off, int len) throws IOException;
 
   /**
-   * Writes an <code>int</code> to the underlying output stream as four
-   * bytes, high byte first.
+   * Writes an <code>int</code> to the underlying output stream as four bytes, high byte first.
    * @param i the <code>int</code> to write
    * @throws IOException if an I/O error occurs.
    */
+  // This is pure performance oriented API been added here. It has nothing to do with
+  // ByteBuffer and so not fully belong to here. This allows an int to be written at one go instead
+  // of 4 (4 bytes one by one).
+  // TODO remove it from here?
   void writeInt(int i) throws IOException;
 }

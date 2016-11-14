@@ -29,7 +29,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.io.ByteBufferSupportOutputStream;
+import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
@@ -144,8 +144,8 @@ public final class ByteBufferUtils {
      // We have writeInt in ByteBufferOutputStream so that it can directly write
      // int to underlying
      // ByteBuffer in one step.
-     if (out instanceof ByteBufferSupportOutputStream) {
-       ((ByteBufferSupportOutputStream) out).writeInt(value);
+     if (out instanceof ByteBufferWriter) {
+       ((ByteBufferWriter) out).writeInt(value);
      } else {
        StreamUtils.writeInt(out, value);
      }
@@ -182,8 +182,8 @@ public final class ByteBufferUtils {
    */
   public static void copyBufferToStream(OutputStream out, ByteBuffer in,
       int offset, int length) throws IOException {
-    if (out instanceof ByteBufferSupportOutputStream) {
-      ((ByteBufferSupportOutputStream) out).write(in, offset, length);
+    if (out instanceof ByteBufferWriter) {
+      ((ByteBufferWriter) out).write(in, offset, length);
     } else if (in.hasArray()) {
       out.write(in.array(), in.arrayOffset() + offset, length);
     } else {
