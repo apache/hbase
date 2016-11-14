@@ -2700,9 +2700,16 @@ public class AssignmentManager {
         + ", a=" + rs_a + ", b=" + rs_b;
     }
 
+    // Always bring the children back online. Even if they are not offline
+    // there's no harm in making them online again.
     regionOnline(a, serverName);
     regionOnline(b, serverName);
-    regionOffline(hri);
+
+    // Only offline the merging region if it is known to exist.
+    RegionState rs_p = regionStates.getRegionState(hri);
+    if (rs_p != null) {
+      regionOffline(hri);
+    }
 
     if (getTableStateManager().isTableState(hri.getTable(),
         TableState.State.DISABLED, TableState.State.DISABLING)) {
