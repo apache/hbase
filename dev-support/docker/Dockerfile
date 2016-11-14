@@ -130,7 +130,7 @@ RUN pip install python-dateutil
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx512m
+ENV MAVEN_OPTS -Xmx3g
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
