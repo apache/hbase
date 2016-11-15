@@ -181,7 +181,8 @@
       </activation>
       <properties>
         <profile.id>compile-protobuf</profile.id>
-        <sources.dir>${project.build.directory}/protoc-generated-sources</sources.dir>
+        <!--Include original and the generated protos dir when talking of sources-->
+        <sources.dir>${basedir}/src/main/java ${project.build.directory}/protoc-generated-sources</sources.dir>
         <classes.dir>${project.build.directory}/protoc-generated-classes</classes.dir>
         <!--When the compile for this profile runs, make sure it makes jars that
              can be related back to this shading profile. Give them a shading prefix.
