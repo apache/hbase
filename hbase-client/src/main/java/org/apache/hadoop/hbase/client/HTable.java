@@ -1319,13 +1319,10 @@ public class HTable implements HTableInterface {
           }
           RpcClient.setRpcTimeout(timeout);
           try {
-            RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(
-              getLocation().getRegionInfo().getRegionName(), rm);
-            regionMutationBuilder.setAtomic(true);
-            MultiRequest request =
-              MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
+            MultiRequest request = RequestConverter.buildMutateRequest(
+                    getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+                    new BinaryComparator(value), CompareType.EQUAL, rm);
             ClientProtos.MultiResponse response = getStub().multi(controller, request);
-            response.getRegionActionResult(0).getResultOrException(0).getResult();
             ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
             if (res.hasException()) {
               Throwable ex = ProtobufUtil.toException(res.getException());

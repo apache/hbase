@@ -33,6 +33,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -490,4 +491,34 @@ public class TestFromClientSide3 {
       table.close();
     }
   }
+
+  @Test
+  public void testCheckAndMutateApi() throws Exception {
+    byte[] row = Bytes.toBytes("ROW");
+    byte[] tableNameBytes = Bytes.toBytes("testCheckAndMutateApi");
+    byte[] family = FAMILY;
+    byte[] qualifier = Bytes.toBytes("QUALIFIER");
+    byte[] oldValue = null;
+    byte[] newValue = Bytes.toBytes("VALUE");
+    Put put = new Put(row);
+    put.add(family, qualifier, newValue);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(tableNameBytes));
+    HColumnDescriptor columnDesc = new HColumnDescriptor(family);
+    columnDesc.setTimeToLive(120);
+    tableDesc.addFamily(columnDesc);
+    admin.createTable(tableDesc);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableNameBytes);
+    try {
+      assertTrue(table.checkAndPut(row, family, qualifier, oldValue, put));
+      Delete delete = new Delete(row);
+      RowMutations mutations = new RowMutations(row);
+      mutations.add(delete);
+      assertTrue(table.checkAndMutate(row, family, qualifier, CompareOp.EQUAL, newValue, mutations));
+      assertFalse(table.checkAndMutate(row, family, qualifier, CompareOp.EQUAL, newValue, mutations));
+    } finally {
+      table.close();
+    }
+  }
+
 }
