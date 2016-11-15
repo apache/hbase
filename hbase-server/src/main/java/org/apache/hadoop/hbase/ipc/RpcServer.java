@@ -93,7 +93,6 @@ import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
-import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
@@ -2377,11 +2376,26 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       RpcScheduler scheduler)
       throws IOException {
     if (conf.getBoolean("hbase.ipc.server.reservoir.enabled", true)) {
-      this.reservoir = new ByteBufferPool(
-          conf.getInt(ByteBufferPool.BUFFER_SIZE_KEY, ByteBufferPool.DEFAULT_BUFFER_SIZE),
-          conf.getInt(ByteBufferPool.MAX_POOL_SIZE_KEY,
-              conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-                  HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2));
+      int poolBufSize = conf.getInt(ByteBufferPool.BUFFER_SIZE_KEY,
+          ByteBufferPool.DEFAULT_BUFFER_SIZE);
+      // The max number of buffers to be pooled in the ByteBufferPool. The default value been
+      // selected based on the #handlers configured. When it is read request, 2 MB is the max size
+      // at which we will send back one RPC request. Means max we need 2 MB for creating the
+      // response cell block. (Well it might be much lesser than this because in 2 MB size calc, we
+      // include the heap size overhead of each cells also.) Considering 2 MB, we will need
+      // (2 * 1024 * 1024) / poolBufSize buffers to make the response cell block. Pool buffer size
+      // is by default 64 KB.
+      // In case of read request, at the end of the handler process, we will make the response
+      // cellblock and add the Call to connection's response Q and a single Responder thread takes
+      // connections and responses from that one by one and do the socket write. So there is chances
+      // that by the time a handler originated response is actually done writing to socket and so
+      // released the BBs it used, the handler might have processed one more read req. On an avg 2x
+      // we consider and consider that also for the max buffers to pool
+      int bufsForTwoMB = (2 * 1024 * 1024) / poolBufSize;
+      int maxPoolSize = conf.getInt(ByteBufferPool.MAX_POOL_SIZE_KEY,
+          conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+              HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
+      this.reservoir = new ByteBufferPool(poolBufSize, maxPoolSize);
       this.minSizeForReservoirUse = getMinSizeForReservoirUse(this.reservoir);
     } else {
       reservoir = null;
