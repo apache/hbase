@@ -244,6 +244,8 @@ final class ByteInputByteString extends ByteString.LeafByteString {
   public CodedInputStream newCodedInput() {
     // We trust CodedInputStream not to modify the bytes, or to give anyone
     // else access to them.
-    return CodedInputStream.newInstance(buffer, offset, length, true);
+    CodedInputStream cis = CodedInputStream.newInstance(buffer, offset, length, true);
+    cis.enableAliasing(true);
+    return cis;
   }
 }

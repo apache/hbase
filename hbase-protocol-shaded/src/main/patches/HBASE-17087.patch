@@ -1,0 +1,14 @@
+diff --git a/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/ByteInputByteString.java b/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/ByteInputByteString.java
+index 1949602..30de4ec 100644
+--- a/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/ByteInputByteString.java
++++ b/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/ByteInputByteString.java
+@@ -244,6 +244,8 @@ final class ByteInputByteString extends ByteString.LeafByteString {
+   public CodedInputStream newCodedInput() {
+     // We trust CodedInputStream not to modify the bytes, or to give anyone
+     // else access to them.
+-    return CodedInputStream.newInstance(buffer, offset, length, true);
++    CodedInputStream cis = CodedInputStream.newInstance(buffer, offset, length, true);
++    cis.enableAliasing(true);
++    return cis;
+   }
+ }
