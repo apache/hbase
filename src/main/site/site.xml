@@ -108,6 +108,11 @@
       <item name="Metrics" href="metrics.html" target="_blank" />
       <item name="HBase on Windows" href="cygwin.html" target="_blank" />
       <item name="Cluster replication" href="book.html#replication" target="_blank" />
+      <item name="1.2 Documentation">
+        <item name="API" href="1.2/apidocs/index.html" target="_blank" />
+        <item name="X-Ref" href="1.2/xref/index.html" target="_blank" />
+        <item name="Ref Guide (single-page)" href="1.2/book.html" target="_blank" />
+      </item>
       <item name="1.1 Documentation">
         <item name="API" href="1.1/apidocs/index.html" target="_blank" />
         <item name="X-Ref" href="1.1/xref/index.html" target="_blank" />
