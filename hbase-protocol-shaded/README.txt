@@ -33,6 +33,11 @@ or
  $ mvn install -Pcompile-protobuf
 
 NOTE: 'install' above whereas other proto generation only needs 'compile'
+NOTE: Unlike elsehwere the above command does NOT install this modules jar
+into the repo., intentionally. The jar made by the above is a scratch jar
+that is part of the process that gets us to a set of files to check in;
+it is not for consumption. Run mvn install without the '-Pcompile-protobuf'
+option to get this modules' artifact installed in your repo!
 
 When finished, the content of src/main/java/org/apache/hadoop/hbase/shaded
 will have been updated. Make sure all builds and then carefully
