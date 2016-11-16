@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 
 /**
@@ -53,7 +52,11 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 public class RWQueueRpcExecutor extends RpcExecutor {
   private static final Log LOG = LogFactory.getLog(RWQueueRpcExecutor.class);
 
-  private final List<BlockingQueue<CallRunner>> queues;
+  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY =
+      "hbase.ipc.server.callqueue.read.ratio";
+  public static final String CALL_QUEUE_SCAN_SHARE_CONF_KEY =
+      "hbase.ipc.server.callqueue.scan.ratio";
+
   private final QueueBalancer writeBalancer;
   private final QueueBalancer readBalancer;
   private final QueueBalancer scanBalancer;
@@ -64,111 +67,52 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private final int numReadQueues;
   private final int numScanQueues;
 
-  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
-      final float readShare, final int maxQueueLength,
-      final Configuration conf, final Abortable abortable) {
-    this(name, handlerCount, numQueues, readShare, maxQueueLength, 0,
-      conf, abortable, LinkedBlockingQueue.class);
-  }
+  public RWQueueRpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
+      final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
+    super(name, handlerCount, maxQueueLength, priority, conf, abortable);
 
-  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
-      final float readShare, final float scanShare, final int maxQueueLength) {
-    this(name, handlerCount, numQueues, readShare, scanShare, maxQueueLength, null, null);
-  }
+    float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
+    float callqScanShare = conf.getFloat(CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0);
 
-  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
-      final float readShare, final float scanShare, final int maxQueueLength,
-      final Configuration conf, final Abortable abortable) {
-    this(name, handlerCount, numQueues, readShare, scanShare, maxQueueLength,
-      conf, abortable, LinkedBlockingQueue.class);
-  }
+    numWriteQueues = calcNumWriters(this.numCallQueues, callqReadShare);
+    writeHandlersCount = Math.max(numWriteQueues, calcNumWriters(handlerCount, callqReadShare));
 
-  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
-      final float readShare, final int maxQueueLength,
-      final Configuration conf, final Abortable abortable,
-      final Class<? extends BlockingQueue> readQueueClass, Object... readQueueInitArgs) {
-    this(name, handlerCount, numQueues, readShare, 0, maxQueueLength, conf, abortable,
-      readQueueClass, readQueueInitArgs);
-  }
+    int readQueues = calcNumReaders(this.numCallQueues, callqReadShare);
+    int readHandlers = Math.max(readQueues, calcNumReaders(handlerCount, callqReadShare));
 
-  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
-      final float readShare, final float scanShare, final int maxQueueLength,
-      final Configuration conf, final Abortable abortable,
-      final Class<? extends BlockingQueue> readQueueClass, Object... readQueueInitArgs) {
-    this(name, calcNumWriters(handlerCount, readShare), calcNumReaders(handlerCount, readShare),
-      calcNumWriters(numQueues, readShare), calcNumReaders(numQueues, readShare), scanShare,
-      LinkedBlockingQueue.class, new Object[] {maxQueueLength},
-      readQueueClass, ArrayUtils.addAll(new Object[] {maxQueueLength}, readQueueInitArgs));
-  }
+    int scanQueues = Math.max(0, (int)Math.floor(readQueues * callqScanShare));
+    int scanHandlers = Math.max(0, (int)Math.floor(readHandlers * callqScanShare));
 
-  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
-      final float readShare, final float scanShare,
-      final Class<? extends BlockingQueue> writeQueueClass, Object[] writeQueueInitArgs,
-      final Class<? extends BlockingQueue> readQueueClass, Object[] readQueueInitArgs) {
-    this(name, calcNumWriters(handlerCount, readShare), calcNumReaders(handlerCount, readShare),
-      calcNumWriters(numQueues, readShare), calcNumReaders(numQueues, readShare), scanShare,
-      writeQueueClass, writeQueueInitArgs,
-      readQueueClass, readQueueInitArgs);
-  }
-
-  public RWQueueRpcExecutor(final String name, final int writeHandlers, final int readHandlers,
-      final int numWriteQueues, final int numReadQueues,
-      final Class<? extends BlockingQueue> writeQueueClass, Object[] writeQueueInitArgs,
-      final Class<? extends BlockingQueue> readQueueClass, Object[] readQueueInitArgs) {
-    this(name, writeHandlers, readHandlers, numWriteQueues, numReadQueues, 0,
-      writeQueueClass, writeQueueInitArgs, readQueueClass, readQueueInitArgs);
-  }
-
-  public RWQueueRpcExecutor(final String name, int writeHandlers, int readHandlers,
-      int numWriteQueues, int numReadQueues, float scanShare,
-      final Class<? extends BlockingQueue> writeQueueClass, Object[] writeQueueInitArgs,
-      final Class<? extends BlockingQueue> readQueueClass, Object[] readQueueInitArgs) {
-    super(name, Math.max(writeHandlers, numWriteQueues) + Math.max(readHandlers, numReadQueues));
-
-    int numScanQueues = Math.max(0, (int)Math.floor(numReadQueues * scanShare));
-    int scanHandlers = Math.max(0, (int)Math.floor(readHandlers * scanShare));
-    if ((numReadQueues - numScanQueues) > 0) {
-      numReadQueues -= numScanQueues;
+    if ((readQueues - scanQueues) > 0) {
+      readQueues -= scanQueues;
       readHandlers -= scanHandlers;
     } else {
-      numScanQueues = 0;
+      scanQueues = 0;
       scanHandlers = 0;
     }
 
-    this.writeHandlersCount = Math.max(writeHandlers, numWriteQueues);
-    this.readHandlersCount = Math.max(readHandlers, numReadQueues);
-    this.scanHandlersCount = Math.max(scanHandlers, numScanQueues);
-    this.numWriteQueues = numWriteQueues;
-    this.numReadQueues = numReadQueues;
-    this.numScanQueues = numScanQueues;
+    numReadQueues = readQueues;
+    readHandlersCount = readHandlers;
+    numScanQueues = scanQueues;
+    scanHandlersCount = scanHandlers;
+
     this.writeBalancer = getBalancer(numWriteQueues);
     this.readBalancer = getBalancer(numReadQueues);
     this.scanBalancer = numScanQueues > 0 ? getBalancer(numScanQueues) : null;
 
-    queues = new ArrayList<BlockingQueue<CallRunner>>(numWriteQueues + numReadQueues + numScanQueues);
-    LOG.info(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount
-        + " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount + " scanQueues="
-        + numScanQueues + " scanHandlers=" + scanHandlersCount);
+    initializeQueues(numWriteQueues);
+    initializeQueues(numReadQueues);
+    initializeQueues(numScanQueues);
 
-    if (writeQueueInitArgs.length > 0) {
-      currentQueueLimit = (int) writeQueueInitArgs[0];
-      writeQueueInitArgs[0] = Math.max((int) writeQueueInitArgs[0],
-        DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
-    }
-    for (int i = 0; i < numWriteQueues; ++i) {
-      queues.add((BlockingQueue<CallRunner>)
-        ReflectionUtils.newInstance(writeQueueClass, writeQueueInitArgs));
-    }
+    LOG.info(getName() + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount
+      + " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount + " scanQueues="
+      + numScanQueues + " scanHandlers=" + scanHandlersCount);
+  }
 
-    if (readQueueInitArgs.length > 0) {
-      currentQueueLimit = (int) readQueueInitArgs[0];
-      readQueueInitArgs[0] = Math.max((int) readQueueInitArgs[0],
-        DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
-    }
-    for (int i = 0; i < (numReadQueues + numScanQueues); ++i) {
-      queues.add((BlockingQueue<CallRunner>)
-        ReflectionUtils.newInstance(readQueueClass, readQueueInitArgs));
-    }
+  @Override
+  protected int computeNumCallQueues(final int handlerCount, final float callQueuesHandlersFactor) {
+    // at least 1 read queue and 1 write queue
+    return Math.max(2, (int) Math.round(handlerCount * callQueuesHandlersFactor));
   }
 
   @Override
@@ -240,20 +184,6 @@ public class RWQueueRpcExecutor extends RpcExecutor {
       return request.hasScannerId();
     }
     return false;
-  }
-
-  @Override
-  public int getQueueLength() {
-    int length = 0;
-    for (final BlockingQueue<CallRunner> queue: queues) {
-      length += queue.size();
-    }
-    return length;
-  }
-
-  @Override
-  protected List<BlockingQueue<CallRunner>> getQueues() {
-    return queues;
   }
 
   /*

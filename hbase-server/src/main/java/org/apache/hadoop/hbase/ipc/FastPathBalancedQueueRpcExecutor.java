@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import java.util.Deque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 
 import org.apache.hadoop.conf.Configuration;
@@ -44,19 +43,15 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
   private final Deque<FastPathHandler> fastPathHandlerStack = new ConcurrentLinkedDeque<>();
 
   public FastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
-                                          final int numQueues, final int maxQueueLength, final Configuration conf,
-                                          final Abortable abortable) {
-    super(name, handlerCount, numQueues, conf, abortable, LinkedBlockingQueue.class,
-        maxQueueLength);
+      final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
+      final Abortable abortable) {
+    super(name, handlerCount, maxQueueLength, priority, conf, abortable);
   }
 
-  public FastPathBalancedQueueRpcExecutor(String name, int handlerCount,
-                                          int numCallQueues,
-                                          Configuration conf,
-                                          Abortable abortable,
-                                          Class<? extends BlockingQueue> queueClass,
-                                          Object... args) {
-    super(name, handlerCount, numCallQueues, conf, abortable, queueClass, args);
+  public FastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
+      final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
+      final Configuration conf, final Abortable abortable) {
+    super(name, handlerCount, callQueueType, maxQueueLength, priority, conf, abortable);
   }
 
   @Override

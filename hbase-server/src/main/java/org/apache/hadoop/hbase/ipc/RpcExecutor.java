@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +36,8 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -47,31 +52,115 @@ public abstract class RpcExecutor {
   private static final Log LOG = LogFactory.getLog(RpcExecutor.class);
 
   protected static final int DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT = 250;
+  public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY = "hbase.ipc.server.callqueue.handler.factor";
+
+  /** max delay in msec used to bound the deprioritized requests */
+  public static final String QUEUE_MAX_CALL_DELAY_CONF_KEY = "hbase.ipc.server.queue.max.call.delay";
+
+  /**
+   * The default, 'fifo', has the least friction but is dumb. If set to 'deadline', uses a priority
+   * queue and deprioritizes long-running scans. Sorting by priority comes at a cost, reduced
+   * throughput.
+   */
+  public static final String CALL_QUEUE_TYPE_CODEL_CONF_VALUE = "codel";
+  public static final String CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE = "deadline";
+  public static final String CALL_QUEUE_TYPE_FIFO_CONF_VALUE = "fifo";
+  public static final String CALL_QUEUE_TYPE_CONF_KEY = "hbase.ipc.server.callqueue.type";
+  public static final String CALL_QUEUE_TYPE_CONF_DEFAULT = CALL_QUEUE_TYPE_FIFO_CONF_VALUE;
+
+  // These 3 are only used by Codel executor
+  public static final String CALL_QUEUE_CODEL_TARGET_DELAY = "hbase.ipc.server.callqueue.codel.target.delay";
+  public static final String CALL_QUEUE_CODEL_INTERVAL = "hbase.ipc.server.callqueue.codel.interval";
+  public static final String CALL_QUEUE_CODEL_LIFO_THRESHOLD = "hbase.ipc.server.callqueue.codel.lifo.threshold";
+
+  public static final int CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY = 100;
+  public static final int CALL_QUEUE_CODEL_DEFAULT_INTERVAL = 100;
+  public static final double CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD = 0.8;
+
+  private AtomicLong numGeneralCallsDropped = new AtomicLong();
+  private AtomicLong numLifoModeSwitches = new AtomicLong();
+
+  protected final int numCallQueues;
+  protected final List<BlockingQueue<CallRunner>> queues;
+  private final Class<? extends BlockingQueue> queueClass;
+  private final Object[] queueInitArgs;
+
+  private final PriorityFunction priority;
 
   protected volatile int currentQueueLimit;
 
   private final AtomicInteger activeHandlerCount = new AtomicInteger(0);
   private final List<Handler> handlers;
   private final int handlerCount;
-  private final String name;
   private final AtomicInteger failedHandlerCount = new AtomicInteger(0);
 
+  private String name;
   private boolean running;
 
   private Configuration conf = null;
   private Abortable abortable = null;
 
-  public RpcExecutor(final String name, final int handlerCount) {
-    this.handlers = new ArrayList<Handler>(handlerCount);
-    this.handlerCount = handlerCount;
-    this.name = Strings.nullToEmpty(name);
+  public RpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
+      final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
+    this(name, handlerCount, conf.get(CALL_QUEUE_TYPE_CONF_KEY,
+      CALL_QUEUE_TYPE_CONF_DEFAULT), maxQueueLength, priority, conf, abortable);
   }
 
-  public RpcExecutor(final String name, final int handlerCount, final Configuration conf,
+  public RpcExecutor(final String name, final int handlerCount, final String callQueueType,
+      final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
       final Abortable abortable) {
-    this(name, handlerCount);
+    this.name = Strings.nullToEmpty(name);
     this.conf = conf;
     this.abortable = abortable;
+
+    float callQueuesHandlersFactor = this.conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0);
+    this.numCallQueues = computeNumCallQueues(handlerCount, callQueuesHandlersFactor);
+    this.queues = new ArrayList<>(this.numCallQueues);
+
+    this.handlerCount = Math.max(handlerCount, this.numCallQueues);
+    this.handlers = new ArrayList<>(this.handlerCount);
+
+    this.priority = priority;
+
+    if (isDeadlineQueueType(callQueueType)) {
+      this.name += ".Deadline";
+      this.queueInitArgs = new Object[] { maxQueueLength,
+        new CallPriorityComparator(conf, this.priority) };
+      this.queueClass = BoundedPriorityBlockingQueue.class;
+    } else if (isCodelQueueType(callQueueType)) {
+      this.name += ".Codel";
+      int codelTargetDelay = conf.getInt(CALL_QUEUE_CODEL_TARGET_DELAY,
+        CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY);
+      int codelInterval = conf.getInt(CALL_QUEUE_CODEL_INTERVAL, CALL_QUEUE_CODEL_DEFAULT_INTERVAL);
+      double codelLifoThreshold = conf.getDouble(CALL_QUEUE_CODEL_LIFO_THRESHOLD,
+        CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD);
+      queueInitArgs = new Object[] { maxQueueLength, codelTargetDelay, codelInterval,
+          codelLifoThreshold, numGeneralCallsDropped, numLifoModeSwitches };
+      queueClass = AdaptiveLifoCoDelCallQueue.class;
+    } else {
+      this.name += ".Fifo";
+      queueInitArgs = new Object[] { maxQueueLength };
+      queueClass = LinkedBlockingQueue.class;
+    }
+
+    LOG.info("RpcExecutor " + " name " + " using " + callQueueType
+        + " as call queue; numCallQueues=" + numCallQueues + "; maxQueueLength=" + maxQueueLength
+        + "; handlerCount=" + handlerCount);
+  }
+
+  protected int computeNumCallQueues(final int handlerCount, final float callQueuesHandlersFactor) {
+    return Math.max(1, (int) Math.round(handlerCount * callQueuesHandlersFactor));
+  }
+
+  protected void initializeQueues(final int numQueues) {
+    if (queueInitArgs.length > 0) {
+      currentQueueLimit = (int) queueInitArgs[0];
+      queueInitArgs[0] = Math.max((int) queueInitArgs[0], DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
+    }
+    for (int i = 0; i < numQueues; ++i) {
+      queues
+          .add((BlockingQueue<CallRunner>) ReflectionUtils.newInstance(queueClass, queueInitArgs));
+    }
   }
 
   public void start(final int port) {
@@ -91,13 +180,21 @@ public abstract class RpcExecutor {
   }
 
   /** Returns the length of the pending queue */
-  public abstract int getQueueLength();
+  public int getQueueLength() {
+    int length = 0;
+    for (final BlockingQueue<CallRunner> queue: queues) {
+      length += queue.size();
+    }
+    return length;
+  }
 
   /** Add the request to the executor queue */
   public abstract boolean dispatch(final CallRunner callTask) throws InterruptedException;
 
   /** Returns the list of request queues */
-  protected abstract List<BlockingQueue<CallRunner>> getQueues();
+  protected List<BlockingQueue<CallRunner>> getQueues() {
+    return queues;
+  }
 
   protected void startHandlers(final int port) {
     List<BlockingQueue<CallRunner>> callQueues = getQueues();
@@ -116,16 +213,16 @@ public abstract class RpcExecutor {
    * Start up our handlers.
    */
   protected void startHandlers(final String nameSuffix, final int numHandlers,
-      final List<BlockingQueue<CallRunner>> callQueues,
-      final int qindex, final int qsize, final int port) {
+      final List<BlockingQueue<CallRunner>> callQueues, final int qindex, final int qsize,
+      final int port) {
     final String threadPrefix = name + Strings.nullToEmpty(nameSuffix);
-    double handlerFailureThreshhold =
-        conf == null ? 1.0 : conf.getDouble(HConstants.REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT,
-          HConstants.DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT);
+    double handlerFailureThreshhold = conf == null ? 1.0 : conf.getDouble(
+      HConstants.REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT,
+      HConstants.DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT);
     for (int i = 0; i < numHandlers; i++) {
       final int index = qindex + (i % qsize);
-      String name = "RpcServer." + threadPrefix + ".handler=" + handlers.size() + ",queue=" +
-          index + ",port=" + port;
+      String name = "RpcServer." + threadPrefix + ".handler=" + handlers.size() + ",queue=" + index
+          + ",port=" + port;
       Handler handler = getHandler(name, handlerFailureThreshhold, callQueues.get(index));
       handler.start();
       LOG.debug("Started " + name);
@@ -190,15 +287,15 @@ public abstract class RpcExecutor {
       } catch (Throwable e) {
         if (e instanceof Error) {
           int failedCount = failedHandlerCount.incrementAndGet();
-          if (this.handlerFailureThreshhold >= 0 &&
-              failedCount > handlerCount * this.handlerFailureThreshhold) {
-            String message = "Number of failed RpcServer handler runs exceeded threshhold " +
-              this.handlerFailureThreshhold + "; reason: " + StringUtils.stringifyException(e);
+          if (this.handlerFailureThreshhold >= 0
+              && failedCount > handlerCount * this.handlerFailureThreshhold) {
+            String message = "Number of failed RpcServer handler runs exceeded threshhold "
+                + this.handlerFailureThreshhold + "; reason: " + StringUtils.stringifyException(e);
             if (abortable != null) {
               abortable.abort(message, e);
             } else {
-              LOG.error("Error but can't abort because abortable is null: " +
-                  StringUtils.stringifyException(e));
+              LOG.error("Error but can't abort because abortable is null: "
+                  + StringUtils.stringifyException(e));
               throw e;
             }
           } else {
@@ -255,6 +352,59 @@ public abstract class RpcExecutor {
   }
 
   /**
+   * Comparator used by the "normal callQueue" if DEADLINE_CALL_QUEUE_CONF_KEY is set to true. It
+   * uses the calculated "deadline" e.g. to deprioritize long-running job If multiple requests have
+   * the same deadline BoundedPriorityBlockingQueue will order them in FIFO (first-in-first-out)
+   * manner.
+   */
+  private static class CallPriorityComparator implements Comparator<CallRunner> {
+    private final static int DEFAULT_MAX_CALL_DELAY = 5000;
+
+    private final PriorityFunction priority;
+    private final int maxDelay;
+
+    public CallPriorityComparator(final Configuration conf, final PriorityFunction priority) {
+      this.priority = priority;
+      this.maxDelay = conf.getInt(QUEUE_MAX_CALL_DELAY_CONF_KEY, DEFAULT_MAX_CALL_DELAY);
+    }
+
+    @Override
+    public int compare(CallRunner a, CallRunner b) {
+      RpcServer.Call callA = a.getCall();
+      RpcServer.Call callB = b.getCall();
+      long deadlineA = priority.getDeadline(callA.getHeader(), callA.param);
+      long deadlineB = priority.getDeadline(callB.getHeader(), callB.param);
+      deadlineA = callA.timestamp + Math.min(deadlineA, maxDelay);
+      deadlineB = callB.timestamp + Math.min(deadlineB, maxDelay);
+      return Long.compare(deadlineA, deadlineB);
+    }
+  }
+
+  public static boolean isDeadlineQueueType(final String callQueueType) {
+    return callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
+  }
+
+  public static boolean isCodelQueueType(final String callQueueType) {
+    return callQueueType.equals(CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
+  }
+
+  public static boolean isFifoQueueType(final String callQueueType) {
+    return callQueueType.equals(CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
+  }
+
+  public long getNumGeneralCallsDropped() {
+    return numGeneralCallsDropped.get();
+  }
+
+  public long getNumLifoModeSwitches() {
+    return numLifoModeSwitches.get();
+  }
+
+  public String getName() {
+    return this.name;
+  }
+
+  /**
    * Update current soft limit for executor's call queues
    * @param conf updated configuration
    */
@@ -264,5 +414,21 @@ public abstract class RpcExecutor {
       configKey = RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH;
     }
     currentQueueLimit = conf.getInt(configKey, currentQueueLimit);
+  }
+
+  public void onConfigurationChange(Configuration conf) {
+    // update CoDel Scheduler tunables
+    int codelTargetDelay = conf.getInt(CALL_QUEUE_CODEL_TARGET_DELAY,
+      CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY);
+    int codelInterval = conf.getInt(CALL_QUEUE_CODEL_INTERVAL, CALL_QUEUE_CODEL_DEFAULT_INTERVAL);
+    double codelLifoThreshold = conf.getDouble(CALL_QUEUE_CODEL_LIFO_THRESHOLD,
+      CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD);
+
+    for (BlockingQueue<CallRunner> queue : queues) {
+      if (queue instanceof AdaptiveLifoCoDelCallQueue) {
+        ((AdaptiveLifoCoDelCallQueue) queue).updateTunables(codelTargetDelay, codelInterval,
+          codelLifoThreshold);
+      }
+    }
   }
 }
