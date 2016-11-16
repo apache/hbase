@@ -155,22 +155,25 @@
       <id>compile-protobuf</id>
       <!--
          Generate and shade proto files. Drops generated java files
-         under src/main/java. Check in the generated files so available
-         at build time. Run this profile/step everytime you change proto
-         files or update the protobuf version. If you add a proto, be
-         sure to add it to the list below in the hadoop-maven-plugin
-         else we won't 'see' it.
+         under src/main/java when done. Check in the generated files so
+         available at build time. Run this profile/step everytime you change
+         proto files or update the protobuf version.
 
          The below does a bunch of ugly stuff. It purges current content
          of the generated and shaded com.google.protobuf java files first.
-         It does this because later we apply patches later and patches
-         fail they've already been applied. We remove too because we
-         overlay the shaded protobuf and if files have been removed or
-         added, it'll be more plain if we have first done this delete.
+         Let me say that again. We do a remove of java files under src/main/java
+         in the shaded dirs. It does this because later we apply patches and
+         patches fail if they've already been applied. We remove too because we
+         overlay the shaded protobuf and if files have been removed or added,
+         it'll be more plain if we have first done this delete.
 
-         Next up we generate protos, build a jar, shade it (which
-         includes the referenced protobuf), undo it over the src/main/java
-         directory, and then apply patches.
+         Next up we generate protos, build a scratch jar that contains protos
+         only and stuff we want shaded (we have to do this because shading only
+         works at install time on a jar), run the shade on the jar, then
+         carefully STOP this scratch jar from being put into the local repository
+         (because it can mess up builds that come later... mvn automatically wants
+         to install artifact into repo per module). Finally, undo this shaded
+         jar over the src/main/java directory, and then apply patches atop this.
 
          The result needs to be checked in.
       -->
@@ -181,8 +184,11 @@
       </activation>
       <properties>
         <profile.id>compile-protobuf</profile.id>
-        <!--Include original and the generated protos dir when talking of sources-->
-        <sources.dir>${basedir}/src/main/java ${project.build.directory}/protoc-generated-sources</sources.dir>
+        <!--Directory under target to hold generated protos files-->
+        <protoc.sources.dir>${project.build.directory}/protoc-generated-sources</protoc.sources.dir>
+        <!--When doing this step, the sources.dir is pointed at generated protos, NOT src/main/java-->
+        <sources.dir>${protoc.sources.dir}</sources.dir>
+        <!--Where to compile protos into-->
         <classes.dir>${project.build.directory}/protoc-generated-classes</classes.dir>
         <!--When the compile for this profile runs, make sure it makes jars that
              can be related back to this shading profile. Give them a shading prefix.
@@ -228,7 +234,7 @@
                 </goals>
                 <configuration>
                   <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-                  <outputDirectory>${sources.dir}</outputDirectory>
+                  <outputDirectory>${protoc.sources.dir}</outputDirectory>
                   <attachProtoSources>false</attachProtoSources>
                 </configuration>
               </execution>
@@ -345,6 +351,14 @@
           </execution>
         </executions>
       </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-install-plugin</artifactId>
+            <version>2.5.2</version>
+            <configuration>
+                <skip>true</skip>
+            </configuration>
+        </plugin>
         </plugins>
       </build>
     </profile>
