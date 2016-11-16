@@ -1087,7 +1087,6 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
         + "  hbase snapshot export \\\n"
         + "    --snapshot MySnapshot --copy-from hdfs://srv2:8082/hbase \\\n"
         + "    --copy-to hdfs://srv1:50070/hbase");
-    System.exit(1);
   }
 
   @Override protected void addOptions() {
