@@ -22,14 +22,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
- * This class contains the mapping information between each region and
+ * This class contains the mapping information between each region name and
  * its favored region server list. Used by {@link FavoredNodeLoadBalancer} set
  * of classes and from unit tests (hence the class is public)
  *
@@ -37,40 +35,38 @@ import org.apache.hadoop.hbase.ServerName;
  */
 @InterfaceAudience.Private
 public class FavoredNodesPlan {
-  private static final Log LOG = LogFactory.getLog(
-      FavoredNodesPlan.class.getName());
 
-  /** the map between each region and its favored region server list */
-  private Map<HRegionInfo, List<ServerName>> favoredNodesMap;
+  /** the map between each region name and its favored region server list */
+  private Map<String, List<ServerName>> favoredNodesMap;
 
   public static enum Position {
     PRIMARY,
     SECONDARY,
-    TERTIARY;
-  };
+    TERTIARY
+  }
 
   public FavoredNodesPlan() {
-    favoredNodesMap = new ConcurrentHashMap<HRegionInfo, List<ServerName>>();
+    favoredNodesMap = new ConcurrentHashMap<String, List<ServerName>>();
   }
 
   /**
-   * Add an assignment to the plan
+   * Update an assignment to the plan
    * @param region
    * @param servers
    */
-  public synchronized void updateFavoredNodesMap(HRegionInfo region,
-      List<ServerName> servers) {
-    if (region == null || servers == null || servers.size() ==0)
+  public void updateFavoredNodesMap(HRegionInfo region, List<ServerName> servers) {
+    if (region == null || servers == null || servers.size() == 0) {
       return;
-    this.favoredNodesMap.put(region, servers);
+    }
+    this.favoredNodesMap.put(region.getRegionNameAsString(), servers);
   }
 
   /**
    * @param region
    * @return the list of favored region server for this region based on the plan
    */
-  public synchronized List<ServerName> getFavoredNodes(HRegionInfo region) {
-    return favoredNodesMap.get(region);
+  public List<ServerName> getFavoredNodes(HRegionInfo region) {
+    return favoredNodesMap.get(region.getRegionNameAsString());
   }
 
   /**
@@ -97,23 +93,8 @@ public class FavoredNodesPlan {
   /**
    * @return the mapping between each region to its favored region server list
    */
-  public synchronized Map<HRegionInfo, List<ServerName>> getAssignmentMap() {
-    return this.favoredNodesMap;
-  }
-
-  /**
-   * Add an assignment to the plan
-   * @param region
-   * @param servers
-   */
-  public synchronized void updateAssignmentPlan(HRegionInfo region,
-      List<ServerName> servers) {
-    if (region == null || servers == null || servers.size() ==0)
-      return;
-    this.favoredNodesMap.put(region, servers);
-    LOG.info("Update the assignment plan for region " +
-        region.getRegionNameAsString() + " ; favored nodes " +
-        FavoredNodeAssignmentHelper.getFavoredNodesAsString(servers));
+  public Map<String, List<ServerName>> getAssignmentMap() {
+    return favoredNodesMap;
   }
 
   @Override
@@ -128,15 +109,14 @@ public class FavoredNodesPlan {
       return false;
     }
     // To compare the map from objec o is identical to current assignment map.
-    Map<HRegionInfo, List<ServerName>> comparedMap=
-      ((FavoredNodesPlan)o).getAssignmentMap();
+    Map<String, List<ServerName>> comparedMap = ((FavoredNodesPlan)o).getAssignmentMap();
 
     // compare the size
     if (comparedMap.size() != this.favoredNodesMap.size())
       return false;
 
     // compare each element in the assignment map
-    for (Map.Entry<HRegionInfo, List<ServerName>> entry :
+    for (Map.Entry<String, List<ServerName>> entry :
       comparedMap.entrySet()) {
       List<ServerName> serverList = this.favoredNodesMap.get(entry.getKey());
       if (serverList == null && entry.getValue() != null) {

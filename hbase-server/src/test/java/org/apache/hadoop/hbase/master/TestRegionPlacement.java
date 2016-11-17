@@ -299,12 +299,13 @@ public class TestRegionPlacement {
    * @return
    */
   private FavoredNodesPlan shuffleAssignmentPlan(FavoredNodesPlan plan,
-      FavoredNodesPlan.Position p1, FavoredNodesPlan.Position p2) {
+      FavoredNodesPlan.Position p1, FavoredNodesPlan.Position p2) throws IOException {
     FavoredNodesPlan shuffledPlan = new FavoredNodesPlan();
 
-    for (Map.Entry<HRegionInfo, List<ServerName>> entry :
+    Map<String, HRegionInfo> regionToHRegion =
+        rp.getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap();
+    for (Map.Entry<String, List<ServerName>> entry :
       plan.getAssignmentMap().entrySet()) {
-      HRegionInfo region = entry.getKey();
 
       // copy the server list from the original plan
       List<ServerName> shuffledServerList = new ArrayList<ServerName>();
@@ -315,7 +316,7 @@ public class TestRegionPlacement {
       shuffledServerList.set(p2.ordinal(), entry.getValue().get(p1.ordinal()));
 
       // update the plan
-      shuffledPlan.updateAssignmentPlan(region, shuffledServerList);
+      shuffledPlan.updateFavoredNodesMap(regionToHRegion.get(entry.getKey()), shuffledServerList);
     }
     return shuffledPlan;
   }

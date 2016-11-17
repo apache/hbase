@@ -409,7 +409,7 @@ public class RegionPlacementMaintainer {
           favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
           // Update the assignment plan
-          plan.updateAssignmentPlan(regions.get(i), favoredServers);
+          plan.updateFavoredNodesMap(regions.get(i), favoredServers);
         }
         LOG.info("Generated the assignment plan for " + numRegions +
             " regions from table " + tableName + " with " +
@@ -444,7 +444,7 @@ public class RegionPlacementMaintainer {
           favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
           // Update the assignment plan
-          plan.updateAssignmentPlan(regions.get(i), favoredServers);
+          plan.updateFavoredNodesMap(regions.get(i), favoredServers);
         }
         LOG.info("Generated the assignment plan for " + numRegions +
             " regions from table " + tableName + " with " +
@@ -614,13 +614,13 @@ public class RegionPlacementMaintainer {
     if (plan == null) return;
     LOG.info("========== Start to print the assignment plan ================");
     // sort the map based on region info
-    Map<HRegionInfo, List<ServerName>> assignmentMap =
-      new TreeMap<HRegionInfo, List<ServerName>>(plan.getAssignmentMap());
+    Map<String, List<ServerName>> assignmentMap =
+      new TreeMap<String, List<ServerName>>(plan.getAssignmentMap());
 
-    for (Map.Entry<HRegionInfo, List<ServerName>> entry : assignmentMap.entrySet()) {
+    for (Map.Entry<String, List<ServerName>> entry : assignmentMap.entrySet()) {
 
       String serverList = FavoredNodeAssignmentHelper.getFavoredNodesAsString(entry.getValue());
-      String regionName = entry.getKey().getRegionNameAsString();
+      String regionName = entry.getKey();
       LOG.info("Region: " + regionName );
       LOG.info("Its favored nodes: " + serverList);
     }
@@ -636,9 +636,15 @@ public class RegionPlacementMaintainer {
   throws IOException {
     try {
       LOG.info("Start to update the hbase:meta with the new assignment plan");
-      Map<HRegionInfo, List<ServerName>> assignmentMap =
-        plan.getAssignmentMap();
-      FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(assignmentMap, conf);
+      Map<String, List<ServerName>> assignmentMap = plan.getAssignmentMap();
+      Map<HRegionInfo, List<ServerName>> planToUpdate = new HashMap<>(assignmentMap.size());
+      Map<String, HRegionInfo> regionToRegionInfoMap =
+        getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap();
+      for (Map.Entry<String, List<ServerName>> entry : assignmentMap.entrySet()) {
+        planToUpdate.put(regionToRegionInfoMap.get(entry.getKey()), entry.getValue());
+      }
+
+      FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(planToUpdate, conf);
       LOG.info("Updated the hbase:meta with the new assignment plan");
     } catch (Exception e) {
       LOG.error("Failed to update hbase:meta with the new assignment" +
@@ -680,7 +686,7 @@ public class RegionPlacementMaintainer {
               singleServerPlan = new FavoredNodesPlan();
             }
             // Update the single server update
-            singleServerPlan.updateAssignmentPlan(region, favoredServerList);
+            singleServerPlan.updateFavoredNodesMap(region, favoredServerList);
             regionUpdateInfos.add(
               new Pair<HRegionInfo, List<ServerName>>(region, favoredServerList));
           }
@@ -1104,7 +1110,7 @@ public class RegionPlacementMaintainer {
             LOG.error("Cannot parse the invalid favored nodes because " + e);
           }
           FavoredNodesPlan newPlan = new FavoredNodesPlan();
-          newPlan.updateAssignmentPlan(regionInfo, favoredNodes);
+          newPlan.updateFavoredNodesMap(regionInfo, favoredNodes);
           rp.updateAssignmentPlan(newPlan);
         }
       } else {
