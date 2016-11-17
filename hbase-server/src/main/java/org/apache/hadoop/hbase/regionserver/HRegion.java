@@ -6974,7 +6974,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               if (idx < results.size()
                   && CellUtil.matchingQualifier(results.get(idx), cell)) {
                 oldCell = results.get(idx);
-                long ts = Math.max(now, oldCell.getTimestamp());
+                long ts = Math.max(now, oldCell.getTimestamp() + 1);
 
                 // Process cell tags
                 List<Tag> tags = Tag.carryForwardTags(null, oldCell);
@@ -7307,7 +7307,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       long ts = now;
       if (idx < currentValues.size() && CellUtil.matchingQualifier(currentValues.get(idx), inc)) {
         currentValue = currentValues.get(idx);
-        ts = Math.max(now, currentValue.getTimestamp());
+        ts = Math.max(now, currentValue.getTimestamp() + 1);
         incrementAmount += getLongValue(currentValue);
         // Carry forward all tags
         tags = Tag.carryForwardTags(tags, currentValue);
