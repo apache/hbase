@@ -264,12 +264,19 @@ public class TestAssignmentListener {
       listener.reset();
       List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
       assertEquals(2, regions.size());
+      boolean sameServer = areAllRegionsLocatedOnSameServer(TABLE_NAME);
+      // If the regions are located by different server, we need to move
+      // regions to same server before merging. So the expected modifications
+      // will increaes to 5. (open + close)
+      final int expectedModifications = sameServer ? 3 : 5;
+      final int expectedLoadCount = sameServer ? 1 : 2;
+      final int expectedCloseCount = sameServer ? 2 : 3;
       admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
         regions.get(1).getEncodedNameAsBytes(), true);
-      listener.awaitModifications(3);
+      listener.awaitModifications(expectedModifications);
       assertEquals(1, admin.getTableRegions(TABLE_NAME).size());
-      assertEquals(1, listener.getLoadCount());     // new merged region added
-      assertEquals(2, listener.getCloseCount());    // daughters removed
+      assertEquals(expectedLoadCount, listener.getLoadCount());     // new merged region added
+      assertEquals(expectedCloseCount, listener.getCloseCount());    // daughters removed
 
       // Delete the table
       LOG.info("Drop Table");
@@ -281,6 +288,20 @@ public class TestAssignmentListener {
     } finally {
       am.unregisterListener(listener);
     }
+  }
+
+  private boolean areAllRegionsLocatedOnSameServer(TableName TABLE_NAME) {
+    MiniHBaseCluster miniCluster = TEST_UTIL.getMiniHBaseCluster();
+    int serverCount = 0;
+    for (JVMClusterUtil.RegionServerThread regionThread: miniCluster.getRegionServerThreads()) {
+      if (!regionThread.getRegionServer().getOnlineRegions(TABLE_NAME).isEmpty()) {
+        ++serverCount;
+      }
+      if (serverCount > 1) {
+        return false;
+      }
+    }
+    return serverCount == 1;
   }
 
   @Test
