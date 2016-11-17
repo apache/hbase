@@ -7512,7 +7512,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long ts = now;
     if (currentValue != null) {
       tags = TagUtil.carryForwardTags(tags, currentValue);
-      ts = Math.max(now, currentValue.getTimestamp());
+      ts = Math.max(now, currentValue.getTimestamp() + 1);
       newValue += getLongValue(currentValue);
     }
     // Now make up the new Cell. TODO: FIX. This is carnel knowledge of how KeyValues are made...
@@ -7538,7 +7538,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     byte [] row = mutation.getRow();
     if (currentValue != null) {
       tags = TagUtil.carryForwardTags(tags, currentValue);
-      ts = Math.max(now, currentValue.getTimestamp());
+      ts = Math.max(now, currentValue.getTimestamp() + 1);
       tags = TagUtil.carryForwardTTLTag(tags, mutation.getTTL());
       byte[] tagBytes = TagUtil.fromList(tags);
       // Allocate an empty cell and copy in all parts.
