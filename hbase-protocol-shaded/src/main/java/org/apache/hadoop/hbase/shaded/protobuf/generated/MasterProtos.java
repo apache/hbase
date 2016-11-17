@@ -842,7 +842,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -960,7 +960,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.ColumnFamilySchema column_families = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder>
           getColumnFamiliesFieldBuilder() {
         if (columnFamiliesBuilder_ == null) {
           columnFamiliesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -2257,7 +2257,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -3622,7 +3622,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -3740,7 +3740,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.ColumnFamilySchema column_families = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder>
           getColumnFamiliesFieldBuilder() {
         if (columnFamiliesBuilder_ == null) {
           columnFamiliesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -4955,7 +4955,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.RegionSpecifier region = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -5073,7 +5073,7 @@ public final class MasterProtos {
        * <code>optional .hbase.pb.ServerName dest_server_name = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
           getDestServerNameFieldBuilder() {
         if (destServerNameBuilder_ == null) {
           destServerNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -5514,7 +5514,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier>
         getRegionList();
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
@@ -5527,7 +5527,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
         getRegionOrBuilderList();
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
@@ -5676,7 +5676,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
         getRegionOrBuilderList() {
       return region_;
     }
@@ -6104,7 +6104,7 @@ public final class MasterProtos {
               regionBuilder_ = null;
               region_ = other.region_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              regionBuilder_ = 
+              regionBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getRegionFieldBuilder() : null;
             } else {
@@ -6349,7 +6349,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
            getRegionOrBuilderList() {
         if (regionBuilder_ != null) {
           return regionBuilder_.getMessageOrBuilderList();
@@ -6375,12 +6375,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.RegionSpecifier region = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder>
            getRegionBuilderList() {
         return getRegionFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -7536,7 +7536,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.RegionSpecifier region = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -8557,7 +8557,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.RegionSpecifier region = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -9554,7 +9554,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.RegionSpecifier region = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -10713,7 +10713,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableSchema table_schema = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
           getTableSchemaFieldBuilder() {
         if (tableSchemaBuilder_ == null) {
           tableSchemaBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -12020,7 +12020,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -13311,7 +13311,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName tableName = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -14578,7 +14578,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -15813,7 +15813,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -17143,7 +17143,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -17261,7 +17261,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableSchema table_schema = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
           getTableSchemaFieldBuilder() {
         if (tableSchemaBuilder_ == null) {
           tableSchemaBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -18496,7 +18496,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>
           getNamespaceDescriptorFieldBuilder() {
         if (namespaceDescriptorBuilder_ == null) {
           namespaceDescriptorBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -19226,7 +19226,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -19242,7 +19242,7 @@ public final class MasterProtos {
         getNamespaceNameBytes() {
       java.lang.Object ref = namespaceName_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         namespaceName_ = b;
@@ -19658,7 +19658,7 @@ public final class MasterProtos {
           getNamespaceNameBytes() {
         java.lang.Object ref = namespaceName_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           namespaceName_ = b;
@@ -20925,7 +20925,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>
           getNamespaceDescriptorFieldBuilder() {
         if (namespaceDescriptorBuilder_ == null) {
           namespaceDescriptorBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -21625,7 +21625,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -21641,7 +21641,7 @@ public final class MasterProtos {
         getNamespaceNameBytes() {
       java.lang.Object ref = namespaceName_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         namespaceName_ = b;
@@ -21975,7 +21975,7 @@ public final class MasterProtos {
           getNamespaceNameBytes() {
         java.lang.Object ref = namespaceName_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           namespaceName_ = b;
@@ -22599,7 +22599,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>
           getNamespaceDescriptorFieldBuilder() {
         if (namespaceDescriptorBuilder_ == null) {
           namespaceDescriptorBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -23040,7 +23040,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor>
         getNamespaceDescriptorList();
     /**
      * <code>repeated .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
@@ -23053,7 +23053,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>
         getNamespaceDescriptorOrBuilderList();
     /**
      * <code>repeated .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
@@ -23151,7 +23151,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>
         getNamespaceDescriptorOrBuilderList() {
       return namespaceDescriptor_;
     }
@@ -23458,7 +23458,7 @@ public final class MasterProtos {
               namespaceDescriptorBuilder_ = null;
               namespaceDescriptor_ = other.namespaceDescriptor_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              namespaceDescriptorBuilder_ = 
+              namespaceDescriptorBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getNamespaceDescriptorFieldBuilder() : null;
             } else {
@@ -23694,7 +23694,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>
            getNamespaceDescriptorOrBuilderList() {
         if (namespaceDescriptorBuilder_ != null) {
           return namespaceDescriptorBuilder_.getMessageOrBuilderList();
@@ -23720,12 +23720,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.NamespaceDescriptor namespaceDescriptor = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder>
            getNamespaceDescriptorBuilderList() {
         return getNamespaceDescriptorFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>
           getNamespaceDescriptorFieldBuilder() {
         if (namespaceDescriptorBuilder_ == null) {
           namespaceDescriptorBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -23895,7 +23895,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -23911,7 +23911,7 @@ public final class MasterProtos {
         getNamespaceNameBytes() {
       java.lang.Object ref = namespaceName_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         namespaceName_ = b;
@@ -24245,7 +24245,7 @@ public final class MasterProtos {
           getNamespaceNameBytes() {
         java.lang.Object ref = namespaceName_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           namespaceName_ = b;
@@ -24345,7 +24345,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableSchema tableSchema = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema>
         getTableSchemaList();
     /**
      * <code>repeated .hbase.pb.TableSchema tableSchema = 1;</code>
@@ -24358,7 +24358,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableSchema tableSchema = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
         getTableSchemaOrBuilderList();
     /**
      * <code>repeated .hbase.pb.TableSchema tableSchema = 1;</code>
@@ -24456,7 +24456,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableSchema tableSchema = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
         getTableSchemaOrBuilderList() {
       return tableSchema_;
     }
@@ -24763,7 +24763,7 @@ public final class MasterProtos {
               tableSchemaBuilder_ = null;
               tableSchema_ = other.tableSchema_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              tableSchemaBuilder_ = 
+              tableSchemaBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getTableSchemaFieldBuilder() : null;
             } else {
@@ -24999,7 +24999,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableSchema tableSchema = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
            getTableSchemaOrBuilderList() {
         if (tableSchemaBuilder_ != null) {
           return tableSchemaBuilder_.getMessageOrBuilderList();
@@ -25025,12 +25025,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableSchema tableSchema = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder>
            getTableSchemaBuilderList() {
         return getTableSchemaFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
           getTableSchemaFieldBuilder() {
         if (tableSchemaBuilder_ == null) {
           tableSchemaBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -25200,7 +25200,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -25216,7 +25216,7 @@ public final class MasterProtos {
         getNamespaceNameBytes() {
       java.lang.Object ref = namespaceName_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         namespaceName_ = b;
@@ -25550,7 +25550,7 @@ public final class MasterProtos {
           getNamespaceNameBytes() {
         java.lang.Object ref = namespaceName_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           namespaceName_ = b;
@@ -25650,7 +25650,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName tableName = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName>
         getTableNameList();
     /**
      * <code>repeated .hbase.pb.TableName tableName = 1;</code>
@@ -25663,7 +25663,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName tableName = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
         getTableNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.TableName tableName = 1;</code>
@@ -25761,7 +25761,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName tableName = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
         getTableNameOrBuilderList() {
       return tableName_;
     }
@@ -26068,7 +26068,7 @@ public final class MasterProtos {
               tableNameBuilder_ = null;
               tableName_ = other.tableName_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              tableNameBuilder_ = 
+              tableNameBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getTableNameFieldBuilder() : null;
             } else {
@@ -26304,7 +26304,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableName tableName = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
            getTableNameOrBuilderList() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilderList();
@@ -26330,12 +26330,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableName tableName = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder>
            getTableNameBuilderList() {
         return getTableNameFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -43556,7 +43556,7 @@ public final class MasterProtos {
               snapshotsBuilder_ = null;
               snapshots_ = other.snapshots_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              snapshotsBuilder_ = 
+              snapshotsBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getSnapshotsFieldBuilder() : null;
             } else {
@@ -49043,7 +49043,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -49664,7 +49664,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName>
         getTableNamesList();
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
@@ -49677,7 +49677,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
         getTableNamesOrBuilderList();
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
@@ -49833,7 +49833,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
         getTableNamesOrBuilderList() {
       return tableNames_;
     }
@@ -49873,7 +49873,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -49889,7 +49889,7 @@ public final class MasterProtos {
         getRegexBytes() {
       java.lang.Object ref = regex_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         regex_ = b;
@@ -49930,7 +49930,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -49946,7 +49946,7 @@ public final class MasterProtos {
         getNamespaceBytes() {
       java.lang.Object ref = namespace_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         namespace_ = b;
@@ -50306,7 +50306,7 @@ public final class MasterProtos {
               tableNamesBuilder_ = null;
               tableNames_ = other.tableNames_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              tableNamesBuilder_ = 
+              tableNamesBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getTableNamesFieldBuilder() : null;
             } else {
@@ -50555,7 +50555,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_names = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
            getTableNamesOrBuilderList() {
         if (tableNamesBuilder_ != null) {
           return tableNamesBuilder_.getMessageOrBuilderList();
@@ -50581,12 +50581,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_names = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder>
            getTableNamesBuilderList() {
         return getTableNamesFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNamesFieldBuilder() {
         if (tableNamesBuilder_ == null) {
           tableNamesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -50631,7 +50631,7 @@ public final class MasterProtos {
           getRegexBytes() {
         java.lang.Object ref = regex_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           regex_ = b;
@@ -50739,7 +50739,7 @@ public final class MasterProtos {
           getNamespaceBytes() {
         java.lang.Object ref = namespace_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           namespace_ = b;
@@ -50839,7 +50839,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableSchema table_schema = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema>
         getTableSchemaList();
     /**
      * <code>repeated .hbase.pb.TableSchema table_schema = 1;</code>
@@ -50852,7 +50852,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableSchema table_schema = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
         getTableSchemaOrBuilderList();
     /**
      * <code>repeated .hbase.pb.TableSchema table_schema = 1;</code>
@@ -50950,7 +50950,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableSchema table_schema = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
         getTableSchemaOrBuilderList() {
       return tableSchema_;
     }
@@ -51257,7 +51257,7 @@ public final class MasterProtos {
               tableSchemaBuilder_ = null;
               tableSchema_ = other.tableSchema_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              tableSchemaBuilder_ = 
+              tableSchemaBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getTableSchemaFieldBuilder() : null;
             } else {
@@ -51493,7 +51493,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableSchema table_schema = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
            getTableSchemaOrBuilderList() {
         if (tableSchemaBuilder_ != null) {
           return tableSchemaBuilder_.getMessageOrBuilderList();
@@ -51519,12 +51519,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableSchema table_schema = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder>
            getTableSchemaBuilderList() {
         return getTableSchemaFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchemaOrBuilder>
           getTableSchemaFieldBuilder() {
         if (tableSchemaBuilder_ == null) {
           tableSchemaBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -51730,7 +51730,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -51746,7 +51746,7 @@ public final class MasterProtos {
         getRegexBytes() {
       java.lang.Object ref = regex_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         regex_ = b;
@@ -51787,7 +51787,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -51803,7 +51803,7 @@ public final class MasterProtos {
         getNamespaceBytes() {
       java.lang.Object ref = namespace_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         namespace_ = b;
@@ -52182,7 +52182,7 @@ public final class MasterProtos {
           getRegexBytes() {
         java.lang.Object ref = regex_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           regex_ = b;
@@ -52290,7 +52290,7 @@ public final class MasterProtos {
           getNamespaceBytes() {
         java.lang.Object ref = namespace_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           namespace_ = b;
@@ -52390,7 +52390,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName>
         getTableNamesList();
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
@@ -52403,7 +52403,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
         getTableNamesOrBuilderList();
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
@@ -52501,7 +52501,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.TableName table_names = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
         getTableNamesOrBuilderList() {
       return tableNames_;
     }
@@ -52808,7 +52808,7 @@ public final class MasterProtos {
               tableNamesBuilder_ = null;
               tableNames_ = other.tableNames_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              tableNamesBuilder_ = 
+              tableNamesBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getTableNamesFieldBuilder() : null;
             } else {
@@ -53044,7 +53044,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_names = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
            getTableNamesOrBuilderList() {
         if (tableNamesBuilder_ != null) {
           return tableNamesBuilder_.getMessageOrBuilderList();
@@ -53070,12 +53070,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.TableName table_names = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder>
            getTableNamesBuilderList() {
         return getTableNamesFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNamesFieldBuilder() {
         if (tableNamesBuilder_ == null) {
           tableNamesBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -53668,7 +53668,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -54260,7 +54260,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableState table_state = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableState, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableState.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableStateOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableState, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableState.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableStateOrBuilder>
           getTableStateFieldBuilder() {
         if (tableStateBuilder_ == null) {
           tableStateBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -55225,7 +55225,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.ClusterStatus cluster_status = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.ClusterStatus, org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.ClusterStatus.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.ClusterStatusOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.ClusterStatus, org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.ClusterStatus.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.ClusterStatusOrBuilder>
           getClusterStatusFieldBuilder() {
         if (clusterStatusBuilder_ == null) {
           clusterStatusBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -56664,7 +56664,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.ProcedureDescription procedure = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescriptionOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescriptionOrBuilder>
           getProcedureFieldBuilder() {
         if (procedureBuilder_ == null) {
           procedureBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -57810,7 +57810,7 @@ public final class MasterProtos {
        * <code>optional .hbase.pb.ProcedureDescription procedure = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescriptionOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescriptionOrBuilder>
           getProcedureFieldBuilder() {
         if (procedureBuilder_ == null) {
           procedureBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -58487,7 +58487,7 @@ public final class MasterProtos {
        * <code>optional .hbase.pb.ProcedureDescription snapshot = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescriptionOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescriptionOrBuilder>
           getSnapshotFieldBuilder() {
         if (snapshotBuilder_ == null) {
           snapshotBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -60008,7 +60008,7 @@ public final class MasterProtos {
        * <code>optional .hbase.pb.ForeignExceptionMessage exception = 5;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage, org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage, org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder>
           getExceptionFieldBuilder() {
         if (exceptionBuilder_ == null) {
           exceptionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -61485,7 +61485,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure>
         getProcedureList();
     /**
      * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
@@ -61498,7 +61498,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder>
         getProcedureOrBuilderList();
     /**
      * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
@@ -61596,7 +61596,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder>
         getProcedureOrBuilderList() {
       return procedure_;
     }
@@ -61903,7 +61903,7 @@ public final class MasterProtos {
               procedureBuilder_ = null;
               procedure_ = other.procedure_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              procedureBuilder_ = 
+              procedureBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getProcedureFieldBuilder() : null;
             } else {
@@ -62139,7 +62139,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder>
            getProcedureOrBuilderList() {
         if (procedureBuilder_ != null) {
           return procedureBuilder_.getMessageOrBuilderList();
@@ -62165,12 +62165,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder>
            getProcedureBuilderList() {
         return getProcedureFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder>
           getProcedureFieldBuilder() {
         if (procedureBuilder_ == null) {
           procedureBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -62612,7 +62612,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo>
         getLockList();
     /**
      * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
@@ -62625,7 +62625,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder>
         getLockOrBuilderList();
     /**
      * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
@@ -62723,7 +62723,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder>
         getLockOrBuilderList() {
       return lock_;
     }
@@ -63030,7 +63030,7 @@ public final class MasterProtos {
               lockBuilder_ = null;
               lock_ = other.lock_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              lockBuilder_ = 
+              lockBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getLockFieldBuilder() : null;
             } else {
@@ -63266,7 +63266,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder>
            getLockOrBuilderList() {
         if (lockBuilder_ != null) {
           return lockBuilder_.getMessageOrBuilderList();
@@ -63292,12 +63292,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder>
            getLockBuilderList() {
         return getLockFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder>
           getLockFieldBuilder() {
         if (lockBuilder_ == null) {
           lockBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -63448,6 +63448,19 @@ public final class MasterProtos {
      * <code>optional .hbase.pb.ThrottleRequest throttle = 7;</code>
      */
     org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequestOrBuilder getThrottleOrBuilder();
+
+    /**
+     * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+     */
+    boolean hasSpaceLimit();
+    /**
+     * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest getSpaceLimit();
+    /**
+     * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequestOrBuilder getSpaceLimitOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.SetQuotaRequest}
@@ -63550,6 +63563,19 @@ public final class MasterProtos {
               bitField0_ |= 0x00000040;
               break;
             }
+            case 66: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000080) == 0x00000080)) {
+                subBuilder = spaceLimit_.toBuilder();
+              }
+              spaceLimit_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(spaceLimit_);
+                spaceLimit_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000080;
+              break;
+            }
           }
         }
       } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
@@ -63591,7 +63617,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -63607,7 +63633,7 @@ public final class MasterProtos {
         getUserNameBytes() {
       java.lang.Object ref = userName_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         userName_ = b;
@@ -63633,7 +63659,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -63649,7 +63675,7 @@ public final class MasterProtos {
         getUserGroupBytes() {
       java.lang.Object ref = userGroup_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         userGroup_ = b;
@@ -63675,7 +63701,7 @@ public final class MasterProtos {
       if (ref instanceof java.lang.String) {
         return (java.lang.String) ref;
       } else {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
             (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
         if (bs.isValidUtf8()) {
@@ -63691,7 +63717,7 @@ public final class MasterProtos {
         getNamespaceBytes() {
       java.lang.Object ref = namespace_;
       if (ref instanceof java.lang.String) {
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
             org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         namespace_ = b;
@@ -63773,6 +63799,27 @@ public final class MasterProtos {
       return throttle_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequest.getDefaultInstance() : throttle_;
     }
 
+    public static final int SPACE_LIMIT_FIELD_NUMBER = 8;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest spaceLimit_;
+    /**
+     * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+     */
+    public boolean hasSpaceLimit() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest getSpaceLimit() {
+      return spaceLimit_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.getDefaultInstance() : spaceLimit_;
+    }
+    /**
+     * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequestOrBuilder getSpaceLimitOrBuilder() {
+      return spaceLimit_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.getDefaultInstance() : spaceLimit_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -63818,6 +63865,9 @@ public final class MasterProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeMessage(7, getThrottle());
       }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeMessage(8, getSpaceLimit());
+      }
       unknownFields.writeTo(output);
     }
 
@@ -63850,6 +63900,10 @@ public final class MasterProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, getThrottle());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, getSpaceLimit());
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -63903,6 +63957,11 @@ public final class MasterProtos {
         result = result && getThrottle()
             .equals(other.getThrottle());
       }
+      result = result && (hasSpaceLimit() == other.hasSpaceLimit());
+      if (hasSpaceLimit()) {
+        result = result && getSpaceLimit()
+            .equals(other.getSpaceLimit());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -63943,6 +64002,10 @@ public final class MasterProtos {
       if (hasThrottle()) {
         hash = (37 * hash) + THROTTLE_FIELD_NUMBER;
         hash = (53 * hash) + getThrottle().hashCode();
+      }
+      if (hasSpaceLimit()) {
+        hash = (37 * hash) + SPACE_LIMIT_FIELD_NUMBER;
+        hash = (53 * hash) + getSpaceLimit().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -64060,6 +64123,7 @@ public final class MasterProtos {
                 .alwaysUseFieldBuilders) {
           getTableNameFieldBuilder();
           getThrottleFieldBuilder();
+          getSpaceLimitFieldBuilder();
         }
       }
       public Builder clear() {
@@ -64086,6 +64150,12 @@ public final class MasterProtos {
           throttleBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000040);
+        if (spaceLimitBuilder_ == null) {
+          spaceLimit_ = null;
+        } else {
+          spaceLimitBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -64145,6 +64215,14 @@ public final class MasterProtos {
           result.throttle_ = throttle_;
         } else {
           result.throttle_ = throttleBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        if (spaceLimitBuilder_ == null) {
+          result.spaceLimit_ = spaceLimit_;
+        } else {
+          result.spaceLimit_ = spaceLimitBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -64215,6 +64293,9 @@ public final class MasterProtos {
         if (other.hasThrottle()) {
           mergeThrottle(other.getThrottle());
         }
+        if (other.hasSpaceLimit()) {
+          mergeSpaceLimit(other.getSpaceLimit());
+        }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
@@ -64284,7 +64365,7 @@ public final class MasterProtos {
           getUserNameBytes() {
         java.lang.Object ref = userName_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           userName_ = b;
@@ -64360,7 +64441,7 @@ public final class MasterProtos {
           getUserGroupBytes() {
         java.lang.Object ref = userGroup_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           userGroup_ = b;
@@ -64436,7 +64517,7 @@ public final class MasterProtos {
           getNamespaceBytes() {
         java.lang.Object ref = namespace_;
         if (ref instanceof String) {
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b =
               org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           namespace_ = b;
@@ -64586,7 +64667,7 @@ public final class MasterProtos {
        * <code>optional .hbase.pb.TableName table_name = 4;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -64768,7 +64849,7 @@ public final class MasterProtos {
        * <code>optional .hbase.pb.ThrottleRequest throttle = 7;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequest, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequest.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequestOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequest, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequest.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequestOrBuilder>
           getThrottleFieldBuilder() {
         if (throttleBuilder_ == null) {
           throttleBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -64779,6 +64860,124 @@ public final class MasterProtos {
           throttle_ = null;
         }
         return throttleBuilder_;
+      }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest spaceLimit_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequestOrBuilder> spaceLimitBuilder_;
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      public boolean hasSpaceLimit() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest getSpaceLimit() {
+        if (spaceLimitBuilder_ == null) {
+          return spaceLimit_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.getDefaultInstance() : spaceLimit_;
+        } else {
+          return spaceLimitBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      public Builder setSpaceLimit(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest value) {
+        if (spaceLimitBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          spaceLimit_ = value;
+          onChanged();
+        } else {
+          spaceLimitBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      public Builder setSpaceLimit(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.Builder builderForValue) {
+        if (spaceLimitBuilder_ == null) {
+          spaceLimit_ = builderForValue.build();
+          onChanged();
+        } else {
+          spaceLimitBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      public Builder mergeSpaceLimit(org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest value) {
+        if (spaceLimitBuilder_ == null) {
+          if (((bitField0_ & 0x00000080) == 0x00000080) &&
+              spaceLimit_ != null &&
+              spaceLimit_ != org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.getDefaultInstance()) {
+            spaceLimit_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.newBuilder(spaceLimit_).mergeFrom(value).buildPartial();
+          } else {
+            spaceLimit_ = value;
+          }
+          onChanged();
+        } else {
+          spaceLimitBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000080;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      public Builder clearSpaceLimit() {
+        if (spaceLimitBuilder_ == null) {
+          spaceLimit_ = null;
+          onChanged();
+        } else {
+          spaceLimitBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000080);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.Builder getSpaceLimitBuilder() {
+        bitField0_ |= 0x00000080;
+        onChanged();
+        return getSpaceLimitFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequestOrBuilder getSpaceLimitOrBuilder() {
+        if (spaceLimitBuilder_ != null) {
+          return spaceLimitBuilder_.getMessageOrBuilder();
+        } else {
+          return spaceLimit_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.getDefaultInstance() : spaceLimit_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceLimitRequest space_limit = 8;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequestOrBuilder>
+          getSpaceLimitFieldBuilder() {
+        if (spaceLimitBuilder_ == null) {
+          spaceLimitBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequestOrBuilder>(
+                  getSpaceLimit(),
+                  getParentForChildren(),
+                  isClean());
+          spaceLimit_ = null;
+        }
+        return spaceLimitBuilder_;
       }
       public final Builder setUnknownFields(
           final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -65733,7 +65932,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.TableName table_name = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>
           getTableNameFieldBuilder() {
         if (tableNameBuilder_ == null) {
           tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -66325,7 +66524,7 @@ public final class MasterProtos {
        * <code>required .hbase.pb.RegionSpecifier region = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -68295,7 +68494,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>
         getServerNameList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -68308,7 +68507,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
         getServerNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -68406,7 +68605,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
         getServerNameOrBuilderList() {
       return serverName_;
     }
@@ -68713,7 +68912,7 @@ public final class MasterProtos {
               serverNameBuilder_ = null;
               serverName_ = other.serverName_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              serverNameBuilder_ = 
+              serverNameBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getServerNameFieldBuilder() : null;
             } else {
@@ -68949,7 +69148,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
            getServerNameOrBuilderList() {
         if (serverNameBuilder_ != null) {
           return serverNameBuilder_.getMessageOrBuilderList();
@@ -68975,12 +69174,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder>
            getServerNameBuilderList() {
         return getServerNameFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
           getServerNameFieldBuilder() {
         if (serverNameBuilder_ == null) {
           serverNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -69049,7 +69248,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>
         getServerNameList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -69062,7 +69261,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
         getServerNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -69160,7 +69359,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
         getServerNameOrBuilderList() {
       return serverName_;
     }
@@ -69467,7 +69666,7 @@ public final class MasterProtos {
               serverNameBuilder_ = null;
               serverName_ = other.serverName_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              serverNameBuilder_ = 
+              serverNameBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getServerNameFieldBuilder() : null;
             } else {
@@ -69703,7 +69902,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
            getServerNameOrBuilderList() {
         if (serverNameBuilder_ != null) {
           return serverNameBuilder_.getMessageOrBuilderList();
@@ -69729,12 +69928,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder>
            getServerNameBuilderList() {
         return getServerNameFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
           getServerNameFieldBuilder() {
         if (serverNameBuilder_ == null) {
           serverNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -70176,7 +70375,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> 
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>
         getServerNameList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -70189,7 +70388,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
         getServerNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -70287,7 +70486,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
         getServerNameOrBuilderList() {
       return serverName_;
     }
@@ -70594,7 +70793,7 @@ public final class MasterProtos {
               serverNameBuilder_ = null;
               serverName_ = other.serverName_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              serverNameBuilder_ = 
+              serverNameBuilder_ =
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getServerNameFieldBuilder() : null;
             } else {
@@ -70830,7 +71029,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
            getServerNameOrBuilderList() {
         if (serverNameBuilder_ != null) {
           return serverNameBuilder_.getMessageOrBuilderList();
@@ -70856,12 +71055,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder>
            getServerNameBuilderList() {
         return getServerNameFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
           getServerNameFieldBuilder() {
         if (serverNameBuilder_ == null) {
           serverNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -71306,7 +71505,7 @@ public final class MasterProtos {
     public interface Interface {
       /**
        * <pre>
-       ** Used by the client to get the number of regions that have received the updated schema 
+       ** Used by the client to get the number of regions that have received the updated schema
        * </pre>
        *
        * <code>rpc GetSchemaAlterStatus(.hbase.pb.GetSchemaAlterStatusRequest) returns (.hbase.pb.GetSchemaAlterStatusResponse);</code>
@@ -71318,7 +71517,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Get list of TableDescriptors for requested tables. 
+       ** Get list of TableDescriptors for requested tables.
        * </pre>
        *
        * <code>rpc GetTableDescriptors(.hbase.pb.GetTableDescriptorsRequest) returns (.hbase.pb.GetTableDescriptorsResponse);</code>
@@ -71330,7 +71529,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Get the list of table names. 
+       ** Get the list of table names.
        * </pre>
        *
        * <code>rpc GetTableNames(.hbase.pb.GetTableNamesRequest) returns (.hbase.pb.GetTableNamesResponse);</code>
@@ -71342,7 +71541,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Return cluster status. 
+       ** Return cluster status.
        * </pre>
        *
        * <code>rpc GetClusterStatus(.hbase.pb.GetClusterStatusRequest) returns (.hbase.pb.GetClusterStatusResponse);</code>
@@ -71354,7 +71553,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** return true if master is available 
+       ** return true if master is available
        * </pre>
        *
        * <code>rpc IsMasterRunning(.hbase.pb.IsMasterRunningRequest) returns (.hbase.pb.IsMasterRunningResponse);</code>
@@ -71366,7 +71565,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Adds a column to the specified table. 
+       ** Adds a column to the specified table.
        * </pre>
        *
        * <code>rpc AddColumn(.hbase.pb.AddColumnRequest) returns (.hbase.pb.AddColumnResponse);</code>
@@ -71378,7 +71577,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Deletes a column from the specified table. Table must be disabled. 
+       ** Deletes a column from the specified table. Table must be disabled.
        * </pre>
        *
        * <code>rpc DeleteColumn(.hbase.pb.DeleteColumnRequest) returns (.hbase.pb.DeleteColumnResponse);</code>
@@ -71390,7 +71589,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Modifies an existing column on the specified table. 
+       ** Modifies an existing column on the specified table.
        * </pre>
        *
        * <code>rpc ModifyColumn(.hbase.pb.ModifyColumnRequest) returns (.hbase.pb.ModifyColumnResponse);</code>
@@ -71402,7 +71601,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Move the region region to the destination server. 
+       ** Move the region region to the destination server.
        * </pre>
        *
        * <code>rpc MoveRegion(.hbase.pb.MoveRegionRequest) returns (.hbase.pb.MoveRegionResponse);</code>
@@ -71414,7 +71613,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Master merge the regions 
+       ** Master merge the regions
        * </pre>
        *
        * <code>rpc MergeTableRegions(.hbase.pb.MergeTableRegionsRequest) returns (.hbase.pb.MergeTableRegionsResponse);</code>
@@ -71426,7 +71625,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Assign a region to a server chosen at random. 
+       ** Assign a region to a server chosen at random.
        * </pre>
        *
        * <code>rpc AssignRegion(.hbase.pb.AssignRegionRequest) returns (.hbase.pb.AssignRegionResponse);</code>
@@ -71470,7 +71669,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Deletes a table 
+       ** Deletes a table
        * </pre>
        *
        * <code>rpc DeleteTable(.hbase.pb.DeleteTableRequest) returns (.hbase.pb.DeleteTableResponse);</code>
@@ -71482,7 +71681,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Truncate a table 
+       ** Truncate a table
        * </pre>
        *
        * <code>rpc truncateTable(.hbase.pb.TruncateTableRequest) returns (.hbase.pb.TruncateTableResponse);</code>
@@ -71494,7 +71693,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Puts the table on-line (only needed if table has been previously taken offline) 
+       ** Puts the table on-line (only needed if table has been previously taken offline)
        * </pre>
        *
        * <code>rpc EnableTable(.hbase.pb.EnableTableRequest) returns (.hbase.pb.EnableTableResponse);</code>
@@ -71506,7 +71705,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Take table offline 
+       ** Take table offline
        * </pre>
        *
        * <code>rpc DisableTable(.hbase.pb.DisableTableRequest) returns (.hbase.pb.DisableTableResponse);</code>
@@ -71518,7 +71717,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Modify a table's metadata 
+       ** Modify a table's metadata
        * </pre>
        *
        * <code>rpc ModifyTable(.hbase.pb.ModifyTableRequest) returns (.hbase.pb.ModifyTableResponse);</code>
@@ -71530,7 +71729,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Creates a new table asynchronously 
+       ** Creates a new table asynchronously
        * </pre>
        *
        * <code>rpc CreateTable(.hbase.pb.CreateTableRequest) returns (.hbase.pb.CreateTableResponse);</code>
@@ -71542,7 +71741,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Shutdown an HBase cluster. 
+       ** Shutdown an HBase cluster.
        * </pre>
        *
        * <code>rpc Shutdown(.hbase.pb.ShutdownRequest) returns (.hbase.pb.ShutdownResponse);</code>
@@ -71554,7 +71753,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Stop HBase Master only.  Does not shutdown the cluster. 
+       ** Stop HBase Master only.  Does not shutdown the cluster.
        * </pre>
        *
        * <code>rpc StopMaster(.hbase.pb.StopMasterRequest) returns (.hbase.pb.StopMasterResponse);</code>
@@ -71687,7 +71886,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Get a run of the catalog janitor 
+       ** Get a run of the catalog janitor
        * </pre>
        *
        * <code>rpc RunCatalogScan(.hbase.pb.RunCatalogScanRequest) returns (.hbase.pb.RunCatalogScanResponse);</code>
@@ -71725,7 +71924,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Get a run of the CleanerChore 
+       ** Get a run of the CleanerChore
        * </pre>
        *
        * <code>rpc RunCleanerChore(.hbase.pb.RunCleanerChoreRequest) returns (.hbase.pb.RunCleanerChoreResponse);</code>
@@ -71881,7 +72080,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Modify a namespace's metadata 
+       ** Modify a namespace's metadata
        * </pre>
        *
        * <code>rpc ModifyNamespace(.hbase.pb.ModifyNamespaceRequest) returns (.hbase.pb.ModifyNamespaceResponse);</code>
@@ -71893,7 +72092,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Creates a new namespace synchronously 
+       ** Creates a new namespace synchronously
        * </pre>
        *
        * <code>rpc CreateNamespace(.hbase.pb.CreateNamespaceRequest) returns (.hbase.pb.CreateNamespaceResponse);</code>
@@ -71905,7 +72104,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Deletes namespace synchronously 
+       ** Deletes namespace synchronously
        * </pre>
        *
        * <code>rpc DeleteNamespace(.hbase.pb.DeleteNamespaceRequest) returns (.hbase.pb.DeleteNamespaceResponse);</code>
@@ -71917,7 +72116,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Get a namespace descriptor by name 
+       ** Get a namespace descriptor by name
        * </pre>
        *
        * <code>rpc GetNamespaceDescriptor(.hbase.pb.GetNamespaceDescriptorRequest) returns (.hbase.pb.GetNamespaceDescriptorResponse);</code>
@@ -71929,7 +72128,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** returns a list of namespaces 
+       ** returns a list of namespaces
        * </pre>
        *
        * <code>rpc ListNamespaceDescriptors(.hbase.pb.ListNamespaceDescriptorsRequest) returns (.hbase.pb.ListNamespaceDescriptorsResponse);</code>
@@ -71965,7 +72164,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** returns table state 
+       ** returns table state
        * </pre>
        *
        * <code>rpc GetTableState(.hbase.pb.GetTableStateRequest) returns (.hbase.pb.GetTableStateResponse);</code>
@@ -71977,7 +72176,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Apply the new quota settings 
+       ** Apply the new quota settings
        * </pre>
        *
        * <code>rpc SetQuota(.hbase.pb.SetQuotaRequest) returns (.hbase.pb.SetQuotaResponse);</code>
@@ -71989,7 +72188,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Returns the timestamp of the last major compaction 
+       ** Returns the timestamp of the last major compaction
        * </pre>
        *
        * <code>rpc getLastMajorCompactionTimestamp(.hbase.pb.MajorCompactionTimestampRequest) returns (.hbase.pb.MajorCompactionTimestampResponse);</code>
@@ -72001,7 +72200,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Returns the timestamp of the last major compaction 
+       ** Returns the timestamp of the last major compaction
        * </pre>
        *
        * <code>rpc getLastMajorCompactionTimestampForRegion(.hbase.pb.MajorCompactionTimestampForRegionRequest) returns (.hbase.pb.MajorCompactionTimestampResponse);</code>
@@ -72021,7 +72220,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Returns the security capabilities in effect on the cluster 
+       ** Returns the security capabilities in effect on the cluster
        * </pre>
        *
        * <code>rpc getSecurityCapabilities(.hbase.pb.SecurityCapabilitiesRequest) returns (.hbase.pb.SecurityCapabilitiesResponse);</code>
@@ -72033,7 +72232,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Abort a procedure 
+       ** Abort a procedure
        * </pre>
        *
        * <code>rpc AbortProcedure(.hbase.pb.AbortProcedureRequest) returns (.hbase.pb.AbortProcedureResponse);</code>
@@ -72045,7 +72244,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** returns a list of procedures 
+       ** returns a list of procedures
        * </pre>
        *
        * <code>rpc ListProcedures(.hbase.pb.ListProceduresRequest) returns (.hbase.pb.ListProceduresResponse);</code>
@@ -72065,7 +72264,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Add a replication peer 
+       ** Add a replication peer
        * </pre>
        *
        * <code>rpc AddReplicationPeer(.hbase.pb.AddReplicationPeerRequest) returns (.hbase.pb.AddReplicationPeerResponse);</code>
@@ -72077,7 +72276,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Remove a replication peer 
+       ** Remove a replication peer
        * </pre>
        *
        * <code>rpc RemoveReplicationPeer(.hbase.pb.RemoveReplicationPeerRequest) returns (.hbase.pb.RemoveReplicationPeerResponse);</code>
@@ -72089,7 +72288,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Enable a replication peer 
+       ** Enable a replication peer
        * </pre>
        *
        * <code>rpc EnableReplicationPeer(.hbase.pb.EnableReplicationPeerRequest) returns (.hbase.pb.EnableReplicationPeerResponse);</code>
@@ -72101,7 +72300,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Disable a replication peer 
+       ** Disable a replication peer
        * </pre>
        *
        * <code>rpc DisableReplicationPeer(.hbase.pb.DisableReplicationPeerRequest) returns (.hbase.pb.DisableReplicationPeerResponse);</code>
@@ -72113,7 +72312,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Return peer config for a replication peer 
+       ** Return peer config for a replication peer
        * </pre>
        *
        * <code>rpc GetReplicationPeerConfig(.hbase.pb.GetReplicationPeerConfigRequest) returns (.hbase.pb.GetReplicationPeerConfigResponse);</code>
@@ -72125,7 +72324,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Update peer config for a replication peer 
+       ** Update peer config for a replication peer
        * </pre>
        *
        * <code>rpc UpdateReplicationPeerConfig(.hbase.pb.UpdateReplicationPeerConfigRequest) returns (.hbase.pb.UpdateReplicationPeerConfigResponse);</code>
@@ -72137,7 +72336,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Returns a list of replication peers 
+       ** Returns a list of replication peers
        * </pre>
        *
        * <code>rpc ListReplicationPeers(.hbase.pb.ListReplicationPeersRequest) returns (.hbase.pb.ListReplicationPeersResponse);</code>
@@ -72149,7 +72348,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Returns a list of ServerNames marked as draining. 
+       ** Returns a list of ServerNames marked as draining.
        * </pre>
        *
        * <code>rpc listDrainingRegionServers(.hbase.pb.ListDrainingRegionServersRequest) returns (.hbase.pb.ListDrainingRegionServersResponse);</code>
@@ -72161,7 +72360,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Mark a list of ServerNames as draining. 
+       ** Mark a list of ServerNames as draining.
        * </pre>
        *
        * <code>rpc drainRegionServers(.hbase.pb.DrainRegionServersRequest) returns (.hbase.pb.DrainRegionServersResponse);</code>
@@ -72173,7 +72372,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Unmark a list of ServerNames marked as draining. 
+       ** Unmark a list of ServerNames marked as draining.
        * </pre>
        *
        * <code>rpc removeDrainFromRegionServers(.hbase.pb.RemoveDrainFromRegionServersRequest) returns (.hbase.pb.RemoveDrainFromRegionServersResponse);</code>
@@ -73242,7 +73441,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Used by the client to get the number of regions that have received the updated schema 
+     ** Used by the client to get the number of regions that have received the updated schema
      * </pre>
      *
      * <code>rpc GetSchemaAlterStatus(.hbase.pb.GetSchemaAlterStatusRequest) returns (.hbase.pb.GetSchemaAlterStatusResponse);</code>
@@ -73254,7 +73453,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Get list of TableDescriptors for requested tables. 
+     ** Get list of TableDescriptors for requested tables.
      * </pre>
      *
      * <code>rpc GetTableDescriptors(.hbase.pb.GetTableDescriptorsRequest) returns (.hbase.pb.GetTableDescriptorsResponse);</code>
@@ -73266,7 +73465,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Get the list of table names. 
+     ** Get the list of table names.
      * </pre>
      *
      * <code>rpc GetTableNames(.hbase.pb.GetTableNamesRequest) returns (.hbase.pb.GetTableNamesResponse);</code>
@@ -73278,7 +73477,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Return cluster status. 
+     ** Return cluster status.
      * </pre>
      *
      * <code>rpc GetClusterStatus(.hbase.pb.GetClusterStatusRequest) returns (.hbase.pb.GetClusterStatusResponse);</code>
@@ -73290,7 +73489,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** return true if master is available 
+     ** return true if master is available
      * </pre>
      *
      * <code>rpc IsMasterRunning(.hbase.pb.IsMasterRunningRequest) returns (.hbase.pb.IsMasterRunningResponse);</code>
@@ -73302,7 +73501,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Adds a column to the specified table. 
+     ** Adds a column to the specified table.
      * </pre>
      *
      * <code>rpc AddColumn(.hbase.pb.AddColumnRequest) returns (.hbase.pb.AddColumnResponse);</code>
@@ -73314,7 +73513,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Deletes a column from the specified table. Table must be disabled. 
+     ** Deletes a column from the specified table. Table must be disabled.
      * </pre>
      *
      * <code>rpc DeleteColumn(.hbase.pb.DeleteColumnRequest) returns (.hbase.pb.DeleteColumnResponse);</code>
@@ -73326,7 +73525,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Modifies an existing column on the specified table. 
+     ** Modifies an existing column on the specified table.
      * </pre>
      *
      * <code>rpc ModifyColumn(.hbase.pb.ModifyColumnRequest) returns (.hbase.pb.ModifyColumnResponse);</code>
@@ -73338,7 +73537,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Move the region region to the destination server. 
+     ** Move the region region to the destination server.
      * </pre>
      *
      * <code>rpc MoveRegion(.hbase.pb.MoveRegionRequest) returns (.hbase.pb.MoveRegionResponse);</code>
@@ -73350,7 +73549,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Master merge the regions 
+     ** Master merge the regions
      * </pre>
      *
      * <code>rpc MergeTableRegions(.hbase.pb.MergeTableRegionsRequest) returns (.hbase.pb.MergeTableRegionsResponse);</code>
@@ -73362,7 +73561,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Assign a region to a server chosen at random. 
+     ** Assign a region to a server chosen at random.
      * </pre>
      *
      * <code>rpc AssignRegion(.hbase.pb.AssignRegionRequest) returns (.hbase.pb.AssignRegionResponse);</code>
@@ -73406,7 +73605,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Deletes a table 
+     ** Deletes a table
      * </pre>
      *
      * <code>rpc DeleteTable(.hbase.pb.DeleteTableRequest) returns (.hbase.pb.DeleteTableResponse);</code>
@@ -73418,7 +73617,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Truncate a table 
+     ** Truncate a table
      * </pre>
      *
      * <code>rpc truncateTable(.hbase.pb.TruncateTableRequest) returns (.hbase.pb.TruncateTableResponse);</code>
@@ -73430,7 +73629,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Puts the table on-line (only needed if table has been previously taken offline) 
+     ** Puts the table on-line (only needed if table has been previously taken offline)
      * </pre>
      *
      * <code>rpc EnableTable(.hbase.pb.EnableTableRequest) returns (.hbase.pb.EnableTableResponse);</code>
@@ -73442,7 +73641,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Take table offline 
+     ** Take table offline
      * </pre>
      *
      * <code>rpc DisableTable(.hbase.pb.DisableTableRequest) returns (.hbase.pb.DisableTableResponse);</code>
@@ -73454,7 +73653,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Modify a table's metadata 
+     ** Modify a table's metadata
      * </pre>
      *
      * <code>rpc ModifyTable(.hbase.pb.ModifyTableRequest) returns (.hbase.pb.ModifyTableResponse);</code>
@@ -73466,7 +73665,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Creates a new table asynchronously 
+     ** Creates a new table asynchronously
      * </pre>
      *
      * <code>rpc CreateTable(.hbase.pb.CreateTableRequest) returns (.hbase.pb.CreateTableResponse);</code>
@@ -73478,7 +73677,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Shutdown an HBase cluster. 
+     ** Shutdown an HBase cluster.
      * </pre>
      *
      * <code>rpc Shutdown(.hbase.pb.ShutdownRequest) returns (.hbase.pb.ShutdownResponse);</code>
@@ -73490,7 +73689,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Stop HBase Master only.  Does not shutdown the cluster. 
+     ** Stop HBase Master only.  Does not shutdown the cluster.
      * </pre>
      *
      * <code>rpc StopMaster(.hbase.pb.StopMasterRequest) returns (.hbase.pb.StopMasterResponse);</code>
@@ -73623,7 +73822,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Get a run of the catalog janitor 
+     ** Get a run of the catalog janitor
      * </pre>
      *
      * <code>rpc RunCatalogScan(.hbase.pb.RunCatalogScanRequest) returns (.hbase.pb.RunCatalogScanResponse);</code>
@@ -73661,7 +73860,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Get a run of the CleanerChore 
+     ** Get a run of the CleanerChore
      * </pre>
      *
      * <code>rpc RunCleanerChore(.hbase.pb.RunCleanerChoreRequest) returns (.hbase.pb.RunCleanerChoreResponse);</code>
@@ -73817,7 +74016,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Modify a namespace's metadata 
+     ** Modify a namespace's metadata
      * </pre>
      *
      * <code>rpc ModifyNamespace(.hbase.pb.ModifyNamespaceRequest) returns (.hbase.pb.ModifyNamespaceResponse);</code>
@@ -73829,7 +74028,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Creates a new namespace synchronously 
+     ** Creates a new namespace synchronously
      * </pre>
      *
      * <code>rpc CreateNamespace(.hbase.pb.CreateNamespaceRequest) returns (.hbase.pb.CreateNamespaceResponse);</code>
@@ -73841,7 +74040,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Deletes namespace synchronously 
+     ** Deletes namespace synchronously
      * </pre>
      *
      * <code>rpc DeleteNamespace(.hbase.pb.DeleteNamespaceRequest) returns (.hbase.pb.DeleteNamespaceResponse);</code>
@@ -73853,7 +74052,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Get a namespace descriptor by name 
+     ** Get a namespace descriptor by name
      * </pre>
      *
      * <code>rpc GetNamespaceDescriptor(.hbase.pb.GetNamespaceDescriptorRequest) returns (.hbase.pb.GetNamespaceDescriptorResponse);</code>
@@ -73865,7 +74064,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** returns a list of namespaces 
+     ** returns a list of namespaces
      * </pre>
      *
      * <code>rpc ListNamespaceDescriptors(.hbase.pb.ListNamespaceDescriptorsRequest) returns (.hbase.pb.ListNamespaceDescriptorsResponse);</code>
@@ -73901,7 +74100,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** returns table state 
+     ** returns table state
      * </pre>
      *
      * <code>rpc GetTableState(.hbase.pb.GetTableStateRequest) returns (.hbase.pb.GetTableStateResponse);</code>
@@ -73913,7 +74112,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Apply the new quota settings 
+     ** Apply the new quota settings
      * </pre>
      *
      * <code>rpc SetQuota(.hbase.pb.SetQuotaRequest) returns (.hbase.pb.SetQuotaResponse);</code>
@@ -73925,7 +74124,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Returns the timestamp of the last major compaction 
+     ** Returns the timestamp of the last major compaction
      * </pre>
      *
      * <code>rpc getLastMajorCompactionTimestamp(.hbase.pb.MajorCompactionTimestampRequest) returns (.hbase.pb.MajorCompactionTimestampResponse);</code>
@@ -73937,7 +74136,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Returns the timestamp of the last major compaction 
+     ** Returns the timestamp of the last major compaction
      * </pre>
      *
      * <code>rpc getLastMajorCompactionTimestampForRegion(.hbase.pb.MajorCompactionTimestampForRegionRequest) returns (.hbase.pb.MajorCompactionTimestampResponse);</code>
@@ -73957,7 +74156,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Returns the security capabilities in effect on the cluster 
+     ** Returns the security capabilities in effect on the cluster
      * </pre>
      *
      * <code>rpc getSecurityCapabilities(.hbase.pb.SecurityCapabilitiesRequest) returns (.hbase.pb.SecurityCapabilitiesResponse);</code>
@@ -73969,7 +74168,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Abort a procedure 
+     ** Abort a procedure
      * </pre>
      *
      * <code>rpc AbortProcedure(.hbase.pb.AbortProcedureRequest) returns (.hbase.pb.AbortProcedureResponse);</code>
@@ -73981,7 +74180,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** returns a list of procedures 
+     ** returns a list of procedures
      * </pre>
      *
      * <code>rpc ListProcedures(.hbase.pb.ListProceduresRequest) returns (.hbase.pb.ListProceduresResponse);</code>
@@ -74001,7 +74200,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Add a replication peer 
+     ** Add a replication peer
      * </pre>
      *
      * <code>rpc AddReplicationPeer(.hbase.pb.AddReplicationPeerRequest) returns (.hbase.pb.AddReplicationPeerResponse);</code>
@@ -74013,7 +74212,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Remove a replication peer 
+     ** Remove a replication peer
      * </pre>
      *
      * <code>rpc RemoveReplicationPeer(.hbase.pb.RemoveReplicationPeerRequest) returns (.hbase.pb.RemoveReplicationPeerResponse);</code>
@@ -74025,7 +74224,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Enable a replication peer 
+     ** Enable a replication peer
      * </pre>
      *
      * <code>rpc EnableReplicationPeer(.hbase.pb.EnableReplicationPeerRequest) returns (.hbase.pb.EnableReplicationPeerResponse);</code>
@@ -74037,7 +74236,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Disable a replication peer 
+     ** Disable a replication peer
      * </pre>
      *
      * <code>rpc DisableReplicationPeer(.hbase.pb.DisableReplicationPeerRequest) returns (.hbase.pb.DisableReplicationPeerResponse);</code>
@@ -74049,7 +74248,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Return peer config for a replication peer 
+     ** Return peer config for a replication peer
      * </pre>
      *
      * <code>rpc GetReplicationPeerConfig(.hbase.pb.GetReplicationPeerConfigRequest) returns (.hbase.pb.GetReplicationPeerConfigResponse);</code>
@@ -74061,7 +74260,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Update peer config for a replication peer 
+     ** Update peer config for a replication peer
      * </pre>
      *
      * <code>rpc UpdateReplicationPeerConfig(.hbase.pb.UpdateReplicationPeerConfigRequest) returns (.hbase.pb.UpdateReplicationPeerConfigResponse);</code>
@@ -74073,7 +74272,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Returns a list of replication peers 
+     ** Returns a list of replication peers
      * </pre>
      *
      * <code>rpc ListReplicationPeers(.hbase.pb.ListReplicationPeersRequest) returns (.hbase.pb.ListReplicationPeersResponse);</code>
@@ -74085,7 +74284,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Returns a list of ServerNames marked as draining. 
+     ** Returns a list of ServerNames marked as draining.
      * </pre>
      *
      * <code>rpc listDrainingRegionServers(.hbase.pb.ListDrainingRegionServersRequest) returns (.hbase.pb.ListDrainingRegionServersResponse);</code>
@@ -74097,7 +74296,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Mark a list of ServerNames as draining. 
+     ** Mark a list of ServerNames as draining.
      * </pre>
      *
      * <code>rpc drainRegionServers(.hbase.pb.DrainRegionServersRequest) returns (.hbase.pb.DrainRegionServersResponse);</code>
@@ -74109,7 +74308,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Unmark a list of ServerNames marked as draining. 
+     ** Unmark a list of ServerNames marked as draining.
      * </pre>
      *
      * <code>rpc removeDrainFromRegionServers(.hbase.pb.RemoveDrainFromRegionServersRequest) returns (.hbase.pb.RemoveDrainFromRegionServersResponse);</code>
@@ -77122,627 +77321,627 @@ public final class MasterProtos {
 
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_AddColumnRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_AddColumnRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_AddColumnResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_AddColumnResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DeleteColumnRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DeleteColumnRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DeleteColumnResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DeleteColumnResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ModifyColumnRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ModifyColumnRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ModifyColumnResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ModifyColumnResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_MoveRegionRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_MoveRegionRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_MoveRegionResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_MoveRegionResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_MergeTableRegionsRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_MergeTableRegionsRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_MergeTableRegionsResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_MergeTableRegionsResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_AssignRegionRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_AssignRegionRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_AssignRegionResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_AssignRegionResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_UnassignRegionRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_UnassignRegionRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_UnassignRegionResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_UnassignRegionResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_OfflineRegionRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_OfflineRegionRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_OfflineRegionResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_OfflineRegionResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_CreateTableRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_CreateTableRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_CreateTableResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_CreateTableResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DeleteTableRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DeleteTableRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DeleteTableResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DeleteTableResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_TruncateTableRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_TruncateTableRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_TruncateTableResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_TruncateTableResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_EnableTableRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_EnableTableRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_EnableTableResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_EnableTableResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DisableTableRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DisableTableRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DisableTableResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DisableTableResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ModifyTableRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ModifyTableRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ModifyTableResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ModifyTableResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_CreateNamespaceRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_CreateNamespaceRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_CreateNamespaceResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_CreateNamespaceResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DeleteNamespaceRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DeleteNamespaceRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DeleteNamespaceResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DeleteNamespaceResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ModifyNamespaceRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ModifyNamespaceRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ModifyNamespaceResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ModifyNamespaceResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetNamespaceDescriptorRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetNamespaceDescriptorRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetNamespaceDescriptorResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetNamespaceDescriptorResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListNamespaceDescriptorsRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListNamespaceDescriptorsRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListNamespaceDescriptorsResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListNamespaceDescriptorsResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListTableDescriptorsByNamespaceRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListTableDescriptorsByNamespaceRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListTableDescriptorsByNamespaceResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListTableDescriptorsByNamespaceResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListTableNamesByNamespaceRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListTableNamesByNamespaceRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListTableNamesByNamespaceResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListTableNamesByNamespaceResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ShutdownRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ShutdownRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ShutdownResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ShutdownResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_StopMasterRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_StopMasterRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_StopMasterResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_StopMasterResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsInMaintenanceModeRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsInMaintenanceModeRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsInMaintenanceModeResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsInMaintenanceModeResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_BalanceRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_BalanceRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_BalanceResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_BalanceResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetBalancerRunningRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetBalancerRunningRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetBalancerRunningResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetBalancerRunningResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsBalancerEnabledRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsBalancerEnabledRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsBalancerEnabledResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsBalancerEnabledResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetSplitOrMergeEnabledRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetSplitOrMergeEnabledRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetSplitOrMergeEnabledResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetSplitOrMergeEnabledResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsSplitOrMergeEnabledRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsSplitOrMergeEnabledRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsSplitOrMergeEnabledResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsSplitOrMergeEnabledResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_NormalizeRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_NormalizeRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_NormalizeResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_NormalizeResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetNormalizerRunningRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetNormalizerRunningRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetNormalizerRunningResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetNormalizerRunningResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsNormalizerEnabledRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsNormalizerEnabledRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsNormalizerEnabledResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsNormalizerEnabledResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RunCatalogScanRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RunCatalogScanRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RunCatalogScanResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RunCatalogScanResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_EnableCatalogJanitorRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_EnableCatalogJanitorRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_EnableCatalogJanitorResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_EnableCatalogJanitorResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsCatalogJanitorEnabledRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsCatalogJanitorEnabledRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsCatalogJanitorEnabledResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsCatalogJanitorEnabledResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RunCleanerChoreRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RunCleanerChoreRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RunCleanerChoreResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RunCleanerChoreResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetCleanerChoreRunningRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetCleanerChoreRunningRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetCleanerChoreRunningResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetCleanerChoreRunningResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsCleanerChoreEnabledRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsCleanerChoreEnabledRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsCleanerChoreEnabledResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsCleanerChoreEnabledResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SnapshotRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SnapshotRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SnapshotResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SnapshotResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetCompletedSnapshotsRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetCompletedSnapshotsRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetCompletedSnapshotsResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetCompletedSnapshotsResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DeleteSnapshotRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DeleteSnapshotRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DeleteSnapshotResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DeleteSnapshotResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RestoreSnapshotRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RestoreSnapshotRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RestoreSnapshotResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RestoreSnapshotResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsSnapshotDoneRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsSnapshotDoneRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsSnapshotDoneResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsSnapshotDoneResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsRestoreSnapshotDoneRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsRestoreSnapshotDoneRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsRestoreSnapshotDoneResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsRestoreSnapshotDoneResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSchemaAlterStatusRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSchemaAlterStatusRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetSchemaAlterStatusResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetSchemaAlterStatusResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetTableDescriptorsRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetTableDescriptorsRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetTableDescriptorsResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetTableDescriptorsResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetTableNamesRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetTableNamesRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetTableNamesResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetTableNamesResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetTableStateRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetTableStateRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetTableStateResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetTableStateResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetClusterStatusRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetClusterStatusRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetClusterStatusResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetClusterStatusResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsMasterRunningRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsMasterRunningRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsMasterRunningResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsMasterRunningResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ExecProcedureRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ExecProcedureRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ExecProcedureResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ExecProcedureResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsProcedureDoneRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsProcedureDoneRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_IsProcedureDoneResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_IsProcedureDoneResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetProcedureResultRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetProcedureResultRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_GetProcedureResultResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_GetProcedureResultResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_AbortProcedureRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_AbortProcedureRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_AbortProcedureResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_AbortProcedureResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListProceduresRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListProceduresRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListProceduresResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListProceduresResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListLocksRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListLocksRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListLocksResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListLocksResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetQuotaRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetQuotaRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetQuotaResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SetQuotaResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_MajorCompactionTimestampRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_MajorCompactionTimestampRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_MajorCompactionTimestampResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_MajorCompactionTimestampResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SecurityCapabilitiesRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListDrainingRegionServersRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListDrainingRegionServersRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListDrainingRegionServersResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListDrainingRegionServersResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DrainRegionServersRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DrainRegionServersRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DrainRegionServersResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DrainRegionServersResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RemoveDrainFromRegionServersRequest_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RemoveDrainFromRegionServersRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RemoveDrainFromRegionServersResponse_descriptor;
-  private static final 
+  private static final
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RemoveDrainFromRegionServersResponse_fieldAccessorTable;
 
@@ -77941,203 +78140,204 @@ public final class MasterProtos {
       "stProceduresResponse\022&\n\tprocedure\030\001 \003(\0132" +
       "\023.hbase.pb.Procedure\"\022\n\020ListLocksRequest" +
       "\"5\n\021ListLocksResponse\022 \n\004lock\030\001 \003(\0132\022.hb" +
-      "ase.pb.LockInfo\"\315\001\n\017SetQuotaRequest\022\021\n\tu" +
+      "ase.pb.LockInfo\"\377\001\n\017SetQuotaRequest\022\021\n\tu" +
       "ser_name\030\001 \001(\t\022\022\n\nuser_group\030\002 \001(\t\022\021\n\tna" +
       "mespace\030\003 \001(\t\022\'\n\ntable_name\030\004 \001(\0132\023.hbas",
       "e.pb.TableName\022\022\n\nremove_all\030\005 \001(\010\022\026\n\016by" +
       "pass_globals\030\006 \001(\010\022+\n\010throttle\030\007 \001(\0132\031.h" +
-      "base.pb.ThrottleRequest\"\022\n\020SetQuotaRespo" +
-      "nse\"J\n\037MajorCompactionTimestampRequest\022\'" +
-      "\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableName\"" +
-      "U\n(MajorCompactionTimestampForRegionRequ" +
-      "est\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpe" +
-      "cifier\"@\n MajorCompactionTimestampRespon" +
-      "se\022\034\n\024compaction_timestamp\030\001 \002(\003\"\035\n\033Secu" +
-      "rityCapabilitiesRequest\"\354\001\n\034SecurityCapa",
-      "bilitiesResponse\022G\n\014capabilities\030\001 \003(\01621" +
-      ".hbase.pb.SecurityCapabilitiesResponse.C" +
-      "apability\"\202\001\n\nCapability\022\031\n\025SIMPLE_AUTHE" +
-      "NTICATION\020\000\022\031\n\025SECURE_AUTHENTICATION\020\001\022\021" +
-      "\n\rAUTHORIZATION\020\002\022\026\n\022CELL_AUTHORIZATION\020" +
-      "\003\022\023\n\017CELL_VISIBILITY\020\004\"\"\n ListDrainingRe" +
-      "gionServersRequest\"N\n!ListDrainingRegion" +
-      "ServersResponse\022)\n\013server_name\030\001 \003(\0132\024.h" +
-      "base.pb.ServerName\"F\n\031DrainRegionServers" +
-      "Request\022)\n\013server_name\030\001 \003(\0132\024.hbase.pb.",
-      "ServerName\"\034\n\032DrainRegionServersResponse" +
-      "\"P\n#RemoveDrainFromRegionServersRequest\022" +
-      ")\n\013server_name\030\001 \003(\0132\024.hbase.pb.ServerNa" +
-      "me\"&\n$RemoveDrainFromRegionServersRespon" +
-      "se*(\n\020MasterSwitchType\022\t\n\005SPLIT\020\000\022\t\n\005MER" +
-      "GE\020\0012\2074\n\rMasterService\022e\n\024GetSchemaAlter" +
-      "Status\022%.hbase.pb.GetSchemaAlterStatusRe" +
-      "quest\032&.hbase.pb.GetSchemaAlterStatusRes" +
-      "ponse\022b\n\023GetTableDescriptors\022$.hbase.pb." +
-      "GetTableDescriptorsRequest\032%.hbase.pb.Ge",
-      "tTableDescriptorsResponse\022P\n\rGetTableNam" +
-      "es\022\036.hbase.pb.GetTableNamesRequest\032\037.hba" +
-      "se.pb.GetTableNamesResponse\022Y\n\020GetCluste" +
-      "rStatus\022!.hbase.pb.GetClusterStatusReque" +
-      "st\032\".hbase.pb.GetClusterStatusResponse\022V" +
-      "\n\017IsMasterRunning\022 .hbase.pb.IsMasterRun" +
-      "ningRequest\032!.hbase.pb.IsMasterRunningRe" +
-      "sponse\022D\n\tAddColumn\022\032.hbase.pb.AddColumn" +
-      "Request\032\033.hbase.pb.AddColumnResponse\022M\n\014" +
-      "DeleteColumn\022\035.hbase.pb.DeleteColumnRequ",
-      "est\032\036.hbase.pb.DeleteColumnResponse\022M\n\014M" +
-      "odifyColumn\022\035.hbase.pb.ModifyColumnReque" +
-      "st\032\036.hbase.pb.ModifyColumnResponse\022G\n\nMo" +
-      "veRegion\022\033.hbase.pb.MoveRegionRequest\032\034." +
-      "hbase.pb.MoveRegionResponse\022\\\n\021MergeTabl" +
-      "eRegions\022\".hbase.pb.MergeTableRegionsReq" +
-      "uest\032#.hbase.pb.MergeTableRegionsRespons" +
-      "e\022M\n\014AssignRegion\022\035.hbase.pb.AssignRegio" +
-      "nRequest\032\036.hbase.pb.AssignRegionResponse" +
-      "\022S\n\016UnassignRegion\022\037.hbase.pb.UnassignRe",
-      "gionRequest\032 .hbase.pb.UnassignRegionRes" +
-      "ponse\022P\n\rOfflineRegion\022\036.hbase.pb.Offlin" +
-      "eRegionRequest\032\037.hbase.pb.OfflineRegionR" +
-      "esponse\022J\n\013DeleteTable\022\034.hbase.pb.Delete" +
-      "TableRequest\032\035.hbase.pb.DeleteTableRespo" +
-      "nse\022P\n\rtruncateTable\022\036.hbase.pb.Truncate" +
-      "TableRequest\032\037.hbase.pb.TruncateTableRes" +
-      "ponse\022J\n\013EnableTable\022\034.hbase.pb.EnableTa" +
-      "bleRequest\032\035.hbase.pb.EnableTableRespons" +
-      "e\022M\n\014DisableTable\022\035.hbase.pb.DisableTabl",
-      "eRequest\032\036.hbase.pb.DisableTableResponse" +
-      "\022J\n\013ModifyTable\022\034.hbase.pb.ModifyTableRe" +
-      "quest\032\035.hbase.pb.ModifyTableResponse\022J\n\013" +
-      "CreateTable\022\034.hbase.pb.CreateTableReques" +
-      "t\032\035.hbase.pb.CreateTableResponse\022A\n\010Shut" +
-      "down\022\031.hbase.pb.ShutdownRequest\032\032.hbase." +
-      "pb.ShutdownResponse\022G\n\nStopMaster\022\033.hbas" +
-      "e.pb.StopMasterRequest\032\034.hbase.pb.StopMa" +
-      "sterResponse\022h\n\031IsMasterInMaintenanceMod" +
-      "e\022$.hbase.pb.IsInMaintenanceModeRequest\032",
-      "%.hbase.pb.IsInMaintenanceModeResponse\022>" +
-      "\n\007Balance\022\030.hbase.pb.BalanceRequest\032\031.hb" +
-      "ase.pb.BalanceResponse\022_\n\022SetBalancerRun" +
-      "ning\022#.hbase.pb.SetBalancerRunningReques" +
-      "t\032$.hbase.pb.SetBalancerRunningResponse\022" +
-      "\\\n\021IsBalancerEnabled\022\".hbase.pb.IsBalanc" +
-      "erEnabledRequest\032#.hbase.pb.IsBalancerEn" +
-      "abledResponse\022k\n\026SetSplitOrMergeEnabled\022" +
-      "\'.hbase.pb.SetSplitOrMergeEnabledRequest" +
-      "\032(.hbase.pb.SetSplitOrMergeEnabledRespon",
-      "se\022h\n\025IsSplitOrMergeEnabled\022&.hbase.pb.I" +
-      "sSplitOrMergeEnabledRequest\032\'.hbase.pb.I" +
-      "sSplitOrMergeEnabledResponse\022D\n\tNormaliz" +
-      "e\022\032.hbase.pb.NormalizeRequest\032\033.hbase.pb" +
-      ".NormalizeResponse\022e\n\024SetNormalizerRunni" +
-      "ng\022%.hbase.pb.SetNormalizerRunningReques" +
-      "t\032&.hbase.pb.SetNormalizerRunningRespons" +
-      "e\022b\n\023IsNormalizerEnabled\022$.hbase.pb.IsNo" +
-      "rmalizerEnabledRequest\032%.hbase.pb.IsNorm" +
-      "alizerEnabledResponse\022S\n\016RunCatalogScan\022",
-      "\037.hbase.pb.RunCatalogScanRequest\032 .hbase" +
-      ".pb.RunCatalogScanResponse\022e\n\024EnableCata" +
-      "logJanitor\022%.hbase.pb.EnableCatalogJanit" +
-      "orRequest\032&.hbase.pb.EnableCatalogJanito" +
-      "rResponse\022n\n\027IsCatalogJanitorEnabled\022(.h" +
-      "base.pb.IsCatalogJanitorEnabledRequest\032)" +
-      ".hbase.pb.IsCatalogJanitorEnabledRespons" +
-      "e\022V\n\017RunCleanerChore\022 .hbase.pb.RunClean" +
-      "erChoreRequest\032!.hbase.pb.RunCleanerChor" +
-      "eResponse\022k\n\026SetCleanerChoreRunning\022\'.hb",
-      "ase.pb.SetCleanerChoreRunningRequest\032(.h" +
-      "base.pb.SetCleanerChoreRunningResponse\022h" +
-      "\n\025IsCleanerChoreEnabled\022&.hbase.pb.IsCle" +
-      "anerChoreEnabledRequest\032\'.hbase.pb.IsCle" +
-      "anerChoreEnabledResponse\022^\n\021ExecMasterSe" +
-      "rvice\022#.hbase.pb.CoprocessorServiceReque" +
-      "st\032$.hbase.pb.CoprocessorServiceResponse" +
-      "\022A\n\010Snapshot\022\031.hbase.pb.SnapshotRequest\032" +
-      "\032.hbase.pb.SnapshotResponse\022h\n\025GetComple" +
-      "tedSnapshots\022&.hbase.pb.GetCompletedSnap",
-      "shotsRequest\032\'.hbase.pb.GetCompletedSnap" +
-      "shotsResponse\022S\n\016DeleteSnapshot\022\037.hbase." +
-      "pb.DeleteSnapshotRequest\032 .hbase.pb.Dele" +
-      "teSnapshotResponse\022S\n\016IsSnapshotDone\022\037.h" +
-      "base.pb.IsSnapshotDoneRequest\032 .hbase.pb" +
-      ".IsSnapshotDoneResponse\022V\n\017RestoreSnapsh" +
-      "ot\022 .hbase.pb.RestoreSnapshotRequest\032!.h" +
-      "base.pb.RestoreSnapshotResponse\022P\n\rExecP" +
-      "rocedure\022\036.hbase.pb.ExecProcedureRequest" +
-      "\032\037.hbase.pb.ExecProcedureResponse\022W\n\024Exe",
-      "cProcedureWithRet\022\036.hbase.pb.ExecProcedu" +
-      "reRequest\032\037.hbase.pb.ExecProcedureRespon" +
-      "se\022V\n\017IsProcedureDone\022 .hbase.pb.IsProce" +
-      "dureDoneRequest\032!.hbase.pb.IsProcedureDo" +
-      "neResponse\022V\n\017ModifyNamespace\022 .hbase.pb" +
-      ".ModifyNamespaceRequest\032!.hbase.pb.Modif" +
-      "yNamespaceResponse\022V\n\017CreateNamespace\022 ." +
-      "hbase.pb.CreateNamespaceRequest\032!.hbase." +
-      "pb.CreateNamespaceResponse\022V\n\017DeleteName" +
-      "space\022 .hbase.pb.DeleteNamespaceRequest\032",
-      "!.hbase.pb.DeleteNamespaceResponse\022k\n\026Ge" +
-      "tNamespaceDescriptor\022\'.hbase.pb.GetNames" +
-      "paceDescriptorRequest\032(.hbase.pb.GetName" +
-      "spaceDescriptorResponse\022q\n\030ListNamespace" +
-      "Descriptors\022).hbase.pb.ListNamespaceDesc" +
-      "riptorsRequest\032*.hbase.pb.ListNamespaceD" +
-      "escriptorsResponse\022\206\001\n\037ListTableDescript" +
-      "orsByNamespace\0220.hbase.pb.ListTableDescr" +
-      "iptorsByNamespaceRequest\0321.hbase.pb.List" +
-      "TableDescriptorsByNamespaceResponse\022t\n\031L",
-      "istTableNamesByNamespace\022*.hbase.pb.List" +
-      "TableNamesByNamespaceRequest\032+.hbase.pb." +
-      "ListTableNamesByNamespaceResponse\022P\n\rGet" +
-      "TableState\022\036.hbase.pb.GetTableStateReque" +
-      "st\032\037.hbase.pb.GetTableStateResponse\022A\n\010S" +
-      "etQuota\022\031.hbase.pb.SetQuotaRequest\032\032.hba" +
-      "se.pb.SetQuotaResponse\022x\n\037getLastMajorCo" +
-      "mpactionTimestamp\022).hbase.pb.MajorCompac" +
-      "tionTimestampRequest\032*.hbase.pb.MajorCom" +
-      "pactionTimestampResponse\022\212\001\n(getLastMajo",
-      "rCompactionTimestampForRegion\0222.hbase.pb" +
-      ".MajorCompactionTimestampForRegionReques" +
-      "t\032*.hbase.pb.MajorCompactionTimestampRes" +
-      "ponse\022_\n\022getProcedureResult\022#.hbase.pb.G" +
-      "etProcedureResultRequest\032$.hbase.pb.GetP" +
-      "rocedureResultResponse\022h\n\027getSecurityCap" +
-      "abilities\022%.hbase.pb.SecurityCapabilitie" +
-      "sRequest\032&.hbase.pb.SecurityCapabilities" +
-      "Response\022S\n\016AbortProcedure\022\037.hbase.pb.Ab" +
-      "ortProcedureRequest\032 .hbase.pb.AbortProc",
-      "edureResponse\022S\n\016ListProcedures\022\037.hbase." +
-      "pb.ListProceduresRequest\032 .hbase.pb.List" +
-      "ProceduresResponse\022D\n\tListLocks\022\032.hbase." +
-      "pb.ListLocksRequest\032\033.hbase.pb.ListLocks" +
-      "Response\022_\n\022AddReplicationPeer\022#.hbase.p" +
-      "b.AddReplicationPeerRequest\032$.hbase.pb.A" +
-      "ddReplicationPeerResponse\022h\n\025RemoveRepli" +
-      "cationPeer\022&.hbase.pb.RemoveReplicationP" +
-      "eerRequest\032\'.hbase.pb.RemoveReplicationP" +
-      "eerResponse\022h\n\025EnableReplicationPeer\022&.h",
-      "base.pb.EnableReplicationPeerRequest\032\'.h" +
-      "base.pb.EnableReplicationPeerResponse\022k\n" +
-      "\026DisableReplicationPeer\022\'.hbase.pb.Disab" +
-      "leReplicationPeerRequest\032(.hbase.pb.Disa" +
-      "bleReplicationPeerResponse\022q\n\030GetReplica" +
-      "tionPeerConfig\022).hbase.pb.GetReplication" +
-      "PeerConfigRequest\032*.hbase.pb.GetReplicat" +
-      "ionPeerConfigResponse\022z\n\033UpdateReplicati" +
-      "onPeerConfig\022,.hbase.pb.UpdateReplicatio" +
-      "nPeerConfigRequest\032-.hbase.pb.UpdateRepl",
-      "icationPeerConfigResponse\022e\n\024ListReplica" +
-      "tionPeers\022%.hbase.pb.ListReplicationPeer" +
-      "sRequest\032&.hbase.pb.ListReplicationPeers" +
-      "Response\022t\n\031listDrainingRegionServers\022*." +
-      "hbase.pb.ListDrainingRegionServersReques" +
-      "t\032+.hbase.pb.ListDrainingRegionServersRe" +
-      "sponse\022_\n\022drainRegionServers\022#.hbase.pb." +
-      "DrainRegionServersRequest\032$.hbase.pb.Dra" +
-      "inRegionServersResponse\022}\n\034removeDrainFr" +
-      "omRegionServers\022-.hbase.pb.RemoveDrainFr",
-      "omRegionServersRequest\032..hbase.pb.Remove" +
-      "DrainFromRegionServersResponseBI\n1org.ap" +
-      "ache.hadoop.hbase.shaded.protobuf.genera" +
-      "tedB\014MasterProtosH\001\210\001\001\240\001\001"
+      "base.pb.ThrottleRequest\0220\n\013space_limit\030\010" +
+      " \001(\0132\033.hbase.pb.SpaceLimitRequest\"\022\n\020Set" +
+      "QuotaResponse\"J\n\037MajorCompactionTimestam" +
+      "pRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb." +
+      "TableName\"U\n(MajorCompactionTimestampFor" +
+      "RegionRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb" +
+      ".RegionSpecifier\"@\n MajorCompactionTimes" +
+      "tampResponse\022\034\n\024compaction_timestamp\030\001 \002",
+      "(\003\"\035\n\033SecurityCapabilitiesRequest\"\354\001\n\034Se" +
+      "curityCapabilitiesResponse\022G\n\014capabiliti" +
+      "es\030\001 \003(\01621.hbase.pb.SecurityCapabilities" +
+      "Response.Capability\"\202\001\n\nCapability\022\031\n\025SI" +
+      "MPLE_AUTHENTICATION\020\000\022\031\n\025SECURE_AUTHENTI" +
+      "CATION\020\001\022\021\n\rAUTHORIZATION\020\002\022\026\n\022CELL_AUTH" +
+      "ORIZATION\020\003\022\023\n\017CELL_VISIBILITY\020\004\"\"\n List" +
+      "DrainingRegionServersRequest\"N\n!ListDrai" +
+      "ningRegionServersResponse\022)\n\013server_name" +
+      "\030\001 \003(\0132\024.hbase.pb.ServerName\"F\n\031DrainReg",
+      "ionServersRequest\022)\n\013server_name\030\001 \003(\0132\024" +
+      ".hbase.pb.ServerName\"\034\n\032DrainRegionServe" +
+      "rsResponse\"P\n#RemoveDrainFromRegionServe" +
+      "rsRequest\022)\n\013server_name\030\001 \003(\0132\024.hbase.p" +
+      "b.ServerName\"&\n$RemoveDrainFromRegionSer" +
+      "versResponse*(\n\020MasterSwitchType\022\t\n\005SPLI" +
+      "T\020\000\022\t\n\005MERGE\020\0012\2074\n\rMasterService\022e\n\024GetS" +
+      "chemaAlterStatus\022%.hbase.pb.GetSchemaAlt" +
+      "erStatusRequest\032&.hbase.pb.GetSchemaAlte" +
+      "rStatusResponse\022b\n\023GetTableDescriptors\022$",
+      ".hbase.pb.GetTableDescriptorsRequest\032%.h" +
+      "base.pb.GetTableDescriptorsResponse\022P\n\rG" +
+      "etTableNames\022\036.hbase.pb.GetTableNamesReq" +
+      "uest\032\037.hbase.pb.GetTableNamesResponse\022Y\n" +
+      "\020GetClusterStatus\022!.hbase.pb.GetClusterS" +
+      "tatusRequest\032\".hbase.pb.GetClusterStatus" +
+      "Response\022V\n\017IsMasterRunning\022 .hbase.pb.I" +
+      "sMasterRunningRequest\032!.hbase.pb.IsMaste" +
+      "rRunningResponse\022D\n\tAddColumn\022\032.hbase.pb" +
+      ".AddColumnRequest\032\033.hbase.pb.AddColumnRe",
+      "sponse\022M\n\014DeleteColumn\022\035.hbase.pb.Delete" +
+      "ColumnRequest\032\036.hbase.pb.DeleteColumnRes" +
+      "ponse\022M\n\014ModifyColumn\022\035.hbase.pb.ModifyC" +
+      "olumnRequest\032\036.hbase.pb.ModifyColumnResp" +
+      "onse\022G\n\nMoveRegion\022\033.hbase.pb.MoveRegion" +
+      "Request\032\034.hbase.pb.MoveRegionResponse\022\\\n" +
+      "\021MergeTableRegions\022\".hbase.pb.MergeTable" +
+      "RegionsRequest\032#.hbase.pb.MergeTableRegi" +
+      "onsResponse\022M\n\014AssignRegion\022\035.hbase.pb.A" +
+      "ssignRegionRequest\032\036.hbase.pb.AssignRegi",
+      "onResponse\022S\n\016UnassignRegion\022\037.hbase.pb." +
+      "UnassignRegionRequest\032 .hbase.pb.Unassig" +
+      "nRegionResponse\022P\n\rOfflineRegion\022\036.hbase" +
+      ".pb.OfflineRegionRequest\032\037.hbase.pb.Offl" +
+      "ineRegionResponse\022J\n\013DeleteTable\022\034.hbase" +
+      ".pb.DeleteTableRequest\032\035.hbase.pb.Delete" +
+      "TableResponse\022P\n\rtruncateTable\022\036.hbase.p" +
+      "b.TruncateTableRequest\032\037.hbase.pb.Trunca" +
+      "teTableResponse\022J\n\013EnableTable\022\034.hbase.p" +
+      "b.EnableTableRequest\032\035.hbase.pb.EnableTa",
+      "bleResponse\022M\n\014DisableTable\022\035.hbase.pb.D" +
+      "isableTableRequest\032\036.hbase.pb.DisableTab" +
+      "leResponse\022J\n\013ModifyTable\022\034.hbase.pb.Mod" +
+      "ifyTableRequest\032\035.hbase.pb.ModifyTableRe" +
+      "sponse\022J\n\013CreateTable\022\034.hbase.pb.CreateT" +
+      "ableRequest\032\035.hbase.pb.CreateTableRespon" +
+      "se\022A\n\010Shutdown\022\031.hbase.pb.ShutdownReques" +
+      "t\032\032.hbase.pb.ShutdownResponse\022G\n\nStopMas" +
+      "ter\022\033.hbase.pb.StopMasterRequest\032\034.hbase" +
+      ".pb.StopMasterResponse\022h\n\031IsMasterInMain",
+      "tenanceMode\022$.hbase.pb.IsInMaintenanceMo" +
+      "deRequest\032%.hbase.pb.IsInMaintenanceMode" +
+      "Response\022>\n\007Balance\022\030.hbase.pb.BalanceRe" +
+      "quest\032\031.hbase.pb.BalanceResponse\022_\n\022SetB" +
+      "alancerRunning\022#.hbase.pb.SetBalancerRun" +
+      "ningRequest\032$.hbase.pb.SetBalancerRunnin" +
+      "gResponse\022\\\n\021IsBalancerEnabled\022\".hbase.p" +
+      "b.IsBalancerEnabledRequest\032#.hbase.pb.Is" +
+      "BalancerEnabledResponse\022k\n\026SetSplitOrMer" +
+      "geEnabled\022\'.hbase.pb.SetSplitOrMergeEnab",
+      "ledRequest\032(.hbase.pb.SetSplitOrMergeEna" +
+      "bledResponse\022h\n\025IsSplitOrMergeEnabled\022&." +
+      "hbase.pb.IsSplitOrMergeEnabledRequest\032\'." +
+      "hbase.pb.IsSplitOrMergeEnabledResponse\022D" +
+      "\n\tNormalize\022\032.hbase.pb.NormalizeRequest\032" +
+      "\033.hbase.pb.NormalizeResponse\022e\n\024SetNorma" +
+      "lizerRunning\022%.hbase.pb.SetNormalizerRun" +
+      "ningRequest\032&.hbase.pb.SetNormalizerRunn" +
+      "ingResponse\022b\n\023IsNormalizerEnabled\022$.hba" +
+      "se.pb.IsNormalizerEnabledRequest\032%.hbase",
+      ".pb.IsNormalizerEnabledResponse\022S\n\016RunCa" +
+      "talogScan\022\037.hbase.pb.RunCatalogScanReque" +
+      "st\032 .hbase.pb.RunCatalogScanResponse\022e\n\024" +
+      "EnableCatalogJanitor\022%.hbase.pb.EnableCa" +
+      "talogJanitorRequest\032&.hbase.pb.EnableCat" +
+      "alogJanitorResponse\022n\n\027IsCatalogJanitorE" +
+      "nabled\022(.hbase.pb.IsCatalogJanitorEnable" +
+      "dRequest\032).hbase.pb.IsCatalogJanitorEnab" +
+      "ledResponse\022V\n\017RunCleanerChore\022 .hbase.p" +
+      "b.RunCleanerChoreRequest\032!.hbase.pb.RunC",
+      "leanerChoreResponse\022k\n\026SetCleanerChoreRu" +
+      "nning\022\'.hbase.pb.SetCleanerChoreRunningR" +
+      "equest\032(.hbase.pb.SetCleanerChoreRunning" +
+      "Response\022h\n\025IsCleanerChoreEnabled\022&.hbas" +
+      "e.pb.IsCleanerChoreEnabledRequest\032\'.hbas" +
+      "e.pb.IsCleanerChoreEnabledResponse\022^\n\021Ex" +
+      "ecMasterService\022#.hbase.pb.CoprocessorSe" +
+      "rviceRequest\032$.hbase.pb.CoprocessorServi" +
+      "ceResponse\022A\n\010Snapshot\022\031.hbase.pb.Snapsh" +
+      "otRequest\032\032.hbase.pb.SnapshotResponse\022h\n",
+      "\025GetCompletedSnapshots\022&.hbase.pb.GetCom" +
+      "pletedSnapshotsRequest\032\'.hbase.pb.GetCom" +
+      "pletedSnapshotsResponse\022S\n\016DeleteSnapsho" +
+      "t\022\037.hbase.pb.DeleteSnapshotRequest\032 .hba" +
+      "se.pb.DeleteSnapshotResponse\022S\n\016IsSnapsh" +
+      "otDone\022\037.hbase.pb.IsSnapshotDoneRequest\032" +
+      " .hbase.pb.IsSnapshotDoneResponse\022V\n\017Res" +
+      "toreSnapshot\022 .hbase.pb.RestoreSnapshotR" +
+      "equest\032!.hbase.pb.RestoreSnapshotRespons" +
+      "e\022P\n\rExecProcedure\022\036.hbase.pb.ExecProced",
+      "ureRequest\032\037.hbase.pb.ExecProcedureRespo" +
+      "nse\022W\n\024ExecProcedureWithRet\022\036.hbase.pb.E" +
+      "xecProcedureRequest\032\037.hbase.pb.ExecProce" +
+      "dureResponse\022V\n\017IsProcedureDone\022 .hbase." +
+      "pb.IsProcedureDoneRequest\032!.hbase.pb.IsP" +
+      "rocedureDoneResponse\022V\n\017ModifyNamespace\022" +
+      " .hbase.pb.ModifyNamespaceRequest\032!.hbas" +
+      "e.pb.ModifyNamespaceResponse\022V\n\017CreateNa" +
+      "mespace\022 .hbase.pb.CreateNamespaceReques" +
+      "t\032!.hbase.pb.CreateNamespaceResponse\022V\n\017",
+      "DeleteNamespace\022 .hbase.pb.DeleteNamespa" +
+      "ceRequest\032!.hbase.pb.DeleteNamespaceResp" +
+      "onse\022k\n\026GetNamespaceDescriptor\022\'.hbase.p" +
+      "b.GetNamespaceDescriptorRequest\032(.hbase." +
+      "pb.GetNamespaceDescriptorResponse\022q\n\030Lis" +
+      "tNamespaceDescriptors\022).hbase.pb.ListNam" +
+      "espaceDescriptorsRequest\032*.hbase.pb.List" +
+      "NamespaceDescriptorsResponse\022\206\001\n\037ListTab" +
+      "leDescriptorsByNamespace\0220.hbase.pb.List" +
+      "TableDescriptorsByNamespaceRequest\0321.hba",
+      "se.pb.ListTableDescriptorsByNamespaceRes" +
+      "ponse\022t\n\031ListTableNamesByNamespace\022*.hba" +
+      "se.pb.ListTableNamesByNamespaceRequest\032+" +
+      ".hbase.pb.ListTableNamesByNamespaceRespo" +
+      "nse\022P\n\rGetTableState\022\036.hbase.pb.GetTable" +
+      "StateRequest\032\037.hbase.pb.GetTableStateRes" +
+      "ponse\022A\n\010SetQuota\022\031.hbase.pb.SetQuotaReq" +
+      "uest\032\032.hbase.pb.SetQuotaResponse\022x\n\037getL" +
+      "astMajorCompactionTimestamp\022).hbase.pb.M" +
+      "ajorCompactionTimestampRequest\032*.hbase.p",
+      "b.MajorCompactionTimestampResponse\022\212\001\n(g" +
+      "etLastMajorCompactionTimestampForRegion\022" +
+      "2.hbase.pb.MajorCompactionTimestampForRe" +
+      "gionRequest\032*.hbase.pb.MajorCompactionTi" +
+      "mestampResponse\022_\n\022getProcedureResult\022#." +
+      "hbase.pb.GetProcedureResultRequest\032$.hba" +
+      "se.pb.GetProcedureResultResponse\022h\n\027getS" +
+      "ecurityCapabilities\022%.hbase.pb.SecurityC" +
+      "apabilitiesRequest\032&.hbase.pb.SecurityCa" +
+      "pabilitiesResponse\022S\n\016AbortProcedure\022\037.h",
+      "base.pb.AbortProcedureRequest\032 .hbase.pb" +
+      ".AbortProcedureResponse\022S\n\016ListProcedure" +
+      "s\022\037.hbase.pb.ListProceduresRequest\032 .hba" +
+      "se.pb.ListProceduresResponse\022D\n\tListLock" +
+      "s\022\032.hbase.pb.ListLocksRequest\032\033.hbase.pb" +
+      ".ListLocksResponse\022_\n\022AddReplicationPeer" +
+      "\022#.hbase.pb.AddReplicationPeerRequest\032$." +
+      "hbase.pb.AddReplicationPeerResponse\022h\n\025R" +
+      "emoveReplicationPeer\022&.hbase.pb.RemoveRe" +
+      "plicationPeerRequest\032\'.hbase.pb.RemoveRe",
+      "plicationPeerResponse\022h\n\025EnableReplicati" +
+      "onPeer\022&.hbase.pb.EnableReplicationPeerR" +
+      "equest\032\'.hbase.pb.EnableReplicationPeerR" +
+      "esponse\022k\n\026DisableReplicationPeer\022\'.hbas" +
+      "e.pb.DisableReplicationPeerRequest\032(.hba" +
+      "se.pb.DisableReplicationPeerResponse\022q\n\030" +
+      "GetReplicationPeerConfig\022).hbase.pb.GetR" +
+      "eplicationPeerConfigRequest\032*.hbase.pb.G" +
+      "etReplicationPeerConfigResponse\022z\n\033Updat" +
+      "eReplicationPeerConfig\022,.hbase.pb.Update",
+      "ReplicationPeerConfigRequest\032-.hbase.pb." +
+      "UpdateReplicationPeerConfigResponse\022e\n\024L" +
+      "istReplicationPeers\022%.hbase.pb.ListRepli" +
+      "cationPeersRequest\032&.hbase.pb.ListReplic" +
+      "ationPeersResponse\022t\n\031listDrainingRegion" +
+      "Servers\022*.hbase.pb.ListDrainingRegionSer" +
+      "versRequest\032+.hbase.pb.ListDrainingRegio" +
+      "nServersResponse\022_\n\022drainRegionServers\022#" +
+      ".hbase.pb.DrainRegionServersRequest\032$.hb" +
+      "ase.pb.DrainRegionServersResponse\022}\n\034rem",
+      "oveDrainFromRegionServers\022-.hbase.pb.Rem" +
+      "oveDrainFromRegionServersRequest\032..hbase" +
+      ".pb.RemoveDrainFromRegionServersResponse" +
+      "BI\n1org.apache.hadoop.hbase.shaded.proto" +
+      "buf.generatedB\014MasterProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -78837,7 +79037,7 @@ public final class MasterProtos {
     internal_static_hbase_pb_SetQuotaRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SetQuotaRequest_descriptor,
-        new java.lang.String[] { "UserName", "UserGroup", "Namespace", "TableName", "RemoveAll", "BypassGlobals", "Throttle", });
+        new java.lang.String[] { "UserName", "UserGroup", "Namespace", "TableName", "RemoveAll", "BypassGlobals", "Throttle", "SpaceLimit", });
     internal_static_hbase_pb_SetQuotaResponse_descriptor =
       getDescriptor().getMessageTypes().get(113);
     internal_static_hbase_pb_SetQuotaResponse_fieldAccessorTable = new

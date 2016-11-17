@@ -553,6 +553,8 @@ message SetQuotaRequest {
   optional bool remove_all = 5;
   optional bool bypass_globals = 6;
   optional ThrottleRequest throttle = 7;
+
+  optional SpaceLimitRequest space_limit = 8;
 }
 
 message SetQuotaResponse {

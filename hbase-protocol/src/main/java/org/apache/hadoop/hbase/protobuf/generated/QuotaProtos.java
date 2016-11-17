@@ -217,12 +217,20 @@ public final class QuotaProtos {
      * <code>THROTTLE = 1;</code>
      */
     THROTTLE(0, 1),
+    /**
+     * <code>SPACE = 2;</code>
+     */
+    SPACE(1, 2),
     ;
 
     /**
      * <code>THROTTLE = 1;</code>
      */
     public static final int THROTTLE_VALUE = 1;
+    /**
+     * <code>SPACE = 2;</code>
+     */
+    public static final int SPACE_VALUE = 2;
 
 
     public final int getNumber() { return value; }
@@ -230,6 +238,7 @@ public final class QuotaProtos {
     public static QuotaType valueOf(int value) {
       switch (value) {
         case 1: return THROTTLE;
+        case 2: return SPACE;
         default: return null;
       }
     }
@@ -279,6 +288,142 @@ public final class QuotaProtos {
     }
 
     // @@protoc_insertion_point(enum_scope:hbase.pb.QuotaType)
+  }
+
+  /**
+   * Protobuf enum {@code hbase.pb.SpaceViolationPolicy}
+   *
+   * <pre>
+   * Defines what action should be taken when the SpaceQuota is violated
+   * </pre>
+   */
+  public enum SpaceViolationPolicy
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>DISABLE = 1;</code>
+     *
+     * <pre>
+     * Disable the table(s)
+     * </pre>
+     */
+    DISABLE(0, 1),
+    /**
+     * <code>NO_WRITES_COMPACTIONS = 2;</code>
+     *
+     * <pre>
+     * No writes, bulk-loads, or compactions
+     * </pre>
+     */
+    NO_WRITES_COMPACTIONS(1, 2),
+    /**
+     * <code>NO_WRITES = 3;</code>
+     *
+     * <pre>
+     * No writes or bulk-loads
+     * </pre>
+     */
+    NO_WRITES(2, 3),
+    /**
+     * <code>NO_INSERTS = 4;</code>
+     *
+     * <pre>
+     * No puts or bulk-loads, but deletes are allowed
+     * </pre>
+     */
+    NO_INSERTS(3, 4),
+    ;
+
+    /**
+     * <code>DISABLE = 1;</code>
+     *
+     * <pre>
+     * Disable the table(s)
+     * </pre>
+     */
+    public static final int DISABLE_VALUE = 1;
+    /**
+     * <code>NO_WRITES_COMPACTIONS = 2;</code>
+     *
+     * <pre>
+     * No writes, bulk-loads, or compactions
+     * </pre>
+     */
+    public static final int NO_WRITES_COMPACTIONS_VALUE = 2;
+    /**
+     * <code>NO_WRITES = 3;</code>
+     *
+     * <pre>
+     * No writes or bulk-loads
+     * </pre>
+     */
+    public static final int NO_WRITES_VALUE = 3;
+    /**
+     * <code>NO_INSERTS = 4;</code>
+     *
+     * <pre>
+     * No puts or bulk-loads, but deletes are allowed
+     * </pre>
+     */
+    public static final int NO_INSERTS_VALUE = 4;
+
+
+    public final int getNumber() { return value; }
+
+    public static SpaceViolationPolicy valueOf(int value) {
+      switch (value) {
+        case 1: return DISABLE;
+        case 2: return NO_WRITES_COMPACTIONS;
+        case 3: return NO_WRITES;
+        case 4: return NO_INSERTS;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<SpaceViolationPolicy>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<SpaceViolationPolicy>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<SpaceViolationPolicy>() {
+            public SpaceViolationPolicy findValueByNumber(int number) {
+              return SpaceViolationPolicy.valueOf(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.getDescriptor().getEnumTypes().get(3);
+    }
+
+    private static final SpaceViolationPolicy[] VALUES = values();
+
+    public static SpaceViolationPolicy valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int index;
+    private final int value;
+
+    private SpaceViolationPolicy(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:hbase.pb.SpaceViolationPolicy)
   }
 
   public interface TimedQuotaOrBuilder
@@ -3315,6 +3460,20 @@ public final class QuotaProtos {
      * <code>optional .hbase.pb.Throttle throttle = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleOrBuilder getThrottleOrBuilder();
+
+    // optional .hbase.pb.SpaceQuota space = 3;
+    /**
+     * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+     */
+    boolean hasSpace();
+    /**
+     * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota getSpace();
+    /**
+     * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder getSpaceOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.Quotas}
@@ -3383,6 +3542,19 @@ public final class QuotaProtos {
                 throttle_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000002;
+              break;
+            }
+            case 26: {
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000004) == 0x00000004)) {
+                subBuilder = space_.toBuilder();
+              }
+              space_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(space_);
+                space_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000004;
               break;
             }
           }
@@ -3463,9 +3635,32 @@ public final class QuotaProtos {
       return throttle_;
     }
 
+    // optional .hbase.pb.SpaceQuota space = 3;
+    public static final int SPACE_FIELD_NUMBER = 3;
+    private org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota space_;
+    /**
+     * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+     */
+    public boolean hasSpace() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota getSpace() {
+      return space_;
+    }
+    /**
+     * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder getSpaceOrBuilder() {
+      return space_;
+    }
+
     private void initFields() {
       bypassGlobals_ = false;
       throttle_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle.getDefaultInstance();
+      space_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3491,6 +3686,9 @@ public final class QuotaProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeMessage(2, throttle_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeMessage(3, space_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3507,6 +3705,10 @@ public final class QuotaProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(2, throttle_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, space_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3541,6 +3743,11 @@ public final class QuotaProtos {
         result = result && getThrottle()
             .equals(other.getThrottle());
       }
+      result = result && (hasSpace() == other.hasSpace());
+      if (hasSpace()) {
+        result = result && getSpace()
+            .equals(other.getSpace());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -3561,6 +3768,10 @@ public final class QuotaProtos {
       if (hasThrottle()) {
         hash = (37 * hash) + THROTTLE_FIELD_NUMBER;
         hash = (53 * hash) + getThrottle().hashCode();
+      }
+      if (hasSpace()) {
+        hash = (37 * hash) + SPACE_FIELD_NUMBER;
+        hash = (53 * hash) + getSpace().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -3664,6 +3875,7 @@ public final class QuotaProtos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getThrottleFieldBuilder();
+          getSpaceFieldBuilder();
         }
       }
       private static Builder create() {
@@ -3680,6 +3892,12 @@ public final class QuotaProtos {
           throttleBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
+        if (spaceBuilder_ == null) {
+          space_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
+        } else {
+          spaceBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -3720,6 +3938,14 @@ public final class QuotaProtos {
         } else {
           result.throttle_ = throttleBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        if (spaceBuilder_ == null) {
+          result.space_ = space_;
+        } else {
+          result.space_ = spaceBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3741,6 +3967,9 @@ public final class QuotaProtos {
         }
         if (other.hasThrottle()) {
           mergeThrottle(other.getThrottle());
+        }
+        if (other.hasSpace()) {
+          mergeSpace(other.getSpace());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -3923,6 +4152,123 @@ public final class QuotaProtos {
           throttle_ = null;
         }
         return throttleBuilder_;
+      }
+
+      // optional .hbase.pb.SpaceQuota space = 3;
+      private org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota space_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder> spaceBuilder_;
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      public boolean hasSpace() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota getSpace() {
+        if (spaceBuilder_ == null) {
+          return space_;
+        } else {
+          return spaceBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      public Builder setSpace(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota value) {
+        if (spaceBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          space_ = value;
+          onChanged();
+        } else {
+          spaceBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      public Builder setSpace(
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder builderForValue) {
+        if (spaceBuilder_ == null) {
+          space_ = builderForValue.build();
+          onChanged();
+        } else {
+          spaceBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      public Builder mergeSpace(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota value) {
+        if (spaceBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004) &&
+              space_ != org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance()) {
+            space_ =
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.newBuilder(space_).mergeFrom(value).buildPartial();
+          } else {
+            space_ = value;
+          }
+          onChanged();
+        } else {
+          spaceBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      public Builder clearSpace() {
+        if (spaceBuilder_ == null) {
+          space_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
+          onChanged();
+        } else {
+          spaceBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder getSpaceBuilder() {
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return getSpaceFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder getSpaceOrBuilder() {
+        if (spaceBuilder_ != null) {
+          return spaceBuilder_.getMessageOrBuilder();
+        } else {
+          return space_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota space = 3;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder> 
+          getSpaceFieldBuilder() {
+        if (spaceBuilder_ == null) {
+          spaceBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder>(
+                  space_,
+                  getParentForChildren(),
+                  isClean());
+          space_ = null;
+        }
+        return spaceBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.Quotas)
@@ -4274,6 +4620,1164 @@ public final class QuotaProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.QuotaUsage)
   }
 
+  public interface SpaceQuotaOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional uint64 soft_limit = 1;
+    /**
+     * <code>optional uint64 soft_limit = 1;</code>
+     *
+     * <pre>
+     * The limit of bytes for this quota
+     * </pre>
+     */
+    boolean hasSoftLimit();
+    /**
+     * <code>optional uint64 soft_limit = 1;</code>
+     *
+     * <pre>
+     * The limit of bytes for this quota
+     * </pre>
+     */
+    long getSoftLimit();
+
+    // optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;
+    /**
+     * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;</code>
+     *
+     * <pre>
+     * The action to take when the quota is violated
+     * </pre>
+     */
+    boolean hasViolationPolicy();
+    /**
+     * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;</code>
+     *
+     * <pre>
+     * The action to take when the quota is violated
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy getViolationPolicy();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.SpaceQuota}
+   *
+   * <pre>
+   * Defines a limit on the amount of filesystem space used by a table/namespace
+   * </pre>
+   */
+  public static final class SpaceQuota extends
+      com.google.protobuf.GeneratedMessage
+      implements SpaceQuotaOrBuilder {
+    // Use SpaceQuota.newBuilder() to construct.
+    private SpaceQuota(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SpaceQuota(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SpaceQuota defaultInstance;
+    public static SpaceQuota getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SpaceQuota getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SpaceQuota(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              softLimit_ = input.readUInt64();
+              break;
+            }
+            case 16: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy value = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(2, rawValue);
+              } else {
+                bitField0_ |= 0x00000002;
+                violationPolicy_ = value;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceQuota_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceQuota_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.class, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SpaceQuota> PARSER =
+        new com.google.protobuf.AbstractParser<SpaceQuota>() {
+      public SpaceQuota parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SpaceQuota(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SpaceQuota> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // optional uint64 soft_limit = 1;
+    public static final int SOFT_LIMIT_FIELD_NUMBER = 1;
+    private long softLimit_;
+    /**
+     * <code>optional uint64 soft_limit = 1;</code>
+     *
+     * <pre>
+     * The limit of bytes for this quota
+     * </pre>
+     */
+    public boolean hasSoftLimit() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional uint64 soft_limit = 1;</code>
+     *
+     * <pre>
+     * The limit of bytes for this quota
+     * </pre>
+     */
+    public long getSoftLimit() {
+      return softLimit_;
+    }
+
+    // optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;
+    public static final int VIOLATION_POLICY_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy violationPolicy_;
+    /**
+     * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;</code>
+     *
+     * <pre>
+     * The action to take when the quota is violated
+     * </pre>
+     */
+    public boolean hasViolationPolicy() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;</code>
+     *
+     * <pre>
+     * The action to take when the quota is violated
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy getViolationPolicy() {
+      return violationPolicy_;
+    }
+
+    private void initFields() {
+      softLimit_ = 0L;
+      violationPolicy_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy.DISABLE;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt64(1, softLimit_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeEnum(2, violationPolicy_.getNumber());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(1, softLimit_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(2, violationPolicy_.getNumber());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota other = (org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota) obj;
+
+      boolean result = true;
+      result = result && (hasSoftLimit() == other.hasSoftLimit());
+      if (hasSoftLimit()) {
+        result = result && (getSoftLimit()
+            == other.getSoftLimit());
+      }
+      result = result && (hasViolationPolicy() == other.hasViolationPolicy());
+      if (hasViolationPolicy()) {
+        result = result &&
+            (getViolationPolicy() == other.getViolationPolicy());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasSoftLimit()) {
+        hash = (37 * hash) + SOFT_LIMIT_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getSoftLimit());
+      }
+      if (hasViolationPolicy()) {
+        hash = (37 * hash) + VIOLATION_POLICY_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getViolationPolicy());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.SpaceQuota}
+     *
+     * <pre>
+     * Defines a limit on the amount of filesystem space used by a table/namespace
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceQuota_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceQuota_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.class, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        softLimit_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        violationPolicy_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy.DISABLE;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceQuota_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota build() {
+        org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota result = new org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.softLimit_ = softLimit_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.violationPolicy_ = violationPolicy_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance()) return this;
+        if (other.hasSoftLimit()) {
+          setSoftLimit(other.getSoftLimit());
+        }
+        if (other.hasViolationPolicy()) {
+          setViolationPolicy(other.getViolationPolicy());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional uint64 soft_limit = 1;
+      private long softLimit_ ;
+      /**
+       * <code>optional uint64 soft_limit = 1;</code>
+       *
+       * <pre>
+       * The limit of bytes for this quota
+       * </pre>
+       */
+      public boolean hasSoftLimit() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional uint64 soft_limit = 1;</code>
+       *
+       * <pre>
+       * The limit of bytes for this quota
+       * </pre>
+       */
+      public long getSoftLimit() {
+        return softLimit_;
+      }
+      /**
+       * <code>optional uint64 soft_limit = 1;</code>
+       *
+       * <pre>
+       * The limit of bytes for this quota
+       * </pre>
+       */
+      public Builder setSoftLimit(long value) {
+        bitField0_ |= 0x00000001;
+        softLimit_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 soft_limit = 1;</code>
+       *
+       * <pre>
+       * The limit of bytes for this quota
+       * </pre>
+       */
+      public Builder clearSoftLimit() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        softLimit_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy violationPolicy_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy.DISABLE;
+      /**
+       * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;</code>
+       *
+       * <pre>
+       * The action to take when the quota is violated
+       * </pre>
+       */
+      public boolean hasViolationPolicy() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;</code>
+       *
+       * <pre>
+       * The action to take when the quota is violated
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy getViolationPolicy() {
+        return violationPolicy_;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;</code>
+       *
+       * <pre>
+       * The action to take when the quota is violated
+       * </pre>
+       */
+      public Builder setViolationPolicy(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        violationPolicy_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceViolationPolicy violation_policy = 2;</code>
+       *
+       * <pre>
+       * The action to take when the quota is violated
+       * </pre>
+       */
+      public Builder clearViolationPolicy() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        violationPolicy_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceViolationPolicy.DISABLE;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SpaceQuota)
+    }
+
+    static {
+      defaultInstance = new SpaceQuota(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SpaceQuota)
+  }
+
+  public interface SpaceLimitRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional .hbase.pb.SpaceQuota quota = 1;
+    /**
+     * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+     */
+    boolean hasQuota();
+    /**
+     * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota getQuota();
+    /**
+     * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder getQuotaOrBuilder();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.SpaceLimitRequest}
+   *
+   * <pre>
+   * The Request to limit space usage (to allow for schema evolution not tied to SpaceQuota).
+   * </pre>
+   */
+  public static final class SpaceLimitRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements SpaceLimitRequestOrBuilder {
+    // Use SpaceLimitRequest.newBuilder() to construct.
+    private SpaceLimitRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SpaceLimitRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SpaceLimitRequest defaultInstance;
+    public static SpaceLimitRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SpaceLimitRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SpaceLimitRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = quota_.toBuilder();
+              }
+              quota_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(quota_);
+                quota_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceLimitRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceLimitRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest.class, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SpaceLimitRequest> PARSER =
+        new com.google.protobuf.AbstractParser<SpaceLimitRequest>() {
+      public SpaceLimitRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SpaceLimitRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SpaceLimitRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // optional .hbase.pb.SpaceQuota quota = 1;
+    public static final int QUOTA_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota quota_;
+    /**
+     * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+     */
+    public boolean hasQuota() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota getQuota() {
+      return quota_;
+    }
+    /**
+     * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder getQuotaOrBuilder() {
+      return quota_;
+    }
+
+    private void initFields() {
+      quota_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, quota_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, quota_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest other = (org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest) obj;
+
+      boolean result = true;
+      result = result && (hasQuota() == other.hasQuota());
+      if (hasQuota()) {
+        result = result && getQuota()
+            .equals(other.getQuota());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasQuota()) {
+        hash = (37 * hash) + QUOTA_FIELD_NUMBER;
+        hash = (53 * hash) + getQuota().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.SpaceLimitRequest}
+     *
+     * <pre>
+     * The Request to limit space usage (to allow for schema evolution not tied to SpaceQuota).
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceLimitRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceLimitRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest.class, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getQuotaFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (quotaBuilder_ == null) {
+          quota_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
+        } else {
+          quotaBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.internal_static_hbase_pb_SpaceLimitRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest result = new org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (quotaBuilder_ == null) {
+          result.quota_ = quota_;
+        } else {
+          result.quota_ = quotaBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest.getDefaultInstance()) return this;
+        if (other.hasQuota()) {
+          mergeQuota(other.getQuota());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceLimitRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional .hbase.pb.SpaceQuota quota = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota quota_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder> quotaBuilder_;
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      public boolean hasQuota() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota getQuota() {
+        if (quotaBuilder_ == null) {
+          return quota_;
+        } else {
+          return quotaBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      public Builder setQuota(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota value) {
+        if (quotaBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          quota_ = value;
+          onChanged();
+        } else {
+          quotaBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      public Builder setQuota(
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder builderForValue) {
+        if (quotaBuilder_ == null) {
+          quota_ = builderForValue.build();
+          onChanged();
+        } else {
+          quotaBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      public Builder mergeQuota(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota value) {
+        if (quotaBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              quota_ != org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance()) {
+            quota_ =
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.newBuilder(quota_).mergeFrom(value).buildPartial();
+          } else {
+            quota_ = value;
+          }
+          onChanged();
+        } else {
+          quotaBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      public Builder clearQuota() {
+        if (quotaBuilder_ == null) {
+          quota_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.getDefaultInstance();
+          onChanged();
+        } else {
+          quotaBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder getQuotaBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getQuotaFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder getQuotaOrBuilder() {
+        if (quotaBuilder_ != null) {
+          return quotaBuilder_.getMessageOrBuilder();
+        } else {
+          return quota_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.SpaceQuota quota = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder> 
+          getQuotaFieldBuilder() {
+        if (quotaBuilder_ == null) {
+          quotaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuota.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.SpaceQuotaOrBuilder>(
+                  quota_,
+                  getParentForChildren(),
+                  isClean());
+          quota_ = null;
+        }
+        return quotaBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SpaceLimitRequest)
+    }
+
+    static {
+      defaultInstance = new SpaceLimitRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SpaceLimitRequest)
+  }
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_TimedQuota_descriptor;
   private static
@@ -4299,6 +5803,16 @@ public final class QuotaProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_QuotaUsage_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SpaceQuota_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_SpaceQuota_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SpaceLimitRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_SpaceLimitRequest_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -4321,15 +5835,23 @@ public final class QuotaProtos {
       "\006 \001(\0132\024.hbase.pb.TimedQuota\"b\n\017ThrottleR" +
       "equest\022$\n\004type\030\001 \001(\0162\026.hbase.pb.Throttle" +
       "Type\022)\n\013timed_quota\030\002 \001(\0132\024.hbase.pb.Tim" +
-      "edQuota\"M\n\006Quotas\022\035\n\016bypass_globals\030\001 \001(" +
+      "edQuota\"r\n\006Quotas\022\035\n\016bypass_globals\030\001 \001(" +
       "\010:\005false\022$\n\010throttle\030\002 \001(\0132\022.hbase.pb.Th" +
-      "rottle\"\014\n\nQuotaUsage*&\n\nQuotaScope\022\013\n\007CL" +
-      "USTER\020\001\022\013\n\007MACHINE\020\002*v\n\014ThrottleType\022\022\n\016" +
-      "REQUEST_NUMBER\020\001\022\020\n\014REQUEST_SIZE\020\002\022\020\n\014WR" +
-      "ITE_NUMBER\020\003\022\016\n\nWRITE_SIZE\020\004\022\017\n\013READ_NUM" +
-      "BER\020\005\022\r\n\tREAD_SIZE\020\006*\031\n\tQuotaType\022\014\n\010THR",
-      "OTTLE\020\001BA\n*org.apache.hadoop.hbase.proto" +
-      "buf.generatedB\013QuotaProtosH\001\210\001\001\240\001\001"
+      "rottle\022#\n\005space\030\003 \001(\0132\024.hbase.pb.SpaceQu" +
+      "ota\"\014\n\nQuotaUsage\"Z\n\nSpaceQuota\022\022\n\nsoft_" +
+      "limit\030\001 \001(\004\0228\n\020violation_policy\030\002 \001(\0162\036." +
+      "hbase.pb.SpaceViolationPolicy\"8\n\021SpaceLi" +
+      "mitRequest\022#\n\005quota\030\001 \001(\0132\024.hbase.pb.Spa",
+      "ceQuota*&\n\nQuotaScope\022\013\n\007CLUSTER\020\001\022\013\n\007MA" +
+      "CHINE\020\002*v\n\014ThrottleType\022\022\n\016REQUEST_NUMBE" +
+      "R\020\001\022\020\n\014REQUEST_SIZE\020\002\022\020\n\014WRITE_NUMBER\020\003\022" +
+      "\016\n\nWRITE_SIZE\020\004\022\017\n\013READ_NUMBER\020\005\022\r\n\tREAD" +
+      "_SIZE\020\006*$\n\tQuotaType\022\014\n\010THROTTLE\020\001\022\t\n\005SP" +
+      "ACE\020\002*]\n\024SpaceViolationPolicy\022\013\n\007DISABLE" +
+      "\020\001\022\031\n\025NO_WRITES_COMPACTIONS\020\002\022\r\n\tNO_WRIT" +
+      "ES\020\003\022\016\n\nNO_INSERTS\020\004BA\n*org.apache.hadoo" +
+      "p.hbase.protobuf.generatedB\013QuotaProtosH" +
+      "\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4359,13 +5881,25 @@ public final class QuotaProtos {
           internal_static_hbase_pb_Quotas_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_Quotas_descriptor,
-              new java.lang.String[] { "BypassGlobals", "Throttle", });
+              new java.lang.String[] { "BypassGlobals", "Throttle", "Space", });
           internal_static_hbase_pb_QuotaUsage_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_hbase_pb_QuotaUsage_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_QuotaUsage_descriptor,
               new java.lang.String[] { });
+          internal_static_hbase_pb_SpaceQuota_descriptor =
+            getDescriptor().getMessageTypes().get(5);
+          internal_static_hbase_pb_SpaceQuota_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_SpaceQuota_descriptor,
+              new java.lang.String[] { "SoftLimit", "ViolationPolicy", });
+          internal_static_hbase_pb_SpaceLimitRequest_descriptor =
+            getDescriptor().getMessageTypes().get(6);
+          internal_static_hbase_pb_SpaceLimitRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_SpaceLimitRequest_descriptor,
+              new java.lang.String[] { "Quota", });
           return null;
         }
       };

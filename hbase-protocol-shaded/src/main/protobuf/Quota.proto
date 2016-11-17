@@ -65,12 +65,33 @@ message ThrottleRequest {
 
 enum QuotaType {
   THROTTLE = 1;
+  SPACE = 2;
 }
 
 message Quotas {
   optional bool bypass_globals = 1 [default = false];
   optional Throttle throttle = 2;
+  optional SpaceQuota space = 3;
 }
 
 message QuotaUsage {
+}
+
+// Defines what action should be taken when the SpaceQuota is violated
+enum SpaceViolationPolicy {
+  DISABLE = 1; // Disable the table(s)
+  NO_WRITES_COMPACTIONS = 2; // No writes, bulk-loads, or compactions
+  NO_WRITES = 3; // No writes or bulk-loads
+  NO_INSERTS = 4; // No puts or bulk-loads, but deletes are allowed
+}
+
+// Defines a limit on the amount of filesystem space used by a table/namespace
+message SpaceQuota {
+  optional uint64 soft_limit = 1; // The limit of bytes for this quota
+  optional SpaceViolationPolicy violation_policy = 2; // The action to take when the quota is violated
+}
+
+// The Request to limit space usage (to allow for schema evolution not tied to SpaceQuota).
+message SpaceLimitRequest {
+  optional SpaceQuota quota = 1;
 }
