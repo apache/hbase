@@ -32,7 +32,7 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>12</version>
+    <version>18</version>
     <relativePath/>
     <!-- no parent resolution -->
   </parent>
