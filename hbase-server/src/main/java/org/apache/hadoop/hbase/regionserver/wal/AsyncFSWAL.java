@@ -35,8 +35,9 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
-import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -109,8 +110,8 @@ import org.apache.htrace.TraceScope;
  * {@link #readyForRolling} to false, and then wait on {@link #readyForRolling}(see
  * {@link #waitForSafePoint()}).</li>
  * <li>In the consumer thread, we will stop polling entries from {@link #waitingConsumePayloads} if
- * {@link #waitingRoll} is true, and also stop writing the entries in {@link #toWriteAppends}
- * out.</li>
+ * {@link #waitingRoll} is true, and also stop writing the entries in {@link #toWriteAppends} out.
+ * </li>
  * <li>If there are unflush data in the writer, sync them.</li>
  * <li>When all out-going sync request is finished, i.e, the {@link #unackedAppends} is empty,
  * signal the {@link #readyForRollingCond}.</li>
@@ -179,14 +180,15 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final Deque<FSWALEntry> unackedAppends = new ArrayDeque<>();
 
-  private final PriorityQueue<SyncFuture> syncFutures =
-      new PriorityQueue<SyncFuture>(11, SEQ_COMPARATOR);
+  private final SortedSet<SyncFuture> syncFutures = new TreeSet<SyncFuture>(SEQ_COMPARATOR);
 
   // the highest txid of WAL entries being processed
   private long highestProcessedAppendTxid;
 
   // file length when we issue last sync request on the writer
   private long fileLengthAtLastSync;
+
+  private long highestProcessedAppendTxidAtLastSync;
 
   public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
@@ -286,7 +288,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private void syncCompleted(AsyncWriter writer, long processedTxid, long startTimeNs) {
     highestSyncedTxid.set(processedTxid);
-    int syncCount = finishSync(true);
     for (Iterator<FSWALEntry> iter = unackedAppends.iterator(); iter.hasNext();) {
       if (iter.next().getTxid() <= processedTxid) {
         iter.remove();
@@ -294,7 +295,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         break;
       }
     }
-    postSync(System.nanoTime() - startTimeNs, syncCount);
+    postSync(System.nanoTime() - startTimeNs, finishSync(true));
     // Ideally, we should set a flag to indicate that the log roll has already been requested for
     // the current writer and give up here, and reset the flag when roll is finished. But we
     // finish roll in the log roller thread so the flag need to be set by different thread which
@@ -321,14 +322,16 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
-  private void sync(final AsyncWriter writer, final long processedTxid) {
+  private void sync(AsyncWriter writer) {
     fileLengthAtLastSync = writer.getLength();
+    long currentHighestProcessedAppendTxid = highestProcessedAppendTxid;
+    highestProcessedAppendTxidAtLastSync = currentHighestProcessedAppendTxid;
     final long startTimeNs = System.nanoTime();
     writer.sync().whenComplete((result, error) -> {
       if (error != null) {
         syncFailed(error);
       } else {
-        syncCompleted(writer, processedTxid, startTimeNs);
+        syncCompleted(writer, currentHighestProcessedAppendTxid, startTimeNs);
       }
     });
   }
@@ -341,10 +344,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private int finishSyncLowerThanTxid(long txid, boolean addSyncTrace) {
     int finished = 0;
-    for (SyncFuture sync; (sync = syncFutures.peek()) != null;) {
+    for (Iterator<SyncFuture> iter = syncFutures.iterator(); iter.hasNext();) {
+      SyncFuture sync = iter.next();
       if (sync.getTxid() <= txid) {
         sync.done(txid, null);
-        syncFutures.remove();
+        iter.remove();
         finished++;
         if (addSyncTrace) {
           addTimeAnnotation(sync, "writer synced");
@@ -356,12 +360,13 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     return finished;
   }
 
+  // try advancing the highestSyncedTxid as much as possible
   private int finishSync(boolean addSyncTrace) {
-    long doneTxid = highestSyncedTxid.get();
-    if (doneTxid >= highestProcessedAppendTxid) {
+    if (unackedAppends.isEmpty()) {
+      // All outstanding appends have been acked.
       if (toWriteAppends.isEmpty()) {
-        // all outstanding appends have been acked, just finish all syncs.
-        long maxSyncTxid = doneTxid;
+        // Also no appends that wait to be written out, then just finished all pending syncs.
+        long maxSyncTxid = highestSyncedTxid.get();
         for (SyncFuture sync : syncFutures) {
           maxSyncTxid = Math.max(maxSyncTxid, sync.getTxid());
           sync.done(maxSyncTxid, null);
@@ -379,10 +384,16 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         // highestProcessedAppendTxid and lowestUnprocessedAppendTxid can be finished.
         long lowestUnprocessedAppendTxid = toWriteAppends.peek().getTxid();
         assert lowestUnprocessedAppendTxid > highestProcessedAppendTxid;
-        highestSyncedTxid.set(lowestUnprocessedAppendTxid - 1);
-        return finishSyncLowerThanTxid(lowestUnprocessedAppendTxid - 1, addSyncTrace);
+        long doneTxid = lowestUnprocessedAppendTxid - 1;
+        highestSyncedTxid.set(doneTxid);
+        return finishSyncLowerThanTxid(doneTxid, addSyncTrace);
       }
     } else {
+      // There are still unacked appends. So let's move the highestSyncedTxid to the txid of the
+      // first unacked append minus 1.
+      long lowestUnackedAppendTxid = unackedAppends.peek().getTxid();
+      long doneTxid = Math.max(lowestUnackedAppendTxid - 1, highestSyncedTxid.get());
+      highestSyncedTxid.set(doneTxid);
       return finishSyncLowerThanTxid(doneTxid, addSyncTrace);
     }
   }
@@ -392,7 +403,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     // maybe a sync request is not queued when we issue a sync, so check here to see if we could
     // finish some.
     finishSync(false);
-    long newHighestProcessedTxid = -1L;
+    long newHighestProcessedAppendTxid = -1L;
     for (Iterator<FSWALEntry> iter = toWriteAppends.iterator(); iter.hasNext();) {
       FSWALEntry entry = iter.next();
       boolean appended;
@@ -415,7 +426,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
           throw new AssertionError("should not happen", e);
         }
       }
-      newHighestProcessedTxid = entry.getTxid();
+      newHighestProcessedAppendTxid = entry.getTxid();
       iter.remove();
       if (appended) {
         unackedAppends.addLast(entry);
@@ -426,42 +437,32 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
     // if we have a newer transaction id, update it.
     // otherwise, use the previous transaction id.
-    if (newHighestProcessedTxid > 0) {
-      highestProcessedAppendTxid = newHighestProcessedTxid;
+    if (newHighestProcessedAppendTxid > 0) {
+      highestProcessedAppendTxid = newHighestProcessedAppendTxid;
     } else {
-      newHighestProcessedTxid = highestProcessedAppendTxid;
+      newHighestProcessedAppendTxid = highestProcessedAppendTxid;
     }
 
     if (writer.getLength() - fileLengthAtLastSync >= batchSize) {
       // sync because buffer size limit.
-      sync(writer, newHighestProcessedTxid);
+      sync(writer);
       return;
     }
     if (writer.getLength() == fileLengthAtLastSync) {
       // we haven't written anything out, just advance the highestSyncedSequence since we may only
       // stamped some region sequence id.
-      highestSyncedTxid.set(newHighestProcessedTxid);
-      finishSync(false);
-      trySetReadyForRolling();
+      if (unackedAppends.isEmpty()) {
+        highestSyncedTxid.set(highestProcessedAppendTxid);
+        finishSync(false);
+        trySetReadyForRolling();
+      }
       return;
     }
     // we have some unsynced data but haven't reached the batch size yet
-    if (!syncFutures.isEmpty()) {
+    if (!syncFutures.isEmpty()
+        && syncFutures.last().getTxid() > highestProcessedAppendTxidAtLastSync) {
       // we have at least one sync request
-      sync(writer, newHighestProcessedTxid);
-      return;
-    }
-    // usually waitingRoll is false so we check it without lock first.
-    if (waitingRoll) {
-      consumeLock.lock();
-      try {
-        if (waitingRoll) {
-          // there is a roll request
-          sync(writer, newHighestProcessedTxid);
-        }
-      } finally {
-        consumeLock.unlock();
-      }
+      sync(writer);
     }
   }
 
@@ -474,7 +475,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       if (waitingRoll) {
         if (writer.getLength() > fileLengthAtLastSync) {
           // issue a sync
-          sync(writer, highestProcessedAppendTxid);
+          sync(writer);
         } else {
           if (unackedAppends.isEmpty()) {
             readyForRolling = true;
@@ -673,6 +674,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       this.fsOut = ((AsyncProtobufLogWriter) nextWriter).getOutput();
     }
     this.fileLengthAtLastSync = 0L;
+    this.highestProcessedAppendTxidAtLastSync = 0L;
     consumeLock.lock();
     try {
       consumerScheduled.set(true);

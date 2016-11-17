@@ -37,6 +37,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.DrainBarrier;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -163,9 +165,9 @@ public abstract class AbstractFSWAL<W> implements WAL {
   /** The barrier used to ensure that close() waits for all log rolls and flushes to finish. */
   protected final DrainBarrier closeBarrier = new DrainBarrier();
 
-  protected final int slowSyncNs;
+  protected final long slowSyncNs;
 
-  private final long walSyncTimeout;
+  private final long walSyncTimeoutNs;
 
   // If > than this size, roll the log.
   protected final long logrollsize;
@@ -221,12 +223,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
    * WAL Comparator; it compares the timestamp (log filenum), present in the log file name. Throws
    * an IllegalArgumentException if used to compare paths from different wals.
    */
-  final Comparator<Path> LOG_NAME_COMPARATOR = new Comparator<Path>() {
-    @Override
-    public int compare(Path o1, Path o2) {
-      return Long.compare(getFileNumFromFileName(o1), getFileNumFromFileName(o2));
-    }
-  };
+  final Comparator<Path> LOG_NAME_COMPARATOR =
+      (o1, o2) -> Long.compare(getFileNumFromFileName(o1), getFileNumFromFileName(o2));
 
   private static final class WalProps {
 
@@ -258,7 +256,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
   /**
    * Map of {@link SyncFuture}s keyed by Handler objects. Used so we reuse SyncFutures.
    * <p>
-   * TODO: Reus FSWALEntry's rather than create them anew each time as we do SyncFutures here.
+   * TODO: Reuse FSWALEntry's rather than create them anew each time as we do SyncFutures here.
    * <p>
    * TODO: Add a FSWalEntry and SyncFuture as thread locals on handlers rather than have them get
    * them from this Map?
@@ -400,10 +398,10 @@ public abstract class AbstractFSWAL<W> implements WAL {
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize="
         + StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix="
         + walFileSuffix + ", logDir=" + this.walDir + ", archiveDir=" + this.walArchiveDir);
-    this.slowSyncNs =
-        1000000 * conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS);
-    this.walSyncTimeout = conf.getLong("hbase.regionserver.hlog.sync.timeout",
-        DEFAULT_WAL_SYNC_TIMEOUT_MS);
+    this.slowSyncNs = TimeUnit.MILLISECONDS
+        .toNanos(conf.getInt("hbase.regionserver.hlog.slowsync.ms", DEFAULT_SLOW_SYNC_TIME_MS));
+    this.walSyncTimeoutNs = TimeUnit.MILLISECONDS
+        .toNanos(conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS));
     int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
     // Presize our map of SyncFutures by handler objects.
     this.syncFuturesByHandler = new ConcurrentHashMap<Thread, SyncFuture>(maxHandlersCount);
@@ -682,7 +680,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
   protected Span blockOnSync(final SyncFuture syncFuture) throws IOException {
     // Now we have published the ringbuffer, halt the current thread until we get an answer back.
     try {
-      syncFuture.get(walSyncTimeout);
+      syncFuture.get(walSyncTimeoutNs);
       return syncFuture.getSpan();
     } catch (TimeoutIOException tioe) {
       // SyncFuture reuse by thread, if TimeoutIOException happens, ringbuffer
@@ -840,15 +838,10 @@ public abstract class AbstractFSWAL<W> implements WAL {
     sequenceIdAccounting.updateStore(encodedRegionName, familyName, sequenceid, onlyIfGreater);
   }
 
-  protected SyncFuture getSyncFuture(final long sequence, Span span) {
-    SyncFuture syncFuture = this.syncFuturesByHandler.get(Thread.currentThread());
-    if (syncFuture == null) {
-      syncFuture = new SyncFuture(sequence, span);
-      this.syncFuturesByHandler.put(Thread.currentThread(), syncFuture);
-    } else {
-      syncFuture.reset(sequence, span);
-    }
-    return syncFuture;
+  protected SyncFuture getSyncFuture(long sequence, Span span) {
+    return CollectionUtils
+        .computeIfAbsent(syncFuturesByHandler, Thread.currentThread(), SyncFuture::new)
+        .reset(sequence, span);
   }
 
   protected void requestLogRoll(boolean tooFewReplicas) {

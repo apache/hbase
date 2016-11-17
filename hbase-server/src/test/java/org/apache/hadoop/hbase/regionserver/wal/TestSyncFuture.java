@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -29,21 +28,14 @@ import org.junit.experimental.categories.Category;
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestSyncFuture {
 
-  @Test(timeout = 60000)
+  @Test(expected = TimeoutIOException.class)
   public void testGet() throws Exception {
     long timeout = 5000;
     long txid = 100000;
-    SyncFuture syncFulture = new SyncFuture(txid, null);
+    SyncFuture syncFulture = new SyncFuture().reset(txid, null);
     syncFulture.done(txid, null);
     assertEquals(txid, syncFulture.get(timeout));
 
-    syncFulture.reset(txid, null);
-    try {
-      syncFulture.get(timeout);
-      fail("Should have timed out but not");
-    } catch (TimeoutIOException e) {
-      // test passed
-    }
+    syncFulture.reset(txid, null).get(timeout);
   }
-
 }

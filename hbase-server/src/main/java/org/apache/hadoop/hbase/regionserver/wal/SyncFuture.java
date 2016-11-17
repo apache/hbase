@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Span;
 
 /**
@@ -72,13 +72,6 @@ class SyncFuture {
    * Optionally carry a disconnected scope to the SyncRunner.
    */
   private Span span;
-
-  SyncFuture(long txid, Span span) {
-    this.t = Thread.currentThread();
-    this.txid = txid;
-    this.span = span;
-    this.doneTxid = NOT_DONE;
-  }
 
   /**
    * Call this method to clear old usage and get it ready for new deploy.
@@ -157,15 +150,15 @@ class SyncFuture {
     throw new UnsupportedOperationException();
   }
 
-  synchronized long get(long timeout) throws InterruptedException,
+  synchronized long get(long timeoutNs) throws InterruptedException,
       ExecutionException, TimeoutIOException {
-    final long done = EnvironmentEdgeManager.currentTime() + timeout;
+    final long done = System.nanoTime() + timeoutNs;
     while (!isDone()) {
       wait(1000);
-      if (EnvironmentEdgeManager.currentTime() >= done) {
-        throw new TimeoutIOException("Failed to get sync result after "
-            + timeout + " ms for txid=" + this.txid
-            + ", WAL system stuck?");
+      if (System.nanoTime() >= done) {
+        throw new TimeoutIOException(
+            "Failed to get sync result after " + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
+                + " ms for txid=" + this.txid + ", WAL system stuck?");
       }
     }
     if (this.throwable != null) {
