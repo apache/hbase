@@ -44,7 +44,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestQuotaSettingsFactory {
-  
+
   @Test
   public void testAllQuotasAddedToList() {
     final SpaceQuota spaceQuota = SpaceQuota.newBuilder()
