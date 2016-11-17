@@ -24,6 +24,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -44,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 @InterfaceAudience.Private
 public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner {
+  private static final Log LOG = LogFactory.getLog(KeyValueHeap.class);
   protected PriorityQueue<KeyValueScanner> heap = null;
 
   /**
@@ -282,34 +285,46 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     heap.add(current);
     current = null;
 
-    KeyValueScanner scanner;
-    while ((scanner = heap.poll()) != null) {
-      Cell topKey = scanner.peek();
-      if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
-        // Top KeyValue is at-or-after Seek KeyValue. We only know that all
-        // scanners are at or after seekKey (because fake keys of
-        // scanners where a lazy-seek operation has been done are not greater
-        // than their real next keys) but we still need to enforce our
-        // invariant that the top scanner has done a real seek. This way
-        // StoreScanner and RegionScanner do not have to worry about fake keys.
-        heap.add(scanner);
-        current = pollRealKV();
-        return current != null;
-      }
+    KeyValueScanner scanner = null;
+    try {
+      while ((scanner = heap.poll()) != null) {
+        Cell topKey = scanner.peek();
+        if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
+          // Top KeyValue is at-or-after Seek KeyValue. We only know that all
+          // scanners are at or after seekKey (because fake keys of
+          // scanners where a lazy-seek operation has been done are not greater
+          // than their real next keys) but we still need to enforce our
+          // invariant that the top scanner has done a real seek. This way
+          // StoreScanner and RegionScanner do not have to worry about fake
+          // keys.
+          heap.add(scanner);
+          scanner = null;
+          current = pollRealKV();
+          return current != null;
+        }
 
-      boolean seekResult;
-      if (isLazy && heap.size() > 0) {
-        // If there is only one scanner left, we don't do lazy seek.
-        seekResult = scanner.requestSeek(seekKey, forward, useBloom);
-      } else {
-        seekResult = NonLazyKeyValueScanner.doRealSeek(
-            scanner, seekKey, forward);
-      }
+        boolean seekResult;
+        if (isLazy && heap.size() > 0) {
+          // If there is only one scanner left, we don't do lazy seek.
+          seekResult = scanner.requestSeek(seekKey, forward, useBloom);
+        } else {
+          seekResult = NonLazyKeyValueScanner.doRealSeek(scanner, seekKey,
+              forward);
+        }
 
-      if (!seekResult) {
-        scanner.close();
-      } else {
-        heap.add(scanner);
+        if (!seekResult) {
+          scanner.close();
+        } else {
+          heap.add(scanner);
+        }
+      }
+    } catch (Exception e) {
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (Exception ce) {
+          LOG.warn("close KeyValueScanner error", ce);
+        }
       }
     }
 
