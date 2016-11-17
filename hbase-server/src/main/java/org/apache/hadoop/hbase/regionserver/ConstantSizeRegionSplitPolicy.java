@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   private static final Random RANDOM = new Random();
-  private static final double EPSILON = 1E-6;
 
   private long desiredMaxFileSize;
   private double jitterRate;
@@ -60,7 +59,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
     this.jitterRate = (RANDOM.nextFloat() - 0.5D) * jitter;
     long jitterValue = (long) (this.desiredMaxFileSize * this.jitterRate);
     // make sure the long value won't overflow with jitter
-    if (this.jitterRate > EPSILON && jitterValue > (Long.MAX_VALUE - this.desiredMaxFileSize)) {
+    if (this.jitterRate > 0 && jitterValue > (Long.MAX_VALUE - this.desiredMaxFileSize)) {
       this.desiredMaxFileSize = Long.MAX_VALUE;
     } else {
       this.desiredMaxFileSize += jitterValue;
@@ -94,6 +93,6 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
 
   @VisibleForTesting
   public boolean positiveJitterRate() {
-    return this.jitterRate > EPSILON;
+    return this.jitterRate > 0;
   }
 }
