@@ -2844,7 +2844,12 @@ public final class ProtobufUtil {
       ClientProtos.MutateRequest r = (ClientProtos.MutateRequest) m;
       return "region= " + getStringForByteString(r.getRegion().getValue()) +
           ", row=" + getStringForByteString(r.getMutation().getRow());
+    } else if (m instanceof ClientProtos.CoprocessorServiceRequest) {
+      ClientProtos.CoprocessorServiceRequest r = (ClientProtos.CoprocessorServiceRequest) m;
+      return "coprocessorService= " + r.getCall().getServiceName() + ":" + r.getCall()
+          .getMethodName();
     }
+
     return "TODO: " + m.getClass().toString();
   }
 
