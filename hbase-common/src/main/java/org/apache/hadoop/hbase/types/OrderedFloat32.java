@@ -28,11 +28,23 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class OrderedFloat32 extends OrderedBytesBase<Float> {
-
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedFloat32 ASCENDING = new OrderedFloat32(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedFloat32 DESCENDING = new OrderedFloat32(Order.DESCENDING);
 
-  protected OrderedFloat32(Order order) {
+  /**
+   * Creates a new 32-bit {@code float} with a fixed-length encoding.
+   *
+   * @param order the {@link Order} to use
+   */
+  public OrderedFloat32(Order order) {
     super(order);
   }
 
@@ -66,6 +78,9 @@ public class OrderedFloat32 extends OrderedBytesBase<Float> {
 
   /**
    * Read a {@code float} value from the buffer {@code dst}.
+   *
+   * @param dst the {@link PositionedByteRange} to read the {@code float} from
+   * @return the {@code float} read from the buffer
    */
   public float decodeFloat(PositionedByteRange dst) {
     return OrderedBytes.decodeFloat32(dst);
@@ -73,6 +88,10 @@ public class OrderedFloat32 extends OrderedBytesBase<Float> {
 
   /**
    * Write instance {@code val} into buffer {@code buff}.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val the value to write to {@code dst}
+   * @return the number of bytes written
    */
   public int encodeFloat(PositionedByteRange dst, float val) {
     return OrderedBytes.encodeFloat32(dst, val, order);

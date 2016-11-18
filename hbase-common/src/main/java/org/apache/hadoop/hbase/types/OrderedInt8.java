@@ -28,11 +28,23 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class OrderedInt8 extends OrderedBytesBase<Byte> {
-
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedInt8 ASCENDING = new OrderedInt8(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final OrderedInt8 DESCENDING = new OrderedInt8(Order.DESCENDING);
 
-  protected OrderedInt8(Order order) {
+  /**
+   * Creates a new 8-bit {@code byte} with a fixed-length encoding.
+   *
+   * @param order the {@link Order} to use
+   */
+  public OrderedInt8(Order order) {
     super(order);
   }
 
@@ -66,6 +78,9 @@ public class OrderedInt8 extends OrderedBytesBase<Byte> {
 
   /**
    * Read a {@code byte} value from the buffer {@code src}.
+   *
+   * @param src the {@link PositionedByteRange} to read the {@code byte} from
+   * @return the {@code byte} read from the buffer
    */
   public byte decodeByte(PositionedByteRange src) {
     return OrderedBytes.decodeInt8(src);
@@ -73,6 +88,10 @@ public class OrderedInt8 extends OrderedBytesBase<Byte> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val the value to write to {@code dst}
+   * @return the number of bytes written
    */
   public int encodeByte(PositionedByteRange dst, byte val) {
     return OrderedBytes.encodeInt8(dst, val, order);

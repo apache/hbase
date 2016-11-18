@@ -35,17 +35,33 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public class RawBytes implements DataType<byte[]> {
-
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final RawBytes ASCENDING = new RawBytes(Order.ASCENDING);
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
   public static final RawBytes DESCENDING = new RawBytes(Order.DESCENDING);
 
   protected final Order order;
 
-  protected RawBytes() {
+  /**
+   * @deprecated since 3.0.0 and will be removed in 4.0.0
+   */
+  @Deprecated
+  public RawBytes() {
     this.order = Order.ASCENDING;
   }
 
-  protected RawBytes(Order order) {
+  /**
+   * Creates a new {@link DataType} with variable-length values.
+   *
+   * @param order the {@link Order} to use
+   */
+  public RawBytes(Order order) {
     this.order = order;
   }
 
@@ -98,6 +114,10 @@ public class RawBytes implements DataType<byte[]> {
 
   /**
    * Read a {@code byte[]} from the buffer {@code src}.
+   *
+   * @param src the {@link PositionedByteRange} to read the {@code byte[]} from
+   * @param length the length to read from the buffer
+   * @return the {@code byte[]} read from the buffer
    */
   public byte[] decode(PositionedByteRange src, int length) {
     byte[] val = new byte[length];
@@ -107,7 +127,12 @@ public class RawBytes implements DataType<byte[]> {
 
   /**
    * Write {@code val} into {@code dst}, respecting {@code voff} and {@code vlen}.
-   * @return number of bytes written.
+   *
+   * @param dst the {@link PositionedByteRange} to write to
+   * @param val the value to write to {@code dst}
+   * @param voff the offset in {@code dst} where to write {@code val} to
+   * @param vlen the length of {@code val}
+   * @return number of bytes written
    */
   public int encode(PositionedByteRange dst, byte[] val, int voff, int vlen) {
     Bytes.putBytes(dst.getBytes(), dst.getOffset() + dst.getPosition(), val, voff, vlen);

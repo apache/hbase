@@ -44,6 +44,6 @@ public class RawStringFixedLength extends FixedLengthWrapper<String> {
    * Create a {@code RawStringFixedLength} of the specified {@code length}.
    */
   public RawStringFixedLength(int length) {
-    super(new RawString(), length);
+    super(new RawString(Order.ASCENDING), length);
   }
 }
