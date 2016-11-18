@@ -170,10 +170,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   //  be waiting for the master lock => deadlock.
   private final Object masterAndZKLock = new Object();
 
-  // thread executor shared by all HTableInterface instances created
+  // thread executor shared by all Table instances created
   // by this connection
   private volatile ExecutorService batchPool = null;
-  // meta thread executor shared by all HTableInterface instances created
+  // meta thread executor shared by all Table instances created
   // by this connection
   private volatile ExecutorService metaLookupPool = null;
   private volatile boolean cleanupPool = false;

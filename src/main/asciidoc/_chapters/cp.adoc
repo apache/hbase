@@ -180,8 +180,7 @@ In contrast to observer coprocessors, where your code is run transparently, endp
 coprocessors must be explicitly invoked using the
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#coprocessorService%28java.lang.Class,%20byte%5B%5D,%20byte%5B%5D,%20org.apache.hadoop.hbase.client.coprocessor.Batch.Call%29[CoprocessorService()]
 method available in
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table],
-link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTableInterface.html[HTableInterface],
+link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html[Table]
 or
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html[HTable].
 
