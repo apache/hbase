@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -127,6 +128,8 @@ public class TestTableResource {
     admin.split(TABLE);
     // give some time for the split to happen
 
+    TestEndToEndSplitTransaction.blockUntilRegionSplit(TEST_UTIL.getConfiguration(), 60000,
+      m.get(0).getRegionInfo().getRegionName(), true);
     long timeout = System.currentTimeMillis() + (15 * 1000);
     while (System.currentTimeMillis() < timeout && m.size()!=2){
       try {
