@@ -16,15 +16,24 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
 
 /**
  * An interface which abstract away the action taken to enable or disable
- * a space quota violation policy across the HBase cluster.
+ * a space quota violation policy across the HBase cluster. Implementations
+ * must have a no-args constructor.
  */
 @InterfaceAudience.Private
 public interface SpaceQuotaViolationNotifier {
+
+  /**
+   * Initializes the notifier.
+   */
+  void initialize(Connection conn);
 
   /**
    * Instructs the cluster that the given table is in violation of a space quota. The
@@ -33,12 +42,13 @@ public interface SpaceQuotaViolationNotifier {
    * @param tableName The name of the table in violation of the quota.
    * @param violationPolicy The policy which should be enacted on the table.
    */
-  void transitionTableToViolation(TableName tableName, SpaceViolationPolicy violationPolicy);
+  void transitionTableToViolation(
+      TableName tableName, SpaceViolationPolicy violationPolicy) throws IOException;
 
   /**
    * Instructs the cluster that the given table is in observance of any applicable space quota.
    *
    * @param tableName The name of the table in observance.
    */
-  void transitionTableToObservance(TableName tableName);
+  void transitionTableToObservance(TableName tableName) throws IOException;
 }

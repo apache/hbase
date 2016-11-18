@@ -352,14 +352,15 @@ public class QuotaObserverChore extends ScheduledChore {
   /**
    * Transitions the given table to violation of its quota, enabling the violation policy.
    */
-  private void transitionTableToViolation(TableName table, SpaceViolationPolicy violationPolicy) {
+  private void transitionTableToViolation(TableName table, SpaceViolationPolicy violationPolicy)
+      throws IOException {
     this.violationNotifier.transitionTableToViolation(table, violationPolicy);
   }
 
   /**
    * Transitions the given table to observance of its quota, disabling the violation policy.
    */
-  private void transitionTableToObservance(TableName table) {
+  private void transitionTableToObservance(TableName table) throws IOException {
     this.violationNotifier.transitionTableToObservance(table);
   }
 

@@ -135,8 +135,9 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaViolationNotifier;
-import org.apache.hadoop.hbase.quotas.SpaceQuotaViolationNotifierForTest;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaViolationNotifierFactory;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -152,10 +153,13 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -904,7 +908,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     status.setStatus("Starting quota manager");
     initQuotaManager();
-    this.spaceQuotaViolationNotifier = new SpaceQuotaViolationNotifierForTest();
+    this.spaceQuotaViolationNotifier = createQuotaViolationNotifier();
     this.quotaObserverChore = new QuotaObserverChore(this);
     // Start the chore to read the region FS space reports and act on them
     getChoreService().scheduleChore(quotaObserverChore);
@@ -993,6 +997,13 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.assignmentManager.setRegionStateListener(quotaManager);
     quotaManager.start();
     this.quotaManager = quotaManager;
+  }
+
+  SpaceQuotaViolationNotifier createQuotaViolationNotifier() {
+    SpaceQuotaViolationNotifier notifier =
+        SpaceQuotaViolationNotifierFactory.getInstance().create(getConfiguration());
+    notifier.initialize(getClusterConnection());
+    return notifier;
   }
 
   boolean isCatalogJanitorEnabled() {
@@ -2198,6 +2209,26 @@ public class HMaster extends HRegionServer implements MasterServices {
       @Override
       protected void run() throws IOException {
         getMaster().getMasterCoprocessorHost().preEnableTable(tableName);
+
+        // Normally, it would make sense for this authorization check to exist inside
+        // AccessController, but because the authorization check is done based on internal state
+        // (rather than explicit permissions) we'll do the check here instead of in the
+        // coprocessor.
+        MasterQuotaManager quotaManager = getMasterQuotaManager();
+        if (null != quotaManager) {
+          if (quotaManager.isQuotaEnabled()) {
+            Quotas quotaForTable = QuotaUtil.getTableQuota(getConnection(), tableName);
+            if (null != quotaForTable && quotaForTable.hasSpace()) {
+              SpaceViolationPolicy policy = quotaForTable.getSpace().getViolationPolicy();
+              if (SpaceViolationPolicy.DISABLE == policy) {
+                throw new AccessDeniedException("Enabling the table '" + tableName
+                    + "' is disallowed due to a violated space quota.");
+              }
+            }
+          } else if (LOG.isTraceEnabled()) {
+            LOG.trace("Unable to check for space quotas as the MasterQuotaManager is not enabled");
+          }
+        }
 
         LOG.info(getClientIdAuditPrefix() + " enable " + tableName);
 

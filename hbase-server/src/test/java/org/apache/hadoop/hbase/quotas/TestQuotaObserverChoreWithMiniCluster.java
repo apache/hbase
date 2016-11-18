@@ -94,6 +94,8 @@ public class TestQuotaObserverChoreWithMiniCluster {
     conf.setInt(QuotaObserverChore.VIOLATION_OBSERVER_CHORE_DELAY_KEY, 1000);
     conf.setInt(QuotaObserverChore.VIOLATION_OBSERVER_CHORE_PERIOD_KEY, 1000);
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
+    conf.setClass(SpaceQuotaViolationNotifierFactory.VIOLATION_NOTIFIER_KEY,
+        SpaceQuotaViolationNotifierForTest.class, SpaceQuotaViolationNotifier.class);
     TEST_UTIL.startMiniCluster(1);
   }
 

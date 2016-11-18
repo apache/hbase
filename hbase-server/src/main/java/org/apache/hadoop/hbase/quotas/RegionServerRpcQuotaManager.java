@@ -46,14 +46,14 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class RegionServerQuotaManager {
-  private static final Log LOG = LogFactory.getLog(RegionServerQuotaManager.class);
+public class RegionServerRpcQuotaManager {
+  private static final Log LOG = LogFactory.getLog(RegionServerRpcQuotaManager.class);
 
   private final RegionServerServices rsServices;
 
   private QuotaCache quotaCache = null;
 
-  public RegionServerQuotaManager(final RegionServerServices rsServices) {
+  public RegionServerRpcQuotaManager(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
   }
 
@@ -63,7 +63,7 @@ public class RegionServerQuotaManager {
       return;
     }
 
-    LOG.info("Initializing quota support");
+    LOG.info("Initializing RPC quota support");
 
     // Initialize quota cache
     quotaCache = new QuotaCache(rsServices);

@@ -21,6 +21,10 @@ package org.apache.hadoop.hbase.quotas;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -28,6 +32,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
@@ -50,6 +58,10 @@ public class TestQuotaTableUtil {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Connection connection;
+  private int tableNameCounter;
+
+  @Rule
+  public TestName testName = new TestName();
 
   @Rule
   public TestName name = new TestName();
@@ -75,6 +87,7 @@ public class TestQuotaTableUtil {
   @Before
   public void before() throws IOException {
     this.connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    this.tableNameCounter = 0;
   }
 
   @After
@@ -183,5 +196,39 @@ public class TestQuotaTableUtil {
     QuotaUtil.deleteUserQuota(this.connection, user, namespace);
     resQuotaNS = QuotaUtil.getUserQuota(this.connection, user, namespace);
     assertEquals(null, resQuotaNS);
+  }
+
+  @Test
+  public void testSerDeViolationPolicies() throws Exception {
+    final TableName tn1 = getUniqueTableName();
+    final SpaceViolationPolicy policy1 = SpaceViolationPolicy.DISABLE;
+    final TableName tn2 = getUniqueTableName();
+    final SpaceViolationPolicy policy2 = SpaceViolationPolicy.NO_INSERTS;
+    final TableName tn3 = getUniqueTableName();
+    final SpaceViolationPolicy policy3 = SpaceViolationPolicy.NO_WRITES;
+    List<Put> puts = new ArrayList<>();
+    puts.add(QuotaTableUtil.createEnableViolationPolicyUpdate(tn1, policy1));
+    puts.add(QuotaTableUtil.createEnableViolationPolicyUpdate(tn2, policy2));
+    puts.add(QuotaTableUtil.createEnableViolationPolicyUpdate(tn3, policy3));
+    final Map<TableName,SpaceViolationPolicy> expectedPolicies = new HashMap<>();
+    expectedPolicies.put(tn1, policy1);
+    expectedPolicies.put(tn2, policy2);
+    expectedPolicies.put(tn3, policy3);
+
+    final Map<TableName,SpaceViolationPolicy> actualPolicies = new HashMap<>();
+    try (Table quotaTable = connection.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
+      quotaTable.put(puts);
+      ResultScanner scanner = quotaTable.getScanner(QuotaTableUtil.makeQuotaViolationScan());
+      for (Result r : scanner) {
+        QuotaTableUtil.extractViolationPolicy(r, actualPolicies);
+      }
+      scanner.close();
+    }
+
+    assertEquals(expectedPolicies, actualPolicies);
+  }
+
+  private TableName getUniqueTableName() {
+    return TableName.valueOf(testName.getMethodName() + "_" + tableNameCounter++);
   }
 }
