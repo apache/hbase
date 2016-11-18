@@ -475,10 +475,7 @@ In HBase 0.96 and newer, you can instead use the `removeCoprocessor()` method of
 
 [[cp_example]]
 == Examples
-HBase ships examples for Observer Coprocessor in
-link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/coprocessor/example/ZooKeeperScanPolicyObserver.html[ZooKeeperScanPolicyObserver]
-and for Endpoint Coprocessor in
-link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/coprocessor/example/RowCountEndpoint.html[RowCountEndpoint]
+HBase ships examples for Observer Coprocessor.
 
 A more detailed example is given below.
 

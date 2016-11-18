@@ -670,7 +670,7 @@ if creating a table from java, or set `IN_MEMORY => true` when creating or alter
 hbase(main):003:0> create  't', {NAME => 'f', IN_MEMORY => 'true'}
 ----
 
-For more information, see the link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/LruBlockCache.html[LruBlockCache source]
+For more information, see the LruBlockCache source
 
 [[block.cache.usage]]
 ==== LruBlockCache Usage
@@ -1551,7 +1551,7 @@ StoreFiles are where your data lives.
 The _HFile_ file format is based on the SSTable file described in the link:http://research.google.com/archive/bigtable.html[BigTable [2006]] paper and on Hadoop's link:http://hadoop.apache.org/common/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html[TFile] (The unit test suite and the compression harness were taken directly from TFile). Schubert Zhang's blog post on link:http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html[HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs] makes for a thorough introduction to HBase's HFile.
 Matteo Bertozzi has also put up a helpful description, link:http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw[HBase I/O: HFile].
 
-For more information, see the link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFile.html[HFile source code].
+For more information, see the HFile source code.
 Also see <<hfilev2>> for information about the HFile v2 format that was included in 0.92.
 
 [[hfile_tool]]
@@ -1586,7 +1586,7 @@ The blocksize is configured on a per-ColumnFamily basis.
 Compression happens at the block level within StoreFiles.
 For more information on compression, see <<compression>>.
 
-For more information on blocks, see the link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFileBlock.html[HFileBlock source code].
+For more information on blocks, see the HFileBlock source code.
 
 [[keyvalue]]
 ==== KeyValue
@@ -1613,7 +1613,7 @@ The Key is further decomposed as:
 
 KeyValue instances are _not_ split across blocks.
 For example, if there is an 8 MB KeyValue, even if the block-size is 64kb this KeyValue will be read in as a coherent block.
-For more information, see the link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/KeyValue.html[KeyValue source code].
+For more information, see the KeyValue source code.
 
 [[keyvalue.example]]
 ===== Example
@@ -1741,7 +1741,7 @@ With the ExploringCompactionPolicy, major compactions happen much less frequentl
 In general, ExploringCompactionPolicy is the right choice for most situations, and thus is the default compaction policy.
 You can also use ExploringCompactionPolicy along with <<ops.stripe>>.
 
-The logic of this policy can be examined in _link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/compactions/ExploringCompactionPolicy.html[hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/compactions/ExploringCompactionPolicy.java]_.
+The logic of this policy can be examined in hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/compactions/ExploringCompactionPolicy.java.
 The following is a walk-through of the logic of the ExploringCompactionPolicy.
 
 
@@ -1957,7 +1957,7 @@ This section has been preserved for historical reasons and refers to the way com
 You can still use this behavior if you enable <<compaction.ratiobasedcompactionpolicy.algorithm>>. For information on the way that compactions work in HBase 0.96.x and later, see <<compaction>>.
 ====
 
-To understand the core algorithm for StoreFile selection, there is some ASCII-art in the link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836[Store source code] that will serve as useful reference.
+To understand the core algorithm for StoreFile selection, there is some ASCII-art in the Store source code that will serve as useful reference.
 
 It has been copied below:
 [source]

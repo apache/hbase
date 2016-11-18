@@ -145,7 +145,7 @@ artifacts using `mvn clean site site:stage`, check out the `asf-site` repository
 . Remove previously-generated content using the following command:
 +
 ----
-rm -rf rm -rf *apidocs* *xref* *book* *.html *.pdf* css js
+rm -rf rm -rf *apidocs* *book* *.html *.pdf* css js
 ----
 +
 WARNING: Do not remove the `0.94/` directory. To regenerate them, you must check out

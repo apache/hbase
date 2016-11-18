@@ -2942,25 +2942,6 @@
         </configuration>
       </plugin>
 
-      <!-- This seems to be needed by the surefire plugin.
-           The Javadoc below provide code as well -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.3</version>
-        <configuration>
-          <aggregate>true</aggregate>
-          <test-aggregate>true</test-aggregate>
-          <linkJavadoc>true</linkJavadoc>
-          <javadocDir>${project.reporting.outputDirectory}/devapidocs</javadocDir>
-          <testJavadocDir>${project.reporting.outputDirectory}/testdevapidocs</testJavadocDir>
-          <destDir>${project.reporting.outputDirectory}/xref</destDir>
-          <excludes>
-            <exclude>**/generated/*</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
