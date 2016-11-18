@@ -61,14 +61,14 @@ public interface DataType<T> {
    * @return {@code true} when natural order is preserved,
    *         {@code false} otherwise.
    */
-  public boolean isOrderPreserving();
+  boolean isOrderPreserving();
 
   /**
    * Retrieve the sort {@link Order} imposed by this data type, or null when
    * natural ordering is not preserved. Value is either ascending or
    * descending. Default is assumed to be {@link Order#ASCENDING}.
    */
-  public Order getOrder();
+  Order getOrder();
 
   /**
    * Indicates whether this instance supports encoding null values. This
@@ -77,40 +77,40 @@ public interface DataType<T> {
    * less than any non-null value for default sort ordering purposes.
    * @return {@code true} when null is supported, {@code false} otherwise.
    */
-  public boolean isNullable();
+  boolean isNullable();
 
   /**
    * Indicates whether this instance is able to skip over it's encoded value.
    * {@code DataType}s that are not skippable can only be used as the
    * right-most field of a {@link Struct}.
    */
-  public boolean isSkippable();
+  boolean isSkippable();
 
   /**
    * Inform consumers how long the encoded {@code byte[]} will be.
    * @param val The value to check.
    * @return the number of bytes required to encode {@code val}.a
    */
-  public int encodedLength(T val);
+  int encodedLength(T val);
 
   /**
    * Inform consumers over what type this {@code DataType} operates. Useful
    * when working with bare {@code DataType} instances.
    */
-  public Class<T> encodedClass();
+  Class<T> encodedClass();
 
   /**
    * Skip {@code src}'s position forward over one encoded value.
    * @param src the buffer containing the encoded value.
    * @return number of bytes skipped.
    */
-  public int skip(PositionedByteRange src);
+  int skip(PositionedByteRange src);
 
   /**
    * Read an instance of {@code T} from the buffer {@code src}.
    * @param src the buffer containing the encoded value.
    */
-  public T decode(PositionedByteRange src);
+  T decode(PositionedByteRange src);
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
@@ -118,5 +118,5 @@ public interface DataType<T> {
    * @param val the value to encode onto {@code dst}.
    * @return number of bytes written.
    */
-  public int encode(PositionedByteRange dst, T val);
+  int encode(PositionedByteRange dst, T val);
 }
