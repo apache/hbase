@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -1166,7 +1167,7 @@ public class HConnectionManager {
     private HRegionLocation locateRegion(final TableName tableName,
       final byte [] row, boolean useCache, boolean retry)
     throws IOException {
-      if (this.closed) throw new IOException(toString() + " closed");
+      if (this.closed) throw new DoNotRetryIOException(toString() + " closed");
       if (tableName== null || tableName.getName().length == 0) {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
