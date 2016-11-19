@@ -164,13 +164,13 @@ public class TestSimpleRpcScheduler {
 
   @Test
   public void testRpcScheduler() throws Exception {
-    testRpcScheduler(SimpleRpcScheduler.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
-    testRpcScheduler(SimpleRpcScheduler.CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
+    testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
+    testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
   }
 
   private void testRpcScheduler(final String queueType) throws Exception {
     Configuration schedConf = HBaseConfiguration.create();
-    schedConf.set(SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY, queueType);
+    schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, queueType);
 
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(RequestHeader.class),
@@ -234,9 +234,9 @@ public class TestSimpleRpcScheduler {
       // -> [small small small huge small large small small]
       // -> NO REORDER   [10 10 10 100 10 50 10 10] -> 930 (FIFO Queue)
       // -> WITH REORDER [10 10 10 10 10 10 50 100] -> 530 (Deadline Queue)
-      if (queueType.equals(SimpleRpcScheduler.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
+      if (queueType.equals(RpcExecutor.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         assertEquals(530, totalTime);
-      } else if (queueType.equals(SimpleRpcScheduler.CALL_QUEUE_TYPE_FIFO_CONF_VALUE)) {
+      } else if (queueType.equals(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE)) {
         assertEquals(930, totalTime);
       }
     } finally {
@@ -247,9 +247,9 @@ public class TestSimpleRpcScheduler {
   @Test
   public void testScanQueueWithZeroScanRatio() throws Exception {
     Configuration schedConf = HBaseConfiguration.create();
-    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
-    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
-    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0f);
+    schedConf.setFloat(RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
+    schedConf.setFloat(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
+    schedConf.setFloat(RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0f);
 
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(RequestHeader.class), any(Message.class),
@@ -263,9 +263,9 @@ public class TestSimpleRpcScheduler {
   @Test
   public void testScanQueues() throws Exception {
     Configuration schedConf = HBaseConfiguration.create();
-    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
-    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.7f);
-    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
+    schedConf.setFloat(RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
+    schedConf.setFloat(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.7f);
+    schedConf.setFloat(RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
 
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(RequestHeader.class), any(Message.class),
@@ -415,8 +415,8 @@ public class TestSimpleRpcScheduler {
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 250);
 
-    schedConf.set(SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY,
-      SimpleRpcScheduler.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
+    schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
 
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(RPCProtos.RequestHeader.class), any(Message.class),

@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-
-import java.util.Comparator;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +26,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 
 /**
  * The default scheduler. Configurable. Maintains isolated handler pools for general ('default'),
@@ -44,106 +38,6 @@ import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 @InterfaceStability.Evolving
 public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObserver {
   private static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);
-
-  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY =
-      "hbase.ipc.server.callqueue.read.ratio";
-  public static final String CALL_QUEUE_SCAN_SHARE_CONF_KEY =
-      "hbase.ipc.server.callqueue.scan.ratio";
-  public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
-      "hbase.ipc.server.callqueue.handler.factor";
-
-  /**
-   * The default, 'fifo', has the least friction but is dumb.
-   * If set to 'deadline', uses a priority queue and deprioritizes long-running scans. Sorting by
-   * priority comes at a cost, reduced throughput.
-   */
-  public static final String CALL_QUEUE_TYPE_CODEL_CONF_VALUE = "codel";
-  public static final String CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE = "deadline";
-  public static final String CALL_QUEUE_TYPE_FIFO_CONF_VALUE = "fifo";
-  public static final String CALL_QUEUE_TYPE_CONF_KEY = "hbase.ipc.server.callqueue.type";
-  public static final String CALL_QUEUE_TYPE_CONF_DEFAULT = CALL_QUEUE_TYPE_FIFO_CONF_VALUE;
-
-  /** max delay in msec used to bound the deprioritized requests */
-  public static final String QUEUE_MAX_CALL_DELAY_CONF_KEY
-      = "hbase.ipc.server.queue.max.call.delay";
-
-  // These 3 are only used by Codel executor
-  public static final String CALL_QUEUE_CODEL_TARGET_DELAY =
-    "hbase.ipc.server.callqueue.codel.target.delay";
-  public static final String CALL_QUEUE_CODEL_INTERVAL =
-    "hbase.ipc.server.callqueue.codel.interval";
-  public static final String CALL_QUEUE_CODEL_LIFO_THRESHOLD =
-    "hbase.ipc.server.callqueue.codel.lifo.threshold";
-
-  public static final int CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY = 100;
-  public static final int CALL_QUEUE_CODEL_DEFAULT_INTERVAL = 100;
-  public static final double CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD = 0.8;
-
-  private AtomicLong numGeneralCallsDropped = new AtomicLong();
-  private AtomicLong numLifoModeSwitches = new AtomicLong();
-
-  /**
-   * Resize call queues;
-   * @param conf new configuration
-   */
-  @Override
-  public void onConfigurationChange(Configuration conf) {
-    callExecutor.resizeQueues(conf);
-    if (priorityExecutor != null) {
-      priorityExecutor.resizeQueues(conf);
-    }
-    if (replicationExecutor != null) {
-      replicationExecutor.resizeQueues(conf);
-    }
-
-    String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT);
-    if (isCodelQueueType(callQueueType)) {
-      // update CoDel Scheduler tunables
-      int codelTargetDelay = conf.getInt(CALL_QUEUE_CODEL_TARGET_DELAY,
-        CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY);
-      int codelInterval = conf.getInt(CALL_QUEUE_CODEL_INTERVAL,
-        CALL_QUEUE_CODEL_DEFAULT_INTERVAL);
-      double codelLifoThreshold = conf.getDouble(CALL_QUEUE_CODEL_LIFO_THRESHOLD,
-        CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD);
-
-      for (BlockingQueue<CallRunner> queue : callExecutor.getQueues()) {
-        if (queue instanceof AdaptiveLifoCoDelCallQueue) {
-          ((AdaptiveLifoCoDelCallQueue) queue).updateTunables(codelTargetDelay,
-            codelInterval, codelLifoThreshold);
-        }
-      }
-    }
-  }
-
-  /**
-   * Comparator used by the "normal callQueue" if DEADLINE_CALL_QUEUE_CONF_KEY is set to true.
-   * It uses the calculated "deadline" e.g. to deprioritize long-running job
-   *
-   * If multiple requests have the same deadline BoundedPriorityBlockingQueue will order them in
-   * FIFO (first-in-first-out) manner.
-   */
-  private static class CallPriorityComparator implements Comparator<CallRunner> {
-    private final static int DEFAULT_MAX_CALL_DELAY = 5000;
-
-    private final PriorityFunction priority;
-    private final int maxDelay;
-
-    public CallPriorityComparator(final Configuration conf, final PriorityFunction priority) {
-      this.priority = priority;
-      this.maxDelay = conf.getInt(QUEUE_MAX_CALL_DELAY_CONF_KEY, DEFAULT_MAX_CALL_DELAY);
-    }
-
-    @Override
-    public int compare(CallRunner a, CallRunner b) {
-      RpcServer.Call callA = a.getCall();
-      RpcServer.Call callB = b.getCall();
-      long deadlineA = priority.getDeadline(callA.getHeader(), callA.param);
-      long deadlineB = priority.getDeadline(callB.getHeader(), callB.param);
-      deadlineA = callA.timestamp + Math.min(deadlineA, maxDelay);
-      deadlineB = callB.timestamp + Math.min(deadlineB, maxDelay);
-      return Long.compare(deadlineA, deadlineB);
-    }
-  }
 
   private int port;
   private final PriorityFunction priority;
@@ -182,84 +76,37 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     this.highPriorityLevel = highPriorityLevel;
     this.abortable = server;
 
-    String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT);
-    float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
-    float callqScanShare = conf.getFloat(CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0);
+    String callQueueType = conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);
+    float callqReadShare = conf.getFloat(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
 
-    int codelTargetDelay = conf.getInt(CALL_QUEUE_CODEL_TARGET_DELAY,
-      CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY);
-    int codelInterval = conf.getInt(CALL_QUEUE_CODEL_INTERVAL,
-      CALL_QUEUE_CODEL_DEFAULT_INTERVAL);
-    double codelLifoThreshold = conf.getDouble(CALL_QUEUE_CODEL_LIFO_THRESHOLD,
-      CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD);
-
-    float callQueuesHandlersFactor = conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0);
-    int numCallQueues = Math.max(1, (int)Math.round(handlerCount * callQueuesHandlersFactor));
-    LOG.info("Using " + callQueueType + " as user call queue; numCallQueues=" + numCallQueues +
-        "; callQReadShare=" + callqReadShare + ", callQScanShare=" + callqScanShare);
-    if (numCallQueues > 1 && callqReadShare > 0) {
-      // multiple read/write queues
-      if (isDeadlineQueueType(callQueueType)) {
-        CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor = new RWQueueRpcExecutor("RW.deadline.Q", handlerCount, numCallQueues,
-            callqReadShare, callqScanShare, maxQueueLength, conf, abortable,
-            BoundedPriorityBlockingQueue.class, callPriority);
-      } else if (isCodelQueueType(callQueueType)) {
-        Object[] callQueueInitArgs = {maxQueueLength, codelTargetDelay, codelInterval,
-          codelLifoThreshold, numGeneralCallsDropped, numLifoModeSwitches};
-        callExecutor = new RWQueueRpcExecutor("RW.codel.Q", handlerCount,
-          numCallQueues, callqReadShare, callqScanShare,
-          AdaptiveLifoCoDelCallQueue.class, callQueueInitArgs,
-          AdaptiveLifoCoDelCallQueue.class, callQueueInitArgs);
-      } else {
-        callExecutor = new RWQueueRpcExecutor("RW.fifo.Q", handlerCount, numCallQueues,
-          callqReadShare, callqScanShare, maxQueueLength, conf, abortable);
-      }
+    if (callqReadShare > 0) {
+      // at least 1 read handler and 1 write handler
+      callExecutor = new RWQueueRpcExecutor("deafult.RWQ", Math.max(2, handlerCount),
+        maxQueueLength, priority, conf, server);
     } else {
-      // multiple queues
-      if (isDeadlineQueueType(callQueueType)) {
-        CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor =
-          new BalancedQueueRpcExecutor("BQDeadline.default", handlerCount, numCallQueues,
-            conf, abortable, BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
-      } else if (isCodelQueueType(callQueueType)) {
-        callExecutor =
-          new FastPathBalancedQueueRpcExecutor("CodelFPBQ.default", handlerCount, numCallQueues,
-            conf, abortable, AdaptiveLifoCoDelCallQueue.class, maxQueueLength,
-            codelTargetDelay, codelInterval, codelLifoThreshold,
-            numGeneralCallsDropped, numLifoModeSwitches);
-      } else {
-        // FifoWFPBQ = FastPathBalancedQueueRpcExecutor
-        callExecutor = new FastPathBalancedQueueRpcExecutor("FifoWFPBQ.default",
-            handlerCount, numCallQueues, maxQueueLength, conf, abortable);
+      if (RpcExecutor.isFifoQueueType(callQueueType)) {
+        callExecutor = new FastPathBalancedQueueRpcExecutor("deafult.FPBQ", handlerCount,
+            maxPriorityQueueLength, priority, conf, server);
+    } else {
+        callExecutor = new BalancedQueueRpcExecutor("deafult.BQ", handlerCount, maxQueueLength,
+            priority, conf, server);
       }
     }
+
     // Create 2 queues to help priorityExecutor be more scalable.
-    this.priorityExecutor = priorityHandlerCount > 0?
-      new FastPathBalancedQueueRpcExecutor("FifoWFPBQ.priority", priorityHandlerCount,
-        2, maxPriorityQueueLength, conf, abortable): null;
-    this.replicationExecutor = replicationHandlerCount > 0?
-      new FastPathBalancedQueueRpcExecutor("FifoWFPBQ.replication",
-        replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
+    this.priorityExecutor = priorityHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
+        "priority.FPBQ", priorityHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
+        maxPriorityQueueLength, priority, conf, abortable) : null;
+    this.replicationExecutor = replicationHandlerCount > 0 ? new FastPathBalancedQueueRpcExecutor(
+        "replication.FPBQ", replicationHandlerCount, RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE,
+        maxQueueLength, priority, conf, abortable) : null;
   }
 
-  private static boolean isDeadlineQueueType(final String callQueueType) {
-    return callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
-  }
-
-  private static boolean isCodelQueueType(final String callQueueType) {
-    return callQueueType.equals(CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
-  }
-
-  public SimpleRpcScheduler(
-	      Configuration conf,
-	      int handlerCount,
-	      int priorityHandlerCount,
-	      int replicationHandlerCount,
-	      PriorityFunction priority,
-	      int highPriorityLevel) {
-	  this(conf, handlerCount, priorityHandlerCount, replicationHandlerCount, priority,
-	    null, highPriorityLevel);
+  public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
+      int replicationHandlerCount, PriorityFunction priority, int highPriorityLevel) {
+    this(conf, handlerCount, priorityHandlerCount, replicationHandlerCount, priority, null,
+        highPriorityLevel);
   }
 
   @Override
@@ -295,6 +142,23 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   }
 
   @Override
+  public void onConfigurationChange(Configuration conf) {
+    callExecutor.resizeQueues(conf);
+    if (priorityExecutor != null) {
+      priorityExecutor.resizeQueues(conf);
+    }
+    if (replicationExecutor != null) {
+      replicationExecutor.resizeQueues(conf);
+    }
+
+    String callQueueType = conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);
+    if (RpcExecutor.isCodelQueueType(callQueueType)) {
+      callExecutor.onConfigurationChange(conf);
+    }
+  }
+
+  @Override
   public int getGeneralQueueLength() {
     return callExecutor.getQueueLength();
   }
@@ -318,12 +182,12 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
 
   @Override
   public long getNumGeneralCallsDropped() {
-    return numGeneralCallsDropped.get();
+    return callExecutor.getNumGeneralCallsDropped();
   }
 
   @Override
   public long getNumLifoModeSwitches() {
-    return numLifoModeSwitches.get();
+    return callExecutor.getNumLifoModeSwitches();
   }
 }
 

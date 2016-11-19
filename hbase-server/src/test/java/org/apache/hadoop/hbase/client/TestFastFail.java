@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.ipc.RpcExecutor;
 import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,7 +76,7 @@ public class TestFastFail {
   public static void setUpBeforeClass() throws Exception {
     // Just to prevent fastpath FIFO from picking calls up bypassing the queue.
     TEST_UTIL.getConfiguration().set(
-      SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY, "deadline");
+      RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, "deadline");
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 

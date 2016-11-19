@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -41,34 +39,52 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 public class BalancedQueueRpcExecutor extends RpcExecutor {
   private static final Log LOG = LogFactory.getLog(BalancedQueueRpcExecutor.class);
 
-  protected final List<BlockingQueue<CallRunner>> queues;
   private final QueueBalancer balancer;
 
+  public BalancedQueueRpcExecutor(final String name, final int handlerCount,
+      final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
+      final Abortable abortable) {
+    this(name, handlerCount, conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT),
+        maxQueueLength, priority, conf, abortable);
+  }
+
+  public BalancedQueueRpcExecutor(final String name, final int handlerCount,
+      final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
+      final Configuration conf, final Abortable abortable) {
+    super(name, handlerCount, callQueueType, maxQueueLength, priority, conf, abortable);
+    this.balancer = getBalancer(this.numCallQueues);
+    initializeQueues(this.numCallQueues);
+  }
+
+  @Deprecated
   public BalancedQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final int maxQueueLength) {
     this(name, handlerCount, numQueues, maxQueueLength, null, null);
   }
 
+  @Deprecated
   public BalancedQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final int maxQueueLength, final Configuration conf, final Abortable abortable) {
     this(name, handlerCount, numQueues, conf, abortable, LinkedBlockingQueue.class, maxQueueLength);
   }
 
+  @Deprecated
   public BalancedQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final Class<? extends BlockingQueue> queueClass, Object... initargs) {
     this(name, handlerCount, numQueues, null, null,  queueClass, initargs);
   }
 
+  @Deprecated
   public BalancedQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final Configuration conf, final Abortable abortable,
       final Class<? extends BlockingQueue> queueClass, Object... initargs) {
-    super(name, Math.max(handlerCount, numQueues), conf, abortable);
-    queues = new ArrayList<BlockingQueue<CallRunner>>(numQueues);
+    super(name, Math.max(handlerCount, numQueues), numQueues, conf, abortable);
     this.balancer = getBalancer(numQueues);
     initializeQueues(numQueues, queueClass, initargs);
     LOG.debug(name + " queues=" + numQueues + " handlerCount=" + handlerCount);
   }
 
+  @Deprecated
   protected void initializeQueues(final int numQueues,
       final Class<? extends BlockingQueue> queueClass, Object... initargs) {
     if (initargs.length > 0) {
@@ -89,19 +105,5 @@ public class BalancedQueueRpcExecutor extends RpcExecutor {
       return false;
     }
     return queue.offer(callTask);
-  }
-
-  @Override
-  public int getQueueLength() {
-    int length = 0;
-    for (final BlockingQueue<CallRunner> queue : queues) {
-      length += queue.size();
-    }
-    return length;
-  }
-
-  @Override
-  public List<BlockingQueue<CallRunner>> getQueues() {
-    return queues;
   }
 }
