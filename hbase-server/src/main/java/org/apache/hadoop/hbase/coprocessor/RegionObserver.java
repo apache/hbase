@@ -682,7 +682,9 @@ public interface RegionObserver extends Coprocessor {
 
   /**
    * This will be called after applying a batch of Mutations on a region. The Mutations are added to
-   * memstore and WAL.
+   * memstore and WAL. The difference of this one with {@link #postPut(ObserverContext, Put, WALEdit, Durability) }
+   * and {@link #postDelete(ObserverContext, Delete, WALEdit, Durability) } is
+   * this hook will be executed before the mvcc transaction completion.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation.
    * If need a Cell reference for later use, copy the cell and use that.

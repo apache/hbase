@@ -3330,6 +3330,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         applyFamilyMapToMemstore(familyMaps[i], memstoreSize);
       }
 
+      // calling the post CP hook for batch mutation
+      if (!replay && coprocessorHost != null) {
+        MiniBatchOperationInProgress<Mutation> miniBatchOp =
+          new MiniBatchOperationInProgress<Mutation>(batchOp.getMutationsForCoprocs(),
+          batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
+        coprocessorHost.postBatchMutate(miniBatchOp);
+      }
+
       // STEP 6. Complete mvcc.
       if (replay) {
         this.mvcc.advanceTo(batchOp.getReplaySequenceId());
@@ -3345,14 +3353,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         locked = false;
       }
       releaseRowLocks(acquiredRowLocks);
-
-      // calling the post CP hook for batch mutation
-      if (!replay && coprocessorHost != null) {
-        MiniBatchOperationInProgress<Mutation> miniBatchOp =
-          new MiniBatchOperationInProgress<Mutation>(batchOp.getMutationsForCoprocs(),
-          batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
-        coprocessorHost.postBatchMutate(miniBatchOp);
-      }
 
       for (int i = firstIndex; i < lastIndexExclusive; i ++) {
         if (batchOp.retCodeDetails[i] == OperationStatus.NOT_RUN) {
@@ -7098,21 +7098,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               applyToMemstore(getHStore(cell), cell, memstoreSize);
             }
           }
-          // STEP 8. Complete mvcc.
+
+          // STEP 8. call postBatchMutate hook
+          processor.postBatchMutate(this);
+
+          // STEP 9. Complete mvcc.
           mvcc.completeAndWait(writeEntry);
           writeEntry = null;
 
-          // STEP 9. Release region lock
+          // STEP 10. Release region lock
           if (locked) {
             this.updatesLock.readLock().unlock();
             locked = false;
           }
 
-          // STEP 10. Release row lock(s)
+          // STEP 11. Release row lock(s)
           releaseRowLocks(acquiredRowLocks);
-
-          // STEP 11. call postBatchMutate hook
-          processor.postBatchMutate(this);
         }
         success = true;
       } finally {
