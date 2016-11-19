@@ -158,8 +158,6 @@ public class KeyValue implements ExtendedCell {
 
   public static final int KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE = ROW_OFFSET + TAGS_LENGTH_SIZE;
 
-  private static final int MAX_TAGS_LENGTH = (2 * Short.MAX_VALUE) + 1;
-
   /**
    * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
    * characteristics would take up for its underlying data structure.
@@ -789,7 +787,7 @@ public class KeyValue implements ExtendedCell {
     if (qlength > Integer.MAX_VALUE - rlength - flength) {
       throw new IllegalArgumentException("Qualifier > " + Integer.MAX_VALUE);
     }
-    checkForTagsLength(tagsLength);
+    TagUtil.checkForTagsLength(tagsLength);
     // Key length
     long longkeylength = getKeyDataStructureSize(rlength, flength, qlength);
     if (longkeylength > Integer.MAX_VALUE) {
@@ -835,7 +833,7 @@ public class KeyValue implements ExtendedCell {
    *
    * @throws IllegalArgumentException an illegal value was passed
    */
-  private static void checkParameters(final byte [] row, final int rlength,
+  static void checkParameters(final byte [] row, final int rlength,
       final byte [] family, int flength, int qlength, int vlength)
           throws IllegalArgumentException {
     if (rlength > Short.MAX_VALUE) {
@@ -907,7 +905,7 @@ public class KeyValue implements ExtendedCell {
         tagsLength += t.getValueLength() + Tag.INFRASTRUCTURE_SIZE;
       }
     }
-    checkForTagsLength(tagsLength);
+    TagUtil.checkForTagsLength(tagsLength);
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
     int keyValueLength = (int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
         tagsLength);
@@ -948,12 +946,6 @@ public class KeyValue implements ExtendedCell {
     return keyValueLength;
   }
 
-  private static void checkForTagsLength(int tagsLength) {
-    if (tagsLength > MAX_TAGS_LENGTH) {
-      throw new IllegalArgumentException("tagslength "+ tagsLength + " > " + MAX_TAGS_LENGTH);
-    }
-  }
-
   /**
    * Write KeyValue format into a byte array.
    * @param row row key
@@ -980,7 +972,7 @@ public class KeyValue implements ExtendedCell {
       int vlength, byte[] tags, int tagsOffset, int tagsLength) {
 
     checkParameters(row, rlength, family, flength, qlength, vlength);
-    checkForTagsLength(tagsLength);
+    TagUtil.checkForTagsLength(tagsLength);
     // Allocate right-sized byte array.
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
     byte[] bytes = new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
@@ -1030,7 +1022,7 @@ public class KeyValue implements ExtendedCell {
         tagsLength += t.getValueLength() + Tag.INFRASTRUCTURE_SIZE;
       }
     }
-    checkForTagsLength(tagsLength);
+    TagUtil.checkForTagsLength(tagsLength);
     // Allocate right-sized byte array.
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
     byte[] bytes = new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
