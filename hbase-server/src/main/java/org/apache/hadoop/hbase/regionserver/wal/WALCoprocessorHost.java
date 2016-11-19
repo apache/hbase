@@ -21,13 +21,13 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 
@@ -120,7 +120,9 @@ public class WALCoprocessorHost
     boolean bypass = false;
     if (this.coprocessors == null || this.coprocessors.isEmpty()) return bypass;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    for (WALEnvironment env: coprocessors) {
+    List<WALEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      WALEnvironment env = envs.get(i);
       if (env.getInstance() instanceof WALObserver) {
         final WALObserver observer = (WALObserver)env.getInstance();
         ctx = ObserverContext.createAndPrepare(env, ctx);
@@ -162,7 +164,9 @@ public class WALCoprocessorHost
       throws IOException {
     if (this.coprocessors == null || this.coprocessors.isEmpty()) return;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    for (WALEnvironment env: coprocessors) {
+    List<WALEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      WALEnvironment env = envs.get(i);
       if (env.getInstance() instanceof WALObserver) {
         final WALObserver observer = (WALObserver)env.getInstance();
         ctx = ObserverContext.createAndPrepare(env, ctx);

@@ -1130,7 +1130,9 @@ public class MasterCoprocessorHost
   private boolean execOperation(final CoprocessorOperation ctx) throws IOException {
     if (ctx == null) return false;
     boolean bypass = false;
-    for (MasterEnvironment env: coprocessors) {
+    List<MasterEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      MasterEnvironment env = envs.get(i);
       if (env.getInstance() instanceof MasterObserver) {
         ctx.prepare(env);
         Thread currentThread = Thread.currentThread();

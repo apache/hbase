@@ -1771,7 +1771,9 @@ public class RegionCoprocessorHost
   private boolean execOperation(final boolean earlyExit, final CoprocessorOperation ctx)
       throws IOException {
     boolean bypass = false;
-    for (RegionEnvironment env: coprocessors) {
+    List<RegionEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      RegionEnvironment env = envs.get(i);
       Coprocessor observer = env.getInstance();
       if (ctx.hasCall(observer)) {
         long startTime = System.nanoTime();
