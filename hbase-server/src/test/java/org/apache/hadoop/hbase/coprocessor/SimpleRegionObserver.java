@@ -635,7 +635,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
-      List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException {
+      List<Pair<byte[], String>> familyPaths, Map<byte[], List<Path>> map, boolean hasLoaded)
+          throws IOException {
     RegionCoprocessorEnvironment e = ctx.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());

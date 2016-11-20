@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.LongAdder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
@@ -2142,6 +2143,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       Region region = getRegion(request.getRegion());
       boolean bypass = false;
       boolean loaded = false;
+      Map<byte[], List<Path>> map = null;
 
       if (!request.hasBulkToken()) {
         // Old style bulk load. This will not be supported in future releases
@@ -2155,17 +2157,23 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
         }
         if (!bypass) {
-          loaded = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
+          map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
               request.getCopyFile());
+          if (map != null) {
+            loaded = true;
+          }
         }
         if (region.getCoprocessorHost() != null) {
-          loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
+          loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map, loaded);
         }
       } else {
         // secure bulk load
-        loaded = regionServer.secureBulkLoadManager.secureBulkLoadHFiles(region, request);
+        map = regionServer.secureBulkLoadManager.secureBulkLoadHFiles(region, request);
       }
       BulkLoadHFileResponse.Builder builder = BulkLoadHFileResponse.newBuilder();
+      if (map != null) {
+        loaded = true;
+      }
       builder.setLoaded(loaded);
       return builder.build();
     } catch (IOException ie) {

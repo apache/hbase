@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -511,7 +512,14 @@ public class BaseRegionObserver implements RegionObserver {
 
   @Override
   public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
-    List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException {
+    List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths,
+    boolean hasLoaded) throws IOException {
+    return hasLoaded;
+  }
+
+  @Override
+  public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+    List<Pair<byte[], String>> stagingFamilyPaths, boolean hasLoaded) throws IOException {
     return hasLoaded;
   }
 

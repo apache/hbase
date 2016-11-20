@@ -19,9 +19,12 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -128,12 +131,14 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   public void secureBulkLoadHFiles(RpcController controller, SecureBulkLoadHFilesRequest request,
       RpcCallback<SecureBulkLoadHFilesResponse> done) {
     boolean loaded = false;
+    Map<byte[], List<Path>> map = null;
     try {
       SecureBulkLoadManager secureBulkLoadManager =
           this.env.getRegionServerServices().getSecureBulkLoadManager();
       BulkLoadHFileRequest bulkLoadHFileRequest = ConvertSecureBulkLoadHFilesRequest(request);
-      loaded = secureBulkLoadManager.secureBulkLoadHFiles(this.env.getRegion(),
+      map = secureBulkLoadManager.secureBulkLoadHFiles(this.env.getRegion(),
           convert(bulkLoadHFileRequest));
+      loaded = map != null && !map.isEmpty();
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
     }

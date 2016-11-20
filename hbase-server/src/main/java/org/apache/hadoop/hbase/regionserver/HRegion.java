@@ -5470,14 +5470,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
+  public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
       BulkLoadListener bulkLoadListener) throws IOException {
     return bulkLoadHFiles(familyPaths, assignSeqId, bulkLoadListener, false);
   }
 
   @Override
-  public boolean bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths, boolean assignSeqId,
-      BulkLoadListener bulkLoadListener, boolean copyFile) throws IOException {
+  public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
+      boolean assignSeqId, BulkLoadListener bulkLoadListener, boolean copyFile) throws IOException {
     long seqId = -1;
     Map<byte[], List<Path>> storeFiles = new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
     Map<String, Long> storeFilesSizes = new HashMap<String, Long>();
@@ -5532,7 +5532,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // problem when validating
         LOG.warn("There was a recoverable bulk load failure likely due to a" +
             " split.  These (family, HFile) pairs were not loaded: " + list);
-        return isSuccessful;
+        return null;
       }
 
       // We need to assign a sequential ID that's in between two memstores in order to preserve
@@ -5626,7 +5626,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       closeBulkRegionOperation();
     }
-    return isSuccessful;
+    return isSuccessful ? storeFiles : null;
   }
 
   @Override

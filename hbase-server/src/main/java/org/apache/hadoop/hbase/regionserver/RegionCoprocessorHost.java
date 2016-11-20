@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -1549,18 +1550,19 @@ public class RegionCoprocessorHost
 
   /**
    * @param familyPaths pairs of { CF, file path } submitted for bulk load
+   * @param map Map of CF to List of file paths for the final loaded files
    * @param hasLoaded whether load was successful or not
    * @return the possibly modified value of hasLoaded
    * @throws IOException
    */
   public boolean postBulkLoadHFile(final List<Pair<byte[], String>> familyPaths,
-      boolean hasLoaded) throws IOException {
+      Map<byte[], List<Path>> map, boolean hasLoaded) throws IOException {
     return execOperationWithResult(hasLoaded,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<Boolean>() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        setResult(oserver.postBulkLoadHFile(ctx, familyPaths, getResult()));
+        setResult(oserver.postBulkLoadHFile(ctx, familyPaths, map, getResult()));
       }
     });
   }

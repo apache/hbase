@@ -196,8 +196,8 @@ public class TestMobStoreCompaction {
 
     // The following will bulk load the above generated store files and compact, with 600(fileSize)
     // > 300(threshold)
-    boolean result = region.bulkLoadHFiles(hfiles, true, null);
-    assertTrue("Bulkload result:", result);
+    Map<byte[], List<Path>> map = region.bulkLoadHFiles(hfiles, true, null);
+    assertTrue("Bulkload result:", !map.isEmpty());
     assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
     assertEquals("Before compaction: mob file count", 0, countMobFiles());
     assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));

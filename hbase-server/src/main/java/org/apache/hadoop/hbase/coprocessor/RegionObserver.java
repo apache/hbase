@@ -21,16 +21,17 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -45,11 +46,12 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -58,9 +60,9 @@ import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 import com.google.common.collect.ImmutableList;
 
@@ -1386,13 +1388,30 @@ public interface RegionObserver extends Coprocessor {
    * Called after bulkLoadHFile.
    *
    * @param ctx
-   * @param familyPaths pairs of { CF, HFile path } submitted for bulk load
+   * @param stagingFamilyPaths pairs of { CF, HFile path } submitted for bulk load
+   * @param finalPaths Map of CF to List of file paths for the final loaded files
    * @param hasLoaded whether the bulkLoad was successful
    * @return the new value of hasLoaded
    * @throws IOException
    */
+  default boolean postBulkLoadHFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+    List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths,
+    boolean hasLoaded) throws IOException {
+    return postBulkLoadHFile(ctx, stagingFamilyPaths, hasLoaded);
+  }
+
+  /**
+   * Called after bulkLoadHFile.
+   *
+   * @param ctx
+   * @param stagingFamilyPaths pairs of { CF, HFile path } submitted for bulk load
+   * @param hasLoaded whether the bulkLoad was successful
+   * @return the new value of hasLoaded
+   * @throws IOException
+   * @deprecated Use {@link #postBulkLoadHFile(ObserverContext, List, Map, boolean)}
+   */
   boolean postBulkLoadHFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
-    List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException;
+    List<Pair<byte[], String>> stagingFamilyPaths, boolean hasLoaded) throws IOException;
 
   /**
    * Called before creation of Reader for a store file.

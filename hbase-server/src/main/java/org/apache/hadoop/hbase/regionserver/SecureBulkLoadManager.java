@@ -171,7 +171,7 @@ public class SecureBulkLoadManager {
     fs.delete(new Path(request.getBulkToken()), true);
   }
 
-  public boolean secureBulkLoadHFiles(final Region region,
+  public Map<byte[], List<Path>> secureBulkLoadHFiles(final Region region,
       final BulkLoadHFileRequest request) throws IOException {
     final List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>(request.getFamilyPathCount());
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
@@ -200,6 +200,8 @@ public class SecureBulkLoadManager {
         bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
     }
     boolean loaded = false;
+    Map<byte[], List<Path>> map = null;
+
     if (!bypass) {
       // Get the target fs (HBase region server fs) delegation token
       // Since we have checked the permission via 'preBulkLoadHFile', now let's give
@@ -217,9 +219,9 @@ public class SecureBulkLoadManager {
         }
       }
 
-      loaded = ugi.doAs(new PrivilegedAction<Boolean>() {
+      map = ugi.doAs(new PrivilegedAction<Map<byte[], List<Path>>>() {
         @Override
-        public Boolean run() {
+        public Map<byte[], List<Path>> run() {
           FileSystem fs = null;
           try {
             fs = FileSystem.get(conf);
@@ -237,14 +239,17 @@ public class SecureBulkLoadManager {
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }
-          return false;
+          return null;
         }
       });
+      if (map != null) {
+        loaded = true;
+      }
     }
     if (region.getCoprocessorHost() != null) {
-       loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
+       region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map, loaded);
     }
-    return loaded;
+    return map;
   }
 
   private List<BulkLoadObserver> getBulkLoadObservers(Region region) {
