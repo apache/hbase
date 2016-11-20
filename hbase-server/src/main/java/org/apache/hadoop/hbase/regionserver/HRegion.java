@@ -7044,8 +7044,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return;
     }
 
-    boolean locked;
-    List<RowLock> acquiredRowLocks;
+    boolean locked = false;
+    List<RowLock> acquiredRowLocks = null;
     List<Mutation> mutations = new ArrayList<Mutation>();
     Collection<byte[]> rowsToLock = processor.getRowsToLock();
     // This is assigned by mvcc either explicity in the below or in the guts of the WAL append
@@ -7053,19 +7053,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WriteEntry writeEntry = null;
     MemstoreSize memstoreSize = new MemstoreSize();
     try {
-      // STEP 2. Acquire the row lock(s)
-      acquiredRowLocks = new ArrayList<RowLock>(rowsToLock.size());
-      for (byte[] row : rowsToLock) {
-        // Attempt to lock all involved rows, throw if any lock times out
-        // use a writer lock for mixed reads and writes
-        acquiredRowLocks.add(getRowLockInternal(row, false));
-      }
-      // STEP 3. Region lock
-      lock(this.updatesLock.readLock(), acquiredRowLocks.size() == 0 ? 1 : acquiredRowLocks.size());
-      locked = true;
       boolean success = false;
-      long now = EnvironmentEdgeManager.currentTime();
       try {
+        // STEP 2. Acquire the row lock(s)
+        acquiredRowLocks = new ArrayList<>(rowsToLock.size());
+        for (byte[] row : rowsToLock) {
+          // Attempt to lock all involved rows, throw if any lock times out
+          // use a writer lock for mixed reads and writes
+          acquiredRowLocks.add(getRowLockInternal(row, false));
+        }
+        // STEP 3. Region lock
+        lock(this.updatesLock.readLock(), acquiredRowLocks.isEmpty() ? 1 : acquiredRowLocks.size());
+        locked = true;
+        long now = EnvironmentEdgeManager.currentTime();
         // STEP 4. Let the processor scan the rows, generate mutations and add waledits
         doProcessRowWithTimeout(processor, now, this, mutations, walEdit, timeout);
         if (!mutations.isEmpty()) {
