@@ -514,7 +514,7 @@ public class BaseRegionObserver implements RegionObserver {
   public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths,
     boolean hasLoaded) throws IOException {
-    return hasLoaded;
+    return postBulkLoadHFile(ctx, stagingFamilyPaths, hasLoaded);
   }
 
   @Override
