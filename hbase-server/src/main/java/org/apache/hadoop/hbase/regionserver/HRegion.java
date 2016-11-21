@@ -7188,28 +7188,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     MultiVersionConcurrencyControl.WriteEntry writeEntry = null;
-    boolean locked;
+    boolean locked = false;
     boolean walSyncSuccessful = false;
-    List<RowLock> acquiredRowLocks;
+    List<RowLock> acquiredRowLocks = null;
     long addedSize = 0;
     List<Mutation> mutations = new ArrayList<Mutation>();
     Collection<byte[]> rowsToLock = processor.getRowsToLock();
     long mvccNum = 0;
     WALKey walKey = null;
     try {
-      // 2. Acquire the row lock(s)
-      acquiredRowLocks = new ArrayList<RowLock>(rowsToLock.size());
-      for (byte[] row : rowsToLock) {
-        // Attempt to lock all involved rows, throw if any lock times out
-        // use a writer lock for mixed reads and writes
-        acquiredRowLocks.add(getRowLockInternal(row, false));
-      }
-      // 3. Region lock
-      lock(this.updatesLock.readLock(), acquiredRowLocks.size() == 0 ? 1 : acquiredRowLocks.size());
-      locked = true;
-
-      long now = EnvironmentEdgeManager.currentTime();
       try {
+        // 2. Acquire the row lock(s)
+        acquiredRowLocks = new ArrayList<RowLock>(rowsToLock.size());
+        for (byte[] row : rowsToLock) {
+          // Attempt to lock all involved rows, throw if any lock times out
+          // use a writer lock for mixed reads and writes
+          acquiredRowLocks.add(getRowLockInternal(row, false));
+        }
+        // 3. Region lock
+        lock(this.updatesLock.readLock(), acquiredRowLocks.isEmpty() ? 1 : acquiredRowLocks.size());
+        locked = true;
+
+        long now = EnvironmentEdgeManager.currentTime();
         // 4. Let the processor scan the rows, generate mutations and add
         //    waledits
         doProcessRowWithTimeout(
