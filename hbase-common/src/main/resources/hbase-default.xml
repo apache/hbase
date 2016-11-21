@@ -1626,32 +1626,6 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.mob.sweep.tool.compaction.ratio</name>
-    <value>0.5f</value>
-    <description>
-      If there're too many cells deleted in a mob file, it's regarded
-      as an invalid file and needs to be merged.
-      If existingCellsSize/mobFileSize is less than ratio, it's regarded
-      as an invalid file. The default value is 0.5f.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.sweep.tool.compaction.mergeable.size</name>
-    <value>134217728</value>
-    <description>
-      If the size of a mob file is less than this value, it's regarded as a small
-      file and needs to be merged. The default value is 128MB.
-    </description>
-  </property>
-  <property>
-    <name>hbase.mob.sweep.tool.compaction.memstore.flush.size</name>
-    <value>134217728</value>
-    <description>
-      The flush size for the memstore used by sweep job. Each sweep reducer owns such a memstore.
-      The default value is 128MB.
-    </description>
-  </property>
-  <property>
     <name>hbase.master.mob.ttl.cleaner.period</name>
     <value>86400</value>
     <description>
