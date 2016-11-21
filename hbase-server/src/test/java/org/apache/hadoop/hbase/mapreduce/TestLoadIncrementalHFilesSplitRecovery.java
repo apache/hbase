@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClientServiceCallable;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -57,7 +58,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles.LoadQueueItem;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -275,31 +276,34 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test(expected=IOException.class, timeout=120000)
   public void testBulkLoadPhaseFailure() throws Exception {
-    TableName table = TableName.valueOf("bulkLoadPhaseFailure");
+    final TableName table = TableName.valueOf("bulkLoadPhaseFailure");
     final AtomicInteger attmptedCalls = new AtomicInteger();
     final AtomicInteger failedCalls = new AtomicInteger();
     util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
-    try (Connection connection = ConnectionFactory.createConnection(this.util.getConfiguration())) {
+    try (Connection connection = ConnectionFactory.createConnection(util
+        .getConfiguration())) {
       setupTable(connection, table, 10);
-      LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
+      LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
+          util.getConfiguration()) {
         @Override
-        protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
-            TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis,
-            boolean copyFile) throws IOException {
+        protected List<LoadQueueItem> tryAtomicRegionLoad(
+            ClientServiceCallable<byte[]> serviceCallable, TableName tableName, final byte[] first,
+            Collection<LoadQueueItem> lqis) throws IOException {
           int i = attmptedCalls.incrementAndGet();
           if (i == 1) {
             Connection errConn;
             try {
               errConn = getMockedConnection(util.getConfiguration());
+              serviceCallable = this.buildClientServiceCallable(errConn, table, first, lqis, true);
             } catch (Exception e) {
               LOG.fatal("mocking cruft, should never happen", e);
               throw new RuntimeException("mocking cruft, should never happen");
             }
             failedCalls.incrementAndGet();
-            return super.tryAtomicRegionLoad(errConn, tableName, first, lqis, copyFile);
+            return super.tryAtomicRegionLoad(serviceCallable, tableName, first, lqis);
           }
 
-          return super.tryAtomicRegionLoad(conn, tableName, first, lqis, copyFile);
+          return super.tryAtomicRegionLoad(serviceCallable, tableName, first, lqis);
         }
       };
       try {
@@ -316,6 +320,53 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       }
       fail("doBulkLoad should have thrown an exception");
     }
+  }
+
+  /**
+   * Test that shows that exception thrown from the RS side will result in the
+   * expected number of retries set by ${@link HConstants#HBASE_CLIENT_RETRIES_NUMBER}
+   * when ${@link LoadIncrementalHFiles#RETRY_ON_IO_EXCEPTION} is set
+   */
+  @Test
+  public void testRetryOnIOException() throws Exception {
+    final TableName table = TableName.valueOf("retryOnIOException");
+    final AtomicInteger calls = new AtomicInteger(1);
+    final Connection conn = ConnectionFactory.createConnection(util
+        .getConfiguration());
+    util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
+    util.getConfiguration().setBoolean(
+        LoadIncrementalHFiles.RETRY_ON_IO_EXCEPTION, true);
+    final LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
+        util.getConfiguration()) {
+      @Override
+      protected List<LoadQueueItem> tryAtomicRegionLoad(
+          ClientServiceCallable<byte[]> serverCallable, TableName tableName,
+          final byte[] first, Collection<LoadQueueItem> lqis)
+          throws IOException {
+        if (calls.getAndIncrement() < util.getConfiguration().getInt(
+            HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+            HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) - 1) {
+          ClientServiceCallable<byte[]> newServerCallable = new ClientServiceCallable<byte[]>(
+              conn, tableName, first, new RpcControllerFactory(
+                  util.getConfiguration()).newController()) {
+            @Override
+            public byte[] rpcCall() throws Exception {
+              throw new IOException("Error calling something on RegionServer");
+            }
+          };
+          return super.tryAtomicRegionLoad(newServerCallable, tableName, first, lqis);
+        } else {
+          return super.tryAtomicRegionLoad(serverCallable, tableName, first, lqis);
+        }
+      }
+    };
+    setupTable(conn, table, 10);
+    Path dir = buildBulkFiles(table, 1);
+    lih.doBulkLoad(dir, conn.getAdmin(), conn.getTable(table),
+        conn.getRegionLocator(table));
+    util.getConfiguration().setBoolean(
+        LoadIncrementalHFiles.RETRY_ON_IO_EXCEPTION, false);
+
   }
 
   @SuppressWarnings("deprecation")

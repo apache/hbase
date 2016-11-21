@@ -45,6 +45,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
@@ -110,6 +111,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private boolean initalized = false;
 
   public static final String NAME = "completebulkload";
+  static final String RETRY_ON_IO_EXCEPTION = "hbase.bulkload.retries.retryOnIOException";
   public static final String MAX_FILES_PER_REGION_PER_FAMILY
     = "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
   private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
@@ -133,6 +135,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private UserProvider userProvider;
   private int nrThreads;
   private RpcControllerFactory rpcControllerFactory;
+  private AtomicInteger numRetries;
 
   private Map<LoadQueueItem, ByteBuffer> retValue = null;
 
@@ -158,6 +161,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     nrThreads = conf.getInt("hbase.loadincremental.threads.max",
       Runtime.getRuntime().availableProcessors());
     initalized = true;
+    numRetries = new AtomicInteger(1);
   }
 
   private void usage() {
@@ -510,6 +514,69 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     return item2RegionMap;
   }
 
+  protected ClientServiceCallable<byte[]> buildClientServiceCallable(final Connection conn,
+      TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
+
+    final List<Pair<byte[], String>> famPaths = new ArrayList<>(lqis.size());
+    for (LoadQueueItem lqi : lqis) {
+        famPaths.add(Pair.newPair(lqi.family, lqi.hfilePath.toString()));
+    }
+
+    return new ClientServiceCallable<byte[]>(conn,
+        tableName, first, rpcControllerFactory.newController()) {
+      @Override
+      protected byte[] rpcCall() throws Exception {
+        SecureBulkLoadClient secureClient = null;
+        boolean success = false;
+        try {
+          LOG.debug("Going to connect to server " + getLocation() + " for row "
+              + Bytes.toStringBinary(getRow()) + " with hfile group " + famPaths);
+          byte[] regionName = getLocation().getRegionInfo().getRegionName();
+          try (Table table = conn.getTable(getTableName())) {
+            secureClient = new SecureBulkLoadClient(getConf(), table);
+            success = secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
+                assignSeqIds, fsDelegationToken.getUserToken(), bulkToken, copyFile);
+          }
+          return success ? regionName : null;
+        } finally {
+          //Best effort copying of files that might not have been imported
+          //from the staging directory back to original location
+          //in user directory
+          if (secureClient != null && !success) {
+            FileSystem targetFs = FileSystem.get(getConf());
+            // fs is the source filesystem
+            if (fs == null) {
+              fs = lqis.iterator().next().hfilePath.getFileSystem(getConf());
+            }
+            // Check to see if the source and target filesystems are the same
+            // If they are the same filesystem, we will try move the files back
+            // because previously we moved them to the staging directory.
+            if (FSHDFSUtils.isSameHdfs(getConf(), fs, targetFs)) {
+              for (Pair<byte[], String> el : famPaths) {
+                Path hfileStagingPath = null;
+                Path hfileOrigPath = new Path(el.getSecond());
+                try {
+                  hfileStagingPath = new Path(new Path(bulkToken, Bytes.toString(el.getFirst())),
+                      hfileOrigPath.getName());
+                  if (targetFs.rename(hfileStagingPath, hfileOrigPath)) {
+                    LOG.debug("Moved back file " + hfileOrigPath + " from " +
+                        hfileStagingPath);
+                  } else if (targetFs.exists(hfileStagingPath)) {
+                    LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
+                        hfileStagingPath);
+                  }
+                } catch (Exception ex) {
+                  LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
+                      hfileStagingPath, ex);
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+  }
+
   /**
    * Prepare a collection of {@link LoadQueueItem} from list of source hfiles contained in the
    * passed directory and validates whether the prepared queue has all the valid table column
@@ -655,11 +722,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       final byte[] first = e.getKey().array();
       final Collection<LoadQueueItem> lqis =  e.getValue();
 
+      final ClientServiceCallable<byte[]> serviceCallable =
+          buildClientServiceCallable(conn, table.getName(), first, lqis, copyFile);
+
       final Callable<List<LoadQueueItem>> call = new Callable<List<LoadQueueItem>>() {
         @Override
         public List<LoadQueueItem> call() throws Exception {
           List<LoadQueueItem> toRetry =
-              tryAtomicRegionLoad(conn, table.getName(), first, lqis, copyFile);
+              tryAtomicRegionLoad(serviceCallable, table.getName(), first, lqis);
           return toRetry;
         }
       };
@@ -946,75 +1016,21 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @return empty list if success, list of items to retry on recoverable
    *   failure
    */
-  protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
-      final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis,
-      boolean copyFile) throws IOException {
+  protected List<LoadQueueItem> tryAtomicRegionLoad(ClientServiceCallable<byte[]> serviceCallable,
+      final TableName tableName, final byte[] first, final Collection<LoadQueueItem> lqis)
+      throws IOException {
     final List<Pair<byte[], String>> famPaths = new ArrayList<>(lqis.size());
     for (LoadQueueItem lqi : lqis) {
       if (!unmatchedFamilies.contains(Bytes.toString(lqi.family))) {
         famPaths.add(Pair.newPair(lqi.family, lqi.hfilePath.toString()));
       }
     }
-    final ClientServiceCallable<byte[]> svrCallable = new ClientServiceCallable<byte[]>(conn,
-        tableName, first, rpcControllerFactory.newController()) {
-      @Override
-      protected byte[] rpcCall() throws Exception {
-        SecureBulkLoadClient secureClient = null;
-        boolean success = false;
-        try {
-          LOG.debug("Going to connect to server " + getLocation() + " for row "
-              + Bytes.toStringBinary(getRow()) + " with hfile group " + famPaths);
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          try (Table table = conn.getTable(getTableName())) {
-            secureClient = new SecureBulkLoadClient(getConf(), table);
-            success = secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName,
-                  assignSeqIds, fsDelegationToken.getUserToken(), bulkToken, copyFile);
-          }
-          return success ? regionName : null;
-        } finally {
-          //Best effort copying of files that might not have been imported
-          //from the staging directory back to original location
-          //in user directory
-          if (secureClient != null && !success) {
-            FileSystem targetFs = FileSystem.get(getConf());
-         // fs is the source filesystem
-            if(fs == null) {
-              fs = lqis.iterator().next().hfilePath.getFileSystem(getConf());
-            }
-            // Check to see if the source and target filesystems are the same
-            // If they are the same filesystem, we will try move the files back
-            // because previously we moved them to the staging directory.
-            if (FSHDFSUtils.isSameHdfs(getConf(), fs, targetFs)) {
-              for(Pair<byte[], String> el : famPaths) {
-                Path hfileStagingPath = null;
-                Path hfileOrigPath = new Path(el.getSecond());
-                try {
-                  hfileStagingPath= new Path(new Path(bulkToken, Bytes.toString(el.getFirst())),
-                    hfileOrigPath.getName());
-                  if(targetFs.rename(hfileStagingPath, hfileOrigPath)) {
-                    LOG.debug("Moved back file " + hfileOrigPath + " from " +
-                        hfileStagingPath);
-                  } else if(targetFs.exists(hfileStagingPath)){
-                    LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
-                        hfileStagingPath);
-                  }
-                } catch(Exception ex) {
-                  LOG.debug("Unable to move back file " + hfileOrigPath + " from " +
-                      hfileStagingPath, ex);
-                }
-              }
-            }
-          }
-        }
-      }
-    };
-
     try {
       List<LoadQueueItem> toRetry = new ArrayList<>();
       Configuration conf = getConf();
       byte[] region = RpcRetryingCallerFactory.instantiate(conf,
           null).<byte[]> newCaller()
-          .callWithRetries(svrCallable, Integer.MAX_VALUE);
+          .callWithRetries(serviceCallable, Integer.MAX_VALUE);
       if (region == null) {
         LOG.warn("Attempt to bulk load region containing "
             + Bytes.toStringBinary(first) + " into table "
@@ -1026,7 +1042,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return toRetry;
     } catch (IOException e) {
       LOG.error("Encountered unrecoverable error from region server, additional details: "
-          + svrCallable.getExceptionMessageAdditionalDetail(), e);
+          + serviceCallable.getExceptionMessageAdditionalDetail(), e);
       throw e;
     }
   }
