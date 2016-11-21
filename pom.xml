@@ -191,6 +191,12 @@
       <timezone>+5</timezone>
     </developer>
     <developer>
+      <id>binlijin</id>
+      <name>Lijin Bin</name>
+      <email>binlijin@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>busbey</id>
       <name>Sean Busbey</name>
       <email>busbey@apache.org</email>
