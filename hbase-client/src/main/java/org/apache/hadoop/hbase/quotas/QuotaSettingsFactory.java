@@ -128,7 +128,8 @@ public class QuotaSettingsFactory {
 
   static QuotaSettings fromSpace(TableName table, String namespace, SpaceQuota protoQuota) {
     if ((null == table && null == namespace) || (null != table && null != namespace)) {
-      throw new IllegalArgumentException("Can only construct SpaceLimitSettings for a table or namespace.");
+      throw new IllegalArgumentException(
+          "Can only construct SpaceLimitSettings for a table or namespace.");
     }
     if (null != table) {
       return SpaceLimitSettings.fromSpaceQuota(table, protoQuota);
@@ -300,29 +301,32 @@ public class QuotaSettingsFactory {
    */
 
   /**
-   * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given table to the given size in bytes.
-   * When the space usage is exceeded by the table, the provided {@link SpaceViolationPolicy} is enacted on the table.
+   * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given table
+   * to the given size in bytes. When the space usage is exceeded by the table, the provided
+   * {@link SpaceViolationPolicy} is enacted on the table.
    *
    * @param tableName The name of the table on which the quota should be applied.
    * @param sizeLimit The limit of a table's size in bytes.
    * @param violationPolicy The action to take when the quota is exceeded.
    * @return An {@link QuotaSettings} object.
    */
-  public static QuotaSettings limitTableSpace(final TableName tableName, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
+  public static QuotaSettings limitTableSpace(
+      final TableName tableName, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
     return new SpaceLimitSettings(tableName, sizeLimit, violationPolicy);
   }
 
   /**
-   * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given namespace to the given size in bytes.
-   * When the space usage is exceeded by all tables in the namespace, the provided {@link SpaceViolationPolicy} is enacted on
-   * all tables in the namespace.
+   * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given
+   * namespace to the given size in bytes. When the space usage is exceeded by all tables in the
+   * namespace, the provided {@link SpaceViolationPolicy} is enacted on all tables in the namespace.
    *
    * @param namespace The namespace on which the quota should be applied.
    * @param sizeLimit The limit of the namespace's size in bytes.
    * @param violationPolicy The action to take when the the quota is exceeded.
    * @return An {@link QuotaSettings} object.
    */
-  public static QuotaSettings limitNamespaceSpace(final String namespace, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
+  public static QuotaSettings limitNamespaceSpace(
+      final String namespace, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
     return new SpaceLimitSettings(namespace, sizeLimit, violationPolicy);
   }
 }

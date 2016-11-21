@@ -93,8 +93,8 @@ class SpaceLimitSettings extends QuotaSettings {
    * @param proto The protobuf representation.
    * @return A QuotaSettings.
    */
-  static SpaceLimitSettings fromSpaceQuota(final TableName tableName,
-      final QuotaProtos.SpaceQuota proto) {
+  static SpaceLimitSettings fromSpaceQuota(
+      final TableName tableName, final QuotaProtos.SpaceQuota proto) {
     validateProtoArguments(proto);
     return new SpaceLimitSettings(tableName, proto.getSoftLimit(),
         ProtobufUtil.toViolationPolicy(proto.getViolationPolicy()));
@@ -107,8 +107,8 @@ class SpaceLimitSettings extends QuotaSettings {
    * @param proto The protobuf representation.
    * @return A QuotaSettings.
    */
-  static SpaceLimitSettings fromSpaceQuota(final String namespace,
-      final QuotaProtos.SpaceQuota proto) {
+  static SpaceLimitSettings fromSpaceQuota(
+      final String namespace, final QuotaProtos.SpaceQuota proto) {
     validateProtoArguments(proto);
     return new SpaceLimitSettings(namespace, proto.getSoftLimit(),
         ProtobufUtil.toViolationPolicy(proto.getViolationPolicy()));
