@@ -26,12 +26,15 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,7 +50,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncTable {
 
@@ -67,6 +75,23 @@ public class TestAsyncTable {
   public TestName testName = new TestName();
 
   private byte[] row;
+
+  @Parameter
+  public Supplier<AsyncTableBase> getTable;
+
+  private static RawAsyncTable getRawTable() {
+    return ASYNC_CONN.getRawTable(TABLE_NAME);
+  }
+
+  private static AsyncTable getTable() {
+    return ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
+  }
+
+  @Parameters
+  public static List<Object[]> params() {
+    return Arrays.asList(new Supplier<?>[] { TestAsyncTable::getRawTable },
+      new Supplier<?>[] { TestAsyncTable::getTable });
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -89,7 +114,7 @@ public class TestAsyncTable {
 
   @Test
   public void testSimple() throws Exception {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     table.put(new Put(row).addColumn(FAMILY, QUALIFIER, VALUE)).get();
     assertTrue(table.exists(new Get(row).addColumn(FAMILY, QUALIFIER)).get());
     Result result = table.get(new Get(row).addColumn(FAMILY, QUALIFIER)).get();
@@ -106,7 +131,7 @@ public class TestAsyncTable {
 
   @Test
   public void testSimpleMultiple() throws Exception {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     int count = 100;
     CountDownLatch putLatch = new CountDownLatch(count);
     IntStream.range(0, count).forEach(
@@ -150,7 +175,7 @@ public class TestAsyncTable {
 
   @Test
   public void testIncrement() throws InterruptedException, ExecutionException {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     int count = 100;
     CountDownLatch latch = new CountDownLatch(count);
     AtomicLong sum = new AtomicLong(0L);
@@ -167,7 +192,7 @@ public class TestAsyncTable {
 
   @Test
   public void testAppend() throws InterruptedException, ExecutionException {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     int count = 10;
     CountDownLatch latch = new CountDownLatch(count);
     char suffix = ':';
@@ -190,7 +215,7 @@ public class TestAsyncTable {
 
   @Test
   public void testCheckAndPut() throws InterruptedException, ExecutionException {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger successIndex = new AtomicInteger(-1);
     int count = 10;
@@ -211,7 +236,7 @@ public class TestAsyncTable {
 
   @Test
   public void testCheckAndDelete() throws InterruptedException, ExecutionException {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     int count = 10;
     CountDownLatch putLatch = new CountDownLatch(count + 1);
     table.put(new Put(row).addColumn(FAMILY, QUALIFIER, VALUE)).thenRun(() -> putLatch.countDown());
@@ -223,17 +248,16 @@ public class TestAsyncTable {
     AtomicInteger successCount = new AtomicInteger(0);
     AtomicInteger successIndex = new AtomicInteger(-1);
     CountDownLatch deleteLatch = new CountDownLatch(count);
-    IntStream.range(0, count)
-        .forEach(i -> table
-            .checkAndDelete(row, FAMILY, QUALIFIER, VALUE,
-              new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i)))
-            .thenAccept(x -> {
-              if (x) {
-                successCount.incrementAndGet();
-                successIndex.set(i);
-              }
-              deleteLatch.countDown();
-            }));
+    IntStream.range(0, count).forEach(i -> table
+        .checkAndDelete(row, FAMILY, QUALIFIER, VALUE,
+          new Delete(row).addColumn(FAMILY, QUALIFIER).addColumn(FAMILY, concat(QUALIFIER, i)))
+        .thenAccept(x -> {
+          if (x) {
+            successCount.incrementAndGet();
+            successIndex.set(i);
+          }
+          deleteLatch.countDown();
+        }));
     deleteLatch.await();
     assertEquals(1, successCount.get());
     Result result = table.get(new Get(row)).get();
@@ -248,7 +272,7 @@ public class TestAsyncTable {
 
   @Test
   public void testMutateRow() throws InterruptedException, ExecutionException, IOException {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     RowMutations mutation = new RowMutations(row);
     mutation.add(new Put(row).addColumn(FAMILY, concat(QUALIFIER, 1), VALUE));
     table.mutateRow(mutation).get();
@@ -266,7 +290,7 @@ public class TestAsyncTable {
 
   @Test
   public void testCheckAndMutate() throws InterruptedException, ExecutionException {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     int count = 10;
     CountDownLatch putLatch = new CountDownLatch(count + 1);
     table.put(new Put(row).addColumn(FAMILY, QUALIFIER, VALUE)).thenRun(() -> putLatch.countDown());

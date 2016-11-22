@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
@@ -148,7 +149,12 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
-  public AsyncTable getTable(TableName tableName) {
-    return new AsyncTableImpl(this, tableName);
+  public RawAsyncTable getRawTable(TableName tableName) {
+    return new RawAsyncTableImpl(this, tableName);
+  }
+
+  @Override
+  public AsyncTable getTable(TableName tableName, ExecutorService pool) {
+    return new AsyncTableImpl(this, tableName, pool);
   }
 }

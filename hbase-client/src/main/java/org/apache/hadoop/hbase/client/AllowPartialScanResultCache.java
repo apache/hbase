@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -39,29 +37,7 @@ class AllowPartialScanResultCache implements ScanResultCache {
   private Cell lastCell;
 
   private Result filterCells(Result result) {
-    if (lastCell == null) {
-      return result;
-    }
-
-    // not the same row
-    if (!CellUtil.matchingRow(lastCell, result.getRow(), 0, result.getRow().length)) {
-      return result;
-    }
-    Cell[] rawCells = result.rawCells();
-    int index = Arrays.binarySearch(rawCells, lastCell, CellComparator::compareWithoutRow);
-    if (index < 0) {
-      index = -index - 1;
-    } else {
-      index++;
-    }
-    if (index == 0) {
-      return result;
-    }
-    if (index == rawCells.length) {
-      return null;
-    }
-    return Result.create(Arrays.copyOfRange(rawCells, index, rawCells.length), null,
-      result.isStale(), true);
+    return lastCell == null ? result : ConnectionUtils.filterCells(result, lastCell);
   }
 
   private void updateLastCell(Result result) {

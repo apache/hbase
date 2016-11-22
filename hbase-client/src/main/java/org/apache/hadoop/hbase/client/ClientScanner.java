@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowBefore;
 
@@ -36,7 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -552,15 +552,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
   private boolean doneWithRegion(long remainingResultSize, int remainingRows,
       boolean regionHasMoreResults) {
     return remainingResultSize > 0 && remainingRows > 0 && !regionHasMoreResults;
-  }
-
-  protected long calcEstimatedSize(Result rs) {
-    long estimatedHeapSizeOfResult = 0;
-    // We don't make Iterator here
-    for (Cell cell : rs.rawCells()) {
-      estimatedHeapSizeOfResult += CellUtil.estimatedHeapSizeOf(cell);
-    }
-    return estimatedHeapSizeOfResult;
   }
 
   protected void addEstimatedSize(long estimatedHeapSizeOfResult) {

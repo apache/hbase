@@ -124,11 +124,11 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
   }
 
   @Override
-  protected List<Result> doScan(AsyncTable table, Scan scan) throws Exception {
-    SimpleScanResultConsumer scanObserver = new SimpleScanResultConsumer();
-    table.scan(scan, scanObserver);
+  protected List<Result> doScan(Scan scan) throws Exception {
+    SimpleScanResultConsumer scanConsumer = new SimpleScanResultConsumer();
+    ASYNC_CONN.getRawTable(TABLE_NAME).scan(scan, scanConsumer);
     List<Result> results = new ArrayList<>();
-    for (Result result; (result = scanObserver.take()) != null;) {
+    for (Result result; (result = scanConsumer.take()) != null;) {
       results.add(result);
     }
     if (scan.getBatch() > 0) {

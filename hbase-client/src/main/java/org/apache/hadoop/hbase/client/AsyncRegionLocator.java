@@ -262,7 +262,7 @@ class AsyncRegionLocator {
     }
     CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
     byte[] metaKey = createRegionName(tableName, row, NINES, false);
-    conn.getTable(META_TABLE_NAME)
+    conn.getRawTable(META_TABLE_NAME)
         .smallScan(new Scan(metaKey).setReversed(true).setSmall(true).addFamily(CATALOG_FAMILY), 1)
         .whenComplete(
           (results, error) -> onScanComplete(future, tableName, row, results, error, "row", loc -> {
@@ -327,7 +327,7 @@ class AsyncRegionLocator {
       metaKey = createRegionName(tableName, startRowOfCurrentRegion, ZEROES, false);
     }
     CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
-    conn.getTable(META_TABLE_NAME)
+    conn.getRawTable(META_TABLE_NAME)
         .smallScan(new Scan(metaKey).setReversed(true).setSmall(true).addFamily(CATALOG_FAMILY), 1)
         .whenComplete((results, error) -> onScanComplete(future, tableName, startRowOfCurrentRegion,
           results, error, "startRowOfCurrentRegion", loc -> {

@@ -57,11 +57,12 @@ public abstract class AbstractTestAsyncTableScan {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, splitKeys);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    RawAsyncTable table = ASYNC_CONN.getRawTable(TABLE_NAME);
     List<CompletableFuture<?>> futures = new ArrayList<>();
-    IntStream.range(0, COUNT).forEach(
-      i -> futures.add(table.put(new Put(Bytes.toBytes(String.format("%03d", i)))
-          .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))));
+    IntStream.range(0, COUNT)
+        .forEach(i -> futures.add(table.put(
+          new Put(Bytes.toBytes(String.format("%03d", i))).addColumn(FAMILY, CQ1, Bytes.toBytes(i))
+              .addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))));
     CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get();
   }
 
@@ -73,11 +74,11 @@ public abstract class AbstractTestAsyncTableScan {
 
   protected abstract Scan createScan();
 
-  protected abstract List<Result> doScan(AsyncTable table, Scan scan) throws Exception;
+  protected abstract List<Result> doScan(Scan scan) throws Exception;
 
   @Test
   public void testScanAll() throws Exception {
-    List<Result> results = doScan(ASYNC_CONN.getTable(TABLE_NAME), createScan());
+    List<Result> results = doScan(createScan());
     assertEquals(COUNT, results.size());
     IntStream.range(0, COUNT).forEach(i -> {
       Result result = results.get(i);
@@ -94,7 +95,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   @Test
   public void testReversedScanAll() throws Exception {
-    List<Result> results = doScan(ASYNC_CONN.getTable(TABLE_NAME), createScan().setReversed(true));
+    List<Result> results = doScan(createScan().setReversed(true));
     assertEquals(COUNT, results.size());
     IntStream.range(0, COUNT).forEach(i -> assertResultEquals(results.get(i), COUNT - i - 1));
   }
@@ -102,8 +103,8 @@ public abstract class AbstractTestAsyncTableScan {
   @Test
   public void testScanNoStopKey() throws Exception {
     int start = 345;
-    List<Result> results = doScan(ASYNC_CONN.getTable(TABLE_NAME),
-      createScan().setStartRow(Bytes.toBytes(String.format("%03d", start))));
+    List<Result> results =
+        doScan(createScan().setStartRow(Bytes.toBytes(String.format("%03d", start))));
     assertEquals(COUNT - start, results.size());
     IntStream.range(0, COUNT - start).forEach(i -> assertResultEquals(results.get(i), start + i));
   }
@@ -111,24 +112,24 @@ public abstract class AbstractTestAsyncTableScan {
   @Test
   public void testReverseScanNoStopKey() throws Exception {
     int start = 765;
-    List<Result> results = doScan(ASYNC_CONN.getTable(TABLE_NAME),
+    List<Result> results = doScan(
       createScan().setStartRow(Bytes.toBytes(String.format("%03d", start))).setReversed(true));
     assertEquals(start + 1, results.size());
     IntStream.range(0, start + 1).forEach(i -> assertResultEquals(results.get(i), start - i));
   }
 
   private void testScan(int start, int stop) throws Exception {
-    List<Result> results = doScan(ASYNC_CONN.getTable(TABLE_NAME),
-      createScan().setStartRow(Bytes.toBytes(String.format("%03d", start)))
-          .setStopRow(Bytes.toBytes(String.format("%03d", stop))));
+    List<Result> results =
+        doScan(createScan().setStartRow(Bytes.toBytes(String.format("%03d", start)))
+            .setStopRow(Bytes.toBytes(String.format("%03d", stop))));
     assertEquals(stop - start, results.size());
     IntStream.range(0, stop - start).forEach(i -> assertResultEquals(results.get(i), start + i));
   }
 
   private void testReversedScan(int start, int stop) throws Exception {
-    List<Result> results = doScan(ASYNC_CONN.getTable(TABLE_NAME),
-      createScan().setStartRow(Bytes.toBytes(String.format("%03d", start)))
-          .setStopRow(Bytes.toBytes(String.format("%03d", stop))).setReversed(true));
+    List<Result> results =
+        doScan(createScan().setStartRow(Bytes.toBytes(String.format("%03d", start)))
+            .setStopRow(Bytes.toBytes(String.format("%03d", stop))).setReversed(true));
     assertEquals(start - stop, results.size());
     IntStream.range(0, start - stop).forEach(i -> assertResultEquals(results.get(i), start - i));
   }

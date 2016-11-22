@@ -19,8 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -28,19 +31,44 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAsyncTableSmallScan extends AbstractTestAsyncTableScan {
 
+  @Parameter
+  public Supplier<AsyncTableBase> getTable;
+
+  private static RawAsyncTable getRawTable() {
+    return ASYNC_CONN.getRawTable(TABLE_NAME);
+  }
+
+  private static AsyncTable getTable() {
+    return ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
+  }
+
+  @Parameters
+  public static List<Object[]> params() {
+    return Arrays.asList(new Supplier<?>[] { TestAsyncTableSmallScan::getRawTable },
+      new Supplier<?>[] { TestAsyncTableSmallScan::getTable });
+  }
+
   @Test
   public void testScanWithLimit() throws InterruptedException, ExecutionException {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     int start = 111;
     int stop = 888;
     int limit = 300;
-    List<Result> results = table.smallScan(new Scan(Bytes.toBytes(String.format("%03d", start)))
-        .setStopRow(Bytes.toBytes(String.format("%03d", stop))).setSmall(true),
-      limit).get();
+    List<Result> results =
+        table
+            .smallScan(new Scan(Bytes.toBytes(String.format("%03d", start)))
+                .setStopRow(Bytes.toBytes(String.format("%03d", stop))).setSmall(true),
+              limit)
+            .get();
     assertEquals(limit, results.size());
     IntStream.range(0, limit).forEach(i -> {
       Result result = results.get(i);
@@ -52,7 +80,7 @@ public class TestAsyncTableSmallScan extends AbstractTestAsyncTableScan {
 
   @Test
   public void testReversedScanWithLimit() throws InterruptedException, ExecutionException {
-    AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME);
+    AsyncTableBase table = getTable.get();
     int start = 888;
     int stop = 111;
     int limit = 300;
@@ -75,7 +103,7 @@ public class TestAsyncTableSmallScan extends AbstractTestAsyncTableScan {
   }
 
   @Override
-  protected List<Result> doScan(AsyncTable table, Scan scan) throws Exception {
-    return table.smallScan(scan).get();
+  protected List<Result> doScan(Scan scan) throws Exception {
+    return getTable.get().smallScan(scan).get();
   }
 }

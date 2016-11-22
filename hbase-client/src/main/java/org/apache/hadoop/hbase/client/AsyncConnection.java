@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -49,6 +50,18 @@ public interface AsyncConnection extends Closeable {
   AsyncTableRegionLocator getRegionLocator(TableName tableName);
 
   /**
+   * Retrieve an RawAsyncTable implementation for accessing a table. The returned Table is not
+   * thread safe, a new instance should be created for each using thread. This is a lightweight
+   * operation, pooling or caching of the returned AsyncTable is neither required nor desired.
+   * <p>
+   * This method no longer checks table existence. An exception will be thrown if the table does not
+   * exist only when the first operation is attempted.
+   * @param tableName the name of the table
+   * @return an RawAsyncTable to use for interactions with this table
+   */
+  RawAsyncTable getRawTable(TableName tableName);
+
+  /**
    * Retrieve an AsyncTable implementation for accessing a table. The returned Table is not thread
    * safe, a new instance should be created for each using thread. This is a lightweight operation,
    * pooling or caching of the returned AsyncTable is neither required nor desired.
@@ -56,7 +69,8 @@ public interface AsyncConnection extends Closeable {
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
    * @param tableName the name of the table
+   * @param pool the thread pool to use for executing callback
    * @return an AsyncTable to use for interactions with this table
    */
-  AsyncTable getTable(TableName tableName);
+  AsyncTable getTable(TableName tableName, ExecutorService pool);
 }

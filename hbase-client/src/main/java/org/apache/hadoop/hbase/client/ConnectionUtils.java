@@ -35,6 +35,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -289,5 +292,36 @@ public final class ConnectionUtils {
       t = translateException(t.getCause());
     }
     return t;
+  }
+
+  static long calcEstimatedSize(Result rs) {
+    long estimatedHeapSizeOfResult = 0;
+    // We don't make Iterator here
+    for (Cell cell : rs.rawCells()) {
+      estimatedHeapSizeOfResult += CellUtil.estimatedHeapSizeOf(cell);
+    }
+    return estimatedHeapSizeOfResult;
+  }
+
+  static Result filterCells(Result result, Cell keepCellsAfter) {
+    // not the same row
+    if (!CellUtil.matchingRow(keepCellsAfter, result.getRow(), 0, result.getRow().length)) {
+      return result;
+    }
+    Cell[] rawCells = result.rawCells();
+    int index = Arrays.binarySearch(rawCells, keepCellsAfter, CellComparator::compareWithoutRow);
+    if (index < 0) {
+      index = -index - 1;
+    } else {
+      index++;
+    }
+    if (index == 0) {
+      return result;
+    }
+    if (index == rawCells.length) {
+      return null;
+    }
+    return Result.create(Arrays.copyOfRange(rawCells, index, rawCells.length), null,
+      result.isStale(), true);
   }
 }

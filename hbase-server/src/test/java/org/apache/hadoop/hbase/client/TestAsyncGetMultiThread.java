@@ -87,7 +87,7 @@ public class TestAsyncGetMultiThread {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
-    AsyncTable table = CONN.getTable(TABLE_NAME);
+    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
     List<CompletableFuture<?>> futures = new ArrayList<>();
     IntStream.range(0, COUNT)
         .forEach(i -> futures.add(table.put(new Put(Bytes.toBytes(String.format("%03d", i)))
@@ -105,8 +105,9 @@ public class TestAsyncGetMultiThread {
     while (!stop.get()) {
       int i = ThreadLocalRandom.current().nextInt(COUNT);
       assertEquals(i,
-        Bytes.toInt(CONN.getTable(TABLE_NAME).get(new Get(Bytes.toBytes(String.format("%03d", i))))
-            .get().getValue(FAMILY, QUALIFIER)));
+        Bytes.toInt(
+          CONN.getRawTable(TABLE_NAME).get(new Get(Bytes.toBytes(String.format("%03d", i)))).get()
+              .getValue(FAMILY, QUALIFIER)));
     }
   }
 
