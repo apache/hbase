@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -39,7 +43,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -70,10 +73,9 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Maintains lists of permission grants to users and groups to allow for
@@ -596,13 +598,36 @@ public class AccessControlLists {
     return ProtobufUtil.prependPBMagic(AccessControlUtil.toUserTablePermissions(perms).toByteArray());
   }
 
+  // This is part of the old HbaseObjectWritableFor96Migration.
+  private static final int LIST_CODE = 61;
+
+  private static final int WRITABLE_CODE = 14;
+
+  private static final int WRITABLE_NOT_ENCODED = 0;
+
+  private static List<TablePermission> readWritablePermissions(DataInput in, Configuration conf)
+      throws IOException, ClassNotFoundException {
+    assert WritableUtils.readVInt(in) == LIST_CODE;
+    int length = in.readInt();
+    List<TablePermission> list = new ArrayList<>(length);
+    for (int i = 0; i < length; i++) {
+      assert WritableUtils.readVInt(in) == WRITABLE_CODE;
+      assert WritableUtils.readVInt(in) == WRITABLE_NOT_ENCODED;
+      String className = Text.readString(in);
+      Class<? extends Writable> clazz = conf.getClassByName(className).asSubclass(Writable.class);
+      Writable instance = WritableFactories.newInstance(clazz, conf);
+      instance.readFields(in);
+      list.add((TablePermission) instance);
+    }
+    return list;
+  }
+
   /**
-   * Reads a set of permissions as {@link org.apache.hadoop.io.Writable} instances
-   * from the input stream.
+   * Reads a set of permissions as {@link org.apache.hadoop.io.Writable} instances from the input
+   * stream.
    */
   public static ListMultimap<String, TablePermission> readPermissions(byte[] data,
-      Configuration conf)
-          throws DeserializationException {
+      Configuration conf) throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(data)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
@@ -614,17 +639,18 @@ public class AccessControlLists {
         throw new DeserializationException(e);
       }
     } else {
-      ListMultimap<String,TablePermission> perms = ArrayListMultimap.create();
+      // TODO: We have to re-write non-PB data as PB encoded. Otherwise we will carry old Writables
+      // forever (here and a couple of other places).
+      ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
       try {
         DataInput in = new DataInputStream(new ByteArrayInputStream(data));
         int length = in.readInt();
-        for (int i=0; i<length; i++) {
+        for (int i = 0; i < length; i++) {
           String user = Text.readString(in);
-          List<TablePermission> userPerms =
-              (List)HbaseObjectWritableFor96Migration.readObject(in, conf);
+          List<TablePermission> userPerms = readWritablePermissions(in, conf);
           perms.putAll(user, userPerms);
         }
-      } catch (IOException e) {
+      } catch (IOException | ClassNotFoundException e) {
         throw new DeserializationException(e);
       }
       return perms;

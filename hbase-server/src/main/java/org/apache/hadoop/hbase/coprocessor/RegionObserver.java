@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import com.google.common.collect.ImmutableList;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -59,12 +61,9 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALKey;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * Coprocessors implement this interface to observe and mediate client actions
@@ -1318,59 +1317,11 @@ public interface RegionObserver extends Coprocessor {
       HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException;
 
   /**
-   * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
-   * replayed for this region.
-   *
-   * This method is left in place to maintain binary compatibility with older
-   * {@link RegionObserver}s. If an implementation directly overrides
-   * {@link #preWALRestore(ObserverContext, HRegionInfo, WALKey, WALEdit)} then this version
-   * won't be called at all, barring problems with the Security Manager. To work correctly
-   * in the presence of a strict Security Manager, or in the case of an implementation that
-   * relies on a parent class to implement preWALRestore, you should implement this method
-   * as a call to the non-deprecated version.
-   *
-   * Users of this method will see all edits that can be treated as HLogKey. If there are
-   * edits that can't be treated as HLogKey they won't be offered to coprocessors that rely
-   * on this method. If a coprocessor gets skipped because of this mechanism, a log message
-   * at ERROR will be generated per coprocessor on the logger for {@link CoprocessorHost} once per
-   * classloader.
-   *
-   * @deprecated use {@link #preWALRestore(ObserverContext, HRegionInfo, WALKey, WALEdit)}
-   */
-  @Deprecated
-  void preWALRestore(final ObserverContext<RegionCoprocessorEnvironment> ctx,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
-
-  /**
    * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * replayed for this region.
    */
   void postWALRestore(final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
       HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException;
-
-  /**
-   * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
-   * replayed for this region.
-   *
-   * This method is left in place to maintain binary compatibility with older
-   * {@link RegionObserver}s. If an implementation directly overrides
-   * {@link #postWALRestore(ObserverContext, HRegionInfo, WALKey, WALEdit)} then this version
-   * won't be called at all, barring problems with the Security Manager. To work correctly
-   * in the presence of a strict Security Manager, or in the case of an implementation that
-   * relies on a parent class to implement preWALRestore, you should implement this method
-   * as a call to the non-deprecated version.
-   *
-   * Users of this method will see all edits that can be treated as HLogKey. If there are
-   * edits that can't be treated as HLogKey they won't be offered to coprocessors that rely
-   * on this method. If a coprocessor gets skipped because of this mechanism, a log message
-   * at ERROR will be generated per coprocessor on the logger for {@link CoprocessorHost} once per
-   * classloader.
-   *
-   * @deprecated use {@link #postWALRestore(ObserverContext, HRegionInfo, WALKey, WALEdit)}
-   */
-  @Deprecated
-  void postWALRestore(final ObserverContext<RegionCoprocessorEnvironment> ctx,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 
   /**
    * Called before bulkLoadHFile. Users can create a StoreFile instance to

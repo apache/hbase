@@ -150,7 +150,7 @@ public class TestFailedAppendAndSync {
             }
 
             @Override
-            public long getLength() throws IOException {
+            public long getLength() {
               return w.getLength();
               }
             };

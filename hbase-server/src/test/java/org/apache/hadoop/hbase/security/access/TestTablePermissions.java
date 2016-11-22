@@ -162,8 +162,7 @@ public class TestTablePermissions {
    * @throws IOException
   */
   public static void writePermissions(DataOutput out,
-      ListMultimap<String,? extends Permission> perms, Configuration conf)
-  throws IOException {
+      ListMultimap<String, ? extends Permission> perms, Configuration conf) throws IOException {
     Set<String> keys = perms.keySet();
     out.writeInt(keys.size());
     for (String key : keys) {
@@ -171,7 +170,6 @@ public class TestTablePermissions {
       HbaseObjectWritableFor96Migration.writeObject(out, perms.get(key), List.class, conf);
     }
   }
-
 
   @Test
   public void testBasicWrite() throws Exception {

@@ -21,14 +21,13 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 /**
  * An abstract class that implements WALObserver.
@@ -53,24 +52,12 @@ public class BaseWALObserver implements WALObserver {
     return false;
   }
 
-  @Override
-  public boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx, HRegionInfo info,
-      HLogKey logKey, WALEdit logEdit) throws IOException {
-    return preWALWrite(ctx, info, (WALKey)logKey, logEdit);
-  }
-
   /**
    * Implementers should override this method and leave the deprecated version as-is.
    */
   @Override
   public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException { }
-
-  @Override
-  public void postWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx, HRegionInfo info,
-      HLogKey logKey, WALEdit logEdit) throws IOException {
-    postWALWrite(ctx, info, (WALKey)logKey, logEdit);
-  }
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {}
 
   @Override
   public void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,

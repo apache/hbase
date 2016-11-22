@@ -235,15 +235,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
         HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
   }
 
-  /**
-   * @deprecated Remove. Useless.
-   */
-  @Deprecated // REMOVE
-  public WALKey(final byte[] encodedRegionName, final TableName tablename,
-      final NavigableMap<byte[], Integer> replicationScope) {
-    this(encodedRegionName, tablename, System.currentTimeMillis(), replicationScope);
-  }
-
   // TODO: Fix being able to pass in sequenceid.
   public WALKey(final byte[] encodedRegionName, final TableName tablename, final long now) {
     init(encodedRegionName,
@@ -687,7 +678,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
             ? UnsafeByteOperations.unsafeWrap(e.getKey())
             : compressor.compress(e.getKey(), compressionContext.familyDict);
         builder.addScopes(FamilyScope.newBuilder()
-            .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));
+            .setFamily(family).setScopeType(ScopeType.forNumber(e.getValue())));
       }
     }
     return builder;
@@ -707,12 +698,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
       this.tablename = TableName.valueOf(walKey.getTableName().toByteArray());
     }
     clusterIds.clear();
-    if (walKey.hasClusterId()) {
-      //When we are reading the older log (0.95.1 release)
-      //This is definitely the originating cluster
-      clusterIds.add(new UUID(walKey.getClusterId().getMostSigBits(), walKey.getClusterId()
-          .getLeastSigBits()));
-    }
     for (HBaseProtos.UUID clusterId : walKey.getClusterIdsList()) {
       clusterIds.add(new UUID(clusterId.getMostSigBits(), clusterId.getLeastSigBits()));
     }

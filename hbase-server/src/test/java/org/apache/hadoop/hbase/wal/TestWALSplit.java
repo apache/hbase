@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,16 +63,16 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.FaultySequenceFileLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.FaultyProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -229,7 +230,7 @@ public class TestWALSplit {
       while (startCount == counter.get()) Threads.sleep(1);
       // Give it a second to write a few appends.
       Threads.sleep(1000);
-      final Configuration conf2 = HBaseConfiguration.create(this.conf);
+      final Configuration conf2 = HBaseConfiguration.create(conf);
       final User robber = User.createUserForTesting(conf2, ROBBER, GROUP);
       int count = robber.runAs(new PrivilegedExceptionAction<Integer>() {
         @Override
@@ -571,11 +572,13 @@ public class TestWALSplit {
         REGIONS.size() * (goodEntries + firstHalfEntries) <= allRegionsCount);
   }
 
-  @Test (timeout=300000)
+  @Test(timeout = 300000)
   public void testCorruptedFileGetsArchivedIfSkipErrors() throws IOException {
     conf.setBoolean(HBASE_SKIP_ERRORS, true);
-    for (FaultySequenceFileLogReader.FailureType  failureType :
-        FaultySequenceFileLogReader.FailureType.values()) {
+    List<FaultyProtobufLogReader.FailureType> failureTypes = Arrays
+        .asList(FaultyProtobufLogReader.FailureType.values()).stream()
+        .filter(x -> x != FaultyProtobufLogReader.FailureType.NONE).collect(Collectors.toList());
+    for (FaultyProtobufLogReader.FailureType failureType : failureTypes) {
       final Set<String> walDirContents = splitCorruptWALs(failureType);
       final Set<String> archivedLogs = new HashSet<String>();
       final StringBuilder archived = new StringBuilder("Archived logs in CORRUPTDIR:");
@@ -585,7 +588,7 @@ public class TestWALSplit {
       }
       LOG.debug(archived.toString());
       assertEquals(failureType.name() + ": expected to find all of our wals corrupt.",
-          walDirContents, archivedLogs);
+        walDirContents, archivedLogs);
     }
   }
 
@@ -593,16 +596,16 @@ public class TestWALSplit {
    * @return set of wal names present prior to split attempt.
    * @throws IOException if the split process fails
    */
-  private Set<String> splitCorruptWALs(final FaultySequenceFileLogReader.FailureType failureType)
+  private Set<String> splitCorruptWALs(final FaultyProtobufLogReader.FailureType failureType)
       throws IOException {
     Class<?> backupClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
         Reader.class);
     InstrumentedLogWriter.activateFailure = false;
 
     try {
-      conf.setClass("hbase.regionserver.hlog.reader.impl",
-          FaultySequenceFileLogReader.class, Reader.class);
-      conf.set("faultysequencefilelogreader.failuretype", failureType.name());
+      conf.setClass("hbase.regionserver.hlog.reader.impl", FaultyProtobufLogReader.class,
+        Reader.class);
+      conf.set("faultyprotobuflogreader.failuretype", failureType.name());
       // Clean up from previous tests or previous loop
       try {
         wals.shutdown();
@@ -639,7 +642,7 @@ public class TestWALSplit {
   public void testTrailingGarbageCorruptionLogFileSkipErrorsFalseThrows()
       throws IOException {
     conf.setBoolean(HBASE_SKIP_ERRORS, false);
-    splitCorruptWALs(FaultySequenceFileLogReader.FailureType.BEGINNING);
+    splitCorruptWALs(FaultyProtobufLogReader.FailureType.BEGINNING);
   }
 
   @Test (timeout=300000)
@@ -647,7 +650,7 @@ public class TestWALSplit {
       throws IOException {
     conf.setBoolean(HBASE_SKIP_ERRORS, false);
     try {
-      splitCorruptWALs(FaultySequenceFileLogReader.FailureType.BEGINNING);
+      splitCorruptWALs(FaultyProtobufLogReader.FailureType.BEGINNING);
     } catch (IOException e) {
       LOG.debug("split with 'skip errors' set to 'false' correctly threw");
     }
@@ -1396,11 +1399,12 @@ public class TestWALSplit {
         HConstants.DEFAULT_CLUSTER_ID), edit);
   }
 
-  private void injectEmptyFile(String suffix, boolean closeFile)
-      throws IOException {
-    Writer writer = wals.createWALWriter(fs, new Path(WALDIR, WAL_FILE_PREFIX + suffix),
-        conf);
-    if (closeFile) writer.close();
+  private void injectEmptyFile(String suffix, boolean closeFile) throws IOException {
+    Writer writer =
+        WALFactory.createWALWriter(fs, new Path(WALDIR, WAL_FILE_PREFIX + suffix), conf);
+    if (closeFile) {
+      writer.close();
+    }
   }
 
   private boolean logsAreEqual(Path p1, Path p2) throws IOException {

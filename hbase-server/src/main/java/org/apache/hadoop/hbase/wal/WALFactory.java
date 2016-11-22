@@ -20,32 +20,29 @@
 
 package org.apache.hadoop.hbase.wal;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
-import java.util.Arrays;
 import java.io.InterruptedIOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.wal.WAL.Reader;
-import org.apache.hadoop.hbase.wal.WALProvider.Writer;
-import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
-
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
+import org.apache.hadoop.hbase.wal.WAL.Reader;
+import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 
 /**
  * Entry point for users of the Write Ahead Log.
@@ -285,7 +282,6 @@ public class WALFactory {
       boolean allowCustom) throws IOException {
     Class<? extends AbstractFSWALProvider.Reader> lrClass =
         allowCustom ? logReaderClass : ProtobufLogReader.class;
-
     try {
       // A wal file could be under recovery, so it may take several
       // tries to get it open. Instead of claiming it is corrupted, retry
@@ -293,38 +289,13 @@ public class WALFactory {
       long startWaiting = EnvironmentEdgeManager.currentTime();
       long openTimeout = timeoutMillis + startWaiting;
       int nbAttempt = 0;
-      FSDataInputStream stream = null;
       AbstractFSWALProvider.Reader reader = null;
       while (true) {
         try {
-          if (lrClass != ProtobufLogReader.class) {
-            // User is overriding the WAL reader, let them.
-            reader = lrClass.newInstance();
-            reader.init(fs, path, conf, null);
-            return reader;
-          } else {
-            stream = fs.open(path);
-            // Note that zero-length file will fail to read PB magic, and attempt to create
-            // a non-PB reader and fail the same way existing code expects it to. If we get
-            // rid of the old reader entirely, we need to handle 0-size files differently from
-            // merely non-PB files.
-            byte[] magic = new byte[ProtobufLogReader.PB_WAL_MAGIC.length];
-            boolean isPbWal =
-                (stream.read(magic) == magic.length)
-                    && Arrays.equals(magic, ProtobufLogReader.PB_WAL_MAGIC);
-            reader = isPbWal ? new ProtobufLogReader() : new SequenceFileLogReader();
-            reader.init(fs, path, conf, stream);
-            return reader;
-          }
+          reader = lrClass.newInstance();
+          reader.init(fs, path, conf, null);
+          return reader;
         } catch (IOException e) {
-          if (stream != null) {
-            try {
-              stream.close();
-            } catch (IOException exception) {
-              LOG.warn("Could not close AbstractFSWALProvider.Reader" + exception.getMessage());
-              LOG.debug("exception details", exception);
-            }
-          }
           if (reader != null) {
             try {
               reader.close();

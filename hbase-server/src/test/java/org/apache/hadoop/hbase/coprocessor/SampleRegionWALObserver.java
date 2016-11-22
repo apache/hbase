@@ -23,28 +23,23 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALKey;
 
 /**
- * Class for testing WALObserver coprocessor.
- *
- * It will monitor WAL writing and restoring, and modify passed-in WALEdit, i.e,
- * ignore specified columns when writing, or add a KeyValue. On the other
- * side, it checks whether the ignored column is still in WAL when Restoreed
- * at region reconstruct.
+ * Class for testing WALObserver coprocessor. It will monitor WAL writing and restoring, and modify
+ * passed-in WALEdit, i.e, ignore specified columns when writing, or add a KeyValue. On the other
+ * side, it checks whether the ignored column is still in WAL when Restoreed at region reconstruct.
  */
-public class SampleRegionWALObserver extends BaseRegionObserver
-implements WALObserver {
+public class SampleRegionWALObserver extends BaseRegionObserver implements WALObserver {
 
   private static final Log LOG = LogFactory.getLog(SampleRegionWALObserver.class);
 
@@ -64,12 +59,6 @@ implements WALObserver {
   private boolean preWALRollCalled = false;
   private boolean postWALRollCalled = false;
 
-  // Deprecated versions
-  private boolean preWALWriteDeprecatedCalled = false;
-  private boolean postWALWriteDeprecatedCalled = false;
-  private boolean preWALRestoreDeprecatedCalled = false;
-  private boolean postWALRestoreDeprecatedCalled = false;
-
   /**
    * Set values: with a table name, a column name which will be ignored, and
    * a column name which will be added to WAL.
@@ -88,10 +77,6 @@ implements WALObserver {
     postWALWriteCalled = false;
     preWALRestoreCalled = false;
     postWALRestoreCalled = false;
-    preWALWriteDeprecatedCalled = false;
-    postWALWriteDeprecatedCalled = false;
-    preWALRestoreDeprecatedCalled = false;
-    postWALRestoreDeprecatedCalled = false;
     preWALRollCalled = false;
     postWALRollCalled = false;
   }
@@ -100,13 +85,6 @@ implements WALObserver {
   public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
       HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     postWALWriteCalled = true;
-  }
-
-  @Override
-  public void postWALWrite(ObserverContext<WALCoprocessorEnvironment> env,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
-    postWALWriteDeprecatedCalled = true;
-    postWALWrite(env, info, (WALKey)logKey, logEdit);
   }
 
   @Override
@@ -148,13 +126,6 @@ implements WALObserver {
     return bypass;
   }
 
-  @Override
-  public boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> env,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
-    preWALWriteDeprecatedCalled = true;
-    return preWALWrite(env, info, (WALKey)logKey, logEdit);
-  }
-
   /**
    * Triggered before  {@link org.apache.hadoop.hbase.regionserver.HRegion} when WAL is
    * Restoreed.
@@ -163,13 +134,6 @@ implements WALObserver {
   public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
       HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     preWALRestoreCalled = true;
-  }
-
-  @Override
-  public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
-    preWALRestoreDeprecatedCalled = true;
-    preWALRestore(env, info, (WALKey)logKey, logEdit);
   }
 
   @Override
@@ -194,13 +158,6 @@ implements WALObserver {
     postWALRestoreCalled = true;
   }
 
-  @Override
-  public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
-    postWALRestoreDeprecatedCalled = true;
-    postWALRestore(env, info, (WALKey)logKey, logEdit);
-  }
-
   public boolean isPreWALWriteCalled() {
     return preWALWriteCalled;
   }
@@ -221,34 +178,11 @@ implements WALObserver {
     return postWALRestoreCalled;
   }
 
-  public boolean isPreWALWriteDeprecatedCalled() {
-    return preWALWriteDeprecatedCalled;
-  }
-
-  public boolean isPostWALWriteDeprecatedCalled() {
-    return postWALWriteDeprecatedCalled;
-  }
-
-  public boolean isPreWALRestoreDeprecatedCalled() {
-    return preWALRestoreDeprecatedCalled;
-  }
-
-  public boolean isPostWALRestoreDeprecatedCalled() {
-    return postWALRestoreDeprecatedCalled;
-  }
-
   public boolean isPreWALRollCalled() {
     return preWALRollCalled;
   }
 
   public boolean isPostWALRollCalled() {
     return postWALRollCalled;
-  }
-
-  /**
-   * This class should trigger our legacy support since it does not directly implement the
-   * newer API methods.
-   */
-  static class Legacy extends SampleRegionWALObserver {
   }
 }

@@ -80,8 +80,6 @@ public class WALPlayer extends Configured implements Tool {
     Configuration.addDeprecation("hlog.bulk.output", BULK_OUTPUT_CONF_KEY);
     Configuration.addDeprecation("hlog.input.tables", TABLES_KEY);
     Configuration.addDeprecation("hlog.input.tablesmap", TABLE_MAP_KEY);
-    Configuration.addDeprecation(HLogInputFormat.START_TIME_KEY, WALInputFormat.START_TIME_KEY);
-    Configuration.addDeprecation(HLogInputFormat.END_TIME_KEY, WALInputFormat.END_TIME_KEY);
   }
 
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
@@ -241,11 +239,10 @@ public class WALPlayer extends Configured implements Tool {
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
-  public Job createSubmittableJob(String[] args)
-  throws IOException {
+  public Job createSubmittableJob(String[] args) throws IOException {
     Configuration conf = getConf();
-    setupTime(conf, HLogInputFormat.START_TIME_KEY);
-    setupTime(conf, HLogInputFormat.END_TIME_KEY);
+    setupTime(conf, WALInputFormat.START_TIME_KEY);
+    setupTime(conf, WALInputFormat.END_TIME_KEY);
     Path inputDir = new Path(args[0]);
     String[] tables = args[1].split(",");
     String[] tableMap;

@@ -19,17 +19,16 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.io.IOException;
+
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-
-import java.io.IOException;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 /**
  * It's provided to have a way for coprocessors to observe, rewrite,
@@ -59,60 +58,11 @@ public interface WALObserver extends Coprocessor {
       HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException;
 
   /**
-   * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
-   * is writen to WAL.
-   *
-   * This method is left in place to maintain binary compatibility with older
-   * {@link WALObserver}s. If an implementation directly overrides
-   * {@link #preWALWrite(ObserverContext, HRegionInfo, WALKey, WALEdit)} then this version
-   * won't be called at all, barring problems with the Security Manager. To work correctly
-   * in the presence of a strict Security Manager, or in the case of an implementation that
-   * relies on a parent class to implement preWALWrite, you should implement this method
-   * as a call to the non-deprecated version.
-   *
-   * Users of this method will see all edits that can be treated as HLogKey. If there are
-   * edits that can't be treated as HLogKey they won't be offered to coprocessors that rely
-   * on this method. If a coprocessor gets skipped because of this mechanism, a log message
-   * at ERROR will be generated per coprocessor on the logger for {@link CoprocessorHost} once per
-   * classloader.
-   *
-   * @return true if default behavior should be bypassed, false otherwise
-   * @deprecated use {@link #preWALWrite(ObserverContext, HRegionInfo, WALKey, WALEdit)}
-   */
-  @Deprecated
-  boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
-
-  /**
    * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * is writen to WAL.
    */
   void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
       HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException;
-
-  /**
-   * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
-   * is writen to WAL.
-   *
-   * This method is left in place to maintain binary compatibility with older
-   * {@link WALObserver}s. If an implementation directly overrides
-   * {@link #postWALWrite(ObserverContext, HRegionInfo, WALKey, WALEdit)} then this version
-   * won't be called at all, barring problems with the Security Manager. To work correctly
-   * in the presence of a strict Security Manager, or in the case of an implementation that
-   * relies on a parent class to implement preWALWrite, you should implement this method
-   * as a call to the non-deprecated version.
-   *
-   * Users of this method will see all edits that can be treated as HLogKey. If there are
-   * edits that can't be treated as HLogKey they won't be offered to coprocessors that rely
-   * on this method. If a coprocessor gets skipped because of this mechanism, a log message
-   * at ERROR will be generated per coprocessor on the logger for {@link CoprocessorHost} once per
-   * classloader.
-   *
-   * @deprecated use {@link #postWALWrite(ObserverContext, HRegionInfo, WALKey, WALEdit)}
-   */
-  @Deprecated
-  void postWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 
   /**
    * Called before rolling the current WAL

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
@@ -24,8 +22,9 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 
-public class FaultySequenceFileLogReader extends SequenceFileLogReader {
+public class FaultyProtobufLogReader extends ProtobufLogReader {
 
   // public until class relocates to o.a.h.h.wal
   public enum FailureType {
@@ -36,34 +35,31 @@ public class FaultySequenceFileLogReader extends SequenceFileLogReader {
   int numberOfFileEntries = 0;
 
   FailureType getFailureType() {
-    return FailureType.valueOf(conf.get("faultysequencefilelogreader.failuretype", "NONE"));
+    return FailureType.valueOf(conf.get("faultyprotobuflogreader.failuretype", "NONE"));
   }
 
   @Override
   public Entry next(Entry reuse) throws IOException {
-    this.entryStart = this.getPosition();
-    boolean b = true;
-
     if (nextQueue.isEmpty()) { // Read the whole thing at once and fake reading
-      while (b == true) {
-        Entry e = new Entry(new HLogKey(), new WALEdit());
+      boolean b;
+      do {
+        Entry e = new Entry(new WALKey(), new WALEdit());
         if (compressionContext != null) {
           e.setCompressionContext(compressionContext);
         }
         b = readNext(e);
         nextQueue.offer(e);
         numberOfFileEntries++;
-      }
+      } while (b);
     }
 
-    if (nextQueue.size() == this.numberOfFileEntries
-        && getFailureType() == FailureType.BEGINNING) {
-      throw this.addFileInfoToException(new IOException("fake Exception"));
+    if (nextQueue.size() == this.numberOfFileEntries && getFailureType() == FailureType.BEGINNING) {
+      throw new IOException("fake Exception");
     } else if (nextQueue.size() == this.numberOfFileEntries / 2
         && getFailureType() == FailureType.MIDDLE) {
-      throw this.addFileInfoToException(new IOException("fake Exception"));
+      throw new IOException("fake Exception");
     } else if (nextQueue.size() == 1 && getFailureType() == FailureType.END) {
-      throw this.addFileInfoToException(new IOException("fake Exception"));
+      throw new IOException("fake Exception");
     }
 
     if (nextQueue.peek() != null) {

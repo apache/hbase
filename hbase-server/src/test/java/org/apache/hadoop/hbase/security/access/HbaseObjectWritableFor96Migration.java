@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -38,7 +41,6 @@ import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -48,6 +50,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -83,24 +86,19 @@ import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ProtoUtil;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.io.DataOutputOutputStream;
 import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableUtils;
-
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
 
 /**
  * <p>This is a customized version of the polymorphic hadoop
@@ -232,8 +230,9 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
 
     addToMap(Entry.class, code++);
     addToMap(Entry[].class, code++);
-    addToMap(HLogKey.class, code++);
 
+    // For HLogKey
+    code++;
     addToMap(List.class, code++);
 
     addToMap(NavigableSet.class, code++);
@@ -392,7 +391,7 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
   }
 
   /**
-   * @return the next object code in the list.  Used in testing to verify that additional fields are not added 
+   * @return the next object code in the list.  Used in testing to verify that additional fields are not added
    */
   static int getNextClassCode(){
     return NEXT_CLASS_CODE;
@@ -541,26 +540,6 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
       byte [] scanBytes = ProtobufUtil.toScan(scan).toByteArray();
       out.writeInt(scanBytes.length);
       out.write(scanBytes);
-    } else if (Entry.class.isAssignableFrom(declClass)) {
-      // Entry is no longer Writable, maintain compatible serialization.
-      // Writables write their exact runtime class
-      Class <?> c = instanceObj.getClass();
-      Integer code = CLASS_TO_CODE.get(c);
-      if (code == null) {
-        out.writeByte(NOT_ENCODED);
-        Text.writeString(out, c.getName());
-      } else {
-        writeClassCode(out, c);
-      }
-      final Entry entry = (Entry)instanceObj;
-      // We only support legacy HLogKey
-      WALKey key = entry.getKey();
-      if (!(key instanceof HLogKey)) {
-        throw new IOException("Can't write Entry '" + instanceObj + "' due to key class '" +
-            key.getClass() + "'");
-      }
-      ((HLogKey)key).write(out);
-      entry.getEdit().write(out);
     } else {
       throw new IOException("Can't write: "+instanceObj+" as "+declClass);
     }
@@ -721,13 +700,6 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
           declaredClass = ((NullInstance)instance).declaredClass;
           instance = null;
         }
-      } else if (Entry.class.isAssignableFrom(instanceClass)) {
-        // Entry stopped being Writable; maintain serialization support.
-        final HLogKey key = new HLogKey();
-        final WALEdit edit = new WALEdit();
-        key.readFields(in);
-        edit.readFields(in);
-        instance = new Entry(key, edit);
       } else {
         int length = in.readInt();
         byte[] objectBytes = new byte[length];

@@ -661,12 +661,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     } finally {
       rollWriterLock.unlock();
     }
-    try {
-      if (lowReplication || writer != null && writer.getLength() > logrollsize) {
-        requestLogRoll(lowReplication);
-      }
-    } catch (IOException e) {
-      LOG.warn("Writer.getLength() failed; continuing", e);
+    if (lowReplication || writer != null && writer.getLength() > logrollsize) {
+      requestLogRoll(lowReplication);
     }
   }
 

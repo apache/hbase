@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 // imports we use from yet-to-be-moved regionsever.wal
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -227,13 +226,11 @@ public interface WAL extends Closeable {
    * Utility class that lets us keep track of the edit with it's key.
    */
   class Entry {
-    private WALEdit edit;
-    private WALKey key;
+    private final WALEdit edit;
+    private final WALKey key;
 
     public Entry() {
-      edit = new WALEdit();
-      // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-      key = new HLogKey();
+      this(new WALKey(), new WALEdit());
     }
 
     /**
@@ -243,7 +240,6 @@ public interface WAL extends Closeable {
      * @param key log's key
      */
     public Entry(WALKey key, WALEdit edit) {
-      super();
       this.key = key;
       this.edit = edit;
     }

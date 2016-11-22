@@ -19,29 +19,26 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
 
 import org.apache.commons.collections.map.AbstractReferenceMap;
 import org.apache.commons.collections.map.ReferenceMap;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -53,6 +50,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -79,13 +78,12 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -114,8 +112,6 @@ public class RegionCoprocessorHost
     private Region region;
     private RegionServerServices rsServices;
     ConcurrentMap<String, Object> sharedData;
-    private final boolean useLegacyPre;
-    private final boolean useLegacyPost;
 
     /**
      * Constructor
@@ -129,14 +125,6 @@ public class RegionCoprocessorHost
       this.region = region;
       this.rsServices = services;
       this.sharedData = sharedData;
-      // Pick which version of the WAL related events we'll call.
-      // This way we avoid calling the new version on older RegionObservers so
-      // we can maintain binary compatibility.
-      // See notes in javadoc for RegionObserver
-      useLegacyPre = useLegacyMethod(impl.getClass(), "preWALRestore", ObserverContext.class,
-          HRegionInfo.class, WALKey.class, WALEdit.class);
-      useLegacyPost = useLegacyMethod(impl.getClass(), "postWALRestore", ObserverContext.class,
-          HRegionInfo.class, WALKey.class, WALEdit.class);
     }
 
     /** @return the region */
@@ -419,31 +407,6 @@ public class RegionCoprocessorHost
     }
     return new RegionEnvironment(instance, priority, seq, conf, region,
         rsServices, classData);
-  }
-
-  /**
-   * HBASE-4014 : This is used by coprocessor hooks which are not declared to throw exceptions.
-   *
-   * For example, {@link
-   * org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost#preOpen()} and
-   * {@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost#postOpen()} are such hooks.
-   *
-   * See also
-   * {@link org.apache.hadoop.hbase.master.MasterCoprocessorHost#handleCoprocessorThrowable(
-   *    CoprocessorEnvironment, Throwable)}
-   * @param env The coprocessor that threw the exception.
-   * @param e The exception that was thrown.
-   */
-  private void handleCoprocessorThrowableNoRethrow(
-      final CoprocessorEnvironment env, final Throwable e) {
-    try {
-      handleCoprocessorThrowable(env,e);
-    } catch (IOException ioe) {
-      // We cannot throw exceptions from the caller hook, so ignore.
-      LOG.warn(
-        "handleCoprocessorThrowable() threw an IOException while attempting to handle Throwable " +
-        e + ". Ignoring.",e);
-    }
   }
 
   /**
@@ -1470,30 +1433,9 @@ public class RegionCoprocessorHost
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        // Once we don't need to support the legacy call, replace RegionOperation with a version
-        // that's ObserverContext<RegionEnvironment> and avoid this cast.
-        final RegionEnvironment env = (RegionEnvironment)ctx.getEnvironment();
-        if (env.useLegacyPre) {
-          if (logKey instanceof HLogKey) {
-            oserver.preWALRestore(ctx, info, (HLogKey)logKey, logEdit);
-          } else {
-            legacyWarning(oserver.getClass(), "There are wal keys present that are not HLogKey.");
-          }
-        } else {
-          oserver.preWALRestore(ctx, info, logKey, logEdit);
-        }
+        oserver.preWALRestore(ctx, info, logKey, logEdit);
       }
     });
-  }
-
-  /**
-   * @return true if default behavior should be bypassed, false otherwise
-   * @deprecated use {@link #preWALRestore(HRegionInfo, WALKey, WALEdit)}; as of 2.0, remove in 3.0
-   */
-  @Deprecated
-  public boolean preWALRestore(final HRegionInfo info, final HLogKey logKey,
-      final WALEdit logEdit) throws IOException {
-    return preWALRestore(info, (WALKey)logKey, logEdit);
   }
 
   /**
@@ -1508,29 +1450,9 @@ public class RegionCoprocessorHost
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        // Once we don't need to support the legacy call, replace RegionOperation with a version
-        // that's ObserverContext<RegionEnvironment> and avoid this cast.
-        final RegionEnvironment env = (RegionEnvironment)ctx.getEnvironment();
-        if (env.useLegacyPost) {
-          if (logKey instanceof HLogKey) {
-            oserver.postWALRestore(ctx, info, (HLogKey)logKey, logEdit);
-          } else {
-            legacyWarning(oserver.getClass(), "There are wal keys present that are not HLogKey.");
-          }
-        } else {
-          oserver.postWALRestore(ctx, info, logKey, logEdit);
-        }
+        oserver.postWALRestore(ctx, info, logKey, logEdit);
       }
     });
-  }
-
-  /**
-   * @deprecated use {@link #postWALRestore(HRegionInfo, WALKey, WALEdit)}; as of 2.0, remove in 3.0
-   */
-  @Deprecated
-  public void postWALRestore(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
-      throws IOException {
-    postWALRestore(info, (WALKey)logKey, logEdit);
   }
 
   /**

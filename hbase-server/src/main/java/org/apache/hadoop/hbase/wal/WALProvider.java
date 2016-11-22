@@ -81,7 +81,7 @@ public interface WALProvider {
   interface Writer extends Closeable {
     void sync() throws IOException;
     void append(WAL.Entry entry) throws IOException;
-    long getLength() throws IOException;
+    long getLength();
   }
 
   interface AsyncWriter extends Closeable {

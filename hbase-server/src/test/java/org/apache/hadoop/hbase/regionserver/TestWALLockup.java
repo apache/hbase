@@ -190,7 +190,7 @@ public class TestWALLockup {
           }
 
           @Override
-          public long getLength() throws IOException {
+          public long getLength() {
             return w.getLength();
           }
         };
@@ -228,7 +228,7 @@ public class TestWALLockup {
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
       WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName(),
-          scopes);
+          System.currentTimeMillis(), scopes);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -349,7 +349,7 @@ public class TestWALLockup {
           }
 
           @Override
-          public long getLength() throws IOException {
+          public long getLength() {
             return w.getLength();
           }
         };
@@ -403,8 +403,8 @@ public class TestWALLockup {
     try {
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
-      WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
-          htd.getTableName(), scopes);
+      WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName(),
+          System.currentTimeMillis(), scopes);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -435,8 +435,8 @@ public class TestWALLockup {
 
       // make RingBufferEventHandler sleep 1s, so the following sync
       // endOfBatch=false
-      key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
-          TableName.valueOf("sleep"), scopes);
+      key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), TableName.valueOf("sleep"),
+          System.currentTimeMillis(), scopes);
       dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
 
       Thread t = new Thread("Sync") {
@@ -460,7 +460,7 @@ public class TestWALLockup {
       }
       // make append throw DamagedWALException
       key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
-          TableName.valueOf("DamagedWALException"), scopes);
+          TableName.valueOf("DamagedWALException"), System.currentTimeMillis(), scopes);
       dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
 
       while (latch.getCount() > 0) {

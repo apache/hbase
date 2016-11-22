@@ -19,6 +19,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
+
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -137,8 +144,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.ReplayHLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -181,13 +186,6 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
 
 
 @SuppressWarnings("deprecation")
@@ -3258,7 +3256,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       long txid;
       if (replay) {
         // use wal key from the original
-        walKey = new ReplayHLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+        walKey = new WALKey(this.getRegionInfo().getEncodedNameAsBytes(),
           this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
           mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc);
         walKey.setOrigLogSeqNum(batchOp.getReplaySequenceId());
@@ -3277,7 +3275,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 writeEntry = mvcc.begin();
               }
               // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-              walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+              walKey = new WALKey(this.getRegionInfo().getEncodedNameAsBytes(),
                   this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
                   mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc,
                   this.getReplicationScope());

@@ -24,6 +24,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -31,8 +33,6 @@ import java.util.NavigableSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -65,20 +65,16 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALKey;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * A sample region observer that tests the RegionObserver interface.
  * It works with TestRegionObserverInterface to provide the test case.
  */
 public class SimpleRegionObserver extends BaseRegionObserver {
-  private static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
 
   final AtomicInteger ctBeforeDelete = new AtomicInteger(1);
   final AtomicInteger ctPreOpen = new AtomicInteger(0);
@@ -130,8 +126,6 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPostReplayWALs = new AtomicInteger(0);
   final AtomicInteger ctPreWALRestore = new AtomicInteger(0);
   final AtomicInteger ctPostWALRestore = new AtomicInteger(0);
-  final AtomicInteger ctPreWALRestoreDeprecated = new AtomicInteger(0);
-  final AtomicInteger ctPostWALRestoreDeprecated = new AtomicInteger(0);
   final AtomicInteger ctPreSplitBeforePONR = new AtomicInteger(0);
   final AtomicInteger ctPreSplitAfterPONR = new AtomicInteger(0);
   final AtomicInteger ctPreStoreFileReaderOpen = new AtomicInteger(0);
@@ -678,23 +672,9 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env, HRegionInfo info,
-                            HLogKey logKey, WALEdit logEdit) throws IOException {
-    preWALRestore(env, info, (WALKey)logKey, logEdit);
-    ctPreWALRestoreDeprecated.incrementAndGet();
-  }
-
-  @Override
   public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
                              HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     ctPostWALRestore.incrementAndGet();
-  }
-
-  @Override
-  public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
-                             HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
-    postWALRestore(env, info, (WALKey)logKey, logEdit);
-    ctPostWALRestoreDeprecated.incrementAndGet();
   }
 
   @Override
@@ -970,22 +950,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     return ctPostWALRestore.get();
   }
 
-  public int getCtPreWALRestoreDeprecated() {
-    return ctPreWALRestoreDeprecated.get();
-  }
-
-  public int getCtPostWALRestoreDeprecated() {
-    return ctPostWALRestoreDeprecated.get();
-  }
-
   public boolean wasStoreFileReaderOpenCalled() {
     return ctPreStoreFileReaderOpen.get() > 0 && ctPostStoreFileReaderOpen.get() > 0;
-  }
-
-  /**
-   * This implementation should trigger our legacy support because it does not directly
-   * implement the newer API calls.
-   */
-  public static class Legacy extends SimpleRegionObserver {
   }
 }

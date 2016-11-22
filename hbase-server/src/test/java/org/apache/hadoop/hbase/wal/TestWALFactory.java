@@ -18,11 +18,9 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -54,9 +52,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -347,9 +342,9 @@ public class TestWALFactory {
           if (previousRegion != null) {
             assertEquals(previousRegion, region);
           }
-          LOG.info("oldseqno=" + seqno + ", newseqno=" + key.getLogSeqNum());
-          assertTrue(seqno < key.getLogSeqNum());
-          seqno = key.getLogSeqNum();
+          LOG.info("oldseqno=" + seqno + ", newseqno=" + key.getSequenceId());
+          assertTrue(seqno < key.getSequenceId());
+          seqno = key.getSequenceId();
           previousRegion = region;
           count++;
         }
@@ -673,74 +668,6 @@ public class TestWALFactory {
     WALCoprocessorHost host = wals.getWAL(UNSPECIFIED_REGION, null).getCoprocessorHost();
     Coprocessor c = host.findCoprocessor(SampleRegionWALObserver.class.getName());
     assertNotNull(c);
-  }
-
-  /**
-   * @throws IOException
-   */
-  @Test
-  public void testReadLegacyLog() throws IOException {
-    final int columnCount = 5;
-    final int recordCount = 5;
-    final TableName tableName =
-        TableName.valueOf("tablename");
-    final byte[] row = Bytes.toBytes("row");
-    long timestamp = System.currentTimeMillis();
-    Path path = new Path(dir, "tempwal");
-    SequenceFileLogWriter sflw = null;
-    WAL.Reader reader = null;
-    try {
-      HRegionInfo hri = new HRegionInfo(tableName,
-          HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      fs.mkdirs(dir);
-      // Write log in pre-PB format.
-      sflw = new SequenceFileLogWriter();
-      sflw.init(fs, path, conf, false);
-      for (int i = 0; i < recordCount; ++i) {
-        WALKey key = new HLogKey(
-            hri.getEncodedNameAsBytes(), tableName, i, timestamp, HConstants.DEFAULT_CLUSTER_ID);
-        WALEdit edit = new WALEdit();
-        for (int j = 0; j < columnCount; ++j) {
-          if (i == 0) {
-            htd.addFamily(new HColumnDescriptor("column" + j));
-          }
-          String value = i + "" + j;
-          edit.add(new KeyValue(row, row, row, timestamp, Bytes.toBytes(value)));
-        }
-        sflw.append(new WAL.Entry(key, edit));
-      }
-      sflw.sync();
-      sflw.close();
-
-      // Now read the log using standard means.
-      reader = wals.createReader(fs, path);
-      assertTrue(reader instanceof SequenceFileLogReader);
-      for (int i = 0; i < recordCount; ++i) {
-        WAL.Entry entry = reader.next();
-        assertNotNull(entry);
-        assertEquals(columnCount, entry.getEdit().size());
-        assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
-        assertEquals(tableName, entry.getKey().getTablename());
-        int idx = 0;
-        for (Cell val : entry.getEdit().getCells()) {
-          assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),
-            val.getRowLength()));
-          String value = i + "" + idx;
-          assertArrayEquals(Bytes.toBytes(value), CellUtil.cloneValue(val));
-          idx++;
-        }
-      }
-      WAL.Entry entry = reader.next();
-      assertNull(entry);
-    } finally {
-      if (sflw != null) {
-        sflw.close();
-      }
-      if (reader != null) {
-        reader.close();
-      }
-    }
   }
 
   static class DumbWALActionsListener extends WALActionsListener.Base {
