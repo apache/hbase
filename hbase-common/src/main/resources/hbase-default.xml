@@ -1638,10 +1638,10 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.mob.compaction.mergeable.threshold</name>
-    <value>201326592</value>
+    <value>1342177280</value>
     <description>
       If the size of a mob file is less than this value, it's regarded as a small
-      file and needs to be merged in mob compaction. The default value is 192MB.
+      file and needs to be merged in mob compaction. The default value is 1280MB.
     </description>
   </property>
   <property>

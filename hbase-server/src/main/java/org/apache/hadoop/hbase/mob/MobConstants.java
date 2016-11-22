@@ -62,11 +62,11 @@ public final class MobConstants {
   public final static String EMPTY_STRING = "";
   /**
    * If the size of a mob file is less than this value, it's regarded as a small file and needs to
-   * be merged in mob compaction. The default value is 192MB.
+   * be merged in mob compaction. The default value is 1280MB.
    */
   public static final String MOB_COMPACTION_MERGEABLE_THRESHOLD =
     "hbase.mob.compaction.mergeable.threshold";
-  public static final long DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD = 192 * 1024 * 1024;
+  public static final long DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD = 10 * 128 * 1024 * 1024;
   /**
    * The max number of del files that is allowed in the mob file compaction. In the mob
    * compaction, when the number of existing del files is larger than this value, they are merged
