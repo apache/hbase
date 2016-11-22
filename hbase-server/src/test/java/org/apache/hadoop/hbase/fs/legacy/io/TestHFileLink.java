@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.io;
+package org.apache.hadoop.hbase.fs.legacy.io;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.fs.legacy.io.FileLink;
+import org.apache.hadoop.hbase.fs.legacy.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;

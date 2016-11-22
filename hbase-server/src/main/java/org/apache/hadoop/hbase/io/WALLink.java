@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.fs.legacy.io.FileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**

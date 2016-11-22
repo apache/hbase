@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.fs.legacy.io.FileLink;
 
 /**
  * Wrapper for input stream(s) that takes care of the interaction of FS and HBase checksums,

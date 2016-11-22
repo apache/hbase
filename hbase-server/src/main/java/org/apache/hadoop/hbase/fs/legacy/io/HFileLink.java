@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.io;
+package org.apache.hadoop.hbase.fs.legacy.io;
 
 import java.io.IOException;
 import java.util.regex.Matcher;

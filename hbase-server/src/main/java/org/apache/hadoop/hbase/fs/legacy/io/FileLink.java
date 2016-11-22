@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.io;
+package org.apache.hadoop.hbase.fs.legacy.io;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -494,4 +494,3 @@ public class FileLink {
     return Arrays.hashCode(locations);
   }
 }
-
