@@ -73,7 +73,7 @@ import com.google.common.collect.Lists;
  * These parameters (and some other parameters from LoadTestTool) can be used to
  * control behavior, given values are default:
  * <pre>
- * -Dhbase.DIntegrationTestTimeBoundedRequestsWithRegionReplicas.runtime=600000
+ * -Dhbase.IntegrationTestTimeBoundedRequestsWithRegionReplicas.runtime=600000
  * -DIntegrationTestTimeBoundedRequestsWithRegionReplicas.num_regions_per_server=5
  * -DIntegrationTestTimeBoundedRequestsWithRegionReplicas.get_timeout_ms=5000
  * -DIntegrationTestTimeBoundedRequestsWithRegionReplicas.num_keys_per_server=2500
@@ -200,6 +200,16 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     // set the intended run time for the reader. The reader will do read requests
     // to random keys for this amount of time.
     long remainingTime = runtime - (System.currentTimeMillis() - start);
+    if (remainingTime <= 0) {
+      LOG.error("The amount of time left for the test to perform random reads is "
+          + "non-positive. Increase the test execution time via "
+          + String.format(RUN_TIME_KEY,
+                IntegrationTestTimeBoundedRequestsWithRegionReplicas.class.getSimpleName())
+          + " or reduce the amount of data written per server via "
+          + IntegrationTestTimeBoundedRequestsWithRegionReplicas.class.getSimpleName()
+          + "." + IntegrationTestIngest.NUM_KEYS_PER_SERVER_KEY);
+      throw new IllegalArgumentException("No time remains to execute random reads");
+    }
     LOG.info("Reading random keys from the table for " + remainingTime/60000 + " min");
     this.conf.setLong(
       String.format(RUN_TIME_KEY, TimeBoundedMultiThreadedReader.class.getSimpleName())
