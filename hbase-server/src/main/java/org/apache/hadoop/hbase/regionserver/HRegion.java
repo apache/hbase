@@ -349,6 +349,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private volatile Optional<ConfigurationManager> configurationManager;
 
+  // Used for testing.
+  private volatile Long timeoutForWriteLock = null;
+
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included in every
@@ -1446,6 +1449,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.closing.set(closing);
   }
 
+  /**
+   * The {@link HRegion#doClose} will block forever if someone tries proving the dead lock via the unit test.
+   * Instead of blocking, the {@link HRegion#doClose} will throw exception if you set the timeout.
+   * @param timeoutForWriteLock the second time to wait for the write lock in {@link HRegion#doClose}
+   */
+  @VisibleForTesting
+  public void setTimeoutForWriteLock(long timeoutForWriteLock) {
+    assert timeoutForWriteLock >= 0;
+    this.timeoutForWriteLock = timeoutForWriteLock;
+  }
+
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="UL_UNRELEASED_LOCK_EXCEPTION_PATH",
       justification="I think FindBugs is confused")
   private Map<byte[], List<StoreFile>> doClose(final boolean abort, MonitoredTask status)
@@ -1484,8 +1498,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
-    // block waiting for the lock for closing
-    lock.writeLock().lock(); // FindBugs: Complains UL_UNRELEASED_LOCK_EXCEPTION_PATH but seems fine
+    if (timeoutForWriteLock == null
+        || timeoutForWriteLock == Long.MAX_VALUE) {
+      // block waiting for the lock for closing
+      lock.writeLock().lock(); // FindBugs: Complains UL_UNRELEASED_LOCK_EXCEPTION_PATH but seems fine
+    } else {
+      try {
+        boolean succeed = lock.writeLock().tryLock(timeoutForWriteLock, TimeUnit.SECONDS);
+        if (!succeed) {
+          throw new IOException("Failed to get write lock when closing region");
+        }
+      } catch (InterruptedException e) {
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
+      }
+    }
     this.closing.set(true);
     status.setStatus("Disabling writes for close");
     try {
@@ -5345,6 +5371,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  @VisibleForTesting
+  public int getReadLockCount() {
+    return lock.getReadLockCount();
+  }
+
   public ConcurrentHashMap<HashedBytes, RowLockContext> getLockedRows() {
     return lockedRows;
   }
@@ -7257,9 +7288,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WriteEntry writeEntry = null;
     startRegionOperation(op);
     List<Cell> results = returnResults? new ArrayList<Cell>(mutation.size()): null;
-    RowLock rowLock = getRowLockInternal(mutation.getRow(), false);
+    RowLock rowLock = null;
     MemstoreSize memstoreSize = new MemstoreSize();
     try {
+      rowLock = getRowLockInternal(mutation.getRow(), false);
       lock(this.updatesLock.readLock());
       try {
         Result cpResult = doCoprocessorPreCall(op, mutation);
@@ -7307,7 +7339,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // the client. Means only way to read-your-own-increment or append is to come in with an
       // a 0 increment.
       if (writeEntry != null) mvcc.complete(writeEntry);
-      rowLock.release();
+      if (rowLock != null) {
+        rowLock.release();
+      }
       // Request a cache flush if over the limit.  Do it outside update lock.
       if (isFlushSize(addAndGetMemstoreSize(memstoreSize))) {
         requestFlush();

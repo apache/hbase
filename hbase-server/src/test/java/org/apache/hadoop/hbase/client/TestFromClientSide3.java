@@ -23,14 +23,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +54,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -565,6 +561,59 @@ public class TestFromClientSide3 {
     assertEquals("The write is blocking by RegionObserver#postBatchMutate"
       + ", so the data is invisible to reader", 0, cells.size());
     TEST_UTIL.deleteTable(tableName);
+  }
+
+  @Test(timeout = 30000)
+  public void testLockLeakWithDelta() throws Exception, Throwable {
+    TableName tableName = TableName.valueOf("testLockLeakWithDelta");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addCoprocessor(WatiingForMultiMutationsObserver.class.getName());
+    desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
+    desc.addFamily(new HColumnDescriptor(FAMILY));
+    TEST_UTIL.getAdmin().createTable(desc);
+    // new a connection for lower retry number.
+    Configuration copy = new Configuration(TEST_UTIL.getConfiguration());
+    copy.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
+    try (Connection con = ConnectionFactory.createConnection(copy)) {
+      HRegion region = (HRegion) find(tableName);
+      region.setTimeoutForWriteLock(10);
+      ExecutorService putService = Executors.newSingleThreadExecutor();
+      putService.execute(() -> {
+        try (Table table = con.getTable(tableName)) {
+          Put put = new Put(ROW);
+          put.addColumn(FAMILY, QUALIFIER, VALUE);
+          // the put will be blocked by WatiingForMultiMutationsObserver.
+          table.put(put);
+        } catch (IOException ex) {
+          throw new RuntimeException(ex);
+        }
+      });
+      ExecutorService appendService = Executors.newSingleThreadExecutor();
+      appendService.execute(() -> {
+        Append append = new Append(ROW);
+        append.add(FAMILY, QUALIFIER, VALUE);
+        try (Table table = con.getTable(tableName)) {
+          table.append(append);
+          fail("The APPEND should fail because the target lock is blocked by previous put");
+        } catch (Throwable ex) {
+        }
+      });
+      appendService.shutdown();
+      appendService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+      WatiingForMultiMutationsObserver observer = find(tableName, WatiingForMultiMutationsObserver.class);
+      observer.latch.countDown();
+      putService.shutdown();
+      putService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+      try (Table table = con.getTable(tableName)) {
+        Result r = table.get(new Get(ROW));
+        assertFalse(r.isEmpty());
+        assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), VALUE));
+      }
+    }
+    HRegion region = (HRegion) find(tableName);
+    int readLockCount = region.getReadLockCount();
+    LOG.info("readLockCount:" + readLockCount);
+    assertEquals(0, readLockCount);
   }
 
   @Test(timeout = 30000)
