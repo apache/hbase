@@ -736,6 +736,7 @@
                     <versionRange>[1.5,)</versionRange>
                     <goals>
                       <goal>process</goal>
+                      <goal>bundle</goal>
                     </goals>
                   </pluginExecutionFilter>
                   <action>
