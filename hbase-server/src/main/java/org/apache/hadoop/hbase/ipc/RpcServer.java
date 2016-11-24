@@ -2169,7 +2169,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       if ((totalRequestSize + callQueueSizeInBytes.sum()) > maxQueueSizeInBytes) {
         final Call callTooBig =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null, null, 0, null);
+            responder, totalRequestSize, null, null, 0, this.callCleanup);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         metrics.exception(CALL_QUEUE_TOO_BIG_EXCEPTION);
         setupResponse(responseBuffer, callTooBig, CALL_QUEUE_TOO_BIG_EXCEPTION,
@@ -2227,7 +2227,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
         final Call readParamsFailedCall =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null, null, 0, null);
+            responder, totalRequestSize, null, null, 0, this.callCleanup);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, readParamsFailedCall, t,
           msg + "; " + t.getMessage());
