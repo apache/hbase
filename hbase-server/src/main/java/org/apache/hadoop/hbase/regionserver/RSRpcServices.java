@@ -45,7 +45,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ByteBufferedCell;
+import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
@@ -1174,8 +1174,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // Since byte buffers can point all kinds of crazy places it's harder to keep track
         // of which blocks are kept alive by what byte buffer.
         // So we make a guess.
-        if (c instanceof ByteBufferedCell) {
-          ByteBufferedCell bbCell = (ByteBufferedCell) c;
+        if (c instanceof ByteBufferCell) {
+          ByteBufferCell bbCell = (ByteBufferCell) c;
           ByteBuffer bb = bbCell.getValueByteBuffer();
           if (bb != lastBlock) {
             context.incrementResponseBlockSize(bb.capacity());

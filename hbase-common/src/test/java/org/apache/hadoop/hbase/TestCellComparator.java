@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.TestCellUtil.ByteBufferedCellImpl;
+import org.apache.hadoop.hbase.TestCellUtil.ByteBufferCellImpl;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -102,15 +102,15 @@ public class TestCellComparator {
     byte[] v = Bytes.toBytes("val1");
     KeyValue kv = new KeyValue(r1, f1, q1, v);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell1 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    Cell bbCell1 = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     kv = new KeyValue(r2, f1, q1, v);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell2 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    Cell bbCell2 = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertEquals(0, CellComparator.compareColumns(bbCell1, bbCell2));
     assertEquals(0, CellComparator.compareColumns(bbCell1, kv));
     kv = new KeyValue(r2, f1, q2, v);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell3 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    Cell bbCell3 = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertEquals(0, CellComparator.compareFamilies(bbCell2, bbCell3));
     assertTrue(CellComparator.compareQualifiers(bbCell2, bbCell3) < 0);
     assertTrue(CellComparator.compareColumns(bbCell2, bbCell3) < 0);

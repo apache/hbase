@@ -17,34 +17,34 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 
 /**
  * A chunk of memory out of which allocations are sliced.
  */
 @InterfaceAudience.Private
-public class Chunk {
+public abstract class Chunk {
   /** Actual underlying data */
-  private byte[] data;
+  protected ByteBuffer data;
 
-  private static final int UNINITIALIZED = -1;
-  private static final int OOM = -2;
+  protected static final int UNINITIALIZED = -1;
+  protected static final int OOM = -2;
   /**
    * Offset for the next allocation, or the sentinel value -1 which implies that the chunk is still
    * uninitialized.
    */
-  private AtomicInteger nextFreeOffset = new AtomicInteger(UNINITIALIZED);
+  protected AtomicInteger nextFreeOffset = new AtomicInteger(UNINITIALIZED);
 
   /** Total number of allocations satisfied from this buffer */
-  private AtomicInteger allocCount = new AtomicInteger();
+  protected AtomicInteger allocCount = new AtomicInteger();
 
   /** Size of chunk in bytes */
-  private final int size;
+  protected final int size;
 
   /**
    * Create an uninitialized chunk. Note that memory is not allocated yet, so this is cheap.
@@ -60,23 +60,7 @@ public class Chunk {
    * constructed the chunk. It is thread-safe against other threads calling alloc(), who will block
    * until the allocation is complete.
    */
-  public void init() {
-    assert nextFreeOffset.get() == UNINITIALIZED;
-    try {
-      if (data == null) {
-        data = new byte[size];
-      }
-    } catch (OutOfMemoryError e) {
-      boolean failInit = nextFreeOffset.compareAndSet(UNINITIALIZED, OOM);
-      assert failInit; // should be true.
-      throw e;
-    }
-    // Mark that it's ready for use
-    boolean initted = nextFreeOffset.compareAndSet(UNINITIALIZED, 0);
-    // We should always succeed the above CAS since only one thread
-    // calls init()!
-    Preconditions.checkState(initted, "Multiple threads tried to init same chunk");
-  }
+  public abstract void init();
 
   /**
    * Reset the offset to UNINITIALIZED before before reusing an old chunk
@@ -109,7 +93,7 @@ public class Chunk {
         return -1;
       }
 
-      if (oldOffset + size > data.length) {
+      if (oldOffset + size > data.capacity()) {
         return -1; // alloc doesn't fit
       }
 
@@ -126,14 +110,14 @@ public class Chunk {
   /**
    * @return This chunk's backing data.
    */
-  byte[] getData() {
+  ByteBuffer getData() {
     return this.data;
   }
 
   @Override
   public String toString() {
     return "Chunk@" + System.identityHashCode(this) + " allocs=" + allocCount.get() + "waste="
-        + (data.length - nextFreeOffset.get());
+        + (data.capacity() - nextFreeOffset.get());
   }
 
   @VisibleForTesting

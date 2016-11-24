@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,8 +34,6 @@ import java.util.List;
 @InterfaceAudience.Private
 public final class SegmentFactory {
 
-  static final String MSLAB_CLASS_NAME = "hbase.regionserver.mslab.class";
-
   private SegmentFactory() {}
   private static SegmentFactory instance = new SegmentFactory();
 
@@ -47,7 +44,7 @@ public final class SegmentFactory {
   // create skip-list-based (non-flat) immutable segment from compacting old immutable segments
   public ImmutableSegment createImmutableSegment(final Configuration conf,
       final CellComparator comparator, MemStoreSegmentsIterator iterator) {
-    return new ImmutableSegment(comparator, iterator, getMemStoreLAB(conf));
+    return new ImmutableSegment(comparator, iterator, MemStoreLAB.newInstance(conf));
   }
 
   // create new flat immutable segment from compacting old immutable segments
@@ -57,7 +54,7 @@ public final class SegmentFactory {
       throws IOException {
     Preconditions.checkArgument(segmentType == ImmutableSegment.Type.ARRAY_MAP_BASED,
         "wrong immutable segment type");
-    MemStoreLAB memStoreLAB = getMemStoreLAB(conf);
+    MemStoreLAB memStoreLAB = MemStoreLAB.newInstance(conf);
     return
         // the last parameter "false" means not to merge, but to compact the pipeline
         // in order to create the new segment
@@ -77,7 +74,7 @@ public final class SegmentFactory {
 
   // create mutable segment
   public MutableSegment createMutableSegment(final Configuration conf, CellComparator comparator) {
-    MemStoreLAB memStoreLAB = getMemStoreLAB(conf);
+    MemStoreLAB memStoreLAB = MemStoreLAB.newInstance(conf);
     return generateMutableSegment(conf, comparator, memStoreLAB);
   }
 
@@ -101,16 +98,6 @@ public final class SegmentFactory {
     // TBD use configuration to set type of segment
     CellSet set = new CellSet(comparator);
     return new MutableSegment(set, comparator, memStoreLAB);
-  }
-
-  private MemStoreLAB getMemStoreLAB(Configuration conf) {
-    MemStoreLAB memStoreLAB = null;
-    if (conf.getBoolean(MemStoreLAB.USEMSLAB_KEY, MemStoreLAB.USEMSLAB_DEFAULT)) {
-      String className = conf.get(MSLAB_CLASS_NAME, HeapMemStoreLAB.class.getName());
-      memStoreLAB = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class }, new Object[] { conf });
-    }
-    return memStoreLAB;
   }
 
   private MemStoreLAB getMergedMemStoreLAB(Configuration conf, List<ImmutableSegment> segments) {

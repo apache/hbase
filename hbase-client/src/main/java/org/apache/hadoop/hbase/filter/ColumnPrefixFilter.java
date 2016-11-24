@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.hadoop.hbase.ByteBufferedCell;
+import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -91,9 +91,9 @@ public class ColumnPrefixFilter extends FilterBase {
   }
 
   private static int compareQualifierPart(Cell cell, int length, byte[] prefix) {
-    if (cell instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) cell).getQualifierByteBuffer(),
-          ((ByteBufferedCell) cell).getQualifierPosition(), length, prefix, 0, length);
+    if (cell instanceof ByteBufferCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferCell) cell).getQualifierByteBuffer(),
+          ((ByteBufferCell) cell).getQualifierPosition(), length, prefix, 0, length);
     }
     return Bytes.compareTo(cell.getQualifierArray(), cell.getQualifierOffset(), length, prefix, 0,
         length);

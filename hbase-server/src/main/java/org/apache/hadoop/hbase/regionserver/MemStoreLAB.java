@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * A memstore-local allocation buffer.
@@ -46,6 +48,19 @@ public interface MemStoreLAB {
 
   String USEMSLAB_KEY = "hbase.hregion.memstore.mslab.enabled";
   boolean USEMSLAB_DEFAULT = true;
+  String MSLAB_CLASS_NAME = "hbase.regionserver.mslab.class";
+
+  String CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.chunksize";
+  int CHUNK_SIZE_DEFAULT = 2048 * 1024;
+  String MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
+  int MAX_ALLOC_DEFAULT = 256 * 1024; // allocs bigger than this don't go through
+                                                   // allocator
+
+  // MSLAB pool related configs
+  String CHUNK_POOL_MAXSIZE_KEY = "hbase.hregion.memstore.chunkpool.maxsize";
+  String CHUNK_POOL_INITIALSIZE_KEY = "hbase.hregion.memstore.chunkpool.initialsize";
+  float POOL_MAX_SIZE_DEFAULT = 1.0f;
+  float POOL_INITIAL_SIZE_DEFAULT = 0.0f;
 
   /**
    * Allocates slice in this LAB and copy the passed Cell into this area. Returns new Cell instance
@@ -68,4 +83,17 @@ public interface MemStoreLAB {
    */
   void decScannerCount();
 
+  public static MemStoreLAB newInstance(Configuration conf) {
+    MemStoreLAB memStoreLAB = null;
+    if (isEnabled(conf)) {
+      String className = conf.get(MSLAB_CLASS_NAME, MemStoreLABImpl.class.getName());
+      memStoreLAB = ReflectionUtils.instantiateWithCustomCtor(className,
+          new Class[] { Configuration.class }, new Object[] { conf });
+    }
+    return memStoreLAB;
+  }
+
+  public static boolean isEnabled(Configuration conf) {
+    return conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT);
+  }
 }

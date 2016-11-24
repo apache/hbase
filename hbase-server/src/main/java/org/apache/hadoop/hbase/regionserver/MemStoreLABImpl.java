@@ -28,9 +28,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.MemStoreChunkPool.PooledChunk;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -43,7 +43,7 @@ import com.google.common.base.Preconditions;
  * slices into the array.
  * <p>
  * The purpose of this class is to combat heap fragmentation in the
- * regionserver. By ensuring that all KeyValues in a given memstore refer
+ * regionserver. By ensuring that all Cells in a given memstore refer
  * only to large chunks of contiguous memory, we ensure that large blocks
  * get freed up when the memstore is flushed.
  * <p>
@@ -54,25 +54,23 @@ import com.google.common.base.Preconditions;
  * TODO: we should probably benchmark whether word-aligning the allocations
  * would provide a performance improvement - probably would speed up the
  * Bytes.toLong/Bytes.toInt calls in KeyValue, but some of those are cached
- * anyway
+ * anyway.
+ * The chunks created by this MemStoreLAB can get pooled at {@link MemStoreChunkPool}.
+ * When the Chunk comes pool, it can be either an on heap or an off heap backed chunk. The chunks,
+ * which this MemStoreLAB creates on its own (when no chunk available from pool), those will be
+ * always on heap backed.
  */
 @InterfaceAudience.Private
-public class HeapMemStoreLAB implements MemStoreLAB {
+public class MemStoreLABImpl implements MemStoreLAB {
 
-  static final String CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.chunksize";
-  static final int CHUNK_SIZE_DEFAULT = 2048 * 1024;
-  static final String MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
-  static final int MAX_ALLOC_DEFAULT = 256 * 1024; // allocs bigger than this don't go through
-                                                   // allocator
-
-  static final Log LOG = LogFactory.getLog(HeapMemStoreLAB.class);
+  static final Log LOG = LogFactory.getLog(MemStoreLABImpl.class);
 
   private AtomicReference<Chunk> curChunk = new AtomicReference<Chunk>();
   // A queue of chunks from pool contained by this memstore LAB
   // TODO: in the future, it would be better to have List implementation instead of Queue,
   // as FIFO order is not so important here
   @VisibleForTesting
-  BlockingQueue<PooledChunk> pooledChunkQueue = null;
+  BlockingQueue<Chunk> pooledChunkQueue = null;
   private final int chunkSize;
   private final int maxAlloc;
   private final MemStoreChunkPool chunkPool;
@@ -87,19 +85,19 @@ public class HeapMemStoreLAB implements MemStoreLAB {
   private final AtomicInteger openScannerCount = new AtomicInteger();
 
   // Used in testing
-  public HeapMemStoreLAB() {
+  public MemStoreLABImpl() {
     this(new Configuration());
   }
 
-  public HeapMemStoreLAB(Configuration conf) {
+  public MemStoreLABImpl(Configuration conf) {
     chunkSize = conf.getInt(CHUNK_SIZE_KEY, CHUNK_SIZE_DEFAULT);
     maxAlloc = conf.getInt(MAX_ALLOC_KEY, MAX_ALLOC_DEFAULT);
-    this.chunkPool = MemStoreChunkPool.getPool(conf);
+    this.chunkPool = MemStoreChunkPool.getPool();
     // currently chunkQueue is only used for chunkPool
     if (this.chunkPool != null) {
       // set queue length to chunk pool max count to avoid keeping reference of
       // too many non-reclaimable chunks
-      pooledChunkQueue = new LinkedBlockingQueue<PooledChunk>(chunkPool.getMaxCount());
+      pooledChunkQueue = new LinkedBlockingQueue<>(chunkPool.getMaxCount());
     }
 
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
@@ -132,7 +130,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
       // try to retire this chunk
       tryRetireChunk(c);
     }
-    return KeyValueUtil.copyCellTo(cell, c.getData(), allocOffset, size);
+    return CellUtil.copyCellTo(cell, c.getData(), allocOffset, size);
   }
 
   /**
@@ -210,14 +208,14 @@ public class HeapMemStoreLAB implements MemStoreLAB {
         // This is chunk from pool
         pooledChunk = true;
       } else {
-        c = new Chunk(chunkSize);
+        c = new OnheapChunk(chunkSize);// When chunk is not from pool, always make it as on heap.
       }
       if (curChunk.compareAndSet(null, c)) {
         // we won race - now we need to actually do the expensive
         // allocation step
         c.init();
         if (pooledChunk) {
-          if (!this.closed && !this.pooledChunkQueue.offer((PooledChunk) c)) {
+          if (!this.closed && !this.pooledChunkQueue.offer(c)) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Chunk queue is full, won't reuse this new chunk. Current queue size: "
                   + pooledChunkQueue.size());
@@ -226,7 +224,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
         }
         return c;
       } else if (pooledChunk) {
-        chunkPool.putbackChunk((PooledChunk) c);
+        chunkPool.putbackChunk(c);
       }
       // someone else won race - that's fine, we'll try to grab theirs
       // in the next iteration of the loop.
@@ -239,7 +237,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
   }
 
 
-  BlockingQueue<PooledChunk> getPooledChunks() {
+  BlockingQueue<Chunk> getPooledChunks() {
     return this.pooledChunkQueue;
   }
 }

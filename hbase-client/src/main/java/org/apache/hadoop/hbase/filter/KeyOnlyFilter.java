@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
-import org.apache.hadoop.hbase.ByteBufferedCell;
+import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -62,8 +62,8 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   private Cell createKeyOnlyCell(Cell c) {
-    if (c instanceof ByteBufferedCell) {
-      return new KeyOnlyByteBufferedCell((ByteBufferedCell) c, lenAsVal);
+    if (c instanceof ByteBufferCell) {
+      return new KeyOnlyByteBufferCell((ByteBufferCell) c, lenAsVal);
     } else {
       return new KeyOnlyCell(c, lenAsVal);
     }
@@ -232,11 +232,11 @@ public class KeyOnlyFilter extends FilterBase {
     }
   }
 
-  static class KeyOnlyByteBufferedCell extends ByteBufferedCell {
-    private ByteBufferedCell cell;
+  static class KeyOnlyByteBufferCell extends ByteBufferCell {
+    private ByteBufferCell cell;
     private boolean lenAsVal;
 
-    public KeyOnlyByteBufferedCell(ByteBufferedCell c, boolean lenAsVal) {
+    public KeyOnlyByteBufferCell(ByteBufferCell c, boolean lenAsVal) {
       this.cell = c;
       this.lenAsVal = lenAsVal;
     }

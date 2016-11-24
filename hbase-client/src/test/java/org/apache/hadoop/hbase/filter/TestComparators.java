@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TestCellUtil.ByteBufferedCellImpl;
+import org.apache.hadoop.hbase.TestCellUtil.ByteBufferCellImpl;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,18 +51,18 @@ public class TestComparators {
     // Row compare
     KeyValue kv = new KeyValue(r1, f, q1, v1);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    Cell bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     ByteArrayComparable comparable = new BinaryComparator(r1);
     assertEquals(0, CellComparator.compareRow(bbCell, comparable));
     assertEquals(0, CellComparator.compareRow(kv, comparable));
     kv = new KeyValue(r0, f, q1, v1);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertTrue(CellComparator.compareRow(bbCell, comparable) > 0);
     assertTrue(CellComparator.compareRow(kv, comparable) > 0);
     kv = new KeyValue(r2, f, q1, v1);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertTrue(CellComparator.compareRow(bbCell, comparable) < 0);
     assertTrue(CellComparator.compareRow(kv, comparable) < 0);
     // Qualifier compare
@@ -71,12 +71,12 @@ public class TestComparators {
     assertEquals(0, CellComparator.compareQualifier(kv, comparable));
     kv = new KeyValue(r2, f, q2, v1);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertEquals(0, CellComparator.compareQualifier(bbCell, comparable));
     assertEquals(0, CellComparator.compareQualifier(kv, comparable));
     kv = new KeyValue(r2, f, q3, v1);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertTrue(CellComparator.compareQualifier(bbCell, comparable) < 0);
     assertTrue(CellComparator.compareQualifier(kv, comparable) < 0);
     // Value compare
@@ -85,7 +85,7 @@ public class TestComparators {
     assertEquals(0, CellComparator.compareValue(kv, comparable));
     kv = new KeyValue(r1, f, q1, v2);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertTrue(CellComparator.compareValue(bbCell, comparable) < 0);
     assertTrue(CellComparator.compareValue(kv, comparable) < 0);
     // Family compare

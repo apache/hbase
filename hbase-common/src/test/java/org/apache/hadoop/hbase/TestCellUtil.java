@@ -416,7 +416,7 @@ public class TestCellUtil {
     byte[] tags = Bytes.toBytes("tag1");
     KeyValue kv = new KeyValue(r, f, q, 0, q.length, 1234L, Type.Put, v, 0, v.length, tags);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    Cell bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     byte[] rDest = CellUtil.cloneRow(bbCell);
     assertTrue(Bytes.equals(r, rDest));
     byte[] fDest = CellUtil.cloneFamily(bbCell);
@@ -440,10 +440,10 @@ public class TestCellUtil {
     byte[] tags = Bytes.toBytes("tag1");
     KeyValue kv = new KeyValue(r, f, q1, 0, q1.length, 1234L, Type.Put, v, 0, v.length, tags);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell1 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    Cell bbCell1 = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     kv = new KeyValue(r, f, q2, 0, q2.length, 1234L, Type.Put, v, 0, v.length, tags);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell2 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    Cell bbCell2 = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertTrue(CellUtil.matchingRows(bbCell1, bbCell2));
     assertTrue(CellUtil.matchingRows(kv, bbCell2));
     assertTrue(CellUtil.matchingRow(bbCell1, r));
@@ -473,30 +473,30 @@ public class TestCellUtil {
     byte[] v = Bytes.toBytes(vl);
     KeyValue kv = new KeyValue(r, f, q, v);
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
-    Cell bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    Cell bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertEquals(ri, CellUtil.getRowAsInt(bbCell));
     assertEquals(vl, CellUtil.getValueAsLong(bbCell));
     double vd = 3005.5;
     v = Bytes.toBytes(vd);
     kv = new KeyValue(r, f, q, v);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertEquals(vd, CellUtil.getValueAsDouble(bbCell), 0.0);
     BigDecimal bd = new BigDecimal(9999);
     v = Bytes.toBytes(bd);
     kv = new KeyValue(r, f, q, v);
     buffer = ByteBuffer.wrap(kv.getBuffer());
-    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    bbCell = new ByteBufferCellImpl(buffer, 0, buffer.remaining());
     assertEquals(bd, CellUtil.getValueAsBigDecimal(bbCell));
   }
 
   // TODO remove this test impl once we have a Cell implementation backed by ByteBuffer
-  public static class ByteBufferedCellImpl extends ByteBufferedCell {
+  public static class ByteBufferCellImpl extends ByteBufferCell {
 
     private final ByteBuffer buffer;
     private final int offset, length;
 
-    public ByteBufferedCellImpl(ByteBuffer buffer, int offset, int length) {
+    public ByteBufferCellImpl(ByteBuffer buffer, int offset, int length) {
       this.buffer = buffer;
       this.offset = offset;
       this.length = length;

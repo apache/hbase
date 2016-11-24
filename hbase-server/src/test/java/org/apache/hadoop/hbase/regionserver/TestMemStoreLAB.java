@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.*;
 
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,9 +34,11 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
@@ -48,9 +51,19 @@ import org.junit.experimental.categories.Category;
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestMemStoreLAB {
 
+  private final static Configuration conf = new Configuration();
+
   private static final byte[] rk = Bytes.toBytes("r1");
   private static final byte[] cf = Bytes.toBytes("f");
   private static final byte[] q = Bytes.toBytes("q");
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
+        .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
+    MemStoreChunkPool.initialize(globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
+        MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false);
+  }
 
   /**
    * Test a bunch of random allocations
@@ -58,7 +71,7 @@ public class TestMemStoreLAB {
   @Test
   public void testLABRandomAllocation() {
     Random rand = new Random();
-    MemStoreLAB mslab = new HeapMemStoreLAB();
+    MemStoreLAB mslab = new MemStoreLABImpl();
     int expectedOff = 0;
     byte[] lastBuffer = null;
     // 100K iterations by 0-1K alloc -> 50MB expected
@@ -82,7 +95,7 @@ public class TestMemStoreLAB {
 
   @Test
   public void testLABLargeAllocation() {
-    MemStoreLAB mslab = new HeapMemStoreLAB();
+    MemStoreLAB mslab = new MemStoreLABImpl();
     KeyValue kv = new KeyValue(rk, cf, q, new byte[2 * 1024 * 1024]);
     Cell newCell = mslab.copyCellInto(kv);
     assertNull("2MB allocation shouldn't be satisfied by LAB.", newCell);
@@ -100,7 +113,7 @@ public class TestMemStoreLAB {
     
     final AtomicInteger totalAllocated = new AtomicInteger();
     
-    final MemStoreLAB mslab = new HeapMemStoreLAB();
+    final MemStoreLAB mslab = new MemStoreLABImpl();
     List<List<AllocRecord>> allocations = Lists.newArrayList();
     
     for (int i = 0; i < 10; i++) {
@@ -170,21 +183,21 @@ public class TestMemStoreLAB {
    */
   @Test
   public void testLABChunkQueue() throws Exception {
-    HeapMemStoreLAB mslab = new HeapMemStoreLAB();
+    MemStoreLABImpl mslab = new MemStoreLABImpl();
     // by default setting, there should be no chunks initialized in the pool
     assertTrue(mslab.getPooledChunks().isEmpty());
     // reset mslab with chunk pool
     Configuration conf = HBaseConfiguration.create();
-    conf.setDouble(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, 0.1);
+    conf.setDouble(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.1);
     // set chunk size to default max alloc size, so we could easily trigger chunk retirement
-    conf.setLong(HeapMemStoreLAB.CHUNK_SIZE_KEY, HeapMemStoreLAB.MAX_ALLOC_DEFAULT);
+    conf.setLong(MemStoreLABImpl.CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
     // reconstruct mslab
     MemStoreChunkPool.clearDisableFlag();
-    mslab = new HeapMemStoreLAB(conf);
+    mslab = new MemStoreLABImpl(conf);
     // launch multiple threads to trigger frequent chunk retirement
     List<Thread> threads = new ArrayList<Thread>();
     final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
-        new byte[HeapMemStoreLAB.MAX_ALLOC_DEFAULT - 24]);
+        new byte[MemStoreLABImpl.MAX_ALLOC_DEFAULT - 24]);
     for (int i = 0; i < 10; i++) {
       threads.add(getChunkQueueTestThread(mslab, "testLABChunkQueue-" + i, kv));
     }
@@ -214,7 +227,7 @@ public class TestMemStoreLAB {
         + " after mslab closed but actually: " + queueLength, queueLength == 0);
   }
 
-  private Thread getChunkQueueTestThread(final HeapMemStoreLAB mslab, String threadName,
+  private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,
       Cell cellToCopyInto) {
     Thread thread = new Thread() {
       boolean stopped = false;

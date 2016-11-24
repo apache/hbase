@@ -7028,7 +7028,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     ClientProtos.RegionLoadStats.Builder stats = ClientProtos.RegionLoadStats.newBuilder();
     stats.setMemstoreLoad((int) (Math.min(100, (this.memstoreDataSize.get() * 100) / this
         .memstoreFlushSize)));
-    stats.setHeapOccupancy((int)rsServices.getHeapMemoryManager().getHeapOccupancyPercent()*100);
+    if (rsServices.getHeapMemoryManager() != null) {
+      stats.setHeapOccupancy(
+          (int) rsServices.getHeapMemoryManager().getHeapOccupancyPercent() * 100);
+    }
     stats.setCompactionPressure((int)rsServices.getCompactionPressure()*100 > 100 ? 100 :
                 (int)rsServices.getCompactionPressure()*100);
     return stats.build();

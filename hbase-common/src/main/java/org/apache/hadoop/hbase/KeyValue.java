@@ -2491,8 +2491,8 @@ public class KeyValue implements ExtendedCell {
   }
 
   @Override
-  public void write(byte[] buf, int offset) {
-    System.arraycopy(this.bytes, this.offset, buf, offset, this.length);
+  public void write(ByteBuffer buf, int offset) {
+    ByteBufferUtils.copyFromArrayToBuffer(buf, offset, this.bytes, this.offset, this.length);
   }
 
   /**

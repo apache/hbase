@@ -132,9 +132,9 @@ public class TestDefaultMemStore {
       // make sure memstore size increased even when writing the same cell, if using MSLAB
       assertEquals(Segment.getCellLength(kv), sizeChangeForSecondCell.getDataSize());
       // make sure chunk size increased even when writing the same cell, if using MSLAB
-      if (msLab instanceof HeapMemStoreLAB) {
+      if (msLab instanceof MemStoreLABImpl) {
         assertEquals(2 * Segment.getCellLength(kv),
-          ((HeapMemStoreLAB) msLab).getCurrentChunk().getNextFreeOffset());
+          ((MemStoreLABImpl) msLab).getCurrentChunk().getNextFreeOffset());
       }
     } else {
       // make sure no memstore size change w/o MSLAB

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.util;
 
 import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 
 import org.apache.commons.logging.Log;
@@ -25,9 +26,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
+import org.apache.hadoop.hbase.util.Pair;
 
+/**
+ * Util class to calculate memory size for memstore, block cache(L1, L2) of RS.
+ */
 @InterfaceAudience.Private
-public class HeapMemorySizeUtil {
+public class MemorySizeUtil {
 
   public static final String MEMSTORE_SIZE_KEY = "hbase.regionserver.global.memstore.size";
   public static final String MEMSTORE_SIZE_OLD_KEY =
@@ -36,12 +42,16 @@ public class HeapMemorySizeUtil {
       "hbase.regionserver.global.memstore.size.lower.limit";
   public static final String MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY =
       "hbase.regionserver.global.memstore.lowerLimit";
+  // Max global off heap memory that can be used for all memstores
+  // This should be an absolute value in MBs and not percent.
+  public static final String OFFHEAP_MEMSTORE_SIZE_KEY =
+      "hbase.regionserver.offheap.global.memstore.size";
 
   public static final float DEFAULT_MEMSTORE_SIZE = 0.4f;
   // Default lower water mark limit is 95% size of memstore size.
   public static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
 
-  private static final Log LOG = LogFactory.getLog(HeapMemorySizeUtil.class);
+  private static final Log LOG = LogFactory.getLog(MemorySizeUtil.class);
   // a constant to convert a fraction to a percentage
   private static final int CONVERT_TO_PERCENTAGE = 100;
 
@@ -50,11 +60,11 @@ public class HeapMemorySizeUtil {
    * We need atleast 20% of heap left out for other RS functions.
    * @param conf
    */
-  public static void checkForClusterFreeMemoryLimit(Configuration conf) {
+  public static void checkForClusterFreeHeapMemoryLimit(Configuration conf) {
     if (conf.get(MEMSTORE_SIZE_OLD_KEY) != null) {
       LOG.warn(MEMSTORE_SIZE_OLD_KEY + " is deprecated by " + MEMSTORE_SIZE_KEY);
     }
-    float globalMemstoreSize = getGlobalMemStorePercent(conf, false);
+    float globalMemstoreSize = getGlobalMemStoreHeapPercent(conf, false);
     int gml = (int)(globalMemstoreSize * CONVERT_TO_PERCENTAGE);
     float blockCacheUpperLimit = getBlockCacheHeapPercent(conf);
     int bcul = (int)(blockCacheUpperLimit * CONVERT_TO_PERCENTAGE);
@@ -76,7 +86,8 @@ public class HeapMemorySizeUtil {
    * @param c
    * @param logInvalid
    */
-  public static float getGlobalMemStorePercent(final Configuration c, final boolean logInvalid) {
+  public static float getGlobalMemStoreHeapPercent(final Configuration c,
+      final boolean logInvalid) {
     float limit = c.getFloat(MEMSTORE_SIZE_KEY,
         c.getFloat(MEMSTORE_SIZE_OLD_KEY, DEFAULT_MEMSTORE_SIZE));
     if (limit > 0.8f || limit <= 0.0f) {
@@ -93,32 +104,62 @@ public class HeapMemorySizeUtil {
    * Retrieve configured size for global memstore lower water mark as fraction of global memstore
    * size.
    */
-  public static float getGlobalMemStoreLowerMark(final Configuration conf, float globalMemStorePercent) {
+  public static float getGlobalMemStoreHeapLowerMark(final Configuration conf,
+      boolean honorOldConfig) {
     String lowMarkPercentStr = conf.get(MEMSTORE_SIZE_LOWER_LIMIT_KEY);
     if (lowMarkPercentStr != null) {
       float lowMarkPercent = Float.parseFloat(lowMarkPercentStr);
       if (lowMarkPercent > 1.0f) {
-        LOG.error("Bad configuration value for " + MEMSTORE_SIZE_LOWER_LIMIT_KEY + ": " +
-            lowMarkPercent + ". Using 1.0f instead.");
+        LOG.error("Bad configuration value for " + MEMSTORE_SIZE_LOWER_LIMIT_KEY + ": "
+            + lowMarkPercent + ". Using 1.0f instead.");
         lowMarkPercent = 1.0f;
       }
       return lowMarkPercent;
     }
+    if (!honorOldConfig) return DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT;
     String lowerWaterMarkOldValStr = conf.get(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY);
     if (lowerWaterMarkOldValStr != null) {
       LOG.warn(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " is deprecated. Instead use "
           + MEMSTORE_SIZE_LOWER_LIMIT_KEY);
       float lowerWaterMarkOldVal = Float.parseFloat(lowerWaterMarkOldValStr);
-      if (lowerWaterMarkOldVal > globalMemStorePercent) {
-        lowerWaterMarkOldVal = globalMemStorePercent;
+      float upperMarkPercent = getGlobalMemStoreHeapPercent(conf, false);
+      if (lowerWaterMarkOldVal > upperMarkPercent) {
+        lowerWaterMarkOldVal = upperMarkPercent;
         LOG.error("Value of " + MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " (" + lowerWaterMarkOldVal
-            + ") is greater than global memstore limit (" + globalMemStorePercent + ") set by "
+            + ") is greater than global memstore limit (" + upperMarkPercent + ") set by "
             + MEMSTORE_SIZE_KEY + "/" + MEMSTORE_SIZE_OLD_KEY + ". Setting memstore lower limit "
-            + "to " + globalMemStorePercent);
+            + "to " + upperMarkPercent);
       }
-      return lowerWaterMarkOldVal / globalMemStorePercent;
+      return lowerWaterMarkOldVal / upperMarkPercent;
     }
     return DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT;
+  }
+
+  /**
+   * @return Pair of global memstore size and memory type(ie. on heap or off heap).
+   */
+  public static Pair<Long, MemoryType> getGlobalMemstoreSize(Configuration conf) {
+    long offheapMSGlobal = conf.getLong(OFFHEAP_MEMSTORE_SIZE_KEY, 0);// Size in MBs
+    if (offheapMSGlobal > 0) {
+      // Off heap memstore size has not relevance when MSLAB is turned OFF. We will go with making
+      // this entire size split into Chunks and pooling them in MemstoreLABPoool. We dont want to
+      // create so many on demand off heap chunks. In fact when this off heap size is configured, we
+      // will go with 100% of this size as the pool size
+      if (MemStoreLAB.isEnabled(conf)) {
+        // We are in offheap Memstore use
+        long globalMemStoreLimit = (long) (offheapMSGlobal * 1024 * 1024); // Size in bytes
+        return new Pair<Long, MemoryType>(globalMemStoreLimit, MemoryType.NON_HEAP);
+      } else {
+        // Off heap max memstore size is configured with turning off MSLAB. It makes no sense. Do a
+        // warn log and go with on heap memstore percentage. By default it will be 40% of Xmx
+        LOG.warn("There is no relevance of configuring '" + OFFHEAP_MEMSTORE_SIZE_KEY + "' when '"
+            + MemStoreLAB.USEMSLAB_KEY + "' is turned off."
+            + " Going with on heap global memstore size ('" + MEMSTORE_SIZE_KEY + "')");
+      }
+    }
+    long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+    float globalMemStorePercent = getGlobalMemStoreHeapPercent(conf, true);
+    return new Pair<Long, MemoryType>((long) (max * globalMemStorePercent), MemoryType.HEAP);
   }
 
   /**

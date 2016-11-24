@@ -44,7 +44,6 @@ public class TestCellFlatSet extends TestCase {
   private Cell descCells[];
   private CellArrayMap descCbOnHeap;
   private final static Configuration CONF = new Configuration();
-  private HeapMemStoreLAB mslab;
   private KeyValue lowerOuterCell;
   private KeyValue upperOuterCell;
 
@@ -73,9 +72,8 @@ public class TestCellFlatSet extends TestCase {
     descCells = new Cell[] {kv4,kv3,kv2,kv1};
     descCbOnHeap = new CellArrayMap(CellComparator.COMPARATOR,descCells,0,NUM_OF_CELLS,true);
     CONF.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
-    CONF.setFloat(MemStoreChunkPool.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
+    CONF.setFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
     MemStoreChunkPool.chunkPoolDisabled = false;
-    mslab = new HeapMemStoreLAB(CONF);
   }
 
   /* Create and test CellSet based on CellArrayMap */

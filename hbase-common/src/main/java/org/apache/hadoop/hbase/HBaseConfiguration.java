@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 
@@ -81,7 +80,6 @@ public class HBaseConfiguration extends Configuration {
     conf.addResource("hbase-site.xml");
 
     checkDefaultsVersion(conf);
-    HeapMemorySizeUtil.checkForClusterFreeMemoryLimit(conf);
     return conf;
   }
 

@@ -27,11 +27,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
- * This Cell is an implementation of {@link ByteBufferedCell} where the data resides in off heap
+ * This Cell is an implementation of {@link ByteBufferCell} where the data resides in off heap
  * memory.
  */
 @InterfaceAudience.Private
-public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
+public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
 
   protected final ByteBuffer buf;
   protected final int offset;
@@ -266,8 +266,8 @@ public class OffheapKeyValue extends ByteBufferedCell implements ExtendedCell {
   }
 
   @Override
-  public void write(byte[] buf, int offset) {
-    ByteBufferUtils.copyFromBufferToArray(buf, this.buf, this.offset, offset, this.length);
+  public void write(ByteBuffer buf, int offset) {
+    ByteBufferUtils.copyFromBufferToBuffer(this.buf, buf, this.offset, offset, this.length);
   }
 
   @Override

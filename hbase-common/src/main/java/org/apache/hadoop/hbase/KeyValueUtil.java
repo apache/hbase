@@ -153,7 +153,6 @@ public class KeyValueUtil {
     return nextOffset;
   }
 
-
   /**************** copy key and value *********************/
 
   public static int appendToByteArray(Cell cell, byte[] output, int offset, boolean withTags) {
@@ -170,15 +169,25 @@ public class KeyValueUtil {
   }
 
   /**
-   * The position will be set to the beginning of the new ByteBuffer
-   * @param cell
-   * @return the ByteBuffer containing the cell
+   * Copy the Cell content into the passed buf in KeyValue serialization format.
    */
-  public static ByteBuffer copyToNewByteBuffer(final Cell cell) {
-    byte[] bytes = new byte[length(cell)];
-    appendToByteArray(cell, bytes, 0, true);
-    ByteBuffer buffer = ByteBuffer.wrap(bytes);
-    return buffer;
+  public static int appendToByteBuffer(Cell cell, ByteBuffer buf, int offset, boolean withTags) {
+    offset = ByteBufferUtils.putInt(buf, offset, keyLength(cell));// Key length
+    offset = ByteBufferUtils.putInt(buf, offset, cell.getValueLength());// Value length
+    offset = ByteBufferUtils.putShort(buf, offset, cell.getRowLength());// RK length
+    offset = CellUtil.copyRowTo(cell, buf, offset);// Row bytes
+    offset = ByteBufferUtils.putByte(buf, offset, cell.getFamilyLength());// CF length
+    offset = CellUtil.copyFamilyTo(cell, buf, offset);// CF bytes
+    offset = CellUtil.copyQualifierTo(cell, buf, offset);// Qualifier bytes
+    offset = ByteBufferUtils.putLong(buf, offset, cell.getTimestamp());// TS
+    offset = ByteBufferUtils.putByte(buf, offset, cell.getTypeByte());// Type
+    offset = CellUtil.copyValueTo(cell, buf, offset);// Value bytes
+    int tagsLength = cell.getTagsLength();
+    if (withTags && (tagsLength > 0)) {
+      offset = ByteBufferUtils.putAsShort(buf, offset, tagsLength);// Tags length
+      offset = CellUtil.copyTagTo(cell, buf, offset);// Tags bytes
+    }
+    return offset;
   }
 
   public static void appendToByteBuffer(final ByteBuffer bb, final KeyValue kv,
@@ -659,30 +668,5 @@ public class KeyValueUtil {
       }
       return size;
     }
-  }
-
-  /**
-   * Write the given cell in KeyValue serialization format into the given buf and return a new
-   * KeyValue object around that.
-   */
-  public static KeyValue copyCellTo(Cell cell, byte[] buf, int offset, int len) {
-    int tagsLen = cell.getTagsLength();
-    if (cell instanceof ExtendedCell) {
-      ((ExtendedCell) cell).write(buf, offset);
-    } else {
-      appendToByteArray(cell, buf, offset, true);
-    }
-    KeyValue newKv;
-    if (tagsLen == 0) {
-      // When tagsLen is 0, make a NoTagsKeyValue version of Cell. This is an optimized class which
-      // directly return tagsLen as 0. So we avoid parsing many length components in reading the
-      // tagLength stored in the backing buffer. The Memstore addition of every Cell call
-      // getTagsLength().
-      newKv = new NoTagsKeyValue(buf, offset, len);
-    } else {
-      newKv = new KeyValue(buf, offset, len);
-    }
-    newKv.setSequenceId(cell.getSequenceId());
-    return newKv;
   }
 }

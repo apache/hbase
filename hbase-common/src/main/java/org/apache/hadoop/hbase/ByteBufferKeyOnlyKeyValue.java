@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * (onheap and offheap).
  */
 @InterfaceAudience.Private
-public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
+public class ByteBufferKeyOnlyKeyValue extends ByteBufferCell {
 
   private ByteBuffer buf;
   private int offset = 0; // offset into buffer where key starts at
@@ -41,10 +41,10 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
    * Used in cases where we want to avoid lot of garbage by allocating new objects with different
    * keys. Use the emtpy construtor and set the keys using {@link #setKey(ByteBuffer, int, int)}
    */
-  public ByteBufferedKeyOnlyKeyValue() {
+  public ByteBufferKeyOnlyKeyValue() {
   }
 
-  public ByteBufferedKeyOnlyKeyValue(ByteBuffer buf, int offset, int length) {
+  public ByteBufferKeyOnlyKeyValue(ByteBuffer buf, int offset, int length) {
     setKey(buf, offset, length);
   }
 

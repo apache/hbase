@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
@@ -55,7 +55,7 @@ public abstract class AbstractDataBlockEncoder implements DataBlockEncoder {
       return new KeyValue.KeyOnlyKeyValue(key.array(), key.arrayOffset()
           + key.position(), keyLength);
     } else {
-      return new ByteBufferedKeyOnlyKeyValue(key, key.position(), keyLength);
+      return new ByteBufferKeyOnlyKeyValue(key, key.position(), keyLength);
     }
   }
 

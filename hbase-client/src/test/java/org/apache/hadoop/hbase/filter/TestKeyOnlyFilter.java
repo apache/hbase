@@ -28,8 +28,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TestCellUtil.ByteBufferedCellImpl;
-import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyByteBufferedCell;
+import org.apache.hadoop.hbase.TestCellUtil.ByteBufferCellImpl;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyByteBufferCell;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter.KeyOnlyCell;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -71,7 +71,7 @@ public class TestKeyOnlyFilter {
         v.length, tags);
 
     ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
-    ByteBufferedCellImpl bbCell = new ByteBufferedCellImpl(buffer, 0,
+    ByteBufferCellImpl bbCell = new ByteBufferCellImpl(buffer, 0,
         buffer.remaining());
 
     // KV format: <keylen:4><valuelen:4><key:keylen><value:valuelen>
@@ -89,7 +89,7 @@ public class TestKeyOnlyFilter {
     KeyValue KeyOnlyKeyValue = new KeyValue(newBuffer);
 
     KeyOnlyCell keyOnlyCell = new KeyOnlyCell(kv, lenAsVal);
-    KeyOnlyByteBufferedCell keyOnlyByteBufferedCell = new KeyOnlyByteBufferedCell(
+    KeyOnlyByteBufferCell keyOnlyByteBufferedCell = new KeyOnlyByteBufferCell(
         bbCell, lenAsVal);
 
     assertTrue(CellUtil.matchingRows(KeyOnlyKeyValue, keyOnlyCell));

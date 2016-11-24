@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
-import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
+import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -62,7 +62,7 @@ public class TestHeapMemoryManager {
   @Test
   public void testAutoTunerShouldBeOffWhenMaxMinRangesForMemstoreIsNotGiven() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_KEY, 0.02f);
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.02f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MAX_RANGE_KEY, 0.75f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.03f);
     HeapMemoryManager manager = new HeapMemoryManager(new BlockCacheStub(0),
@@ -228,7 +228,7 @@ public class TestHeapMemoryManager {
     blockCache.setTestBlockSize((long) (maxHeapSize * 0.4 * 0.8));
     regionServerAccounting.setTestMemstoreSize(0);
     Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_LOWER_LIMIT_KEY, 0.7f);
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_LOWER_LIMIT_KEY, 0.7f);
     conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MAX_RANGE_KEY, 0.75f);
     conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MIN_RANGE_KEY, 0.10f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MAX_RANGE_KEY, 0.7f);
@@ -462,7 +462,7 @@ public class TestHeapMemoryManager {
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MAX_RANGE_KEY, 0.7f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.1f);
     conf.setInt(DefaultHeapMemoryTuner.NUM_PERIODS_TO_IGNORE, 0);
-    conf.setFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_KEY, 0.4F);
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.4F);
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.3F);
     conf.setFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0.1F);
     conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "heap");

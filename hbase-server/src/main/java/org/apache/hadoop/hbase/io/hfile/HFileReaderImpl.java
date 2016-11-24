@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -491,7 +491,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     protected final HFile.Reader reader;
     private int currTagsLen;
     // buffer backed keyonlyKV
-    private ByteBufferedKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferedKeyOnlyKeyValue();
+    private ByteBufferKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferKeyOnlyKeyValue();
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects
     final ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
 
@@ -1208,7 +1208,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         return new KeyValue.KeyOnlyKeyValue(keyBuff.array(), keyBuff.arrayOffset()
             + keyBuff.position(), klen);
       } else {
-        return new ByteBufferedKeyOnlyKeyValue(keyBuff, keyBuff.position(), klen);
+        return new ByteBufferKeyOnlyKeyValue(keyBuff, keyBuff.position(), klen);
       }
     }
 

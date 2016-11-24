@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
-import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
+import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -386,8 +386,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
     this.logrollsize = (long) (blocksize
         * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
 
-    float memstoreRatio = conf.getFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_KEY, conf.getFloat(
-      HeapMemorySizeUtil.MEMSTORE_SIZE_OLD_KEY, HeapMemorySizeUtil.DEFAULT_MEMSTORE_SIZE));
+    float memstoreRatio = MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false);
     boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
     if (maxLogsDefined) {
       LOG.warn("'hbase.regionserver.maxlogs' was deprecated.");

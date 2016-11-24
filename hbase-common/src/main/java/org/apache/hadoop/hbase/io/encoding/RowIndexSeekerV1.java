@@ -18,8 +18,8 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.ByteBufferedCell;
-import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
+import org.apache.hadoop.hbase.ByteBufferCell;
+import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -153,10 +153,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   }
 
   private int compareRows(ByteBuffer row, Cell seekCell) {
-    if (seekCell instanceof ByteBufferedCell) {
+    if (seekCell instanceof ByteBufferCell) {
       return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
-          ((ByteBufferedCell) seekCell).getRowByteBuffer(),
-          ((ByteBufferedCell) seekCell).getRowPosition(),
+          ((ByteBufferCell) seekCell).getRowByteBuffer(),
+          ((ByteBufferCell) seekCell).getRowPosition(),
           seekCell.getRowLength());
     } else {
       return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
@@ -315,7 +315,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     protected long memstoreTS;
     protected int nextKvOffset;
     // buffer backed keyonlyKV
-    private ByteBufferedKeyOnlyKeyValue currentKey = new ByteBufferedKeyOnlyKeyValue();
+    private ByteBufferKeyOnlyKeyValue currentKey = new ByteBufferKeyOnlyKeyValue();
 
     protected boolean isValid() {
       return valueOffset != -1;
@@ -323,7 +323,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
     protected void invalidate() {
       valueOffset = -1;
-      currentKey = new ByteBufferedKeyOnlyKeyValue();
+      currentKey = new ByteBufferKeyOnlyKeyValue();
       currentBuffer = null;
     }
 

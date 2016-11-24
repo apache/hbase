@@ -24,7 +24,7 @@ import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryType;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -49,11 +49,12 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
+import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
@@ -109,12 +110,21 @@ class MemStoreFlusher implements FlushRequester {
     this.conf = conf;
     this.server = server;
     this.threadWakeFrequency =
-      conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-    long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-    float globalMemStorePercent = HeapMemorySizeUtil.getGlobalMemStorePercent(conf, true);
-    this.globalMemStoreLimit = (long) (max * globalMemStorePercent);
-    this.globalMemStoreLimitLowMarkPercent =
-        HeapMemorySizeUtil.getGlobalMemStoreLowerMark(conf, globalMemStorePercent);
+        conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
+    Pair<Long, MemoryType> pair = MemorySizeUtil.getGlobalMemstoreSize(conf);
+    this.globalMemStoreLimit = pair.getFirst();
+    boolean onheap = pair.getSecond() == MemoryType.HEAP;
+    // When off heap memstore in use we configure the global off heap space for memstore as bytes
+    // not as % of max memory size. In such case, the lower water mark should be specified using the
+    // key "hbase.regionserver.global.memstore.size.lower.limit" which says % of the global upper
+    // bound and defaults to 95%. In on heap case also specifying this way is ideal. But in the past
+    // we used to take lower bound also as the % of xmx (38% as default). For backward compatibility
+    // for this deprecated config,we will fall back to read that config when new one is missing.
+    // Only for on heap case, do this fallback mechanism. For off heap it makes no sense.
+    // TODO When to get rid of the deprecated config? ie
+    // "hbase.regionserver.global.memstore.lowerLimit". Can get rid of this boolean passing then.
+    this.globalMemStoreLimitLowMarkPercent = MemorySizeUtil.getGlobalMemStoreHeapLowerMark(conf,
+        onheap);
     this.globalMemStoreLimitLowMark =
         (long) (this.globalMemStoreLimit * this.globalMemStoreLimitLowMarkPercent);
 
@@ -126,7 +136,7 @@ class MemStoreFlusher implements FlushRequester {
         + TraditionalBinaryPrefix.long2String(this.globalMemStoreLimit, "", 1)
         + ", globalMemStoreLimitLowMark="
         + TraditionalBinaryPrefix.long2String(this.globalMemStoreLimitLowMark, "", 1)
-        + ", maxHeap=" + TraditionalBinaryPrefix.long2String(max, "", 1));
+        + ", Offheap=" + !onheap);
   }
 
   public LongAdder getUpdatesBlockedMsHighWater() {

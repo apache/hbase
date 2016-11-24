@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode;
 
 
 import java.nio.ByteBuffer;
-import org.apache.hadoop.hbase.ByteBufferedCell;
+import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.util.ObjectIntPair;
  * without allocating new memory for every Cell iterated through.
  */
 @InterfaceAudience.Private
-public class PrefixTreeCell extends ByteBufferedCell implements SettableSequenceId,
+public class PrefixTreeCell extends ByteBufferCell implements SettableSequenceId,
     Comparable<Cell> {
   // Create a reference here? Can be removed too
   protected CellComparator comparator = CellComparator.COMPARATOR;

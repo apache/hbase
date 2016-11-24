@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
+import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
 import org.apache.hadoop.hbase.util.RollingStatCalculator;
@@ -109,6 +109,9 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
   private float globalMemStorePercentMaxRange;
   private float blockCachePercentMinRange;
   private float blockCachePercentMaxRange;
+
+  private float globalMemStoreLimitLowMarkPercent;
+
   // Store statistics about the corresponding parameters for memory tuning
   private RollingStatCalculator rollingStatsForCacheMisses;
   private RollingStatCalculator rollingStatsForFlushes;
@@ -165,11 +168,9 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
       newTuneDirection = StepDirection.NEUTRAL;
     }
     // Increase / decrease the memstore / block cahce sizes depending on new tuner step.
-    float globalMemstoreLowerMark = HeapMemorySizeUtil.getGlobalMemStoreLowerMark(conf,
-        curMemstoreSize);
     // We don't want to exert immediate pressure on memstore. So, we decrease its size gracefully;
     // we set a minimum bar in the middle of the total memstore size and the lower limit.
-    float minMemstoreSize = ((globalMemstoreLowerMark + 1) * curMemstoreSize) / 2.00f;
+    float minMemstoreSize = ((globalMemStoreLimitLowMarkPercent + 1) * curMemstoreSize) / 2.00f;
 
     switch (newTuneDirection) {
     case INCREASE_BLOCK_CACHE_SIZE:
@@ -365,9 +366,11 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     this.blockCachePercentMaxRange = conf.getFloat(BLOCK_CACHE_SIZE_MAX_RANGE_KEY,
         conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT));
     this.globalMemStorePercentMinRange = conf.getFloat(MEMSTORE_SIZE_MIN_RANGE_KEY,
-        HeapMemorySizeUtil.getGlobalMemStorePercent(conf, false));
+        MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
     this.globalMemStorePercentMaxRange = conf.getFloat(MEMSTORE_SIZE_MAX_RANGE_KEY,
-        HeapMemorySizeUtil.getGlobalMemStorePercent(conf, false));
+        MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
+    this.globalMemStoreLimitLowMarkPercent = MemorySizeUtil.getGlobalMemStoreHeapLowerMark(conf,
+        true);
     // Default value of periods to ignore is number of lookup periods
     this.numPeriodsToIgnore = conf.getInt(NUM_PERIODS_TO_IGNORE, this.tunerLookupPeriods);
     this.rollingStatsForCacheMisses = new RollingStatCalculator(this.tunerLookupPeriods);

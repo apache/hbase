@@ -44,8 +44,30 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * appropriate Cell access server-side: i.e. ByteBufferedCell when backed by a ByteBuffer and Cell
  * when it is not.
  */
+/*
+ * Even though all the methods are abstract, ByteBufferCell is not made to be an interface with
+ * intent. In CellComparator compare method, we have instance of check to decide whether to use
+ * getXXXArray() or getXXXByteBuffer(). This is a very hot method in read and write paths.
+ * if (left instanceof ByteBufferCell && right instanceof ByteBufferCell) {
+      ....
+    }
+    if (left instanceof ByteBufferCell) {
+      ....
+    }
+    if (right instanceof ByteBufferCell) {
+      ....
+    }
+    return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
+ * We did JMH micro benchmark tests with both left and right cells as ByteBufferCell, one only
+ * ByteBufferCell and both as Cells. This is compared against JMH results on compare logic with out
+ * any instance of checks. We noticed that if ByteBufferCell is an interface, the benchmark result
+ * seems to be very bad for case of both right and left are Cell only (Not ByteBufferCell). When
+ * ByteBufferCell is an abstract class all 4 possible cases giving almost similar performance number
+ * compared with compare logic with no instance of checks.
+ */
 @InterfaceAudience.Private
-public abstract class ByteBufferedCell implements Cell {
+public abstract class ByteBufferCell implements Cell {
   /**
    * @return The {@link ByteBuffer} containing the row bytes.
    */

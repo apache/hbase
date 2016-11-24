@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.ByteBufferedCell;
+import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -452,7 +452,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public void write(byte[] buf, int offset) {
+    public void write(ByteBuffer buf, int offset) {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
     }
@@ -475,7 +475,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
   }
 
-  protected static class OffheapDecodedCell extends ByteBufferedCell implements ExtendedCell {
+  protected static class OffheapDecodedCell extends ByteBufferCell implements ExtendedCell {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
         + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
         + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.BYTE_BUFFER));
@@ -708,7 +708,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public void write(byte[] buf, int offset) {
+    public void write(ByteBuffer buf, int offset) {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
     }

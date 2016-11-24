@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.lang.management.ManagementFactory;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -29,8 +28,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.HeapMemoryTuneObserver;
 import org.apache.hadoop.util.StringUtils;
 
@@ -45,7 +42,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * collection on JVM.
  * 
  * The pool instance is globally unique and could be obtained through
- * {@link MemStoreChunkPool#getPool(Configuration)}
+ * {@link MemStoreChunkPool#initialize(long, float, float, int, boolean)}
  * 
  * {@link MemStoreChunkPool#getChunk()} is called when MemStoreLAB allocating
  * bytes, and {@link MemStoreChunkPool#putbackChunks(BlockingQueue)} is called
@@ -55,10 +52,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 public class MemStoreChunkPool implements HeapMemoryTuneObserver {
   private static final Log LOG = LogFactory.getLog(MemStoreChunkPool.class);
-  final static String CHUNK_POOL_MAXSIZE_KEY = "hbase.hregion.memstore.chunkpool.maxsize";
-  final static String CHUNK_POOL_INITIALSIZE_KEY = "hbase.hregion.memstore.chunkpool.initialsize";
-  final static float POOL_MAX_SIZE_DEFAULT = 1.0f;
-  final static float POOL_INITIAL_SIZE_DEFAULT = 0.0f;
 
   // Static reference to the MemStoreChunkPool
   static MemStoreChunkPool GLOBAL_INSTANCE;
@@ -68,7 +61,7 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
   private int maxCount;
 
   // A queue of reclaimed chunks
-  private final BlockingQueue<PooledChunk> reclaimedChunks;
+  private final BlockingQueue<Chunk> reclaimedChunks;
   private final int chunkSize;
   private final float poolSizePercentage;
 
@@ -78,15 +71,17 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
   private static final int statThreadPeriod = 60 * 5;
   private final AtomicLong chunkCount = new AtomicLong();
   private final AtomicLong reusedChunkCount = new AtomicLong();
+  private final boolean offheap;
 
-  MemStoreChunkPool(Configuration conf, int chunkSize, int maxCount,
-      int initialCount, float poolSizePercentage) {
+  MemStoreChunkPool(int chunkSize, int maxCount, int initialCount, float poolSizePercentage,
+      boolean offheap) {
     this.maxCount = maxCount;
     this.chunkSize = chunkSize;
     this.poolSizePercentage = poolSizePercentage;
-    this.reclaimedChunks = new LinkedBlockingQueue<PooledChunk>();
+    this.offheap = offheap;
+    this.reclaimedChunks = new LinkedBlockingQueue<>();
     for (int i = 0; i < initialCount; i++) {
-      PooledChunk chunk = new PooledChunk(chunkSize);
+      Chunk chunk = this.offheap ? new OffheapChunk(chunkSize) : new OnheapChunk(chunkSize);
       chunk.init();
       reclaimedChunks.add(chunk);
     }
@@ -108,8 +103,8 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
    * @see #putbackChunk(Chunk)
    * @see #putbackChunks(BlockingQueue)
    */
-  PooledChunk getChunk() {
-    PooledChunk chunk = reclaimedChunks.poll();
+  Chunk getChunk() {
+    Chunk chunk = reclaimedChunks.poll();
     if (chunk != null) {
       chunk.reset();
       reusedChunkCount.incrementAndGet();
@@ -118,7 +113,7 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
       while (true) {
         long created = this.chunkCount.get();
         if (created < this.maxCount) {
-          chunk = new PooledChunk(chunkSize);
+          chunk = this.offheap ? new OffheapChunk(this.chunkSize) : new OnheapChunk(this.chunkSize);
           if (this.chunkCount.compareAndSet(created, created + 1)) {
             break;
           }
@@ -135,9 +130,9 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
    * skip the remaining chunks
    * @param chunks
    */
-  synchronized void putbackChunks(BlockingQueue<PooledChunk> chunks) {
+  synchronized void putbackChunks(BlockingQueue<Chunk> chunks) {
     int toAdd = Math.min(chunks.size(), this.maxCount - reclaimedChunks.size());
-    PooledChunk chunk = null;
+    Chunk chunk = null;
     while ((chunk = chunks.poll()) != null && toAdd > 0) {
       reclaimedChunks.add(chunk);
       toAdd--;
@@ -149,7 +144,7 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
    * skip it
    * @param chunk
    */
-  synchronized void putbackChunk(PooledChunk chunk) {
+  synchronized void putbackChunk(Chunk chunk) {
     if (reclaimedChunks.size() < this.maxCount) {
       reclaimedChunks.add(chunk);
     }
@@ -191,51 +186,41 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
   }
 
   /**
-   * @param conf
    * @return the global MemStoreChunkPool instance
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DC_DOUBLECHECK",
-      justification="Intentional")
-  static MemStoreChunkPool getPool(Configuration conf) {
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "LI_LAZY_INIT_STATIC",
+      justification = "Method is called by single thread at the starting of RS")
+  static MemStoreChunkPool initialize(long globalMemStoreSize, float poolSizePercentage,
+      float initialCountPercentage, int chunkSize, boolean offheap) {
     if (GLOBAL_INSTANCE != null) return GLOBAL_INSTANCE;
+    if (chunkPoolDisabled) return null;
 
-    synchronized (MemStoreChunkPool.class) {
-      if (chunkPoolDisabled) return null;
-      if (GLOBAL_INSTANCE != null) return GLOBAL_INSTANCE;
-      // When MSLAB is turned OFF no need to init chunk pool at all.
-      if (!conf.getBoolean(MemStoreLAB.USEMSLAB_KEY, MemStoreLAB.USEMSLAB_DEFAULT)) {
-        chunkPoolDisabled = true;
-        return null;
-      }
-      float poolSizePercentage = conf.getFloat(CHUNK_POOL_MAXSIZE_KEY, POOL_MAX_SIZE_DEFAULT);
-      if (poolSizePercentage <= 0) {
-        chunkPoolDisabled = true;
-        return null;
-      }
-      if (poolSizePercentage > 1.0) {
-        throw new IllegalArgumentException(CHUNK_POOL_MAXSIZE_KEY + " must be between 0.0 and 1.0");
-      }
-      long heapMax = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-      long globalMemStoreLimit = (long) (heapMax * HeapMemorySizeUtil.getGlobalMemStorePercent(conf,
-          false));
-      int chunkSize = conf.getInt(HeapMemStoreLAB.CHUNK_SIZE_KEY,
-          HeapMemStoreLAB.CHUNK_SIZE_DEFAULT);
-      int maxCount = (int) (globalMemStoreLimit * poolSizePercentage / chunkSize);
-
-      float initialCountPercentage = conf.getFloat(CHUNK_POOL_INITIALSIZE_KEY,
-          POOL_INITIAL_SIZE_DEFAULT);
-      if (initialCountPercentage > 1.0 || initialCountPercentage < 0) {
-        throw new IllegalArgumentException(CHUNK_POOL_INITIALSIZE_KEY
-            + " must be between 0.0 and 1.0");
-      }
-
-      int initialCount = (int) (initialCountPercentage * maxCount);
-      LOG.info("Allocating MemStoreChunkPool with chunk size " + StringUtils.byteDesc(chunkSize)
-          + ", max count " + maxCount + ", initial count " + initialCount);
-      GLOBAL_INSTANCE = new MemStoreChunkPool(conf, chunkSize, maxCount, initialCount,
-          poolSizePercentage);
-      return GLOBAL_INSTANCE;
+    if (poolSizePercentage <= 0) {
+      chunkPoolDisabled = true;
+      return null;
     }
+    if (poolSizePercentage > 1.0) {
+      throw new IllegalArgumentException(
+          MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY + " must be between 0.0 and 1.0");
+    }
+    int maxCount = (int) (globalMemStoreSize * poolSizePercentage / chunkSize);
+    if (initialCountPercentage > 1.0 || initialCountPercentage < 0) {
+      throw new IllegalArgumentException(
+          MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY + " must be between 0.0 and 1.0");
+    }
+    int initialCount = (int) (initialCountPercentage * maxCount);
+    LOG.info("Allocating MemStoreChunkPool with chunk size " + StringUtils.byteDesc(chunkSize)
+        + ", max count " + maxCount + ", initial count " + initialCount);
+    GLOBAL_INSTANCE = new MemStoreChunkPool(chunkSize, maxCount, initialCount, poolSizePercentage,
+        offheap);
+    return GLOBAL_INSTANCE;
+  }
+
+  /**
+   * @return The singleton instance of this pool.
+   */
+  static MemStoreChunkPool getPool() {
+    return GLOBAL_INSTANCE;
   }
 
   int getMaxCount() {
@@ -245,12 +230,6 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
   @VisibleForTesting
   static void clearDisableFlag() {
     chunkPoolDisabled = false;
-  }
-
-  public static class PooledChunk extends Chunk {
-    PooledChunk(int size) {
-      super(size);
-    }
   }
 
   @Override
