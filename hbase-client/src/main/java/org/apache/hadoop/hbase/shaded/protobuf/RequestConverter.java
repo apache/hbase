@@ -560,10 +560,15 @@ public final class RequestConverter {
 
     List<ClientProtos.BulkLoadHFileRequest.FamilyPath> protoFamilyPaths =
         new ArrayList<ClientProtos.BulkLoadHFileRequest.FamilyPath>(familyPaths.size());
-    for(Pair<byte[], String> el: familyPaths) {
-      protoFamilyPaths.add(ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder()
-        .setFamily(UnsafeByteOperations.unsafeWrap(el.getFirst()))
-        .setPath(el.getSecond()).build());
+    if (!familyPaths.isEmpty()) {
+      ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder pathBuilder
+        = ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder();
+      for(Pair<byte[], String> el: familyPaths) {
+        protoFamilyPaths.add(pathBuilder
+          .setFamily(UnsafeByteOperations.unsafeWrap(el.getFirst()))
+          .setPath(el.getSecond()).build());
+      }
+      pathBuilder.clear();
     }
 
     BulkLoadHFileRequest.Builder request =
@@ -594,6 +599,7 @@ public final class RequestConverter {
       final List<Action> actions, final RegionAction.Builder regionActionBuilder,
       final ClientProtos.Action.Builder actionBuilder,
       final MutationProto.Builder mutationBuilder) throws IOException {
+    ClientProtos.CoprocessorServiceCall.Builder cpBuilder = null;
     for (Action action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
@@ -620,9 +626,13 @@ public final class RequestConverter {
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value =
          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.unsafeWrap(
              exec.getRequest().toByteArray());
+        if (cpBuilder == null) {
+          cpBuilder = ClientProtos.CoprocessorServiceCall.newBuilder();
+        } else {
+          cpBuilder.clear();
+        }
         regionActionBuilder.addAction(actionBuilder.setServiceCall(
-            ClientProtos.CoprocessorServiceCall.newBuilder()
-              .setRow(UnsafeByteOperations.unsafeWrap(exec.getRow()))
+            cpBuilder.setRow(UnsafeByteOperations.unsafeWrap(exec.getRow()))
               .setServiceName(exec.getMethod().getService().getFullName())
               .setMethodName(exec.getMethod().getName())
               .setRequest(value)));
@@ -657,7 +667,8 @@ public final class RequestConverter {
       final ClientProtos.Action.Builder actionBuilder,
       final MutationProto.Builder mutationBuilder) throws IOException {
     RegionAction.Builder builder = getRegionActionBuilderWithRegion(
-      RegionAction.newBuilder(), regionName);
+      regionActionBuilder, regionName);
+    ClientProtos.CoprocessorServiceCall.Builder cpBuilder = null;
     for (Action action: actions) {
       Row row = action.getAction();
       actionBuilder.clear();
@@ -703,9 +714,13 @@ public final class RequestConverter {
         org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value =
          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations.unsafeWrap(
              exec.getRequest().toByteArray());
+        if (cpBuilder == null) {
+          cpBuilder = ClientProtos.CoprocessorServiceCall.newBuilder();
+        } else {
+          cpBuilder.clear();
+        }
         builder.addAction(actionBuilder.setServiceCall(
-            ClientProtos.CoprocessorServiceCall.newBuilder()
-              .setRow(UnsafeByteOperations.unsafeWrap(exec.getRow()))
+            cpBuilder.setRow(UnsafeByteOperations.unsafeWrap(exec.getRow()))
               .setServiceName(exec.getMethod().getService().getFullName())
               .setMethodName(exec.getMethod().getName())
               .setRequest(value)));
@@ -856,13 +871,16 @@ public final class RequestConverter {
  public static UpdateFavoredNodesRequest buildUpdateFavoredNodesRequest(
      final List<Pair<HRegionInfo, List<ServerName>>> updateRegionInfos) {
    UpdateFavoredNodesRequest.Builder ubuilder = UpdateFavoredNodesRequest.newBuilder();
-   for (Pair<HRegionInfo, List<ServerName>> pair : updateRegionInfos) {
+   if (updateRegionInfos != null && !updateRegionInfos.isEmpty()) {
      RegionUpdateInfo.Builder builder = RegionUpdateInfo.newBuilder();
-     builder.setRegion(HRegionInfo.convert(pair.getFirst()));
-     for (ServerName server : pair.getSecond()) {
-       builder.addFavoredNodes(ProtobufUtil.toServerName(server));
-     }
-     ubuilder.addUpdateInfo(builder.build());
+    for (Pair<HRegionInfo, List<ServerName>> pair : updateRegionInfos) {
+      builder.setRegion(HRegionInfo.convert(pair.getFirst()));
+      for (ServerName server : pair.getSecond()) {
+        builder.addFavoredNodes(ProtobufUtil.toServerName(server));
+      }
+      ubuilder.addUpdateInfo(builder.build());
+      builder.clear();
+    }
    }
    return ubuilder.build();
  }
