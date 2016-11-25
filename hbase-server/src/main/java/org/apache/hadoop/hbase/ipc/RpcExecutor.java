@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -175,19 +174,6 @@ public abstract class RpcExecutor {
     }
   }
 
-  public int getActiveHandlerCount() {
-    return activeHandlerCount.get();
-  }
-
-  /** Returns the length of the pending queue */
-  public int getQueueLength() {
-    int length = 0;
-    for (final BlockingQueue<CallRunner> queue: queues) {
-      length += queue.size();
-    }
-    return length;
-  }
-
   /** Add the request to the executor queue */
   public abstract boolean dispatch(final CallRunner callTask) throws InterruptedException;
 
@@ -198,15 +184,15 @@ public abstract class RpcExecutor {
 
   protected void startHandlers(final int port) {
     List<BlockingQueue<CallRunner>> callQueues = getQueues();
-    startHandlers(null, handlerCount, callQueues, 0, callQueues.size(), port);
+    startHandlers(null, handlerCount, callQueues, 0, callQueues.size(), port, activeHandlerCount);
   }
 
   /**
    * Override if providing alternate Handler implementation.
    */
   protected Handler getHandler(final String name, final double handlerFailureThreshhold,
-      final BlockingQueue<CallRunner> q) {
-    return new Handler(name, handlerFailureThreshhold, q);
+      final BlockingQueue<CallRunner> q, final AtomicInteger activeHandlerCount) {
+    return new Handler(name, handlerFailureThreshhold, q, activeHandlerCount);
   }
 
   /**
@@ -214,7 +200,7 @@ public abstract class RpcExecutor {
    */
   protected void startHandlers(final String nameSuffix, final int numHandlers,
       final List<BlockingQueue<CallRunner>> callQueues, final int qindex, final int qsize,
-      final int port) {
+      final int port, final AtomicInteger activeHandlerCount) {
     final String threadPrefix = name + Strings.nullToEmpty(nameSuffix);
     double handlerFailureThreshhold = conf == null ? 1.0 : conf.getDouble(
       HConstants.REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT,
@@ -223,7 +209,8 @@ public abstract class RpcExecutor {
       final int index = qindex + (i % qsize);
       String name = "RpcServer." + threadPrefix + ".handler=" + handlers.size() + ",queue=" + index
           + ",port=" + port;
-      Handler handler = getHandler(name, handlerFailureThreshhold, callQueues.get(index));
+      Handler handler = getHandler(name, handlerFailureThreshhold, callQueues.get(index),
+        activeHandlerCount);
       handler.start();
       LOG.debug("Started " + name);
       handlers.add(handler);
@@ -241,12 +228,16 @@ public abstract class RpcExecutor {
 
     final double handlerFailureThreshhold;
 
+    // metrics (shared with other handlers)
+    final AtomicInteger activeHandlerCount;
+
     Handler(final String name, final double handlerFailureThreshhold,
-        final BlockingQueue<CallRunner> q) {
+        final BlockingQueue<CallRunner> q, final AtomicInteger activeHandlerCount) {
       super(name);
       setDaemon(true);
       this.q = q;
       this.handlerFailureThreshhold = handlerFailureThreshhold;
+      this.activeHandlerCount = activeHandlerCount;
     }
 
     /**
@@ -282,7 +273,7 @@ public abstract class RpcExecutor {
       MonitoredRPCHandler status = RpcServer.getStatus();
       cr.setStatus(status);
       try {
-        activeHandlerCount.incrementAndGet();
+        this.activeHandlerCount.incrementAndGet();
         cr.run();
       } catch (Throwable e) {
         if (e instanceof Error) {
@@ -305,7 +296,7 @@ public abstract class RpcExecutor {
           LOG.warn("Handler  exception " + StringUtils.stringifyException(e));
         }
       } finally {
-        activeHandlerCount.decrementAndGet();
+        this.activeHandlerCount.decrementAndGet();
       }
     }
   }
@@ -398,6 +389,43 @@ public abstract class RpcExecutor {
 
   public long getNumLifoModeSwitches() {
     return numLifoModeSwitches.get();
+  }
+
+  public int getActiveHandlerCount() {
+    return activeHandlerCount.get();
+  }
+
+  public int getActiveWriteHandlerCount() {
+    return 0;
+  }
+
+  public int getActiveReadHandlerCount() {
+    return 0;
+  }
+
+  public int getActiveScanHandlerCount() {
+    return 0;
+  }
+
+  /** Returns the length of the pending queue */
+  public int getQueueLength() {
+    int length = 0;
+    for (final BlockingQueue<CallRunner> queue: queues) {
+      length += queue.size();
+    }
+    return length;
+  }
+
+  public int getReadQueueLength() {
+    return 0;
+  }
+
+  public int getScanQueueLength() {
+    return 0;
+  }
+
+  public int getWriteQueueLength() {
+    return 0;
   }
 
   public String getName() {

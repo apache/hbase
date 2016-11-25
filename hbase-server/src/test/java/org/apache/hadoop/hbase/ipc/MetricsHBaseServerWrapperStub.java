@@ -58,4 +58,34 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   public long getNumLifoModeSwitches() {
     return 5;
   }
+
+  @Override
+  public int getWriteQueueLength() {
+    return 50;
+  }
+
+  @Override
+  public int getReadQueueLength() {
+    return 50;
+  }
+
+  @Override
+  public int getScanQueueLength() {
+    return 2;
+  }
+
+  @Override
+  public int getActiveWriteRpcHandlerCount() {
+    return 50;
+  }
+
+  @Override
+  public int getActiveReadRpcHandlerCount() {
+    return 50;
+  }
+
+  @Override
+  public int getActiveScanRpcHandlerCount() {
+    return 6;
+  }
 }

@@ -19,12 +19,9 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,7 +36,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 
 /**
@@ -66,6 +62,10 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private final int numWriteQueues;
   private final int numReadQueues;
   private final int numScanQueues;
+
+  private final AtomicInteger activeWriteHandlerCount = new AtomicInteger(0);
+  private final AtomicInteger activeReadHandlerCount = new AtomicInteger(0);
+  private final AtomicInteger activeScanHandlerCount = new AtomicInteger(0);
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
       final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
@@ -117,11 +117,13 @@ public class RWQueueRpcExecutor extends RpcExecutor {
 
   @Override
   protected void startHandlers(final int port) {
-    startHandlers(".write", writeHandlersCount, queues, 0, numWriteQueues, port);
-    startHandlers(".read", readHandlersCount, queues, numWriteQueues, numReadQueues, port);
+    startHandlers(".write", writeHandlersCount, queues, 0, numWriteQueues, port,
+      activeWriteHandlerCount);
+    startHandlers(".read", readHandlersCount, queues, numWriteQueues, numReadQueues, port,
+      activeReadHandlerCount);
     if (numScanQueues > 0) {
       startHandlers(".scan", scanHandlersCount, queues, numWriteQueues + numReadQueues,
-        numScanQueues, port);
+        numScanQueues, port, activeScanHandlerCount);
     }
   }
 
@@ -142,6 +144,55 @@ public class RWQueueRpcExecutor extends RpcExecutor {
       return false;
     }
     return queue.offer(callTask);
+  }
+
+  @Override
+  public int getWriteQueueLength() {
+    int length = 0;
+    for (int i = 0; i < numWriteQueues; i++) {
+      length += queues.get(i).size();
+    }
+    return length;
+  }
+
+  @Override
+  public int getReadQueueLength() {
+    int length = 0;
+    for (int i = numWriteQueues; i < (numWriteQueues + numReadQueues); i++) {
+      length += queues.get(i).size();
+    }
+    return length;
+  }
+
+  @Override
+  public int getScanQueueLength() {
+    int length = 0;
+    for (int i = numWriteQueues + numReadQueues;
+        i < (numWriteQueues + numReadQueues + numScanQueues); i++) {
+      length += queues.get(i).size();
+    }
+    return length;
+  }
+
+  @Override
+  public int getActiveHandlerCount() {
+    return activeWriteHandlerCount.get() + activeReadHandlerCount.get()
+        + activeScanHandlerCount.get();
+  }
+
+  @Override
+  public int getActiveWriteHandlerCount() {
+    return activeWriteHandlerCount.get();
+  }
+
+  @Override
+  public int getActiveReadHandlerCount() {
+    return activeReadHandlerCount.get();
+  }
+
+  @Override
+  public int getActiveScanHandlerCount() {
+    return activeScanHandlerCount.get();
   }
 
   private boolean isWriteRequest(final RequestHeader header, final Message param) {

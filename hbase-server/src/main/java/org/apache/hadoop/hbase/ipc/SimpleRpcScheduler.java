@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-
-import java.util.Comparator;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +26,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 
 /**
  * The default scheduler. Configurable. Maintains isolated handler pools for general ('default'),
@@ -204,6 +198,36 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   @Override
   public long getNumLifoModeSwitches() {
     return callExecutor.getNumLifoModeSwitches();
+  }
+
+  @Override
+  public int getWriteQueueLength() {
+    return callExecutor.getWriteQueueLength();
+  }
+
+  @Override
+  public int getReadQueueLength() {
+    return callExecutor.getReadQueueLength();
+  }
+
+  @Override
+  public int getScanQueueLength() {
+    return callExecutor.getScanQueueLength();
+  }
+
+  @Override
+  public int getActiveWriteRpcHandlerCount() {
+    return callExecutor.getActiveWriteHandlerCount();
+  }
+
+  @Override
+  public int getActiveReadRpcHandlerCount() {
+    return callExecutor.getActiveReadHandlerCount();
+  }
+
+  @Override
+  public int getActiveScanRpcHandlerCount() {
+    return callExecutor.getActiveScanHandlerCount();
   }
 }
 
