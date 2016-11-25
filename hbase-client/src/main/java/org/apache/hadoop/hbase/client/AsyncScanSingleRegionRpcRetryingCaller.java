@@ -75,7 +75,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private final ScanResultCache resultCache;
 
-  private final ScanResultConsumer consumer;
+  private final RawScanResultConsumer consumer;
 
   private final ClientService.Interface stub;
 
@@ -113,7 +113,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   public AsyncScanSingleRegionRpcRetryingCaller(HashedWheelTimer retryTimer,
       AsyncConnectionImpl conn, Scan scan, long scannerId, ScanResultCache resultCache,
-      ScanResultConsumer consumer, Interface stub, HRegionLocation loc, long pauseNs,
+      RawScanResultConsumer consumer, Interface stub, HRegionLocation loc, long pauseNs,
       int maxRetries, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.scan = scan;
@@ -246,7 +246,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private void updateNextStartRowWhenError(Result result) {
     nextStartRowWhenError = result.getRow();
-    includeNextStartRowWhenError = result.isPartial();
+    includeNextStartRowWhenError = scan.getBatch() > 0 || result.isPartial();
   }
 
   private void completeWhenNoMoreResultsInRegion() {

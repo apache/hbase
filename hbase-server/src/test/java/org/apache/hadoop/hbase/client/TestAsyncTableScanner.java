@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.base.Throwables;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,56 +33,17 @@ import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
-public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
-
-  private static final class SimpleScanResultConsumer implements ScanResultConsumer {
-
-    private final List<Result> results = new ArrayList<>();
-
-    private Throwable error;
-
-    private boolean finished = false;
-
-    @Override
-    public synchronized boolean onNext(Result result) {
-      results.add(result);
-      return true;
-    }
-
-    @Override
-    public synchronized void onError(Throwable error) {
-      this.error = error;
-      finished = true;
-      notifyAll();
-    }
-
-    @Override
-    public synchronized void onComplete() {
-      finished = true;
-      notifyAll();
-    }
-
-    public synchronized List<Result> getAll() throws Exception {
-      while (!finished) {
-        wait();
-      }
-      if (error != null) {
-        Throwables.propagateIfPossible(error, Exception.class);
-        throw new Exception(error);
-      }
-      return results;
-    }
-  }
+public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
 
   @Parameter
   public Supplier<Scan> scanCreater;
 
   @Parameters
   public static List<Object[]> params() {
-    return Arrays.asList(new Supplier<?>[] { TestAsyncTableScan::createNormalScan },
-      new Supplier<?>[] { TestAsyncTableScan::createBatchScan },
-      new Supplier<?>[] { TestAsyncTableScan::createSmallResultSizeScan },
-      new Supplier<?>[] { TestAsyncTableScan::createBatchSmallResultSizeScan });
+    return Arrays.asList(new Supplier<?>[] { TestAsyncTableScanner::createNormalScan },
+      new Supplier<?>[] { TestAsyncTableScanner::createBatchScan },
+      new Supplier<?>[] { TestAsyncTableScanner::createSmallResultSizeScan },
+      new Supplier<?>[] { TestAsyncTableScanner::createBatchSmallResultSizeScan });
   }
 
   private static Scan createNormalScan() {
@@ -112,9 +71,12 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
   @Override
   protected List<Result> doScan(Scan scan) throws Exception {
     AsyncTable table = ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
-    SimpleScanResultConsumer consumer = new SimpleScanResultConsumer();
-    table.scan(scan, consumer);
-    List<Result> results = consumer.getAll();
+    List<Result> results = new ArrayList<>();
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      for (Result result; (result = scanner.next()) != null;) {
+        results.add(result);
+      }
+    }
     if (scan.getBatch() > 0) {
       results = convertFromBatchResult(results);
     }

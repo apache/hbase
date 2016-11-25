@@ -41,7 +41,7 @@ class AllowPartialScanResultCache implements ScanResultCache {
   }
 
   private void updateLastCell(Result result) {
-    lastCell = result.isPartial() ? result.rawCells()[result.rawCells().length - 1] : null;
+    lastCell = result.rawCells()[result.rawCells().length - 1];
   }
 
   @Override

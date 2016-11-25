@@ -40,9 +40,22 @@ class CompleteScanResultCache implements ScanResultCache {
   }
 
   private Result[] prependCombined(Result[] results, int length) throws IOException {
+    if (length == 0) {
+      return new Result[] { combine() };
+    }
+    // the last part of a partial result may not be marked as partial so here we need to check if
+    // there is a row change.
+    int start;
+    if (Bytes.equals(partialResults.get(0).getRow(), results[0].getRow())) {
+      partialResults.add(results[0]);
+      start = 1;
+      length--;
+    } else {
+      start = 0;
+    }
     Result[] prependResults = new Result[length + 1];
     prependResults[0] = combine();
-    System.arraycopy(results, 0, prependResults, 1, length);
+    System.arraycopy(results, start, prependResults, 1, length);
     return prependResults;
   }
 

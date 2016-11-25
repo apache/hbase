@@ -182,7 +182,7 @@ class AsyncRpcRetryingCallerFactory {
 
     private ScanResultCache resultCache;
 
-    private ScanResultConsumer consumer;
+    private RawScanResultConsumer consumer;
 
     private ClientService.Interface stub;
 
@@ -207,7 +207,7 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public ScanSingleRegionCallerBuilder consumer(ScanResultConsumer consumer) {
+    public ScanSingleRegionCallerBuilder consumer(RawScanResultConsumer consumer) {
       this.consumer = consumer;
       return this;
     }

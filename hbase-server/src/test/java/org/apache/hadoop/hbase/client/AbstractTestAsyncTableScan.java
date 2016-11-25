@@ -18,10 +18,15 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -59,10 +64,9 @@ public abstract class AbstractTestAsyncTableScan {
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
     RawAsyncTable table = ASYNC_CONN.getRawTable(TABLE_NAME);
     List<CompletableFuture<?>> futures = new ArrayList<>();
-    IntStream.range(0, COUNT)
-        .forEach(i -> futures.add(table.put(
-          new Put(Bytes.toBytes(String.format("%03d", i))).addColumn(FAMILY, CQ1, Bytes.toBytes(i))
-              .addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))));
+    IntStream.range(0, COUNT).forEach(
+      i -> futures.add(table.put(new Put(Bytes.toBytes(String.format("%03d", i)))
+          .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))));
     CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get();
   }
 
@@ -75,6 +79,22 @@ public abstract class AbstractTestAsyncTableScan {
   protected abstract Scan createScan();
 
   protected abstract List<Result> doScan(Scan scan) throws Exception;
+
+  private Result convertToPartial(Result result) {
+    return Result.create(result.rawCells(), result.getExists(), result.isStale(), true);
+  }
+
+  protected final List<Result> convertFromBatchResult(List<Result> results) {
+    assertTrue(results.size() % 2 == 0);
+    return IntStream.range(0, results.size() / 2).mapToObj(i -> {
+      try {
+        return Result.createCompleteResult(Arrays.asList(convertToPartial(results.get(2 * i)),
+          convertToPartial(results.get(2 * i + 1))));
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }).collect(Collectors.toList());
+  }
 
   @Test
   public void testScanAll() throws Exception {

@@ -352,7 +352,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
         .rpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS).call();
   }
 
-  public void scan(Scan scan, ScanResultConsumer consumer) {
+  public void scan(Scan scan, RawScanResultConsumer consumer) {
     if (scan.isSmall()) {
       if (scan.getBatch() > 0 || scan.getAllowPartialResults()) {
         consumer.onError(

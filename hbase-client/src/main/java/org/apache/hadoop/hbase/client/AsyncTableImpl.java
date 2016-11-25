@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -26,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * The implementation of AsyncTable. Based on {@link RawAsyncTable}.
@@ -37,9 +39,12 @@ class AsyncTableImpl implements AsyncTable {
 
   private final ExecutorService pool;
 
+  private final long defaultScannerMaxResultSize;
+
   public AsyncTableImpl(AsyncConnectionImpl conn, TableName tableName, ExecutorService pool) {
     this.rawTable = conn.getRawTable(tableName);
     this.pool = pool;
+    this.defaultScannerMaxResultSize = conn.connConf.getScannerMaxResultSize();
   }
 
   @Override
@@ -155,5 +160,35 @@ class AsyncTableImpl implements AsyncTable {
   @Override
   public CompletableFuture<List<Result>> smallScan(Scan scan, int limit) {
     return wrap(rawTable.smallScan(scan, limit));
+  }
+
+  private long resultSize2CacheSize(long maxResultSize) {
+    // * 2 if possible
+    return maxResultSize > Long.MAX_VALUE / 2 ? maxResultSize : maxResultSize * 2;
+  }
+
+  @Override
+  public ResultScanner getScanner(Scan scan) {
+    return new AsyncTableResultScanner(rawTable, ReflectionUtils.newInstance(scan.getClass(), scan),
+        resultSize2CacheSize(
+          scan.getMaxResultSize() > 0 ? scan.getMaxResultSize() : defaultScannerMaxResultSize));
+  }
+
+  private void scan0(Scan scan, ScanResultConsumer consumer) {
+    try (ResultScanner scanner = getScanner(scan)) {
+      for (Result result; (result = scanner.next()) != null;) {
+        if (!consumer.onNext(result)) {
+          break;
+        }
+      }
+      consumer.onComplete();
+    } catch (IOException e) {
+      consumer.onError(e);
+    }
+  }
+
+  @Override
+  public void scan(Scan scan, ScanResultConsumer consumer) {
+    pool.execute(() -> scan0(scan, consumer));
   }
 }

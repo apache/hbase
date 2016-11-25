@@ -139,8 +139,8 @@ public class TestCompleteResultScanResultCache {
     assertEquals(0, resultCache.addAndGet(new Result[] { result1 }, false).length);
     assertEquals(0, resultCache.addAndGet(new Result[] { result2 }, false).length);
 
-    Result[] results = resultCache.addAndGet(new Result[] { nextResult1, nextToNextResult1 },
-      false);
+    Result[] results =
+        resultCache.addAndGet(new Result[] { nextResult1, nextToNextResult1 }, false);
     assertEquals(2, results.length);
     assertEquals(1, Bytes.toInt(results[0].getRow()));
     assertEquals(2, results[0].rawCells().length);
@@ -155,5 +155,29 @@ public class TestCompleteResultScanResultCache {
     assertEquals(3, Bytes.toInt(results[0].getRow()));
     assertEquals(1, results[0].rawCells().length);
     assertEquals(3, Bytes.toInt(results[0].getValue(CF, CQ1)));
+  }
+
+  @Test
+  public void testCombine4() throws IOException {
+    Result result1 = Result.create(Arrays.asList(createCell(1, CQ1)), null, false, true);
+    Result result2 = Result.create(Arrays.asList(createCell(1, CQ2)), null, false, false);
+    Result nextResult1 = Result.create(Arrays.asList(createCell(2, CQ1)), null, false, true);
+    Result nextResult2 = Result.create(Arrays.asList(createCell(2, CQ2)), null, false, false);
+
+    assertEquals(0, resultCache.addAndGet(new Result[] { result1 }, false).length);
+
+    Result[] results = resultCache.addAndGet(new Result[] { result2, nextResult1 }, false);
+    assertEquals(1, results.length);
+    assertEquals(1, Bytes.toInt(results[0].getRow()));
+    assertEquals(2, results[0].rawCells().length);
+    assertEquals(1, Bytes.toInt(results[0].getValue(CF, CQ1)));
+    assertEquals(1, Bytes.toInt(results[0].getValue(CF, CQ2)));
+
+    results = resultCache.addAndGet(new Result[] { nextResult2 }, false);
+    assertEquals(1, results.length);
+    assertEquals(2, Bytes.toInt(results[0].getRow()));
+    assertEquals(2, results[0].rawCells().length);
+    assertEquals(2, Bytes.toInt(results[0].getValue(CF, CQ1)));
+    assertEquals(2, Bytes.toInt(results[0].getValue(CF, CQ2)));
   }
 }
