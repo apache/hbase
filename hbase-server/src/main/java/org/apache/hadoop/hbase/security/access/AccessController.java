@@ -261,9 +261,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     for (Map.Entry<byte[], List<Cell>> f : familyMap.entrySet()) {
       List<Cell> cells = f.getValue();
       for (Cell cell: cells) {
-        if (Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
-            cell.getFamilyLength(), AccessControlLists.ACL_LIST_FAMILY, 0,
-            AccessControlLists.ACL_LIST_FAMILY.length)) {
+        if (CellUtil.matchingFamily(cell, AccessControlLists.ACL_LIST_FAMILY)) {
           entries.add(CellUtil.cloneRow(cell));
         }
       }

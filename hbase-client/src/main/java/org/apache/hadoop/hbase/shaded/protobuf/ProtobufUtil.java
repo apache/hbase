@@ -739,8 +739,8 @@ public final class ProtobufUtil {
   throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.APPEND : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
-    Append append = null;
+    byte[] row = proto.hasRow() ? proto.getRow().toByteArray() : null;
+    Append append = row != null ? new Append(row) : null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
@@ -760,7 +760,9 @@ public final class ProtobufUtil {
         append.add(cell);
       }
     } else {
-      append = new Append(row);
+      if (append == null) {
+        throw new IllegalArgumentException("row cannot be null");
+      }
       for (ColumnValue column: proto.getColumnValueList()) {
         byte[] family = column.getFamily().toByteArray();
         for (QualifierValue qv: column.getQualifierValueList()) {
@@ -819,7 +821,7 @@ public final class ProtobufUtil {
     MutationType type = proto.getMutateType();
     assert type == MutationType.INCREMENT : type.name();
     byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
-    Increment increment = null;
+    Increment increment = row != null ? new Increment(row) : null;
     int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
@@ -839,7 +841,9 @@ public final class ProtobufUtil {
         increment.add(cell);
       }
     } else {
-      increment = new Increment(row);
+      if (increment == null) {
+        throw new IllegalArgumentException("row cannot be null");
+      }
       for (ColumnValue column: proto.getColumnValueList()) {
         byte[] family = column.getFamily().toByteArray();
         for (QualifierValue qv: column.getQualifierValueList()) {
@@ -895,12 +899,9 @@ public final class ProtobufUtil {
         }
         Cell cell = cellScanner.current();
         if (get == null) {
-          get = new Get(Bytes.copy(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+          get = new Get(CellUtil.cloneRow(cell));
         }
-        get.addColumn(
-          Bytes.copy(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()),
-          Bytes.copy(cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength()));
+        get.addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell));
       }
     } else {
       get = new Get(row);

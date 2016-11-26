@@ -1835,6 +1835,20 @@ public final class CellUtil {
   }
 
   /**
+   * @return Cell that is smaller than all other possible Cells for the given Cell's row and passed
+   *         family.
+   */
+  public static Cell createFirstOnRowFamily(Cell cell, byte[] fArray, int foff, int flen) {
+    if (cell instanceof ByteBufferCell) {
+      return new FirstOnRowColByteBufferCell(((ByteBufferCell) cell).getRowByteBuffer(),
+          ((ByteBufferCell) cell).getRowPosition(), cell.getRowLength(), ByteBuffer.wrap(fArray),
+          foff, (byte) flen, HConstants.EMPTY_BYTE_BUFFER, 0, 0);
+    }
+    return new FirstOnRowColCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+        fArray, foff, (byte) flen, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+  }
+
+  /**
    * Create a Cell that is smaller than all other possible Cells for the given Cell's row.
    * The family length is considered to be 0
    * @param cell

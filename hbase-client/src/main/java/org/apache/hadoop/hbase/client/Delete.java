@@ -165,8 +165,7 @@ public class Delete extends Mutation implements Comparable<Row> {
       throw new IOException("The recently added KeyValue is not of type "
           + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
     }
-    if (Bytes.compareTo(this.row, 0, row.length, kv.getRowArray(),
-        kv.getRowOffset(), kv.getRowLength()) != 0) {
+    if (!CellUtil.matchingRow(kv, this.row)) {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }

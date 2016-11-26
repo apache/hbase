@@ -7621,7 +7621,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // throw DoNotRetryIOException instead of IllegalArgumentException
       throw new DoNotRetryIOException("Field is not a long, it's " + len + " bytes wide");
     }
-    return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), len);
+    return CellUtil.getValueAsLong(cell);
   }
 
   /**
