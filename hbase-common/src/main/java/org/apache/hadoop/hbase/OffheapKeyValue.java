@@ -296,4 +296,18 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
   public long heapOverhead() {
     return FIXED_OVERHEAD;
   }
+
+  @Override
+  public Cell deepClone() {
+    byte[] copy = new byte[this.length];
+    ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
+    KeyValue kv;
+    if (this.hasTags) {
+      kv = new KeyValue(copy, 0, copy.length);
+    } else {
+      kv = new NoTagsKeyValue(copy, 0, copy.length);
+    }
+    kv.setSequenceId(this.getSequenceId());
+    return kv;
+  }
 }

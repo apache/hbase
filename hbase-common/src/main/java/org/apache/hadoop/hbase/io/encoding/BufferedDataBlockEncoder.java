@@ -473,6 +473,12 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     public long heapOverhead() {
       return FIXED_OVERHEAD;
     }
+
+    @Override
+    public Cell deepClone() {
+      // This is not used in actual flow. Throwing UnsupportedOperationException
+      throw new UnsupportedOperationException();
+    }
   }
 
   protected static class OffheapDecodedCell extends ByteBufferCell implements ExtendedCell {
@@ -716,6 +722,12 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     @Override
     public long heapOverhead() {
       return FIXED_OVERHEAD;
+    }
+
+    @Override
+    public Cell deepClone() {
+      // This is not used in actual flow. Throwing UnsupportedOperationException
+      throw new UnsupportedOperationException();
     }
   }
 

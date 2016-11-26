@@ -426,9 +426,6 @@ public final class CellUtil {
    * @return A new cell which is having the extra tags also added to it.
    */
   public static Cell createCell(Cell cell, byte[] tags) {
-    if (cell instanceof ShareableMemory) {
-      return new ShareableMemoryTagRewriteCell(cell, tags);
-    }
     return new TagRewriteCell(cell, tags);
   }
 
@@ -618,22 +615,10 @@ public final class CellUtil {
     public long heapOverhead() {
       return ((ExtendedCell) this.cell).heapOverhead() + HEAP_SIZE_OVERHEAD;
     }
-  }
-
-  /**
-   * Version of TagRewriteCell where the original Cell is ShareableMemory type.
-   */
-  private static class ShareableMemoryTagRewriteCell extends TagRewriteCell implements
-      ShareableMemory {
-
-    public ShareableMemoryTagRewriteCell(Cell cell, byte[] tags) {
-      super(cell, tags);
-      assert cell instanceof ShareableMemory;
-    }
 
     @Override
-    public Cell cloneToCell() {
-      Cell clonedBaseCell = ((ShareableMemory) this.cell).cloneToCell();
+    public Cell deepClone() {
+      Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
       return new TagRewriteCell(clonedBaseCell, this.tags);
     }
   }

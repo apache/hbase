@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * An extension of the KeyValue where the tags length is always 0 
@@ -47,5 +48,13 @@ public class NoTagsKeyValue extends KeyValue {
   @Override
   public int getSerializedSize(boolean withTags) {
     return this.length;
+  }
+
+  @Override
+  public Cell deepClone() {
+    byte[] copy = Bytes.copy(this.bytes, this.offset, this.length);
+    KeyValue kv = new NoTagsKeyValue(copy, 0, copy.length);
+    kv.setSequenceId(this.getSequenceId());
+    return kv;
   }
 }

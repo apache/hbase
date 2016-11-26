@@ -2815,4 +2815,12 @@ public class KeyValue implements ExtendedCell {
   public long heapOverhead() {
     return FIXED_OVERHEAD;
   }
+
+  @Override
+  public Cell deepClone() {
+    byte[] copy = Bytes.copy(this.bytes, this.offset, this.length);
+    KeyValue kv = new KeyValue(copy, 0, copy.length);
+    kv.setSequenceId(this.getSequenceId());
+    return kv;
+  }
 }

@@ -24,15 +24,12 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NoTagsKeyValue;
 import org.apache.hadoop.hbase.OffheapKeyValue;
-import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Codec that does KeyValue version 1 serialization.
@@ -109,66 +106,14 @@ public class KeyValueCodec implements Codec {
     }
 
     protected Cell createCell(byte[] buf, int offset, int len) {
-      return new ShareableMemoryNoTagsKeyValue(buf, offset, len);
+      return new NoTagsKeyValue(buf, offset, len);
     }
 
     protected Cell createCell(ByteBuffer bb, int pos, int len) {
       // We know there is not going to be any tags.
-      return new ShareableMemoryOffheapKeyValue(bb, pos, len, false, 0);
+      return new OffheapKeyValue(bb, pos, len, false, 0);
     }
 
-    static class ShareableMemoryKeyValue extends KeyValue implements ShareableMemory {
-      public ShareableMemoryKeyValue(byte[] bytes, int offset, int length) {
-        super(bytes, offset, length);
-      }
-
-      @Override
-      public Cell cloneToCell() {
-        byte[] copy = Bytes.copy(this.bytes, this.offset, this.length);
-        KeyValue kv = new KeyValue(copy, 0, copy.length);
-        kv.setSequenceId(this.getSequenceId());
-        return kv;
-      }
-    }
-
-    static class ShareableMemoryNoTagsKeyValue extends NoTagsKeyValue implements ShareableMemory {
-      public ShareableMemoryNoTagsKeyValue(byte[] bytes, int offset, int length) {
-        super(bytes, offset, length);
-      }
-
-      @Override
-      public Cell cloneToCell() {
-        byte[] copy = Bytes.copy(this.bytes, this.offset, this.length);
-        KeyValue kv = new NoTagsKeyValue(copy, 0, copy.length);
-        kv.setSequenceId(this.getSequenceId());
-        return kv;
-      }
-    }
-
-    static class ShareableMemoryOffheapKeyValue extends OffheapKeyValue implements ShareableMemory {
-      public ShareableMemoryOffheapKeyValue(ByteBuffer buf, int offset, int length) {
-        super(buf, offset, length);
-      }
-
-      public ShareableMemoryOffheapKeyValue(ByteBuffer buf, int offset, int length, boolean hasTags,
-          long seqId) {
-        super(buf, offset, length, hasTags, seqId);
-      }
-
-      @Override
-      public Cell cloneToCell() {
-        byte[] copy = new byte[this.length];
-        ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
-        KeyValue kv;
-        if (this.hasTags) {
-          kv = new KeyValue(copy, 0, copy.length);
-        } else {
-          kv = new NoTagsKeyValue(copy, 0, copy.length);
-        }
-        kv.setSequenceId(this.getSequenceId());
-        return kv;
-      }
-    }
   }
 
   /**

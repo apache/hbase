@@ -72,4 +72,10 @@ public interface ExtendedCell extends Cell, SettableSequenceId, SettableTimestam
    * @return The heap size overhead associated with this Cell.
    */
   long heapOverhead();
+
+  /**
+   * Does a deep copy of the contents to a new memory area and returns it as a new cell.
+   * @return The deep cloned cell
+   */
+  Cell deepClone();
 }

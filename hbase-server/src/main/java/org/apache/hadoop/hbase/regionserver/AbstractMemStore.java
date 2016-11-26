@@ -28,7 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.ShareableMemory;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -107,11 +107,8 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   private static Cell deepCopyIfNeeded(Cell cell) {
-    // When Cell is backed by a shared memory chunk (this can be a chunk of memory where we read the
-    // req into) the Cell instance will be of type ShareableMemory. Later we will add feature to
-    // read the RPC request into pooled direct ByteBuffers.
-    if (cell instanceof ShareableMemory) {
-      return ((ShareableMemory) cell).cloneToCell();
+    if (cell instanceof ExtendedCell) {
+      return ((ExtendedCell) cell).deepClone();
     }
     return cell;
   }
