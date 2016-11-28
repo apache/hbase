@@ -345,7 +345,6 @@ public class CloneSnapshotProcedure
           final TableName tableName,
           final List<HRegionInfo> newRegions) throws IOException {
 
-        final Configuration conf = env.getMasterConfiguration();
         final ForeignExceptionDispatcher monitorException = new ForeignExceptionDispatcher();
 
         getMonitorStatus().setStatus("Clone snapshot - creating regions for table: " + tableName);

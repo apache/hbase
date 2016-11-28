@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.fs.MasterStorage;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.fs.legacy.snapshot.SnapshotManifestV1;
@@ -206,11 +207,13 @@ public final class SnapshotTestingUtils {
     final Configuration conf = admin.getConfiguration();
 
     // check snapshot dir
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-        snapshotDescriptor, rootDir);
+//    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
+//        snapshotDescriptor, rootDir);
+    Path snapshotDir = null;
     assertTrue(fs.exists(snapshotDir));
 
-    HBaseProtos.SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+//    HBaseProtos.SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    HBaseProtos.SnapshotDescription desc = null;
 
     // Extract regions and families with store files
     final Set<byte[]> snapshotFamilies = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
@@ -218,14 +221,15 @@ public final class SnapshotTestingUtils {
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, desc);
     Map<String, SnapshotRegionManifest> regionManifests = manifest.getRegionManifestsMap();
     for (SnapshotRegionManifest regionManifest: regionManifests.values()) {
-      SnapshotReferenceUtil.visitRegionStoreFiles(regionManifest,
-          new SnapshotReferenceUtil.StoreFileVisitor() {
-        @Override
-        public void storeFile(final HRegionInfo regionInfo, final String family,
-              final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          snapshotFamilies.add(Bytes.toBytes(family));
-        }
-      });
+      Assert.fail("visiting snapshot region store files.");
+//      SnapshotReferenceUtil.visitRegionStoreFiles(regionManifest,
+//          new SnapshotReferenceUtil.StoreFileVisitor() {
+//        @Override
+//        public void storeFile(final HRegionInfo regionInfo, final String family,
+//              final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+//          snapshotFamilies.add(Bytes.toBytes(family));
+//        }
+//      });
     }
 
     // Verify that there are store files in the specified families
@@ -429,26 +433,28 @@ public final class SnapshotTestingUtils {
 //    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
 //                                                                        mfs.getRootDir());
     Path snapshotDir = null;
-    HBaseProtos.SnapshotDescription snapshotDesc =
-        SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+//    HBaseProtos.SnapshotDescription snapshotDesc =
+//        SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    HBaseProtos.SnapshotDescription snapshotDesc = null;
     final TableName table = TableName.valueOf(snapshotDesc.getTable());
 
     final ArrayList corruptedFiles = new ArrayList();
     final Configuration conf = util.getConfiguration();
-    SnapshotReferenceUtil.visitTableStoreFiles(conf, fs, snapshotDir, snapshotDesc,
-        new SnapshotReferenceUtil.StoreFileVisitor() {
-      @Override
-      public void storeFile(final HRegionInfo regionInfo, final String family,
-            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-        String region = regionInfo.getEncodedName();
-        String hfile = storeFile.getName();
-        HFileLink link = HFileLink.build(conf, table, region, family, hfile);
-        if (corruptedFiles.size() % 2 == 0) {
-          fs.delete(link.getAvailablePath(fs), true);
-          corruptedFiles.add(hfile);
-        }
-      }
-    });
+//    SnapshotReferenceUtil.visitTableStoreFiles(conf, fs, snapshotDir, snapshotDesc,
+//        new SnapshotReferenceUtil.StoreFileVisitor() {
+//      @Override
+//      public void storeFile(final HRegionInfo regionInfo, final String family,
+//            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+//        String region = regionInfo.getEncodedName();
+//        String hfile = storeFile.getName();
+//        HFileLink link = HFileLink.build(conf, table, region, family, hfile);
+//        if (corruptedFiles.size() % 2 == 0) {
+//          fs.delete(link.getAvailablePath(fs), true);
+//          corruptedFiles.add(hfile);
+//        }
+//      }
+//    });
+    Assert.fail("visiting snapshot store files.");
 
     assertTrue(corruptedFiles.size() > 0);
     return corruptedFiles;
@@ -497,7 +503,7 @@ public final class SnapshotTestingUtils {
         this.htd = htd;
         this.desc = desc;
         this.tableRegions = tableRegions;
-        this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+//        this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
         LegacyTableDescriptor.createTableDescriptor(
             fs, snapshotDir, htd, false);
       }
@@ -589,9 +595,9 @@ public final class SnapshotTestingUtils {
         FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir);
         for (FileStatus fileStatus : manifestFiles) {
           String fileName = fileStatus.getPath().getName();
-          if (fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOTINFO_FILE)
+          if (fileName.endsWith(LegacyLayout.SNAPSHOTINFO_FILE)
             || fileName.endsWith(".tabledesc")
-            || fileName.endsWith(SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME)) {
+            || fileName.endsWith(LegacyLayout.SNAPSHOT_TMP_DIR_NAME)) {
               fs.delete(fileStatus.getPath(), true);
           }
         }
@@ -622,8 +628,8 @@ public final class SnapshotTestingUtils {
         SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
         manifest.addTableDescriptor(htd);
         manifest.consolidate();
-        SnapshotDescriptionUtils.completeSnapshot(desc, rootDir, snapshotDir, fs);
-        snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
+//        SnapshotDescriptionUtils.completeSnapshot(desc, rootDir, snapshotDir, fs);
+//        snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
         return snapshotDir;
       }
 
@@ -677,8 +683,8 @@ public final class SnapshotTestingUtils {
         .setVersion(version)
         .build();
 
-      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
-      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
+//      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+//      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
       return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
     }
 

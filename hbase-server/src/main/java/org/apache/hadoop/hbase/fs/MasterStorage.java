@@ -370,7 +370,6 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
    * Returns all {@link HRegionInfo} for a snapshot
    *
    * @param snapshot
-   * @return
    * @throws IOException
    */
   public Map<String, HRegionInfo> getSnapshotRegions(final SnapshotDescription snapshot)
@@ -482,7 +481,6 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
    * @param snapshot
    * @param src Source {@link StorageContext}
    * @param dest Destination {@link StorageContext}
-   * @return
    * @throws IOException
    */
   public abstract boolean changeSnapshotContext(SnapshotDescription snapshot, StorageContext src,
@@ -518,7 +516,6 @@ public abstract class MasterStorage<IDENTIFIER extends StorageIdentifier> {
    * @param destHtd
    * @param monitor
    * @param status
-   * @return
    * @throws IOException
    */
   public SnapshotRestoreMetaChanges restoreSnapshot(final SnapshotDescription snapshot,

@@ -94,8 +94,9 @@ public class TestSnapshotDescriptionUtils {
         + " but shouldn't. Test file leak?", fs.exists(workingDir));
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("snapshot").build();
     try {
-      SnapshotDescriptionUtils.completeSnapshot(snapshot, root, workingDir, fs);
+//      SnapshotDescriptionUtils.completeSnapshot(snapshot, root, workingDir, fs);
       fail("Shouldn't successfully complete move of a non-existent directory.");
+      throw new IOException("dead code placeholder.");
     } catch (IOException e) {
       LOG.info("Correctly failed to move non-existant directory: " + e.getMessage());
     }

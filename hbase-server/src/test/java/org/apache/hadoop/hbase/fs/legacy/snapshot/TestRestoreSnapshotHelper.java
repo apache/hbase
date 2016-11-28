@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.snapshot;
+package org.apache.hadoop.hbase.fs.legacy.snapshot;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.fs.legacy.io.HFileLink;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -170,8 +171,9 @@ public class TestRestoreSnapshotHelper {
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
 
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
-    return new RestoreSnapshotHelper(conf, manifest,
-      htdClone, monitor, status);
+//    return new RestoreSnapshotHelper(conf, manifest,
+//      htdClone, monitor, status);
+    return null;
   }
 
   private Path getReferredToFile(final String referenceName) {

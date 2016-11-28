@@ -135,8 +135,9 @@ public class TestSnapshotManager {
 
     // Create a "test snapshot"
     Path rootDir = UTIL.getDataTestDir();
-    Path testSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-      "testSnapshotSupportConfiguration", rootDir);
+//    Path testSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
+//      "testSnapshotSupportConfiguration", rootDir);
+    Path testSnapshotDir = null;
     fs.mkdirs(testSnapshotDir);
     try {
       // force snapshot feature to be disabled, but snapshots are present

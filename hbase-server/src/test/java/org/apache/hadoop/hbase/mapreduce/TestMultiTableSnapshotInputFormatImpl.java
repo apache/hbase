@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -67,9 +68,9 @@ public class TestMultiTableSnapshotInputFormatImpl {
     // feels weird to introduce a RestoreSnapshotHelperFactory and inject that, which would
     // probably be the more "pure"
     // way of doing things. This is the lesser of two evils, perhaps?
-    doNothing().when(this.subject).
-        restoreSnapshot(any(Configuration.class), any(String.class), any(Path.class),
-            any(Path.class), any(FileSystem.class));
+//    doNothing().when(this.subject).
+//        restoreSnapshot(any(Configuration.class), any(String.class), any(Path.class),
+//            any(Path.class), any(FileSystem.class));
 
     this.conf = new Configuration();
     this.rootDir = new Path("file:///test-root-dir");
@@ -178,8 +179,9 @@ public class TestMultiTableSnapshotInputFormatImpl {
     Map<String, Path> snapshotDirs = subject.getSnapshotDirs(conf);
 
     for (Map.Entry<String, Path> entry : snapshotDirs.entrySet()) {
-      verify(this.subject).restoreSnapshot(eq(this.conf), eq(entry.getKey()), eq(this.rootDir),
-          eq(entry.getValue()), any(FileSystem.class));
+      Assert.fail("restore snapshot.");
+//      verify(this.subject).restoreSnapshot(eq(this.conf), eq(entry.getKey()), eq(this.rootDir),
+//          eq(entry.getValue()), any(FileSystem.class));
     }
   }
 }

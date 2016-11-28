@@ -210,14 +210,15 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
 
     Scan scan = getScan();
     scanOpenTimer.start();
-    TableSnapshotScanner scanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+//    TableSnapshotScanner scanner = new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
     scanOpenTimer.stop();
 
     long numRows = 0;
     long numCells = 0;
     scanTimer.start();
     while (true) {
-      Result result = scanner.next();
+//      Result result = scanner.next();
+      Result result = null;
       if (result == null) {
         break;
       }
@@ -226,10 +227,11 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
       numCells += result.rawCells().length;
     }
     scanTimer.stop();
-    scanner.close();
+//    scanner.close();
 
-    ScanMetrics metrics = scanner.getScanMetrics();
-    long totalBytes = metrics.countOfBytesInResults.get();
+//    ScanMetrics metrics = scanner.getScanMetrics();
+//    long totalBytes = metrics.countOfBytesInResults.get();
+    long totalBytes = 0;
     double throughput = (double)totalBytes / scanTimer.elapsedTime(TimeUnit.SECONDS);
     double throughputRows = (double)numRows / scanTimer.elapsedTime(TimeUnit.SECONDS);
     double throughputCells = (double)numCells / scanTimer.elapsedTime(TimeUnit.SECONDS);
@@ -239,7 +241,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("total time to open scanner: " + scanOpenTimer.elapsedMillis() + " ms");
     System.out.println("total time to scan: " + scanTimer.elapsedMillis() + " ms");
 
-    System.out.println("Scan metrics:\n" + metrics.getMetricsMap());
+//    System.out.println("Scan metrics:\n" + metrics.getMetricsMap());
 
     System.out.println("total bytes: " + totalBytes + " bytes ("
         + StringUtils.humanReadableInt(totalBytes) + ")");

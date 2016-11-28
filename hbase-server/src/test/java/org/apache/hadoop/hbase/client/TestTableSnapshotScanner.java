@@ -140,11 +140,12 @@ public class TestTableSnapshotScanner {
       Path restoreDir = util.getDataTestDirOnTestFS(snapshotName);
       Scan scan = new Scan(bbb, yyy); // limit the scan
 
-      TableSnapshotScanner scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir,
-        snapshotName, scan);
-
-      verifyScanner(scanner, bbb, yyy);
-      scanner.close();
+//      TableSnapshotScanner scanner = new TableSnapshotScanner(UTIL.getConfiguration(), restoreDir,
+//        snapshotName, scan);
+//
+//      verifyScanner(scanner, bbb, yyy);
+//      scanner.close();
+      Assert.fail("test commented out");
     } finally {
       if (!shutdownCluster) {
         util.getHBaseAdmin().deleteSnapshot(snapshotName);
