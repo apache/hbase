@@ -112,7 +112,7 @@ public class HFileBlockIndex {
    * blocks at all other levels will be cached in the LRU cache in practice,
    * although this API does not enforce that.
    *
-   * All non-root (leaf and intermediate) index blocks contain what we call a
+   * <p>All non-root (leaf and intermediate) index blocks contain what we call a
    * "secondary index": an array of offsets to the entries within the block.
    * This allows us to do binary search for the entry corresponding to the
    * given key without having to deserialize the block.
@@ -202,14 +202,12 @@ public class HFileBlockIndex {
     }
 
     /**
-     * Return the BlockWithScanInfo which contains the DataBlock with other scan
-     * info such as nextIndexedKey. This function will only be called when the
-     * HFile version is larger than 1.
+     * Return the BlockWithScanInfo, a data structure which contains the Data HFileBlock with
+     * other scan info such as the key that starts the next HFileBlock. This function will only
+     * be called when the HFile version is larger than 1.
      *
-     * @param key
-     *          the key we are looking for
-     * @param currentBlock
-     *          the current block, to avoid re-reading the same block
+     * @param key the key we are looking for
+     * @param currentBlock the current block, to avoid re-reading the same block
      * @param cacheBlocks
      * @param pread
      * @param isCompaction
