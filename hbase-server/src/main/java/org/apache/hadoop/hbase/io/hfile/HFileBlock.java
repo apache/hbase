@@ -25,6 +25,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -1287,13 +1288,16 @@ public class HFileBlock implements Cacheable {
       final FSReader owner = this; // handle for inner class
       return new BlockIterator() {
         private long offset = startOffset;
+        // Cache length of next block. Current block has the length of next block in it.
+        private long length = -1;
 
         @Override
         public HFileBlock nextBlock() throws IOException {
           if (offset >= endOffset)
             return null;
-          HFileBlock b = readBlockData(offset, -1, -1, false);
+          HFileBlock b = readBlockData(offset, length, -1, false);
           offset += b.getOnDiskSizeWithHeader();
+          length = b.getNextBlockOnDiskSizeWithHeader();
           return b.unpack(fileContext, owner);
         }
 
@@ -1397,13 +1401,8 @@ public class HFileBlock implements Cacheable {
     /** Default context used when BlockType != {@link BlockType#ENCODED_DATA}. */
     private final HFileBlockDefaultDecodingContext defaultDecodingCtx;
 
-    private ThreadLocal<PrefetchedHeader> prefetchedHeaderForThread =
-        new ThreadLocal<PrefetchedHeader>() {
-          @Override
-          public PrefetchedHeader initialValue() {
-            return new PrefetchedHeader();
-          }
-        };
+    private AtomicReference<PrefetchedHeader> prefetchedHeader =
+        new AtomicReference<PrefetchedHeader>(new PrefetchedHeader());
 
     public FSReaderV2(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
         HFileContext fileContext) throws IOException {
@@ -1543,9 +1542,15 @@ public class HFileBlock implements Cacheable {
       // read this block's header as part of the previous read's look-ahead.
       // And we also want to skip reading the header again if it has already
       // been read.
-      PrefetchedHeader prefetchedHeader = prefetchedHeaderForThread.get();
-      ByteBuffer headerBuf = prefetchedHeader.offset == offset ?
-          prefetchedHeader.buf : null;
+      PrefetchedHeader ph = prefetchedHeader.getAndSet(null); // be multithread safe
+      ByteBuffer headerBuf = null;
+      if (ph != null) {
+        if (ph.offset == offset) {
+          headerBuf = ph.buf;       // our previous read, use the cached buffer
+        } else {
+          prefetchedHeader.set(ph); // not our previous read, put back
+        }
+      }
 
       int nextBlockOnDiskSize = 0;
       // Allocate enough space to fit the next block's header too.
@@ -1589,9 +1594,9 @@ public class HFileBlock implements Cacheable {
               + ", preReadHeaderSize="
               + hdrSize
               + ", header.length="
-              + prefetchedHeader.header.length
+              + prefetchedHeader.get().header.length
               + ", header bytes: "
-              + Bytes.toStringBinary(prefetchedHeader.header, 0,
+              + Bytes.toStringBinary(prefetchedHeader.get().header, 0,
                   hdrSize), ex);
         }
         // if the caller specifies a onDiskSizeWithHeader, validate it.
@@ -1645,9 +1650,10 @@ public class HFileBlock implements Cacheable {
 
       // Set prefetched header
       if (b.hasNextBlockHeader()) {
-        prefetchedHeader.offset = offset + b.getOnDiskSizeWithHeader();
-        System.arraycopy(onDiskBlock, onDiskSizeWithHeader,
-            prefetchedHeader.header, 0, hdrSize);
+        ph = new PrefetchedHeader();
+        ph.offset = offset + b.getOnDiskSizeWithHeader();
+        System.arraycopy(onDiskBlock, onDiskSizeWithHeader, ph.header, 0, hdrSize);
+        prefetchedHeader.set(ph);
       }
 
       b.offset = offset;
