@@ -302,6 +302,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   private final ProcedureEvent serverCrashProcessingEnabled =
     new ProcedureEvent("server crash processing");
 
+  // Maximum time we should run balancer for
+  private final int maxBlancingTime;
+  // Maximum percent of regions in transition when balancing
+  private final double maxRitPercent;
+
   private LoadBalancer balancer;
   private RegionNormalizer normalizer;
   private BalancerChore balancerChore;
@@ -430,6 +435,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // preload table descriptor at startup
     this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
+
+    this.maxBlancingTime = getMaxBalancingTime();
+    this.maxRitPercent = conf.getDouble(HConstants.HBASE_MASTER_BALANCER_MAX_RIT_PERCENT,
+      HConstants.DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT);
 
     // Do we publish the status?
 
@@ -1114,14 +1123,60 @@ public class HMaster extends HRegionServer implements MasterServices {
   /**
    * @return Maximum time we should run balancer for
    */
-  private int getBalancerCutoffTime() {
-    int balancerCutoffTime = getConfiguration().getInt("hbase.balancer.max.balancing", -1);
-    if (balancerCutoffTime == -1) {
-      // if cutoff time isn't set, defaulting it to period time
-      int balancerPeriod = getConfiguration().getInt("hbase.balancer.period", 300000);
-      balancerCutoffTime = balancerPeriod;
+  private int getMaxBalancingTime() {
+    int maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_MAX_BALANCING, -1);
+    if (maxBalancingTime == -1) {
+      // if max balancing time isn't set, defaulting it to period time
+      maxBalancingTime = getConfiguration().getInt(HConstants.HBASE_BALANCER_PERIOD,
+        HConstants.DEFAULT_HBASE_BALANCER_PERIOD);
     }
-    return balancerCutoffTime;
+    return maxBalancingTime;
+  }
+
+  /**
+   * @return Maximum number of regions in transition
+   */
+  private int getMaxRegionsInTransition() {
+    int numRegions = this.assignmentManager.getRegionStates().getRegionAssignments().size();
+    return Math.max((int) Math.floor(numRegions * this.maxRitPercent), 1);
+  }
+
+  /**
+   * It first sleep to the next balance plan start time. Meanwhile, throttling by the max
+   * number regions in transition to protect availability.
+   * @param nextBalanceStartTime The next balance plan start time
+   * @param maxRegionsInTransition max number of regions in transition
+   * @param cutoffTime when to exit balancer
+   */
+  private void balanceThrottling(long nextBalanceStartTime, int maxRegionsInTransition,
+      long cutoffTime) {
+    boolean interrupted = false;
+
+    // Sleep to next balance plan start time
+    // But if there are zero regions in transition, it can skip sleep to speed up.
+    while (!interrupted && System.currentTimeMillis() < nextBalanceStartTime
+        && this.assignmentManager.getRegionStates().getRegionsInTransitionCount() != 0) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ie) {
+        interrupted = true;
+      }
+    }
+
+    // Throttling by max number regions in transition
+    while (!interrupted
+        && maxRegionsInTransition > 0
+        && this.assignmentManager.getRegionStates().getRegionsInTransitionCount()
+        >= maxRegionsInTransition && System.currentTimeMillis() <= cutoffTime) {
+      try {
+        // sleep if the number of regions in transition exceeds the limit
+        Thread.sleep(100);
+      } catch (InterruptedException ie) {
+        interrupted = true;
+      }
+    }
+
+    if (interrupted) Thread.currentThread().interrupt();
   }
 
   public boolean balance() throws IOException {
@@ -1140,8 +1195,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       return false;
     }
 
-    // Do this call outside of synchronized block.
-    int maximumBalanceTime = getBalancerCutoffTime();
+    int maxRegionsInTransition = getMaxRegionsInTransition();
     synchronized (this.balancer) {
       // If balance not true, don't run balancer.
       if (!this.loadBalancerTracker.isBalancerOn()) return false;
@@ -1188,28 +1242,35 @@ public class HMaster extends HRegionServer implements MasterServices {
         if (partialPlans != null) plans.addAll(partialPlans);
       }
 
-      long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
+      long balanceStartTime = System.currentTimeMillis();
+      long cutoffTime = balanceStartTime + this.maxBlancingTime;
       int rpCount = 0;  // number of RegionPlans balanced so far
-      long totalRegPlanExecTime = 0;
       if (plans != null && !plans.isEmpty()) {
+        int balanceInterval = this.maxBlancingTime / plans.size();
+        LOG.info("Balancer plans size is " + plans.size() + ", the balance interval is "
+            + balanceInterval + " ms, and the max number regions in transition is "
+            + maxRegionsInTransition);
+
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
-          long balStartTime = System.currentTimeMillis();
           //TODO: bulk assign
           this.assignmentManager.balance(plan);
-          totalRegPlanExecTime += System.currentTimeMillis()-balStartTime;
           rpCount++;
-          if (rpCount < plans.size() &&
-              // if performing next balance exceeds cutoff time, exit the loop
-              (System.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
-            //TODO: After balance, there should not be a cutoff time (keeping it as
+
+          balanceThrottling(balanceStartTime + rpCount * balanceInterval, maxRegionsInTransition,
+            cutoffTime);
+
+          // if performing next balance exceeds cutoff time, exit the loop
+          if (rpCount < plans.size() && System.currentTimeMillis() > cutoffTime) {
+            // TODO: After balance, there should not be a cutoff time (keeping it as
             // a security net for now)
-            LOG.debug("No more balancing till next balance run; maximumBalanceTime=" +
-              maximumBalanceTime);
+            LOG.debug("No more balancing till next balance run; maxBalanceTime="
+                + this.maxBlancingTime);
             break;
           }
         }
       }
+
       if (this.cpHost != null) {
         try {
           this.cpHost.postBalance(rpCount < plans.size() ? plans.subList(0, rpCount) : plans);

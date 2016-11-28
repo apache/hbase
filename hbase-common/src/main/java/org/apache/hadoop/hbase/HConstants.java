@@ -129,6 +129,22 @@ public final class HConstants {
   /** Config for balancing the cluster by table */
   public static final String HBASE_MASTER_LOADBALANCE_BYTABLE = "hbase.master.loadbalance.bytable";
 
+  /** Config for the max percent of regions in transition */
+  public static final String HBASE_MASTER_BALANCER_MAX_RIT_PERCENT =
+      "hbase.master.balancer.maxRitPercent";
+
+  /** Default value for the max percent of regions in transition */
+  public static final double DEFAULT_HBASE_MASTER_BALANCER_MAX_RIT_PERCENT = 1.0;
+
+  /** Config for the max balancing time */
+  public static final String HBASE_BALANCER_MAX_BALANCING = "hbase.balancer.max.balancing";
+
+  /** Config for the balancer period */
+  public static final String HBASE_BALANCER_PERIOD = "hbase.balancer.period";
+
+  /** Default value for the balancer period */
+  public static final int DEFAULT_HBASE_BALANCER_PERIOD = 300000;
+
   /** The name of the ensemble table */
   public static final String ENSEMBLE_TABLE_NAME = "hbase:ensemble";
 

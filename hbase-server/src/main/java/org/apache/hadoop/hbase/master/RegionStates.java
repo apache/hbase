@@ -20,13 +20,10 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,7 +48,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -233,6 +229,13 @@ public class RegionStates {
       rit.add(rs);
     }
     return rit;
+  }
+
+  /**
+   * Get the number of regions in transition.
+   */
+  public synchronized int getRegionsInTransitionCount() {
+    return regionsInTransition.size();
   }
 
   /**
