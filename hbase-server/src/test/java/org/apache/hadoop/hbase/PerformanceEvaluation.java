@@ -367,6 +367,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     family.setDataBlockEncoding(opts.blockEncoding);
     family.setCompressionType(opts.compression);
     family.setBloomFilterType(opts.bloomType);
+    family.setBlocksize(opts.blockSize);
     if (opts.inMemoryCF) {
       family.setInMemory(true);
     }
@@ -599,6 +600,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     String splitPolicy = null;
     Compression.Algorithm compression = Compression.Algorithm.NONE;
     BloomType bloomType = BloomType.ROW;
+    int blockSize = HConstants.DEFAULT_BLOCKSIZE;
     DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
     boolean valueRandom = false;
     boolean valueZipf = false;
@@ -640,6 +642,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.blockEncoding = that.blockEncoding;
       this.filterAll = that.filterAll;
       this.bloomType = that.bloomType;
+      this.blockSize = that.blockSize;
       this.valueRandom = that.valueRandom;
       this.valueZipf = that.valueZipf;
       this.valueSize = that.valueSize;
@@ -786,6 +789,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.bloomType = bloomType;
     }
 
+    public void setBlockSize(int blockSize) {
+      this.blockSize = blockSize;
+    }
+
     public void setBlockEncoding(DataBlockEncoding blockEncoding) {
       this.blockEncoding = blockEncoding;
     }
@@ -900,6 +907,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public BloomType getBloomType() {
       return bloomType;
+    }
+
+    public int getBlockSize() {
+      return blockSize;
     }
 
     public boolean isOneCon() {
@@ -1789,6 +1800,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "Default: opts.perClientRunRows / 10 = " + DEFAULT_OPTS.getPerClientRunRows()/10);
     System.err.println(" multiGet        Batch gets together into groups of N. Only supported " +
         "by randomRead. Default: disabled");
+    System.err.println(" blockSize       Blocksize to use when writing out hfiles. ");
     System.err.println(" addColumns      Adds columns to scans/gets explicitly. Default: true");
     System.err.println(" splitPolicy     Specify a custom RegionSplitPolicy for the table.");
     System.err.println(" randomSleep     Do a random sleep before each get between 0 and entered value. Defaults: 0");
@@ -1968,6 +1980,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (cmd.startsWith(bloomFilter)) {
         opts.bloomType = BloomType.valueOf(cmd.substring(bloomFilter.length()));
         continue;
+      }
+
+      final String blockSize = "--blockSize=";
+      if(cmd.startsWith(blockSize) ) {
+        opts.blockSize = Integer.parseInt(cmd.substring(blockSize.length()));
       }
 
       final String valueSize = "--valueSize=";
