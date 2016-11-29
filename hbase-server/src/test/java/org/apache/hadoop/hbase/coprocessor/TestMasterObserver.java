@@ -793,10 +793,18 @@ public class TestMasterObserver {
       preShutdownCalled = true;
     }
 
+    public boolean wasShutdownCalled() {
+      return preShutdownCalled;
+    }
+
     @Override
     public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> env)
         throws IOException {
       preStopMasterCalled = true;
+    }
+
+    public boolean wasStopMasterCalled() {
+      return preStopMasterCalled;
     }
 
     @Override
@@ -1017,11 +1025,11 @@ public class TestMasterObserver {
     }
 
     public boolean wasModifyTableHandlerCalled() {
-      return preModifyColumnHandlerCalled && postModifyColumnHandlerCalled;
+      return preModifyTableHandlerCalled && postModifyTableHandlerCalled;
     }
 
     public boolean wasModifyTableHandlerCalledOnly() {
-      return preModifyColumnHandlerCalled && !postModifyColumnHandlerCalled;
+      return preModifyTableHandlerCalled && !postModifyTableHandlerCalled;
     }
 
     @Override
