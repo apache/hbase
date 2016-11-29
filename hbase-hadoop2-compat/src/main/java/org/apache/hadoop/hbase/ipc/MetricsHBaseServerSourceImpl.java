@@ -239,19 +239,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
           .addCounter(Interns.info(NUM_GENERAL_CALLS_DROPPED_NAME,
               NUM_GENERAL_CALLS_DROPPED_DESC), wrapper.getNumGeneralCallsDropped())
           .addCounter(Interns.info(NUM_LIFO_MODE_SWITCHES_NAME,
-              NUM_LIFO_MODE_SWITCHES_DESC), wrapper.getNumLifoModeSwitches())
-          .addGauge(Interns.info(WRITE_QUEUE_NAME, WRITE_QUEUE_DESC),
-              wrapper.getWriteQueueLength())
-          .addGauge(Interns.info(READ_QUEUE_NAME, READ_QUEUE_DESC),
-              wrapper.getReadQueueLength())
-          .addGauge(Interns.info(SCAN_QUEUE_NAME, SCAN_QUEUE_DESC),
-              wrapper.getScanQueueLength())
-          .addGauge(Interns.info(NUM_ACTIVE_WRITE_HANDLER_NAME, NUM_ACTIVE_WRITE_HANDLER_DESC),
-            wrapper.getActiveWriteRpcHandlerCount())
-          .addGauge(Interns.info(NUM_ACTIVE_READ_HANDLER_NAME, NUM_ACTIVE_READ_HANDLER_DESC),
-            wrapper.getActiveReadRpcHandlerCount())
-          .addGauge(Interns.info(NUM_ACTIVE_SCAN_HANDLER_NAME, NUM_ACTIVE_SCAN_HANDLER_DESC),
-            wrapper.getActiveScanRpcHandlerCount());
+              NUM_LIFO_MODE_SWITCHES_DESC), wrapper.getNumLifoModeSwitches());
     }
 
     metricsRegistry.snapshot(mrb, all);

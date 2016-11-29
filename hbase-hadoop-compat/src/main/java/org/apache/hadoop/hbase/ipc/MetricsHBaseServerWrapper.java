@@ -21,30 +21,11 @@ package org.apache.hadoop.hbase.ipc;
 
 public interface MetricsHBaseServerWrapper {
   long getTotalQueueSize();
-
   int getGeneralQueueLength();
-
   int getReplicationQueueLength();
-
   int getPriorityQueueLength();
-
   int getNumOpenConnections();
-
   int getActiveRpcHandlerCount();
-
   long getNumGeneralCallsDropped();
-
   long getNumLifoModeSwitches();
-
-  int getWriteQueueLength();
-
-  int getReadQueueLength();
-
-  int getScanQueueLength();
-
-  int getActiveWriteRpcHandlerCount();
-
-  int getActiveReadRpcHandlerCount();
-
-  int getActiveScanRpcHandlerCount();
 }

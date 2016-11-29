@@ -189,35 +189,5 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public long getNumLifoModeSwitches() {
     return callExecutor.getNumLifoModeSwitches();
   }
-
-  @Override
-  public int getWriteQueueLength() {
-    return callExecutor.getWriteQueueLength();
-  }
-
-  @Override
-  public int getReadQueueLength() {
-    return callExecutor.getReadQueueLength();
-  }
-
-  @Override
-  public int getScanQueueLength() {
-    return callExecutor.getScanQueueLength();
-  }
-
-  @Override
-  public int getActiveWriteRpcHandlerCount() {
-    return callExecutor.getActiveWriteHandlerCount();
-  }
-
-  @Override
-  public int getActiveReadRpcHandlerCount() {
-    return callExecutor.getActiveReadHandlerCount();
-  }
-
-  @Override
-  public int getActiveScanRpcHandlerCount() {
-    return callExecutor.getActiveScanHandlerCount();
-  }
 }
 

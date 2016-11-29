@@ -21,7 +21,6 @@ import java.util.Deque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -58,9 +57,8 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
 
   @Override
   protected Handler getHandler(String name, double handlerFailureThreshhold,
-      BlockingQueue<CallRunner> q, AtomicInteger activeHandlerCount) {
-    return new FastPathHandler(name, handlerFailureThreshhold, q, activeHandlerCount,
-        fastPathHandlerStack);
+      BlockingQueue<CallRunner> q) {
+    return new FastPathHandler(name, handlerFailureThreshhold, q, fastPathHandlerStack);
   }
 
   @Override
@@ -86,9 +84,8 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
     private CallRunner loadedCallRunner;
 
     FastPathHandler(String name, double handlerFailureThreshhold, BlockingQueue<CallRunner> q,
-        final AtomicInteger activeHandlerCount,
         final Deque<FastPathHandler> fastPathHandlerStack) {
-      super(name, handlerFailureThreshhold, q, activeHandlerCount);
+      super(name, handlerFailureThreshhold, q);
       this.fastPathHandlerStack = fastPathHandlerStack;
     }
 
