@@ -225,6 +225,8 @@ public class TestMasterObserver {
       postBalanceCalled = false;
       preBalanceSwitchCalled = false;
       postBalanceSwitchCalled = false;
+      preShutdownCalled = false;
+      preStopMasterCalled = false;
       preSnapshotCalled = false;
       postSnapshotCalled = false;
       preListSnapshotCalled = false;
@@ -835,10 +837,18 @@ public class TestMasterObserver {
       preShutdownCalled = true;
     }
 
+    public boolean wasShutdownCalled() {
+      return preShutdownCalled;
+    }
+
     @Override
     public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> env)
         throws IOException {
       preStopMasterCalled = true;
+    }
+
+    public boolean wasStopMasterCalled() {
+      return preStopMasterCalled;
     }
 
     @Override
@@ -1119,11 +1129,11 @@ public class TestMasterObserver {
     }
 
     public boolean wasModifyTableActionCalled() {
-      return preModifyColumnFamilyActionCalled && postCompletedModifyColumnFamilyActionCalled;
+      return preModifyTableActionCalled && postCompletedModifyTableActionCalled;
     }
 
     public boolean wasModifyTableActionCalledOnly() {
-      return preModifyColumnFamilyActionCalled && !postCompletedModifyColumnFamilyActionCalled;
+      return preModifyTableActionCalled && !postCompletedModifyTableActionCalled;
     }
 
     @Deprecated
