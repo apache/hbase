@@ -89,11 +89,6 @@
       e.g. surefire 2.18-SNAPSHOT-->
   <pluginRepositories>
     <pluginRepository>
-      <id>scala-tools.org</id>
-      <name>Scala-tools Maven2 Repository</name>
-      <url>http://scala-tools.org/repo-releases</url>
-    </pluginRepository>
-    <pluginRepository>
       <id>apache.snapshots</id>
       <url>http://repository.apache.org/snapshots/</url>
     </pluginRepository>
