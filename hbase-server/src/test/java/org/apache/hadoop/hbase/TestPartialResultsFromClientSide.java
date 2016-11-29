@@ -734,12 +734,9 @@ public class TestPartialResultsFromClientSide {
 
     Table tmpTable = createTestTable(testName, rows, families, qualifiers, value);
 
-    Scan scan = new Scan();
-    scan.setMaxResultSize(1);
-    scan.setAllowPartialResults(true);
-
     // Open scanner before deletes
-    ResultScanner scanner = tmpTable.getScanner(scan);
+    ResultScanner scanner =
+        tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
 
     Delete delete1 = new Delete(rows[0]);
     delete1.addColumn(families[0], qualifiers[0], 0);
@@ -756,13 +753,13 @@ public class TestPartialResultsFromClientSide {
         scannerCount == expectedCount);
 
     // Minus 2 for the two cells that were deleted
-    scanner = tmpTable.getScanner(scan);
+    scanner = tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
     scannerCount = countCellsFromScanner(scanner);
     expectedCount = numRows * numFamilies * numQualifiers - 2;
     assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,
         scannerCount == expectedCount);
 
-    scanner = tmpTable.getScanner(scan);
+    scanner = tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
     // Put in 2 new rows. The timestamps differ from the deleted rows
     Put put1 = new Put(rows[0]);
     put1.add(new KeyValue(rows[0], families[0], qualifiers[0], 1, value));
@@ -779,7 +776,7 @@ public class TestPartialResultsFromClientSide {
         scannerCount == expectedCount);
 
     // Now the scanner should see the cells that were added by puts
-    scanner = tmpTable.getScanner(scan);
+    scanner = tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
     scannerCount = countCellsFromScanner(scanner);
     expectedCount = numRows * numFamilies * numQualifiers;
     assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,

@@ -2749,8 +2749,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         scannerName = String.valueOf(scannerId);
         rsh = addScanner(scannerName, scanner, region);
         ttl = this.scannerLeaseTimeoutPeriod;
+        builder.setMvccReadPoint(scanner.getMvccReadPoint());
       }
-      assert scanner != null;
       if (request.hasRenew() && request.getRenew()) {
         rsh = scanners.get(scannerName);
         lease = regionServer.leases.removeLease(scannerName);
@@ -2868,7 +2868,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                       }
                     } else {
                       throw new UnsupportedOperationException("We only do " +
-                        "PayloadCarryingRpcControllers! FIX IF A PROBLEM: " + controller);
+                        "HBaseRpcControllers! FIX IF A PROBLEM: " + controller);
                     }
                   }
                   // Use half of whichever timeout value was more restrictive... But don't allow

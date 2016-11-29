@@ -334,7 +334,7 @@ public class HTable implements Table {
    * {@link Table#getScanner(Scan)} has other usage details.
    */
   @Override
-  public ResultScanner getScanner(final Scan scan) throws IOException {
+  public ResultScanner getScanner(Scan scan) throws IOException {
     if (scan.getBatch() > 0 && scan.isSmall()) {
       throw new IllegalArgumentException("Small scan should not be used with batching");
     }
@@ -345,7 +345,10 @@ public class HTable implements Table {
     if (scan.getMaxResultSize() <= 0) {
       scan.setMaxResultSize(scannerMaxResultSize);
     }
-
+    if (scan.getMvccReadPoint() > 0) {
+      // it is not supposed to be set by user, clear
+      scan.resetMvccReadPoint();
+    }
     Boolean async = scan.isAsyncPrefetch();
     if (async == null) {
       async = connConfiguration.isClientScannerAsyncPrefetch();

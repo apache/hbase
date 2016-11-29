@@ -375,6 +375,9 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
         LOG.info("Open scanner=" + id + " for scan=" + scan.toString()
           + " on region " + getLocation().toString());
       }
+      if (response.hasMvccReadPoint()) {
+        this.scan.setMvccReadPoint(response.getMvccReadPoint());
+      }
       return id;
     } catch (Exception e) {
       throw ProtobufUtil.handleRemoteException(e);

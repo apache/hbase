@@ -120,198 +120,192 @@ public abstract class ClientScanner extends AbstractClientScanner {
       ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
       RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
       throws IOException {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Scan table=" + tableName
-            + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(
+        "Scan table=" + tableName + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
+    }
+    this.scan = scan;
+    this.tableName = tableName;
+    this.lastNext = System.currentTimeMillis();
+    this.connection = connection;
+    this.pool = pool;
+    this.primaryOperationTimeout = primaryOperationTimeout;
+    this.retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    if (scan.getMaxResultSize() > 0) {
+      this.maxScannerResultSize = scan.getMaxResultSize();
+    } else {
+      this.maxScannerResultSize = conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+    }
+    this.scannerTimeout =
+        HBaseConfiguration.getInt(conf, HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+          HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
+          HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+
+    // check if application wants to collect scan metrics
+    initScanMetrics(scan);
+
+    // Use the caching from the Scan. If not set, use the default cache setting for this table.
+    if (this.scan.getCaching() > 0) {
+      this.caching = this.scan.getCaching();
+    } else {
+      this.caching = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_CACHING,
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
+    }
+
+    this.caller = rpcFactory.<Result[]> newCaller();
+    this.rpcControllerFactory = controllerFactory;
+
+    this.conf = conf;
+    initCache();
+    initializeScannerInConstruction();
+  }
+
+  protected abstract void initCache();
+
+  protected void initializeScannerInConstruction() throws IOException {
+    // initialize the scanner
+    nextScanner(this.caching, false);
+  }
+
+  protected ClusterConnection getConnection() {
+    return this.connection;
+  }
+
+  protected TableName getTable() {
+    return this.tableName;
+  }
+
+  protected int getRetries() {
+    return this.retries;
+  }
+
+  protected int getScannerTimeout() {
+    return this.scannerTimeout;
+  }
+
+  protected Configuration getConf() {
+    return this.conf;
+  }
+
+  protected Scan getScan() {
+    return scan;
+  }
+
+  protected ExecutorService getPool() {
+    return pool;
+  }
+
+  protected int getPrimaryOperationTimeout() {
+    return primaryOperationTimeout;
+  }
+
+  protected int getCaching() {
+    return caching;
+  }
+
+  protected long getTimestamp() {
+    return lastNext;
+  }
+
+  @VisibleForTesting
+  protected long getMaxResultSize() {
+    return maxScannerResultSize;
+  }
+
+  // returns true if the passed region endKey
+  protected boolean checkScanStopRow(final byte[] endKey) {
+    if (this.scan.getStopRow().length > 0) {
+      // there is a stop row, check to see if we are past it.
+      byte[] stopRow = scan.getStopRow();
+      int cmp = Bytes.compareTo(stopRow, 0, stopRow.length, endKey, 0, endKey.length);
+      if (cmp <= 0) {
+        // stopRow <= endKey (endKey is equals to or larger than stopRow)
+        // This is a stop.
+        return true;
       }
-      this.scan = scan;
-      this.tableName = tableName;
-      this.lastNext = System.currentTimeMillis();
-      this.connection = connection;
-      this.pool = pool;
-      this.primaryOperationTimeout = primaryOperationTimeout;
-      this.retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
-      if (scan.getMaxResultSize() > 0) {
-        this.maxScannerResultSize = scan.getMaxResultSize();
-      } else {
-        this.maxScannerResultSize = conf.getLong(
-          HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
-          HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
-      }
-      this.scannerTimeout = HBaseConfiguration.getInt(conf,
-        HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+    }
+    return false; // unlikely.
+  }
 
-      // check if application wants to collect scan metrics
-      initScanMetrics(scan);
+  private boolean possiblyNextScanner(int nbRows, final boolean done) throws IOException {
+    // If we have just switched replica, don't go to the next scanner yet. Rather, try
+    // the scanner operations on the new replica, from the right point in the scan
+    // Note that when we switched to a different replica we left it at a point
+    // where we just did the "openScanner" with the appropriate startrow
+    if (callable != null && callable.switchedToADifferentReplica()) return true;
+    return nextScanner(nbRows, done);
+  }
 
-      // Use the caching from the Scan.  If not set, use the default cache setting for this table.
-      if (this.scan.getCaching() > 0) {
-        this.caching = this.scan.getCaching();
-      } else {
-        this.caching = conf.getInt(
-            HConstants.HBASE_CLIENT_SCANNER_CACHING,
-            HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
-      }
-
-      this.caller = rpcFactory.<Result[]> newCaller();
-      this.rpcControllerFactory = controllerFactory;
-
-      this.conf = conf;
-      initCache();
-      initializeScannerInConstruction();
+  /*
+   * Gets a scanner for the next region. If this.currentRegion != null, then we will move to the
+   * endrow of this.currentRegion. Else we will get scanner at the scan.getStartRow(). We will go no
+   * further, just tidy up outstanding scanners, if <code>currentRegion != null</code> and
+   * <code>done</code> is true.
+   * @param nbRows
+   * @param done Server-side says we're done scanning.
+   */
+  protected boolean nextScanner(int nbRows, final boolean done) throws IOException {
+    // Close the previous scanner if it's open
+    if (this.callable != null) {
+      this.callable.setClose();
+      call(callable, caller, scannerTimeout);
+      this.callable = null;
     }
 
-    protected abstract void initCache();
+    // Where to start the next scanner
+    byte[] localStartKey;
 
-    protected void initializeScannerInConstruction() throws IOException{
-      // initialize the scanner
-      nextScanner(this.caching, false);
-    }
-
-    protected ClusterConnection getConnection() {
-      return this.connection;
-    }
-
-    protected TableName getTable() {
-      return this.tableName;
-    }
-
-    protected int getRetries() {
-      return this.retries;
-    }
-
-    protected int getScannerTimeout() {
-      return this.scannerTimeout;
-    }
-
-    protected Configuration getConf() {
-      return this.conf;
-    }
-
-    protected Scan getScan() {
-      return scan;
-    }
-
-    protected ExecutorService getPool() {
-      return pool;
-    }
-
-    protected int getPrimaryOperationTimeout() {
-      return primaryOperationTimeout;
-    }
-
-    protected int getCaching() {
-      return caching;
-    }
-
-    protected long getTimestamp() {
-      return lastNext;
-    }
-
-    @VisibleForTesting
-    protected long getMaxResultSize() {
-      return maxScannerResultSize;
-    }
-
-    // returns true if the passed region endKey
-    protected boolean checkScanStopRow(final byte [] endKey) {
-      if (this.scan.getStopRow().length > 0) {
-        // there is a stop row, check to see if we are past it.
-        byte [] stopRow = scan.getStopRow();
-        int cmp = Bytes.compareTo(stopRow, 0, stopRow.length,
-          endKey, 0, endKey.length);
-        if (cmp <= 0) {
-          // stopRow <= endKey (endKey is equals to or larger than stopRow)
-          // This is a stop.
-          return true;
-        }
-      }
-      return false; //unlikely.
-    }
-
-    private boolean possiblyNextScanner(int nbRows, final boolean done) throws IOException {
-      // If we have just switched replica, don't go to the next scanner yet. Rather, try
-      // the scanner operations on the new replica, from the right point in the scan
-      // Note that when we switched to a different replica we left it at a point
-      // where we just did the "openScanner" with the appropriate startrow
-      if (callable != null && callable.switchedToADifferentReplica()) return true;
-      return nextScanner(nbRows, done);
-    }
-
-    /*
-     * Gets a scanner for the next region.  If this.currentRegion != null, then
-     * we will move to the endrow of this.currentRegion.  Else we will get
-     * scanner at the scan.getStartRow().  We will go no further, just tidy
-     * up outstanding scanners, if <code>currentRegion != null</code> and
-     * <code>done</code> is true.
-     * @param nbRows
-     * @param done Server-side says we're done scanning.
-     */
-  protected boolean nextScanner(int nbRows, final boolean done)
-    throws IOException {
-      // Close the previous scanner if it's open
-      if (this.callable != null) {
-        this.callable.setClose();
-        call(callable, caller, scannerTimeout);
-        this.callable = null;
-      }
-
-      // Where to start the next scanner
-      byte [] localStartKey;
-
-      // if we're at end of table, close and return false to stop iterating
-      if (this.currentRegion != null) {
-        byte [] endKey = this.currentRegion.getEndKey();
-        if (endKey == null ||
-            Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY) ||
-            checkScanStopRow(endKey) ||
-            done) {
-          close();
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Finished " + this.currentRegion);
-          }
-          return false;
-        }
-        localStartKey = endKey;
+    // if we're at end of table, close and return false to stop iterating
+    if (this.currentRegion != null) {
+      byte[] endKey = this.currentRegion.getEndKey();
+      if (endKey == null || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)
+          || checkScanStopRow(endKey) || done) {
+        close();
         if (LOG.isTraceEnabled()) {
           LOG.trace("Finished " + this.currentRegion);
         }
-      } else {
-        localStartKey = this.scan.getStartRow();
+        return false;
       }
-
-      if (LOG.isDebugEnabled() && this.currentRegion != null) {
-        // Only worth logging if NOT first region in scan.
-        LOG.debug("Advancing internal scanner to startKey at '" +
-          Bytes.toStringBinary(localStartKey) + "'");
+      localStartKey = endKey;
+      // clear mvcc read point if we are going to switch regions
+      scan.resetMvccReadPoint();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Finished " + this.currentRegion);
       }
-      try {
-        callable = getScannerCallable(localStartKey, nbRows);
-        // Open a scanner on the region server starting at the
-        // beginning of the region
-        call(callable, caller, scannerTimeout);
-        this.currentRegion = callable.getHRegionInfo();
-        if (this.scanMetrics != null) {
-          this.scanMetrics.countOfRegions.incrementAndGet();
-        }
-      } catch (IOException e) {
-        close();
-        throw e;
-      }
-      return true;
+    } else {
+      localStartKey = this.scan.getStartRow();
     }
+
+    if (LOG.isDebugEnabled() && this.currentRegion != null) {
+      // Only worth logging if NOT first region in scan.
+      LOG.debug(
+        "Advancing internal scanner to startKey at '" + Bytes.toStringBinary(localStartKey) + "'");
+    }
+    try {
+      callable = getScannerCallable(localStartKey, nbRows);
+      // Open a scanner on the region server starting at the
+      // beginning of the region
+      call(callable, caller, scannerTimeout);
+      this.currentRegion = callable.getHRegionInfo();
+      if (this.scanMetrics != null) {
+        this.scanMetrics.countOfRegions.incrementAndGet();
+      }
+    } catch (IOException e) {
+      close();
+      throw e;
+    }
+    return true;
+  }
 
   @VisibleForTesting
   boolean isAnyRPCcancelled() {
     return callable.isAnyRPCcancelled();
   }
 
-  Result[] call(ScannerCallableWithReplicas callable,
-      RpcRetryingCaller<Result[]> caller, int scannerTimeout)
-      throws IOException, RuntimeException {
+  Result[] call(ScannerCallableWithReplicas callable, RpcRetryingCaller<Result[]> caller,
+      int scannerTimeout) throws IOException, RuntimeException {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
@@ -320,61 +314,57 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return caller.callWithoutRetries(callable, scannerTimeout);
   }
 
-    @InterfaceAudience.Private
-    protected ScannerCallableWithReplicas getScannerCallable(byte [] localStartKey,
-        int nbRows) {
-      scan.setStartRow(localStartKey);
-      ScannerCallable s =
-          new ScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
-              this.rpcControllerFactory);
-      s.setCaching(nbRows);
-      ScannerCallableWithReplicas sr = new ScannerCallableWithReplicas(tableName, getConnection(),
-       s, pool, primaryOperationTimeout, scan,
-       retries, scannerTimeout, caching, conf, caller);
-      return sr;
-    }
+  @InterfaceAudience.Private
+  protected ScannerCallableWithReplicas getScannerCallable(byte[] localStartKey, int nbRows) {
+    scan.setStartRow(localStartKey);
+    ScannerCallable s = new ScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
+        this.rpcControllerFactory);
+    s.setCaching(nbRows);
+    ScannerCallableWithReplicas sr = new ScannerCallableWithReplicas(tableName, getConnection(), s,
+        pool, primaryOperationTimeout, scan, retries, scannerTimeout, caching, conf, caller);
+    return sr;
+  }
 
-    /**
-     * Publish the scan metrics. For now, we use scan.setAttribute to pass the metrics back to the
-     * application or TableInputFormat.Later, we could push it to other systems. We don't use
-     * metrics framework because it doesn't support multi-instances of the same metrics on the same
-     * machine; for scan/map reduce scenarios, we will have multiple scans running at the same time.
-     *
-     * By default, scan metrics are disabled; if the application wants to collect them, this
-     * behavior can be turned on by calling calling {@link Scan#setScanMetricsEnabled(boolean)}
-     *
-     * <p>This invocation clears the scan metrics. Metrics are aggregated in the Scan instance.
-     */
-    protected void writeScanMetrics() {
-      if (this.scanMetrics == null || scanMetricsPublished) {
-        return;
-      }
-      MapReduceProtos.ScanMetrics pScanMetrics = ProtobufUtil.toScanMetrics(scanMetrics);
-      scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA, pScanMetrics.toByteArray());
-      scanMetricsPublished = true;
+  /**
+   * Publish the scan metrics. For now, we use scan.setAttribute to pass the metrics back to the
+   * application or TableInputFormat.Later, we could push it to other systems. We don't use metrics
+   * framework because it doesn't support multi-instances of the same metrics on the same machine;
+   * for scan/map reduce scenarios, we will have multiple scans running at the same time. By
+   * default, scan metrics are disabled; if the application wants to collect them, this behavior can
+   * be turned on by calling calling {@link Scan#setScanMetricsEnabled(boolean)}
+   * <p>
+   * This invocation clears the scan metrics. Metrics are aggregated in the Scan instance.
+   */
+  protected void writeScanMetrics() {
+    if (this.scanMetrics == null || scanMetricsPublished) {
+      return;
     }
+    MapReduceProtos.ScanMetrics pScanMetrics = ProtobufUtil.toScanMetrics(scanMetrics);
+    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA, pScanMetrics.toByteArray());
+    scanMetricsPublished = true;
+  }
 
-    protected void initSyncCache() {
+  protected void initSyncCache() {
     cache = new LinkedList<Result>();
   }
 
-    protected Result nextWithSyncCache() throws IOException {
-      // If the scanner is closed and there's nothing left in the cache, next is a no-op.
-      if (cache.size() == 0 && this.closed) {
-        return null;
-      }
-      if (cache.size() == 0) {
-        loadCache();
-      }
-
-      if (cache.size() > 0) {
-        return cache.poll();
-      }
-
-      // if we exhausted this scanner before calling close, write out the scan metrics
-      writeScanMetrics();
+  protected Result nextWithSyncCache() throws IOException {
+    // If the scanner is closed and there's nothing left in the cache, next is a no-op.
+    if (cache.size() == 0 && this.closed) {
       return null;
     }
+    if (cache.size() == 0) {
+      loadCache();
+    }
+
+    if (cache.size() > 0) {
+      return cache.poll();
+    }
+
+    // if we exhausted this scanner before calling close, write out the scan metrics
+    writeScanMetrics();
+    return null;
+  }
 
   @VisibleForTesting
   public int getCacheSize() {
