@@ -3408,23 +3408,39 @@ public class AssignmentManager extends ZooKeeperListener {
     return true;
   }
 
-  void invokeAssign(HRegionInfo regionInfo) {
+  void invokeAssignNow(HRegionInfo regionInfo, boolean forceNewPlan) {
+    threadPoolExecutorService.submit(new AssignCallable(this, regionInfo, forceNewPlan));
+  }
+
+  void invokeAssignLater(HRegionInfo regionInfo, boolean forceNewPlan, long sleepMillis) {
+    scheduledThreadPoolExecutor.schedule(new DelayedAssignCallable(new AssignCallable(this,
+            regionInfo, forceNewPlan)), sleepMillis, TimeUnit.MILLISECONDS);
+  }
+
+  public void invokeAssign(HRegionInfo regionInfo) {
     invokeAssign(regionInfo, true);
   }
 
-  public void invokeAssign(HRegionInfo regionInfo, boolean newPlan) {
-    threadPoolExecutorService.submit(new AssignCallable(this, regionInfo, newPlan));
+  public void invokeAssign(HRegionInfo regionInfo, boolean forceNewPlan) {
+    if (failedOpenTracker.containsKey(regionInfo.getEncodedName())) {
+      // Sleep before reassigning if this region has failed to open before
+      long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
+          getFailedAttempts(regionInfo.getEncodedName()));
+      invokeAssignLater(regionInfo, forceNewPlan, sleepTime);
+    } else {
+      // Immediately reassign if this region has never failed an open before
+      invokeAssignNow(regionInfo, forceNewPlan);
+    }
   }
 
-  public void invokeAssignLater(HRegionInfo regionInfo, long sleepMillis) {
-    scheduledThreadPoolExecutor.schedule(new DelayedAssignCallable(
-        new AssignCallable(this, regionInfo, true)), sleepMillis, TimeUnit.MILLISECONDS);
-  }
-
-  public void invokeAssignLaterOnFailure(HRegionInfo regionInfo) {
-    long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
-        failedOpenTracker.get(regionInfo.getEncodedName()).get());
-    invokeAssignLater(regionInfo, sleepTime);
+  private int getFailedAttempts(String regionName) {
+    AtomicInteger failedCount = failedOpenTracker.get(regionName);
+    if (failedCount != null) {
+      return failedCount.get();
+    } else {
+      // If we do not have a failed open tracker for a region assume it has never failed before
+      return 0;
+    }
   }
 
   void invokeUnAssign(HRegionInfo regionInfo) {
@@ -3738,10 +3754,7 @@ public class AssignmentManager extends ZooKeeperListener {
         } catch (HBaseIOException e) {
           LOG.warn("Failed to get region plan", e);
         }
-        // Have the current thread sleep a bit before resubmitting the RPC request
-        long sleepTime = backoffPolicy.getBackoffTime(retryConfig,
-            failedOpenTracker.get(encodedName).get());
-        invokeAssignLater(hri, sleepTime);
+        invokeAssign(hri, false);
       }
     }
   }
