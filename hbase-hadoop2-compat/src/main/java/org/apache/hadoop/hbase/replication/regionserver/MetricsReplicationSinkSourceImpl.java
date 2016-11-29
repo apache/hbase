@@ -20,23 +20,24 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
 public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkSource {
 
-  private final MutableGaugeLong ageGauge;
+  private final MutableHistogram ageHist;
   private final MutableFastCounter batchesCounter;
   private final MutableFastCounter opsCounter;
   private final MutableFastCounter hfilesCounter;
 
   public MetricsReplicationSinkSourceImpl(MetricsReplicationSourceImpl rms) {
-    ageGauge = rms.getMetricsRegistry().getGauge(SINK_AGE_OF_LAST_APPLIED_OP, 0L);
+    ageHist = rms.getMetricsRegistry().getHistogram(SINK_AGE_OF_LAST_APPLIED_OP);
     batchesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_BATCHES, 0L);
     opsCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_OPS, 0L);
     hfilesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_HFILES, 0L);
   }
 
   @Override public void setLastAppliedOpAge(long age) {
-    ageGauge.set(age);
+    ageHist.add(age);
   }
 
   @Override public void incrAppliedBatches(long batches) {
@@ -49,7 +50,7 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
 
   @Override
   public long getLastAppliedOpAge() {
-    return ageGauge.value();
+    return ageHist.getMax();
   }
 
   @Override
