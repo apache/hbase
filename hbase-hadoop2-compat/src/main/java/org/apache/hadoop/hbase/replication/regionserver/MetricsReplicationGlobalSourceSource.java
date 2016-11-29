@@ -20,11 +20,12 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
 public class MetricsReplicationGlobalSourceSource implements MetricsReplicationSourceSource{
   private final MetricsReplicationSourceImpl rms;
 
-  private final MutableGaugeLong ageOfLastShippedOpGauge;
+  private final MutableHistogram ageOfLastShippedOpHist;
   private final MutableGaugeLong sizeOfLogQueueGauge;
   private final MutableFastCounter logReadInEditsCounter;
   private final MutableFastCounter logEditsFilteredCounter;
@@ -47,7 +48,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   public MetricsReplicationGlobalSourceSource(MetricsReplicationSourceImpl rms) {
     this.rms = rms;
 
-    ageOfLastShippedOpGauge = rms.getMetricsRegistry().getGauge(SOURCE_AGE_OF_LAST_SHIPPED_OP, 0L);
+    ageOfLastShippedOpHist = rms.getMetricsRegistry().getHistogram(SOURCE_AGE_OF_LAST_SHIPPED_OP);
 
     sizeOfLogQueueGauge = rms.getMetricsRegistry().getGauge(SOURCE_SIZE_OF_LOG_QUEUE, 0L);
 
@@ -80,7 +81,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
   }
 
   @Override public void setLastShippedAge(long age) {
-    ageOfLastShippedOpGauge.set(age);
+    ageOfLastShippedOpHist.add(age);
   }
 
   @Override public void incrSizeOfLogQueue(int size) {
@@ -137,7 +138,7 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
 
   @Override
   public long getLastShippedAge() {
-    return ageOfLastShippedOpGauge.value();
+    return ageOfLastShippedOpHist.getMax();
   }
 
   @Override public void incrHFilesShipped(long hfiles) {
