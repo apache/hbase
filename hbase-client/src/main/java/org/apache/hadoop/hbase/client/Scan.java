@@ -169,6 +169,12 @@ public class Scan extends Query {
   private boolean small = false;
 
   /**
+   * The mvcc read point to use when open a scanner. Remember to clear it after switching regions as
+   * the mvcc is only valid within region scope.
+   */
+  private long mvccReadPoint = -1L;
+
+  /**
    * Create a Scan operation across all rows.
    */
   public Scan() {}
@@ -246,6 +252,7 @@ public class Scan extends Query {
       TimeRange tr = entry.getValue();
       setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
+    this.mvccReadPoint = scan.getMvccReadPoint();
   }
 
   /**
@@ -272,6 +279,7 @@ public class Scan extends Query {
       TimeRange tr = entry.getValue();
       setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
+    this.mvccReadPoint = -1L;
   }
 
   public boolean isGetScan() {
@@ -1003,5 +1011,27 @@ public class Scan extends Query {
     byte [] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
     if (bytes == null) return null;
     return ProtobufUtil.toScanMetrics(bytes);
+  }
+
+  /**
+   * Get the mvcc read point used to open a scanner.
+   */
+  long getMvccReadPoint() {
+    return mvccReadPoint;
+  }
+
+  /**
+   * Set the mvcc read point used to open a scanner.
+   */
+  Scan setMvccReadPoint(long mvccReadPoint) {
+    this.mvccReadPoint = mvccReadPoint;
+    return this;
+  }
+
+  /**
+   * Set the mvcc read point to -1 which means do not use it.
+   */
+  Scan resetMvccReadPoint() {
+    return setMvccReadPoint(-1L);
   }
 }

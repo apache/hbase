@@ -2510,6 +2510,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         scannerId = addScanner(scanner, region);
         scannerName = String.valueOf(scannerId);
         ttl = this.scannerLeaseTimeoutPeriod;
+        builder.setMvccReadPoint(scanner.getMvccReadPoint());
       }
       if (request.hasRenew() && request.getRenew()) {
         rsh = scanners.get(scannerName);

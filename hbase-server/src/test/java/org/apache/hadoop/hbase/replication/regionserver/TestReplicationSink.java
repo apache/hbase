@@ -333,22 +333,16 @@ public class TestReplicationSink {
     }
 
     entries.add(builder.build());
-    ResultScanner scanRes = null;
-    try {
-      Scan scan = new Scan();
-      scanRes = table1.getScanner(scan);
+    try (ResultScanner scanner = table1.getScanner(new Scan())) {
       // 6. Assert no existing data in table
-      assertEquals(0, scanRes.next(numRows).length);
-      // 7. Replicate the bulk loaded entry
-      SINK.replicateEntries(entries, CellUtil.createCellScanner(edit.getCells().iterator()),
-        replicationClusterId, baseNamespaceDir, hfileArchiveDir);
-      scanRes = table1.getScanner(scan);
+      assertEquals(0, scanner.next(numRows).length);
+    }
+    // 7. Replicate the bulk loaded entry
+    SINK.replicateEntries(entries, CellUtil.createCellScanner(edit.getCells().iterator()),
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir);
+    try (ResultScanner scanner = table1.getScanner(new Scan())) {
       // 8. Assert data is replicated
-      assertEquals(numRows, scanRes.next(numRows).length);
-    } finally {
-      if (scanRes != null) {
-        scanRes.close();
-      }
+      assertEquals(numRows, scanner.next(numRows).length);
     }
   }
 

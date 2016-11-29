@@ -436,10 +436,8 @@ public class TestTags {
       increment.add(new KeyValue(row2, f, q, 1234L, v));
       increment.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.increment(increment);
-      Scan scan = new Scan();
-      scan.setStartRow(row2);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(scan);
+      scanner = table.getScanner(new Scan().setStartRow(row2));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -458,10 +456,8 @@ public class TestTags {
       Append append = new Append(row3);
       append.add(f, q, Bytes.toBytes("b"));
       table.append(append);
-      scan = new Scan();
-      scan.setStartRow(row3);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(scan);
+      scanner = table.getScanner(new Scan().setStartRow(row3));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -475,7 +471,7 @@ public class TestTags {
       append.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.append(append);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(scan);
+      scanner = table.getScanner(new Scan().setStartRow(row3));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
@@ -498,10 +494,8 @@ public class TestTags {
       append.add(new KeyValue(row4, f, q, 1234L, v));
       append.setAttribute("visibility", Bytes.toBytes("tag2"));
       table.append(append);
-      scan = new Scan();
-      scan.setStartRow(row4);
       TestCoprocessorForTags.checkTagPresence = true;
-      scanner = table.getScanner(scan);
+      scanner = table.getScanner(new Scan().setStartRow(row4));
       result = scanner.next();
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;

@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.PackagePrivateFieldAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -5744,8 +5745,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // synchronize on scannerReadPoints so that nobody calculates
       // getSmallestReadPoint, before scannerReadPoints is updated.
       IsolationLevel isolationLevel = scan.getIsolationLevel();
-      synchronized(scannerReadPoints) {
-        if (nonce == HConstants.NO_NONCE || rsServices == null
+      long mvccReadPoint = PackagePrivateFieldAccessor.getMvccReadPoint(scan);
+      synchronized (scannerReadPoints) {
+        if (mvccReadPoint > 0) {
+          this.readPt = mvccReadPoint;
+        } else if (nonce == HConstants.NO_NONCE || rsServices == null
             || rsServices.getNonceManager() == null) {
           this.readPt = getReadpoint(isolationLevel);
         } else {
@@ -5753,7 +5757,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         scannerReadPoints.put(this, this.readPt);
       }
-
       initializeScanners(scan, additionalScanners);
     }
 
