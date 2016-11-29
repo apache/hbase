@@ -329,7 +329,6 @@ public class MasterProcedureTestingUtility {
   private static void testRecoveryAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
       final int numSteps, final boolean expectExecRunning) throws Exception {
-    final Procedure proc = procExec.getProcedure(procId);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
 
@@ -338,7 +337,7 @@ public class MasterProcedureTestingUtility {
     //   restart executor/store
     //   execute step N - save on store
     for (int i = 0; i < numSteps; ++i) {
-      LOG.info("Restart " + i + " exec state: " + proc);
+      LOG.info("Restart " + i + " exec state: " + procExec.getProcedure(procId));
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
       ProcedureTestingUtility.restart(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
@@ -365,11 +364,10 @@ public class MasterProcedureTestingUtility {
    */
   public static void testRecoveryAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId) throws Exception {
-    final Procedure proc = procExec.getProcedure(procId);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
     for (int i = 0; !procExec.isFinished(procId); ++i) {
-      LOG.info("Restart " + i + " exec state: " + proc);
+      LOG.info("Restart " + i + " exec state: " + procExec.getProcedure(procId));
       ProcedureTestingUtility.restart(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     }
@@ -388,8 +386,6 @@ public class MasterProcedureTestingUtility {
   public static void testRollbackAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
       final int lastStep) throws Exception {
-    final Procedure proc = procExec.getProcedure(procId);
-
     // Execute up to last step
     testRecoveryAndDoubleExecution(procExec, procId, lastStep, false);
 
@@ -402,7 +398,7 @@ public class MasterProcedureTestingUtility {
     procExec.registerListener(abortListener);
     try {
       for (int i = 0; !procExec.isFinished(procId); ++i) {
-        LOG.info("Restart " + i + " rollback state: " + proc);
+        LOG.info("Restart " + i + " rollback state: " + procExec.getProcedure(procId));
         ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
         ProcedureTestingUtility.restart(procExec);
         ProcedureTestingUtility.waitProcedure(procExec, procId);
