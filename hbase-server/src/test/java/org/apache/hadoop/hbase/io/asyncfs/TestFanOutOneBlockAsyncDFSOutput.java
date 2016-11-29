@@ -128,6 +128,21 @@ public class TestFanOutOneBlockAsyncDFSOutput {
   }
 
   @Test
+  public void testMaxByteBufAllocated() throws Exception {
+    Path f = new Path("/" + name.getMethodName());
+    EventLoop eventLoop = EVENT_LOOP_GROUP.next();
+    final FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f,
+      true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop);
+    out.guess(5 * 1024);
+    assertEquals(8 * 1024, out.guess(5 * 1024));
+    assertEquals(16 * 1024, out.guess(10 * 1024));
+    // it wont reduce directly to 4KB
+    assertEquals(8 * 1024, out.guess(4 * 1024));
+    // This time it will reduece
+    assertEquals(4 * 1024, out.guess(4 * 1024));
+  }
+
+  @Test
   public void testRecover() throws IOException, InterruptedException, ExecutionException {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
