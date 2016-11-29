@@ -23,12 +23,14 @@ import static org.junit.Assert.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.OffheapKeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.ArrayBackedTag;
@@ -46,24 +48,35 @@ public class TestWALCellCodecWithCompression {
 
   @Test
   public void testEncodeDecodeKVsWithTags() throws Exception {
-    doTest(false);
+    doTest(false, false);
   }
 
   @Test
   public void testEncodeDecodeKVsWithTagsWithTagsCompression() throws Exception {
-    doTest(true);
+    doTest(true, false);
   }
 
-  private void doTest(boolean compressTags) throws Exception {
+  @Test
+  public void testEncodeDecodeOffKVsWithTagsWithTagsCompression() throws Exception {
+    doTest(true, true);
+  }
+
+  private void doTest(boolean compressTags, boolean offheapKV) throws Exception {
     Configuration conf = new Configuration(false);
     conf.setBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, compressTags);
     WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class, false,
         compressTags));
     ByteArrayOutputStream bos = new ByteArrayOutputStream(1024);
     Encoder encoder = codec.getEncoder(bos);
-    encoder.write(createKV(1));
-    encoder.write(createKV(0));
-    encoder.write(createKV(2));
+    if (offheapKV) {
+      encoder.write(createOffheapKV(1));
+      encoder.write(createOffheapKV(0));
+      encoder.write(createOffheapKV(2));
+    } else {
+      encoder.write(createKV(1));
+      encoder.write(createKV(0));
+      encoder.write(createKV(2));
+    }
 
     InputStream is = new ByteArrayInputStream(bos.toByteArray());
     Decoder decoder = codec.getDecoder(is);
@@ -94,5 +107,20 @@ public class TestWALCellCodecWithCompression {
       tags.add(new ArrayBackedTag((byte) i, Bytes.toBytes("tagValue" + i)));
     }
     return new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, tags);
+  }
+
+  private OffheapKeyValue createOffheapKV(int noOfTags) {
+    byte[] row = Bytes.toBytes("myRow");
+    byte[] cf = Bytes.toBytes("myCF");
+    byte[] q = Bytes.toBytes("myQualifier");
+    byte[] value = Bytes.toBytes("myValue");
+    List<Tag> tags = new ArrayList<Tag>(noOfTags);
+    for (int i = 1; i <= noOfTags; i++) {
+      tags.add(new ArrayBackedTag((byte) i, Bytes.toBytes("tagValue" + i)));
+    }
+    KeyValue kv = new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, tags);
+    ByteBuffer dbb = ByteBuffer.allocateDirect(kv.getBuffer().length);
+    dbb.put(kv.getBuffer());
+    return new OffheapKeyValue(dbb, 0, kv.getBuffer().length);
   }
 }

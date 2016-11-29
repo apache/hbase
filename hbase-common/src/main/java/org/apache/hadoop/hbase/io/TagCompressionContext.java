@@ -70,7 +70,7 @@ public class TagCompressionContext {
     while (pos < endOffset) {
       int tagLen = Bytes.readAsInt(in, pos, Tag.TAG_LENGTH_SIZE);
       pos += Tag.TAG_LENGTH_SIZE;
-      write(in, pos, tagLen, out);
+      Dictionary.write(out, in, pos, tagLen, tagDict);
       pos += tagLen;
     }
   }
@@ -94,7 +94,7 @@ public class TagCompressionContext {
       while (pos < endOffset) {
         int tagLen = ByteBufferUtils.readAsInt(in, pos, Tag.TAG_LENGTH_SIZE);
         pos += Tag.TAG_LENGTH_SIZE;
-        write(in, pos, tagLen, out);
+        Dictionary.write(out, in, pos, tagLen, tagDict);;
         pos += tagLen;
       }
     }
@@ -183,34 +183,6 @@ public class TagCompressionContext {
       byte[] tagBuf = new byte[length];
       uncompressTags(src, tagBuf, 0, length);
       dest.put(tagBuf);
-    }
-  }
-
-  private void write(byte[] data, int offset, int length, OutputStream out) throws IOException {
-    short dictIdx = Dictionary.NOT_IN_DICTIONARY;
-    if (tagDict != null) {
-      dictIdx = tagDict.findEntry(data, offset, length);
-    }
-    if (dictIdx == Dictionary.NOT_IN_DICTIONARY) {
-      out.write(Dictionary.NOT_IN_DICTIONARY);
-      StreamUtils.writeRawVInt32(out, length);
-      out.write(data, offset, length);
-    } else {
-      StreamUtils.writeShort(out, dictIdx);
-    }
-  }
-
-  private void write(ByteBuffer data, int offset, int length, OutputStream out) throws IOException {
-    short dictIdx = Dictionary.NOT_IN_DICTIONARY;
-    if (tagDict != null) {
-      dictIdx = tagDict.findEntry(data, offset, length);
-    }
-    if (dictIdx == Dictionary.NOT_IN_DICTIONARY) {
-      out.write(Dictionary.NOT_IN_DICTIONARY);
-      StreamUtils.writeRawVInt32(out, length);
-      ByteBufferUtils.copyBufferToStream(out, data, offset, length);
-    } else {
-      StreamUtils.writeShort(out, dictIdx);
     }
   }
 }

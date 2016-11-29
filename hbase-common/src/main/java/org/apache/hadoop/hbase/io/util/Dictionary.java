@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.io.util;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 
 /**
  * Dictionary interface
@@ -80,4 +83,52 @@ public interface Dictionary {
    * Flushes the dictionary, empties all values.
    */
   void clear();
+
+  /**
+   * Helper methods to write the dictionary data to the OutputStream
+   * @param out the outputstream to which data needs to be written
+   * @param data the data to be written in byte[]
+   * @param offset the offset
+   * @param length length to be written
+   * @param dict the dictionary whose contents are to written
+   * @throws IOException
+   */
+  public static void write(OutputStream out, byte[] data, int offset, int length, Dictionary dict)
+      throws IOException {
+    short dictIdx = Dictionary.NOT_IN_DICTIONARY;
+    if (dict != null) {
+      dictIdx = dict.findEntry(data, offset, length);
+    }
+    if (dictIdx == Dictionary.NOT_IN_DICTIONARY) {
+      out.write(Dictionary.NOT_IN_DICTIONARY);
+      StreamUtils.writeRawVInt32(out, length);
+      out.write(data, offset, length);
+    } else {
+      StreamUtils.writeShort(out, dictIdx);
+    }
+  }
+
+  /**
+   * Helper methods to write the dictionary data to the OutputStream
+   * @param out the outputstream to which data needs to be written
+   * @param data the data to be written in ByteBuffer
+   * @param offset the offset
+   * @param length length to be written
+   * @param dict the dictionary whose contents are to written
+   * @throws IOException
+   */
+  public static void write(OutputStream out, ByteBuffer data, int offset, int length,
+      Dictionary dict) throws IOException {
+    short dictIdx = Dictionary.NOT_IN_DICTIONARY;
+    if (dict != null) {
+      dictIdx = dict.findEntry(data, offset, length);
+    }
+    if (dictIdx == Dictionary.NOT_IN_DICTIONARY) {
+      out.write(Dictionary.NOT_IN_DICTIONARY);
+      StreamUtils.writeRawVInt32(out, length);
+      ByteBufferUtils.copyBufferToStream(out, data, offset, length);
+    } else {
+      StreamUtils.writeShort(out, dictIdx);
+    }
+  }
 }

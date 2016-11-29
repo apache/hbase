@@ -41,7 +41,6 @@ public class TestRpcServer {
 
   @Test
   public void testAllocateByteBuffToReadInto() throws Exception {
-    System.out.println(Long.MAX_VALUE);
     int maxBuffersInPool = 10;
     ByteBufferPool pool = new ByteBufferPool(6 * 1024, maxBuffersInPool);
     initPoolWithAllBuffers(pool, maxBuffersInPool);

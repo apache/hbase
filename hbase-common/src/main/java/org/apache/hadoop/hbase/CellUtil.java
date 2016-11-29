@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience.Private;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
+import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1578,12 +1579,12 @@ public final class CellUtil {
 
   /**
    * Writes the row from the given cell to the output stream
-   * @param out The dataoutputstream to which the data has to be written
+   * @param out The outputstream to which the data has to be written
    * @param cell The cell whose contents has to be written
    * @param rlength the row length
    * @throws IOException
    */
-  public static void writeRow(DataOutputStream out, Cell cell, short rlength) throws IOException {
+  public static void writeRow(OutputStream out, Cell cell, short rlength) throws IOException {
     if (cell instanceof ByteBufferCell) {
       ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getRowByteBuffer(),
         ((ByteBufferCell) cell).getRowPosition(), rlength);
@@ -1611,12 +1612,12 @@ public final class CellUtil {
 
   /**
    * Writes the family from the given cell to the output stream
-   * @param out The dataoutputstream to which the data has to be written
+   * @param out The outputstream to which the data has to be written
    * @param cell The cell whose contents has to be written
    * @param flength the family length
    * @throws IOException
    */
-  public static void writeFamily(DataOutputStream out, Cell cell, byte flength) throws IOException {
+  public static void writeFamily(OutputStream out, Cell cell, byte flength) throws IOException {
     if (cell instanceof ByteBufferCell) {
       ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getFamilyByteBuffer(),
         ((ByteBufferCell) cell).getFamilyPosition(), flength);
@@ -1627,12 +1628,12 @@ public final class CellUtil {
 
   /**
    * Writes the qualifier from the given cell to the output stream
-   * @param out The dataoutputstream to which the data has to be written
+   * @param out The outputstream to which the data has to be written
    * @param cell The cell whose contents has to be written
    * @param qlength the qualifier length
    * @throws IOException
    */
-  public static void writeQualifier(DataOutputStream out, Cell cell, int qlength)
+  public static void writeQualifier(OutputStream out, Cell cell, int qlength)
       throws IOException {
     if (cell instanceof ByteBufferCell) {
       ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getQualifierByteBuffer(),
@@ -1662,12 +1663,12 @@ public final class CellUtil {
 
   /**
    * Writes the value from the given cell to the output stream
-   * @param out The dataoutputstream to which the data has to be written
+   * @param out The outputstream to which the data has to be written
    * @param cell The cell whose contents has to be written
    * @param vlength the value length
    * @throws IOException
    */
-  public static void writeValue(DataOutputStream out, Cell cell, int vlength) throws IOException {
+  public static void writeValue(OutputStream out, Cell cell, int vlength) throws IOException {
     if (cell instanceof ByteBufferCell) {
       ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getValueByteBuffer(),
         ((ByteBufferCell) cell).getValuePosition(), vlength);
@@ -1678,12 +1679,12 @@ public final class CellUtil {
 
   /**
    * Writes the tag from the given cell to the output stream
-   * @param out The dataoutputstream to which the data has to be written
+   * @param out The outputstream to which the data has to be written
    * @param cell The cell whose contents has to be written
    * @param tagsLength the tag length
    * @throws IOException
    */
-  public static void writeTags(DataOutputStream out, Cell cell, int tagsLength) throws IOException {
+  public static void writeTags(OutputStream out, Cell cell, int tagsLength) throws IOException {
     if (cell instanceof ByteBufferCell) {
       ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getTagsByteBuffer(),
         ((ByteBufferCell) cell).getTagsPosition(), tagsLength);
@@ -2230,7 +2231,8 @@ public final class CellUtil {
    * @param tagCompressionContext the TagCompressionContext
    * @throws IOException can throw IOException if the compression encounters issue
    */
-  public static void compressTags(DataOutputStream out, Cell cell,
+  @InterfaceAudience.Private
+  public static void compressTags(OutputStream out, Cell cell,
       TagCompressionContext tagCompressionContext) throws IOException {
     if (cell instanceof ByteBufferCell) {
       tagCompressionContext.compressTags(out, ((ByteBufferCell) cell).getTagsByteBuffer(),
@@ -2238,6 +2240,40 @@ public final class CellUtil {
     } else {
       tagCompressionContext.compressTags(out, cell.getTagsArray(), cell.getTagsOffset(),
           cell.getTagsLength());
+    }
+  }
+
+  @InterfaceAudience.Private
+  public static void compressRow(OutputStream out, Cell cell, Dictionary dict) throws IOException {
+    if (cell instanceof ByteBufferCell) {
+      Dictionary.write(out, ((ByteBufferCell) cell).getRowByteBuffer(),
+        ((ByteBufferCell) cell).getRowPosition(), cell.getRowLength(), dict);
+    } else {
+      Dictionary.write(out, cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), dict);
+    }
+  }
+
+  @InterfaceAudience.Private
+  public static void compressFamily(OutputStream out, Cell cell, Dictionary dict)
+      throws IOException {
+    if (cell instanceof ByteBufferCell) {
+      Dictionary.write(out, ((ByteBufferCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferCell) cell).getFamilyPosition(), cell.getFamilyLength(), dict);
+    } else {
+      Dictionary.write(out, cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+        dict);
+    }
+  }
+
+  @InterfaceAudience.Private
+  public static void compressQualifier(OutputStream out, Cell cell, Dictionary dict)
+      throws IOException {
+    if (cell instanceof ByteBufferCell) {
+      Dictionary.write(out, ((ByteBufferCell) cell).getQualifierByteBuffer(),
+        ((ByteBufferCell) cell).getQualifierPosition(), cell.getQualifierLength(), dict);
+    } else {
+      Dictionary.write(out, cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength(), dict);
     }
   }
 

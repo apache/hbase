@@ -28,9 +28,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
+import org.apache.hadoop.hbase.io.ByteBufferWriterOutputStream;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
@@ -195,29 +197,32 @@ public class SecureWALCellCodec extends WALCellCodec {
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       OutputStream cout = encryptor.createEncryptionStream(baos);
-
+      ByteBufferWriterOutputStream bos = new ByteBufferWriterOutputStream(cout);
       int tlen = cell.getTagsLength();
       // Write the KeyValue infrastructure as VInts.
-      StreamUtils.writeRawVInt32(cout, KeyValueUtil.keyLength(cell));
-      StreamUtils.writeRawVInt32(cout, cell.getValueLength());
+      StreamUtils.writeRawVInt32(bos, KeyValueUtil.keyLength(cell));
+      StreamUtils.writeRawVInt32(bos, cell.getValueLength());
       // To support tags
-      StreamUtils.writeRawVInt32(cout, tlen);
+      StreamUtils.writeRawVInt32(bos, tlen);
 
       // Write row, qualifier, and family
-      StreamUtils.writeRawVInt32(cout, cell.getRowLength());
-      cout.write(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-      StreamUtils.writeRawVInt32(cout, cell.getFamilyLength());
-      cout.write(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
-      StreamUtils.writeRawVInt32(cout, cell.getQualifierLength());
-      cout.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+      short rowLength = cell.getRowLength();
+      StreamUtils.writeRawVInt32(bos, rowLength);
+      CellUtil.writeRow(bos, cell, rowLength);
+      byte familyLength = cell.getFamilyLength();
+      StreamUtils.writeRawVInt32(bos, familyLength);
+      CellUtil.writeFamily(bos, cell, familyLength);
+      int qualifierLength = cell.getQualifierLength();
+      StreamUtils.writeRawVInt32(bos, qualifierLength);
+      CellUtil.writeQualifier(bos, cell, qualifierLength);
       // Write the rest ie. ts, type, value and tags parts
-      StreamUtils.writeLong(cout, cell.getTimestamp());
-      cout.write(cell.getTypeByte());
-      cout.write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+      StreamUtils.writeLong(bos, cell.getTimestamp());
+      bos.write(cell.getTypeByte());
+      CellUtil.writeValue(bos, cell, cell.getValueLength());
       if (tlen > 0) {
-        cout.write(cell.getTagsArray(), cell.getTagsOffset(), tlen);
+        CellUtil.writeTags(bos, cell, tlen);
       }
-      cout.close();
+      bos.close();
 
       StreamUtils.writeRawVInt32(out, baos.size());
       baos.writeTo(out);
