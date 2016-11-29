@@ -216,7 +216,7 @@ class MemStoreFlusher implements FlushRequester {
             + humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize())
             + ", Region memstore size="
             + humanReadableInt(regionToFlush.getMemstoreSize()));
-        flushedOne = flushRegion(regionToFlush, true, true);
+        flushedOne = flushRegion(regionToFlush, true, false);
 
         if (!flushedOne) {
           LOG.info("Excluding unflushable region " + regionToFlush +
