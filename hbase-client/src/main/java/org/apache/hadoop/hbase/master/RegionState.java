@@ -176,6 +176,8 @@ public class RegionState {
   private final HRegionInfo hri;
   private final ServerName serverName;
   private final State state;
+  // The duration of region in transition
+  private long ritDuration;
 
   public RegionState(HRegionInfo region, State state) {
     this(region, state, System.currentTimeMillis(), null);
@@ -188,10 +190,16 @@ public class RegionState {
 
   public RegionState(HRegionInfo region,
       State state, long stamp, ServerName serverName) {
+    this(region, state, stamp, serverName, 0);
+  }
+
+  public RegionState(HRegionInfo region, State state, long stamp, ServerName serverName,
+      long ritDuration) {
     this.hri = region;
     this.state = state;
     this.stamp = stamp;
     this.serverName = serverName;
+    this.ritDuration = ritDuration;
   }
 
   public State getState() {
@@ -208,6 +216,19 @@ public class RegionState {
 
   public ServerName getServerName() {
     return serverName;
+  }
+
+  public long getRitDuration() {
+    return ritDuration;
+  }
+
+  /**
+   * Update the duration of region in transition
+   * @param previousStamp previous RegionState's timestamp
+   */
+  @InterfaceAudience.Private
+  void updateRitDuration(long previousStamp) {
+    this.ritDuration += (this.stamp - previousStamp);
   }
 
   /**

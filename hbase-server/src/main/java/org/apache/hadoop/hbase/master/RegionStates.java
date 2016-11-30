@@ -451,7 +451,15 @@ public class RegionStates {
     updateRegionState(hri, State.OPEN, serverName, openSeqNum);
 
     synchronized (this) {
-      regionsInTransition.remove(encodedName);
+      RegionState regionState = regionsInTransition.remove(encodedName);
+      // When region is online and remove from regionsInTransition,
+      // update the RIT duration to assignment manager metrics
+      if (regionState != null && this.server.getAssignmentManager() != null) {
+        long ritDuration = System.currentTimeMillis() - regionState.getStamp()
+            + regionState.getRitDuration();
+        this.server.getAssignmentManager().getAssignmentManagerMetrics()
+            .updateRitDuration(ritDuration);
+      }
       ServerName oldServerName = regionAssignments.put(hri, serverName);
       if (!serverName.equals(oldServerName)) {
         if (LOG.isDebugEnabled()) {
@@ -1126,7 +1134,12 @@ public class RegionStates {
     }
 
     synchronized (this) {
-      regionsInTransition.put(encodedName, regionState);
+      RegionState oldRegionState = regionsInTransition.put(encodedName, regionState);
+      // When region transform old region state to new region state,
+      // accumulate the RIT duration to new region state.
+      if (oldRegionState != null) {
+        regionState.updateRitDuration(oldRegionState.getStamp());
+      }
       putRegionState(regionState);
 
       // For these states, region should be properly closed.
