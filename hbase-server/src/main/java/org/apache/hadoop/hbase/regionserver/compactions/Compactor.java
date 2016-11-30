@@ -77,6 +77,15 @@ public abstract class Compactor<T extends CellSink> {
   /** specify how many days to keep MVCC values during major compaction **/ 
   protected int keepSeqIdPeriod;
 
+  // Configs that drive whether we drop page cache behind compactions
+  protected static final String  MAJOR_COMPACTION_DROP_CACHE =
+      "hbase.regionserver.majorcompaction.pagecache.drop";
+  protected static final String MINOR_COMPACTION_DROP_CACHE =
+      "hbase.regionserver.minorcompaction.pagecache.drop";
+
+  private boolean dropCacheMajor;
+  private boolean dropCacheMinor;
+
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(final Configuration conf, final Store store) {
     this.conf = conf;
@@ -87,6 +96,8 @@ public abstract class Compactor<T extends CellSink> {
         Compression.Algorithm.NONE : this.store.getFamily().getCompactionCompression();
     this.keepSeqIdPeriod = Math.max(this.conf.getInt(HConstants.KEEP_SEQID_PERIOD, 
       HConstants.MIN_KEEP_SEQID_PERIOD), HConstants.MIN_KEEP_SEQID_PERIOD);
+    this.dropCacheMajor = conf.getBoolean(MAJOR_COMPACTION_DROP_CACHE, true);
+    this.dropCacheMinor = conf.getBoolean(MINOR_COMPACTION_DROP_CACHE, true);
   }
 
   public interface CellSink {
@@ -267,6 +278,13 @@ public abstract class Compactor<T extends CellSink> {
     List<StoreFileScanner> scanners;
     Collection<StoreFile> readersToClose;
     T writer = null;
+    boolean dropCache;
+    if (request.isMajor() || request.isAllFiles()) {
+      dropCache = this.dropCacheMajor;
+    } else {
+      dropCache = this.dropCacheMinor;
+    }
+
     if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", true)) {
       // clone all StoreFiles, so we'll do the compaction on a independent copy of StoreFiles,
       // HFiles, and their readers
@@ -274,12 +292,10 @@ public abstract class Compactor<T extends CellSink> {
       for (StoreFile f : request.getFiles()) {
         readersToClose.add(f.cloneForReader());
       }
-      scanners = createFileScanners(readersToClose, smallestReadPoint,
-        store.throttleCompaction(request.getSize()));
+      scanners = createFileScanners(readersToClose, smallestReadPoint, dropCache);
     } else {
       readersToClose = Collections.emptyList();
-      scanners = createFileScanners(request.getFiles(), smallestReadPoint,
-        store.throttleCompaction(request.getSize()));
+      scanners = createFileScanners(request.getFiles(), smallestReadPoint, dropCache);
     }
     InternalScanner scanner = null;
     boolean finished = false;
@@ -300,7 +316,7 @@ public abstract class Compactor<T extends CellSink> {
         smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
         cleanSeqId = true;
       }
-      writer = sinkFactory.createWriter(scanner, fd, store.throttleCompaction(request.getSize()));
+      writer = sinkFactory.createWriter(scanner, fd, dropCache);
       finished =
           performCompaction(scanner, writer, smallestReadPoint, cleanSeqId, throughputController);
       if (!finished) {
