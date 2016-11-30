@@ -170,7 +170,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   private int capacity = 4 * 1024;
 
   // LIMIT is 128MB
-  private final int LIMIT = 128 * 1024 * 1024;
+  private static final int LIMIT = 128 * 1024 * 1024;
 
   private enum State {
     STREAMING, CLOSING, BROKEN, CLOSED

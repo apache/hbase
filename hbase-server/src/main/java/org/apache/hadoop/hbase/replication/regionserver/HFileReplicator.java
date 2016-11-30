@@ -71,7 +71,7 @@ public class HFileReplicator {
   public static final int REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_DEFAULT = 10;
 
   private static final Log LOG = LogFactory.getLog(HFileReplicator.class);
-  private final String UNDERSCORE = "_";
+  private static final String UNDERSCORE = "_";
   private final static FsPermission PERM_ALL_ACCESS = FsPermission.valueOf("-rwxrwxrwx");
 
   private Configuration sourceClusterConf;

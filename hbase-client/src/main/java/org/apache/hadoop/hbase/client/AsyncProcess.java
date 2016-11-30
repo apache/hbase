@@ -118,7 +118,7 @@ class AsyncProcess {
   private static final String THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS =
       "hbase.client.threshold.log.details";
   private static final int DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS = 10;
-  private final int THRESHOLD_TO_LOG_REGION_DETAILS = 2;
+  private static final int THRESHOLD_TO_LOG_REGION_DETAILS = 2;
 
   /**
    * The maximum size of single RegionServer.

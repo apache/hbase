@@ -59,12 +59,12 @@ import org.apache.hadoop.hbase.util.ObjectIntPair;
  */
 @InterfaceAudience.Private
 public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
-  final int MASK_TIMESTAMP_LENGTH = (1 << 0) | (1 << 1) | (1 << 2);
-  final int SHIFT_TIMESTAMP_LENGTH = 0;
-  final int FLAG_SAME_KEY_LENGTH = 1 << 3;
-  final int FLAG_SAME_VALUE_LENGTH = 1 << 4;
-  final int FLAG_SAME_TYPE = 1 << 5;
-  final int FLAG_SAME_VALUE = 1 << 6;
+  static final int MASK_TIMESTAMP_LENGTH = (1 << 0) | (1 << 1) | (1 << 2);
+  static final int SHIFT_TIMESTAMP_LENGTH = 0;
+  static final int FLAG_SAME_KEY_LENGTH = 1 << 3;
+  static final int FLAG_SAME_VALUE_LENGTH = 1 << 4;
+  static final int FLAG_SAME_TYPE = 1 << 5;
+  static final int FLAG_SAME_VALUE = 1 << 6;
 
   private static class FastDiffCompressionState extends CompressionState {
     byte[] timestamp = new byte[KeyValue.TIMESTAMP_SIZE];

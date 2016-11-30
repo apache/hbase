@@ -100,7 +100,7 @@ public class WALEdit implements Writable, HeapSize {
   @VisibleForTesting
   public static final byte [] BULK_LOAD = Bytes.toBytes("HBASE::BULK_LOAD");
 
-  private final int VERSION_2 = -1;
+  private static final int VERSION_2 = -1;
   private final boolean isReplay;
 
   private ArrayList<Cell> cells = null;
