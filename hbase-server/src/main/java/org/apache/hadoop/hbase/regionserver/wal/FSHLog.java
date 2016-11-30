@@ -849,6 +849,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
      */
     private volatile CountDownLatch safePointReleasedLatch = new CountDownLatch(1);
 
+    private void checkIfSyncFailed(SyncFuture syncFuture) throws FailedSyncBeforeLogCloseException {
+      if (syncFuture.isThrowable()) {
+        throw new FailedSyncBeforeLogCloseException(syncFuture.getThrowable());
+      }
+    }
+
     /**
      * For Thread A to call when it is ready to wait on the 'safe point' to be attained. Thread A
      * will be held in here until Thread B calls {@link #safePointAttained()}
@@ -856,16 +862,12 @@ public class FSHLog extends AbstractFSWAL<Writer> {
      *          exception, then something is up w/ our syncing.
      * @return The passed <code>syncFuture</code>
      */
-    SyncFuture waitSafePoint(final SyncFuture syncFuture) throws InterruptedException,
+    SyncFuture waitSafePoint(SyncFuture syncFuture) throws InterruptedException,
         FailedSyncBeforeLogCloseException {
-      while (true) {
-        if (this.safePointAttainedLatch.await(1, TimeUnit.MILLISECONDS)) {
-          break;
-        }
-        if (syncFuture.isThrowable()) {
-          throw new FailedSyncBeforeLogCloseException(syncFuture.getThrowable());
-        }
+      while (!this.safePointAttainedLatch.await(1, TimeUnit.MILLISECONDS)) {
+        checkIfSyncFailed(syncFuture);
       }
+      checkIfSyncFailed(syncFuture);
       return syncFuture;
     }
 
