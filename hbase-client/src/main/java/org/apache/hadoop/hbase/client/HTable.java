@@ -307,6 +307,9 @@ public class HTable implements HTableInterface, RegionLocator {
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
+    if (tableName == null) {
+      throw new IllegalArgumentException("Given table name is null");
+    }
     this.tableName = tableName;
     this.cleanupConnectionOnClose = false;
     this.connection = connection;

@@ -60,6 +60,9 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    */
   public RegionServerCallable(Connection connection, TableName tableName, byte [] row) {
     this.connection = connection;
+    if (tableName == null) {
+      throw new IllegalArgumentException("Given tableName is null");
+    }
     this.tableName = tableName;
     this.row = row;
   }
