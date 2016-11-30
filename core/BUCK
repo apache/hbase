@@ -29,6 +29,8 @@ cxx_library(
         "meta-utils.h",
         "get.h",
         "time_range.h",
+        "configuration.h",
+        "hbase_configuration_loader.h",
     ],
     srcs=[
         "cell.cc",
@@ -37,6 +39,8 @@ cxx_library(
         "meta-utils.cc",
         "get.cc",
         "time_range.cc",
+        "configuration.cc",
+        "hbase_configuration_loader.cc",
     ],
     deps=[
         "//connection:connection",
@@ -72,6 +76,12 @@ cxx_test(name="get-test",
 cxx_test(name="time_range-test",
          srcs=[
              "time_range-test.cc",
+         ],
+         deps=[":core", ],
+         run_test_separately=True, )
+cxx_test(name="hbase_configuration-test",
+         srcs=[
+             "hbase_configuration-test.cc",
          ],
          deps=[":core", ],
          run_test_separately=True, )
