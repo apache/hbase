@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -38,7 +39,7 @@ public class BalancerChore extends ScheduledChore {
 
   public BalancerChore(HMaster master) {
     super(master.getServerName() + "-BalancerChore", master, master.getConfiguration().getInt(
-      "hbase.balancer.period", 300000));
+      HConstants.HBASE_BALANCER_PERIOD, HConstants.DEFAULT_HBASE_BALANCER_PERIOD));
     this.master = master;
   }
 

@@ -241,6 +241,13 @@ public class RegionStates {
   }
 
   /**
+   * Get the number of regions in transition.
+   */
+  public synchronized int getRegionsInTransitionCount() {
+    return regionsInTransition.size();
+  }
+
+  /**
    * @return True if specified region in transition.
    */
   public synchronized boolean isRegionInTransition(final HRegionInfo hri) {

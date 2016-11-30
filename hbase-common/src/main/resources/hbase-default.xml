@@ -565,6 +565,14 @@ possible configurations would overwhelm and obscure the important.
     0 means never give up.</description>
   </property>
   <property>
+    <name>hbase.master.balancer.maxRitPercent</name>
+    <value>1.0</value>
+    <description>The max percent of regions in transition when balancing.
+      The default value is 1.0. So there are no balancer throttling. If set this config to 0.01,
+      It means that there are at most 1% regions in transition when balancing.
+      Then the cluster's availability is at least 99% when balancing.</description>
+  </property>
+  <property>
     <name>hbase.balancer.period
     </name>
     <value>300000</value>
