@@ -309,7 +309,10 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
         throw ProtobufUtil.getRemoteException(se);
       }
     } catch (IOException e) {
-      LOG.warn("Ignore, probably already closed", e);
+      TableName table = getTableName();
+      String tableDetails = (table == null) ? "" : (" on table: " + table.getNameAsString());
+      LOG.warn("Ignore, probably already closed. Current scan: " + getScan().toString()
+          + tableDetails, e);
     }
     this.scannerId = -1L;
   }
