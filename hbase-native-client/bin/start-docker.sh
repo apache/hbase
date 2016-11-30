@@ -52,7 +52,7 @@ fi;
 docker build -t hbase_native .
 
 # After the image is built run the thing
-docker run -p 16010:16010/tcp \
+docker run -p 16050:16050/tcp \
            -v ${BASE_DIR}/..:/usr/src/hbase \
            -v ~/.m2:/root/.m2 \
            -it hbase_native  /bin/bash
