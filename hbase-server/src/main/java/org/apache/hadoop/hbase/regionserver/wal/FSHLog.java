@@ -1654,6 +1654,12 @@ public class FSHLog implements WAL {
      */
     private volatile CountDownLatch safePointReleasedLatch = new CountDownLatch(1);
 
+    private void checkIfSyncFailed(SyncFuture syncFuture) throws FailedSyncBeforeLogCloseException {
+      if (syncFuture.isThrowable()) {
+        throw new FailedSyncBeforeLogCloseException(syncFuture.getThrowable());
+      }
+    }
+
     /**
      * For Thread A to call when it is ready to wait on the 'safe point' to be attained.
      * Thread A will be held in here until Thread B calls {@link #safePointAttained()}
@@ -1664,16 +1670,12 @@ public class FSHLog implements WAL {
      * @return The passed <code>syncFuture</code>
      * @throws FailedSyncBeforeLogCloseException
      */
-    SyncFuture waitSafePoint(final SyncFuture syncFuture)
-    throws InterruptedException, FailedSyncBeforeLogCloseException {
-      while (true) {
-        if (this.safePointAttainedLatch.await(1, TimeUnit.MILLISECONDS)) {
-          break;
-        }
-        if (syncFuture.isThrowable()) {
-          throw new FailedSyncBeforeLogCloseException(syncFuture.getThrowable());
-        }
+    SyncFuture waitSafePoint(SyncFuture syncFuture) throws InterruptedException,
+        FailedSyncBeforeLogCloseException {
+      while (!this.safePointAttainedLatch.await(1, TimeUnit.MILLISECONDS)) {
+        checkIfSyncFailed(syncFuture);
       }
+      checkIfSyncFailed(syncFuture);
       return syncFuture;
     }
 
