@@ -753,6 +753,24 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.majorcompaction.pagecache.drop</name>
+    <value>true</value>
+    <description>Specifies whether to drop pages read/written into the system page cache by
+      major compactions. Setting it to true helps prevent major compactions from
+      polluting the page cache, which is almost always required, especially for clusters
+      with low/moderate memory to storage ratio.</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.minorcompaction.pagecache.drop</name>
+    <value>true</value>
+    <description>Specifies whether to drop pages read/written into the system page cache by
+      minor compactions. Setting it to true helps prevent minor compactions from
+      polluting the page cache, which is most beneficial on clusters with low
+      memory to storage ratio or very write heavy clusters. You may want to set it to
+      false under moderate to low write workload when bulk of the reads are
+      on the most recently written data.</description>
+  </property>
+  <property>
     <name>hbase.storescanner.parallel.seek.enable</name>
     <value>false</value>
     <description>
