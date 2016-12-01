@@ -199,7 +199,7 @@ public class HeapMemoryManager {
 
   public void stop() {
     // The thread is Daemon. Just interrupting the ongoing process.
-    LOG.info("Stoping HeapMemoryTuner chore.");
+    LOG.info("Stopping HeapMemoryTuner chore.");
     this.heapMemTunerChore.cancel(true);
     
   }

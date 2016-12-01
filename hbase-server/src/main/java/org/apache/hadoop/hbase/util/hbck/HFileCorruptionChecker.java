@@ -250,7 +250,7 @@ public class HFileCorruptionChecker {
       try {
         f.get();
       } catch (ExecutionException e) {
-        LOG.warn("Failed to quaratine an HFile in regiondir "
+        LOG.warn("Failed to quarantine an HFile in regiondir "
             + rdcs.get(i).regionDir, e.getCause());
         // rethrow IOExceptions
         if (e.getCause() instanceof IOException) {
