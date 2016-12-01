@@ -100,7 +100,7 @@ public class CompactedHFilesDischarger extends ScheduledChore {
                   + region.getRegionInfo() + " under the store " + store.getColumnFamilyName());
             }
           } catch (Exception e) {
-            LOG.error("Exception while trying to close and archive the comapcted store "
+            LOG.error("Exception while trying to close and archive the compacted store "
                 + "files of the store  " + store.getColumnFamilyName() + " in the" + " region "
                 + region.getRegionInfo(), e);
           }

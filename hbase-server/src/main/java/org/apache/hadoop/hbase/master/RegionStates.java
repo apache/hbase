@@ -1091,7 +1091,7 @@ public class RegionStates {
       }
       return hri;
     } catch (IOException e) {
-      server.abort("Aborting because error occoured while reading "
+      server.abort("Aborting because error occurred while reading "
         + Bytes.toStringBinary(regionName) + " from hbase:meta", e);
       return null;
     }

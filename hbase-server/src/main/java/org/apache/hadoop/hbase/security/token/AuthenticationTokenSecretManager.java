@@ -152,7 +152,7 @@ public class AuthenticationTokenSecretManager
       synchronized (this) {
         if (!leaderElector.isAlive() || leaderElector.isStopped()) {
           LOG.warn("Thread leaderElector[" + leaderElector.getName() + ":"
-              + leaderElector.getId() + "] is stoped or not alive");
+              + leaderElector.getId() + "] is stopped or not alive");
           leaderElector.start();
           LOG.info("Thread leaderElector [" + leaderElector.getName() + ":"
               + leaderElector.getId() + "] is started");

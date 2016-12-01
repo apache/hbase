@@ -182,7 +182,7 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
 
   @Override
   public void abort(String why, Throwable e) {
-    LOG.fatal("The ReplicationPeer coresponding to peer " + peerConfig
+    LOG.fatal("The ReplicationPeer corresponding to peer " + peerConfig
         + " was aborted for the following reason(s):" + why, e);
   }
 

@@ -199,7 +199,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     try {
       byte[] data = ZKUtil.getData(zkController.getWatcher(), path);
       if (!ProtobufUtil.isPBMagicPrefix(data)) {
-        String msg = "Data in for starting procuedure " + opName +
+        String msg = "Data in for starting procedure " + opName +
           " is illegally formatted (no pb magic). " +
           "Killing the procedure: " + Bytes.toString(data);
         LOG.error(msg);

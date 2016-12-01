@@ -1598,7 +1598,7 @@ public class HFileBlock implements Cacheable {
         blk = readBlockDataInternal(is, offset, onDiskSizeWithHeaderL, pread,
                                     doVerificationThruHBaseChecksum);
         if (blk != null) {
-          HFile.LOG.warn("HDFS checksum verification suceeded for file " +
+          HFile.LOG.warn("HDFS checksum verification succeeded for file " +
                          pathName + " at offset " +
                          offset + " filesize " + fileSize);
         }

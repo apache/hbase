@@ -138,7 +138,7 @@ public class ZNodeClearer {
       String[] rsZnodeParts = rsZnodePath.split("/");
       masterServerName = rsZnodeParts[rsZnodeParts.length -1];
     } catch (IndexOutOfBoundsException e) {
-      LOG.warn("String " + rsZnodePath + " has wrong fromat", e);
+      LOG.warn("String " + rsZnodePath + " has wrong format", e);
     }
     return masterServerName; 
   }

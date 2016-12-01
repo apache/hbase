@@ -1001,7 +1001,7 @@ public class WALSplitter {
           try {
             controller.dataAvailable.wait(2000);
           } catch (InterruptedException e) {
-            LOG.warn("Got intrerrupted while waiting for EntryBuffers is drained");
+            LOG.warn("Got interrupted while waiting for EntryBuffers is drained");
             Thread.interrupted();
             break;
           }

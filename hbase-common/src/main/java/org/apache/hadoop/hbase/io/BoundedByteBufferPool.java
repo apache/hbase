@@ -138,7 +138,7 @@ public class BoundedByteBufferPool {
 
     if (LOG.isTraceEnabled()) {
       long allocations = allocationsRef.incrementAndGet();
-      LOG.trace("runningAverage=" + runningAverage + ", alloctions=" + allocations);
+      LOG.trace("runningAverage=" + runningAverage + ", allocations=" + allocations);
     }
     return bb;
   }

@@ -416,14 +416,14 @@ public class DispatchMergingRegionsProcedure
           forcible,
           getUser());
         LOG.info("Sent merge to server " + getServerName(env) + " for region " +
-            getRegionsToMergeListEncodedNameString() + ", focible=" + forcible);
+            getRegionsToMergeListEncodedNameString() + ", forcible=" + forcible);
         return;
       } catch (RegionOpeningException roe) {
         // Do a retry since region should be online on RS immediately
         LOG.warn("Failed mergering regions in " + getServerName(env) + ", retrying...", roe);
       } catch (Exception ie) {
         LOG.warn("Failed sending merge to " + getServerName(env) + " for regions " +
-            getRegionsToMergeListEncodedNameString() + ", focible=" + forcible, ie);
+            getRegionsToMergeListEncodedNameString() + ", forcible=" + forcible, ie);
         return;
       }
     } while ((duration = EnvironmentEdgeManager.currentTime() - startTime) <= getTimeout(env));

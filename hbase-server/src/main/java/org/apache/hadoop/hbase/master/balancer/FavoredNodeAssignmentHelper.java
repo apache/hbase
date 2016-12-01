@@ -460,7 +460,7 @@ public class FavoredNodeAssignmentHelper {
        getOneRandomServer(primaryRack, serverSkipSet);
 
      if (secondaryRS == null || tertiaryRS == null) {
-       LOG.error("Cannot place the secondary and terinary" +
+       LOG.error("Cannot place the secondary and ternary" +
            "region server for region " +
            regionInfo.getRegionNameAsString());
      }
@@ -498,7 +498,7 @@ public class FavoredNodeAssignmentHelper {
       ServerName tertiaryRS = getOneRandomServer(secondaryRack, skipServerSet);
 
       if (secondaryRS == null || tertiaryRS == null) {
-        LOG.error("Cannot place the secondary and terinary" +
+        LOG.error("Cannot place the secondary and ternary" +
             "region server for region " +
             regionInfo.getRegionNameAsString());
       }

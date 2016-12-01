@@ -349,7 +349,7 @@ public class DeleteTableProcedure
         }
       }
       if (!deletes.isEmpty()) {
-        LOG.warn("Deleting some vestigal " + deletes.size() + " rows of " + tableName +
+        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName +
           " from " + TableName.META_TABLE_NAME);
         metaTable.delete(deletes);
       }

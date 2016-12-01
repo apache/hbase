@@ -113,7 +113,7 @@ public class HDFSBlocksDistribution {
    */
   @Override
   public synchronized String toString() {
-    return "number of unique hosts in the disribution=" +
+    return "number of unique hosts in the distribution=" +
       this.hostAndWeights.size();
   }
 

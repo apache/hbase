@@ -697,7 +697,7 @@ public class SplitTableRegionProcedure
           HRegionInfo.parseRegionName(p.getRow());
         }
       } catch (IOException e) {
-        LOG.error("Row key of mutation from coprossor is not parsable as region name."
+        LOG.error("Row key of mutation from coprocessor is not parsable as region name."
             + "Mutations from coprocessor should only for hbase:meta table.");
         throw e;
       }

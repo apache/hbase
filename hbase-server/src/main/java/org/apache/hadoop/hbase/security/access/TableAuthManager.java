@@ -225,7 +225,7 @@ public class TableAuthManager implements Closeable {
       mtime.incrementAndGet();
     } catch (IOException e) {
       // Never happens
-      LOG.error("Error occured while updating the global cache", e);
+      LOG.error("Error occurred while updating the global cache", e);
     }
   }
 
