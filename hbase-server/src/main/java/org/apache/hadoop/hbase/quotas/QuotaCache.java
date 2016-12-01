@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.quotas;
 
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,8 +41,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Cache that keeps track of the quota settings for the users and tables that
@@ -114,20 +116,12 @@ public class QuotaCache implements Stoppable {
 
   /**
    * Returns the QuotaState associated to the specified user.
-   *
    * @param ugi the user
    * @return the quota info associated to specified user
    */
   public UserQuotaState getUserQuotaState(final UserGroupInformation ugi) {
-    String key = ugi.getShortUserName();
-    UserQuotaState quotaInfo = userQuotaCache.get(key);
-    if (quotaInfo == null) {
-      quotaInfo = new UserQuotaState();
-      if (userQuotaCache.putIfAbsent(key, quotaInfo) == null) {
-        triggerCacheRefresh();
-      }
-    }
-    return quotaInfo;
+    return computeIfAbsent(userQuotaCache, ugi.getShortUserName(), UserQuotaState::new,
+      this::triggerCacheRefresh);
   }
 
   /**
@@ -151,24 +145,12 @@ public class QuotaCache implements Stoppable {
   }
 
   /**
-   * Returns the QuotaState requested.
-   * If the quota info is not in cache an empty one will be returned
-   * and the quota request will be enqueued for the next cache refresh.
+   * Returns the QuotaState requested. If the quota info is not in cache an empty one will be
+   * returned and the quota request will be enqueued for the next cache refresh.
    */
   private <K> QuotaState getQuotaState(final ConcurrentHashMap<K, QuotaState> quotasMap,
       final K key) {
-    QuotaState quotaInfo = quotasMap.get(key);
-    if (quotaInfo == null) {
-      quotaInfo = new QuotaState();
-      if (quotasMap.putIfAbsent(key, quotaInfo) == null) {
-        triggerCacheRefresh();
-      }
-    }
-    return quotaInfo;
-  }
-
-  private Configuration getConfiguration() {
-    return rsServices.getConfiguration();
+    return computeIfAbsent(quotasMap, key, QuotaState::new, this::triggerCacheRefresh);
   }
 
   @VisibleForTesting

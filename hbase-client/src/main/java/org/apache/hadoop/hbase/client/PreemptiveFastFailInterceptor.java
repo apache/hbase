@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,34 +39,29 @@ import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
- * 
  * The concrete {@link RetryingCallerInterceptor} class that implements the preemptive fast fail
  * feature.
- * 
- * The motivation is as follows : 
- * In case where a large number of clients try and talk to a particular region server in hbase, if
- * the region server goes down due to network problems, we might end up in a scenario where
- * the clients would go into a state where they all start to retry.
+ * <p>
+ * The motivation is as follows : In case where a large number of clients try and talk to a
+ * particular region server in hbase, if the region server goes down due to network problems, we
+ * might end up in a scenario where the clients would go into a state where they all start to retry.
  * This behavior will set off many of the threads in pretty much the same path and they all would be
  * sleeping giving rise to a state where the client either needs to create more threads to send new
  * requests to other hbase machines or block because the client cannot create anymore threads.
- * 
+ * <p>
  * In most cases the clients might prefer to have a bound on the number of threads that are created
  * in order to send requests to hbase. This would mostly result in the client thread starvation.
- * 
- *  To circumvent this problem, the approach that is being taken here under is to let 1 of the many
- *  threads who are trying to contact the regionserver with connection problems and let the other
- *  threads get a {@link PreemptiveFastFailException} so that they can move on and take other
- *  requests.
- *  
- *  This would give the client more flexibility on the kind of action he would want to take in cases
- *  where the regionserver is down. He can either discard the requests and send a nack upstream
- *  faster or have an application level retry or buffer the requests up so as to send them down to
- *  hbase later.
- *
+ * <p>
+ * To circumvent this problem, the approach that is being taken here under is to let 1 of the many
+ * threads who are trying to contact the regionserver with connection problems and let the other
+ * threads get a {@link PreemptiveFastFailException} so that they can move on and take other
+ * requests.
+ * <p>
+ * This would give the client more flexibility on the kind of action he would want to take in cases
+ * where the regionserver is down. He can either discard the requests and send a nack upstream
+ * faster or have an application level retry or buffer the requests up so as to send them down to
+ * hbase later.
  */
 @InterfaceAudience.Private
 class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
@@ -155,15 +154,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
       return;
     }
     long currentTime = EnvironmentEdgeManager.currentTime();
-    FailureInfo fInfo = repeatedFailuresMap.get(serverName);
-    if (fInfo == null) {
-      fInfo = new FailureInfo(currentTime);
-      FailureInfo oldfInfo = repeatedFailuresMap.putIfAbsent(serverName, fInfo);
-
-      if (oldfInfo != null) {
-        fInfo = oldfInfo;
-      }
-    }
+    FailureInfo fInfo =
+        computeIfAbsent(repeatedFailuresMap, serverName, () -> new FailureInfo(currentTime));
     fInfo.timeOfLatestAttemptMilliSec = currentTime;
     fInfo.numConsecutiveFailures.incrementAndGet();
   }

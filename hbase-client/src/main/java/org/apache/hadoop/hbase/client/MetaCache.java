@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -49,8 +51,7 @@ public class MetaCache {
    * Map of table to table {@link HRegionLocation}s.
    */
   private final ConcurrentMap<TableName, ConcurrentNavigableMap<byte[], RegionLocations>>
-  cachedRegionLocations =
-  new CopyOnWriteArrayMap<>();
+    cachedRegionLocations = new CopyOnWriteArrayMap<>();
 
   // The presence of a server in the map implies it's likely that there is an
   // entry in cachedRegionLocations that map to this server; but the absence
@@ -191,21 +192,11 @@ public class MetaCache {
    * @param tableName
    * @return Map of cached locations for passed <code>tableName</code>
    */
-  private ConcurrentNavigableMap<byte[], RegionLocations>
-    getTableLocations(final TableName tableName) {
+  private ConcurrentNavigableMap<byte[], RegionLocations> getTableLocations(
+      final TableName tableName) {
     // find the map of cached locations for this table
-    ConcurrentNavigableMap<byte[], RegionLocations> result;
-    result = this.cachedRegionLocations.get(tableName);
-    // if tableLocations for this table isn't built yet, make one
-    if (result == null) {
-      result = new CopyOnWriteArrayMap<>(Bytes.BYTES_COMPARATOR);
-      ConcurrentNavigableMap<byte[], RegionLocations> old =
-          this.cachedRegionLocations.putIfAbsent(tableName, result);
-      if (old != null) {
-        return old;
-      }
-    }
-    return result;
+    return computeIfAbsent(cachedRegionLocations, tableName,
+      () -> new CopyOnWriteArrayMap<>(Bytes.BYTES_COMPARATOR));
   }
 
   /**

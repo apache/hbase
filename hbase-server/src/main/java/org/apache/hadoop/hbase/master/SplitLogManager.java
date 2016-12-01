@@ -117,7 +117,8 @@ public class SplitLogManager {
    */
   protected final ReentrantLock recoveringRegionLock = new ReentrantLock();
 
-  private final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<String, Task>();
+  @VisibleForTesting
+  final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<String, Task>();
   private TimeoutMonitor timeoutMonitor;
 
   private volatile Set<ServerName> deadWorkers = null;
@@ -502,18 +503,6 @@ public class SplitLogManager {
       LOG.warn("Failure because two threads can't wait for the same task; path=" + path);
       return oldtask;
     }
-  }
-
-  Task findOrCreateOrphanTask(String path) {
-    Task orphanTask = new Task();
-    Task task;
-    task = tasks.putIfAbsent(path, orphanTask);
-    if (task == null) {
-      LOG.info("creating orphan task " + path);
-      SplitLogCounters.tot_mgr_orphan_task_acquired.incrementAndGet();
-      task = orphanTask;
-    }
-    return task;
   }
 
   public void stop() {

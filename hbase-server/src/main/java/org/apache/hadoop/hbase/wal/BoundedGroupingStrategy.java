@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -44,15 +46,8 @@ public class BoundedGroupingStrategy implements RegionGroupingStrategy{
   @Override
   public String group(byte[] identifier, byte[] namespace) {
     String idStr = Bytes.toString(identifier);
-    String groupName = groupNameCache.get(idStr);
-    if (null == groupName) {
-      groupName = groupNames[getAndIncrAtomicInteger(counter, groupNames.length)];
-      String extantName = groupNameCache.putIfAbsent(idStr, groupName);
-      if (extantName != null) {
-        return extantName;
-      }
-    }
-    return groupName;
+    return computeIfAbsent(groupNameCache, idStr,
+      () -> groupNames[getAndIncrAtomicInteger(counter, groupNames.length)]);
   }
 
   // Non-blocking incrementing & resetting of AtomicInteger.

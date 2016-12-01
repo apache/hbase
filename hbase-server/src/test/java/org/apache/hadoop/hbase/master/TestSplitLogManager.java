@@ -58,8 +58,8 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.TestMasterAddressTracker.NodeCreationListener;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -196,6 +196,14 @@ public class TestSplitLogManager {
     assertEquals(newval, e.eval());
   }
 
+  private Task findOrCreateOrphanTask(String path) {
+    return slm.tasks.computeIfAbsent(path, k -> {
+      LOG.info("creating orphan task " + k);
+      SplitLogCounters.tot_mgr_orphan_task_acquired.incrementAndGet();
+      return new Task();
+    });
+  }
+
   private String submitTaskAndWait(TaskBatch batch, String name) throws KeeperException,
       InterruptedException {
     String tasknode = ZKSplitLog.getEncodedNodeName(zkw, name);
@@ -205,7 +213,7 @@ public class TestSplitLogManager {
 
     slm.enqueueSplitTask(name, batch);
     assertEquals(1, batch.installed);
-    assertTrue(slm.findOrCreateOrphanTask(tasknode).batch == batch);
+    assertTrue(findOrCreateOrphanTask(tasknode).batch == batch);
     assertEquals(1L, tot_mgr_node_create_queued.get());
 
     LOG.debug("waiting for task node creation");
@@ -244,7 +252,7 @@ public class TestSplitLogManager {
 
     slm = new SplitLogManager(master, conf);
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
-    Task task = slm.findOrCreateOrphanTask(tasknode);
+    Task task = findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
     waitForCounter(tot_mgr_heartbeat, 0, 1, to/2);
     assertFalse(task.isUnassigned());
@@ -270,12 +278,12 @@ public class TestSplitLogManager {
 
     slm = new SplitLogManager(master, conf);
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
-    Task task = slm.findOrCreateOrphanTask(tasknode);
+    Task task = findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
     assertTrue(task.isUnassigned());
     // wait for RESCAN node to be created
-    waitForCounter(tot_mgr_rescan, 0, 1, to/2);
-    Task task2 = slm.findOrCreateOrphanTask(tasknode);
+    waitForCounter(tot_mgr_rescan, 0, 1, to / 2);
+    Task task2 = findOrCreateOrphanTask(tasknode);
     assertTrue(task == task2);
     LOG.debug("task = " + task);
     assertEquals(1L, tot_mgr_resubmit.get());

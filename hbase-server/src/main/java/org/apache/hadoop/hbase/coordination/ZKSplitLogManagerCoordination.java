@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.coordination;
 
+import static org.apache.hadoop.hbase.util.CollectionUtils.*;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.CHECK;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.FORCE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.DELETED;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.SplitLo
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -449,7 +451,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       setDone(path, FAILURE);
       return;
     }
-    data = this.watcher.getRecoverableZooKeeper().removeMetaData(data);
+    data = RecoverableZooKeeper.removeMetaData(data);
     SplitLogTask slt = SplitLogTask.parseFrom(data);
     if (slt.isUnassigned()) {
       LOG.debug("task not yet acquired " + path + " ver = " + version);
@@ -531,16 +533,11 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     return;
   }
 
-  Task findOrCreateOrphanTask(String path) {
-    Task orphanTask = new Task();
-    Task task;
-    task = details.getTasks().putIfAbsent(path, orphanTask);
-    if (task == null) {
+  private Task findOrCreateOrphanTask(String path) {
+    return computeIfAbsent(details.getTasks(), path, Task::new, () -> {
       LOG.info("creating orphan task " + path);
       SplitLogCounters.tot_mgr_orphan_task_acquired.incrementAndGet();
-      task = orphanTask;
-    }
-    return task;
+    });
   }
 
   private void heartbeat(String path, int new_version, ServerName workerName) {

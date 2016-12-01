@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+
 import com.google.common.annotations.VisibleForTesting;
+
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
-
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Tracks the statistics for multiple regions
@@ -36,23 +39,8 @@ public class ServerStatisticTracker implements StatisticTrackable {
       new ConcurrentHashMap<ServerName, ServerStatistics>();
 
   @Override
-  public void updateRegionStats(ServerName server, byte[] region, RegionLoadStats
-      currentStats) {
-    ServerStatistics stat = stats.get(server);
-
-    if (stat == null) {
-      stat = stats.get(server);
-      // We don't have stats for that server yet, so we need to make an entry.
-      // If we race with another thread it's a harmless unnecessary allocation.
-      if (stat == null) {
-        stat = new ServerStatistics();
-        ServerStatistics old = stats.putIfAbsent(server, stat);
-        if (old != null) {
-          stat = old;
-        }
-      }
-    }
-    stat.update(region, currentStats);
+  public void updateRegionStats(ServerName server, byte[] region, RegionLoadStats currentStats) {
+    computeIfAbsent(stats, server, ServerStatistics::new).update(region, currentStats);
   }
 
   public ServerStatistics getStats(ServerName server) {

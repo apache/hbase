@@ -122,7 +122,7 @@ public class TestMasterShutdown {
     final MasterThread master = cluster.getMasters().get(MASTER_INDEX);
     master.start();
     LOG.info("Called master start on " + master.getName());
-    Thread shutdownThread = new Thread() {
+    Thread shutdownThread = new Thread("Shutdown-Thread") {
       public void run() {
         LOG.info("Before call to shutdown master");
         try {

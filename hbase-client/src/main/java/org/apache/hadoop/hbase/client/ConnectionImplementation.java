@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsentEx;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -921,11 +923,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   // Map keyed by service name + regionserver to service stub implementation
-  private final ConcurrentHashMap<String, Object> stubs =
-    new ConcurrentHashMap<String, Object>();
-  // Map of locks used creating service stubs per regionserver.
-  private final ConcurrentHashMap<String, String> connectionLock =
-    new ConcurrentHashMap<String, String>();
+  private final ConcurrentMap<String, Object> stubs = new ConcurrentHashMap<String, Object>();
 
   /**
    * State of the MasterService connection/setup.
@@ -1008,7 +1006,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       long result;
       ServerErrors errorStats = errorsByServer.get(server);
       if (errorStats != null) {
-        result = ConnectionUtils.getPauseTime(basePause, errorStats.getCount());
+        result = ConnectionUtils.getPauseTime(basePause, Math.max(0, errorStats.getCount() - 1));
       } else {
         result = 0; // yes, if the server is not in our list we don't wait before retrying.
       }
@@ -1017,19 +1015,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
     /**
      * Reports that there was an error on the server to do whatever bean-counting necessary.
-     *
      * @param server The server in question.
      */
     void reportServerError(ServerName server) {
-      ServerErrors errors = errorsByServer.get(server);
-      if (errors != null) {
-        errors.addError();
-      } else {
-        errors = errorsByServer.putIfAbsent(server, new ServerErrors());
-        if (errors != null){
-          errors.addError();
-        }
-      }
+      computeIfAbsent(errorsByServer, server, ServerErrors::new).addError();
     }
 
     long getStartTrackingTime() {
@@ -1053,32 +1042,26 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   /**
-   * Makes a client-side stub for master services. Sub-class to specialize.
-   * Depends on hosting class so not static.  Exists so we avoid duplicating a bunch of code
-   * when setting up the MasterMonitorService and MasterAdminService.
+   * Class to make a MasterServiceStubMaker stub.
    */
-  abstract class StubMaker {
-    /**
-     * Returns the name of the service stub being created.
-     */
-    protected abstract String getServiceName();
+  private final class MasterServiceStubMaker {
+
+    private void isMasterRunning(MasterProtos.MasterService.BlockingInterface stub)
+        throws IOException {
+      try {
+        stub.isMasterRunning(null, RequestConverter.buildIsMasterRunningRequest());
+      } catch (ServiceException e) {
+        throw ProtobufUtil.handleRemoteException(e);
+      }
+    }
 
     /**
-     * Make stub and cache it internal so can be used later doing the isMasterRunning call.
-     */
-    protected abstract Object makeStub(final BlockingRpcChannel channel);
-
-    /**
-     * Once setup, check it works by doing isMasterRunning check.
-     */
-    protected abstract void isMasterRunning() throws IOException;
-
-    /**
-     * Create a stub. Try once only.  It is not typed because there is no common type to
-     * protobuf services nor their interfaces.  Let the caller do appropriate casting.
+     * Create a stub. Try once only. It is not typed because there is no common type to protobuf
+     * services nor their interfaces. Let the caller do appropriate casting.
      * @return A stub for master services.
      */
-    private Object makeStubNoRetries() throws IOException, KeeperException {
+    private MasterProtos.MasterService.BlockingInterface makeStubNoRetries()
+        throws IOException, KeeperException {
       ZooKeeperKeepAliveConnection zkw;
       try {
         zkw = getKeepAliveZooKeeperWatcher();
@@ -1098,18 +1081,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           throw new MasterNotRunningException(sn + " is dead.");
         }
         // Use the security info interface name as our stub key
-        String key = getStubKey(getServiceName(), sn, hostnamesCanChange);
-        connectionLock.putIfAbsent(key, key);
-        Object stub = null;
-        synchronized (connectionLock.get(key)) {
-          stub = stubs.get(key);
-          if (stub == null) {
-            BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
-            stub = makeStub(channel);
-            isMasterRunning();
-            stubs.put(key, stub);
-          }
-        }
+        String key = getStubKey(MasterProtos.MasterService.getDescriptor().getName(), sn,
+          hostnamesCanChange);
+        MasterProtos.MasterService.BlockingInterface stub =
+            (MasterProtos.MasterService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+              BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
+              return MasterProtos.MasterService.newBlockingStub(channel);
+            });
+        isMasterRunning(stub);
         return stub;
       } finally {
         zkw.close();
@@ -1121,9 +1100,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
      * @return A stub to do <code>intf</code> against the master
      * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
      */
-    Object makeStub() throws IOException {
+    MasterProtos.MasterService.BlockingInterface makeStub() throws IOException {
       // The lock must be at the beginning to prevent multiple master creations
-      //  (and leaks) in a multithread context
+      // (and leaks) in a multithread context
       synchronized (masterAndZKLock) {
         Exception exceptionCaught = null;
         if (!closed) {
@@ -1142,80 +1121,33 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  /**
-   * Class to make a MasterServiceStubMaker stub.
-   */
-  class MasterServiceStubMaker extends StubMaker {
-    private MasterProtos.MasterService.BlockingInterface stub;
-    @Override
-    protected String getServiceName() {
-      return MasterProtos.MasterService.getDescriptor().getName();
-    }
-
-    @Override
-    MasterProtos.MasterService.BlockingInterface makeStub() throws IOException {
-      return (MasterProtos.MasterService.BlockingInterface)super.makeStub();
-    }
-
-    @Override
-    protected Object makeStub(BlockingRpcChannel channel) {
-      this.stub = MasterProtos.MasterService.newBlockingStub(channel);
-      return this.stub;
-    }
-
-    @Override
-    protected void isMasterRunning() throws IOException {
-      try {
-        this.stub.isMasterRunning(null, RequestConverter.buildIsMasterRunningRequest());
-      } catch (Exception e) {
-        throw ProtobufUtil.handleRemoteException(e);
-      }
-    }
-  }
-
   @Override
-  public AdminProtos.AdminService.BlockingInterface getAdmin(final ServerName serverName)
+  public AdminProtos.AdminService.BlockingInterface getAdmin(ServerName serverName)
       throws IOException {
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
     String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(), serverName,
       this.hostnamesCanChange);
-    this.connectionLock.putIfAbsent(key, key);
-    AdminProtos.AdminService.BlockingInterface stub;
-    synchronized (this.connectionLock.get(key)) {
-      stub = (AdminProtos.AdminService.BlockingInterface)this.stubs.get(key);
-      if (stub == null) {
-        BlockingRpcChannel channel =
+    return (AdminProtos.AdminService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+      BlockingRpcChannel channel =
           this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
-        stub = AdminProtos.AdminService.newBlockingStub(channel);
-        this.stubs.put(key, stub);
-      }
-    }
-    return stub;
+      return AdminProtos.AdminService.newBlockingStub(channel);
+    });
   }
 
   @Override
-  public BlockingInterface getClient(final ServerName sn)
-  throws IOException {
-    if (isDeadServer(sn)) {
-      throw new RegionServerStoppedException(sn + " is dead.");
+  public BlockingInterface getClient(ServerName serverName) throws IOException {
+    if (isDeadServer(serverName)) {
+      throw new RegionServerStoppedException(serverName + " is dead.");
     }
-    String key = getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(), sn,
-      this.hostnamesCanChange);
-    this.connectionLock.putIfAbsent(key, key);
-    ClientProtos.ClientService.BlockingInterface stub = null;
-    synchronized (this.connectionLock.get(key)) {
-      stub = (ClientProtos.ClientService.BlockingInterface)this.stubs.get(key);
-      if (stub == null) {
-        BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
-        stub = ClientProtos.ClientService.newBlockingStub(channel);
-        // In old days, after getting stub/proxy, we'd make a call.  We are not doing that here.
-        // Just fail on first actual call rather than in here on setup.
-        this.stubs.put(key, stub);
-      }
-    }
-    return stub;
+    String key = getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(),
+      serverName, this.hostnamesCanChange);
+    return (ClientProtos.ClientService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+      BlockingRpcChannel channel =
+          this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
+      return ClientProtos.ClientService.newBlockingStub(channel);
+    });
   }
 
   private ZooKeeperKeepAliveConnection keepAliveZookeeper;

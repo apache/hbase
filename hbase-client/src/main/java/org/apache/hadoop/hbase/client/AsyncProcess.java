@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -645,23 +647,10 @@ class AsyncProcess {
   protected void incTaskCounters(Collection<byte[]> regions, ServerName sn) {
     tasksInProgress.incrementAndGet();
 
-    AtomicInteger serverCnt = taskCounterPerServer.get(sn);
-    if (serverCnt == null) {
-      taskCounterPerServer.putIfAbsent(sn, new AtomicInteger());
-      serverCnt = taskCounterPerServer.get(sn);
-    }
-    serverCnt.incrementAndGet();
+    computeIfAbsent(taskCounterPerServer, sn, AtomicInteger::new).incrementAndGet();
 
     for (byte[] regBytes : regions) {
-      AtomicInteger regionCnt = taskCounterPerRegion.get(regBytes);
-      if (regionCnt == null) {
-        regionCnt = new AtomicInteger();
-        AtomicInteger oldCnt = taskCounterPerRegion.putIfAbsent(regBytes, regionCnt);
-        if (oldCnt != null) {
-          regionCnt = oldCnt;
-        }
-      }
-      regionCnt.incrementAndGet();
+      computeIfAbsent(taskCounterPerRegion, regBytes, AtomicInteger::new).incrementAndGet();
     }
   }
 

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import java.util.ArrayList;
@@ -215,16 +217,8 @@ class SequenceIdAccounting {
   @VisibleForTesting
   ConcurrentMap<ImmutableByteArray, Long> getOrCreateLowestSequenceIds(byte[] encodedRegionName) {
     // Intentionally, this access is done outside of this.regionSequenceIdLock. Done per append.
-    ConcurrentMap<ImmutableByteArray, Long> m = this.lowestUnflushedSequenceIds
-        .get(encodedRegionName);
-    if (m != null) {
-      return m;
-    }
-    m = new ConcurrentHashMap<>();
-    // Another thread may have added it ahead of us.
-    ConcurrentMap<ImmutableByteArray, Long> alreadyPut = this.lowestUnflushedSequenceIds
-        .putIfAbsent(encodedRegionName, m);
-    return alreadyPut == null ? m : alreadyPut;
+    return computeIfAbsent(this.lowestUnflushedSequenceIds, encodedRegionName,
+      ConcurrentHashMap::new);
   }
 
   /**

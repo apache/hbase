@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
+import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
@@ -5314,19 +5315,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Keep trying until we have a lock or error out.
       // TODO: do we need to add a time component here?
       while (result == null) {
-
-        // Try adding a RowLockContext to the lockedRows.
-        // If we can add it then there's no other transactions currently running.
-        rowLockContext = new RowLockContext(rowKey);
-        RowLockContext existingContext = lockedRows.putIfAbsent(rowKey, rowLockContext);
-
-        // if there was a running transaction then there's already a context.
-        if (existingContext != null) {
-          rowLockContext = existingContext;
-        }
-
+        rowLockContext = computeIfAbsent(lockedRows, rowKey, () -> new RowLockContext(rowKey));
         // Now try an get the lock.
-        //
         // This can fail as
         if (readLock) {
           result = rowLockContext.newReadLock();
