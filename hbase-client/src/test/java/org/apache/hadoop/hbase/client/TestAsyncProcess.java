@@ -238,7 +238,7 @@ public class TestAsyncProcess {
             }
           });
 
-      return new RpcRetryingCaller<MultiResponse>(100, 10, 9) {
+      return new RpcRetryingCaller<MultiResponse>(100, 500, 10, 9) {
         @Override
         public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable,
                                                 int callTimeout)
@@ -261,7 +261,7 @@ public class TestAsyncProcess {
     private final IOException e;
 
     public CallerWithFailure(IOException e) {
-      super(100, 100, 9);
+      super(100, 500, 100, 9);
       this.e = e;
     }
 
@@ -366,7 +366,7 @@ public class TestAsyncProcess {
         replicaCalls.incrementAndGet();
       }
 
-      return new RpcRetryingCaller<MultiResponse>(100, 10, 9) {
+      return new RpcRetryingCaller<MultiResponse>(100, 500, 10, 9) {
         @Override
         public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable,
                                                 int callTimeout)
@@ -1694,5 +1694,69 @@ public class TestAsyncProcess {
       tasks.set(tasks.get() - 1);
     }
     t.join();
+  }
+
+  /**
+   * Test and make sure we could use a special pause setting when retry with
+   * CallQueueTooBigException, see HBASE-17114
+   * @throws Exception if unexpected error happened during test
+   */
+  @Test
+  public void testRetryPauseWithCallQueueTooBigException() throws Exception {
+    Configuration myConf = new Configuration(conf);
+    final long specialPause = 500L;
+    final int tries = 2;
+    myConf.setLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, specialPause);
+    myConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, tries);
+    ClusterConnection conn = new MyConnectionImpl(myConf);
+    BufferedMutatorImpl mutator = (BufferedMutatorImpl) conn.getBufferedMutator(DUMMY_TABLE);
+    AsyncProcessWithFailure ap =
+        new AsyncProcessWithFailure(conn, myConf, new CallQueueTooBigException());
+    mutator.ap = ap;
+
+    Assert.assertNotNull(mutator.ap.createServerErrorTracker());
+
+    Put p = createPut(1, true);
+    mutator.mutate(p);
+
+    long startTime = System.currentTimeMillis();
+    try {
+      mutator.flush();
+      Assert.fail();
+    } catch (RetriesExhaustedWithDetailsException expected) {
+    }
+    long actualSleep = System.currentTimeMillis() - startTime;
+    long expectedSleep = 0L;
+    for (int i = 0; i < tries - 1; i++) {
+      expectedSleep += ConnectionUtils.getPauseTime(specialPause, i);
+      // Prevent jitter in CollectionUtils#getPauseTime to affect result
+      actualSleep += (long) (specialPause * 0.01f);
+    }
+    LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
+    Assert.assertTrue("Expected to sleep " + expectedSleep + " but actually " + actualSleep + "ms",
+      actualSleep >= expectedSleep);
+
+    // check and confirm normal IOE will use the normal pause
+    final long normalPause =
+        myConf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    ap = new AsyncProcessWithFailure(conn, myConf, new IOException());
+    mutator.ap = ap;
+    Assert.assertNotNull(mutator.ap.createServerErrorTracker());
+    mutator.mutate(p);
+    startTime = System.currentTimeMillis();
+    try {
+      mutator.flush();
+      Assert.fail();
+    } catch (RetriesExhaustedWithDetailsException expected) {
+    }
+    actualSleep = System.currentTimeMillis() - startTime;
+    expectedSleep = 0L;
+    for (int i = 0; i < tries - 1; i++) {
+      expectedSleep += ConnectionUtils.getPauseTime(normalPause, i);
+    }
+    // plus an additional pause to balance the program execution time
+    expectedSleep += normalPause;
+    LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
+    Assert.assertTrue("Slept for too long: " + actualSleep + "ms", actualSleep <= expectedSleep);
   }
 }

@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -62,19 +63,22 @@ public class RpcRetryingCaller<T> {
   private final int startLogErrorsCnt;
 
   private final long pause;
+  private final long pauseForCQTBE;
   private final int retries;
   private final int rpcTimeout;// timeout for each rpc request
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
   private final RetryingCallerInterceptor interceptor;
   private final RetryingCallerInterceptorContext context;
 
-  public RpcRetryingCaller(long pause, int retries, int startLogErrorsCnt) {
-    this(pause, retries, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, startLogErrorsCnt, 0);
+  public RpcRetryingCaller(long pause, long pauseForCQTBE, int retries, int startLogErrorsCnt) {
+    this(pause, pauseForCQTBE, retries, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR,
+        startLogErrorsCnt, 0);
   }
 
-  public RpcRetryingCaller(long pause, int retries,
+  public RpcRetryingCaller(long pause, long pauseForCQTBE, int retries,
       RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout) {
     this.pause = pause;
+    this.pauseForCQTBE = pauseForCQTBE;
     this.retries = retries;
     this.interceptor = interceptor;
     context = interceptor.createEmptyContext();
@@ -159,9 +163,11 @@ public class RpcRetryingCaller<T> {
           throw new RetriesExhaustedException(tries, exceptions);
         }
         // If the server is dead, we need to wait a little before retrying, to give
-        //  a chance to the regions to be
-        // get right pause time, start by RETRY_BACKOFF[0] * pause
-        expectedSleep = callable.sleep(pause, tries);
+        // a chance to the regions to be moved
+        // get right pause time, start by RETRY_BACKOFF[0] * pauseBase, where pauseBase might be
+        // special when encountering CallQueueTooBigException, see #HBASE-17114
+        long pauseBase = (t instanceof CallQueueTooBigException) ? pauseForCQTBE : pause;
+        expectedSleep = callable.sleep(pauseBase, tries);
 
         // If, after the planned sleep, there won't be enough time left, we stop now.
         long duration = singleCallDuration(expectedSleep);

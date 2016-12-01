@@ -532,7 +532,7 @@ public class TestClientScanner {
 
     @Override
     public <T> RpcRetryingCaller<T> newCaller() {
-      return new RpcRetryingCaller<T>(0, 0, 0) {
+      return new RpcRetryingCaller<T>(0, 0, 0, 0) {
         @Override
         public void cancel() {
         }

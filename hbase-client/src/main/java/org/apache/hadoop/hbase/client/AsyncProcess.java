@@ -47,6 +47,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncProcess.RowChecker.ReturnCode;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -257,6 +258,7 @@ class AsyncProcess {
    */
   protected final int maxConcurrentTasksPerServer;
   protected final long pause;
+  protected final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   protected int numTries;
   protected int serverTrackerTimeout;
   protected int rpcTimeout;
@@ -321,6 +323,15 @@ class AsyncProcess {
 
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
+    if (configuredPauseForCQTBE < pause) {
+      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
+          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
+          + ", will use " + pause + " instead.");
+      this.pauseForCQTBE = pause;
+    } else {
+      this.pauseForCQTBE = configuredPauseForCQTBE;
+    }
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.rpcTimeout = rpcTimeout;
@@ -1313,8 +1324,15 @@ class AsyncProcess {
       //  we go for one.
       boolean retryImmediately = throwable instanceof RetryImmediatelyException;
       int nextAttemptNumber = retryImmediately ? numAttempt : numAttempt + 1;
-      long backOffTime = retryImmediately ? 0 :
-          errorsByServer.calculateBackoffTime(oldServer, pause);
+      long backOffTime;
+      if (retryImmediately) {
+        backOffTime = 0;
+      } else if (throwable instanceof CallQueueTooBigException) {
+        // Give a special check on CQTBE, see #HBASE-17114
+        backOffTime = errorsByServer.calculateBackoffTime(oldServer, pauseForCQTBE);
+      } else {
+        backOffTime = errorsByServer.calculateBackoffTime(oldServer, pause);
+      }
       if (numAttempt > startLogErrorsCnt) {
         // We use this value to have some logs when we have multiple failures, but not too many
         //  logs, as errors are to be expected when a region moves, splits and so on
