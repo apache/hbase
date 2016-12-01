@@ -43,7 +43,7 @@ public class TestRegionStates {
 
   @Test
   public void testWeDontReturnDrainingServersForOurBalancePlans() throws Exception {
-    Server server = mock(Server.class);
+    MasterServices server = mock(MasterServices.class);
     when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Configuration configuration = mock(Configuration.class);
     when(server.getConfiguration()).thenReturn(configuration);

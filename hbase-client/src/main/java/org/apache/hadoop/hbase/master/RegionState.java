@@ -180,6 +180,8 @@ public class RegionState {
 
   private volatile ServerName serverName;
   private volatile State state;
+  // The duration of region in transition
+  private long ritDuration;
 
   public RegionState() {
     this.stamp = new AtomicLong(System.currentTimeMillis());
@@ -196,10 +198,16 @@ public class RegionState {
 
   public RegionState(HRegionInfo region,
       State state, long stamp, ServerName serverName) {
+    this(region, state, stamp, serverName, 0);
+  }
+
+  public RegionState(HRegionInfo region, State state, long stamp, ServerName serverName,
+      long ritDuration) {
     this.hri = region;
     this.state = state;
     this.stamp = new AtomicLong(stamp);
     this.serverName = serverName;
+    this.ritDuration = ritDuration;
   }
 
   public void updateTimestampToNow() {
@@ -220,6 +228,19 @@ public class RegionState {
 
   public ServerName getServerName() {
     return serverName;
+  }
+
+  public long getRitDuration() {
+    return ritDuration;
+  }
+
+  /**
+   * Update the duration of region in transition
+   * @param previousStamp previous RegionState's timestamp
+   */
+  @InterfaceAudience.Private
+  void updateRitDuration(long previousStamp) {
+    this.ritDuration += (this.stamp.get() - previousStamp);
   }
 
   public boolean isClosing() {
