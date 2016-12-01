@@ -967,7 +967,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (this.ioErrorStartTime > 0) {
       if (cacheEnabled && (now - ioErrorStartTime) > this.ioErrorsTolerationDuration) {
         LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration +
-          "ms, disabing cache, please check your IOEngine");
+          "ms, disabling cache, please check your IOEngine");
         disableCache();
       }
     } else {

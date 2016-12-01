@@ -460,7 +460,7 @@ public class AssignmentVerificationReport {
 
   public void print(boolean isDetailMode) {
     if (!isFilledUp) {
-      System.err.println("[Error] Region assignment verfication report" +
+      System.err.println("[Error] Region assignment verification report" +
           "hasn't been filled up");
     }
     DecimalFormat df = new java.text.DecimalFormat( "#.##");

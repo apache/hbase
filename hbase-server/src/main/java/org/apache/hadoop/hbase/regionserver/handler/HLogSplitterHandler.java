@@ -87,7 +87,7 @@ public class HLogSplitterHandler extends EventHandler {
         break;
       case PREEMPTED:
         SplitLogCounters.tot_wkr_preempt_task.incrementAndGet();
-        LOG.warn("task execution prempted " + wal);
+        LOG.warn("task execution preempted " + curTask);
         break;
       case ERR:
         if (server != null && !server.isStopped()) {

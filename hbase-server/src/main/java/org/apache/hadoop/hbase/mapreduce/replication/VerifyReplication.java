@@ -237,7 +237,7 @@ public class VerifyReplication extends Configured implements Tool {
       return pair;
     } catch (ReplicationException e) {
       throw new IOException(
-          "An error occured while trying to connect to the remove peer cluster", e);
+          "An error occurred while trying to connect to the remove peer cluster", e);
     } finally {
       if (peer != null) {
         peer.close();

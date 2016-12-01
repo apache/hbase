@@ -972,8 +972,8 @@ public class RegionPlacementMaintainer {
     opt.addOption("tables", true,
         "The list of table names splitted by ',' ;" +
         "For example: -tables: t1,t2,...,tn");
-    opt.addOption("l", "locality", true, "enforce the maxium locality");
-    opt.addOption("m", "min-move", true, "enforce minium assignment move");
+    opt.addOption("l", "locality", true, "enforce the maximum locality");
+    opt.addOption("m", "min-move", true, "enforce minimum assignment move");
     opt.addOption("diff", false, "calculate difference between assignment plans");
     opt.addOption("munkres", false,
         "use munkres to place secondaries and tertiaries");

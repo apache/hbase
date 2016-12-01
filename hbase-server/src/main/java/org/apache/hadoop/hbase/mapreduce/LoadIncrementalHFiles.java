@@ -668,13 +668,13 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
      */
     if (indexForCallable < 0) {
       throw new IOException("The first region info for table "
-          + Bytes.toString(table.getTableName())
-          + " cann't be found in hbase:meta.Please use hbck tool to fix it first.");
+          + table.getName()
+          + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
     } else if ((indexForCallable == startEndKeys.getFirst().length - 1)
         && !Bytes.equals(startEndKeys.getSecond()[indexForCallable], HConstants.EMPTY_BYTE_ARRAY)) {
       throw new IOException("The last region info for table "
-          + Bytes.toString(table.getTableName())
-          + " cann't be found in hbase:meta.Please use hbck tool to fix it first.");
+          + table.getName()
+          + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
     } else if (indexForCallable + 1 < startEndKeys.getFirst().length
         && !(Bytes.compareTo(startEndKeys.getSecond()[indexForCallable],
           startEndKeys.getFirst()[indexForCallable + 1]) == 0)) {
