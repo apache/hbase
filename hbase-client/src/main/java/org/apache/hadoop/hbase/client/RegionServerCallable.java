@@ -78,9 +78,6 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
       RpcController rpcController) {
     super();
     this.connection = connection;
-    if (tableName == null) {
-      throw new IllegalArgumentException("Given tableName is null");
-    }
     this.tableName = tableName;
     this.row = row;
     this.rpcController = rpcController;
@@ -208,8 +205,8 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
 
   public void prepare(final boolean reload) throws IOException {
     // check table state if this is a retry
-    if (reload && !tableName.equals(TableName.META_TABLE_NAME) &&
-        getConnection().isTableDisabled(tableName)) {
+    if (reload && tableName != null && !tableName.equals(TableName.META_TABLE_NAME)
+        && getConnection().isTableDisabled(tableName)) {
       throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
     }
     try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
