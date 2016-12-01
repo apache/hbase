@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -148,4 +149,17 @@ public class TestByteBufferIOEngine {
     assert testOffsetAtStartNum == 0;
     assert testOffsetAtEndNum == 0;
   }
+
+  @Test
+  public void testIsSegmented() throws Exception {
+    ByteBufferIOEngine ioEngine = new ByteBufferIOEngine(100, false);
+    assertFalse(ioEngine.isSegmented());
+  }
+
+  @Test
+  public void testDoesAllocationCrossSegments() throws Exception {
+    ByteBufferIOEngine ioEngine = new ByteBufferIOEngine(100, false);
+    assertFalse(ioEngine.allocationCrossedSegments(0, 100));
+  }
+
 }

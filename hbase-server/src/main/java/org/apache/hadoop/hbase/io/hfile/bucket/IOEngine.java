@@ -38,6 +38,18 @@ public interface IOEngine {
   boolean isPersistent();
 
   /**
+   * @return true if the IOEngine is segmented at specific boundaries
+   */
+  boolean isSegmented();
+
+  /**
+   * @param offset the offset of the allocation
+   * @param len the length of the allocation
+   * @return true if the allocation would cross a segment boundary, false otherwise
+   */
+  boolean allocationCrossedSegments(long offset, long len);
+
+  /**
    * Transfers data from IOEngine to a Cacheable object.
    * @param length How many bytes to be read from the offset
    * @param offset The offset in the IO engine where the first byte to be read

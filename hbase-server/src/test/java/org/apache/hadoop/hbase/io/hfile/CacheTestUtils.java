@@ -275,6 +275,7 @@ public class CacheTestUtils {
 
       @Override
       public Cacheable deserialize(ByteBuff b) throws IOException {
+        b.rewind();
         int len = b.getInt();
         Thread.yield();
         byte buf[] = new byte[len];

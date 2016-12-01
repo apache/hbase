@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -28,6 +29,8 @@ import org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.BufferGrab
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -36,33 +39,47 @@ import org.junit.experimental.categories.Category;
  */
 @Category({IOTests.class, SmallTests.class})
 public class TestFileMmapEngine {
+  final int size = 2 * 1024 * 1024; // 2 MB
+  final String filePath = "testFileMmapEngine";
+
+  @After
+  public void tearDown() throws Exception {
+    File file = new File(filePath);
+    if (file.exists()) {
+      file.delete();
+    }
+  }
+
   @Test
   public void testFileMmapEngine() throws IOException {
-    int size = 2 * 1024 * 1024; // 2 MB
-    String filePath = "testFileMmapEngine";
-    try {
-      FileMmapEngine fileMmapEngine = new FileMmapEngine(filePath, size);
-      for (int i = 0; i < 50; i++) {
-        int len = (int) Math.floor(Math.random() * 100);
-        long offset = (long) Math.floor(Math.random() * size % (size - len));
-        byte[] data1 = new byte[len];
-        for (int j = 0; j < data1.length; ++j) {
-          data1[j] = (byte) (Math.random() * 255);
-        }
-        fileMmapEngine.write(ByteBuffer.wrap(data1), offset);
-        BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
-        fileMmapEngine.read(offset, len, deserializer);
-        ByteBuff data2 = deserializer.getDeserializedByteBuff();
-        for (int j = 0; j < data1.length; ++j) {
-          assertTrue(data1[j] == data2.get(j));
-        }
+    FileMmapEngine fileMmapEngine = new FileMmapEngine(filePath, size);
+    for (int i = 0; i < 50; i++) {
+      int len = (int) Math.floor(Math.random() * 100);
+      long offset = (long) Math.floor(Math.random() * size % (size - len));
+      byte[] data1 = new byte[len];
+      for (int j = 0; j < data1.length; ++j) {
+        data1[j] = (byte) (Math.random() * 255);
       }
-    } finally {
-      File file = new File(filePath);
-      if (file.exists()) {
-        file.delete();
+      fileMmapEngine.write(ByteBuffer.wrap(data1), offset);
+      BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
+      fileMmapEngine.read(offset, len, deserializer);
+      ByteBuff data2 = deserializer.getDeserializedByteBuff();
+      for (int j = 0; j < data1.length; ++j) {
+        assertTrue(data1[j] == data2.get(j));
       }
     }
-
   }
+
+  @Test
+  public void testIsSegmented() throws Exception {
+    IOEngine ioEngine = new FileMmapEngine(filePath, size);
+    assertFalse(ioEngine.isSegmented());
+  }
+
+  @Test
+  public void testDoesAllocationCrossSegments() throws Exception {
+    IOEngine ioEngine = new FileMmapEngine(filePath, size);
+    assertFalse(ioEngine.allocationCrossedSegments(0, 100));
+  }
+
 }

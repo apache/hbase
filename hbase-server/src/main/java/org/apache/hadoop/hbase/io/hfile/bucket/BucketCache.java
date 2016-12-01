@@ -74,6 +74,8 @@ import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -310,6 +312,8 @@ public class BucketCache implements BlockCache, HeapSize {
       throws IOException {
     if (ioEngineName.startsWith("file:")) {
       return new FileIOEngine(ioEngineName.substring(5), capacity);
+    } else if (ioEngineName.startsWith("files:")) {
+      return new FileIOEngine(ioEngineName.substring(6).split(","), capacity);
     } else if (ioEngineName.startsWith("offheap")) {
       return new ByteBufferIOEngine(capacity, true);
     } else if (ioEngineName.startsWith("heap")) {
@@ -1319,7 +1323,20 @@ public class BucketCache implements BlockCache, HeapSize {
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
       if (len == 0) return null;
+      long[] failedSegmentOffsets = null;
       long offset = bucketAllocator.allocateBlock(len);
+      int failedSegmentCount = 0;
+      if (ioEngine.isSegmented()) {
+        failedSegmentOffsets = new long[1];
+        while (ioEngine.allocationCrossedSegments(offset, len)) {
+          if (failedSegmentCount == failedSegmentOffsets.length) {
+            failedSegmentOffsets = Longs.ensureCapacity(failedSegmentOffsets,
+                failedSegmentOffsets.length * 2, 0);
+          }
+          failedSegmentOffsets[failedSegmentCount++] = offset;
+          offset = bucketAllocator.allocateBlock(len);
+        }
+      }
       BucketEntry bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory);
       bucketEntry.setDeserialiserReference(data.getDeserializer(), deserialiserMap);
       try {
@@ -1339,8 +1356,15 @@ public class BucketCache implements BlockCache, HeapSize {
           ioEngine.write(bb, offset);
         }
       } catch (IOException ioe) {
+        // CacheFullException is an IOException
         // free it in bucket allocator
         bucketAllocator.freeBlock(offset);
+        if (ioEngine.isSegmented()) {
+          // free any failed allocations due to segmentation
+          for (int i = 0; i < failedSegmentCount; ++i) {
+            bucketAllocator.freeBlock(failedSegmentOffsets[i]);
+          }
+        }
         throw ioe;
       }
 
