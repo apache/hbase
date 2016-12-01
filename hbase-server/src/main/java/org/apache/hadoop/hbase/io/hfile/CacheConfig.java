@@ -25,10 +25,10 @@ import java.lang.management.ManagementFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -42,6 +42,14 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class CacheConfig {
   private static final Log LOG = LogFactory.getLog(CacheConfig.class.getName());
+
+
+  /**
+   * Disabled cache configuration
+   */
+
+  public static final CacheConfig DISABLED = new CacheConfig();
+
 
   /**
    * Configuration key to cache data blocks on read. Bloom blocks and index blocks are always be
@@ -96,7 +104,7 @@ public class CacheConfig {
    * is an in-memory map that needs to be persisted across restarts. Where to store this
    * in-memory state is what you supply here: e.g. <code>/tmp/bucketcache.map</code>.
    */
-  public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY = 
+  public static final String BUCKET_CACHE_PERSISTENT_PATH_KEY =
       "hbase.bucketcache.persistent.path";
 
   /**
@@ -104,11 +112,11 @@ public class CacheConfig {
    * as indices and blooms are kept in the lru blockcache and the data blocks in the
    * bucket cache).
    */
-  public static final String BUCKET_CACHE_COMBINED_KEY = 
+  public static final String BUCKET_CACHE_COMBINED_KEY =
       "hbase.bucketcache.combinedcache.enabled";
 
   public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
-  public static final String BUCKET_CACHE_WRITER_QUEUE_KEY = 
+  public static final String BUCKET_CACHE_WRITER_QUEUE_KEY =
       "hbase.bucketcache.writer.queuelength";
 
   /**
@@ -318,6 +326,11 @@ public class CacheConfig {
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
         cacheConf.cacheDataCompressed, cacheConf.prefetchOnOpen,
         cacheConf.cacheDataInL1, cacheConf.dropBehindCompaction);
+  }
+
+  private CacheConfig() {
+    this(null, false, false, false, false, false,
+               false, false, false, false, false);
   }
 
   /**

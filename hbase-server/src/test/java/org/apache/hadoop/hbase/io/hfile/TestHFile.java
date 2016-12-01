@@ -18,12 +18,18 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +39,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -42,20 +49,20 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
-import org.junit.*;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import static org.junit.Assert.*;
 
 /**
  * test hfile features.
@@ -66,14 +73,13 @@ public class TestHFile  {
   @Rule public TestName testName = new TestName();
 
   private static final Log LOG = LogFactory.getLog(TestHFile.class);
-
+  private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static String ROOT_DIR =
     TEST_UTIL.getDataTestDir("TestHFile").toString();
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
   private static CacheConfig cacheConf = null;
-  private Map<String, Long> startingMetrics;
   private static Configuration conf ;
   private static FileSystem fs;
 
@@ -82,7 +88,66 @@ public class TestHFile  {
     conf = TEST_UTIL.getConfiguration();
     fs = TEST_UTIL.getTestFileSystem();
   }
-  
+
+  @Test
+  public void testReaderWithoutBlockCache() throws Exception {
+     Path path = writeStoreFile();
+     try{
+       readStoreFile(path);
+     } catch (Exception e) {
+       // fail test
+       assertTrue(false);
+     }
+  }
+
+
+  private void readStoreFile(Path storeFilePath) throws Exception {
+    // Open the file reader with block cache disabled.
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, conf);
+    long offset = 0;
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null);
+      offset += block.getOnDiskSizeWithHeader();
+    }
+  }
+
+  private Path writeStoreFile() throws IOException {
+    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), "TestHFile");
+    HFileContext meta = new HFileContextBuilder().withBlockSize(64 * 1024).build();
+    StoreFileWriter sfw =
+        new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(storeFileParentDir)
+            .withComparator(CellComparator.COMPARATOR).withFileContext(meta).build();
+
+    final int rowLen = 32;
+    Random RNG = new Random();
+    for (int i = 0; i < 1000; ++i) {
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(RNG, i);
+      byte[] v = RandomKeyValueUtil.randomValue(RNG);
+      int cfLen = RNG.nextInt(k.length - rowLen + 1);
+      KeyValue kv =
+          new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
+              k.length - rowLen - cfLen, RNG.nextLong(), generateKeyType(RNG), v, 0, v.length);
+      sfw.append(kv);
+    }
+
+    sfw.close();
+    return sfw.getPath();
+  }
+
+  public static KeyValue.Type generateKeyType(Random rand) {
+    if (rand.nextBoolean()) {
+      // Let's make half of KVs puts.
+      return KeyValue.Type.Put;
+    } else {
+      KeyValue.Type keyType = KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
+      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
+        throw new RuntimeException("Generated an invalid key type: " + keyType + ". "
+            + "Probably the layout of KeyValue.Type has changed.");
+      }
+      return keyType;
+    }
+  }
+
   /**
    * Test empty HFile.
    * Test all features work reasonably when hfile is empty of entries.
@@ -450,7 +515,7 @@ public class TestHFile  {
     mid = HFileWriterImpl.getMidpoint(CellComparator.COMPARATOR, left, right);
     assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(left, mid) < 0);
     assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(mid, right) < 0);
-    assertEquals(1, (int) mid.getRowLength());
+    assertEquals(1, mid.getRowLength());
 
     left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("a"));
@@ -463,21 +528,21 @@ public class TestHFile  {
     mid = HFileWriterImpl.getMidpoint(CellComparator.COMPARATOR, left, right);
     assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(left, mid) < 0);
     assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(mid, right) < 0);
-    assertEquals(2, (int) mid.getFamilyLength());
+    assertEquals(2, mid.getFamilyLength());
 
     left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaaa"));
     mid = HFileWriterImpl.getMidpoint(CellComparator.COMPARATOR, left, right);
     assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(left, mid) < 0);
     assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(mid, right) < 0);
-    assertEquals(2, (int) mid.getQualifierLength());
+    assertEquals(2, mid.getQualifierLength());
 
     left = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = CellUtil.createCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("b"));
     mid = HFileWriterImpl.getMidpoint(CellComparator.COMPARATOR, left, right);
     assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(left, mid) < 0);
     assertTrue(CellComparator.COMPARATOR.compareKeyIgnoresMvcc(mid, right) <= 0);
-    assertEquals(1, (int) mid.getQualifierLength());
+    assertEquals(1, mid.getQualifierLength());
 
     // Assert that if meta comparator, it returns the right cell -- i.e. no
     // optimization done.

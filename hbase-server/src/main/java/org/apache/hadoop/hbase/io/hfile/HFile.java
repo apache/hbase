@@ -248,7 +248,7 @@ public class HFile {
     protected FileSystem fs;
     protected Path path;
     protected FSDataOutputStream ostream;
-    protected CellComparator comparator = 
+    protected CellComparator comparator =
         CellComparator.COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
@@ -459,9 +459,9 @@ public class HFile {
      * Return the file context of the HFile this reader belongs to
      */
     HFileContext getFileContext();
-    
+
     boolean isPrimaryReplicaReader();
-    
+
     void setPrimaryReplicaReader(boolean isPrimaryReplicaReader);
 
     boolean shouldIncludeMemstoreTS();
@@ -544,6 +544,19 @@ public class HFile {
     }
     return pickReaderVersion(path, fsdis, size, cacheConf, hfs, conf);
   }
+
+  /**
+  * Creates reader with cache configuration disabled
+  * @param fs filesystem
+  * @param path Path to file to read
+  * @return an active Reader instance
+  * @throws IOException Will throw a CorruptHFileException
+  * (DoNotRetryIOException subtype) if hfile is corrupt/invalid.
+  */
+ public static Reader createReader(
+     FileSystem fs, Path path,  Configuration conf) throws IOException {
+     return createReader(fs, path, CacheConfig.DISABLED, conf);
+ }
 
   /**
    *
@@ -655,82 +668,102 @@ public class HFile {
       return this;
     }
 
+    @Override
     public void clear() {
       this.map.clear();
     }
 
+    @Override
     public Comparator<? super byte[]> comparator() {
       return map.comparator();
     }
 
+    @Override
     public boolean containsKey(Object key) {
       return map.containsKey(key);
     }
 
+    @Override
     public boolean containsValue(Object value) {
       return map.containsValue(value);
     }
 
+    @Override
     public Set<java.util.Map.Entry<byte[], byte[]>> entrySet() {
       return map.entrySet();
     }
 
+    @Override
     public boolean equals(Object o) {
       return map.equals(o);
     }
 
+    @Override
     public byte[] firstKey() {
       return map.firstKey();
     }
 
+    @Override
     public byte[] get(Object key) {
       return map.get(key);
     }
 
+    @Override
     public int hashCode() {
       return map.hashCode();
     }
 
+    @Override
     public SortedMap<byte[], byte[]> headMap(byte[] toKey) {
       return this.map.headMap(toKey);
     }
 
+    @Override
     public boolean isEmpty() {
       return map.isEmpty();
     }
 
+    @Override
     public Set<byte[]> keySet() {
       return map.keySet();
     }
 
+    @Override
     public byte[] lastKey() {
       return map.lastKey();
     }
 
+    @Override
     public byte[] put(byte[] key, byte[] value) {
       return this.map.put(key, value);
     }
 
+    @Override
     public void putAll(Map<? extends byte[], ? extends byte[]> m) {
       this.map.putAll(m);
     }
 
+    @Override
     public byte[] remove(Object key) {
       return this.map.remove(key);
     }
 
+    @Override
     public int size() {
       return map.size();
     }
 
+    @Override
     public SortedMap<byte[], byte[]> subMap(byte[] fromKey, byte[] toKey) {
       return this.map.subMap(fromKey, toKey);
     }
 
+    @Override
     public SortedMap<byte[], byte[]> tailMap(byte[] fromKey) {
       return this.map.tailMap(fromKey);
     }
 
+    @Override
     public Collection<byte[]> values() {
       return map.values();
     }
