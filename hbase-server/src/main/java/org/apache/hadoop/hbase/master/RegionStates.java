@@ -990,50 +990,27 @@ public class RegionStates {
       (double)totalLoad / (double)numServers;
   }
 
+  protected Map<TableName, Map<ServerName, List<HRegionInfo>>> getAssignmentsByTable() {
+    return getAssignmentsByTable(false);
+  }
+
   /**
    * This is an EXPENSIVE clone.  Cloning though is the safest thing to do.
    * Can't let out original since it can change and at least the load balancer
    * wants to iterate this exported list.  We need to synchronize on regions
    * since all access to this.servers is under a lock on this.regions.
-   *
+   * @param forceByCluster a flag to force to aggregate the server-load to the cluster level
    * @return A clone of current assignments by table.
    */
-  protected Map<TableName, Map<ServerName, List<HRegionInfo>>>
-      getAssignmentsByTable() {
-    Map<TableName, Map<ServerName, List<HRegionInfo>>> result =
-      new HashMap<TableName, Map<ServerName,List<HRegionInfo>>>();
+  protected Map<TableName, Map<ServerName, List<HRegionInfo>>> getAssignmentsByTable(
+          boolean forceByCluster) {
+    Map<TableName, Map<ServerName, List<HRegionInfo>>> result;
     synchronized (this) {
-      if (!server.getConfiguration().getBoolean(
-            HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false)) {
-        Map<ServerName, List<HRegionInfo>> svrToRegions =
-          new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());
-        for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
-          svrToRegions.put(e.getKey(), new ArrayList<HRegionInfo>(e.getValue()));
-        }
-        result.put(TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME), svrToRegions);
-      } else {
-        for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
-          for (HRegionInfo hri: e.getValue()) {
-            if (hri.isMetaRegion()) continue;
-            TableName tablename = hri.getTable();
-            Map<ServerName, List<HRegionInfo>> svrToRegions = result.get(tablename);
-            if (svrToRegions == null) {
-              svrToRegions = new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());
-              result.put(tablename, svrToRegions);
-            }
-            List<HRegionInfo> regions = svrToRegions.get(e.getKey());
-            if (regions == null) {
-              regions = new ArrayList<HRegionInfo>();
-              svrToRegions.put(e.getKey(), regions);
-            }
-            regions.add(hri);
-          }
-        }
-      }
+      result = getTableRSRegionMap(server.getConfiguration().getBoolean(
+              HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE,false) && !forceByCluster);
     }
-
     Map<ServerName, ServerLoad>
-      onlineSvrs = serverManager.getOnlineServers();
+            onlineSvrs = serverManager.getOnlineServers();
     // Take care of servers w/o assignments, and remove servers in draining mode
     List<ServerName> drainingServers = this.serverManager.getDrainingServersList();
     for (Map<ServerName, List<HRegionInfo>> map: result.values()) {
@@ -1043,6 +1020,29 @@ public class RegionStates {
         }
       }
       map.keySet().removeAll(drainingServers);
+    }
+    return result;
+  }
+
+  private Map<TableName, Map<ServerName, List<HRegionInfo>>> getTableRSRegionMap(Boolean bytable){
+    Map<TableName, Map<ServerName, List<HRegionInfo>>> result =
+            new HashMap<TableName, Map<ServerName,List<HRegionInfo>>>();
+    for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
+      for (HRegionInfo hri: e.getValue()) {
+        if (hri.isMetaRegion()) continue;
+        TableName tablename = bytable ? hri.getTable() : TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME);
+        Map<ServerName, List<HRegionInfo>> svrToRegions = result.get(tablename);
+        if (svrToRegions == null) {
+          svrToRegions = new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());
+          result.put(tablename, svrToRegions);
+        }
+        List<HRegionInfo> regions = svrToRegions.get(e.getKey());
+        if (regions == null) {
+          regions = new ArrayList<HRegionInfo>();
+          svrToRegions.put(e.getKey(), regions);
+        }
+        regions.add(hri);
+      }
     }
     return result;
   }

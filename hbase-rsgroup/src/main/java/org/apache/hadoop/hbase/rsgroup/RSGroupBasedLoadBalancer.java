@@ -45,6 +45,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -115,6 +116,11 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   }
 
   @Override
+  public void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad){
+
+  }
+
+  @Override
   public List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName, List<HRegionInfo>>
       clusterState) throws HBaseIOException {
     return balanceCluster(clusterState);
@@ -139,6 +145,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
       for (RSGroupInfo info : RSGroupInfoManager.listRSGroups()) {
         Map<ServerName, List<HRegionInfo>> groupClusterState =
             new HashMap<ServerName, List<HRegionInfo>>();
+        Map<TableName, Map<ServerName, List<HRegionInfo>>> groupClusterLoad =
+            new HashMap<TableName, Map<ServerName, List<HRegionInfo>>>();
         for (HostAndPort sName : info.getServers()) {
           for(ServerName curr: clusterState.keySet()) {
             if(curr.getHostPort().equals(sName)) {
@@ -146,6 +154,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
             }
           }
         }
+        groupClusterLoad.put(TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME), groupClusterState);
+        this.internalBalancer.setClusterLoad(groupClusterLoad);
         List<RegionPlan> groupPlans = this.internalBalancer
             .balanceCluster(groupClusterState);
         if (groupPlans != null) {

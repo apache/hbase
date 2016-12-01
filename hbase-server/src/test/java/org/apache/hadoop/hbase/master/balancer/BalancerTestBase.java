@@ -307,6 +307,39 @@ public class BalancerTestBase {
   }
 
   /**
+   * Invariant is that all servers have between acceptable range
+   * number of regions.
+   */
+  public boolean assertClusterOverallAsBalanced(List<ServerAndLoad> servers, int tablenum) {
+    int numServers = servers.size();
+    int numRegions = 0;
+    int maxRegions = 0;
+    int minRegions = Integer.MAX_VALUE;
+    for (ServerAndLoad server : servers) {
+      int nr = server.getLoad();
+      if (nr > maxRegions) {
+        maxRegions = nr;
+      }
+      if (nr < minRegions) {
+        minRegions = nr;
+      }
+      numRegions += nr;
+    }
+    if (maxRegions - minRegions < 2) {
+      // less than 2 between max and min, can't balance
+      return true;
+    }
+    int min = numRegions / numServers;
+    int max = numRegions % numServers == 0 ? min : min + 1;
+
+    for (ServerAndLoad server : servers) {
+      if (server.getLoad() < 0 || server.getLoad() > max + tablenum/2 + 1  || server.getLoad() < min - tablenum/2 - 1)
+        return false;
+    }
+    return true;
+  }
+
+  /**
    * Checks whether region replicas are not hosted on the same host.
    */
   public void assertRegionReplicaPlacement(Map<ServerName, List<HRegionInfo>> serverMap, RackManager rackManager) {
@@ -452,6 +485,45 @@ public class BalancerTestBase {
     return servers;
   }
 
+  protected TreeMap<ServerName, List<HRegionInfo>> mockUniformClusterServers(int[] mockCluster) {
+    int numServers = mockCluster.length;
+    TreeMap<ServerName, List<HRegionInfo>> servers = new TreeMap<ServerName, List<HRegionInfo>>();
+    for (int i = 0; i < numServers; i++) {
+      int numRegions = mockCluster[i];
+      ServerAndLoad sal = randomServer(0);
+      List<HRegionInfo> regions = uniformRegions(numRegions);
+      servers.put(sal.getServerName(), regions);
+    }
+    return servers;
+  }
+
+  protected HashMap<TableName, TreeMap<ServerName, List<HRegionInfo>>> mockClusterServersWithTables(Map<ServerName, List<HRegionInfo>> clusterServers) {
+    HashMap<TableName, TreeMap<ServerName, List<HRegionInfo>>> result = new HashMap<>();
+    for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterServers.entrySet()) {
+      ServerName sal = entry.getKey();
+      List<HRegionInfo> regions = entry.getValue();
+      for (HRegionInfo hri : regions){
+        TreeMap<ServerName, List<HRegionInfo>> servers = result.get(hri.getTable());
+        if (servers == null) {
+          servers = new TreeMap<ServerName, List<HRegionInfo>>();
+          result.put(hri.getTable(), servers);
+        }
+        List<HRegionInfo> hrilist = servers.get(sal);
+        if (hrilist == null) {
+          hrilist = new ArrayList<HRegionInfo>();
+          servers.put(sal, hrilist);
+        }
+        hrilist.add(hri);
+      }
+    }
+    for(Map.Entry<TableName, TreeMap<ServerName, List<HRegionInfo>>> entry : result.entrySet()){
+      for(ServerName srn : clusterServers.keySet()){
+        if (!entry.getValue().containsKey(srn)) entry.getValue().put(srn, new ArrayList<HRegionInfo>());
+      }
+    }
+    return result;
+  }
+
   private Queue<HRegionInfo> regionQueue = new LinkedList<HRegionInfo>();
 
   protected List<HRegionInfo> randomRegions(int numRegions) {
@@ -474,6 +546,23 @@ public class BalancerTestBase {
       TableName tableName =
           TableName.valueOf("table" + (numTables > 0 ? rand.nextInt(numTables) : i));
       HRegionInfo hri = new HRegionInfo(tableName, start, end, false, regionId++);
+      regions.add(hri);
+    }
+    return regions;
+  }
+
+  protected List<HRegionInfo> uniformRegions(int numRegions) {
+    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(numRegions);
+    byte[] start = new byte[16];
+    byte[] end = new byte[16];
+    rand.nextBytes(start);
+    rand.nextBytes(end);
+    for (int i = 0; i < numRegions; i++) {
+      Bytes.putInt(start, 0, numRegions << 1);
+      Bytes.putInt(end, 0, (numRegions << 1) + 1);
+      TableName tableName =
+              TableName.valueOf("table" + i);
+      HRegionInfo hri = new HRegionInfo(tableName, start, end, false);
       regions.add(hri);
     }
     return regions;

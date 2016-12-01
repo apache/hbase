@@ -57,6 +57,11 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    */
   void setClusterStatus(ClusterStatus st);
 
+  /**
+   * Pass RegionStates and allow balancer to set the current cluster load.
+   * @param ClusterLoad
+   */
+  void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> ClusterLoad);
 
   /**
    * Set the master service.

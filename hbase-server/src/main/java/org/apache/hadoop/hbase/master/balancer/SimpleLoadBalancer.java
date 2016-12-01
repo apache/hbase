@@ -26,9 +26,12 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.Comparator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -38,6 +41,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionPlan;
 
 import com.google.common.collect.MinMaxPriorityQueue;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -59,7 +63,8 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
 
   private RegionInfoComparator riComparator = new RegionInfoComparator();
   private RegionPlan.RegionPlanComparator rpComparator = new RegionPlan.RegionPlanComparator();
-
+  private float avgLoadOverall;
+  private List<ServerAndLoad> serverLoadList;
 
   /**
    * Stores additional per-server information about the regions added/removed
@@ -71,12 +76,14 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    */
   static class BalanceInfo {
 
-    private final int nextRegionForUnload;
+    private int nextRegionForUnload;
     private int numRegionsAdded;
+    private List<HRegionInfo> hriList;
 
-    public BalanceInfo(int nextRegionForUnload, int numRegionsAdded) {
+    public BalanceInfo(int nextRegionForUnload, int numRegionsAdded, List<HRegionInfo> hriList) {
       this.nextRegionForUnload = nextRegionForUnload;
       this.numRegionsAdded = numRegionsAdded;
+      this.hriList = hriList;
     }
 
     int getNextRegionForUnload() {
@@ -90,6 +97,66 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     void setNumRegionsAdded(int numAdded) {
       this.numRegionsAdded = numAdded;
     }
+
+    List<HRegionInfo> getHriList() {
+      return hriList;
+    }
+
+    void setNextRegionForUnload(int nextRegionForUnload) {
+      this.nextRegionForUnload = nextRegionForUnload;
+    }
+
+  }
+
+  public void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad){
+    serverLoadList = new ArrayList<>();
+    float sum = 0;
+    for(Map.Entry<TableName, Map<ServerName, List<HRegionInfo>>> clusterEntry : clusterLoad.entrySet()){
+      for(Map.Entry<ServerName, List<HRegionInfo>> entry : clusterEntry.getValue().entrySet()){
+        if(entry.getKey().equals(masterServerName)) continue; // we shouldn't include master as potential assignee
+        serverLoadList.add(new ServerAndLoad(entry.getKey(), entry.getValue().size()));
+        sum += entry.getValue().size();
+      }
+    }
+    avgLoadOverall = sum / serverLoadList.size();
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    float originSlop = slop;
+    float originOverallSlop = overallSlop;
+    super.setConf(conf);
+    LOG.info("Update configuration of SimpleLoadBalancer, previous slop is "
+            + originSlop + ", current slop is " + slop + "previous overallSlop is" +
+            originOverallSlop + ", current overallSlop is " + originOverallSlop);
+  }
+
+  private void setLoad(List<ServerAndLoad> slList, int i, int loadChange){
+    ServerAndLoad newsl = new ServerAndLoad(slList.get(i).getServerName(),slList.get(i).getLoad() + loadChange);
+    slList.set(i, newsl);
+  }
+
+  /**
+   * A checker function to decide when we want balance overall and certain table has been balanced,
+   * do we still need to re-distribute regions of this table to achieve the state of overall-balance
+   * @return true if this table should be balanced.
+   */
+  private boolean overallNeedsBalance() {
+    int floor = (int) Math.floor(avgLoadOverall * (1 - overallSlop));
+    int ceiling = (int) Math.ceil(avgLoadOverall * (1 + overallSlop));
+    int max = 0, min = Integer.MAX_VALUE;
+    for(ServerAndLoad server : serverLoadList){
+      max = Math.max(server.getLoad(), max);
+      min = Math.min(server.getLoad(), min);
+    }
+    if (max <= ceiling && min >= floor) {
+      if (LOG.isTraceEnabled()) {
+        // If nothing to balance, then don't say anything unless trace-level logging.
+        LOG.trace("Skipping load balancing because cluster is balanced at overall level");
+      }
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -197,7 +264,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // construct a Cluster object with clusterMap and rest of the
     // argument as defaults
     Cluster c = new Cluster(clusterMap, null, this.regionFinder, this.rackManager);
-    if (!this.needsBalance(c)) return null;
+    if (!this.needsBalance(c) && !this.overallNeedsBalance()) return null;
 
     ClusterLoadState cs = new ClusterLoadState(clusterMap);
     int numServers = cs.getNumServers();
@@ -231,8 +298,8 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       ServerAndLoad sal = server.getKey();
       int load = sal.getLoad();
       if (load <= max) {
-        serverBalanceInfo.put(sal.getServerName(), new BalanceInfo(0, 0));
-        break;
+        serverBalanceInfo.put(sal.getServerName(), new BalanceInfo(0, 0, server.getValue()));
+        continue;
       }
       serversOverloaded++;
       List<HRegionInfo> regions = server.getValue();
@@ -255,7 +322,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         if (numTaken >= numToOffload) break;
       }
       serverBalanceInfo.put(sal.getServerName(),
-        new BalanceInfo(numToOffload, (-1)*numTaken));
+              new BalanceInfo(numToOffload, (-1)*numTaken, server.getValue()));
     }
     int totalNumMoved = regionsToMove.size();
 
@@ -296,10 +363,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         underloadedServers.put(si, numToTake-1);
         cnt++;
         BalanceInfo bi = serverBalanceInfo.get(si);
-        if (bi == null) {
-          bi = new BalanceInfo(0, 0);
-          serverBalanceInfo.put(si, bi);
-        }
         bi.setNumRegionsAdded(bi.getNumRegionsAdded()+1);
       }
       if (cnt == 0) break;
@@ -309,17 +372,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     for (Integer i : underloadedServers.values()) {
       // If we still want to take some, increment needed
       neededRegions += i;
-    }
-
-    // If none needed to fill all to min and none left to drain all to max,
-    // we are done
-    if (neededRegions == 0 && regionsToMove.isEmpty()) {
-      long endTime = System.currentTimeMillis();
-      LOG.info("Calculated a load balance in " + (endTime-startTime) + "ms. " +
-          "Moving " + totalNumMoved + " regions off of " +
-          serversOverloaded + " overloaded servers onto " +
-          serversUnderloaded + " less loaded servers");
-      return regionsToReturn;
     }
 
     // Need to do a second pass.
@@ -338,6 +390,8 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         HRegionInfo region = server.getValue().get(idx);
         if (region.isMetaRegion()) continue; // Don't move meta regions.
         regionsToMove.add(new RegionPlan(region, server.getKey().getServerName(), null));
+        balanceInfo.setNumRegionsAdded(balanceInfo.getNumRegionsAdded() - 1);
+        balanceInfo.setNextRegionForUnload(balanceInfo.getNextRegionForUnload() + 1);
         totalNumMoved++;
         if (--neededRegions == 0) {
           // No more regions needed, done shedding
@@ -370,24 +424,8 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       }
     }
 
-    // If we still have regions to dish out, assign underloaded to max
-    if (0 < regionsToMove.size()) {
-      for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server :
-        serversByLoad.entrySet()) {
-        int regionCount = server.getKey().getLoad();
-        BalanceInfo balanceInfo = serverBalanceInfo.get(server.getKey().getServerName());
-        if(balanceInfo != null) {
-          regionCount += balanceInfo.getNumRegionsAdded();
-        }
-        if(regionCount >= max) {
-          break;
-        }
-        addRegionPlan(regionsToMove, fetchFromTail,
-          server.getKey().getServerName(), regionsToReturn);
-        if (regionsToMove.isEmpty()) {
-          break;
-        }
-      }
+    if (min != max) {
+      balanceOverall(regionsToReturn, serverBalanceInfo, fetchFromTail, regionsToMove, max, min);
     }
 
     long endTime = System.currentTimeMillis();
@@ -417,6 +455,128 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   }
 
   /**
+   * If we need to balanceoverall, we need to add one more round to peel off one region from each max.
+   * Together with other regions left to be assigned, we distribute all regionToMove, to the RS
+   * that have less regions in whole cluster scope.
+   */
+  public void balanceOverall(List<RegionPlan> regionsToReturn,
+                                       Map<ServerName, BalanceInfo> serverBalanceInfo, boolean fetchFromTail,
+                                         MinMaxPriorityQueue<RegionPlan> regionsToMove, int max, int min ){
+    // Step 1.
+    // A map to record the plan we have already got as status quo, in order to resolve a cyclic assignment pair,
+    // e.g. plan 1: A -> B, plan 2: B ->C => resolve plan1 to A -> C, remove plan2
+    Map<ServerName, List<Integer>> returnMap = new HashMap<>();
+    for (int i = 0; i < regionsToReturn.size(); i++) {
+      List<Integer> pos = returnMap.get(regionsToReturn.get(i).getDestination());
+      if (pos == null) {
+        pos = new ArrayList<>();
+        returnMap.put(regionsToReturn.get(i).getDestination(), pos);
+      }
+      pos.add(i);
+    }
+
+    // Step 2.
+    // Peel off one region from each RS which has max number of regions now.
+    // Each RS should have either max or min numbers of regions for this table.
+    for (int i = 0; i < serverLoadList.size(); i++) {
+      ServerAndLoad serverload = serverLoadList.get(i);
+      BalanceInfo balanceInfo = serverBalanceInfo.get(serverload.getServerName());
+      setLoad(serverLoadList, i, balanceInfo.getNumRegionsAdded());
+      if (balanceInfo.getHriList().size() + balanceInfo.getNumRegionsAdded() == max) {
+        HRegionInfo hriToPlan;
+        if (balanceInfo.getHriList().size() == 0) {
+          LOG.debug("During balanceOverall, we found " + serverload.getServerName()
+                  + " has no HRegionInfo, no operation needed");
+          continue;
+        } else if (balanceInfo.getNextRegionForUnload() >= balanceInfo.getHriList().size()) {
+          continue;
+        } else {
+          hriToPlan = balanceInfo.getHriList().get(balanceInfo.getNextRegionForUnload());
+        }
+        RegionPlan maxPlan = new RegionPlan(hriToPlan, serverload.getServerName(), null);
+        regionsToMove.add(maxPlan);
+        setLoad(serverLoadList, i, -1);
+      }else if(balanceInfo.getHriList().size() + balanceInfo.getNumRegionsAdded() > max
+              || balanceInfo.getHriList().size() + balanceInfo.getNumRegionsAdded() < min){
+        LOG.warn("Encounter incorrect region numbers after calculating move plan during balanceOverall, " +
+                "for this table, " + serverload.getServerName() + " originally has " + balanceInfo.getHriList().size() +
+                " regions and " + balanceInfo.getNumRegionsAdded() + " regions have been added. Yet, max =" +
+                max + ", min =" + min + ". Thus stop balance for this table"); // should not happen
+        return;
+      }
+    }
+
+    // Step 3. sort the ServerLoadList, the ArrayList hold overall load for each server.
+    // We only need to assign the regionsToMove to
+    // the first n = regionsToMove.size() RS that has least load.
+    Collections.sort(serverLoadList,new Comparator<ServerAndLoad>(){
+      @Override
+      public int compare(ServerAndLoad s1, ServerAndLoad s2) {
+        if(s1.getLoad() == s2.getLoad()) return 0;
+        else return (s1.getLoad() > s2.getLoad())? 1 : -1;
+      }});
+
+    // Step 4.
+    // Preparation before assign out all regionsToMove.
+    // We need to remove the plan that has the source RS equals to destination RS,
+    // since the source RS belongs to the least n loaded RS.
+    int assignLength = regionsToMove.size();
+    // A structure help to map ServerName to  it's load and index in ServerLoadList
+    Map<ServerName, Pair<ServerAndLoad,Integer>> SnLoadMap = new HashMap<>();
+    for (int i = 0; i < serverLoadList.size(); i++) {
+      SnLoadMap.put(serverLoadList.get(i).getServerName(),
+              new Pair<ServerAndLoad, Integer>(serverLoadList.get(i), i));
+    }
+    Pair<ServerAndLoad,Integer> shredLoad;
+    // A List to help mark the plan in regionsToMove that should be removed
+    List<RegionPlan> planToRemoveList = new ArrayList<>();
+    // A structure to record how many times a server becomes the source of a plan, from regionsToMove.
+    Map<ServerName, Integer> sourceMap = new HashMap<>();
+    // We remove one of the plan which would cause source RS equals destination RS.
+    // But we should keep in mind that the second plan from such RS should be kept.
+    for(RegionPlan plan: regionsToMove){
+      // the source RS's load and index in ServerLoadList
+      shredLoad = SnLoadMap.get(plan.getSource());
+      if(!sourceMap.containsKey(plan.getSource())) sourceMap.put(plan.getSource(), 0);
+      sourceMap.put(plan.getSource(), sourceMap.get(plan.getSource()) + 1);
+      if(shredLoad.getSecond() < assignLength && sourceMap.get(plan.getSource()) == 1) {
+        planToRemoveList.add(plan);
+        // While marked as to be removed, the count should be add back to the source RS
+        setLoad(serverLoadList, shredLoad.getSecond(), 1);
+      }
+    }
+    // Remove those marked plans from regionsToMove,
+    // we cannot direct remove them during iterating through
+    // regionsToMove, due to the fact that regionsToMove is a MinMaxPriorityQueue.
+    for(RegionPlan planToRemove : planToRemoveList){
+      regionsToMove.remove(planToRemove);
+    }
+
+    // Step 5.
+    // We only need to assign the regionsToMove to
+    // the first n = regionsToMove.size() of them, with least load.
+    // With this strategy adopted, we can gradually achieve the overall balance,
+    // while keeping table level balanced.
+    for(int i = 0; i < assignLength; i++){
+      // skip the RS that is also the source, we have removed them from regionsToMove in previous step
+      if(sourceMap.containsKey(serverLoadList.get(i).getServerName())) continue;
+      addRegionPlan(regionsToMove, fetchFromTail,
+              serverLoadList.get(i).getServerName(), regionsToReturn);
+      setLoad(serverLoadList, i, 1);
+      // resolve a possible cyclic assignment pair if we just produced one:
+      // e.g. plan1: A -> B, plan2: B -> C => resolve plan1 to A -> C and remove plan2
+      List<Integer> pos = returnMap.get(regionsToReturn.get(regionsToReturn.size() - 1).getSource());
+      if (pos != null && pos.size() != 0) {
+        regionsToReturn.get(pos.get(pos.size() - 1)).setDestination(
+                regionsToReturn.get(regionsToReturn.size() - 1).getDestination());
+        pos.remove(pos.size() - 1);
+        regionsToReturn.remove(regionsToReturn.size() - 1);
+      }
+    }
+    // Done balance overall
+  }
+
+  /**
    * Add a region from the head or tail to the List of regions to return.
    */
   private void addRegionPlan(final MinMaxPriorityQueue<RegionPlan> regionsToMove,
@@ -431,6 +591,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   @Override
   public List<RegionPlan> balanceCluster(TableName tableName,
       Map<ServerName, List<HRegionInfo>> clusterState) throws HBaseIOException {
+    LOG.debug("Start Generate Balance plan for table: " + tableName);
     return balanceCluster(clusterState);
   }
 }
