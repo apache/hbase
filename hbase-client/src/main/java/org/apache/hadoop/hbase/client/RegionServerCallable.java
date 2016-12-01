@@ -60,9 +60,6 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    */
   public RegionServerCallable(Connection connection, TableName tableName, byte [] row) {
     this.connection = connection;
-    if (tableName == null) {
-      throw new IllegalArgumentException("Given tableName is null");
-    }
     this.tableName = tableName;
     this.row = row;
   }
@@ -76,7 +73,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   @Override
   public void prepare(final boolean reload) throws IOException {
     // check table state if this is a retry
-    if (reload &&
+    if (reload && tableName != null &&
         !tableName.equals(TableName.META_TABLE_NAME) &&
         getConnection().isTableDisabled(tableName)) {
       throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");

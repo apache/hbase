@@ -90,7 +90,7 @@ public class TestRpcControllerFactory {
       super.setPriority(tn);
       // ignore counts for system tables - it could change and we really only want to check on what
       // the client should change
-      if (!tn.isSystemTable()) {
+      if (tn != null && !tn.isSystemTable()) {
         TABLE_PRIORITY.incrementAndGet();
       }
 
