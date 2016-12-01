@@ -458,6 +458,14 @@ possible configurations would overwhelm and obscure the important.
     this initial pause amount and how this pause works w/ retries.</description>
   </property>
   <property>
+    <name>hbase.client.pause.cqtbe</name>
+    <value></value>
+    <description>Whether or not to use a special client pause for
+    CallQueueTooBigException (cqtbe). Set this property to a higher value
+    than hbase.client.pause if you observe frequent CQTBE from the same
+    RegionServer and the call queue there keeps full</description>
+  </property>
+  <property>
     <name>hbase.client.retries.number</name>
     <value>35</value>
     <description>Maximum retries.  Used as maximum for all retryable

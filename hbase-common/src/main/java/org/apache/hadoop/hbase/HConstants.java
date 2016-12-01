@@ -729,6 +729,11 @@ public final class HConstants {
   public static final long DEFAULT_HBASE_CLIENT_PAUSE = 100;
 
   /**
+   * Parameter name for client pause value for special case such as call queue too big, etc.
+   */
+  public static final String HBASE_CLIENT_PAUSE_FOR_CQTBE = "hbase.client.pause.cqtbe";
+
+  /**
    * The maximum number of concurrent connections the client will maintain.
    */
   public static final String HBASE_CLIENT_MAX_TOTAL_TASKS = "hbase.client.max.total.tasks";

@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -788,8 +789,15 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     //  we go for one.
     boolean retryImmediately = throwable instanceof RetryImmediatelyException;
     int nextAttemptNumber = retryImmediately ? numAttempt : numAttempt + 1;
-    long backOffTime = retryImmediately ? 0 :
-        errorsByServer.calculateBackoffTime(oldServer, asyncProcess.pause);
+    long backOffTime;
+    if (retryImmediately) {
+      backOffTime = 0;
+    } else if (throwable instanceof CallQueueTooBigException) {
+      // Give a special check on CQTBE, see #HBASE-17114
+      backOffTime = errorsByServer.calculateBackoffTime(oldServer, asyncProcess.pauseForCQTBE);
+    } else {
+      backOffTime = errorsByServer.calculateBackoffTime(oldServer, asyncProcess.pause);
+    }
     if (numAttempt > asyncProcess.startLogErrorsCnt) {
       // We use this value to have some logs when we have multiple failures, but not too many
       //  logs, as errors are to be expected when a region moves, splits and so on

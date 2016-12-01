@@ -210,6 +210,7 @@ class AsyncProcess {
    */
   protected final int maxConcurrentTasksPerServer;
   protected final long pause;
+  protected final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   protected int numTries;
   protected int serverTrackerTimeout;
   protected int rpcTimeout;
@@ -234,6 +235,15 @@ class AsyncProcess {
 
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
+    if (configuredPauseForCQTBE < pause) {
+      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
+          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
+          + ", will use " + pause + " instead.");
+      this.pauseForCQTBE = pause;
+    } else {
+      this.pauseForCQTBE = configuredPauseForCQTBE;
+    }
     // how many times we could try in total, one more than retry number
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) + 1;

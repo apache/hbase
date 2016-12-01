@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -114,6 +115,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private final boolean hostnamesCanChange;
   private final long pause;
+  private final long pauseForCQTBE;// pause for CallQueueTooBigException, if specified
   private final boolean useMetaReplicas;
   private final int numTries;
   final int rpcTimeout;
@@ -193,6 +195,15 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.closed = false;
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
+    if (configuredPauseForCQTBE < pause) {
+      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
+          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
+          + ", will use " + pause + " instead.");
+      this.pauseForCQTBE = pause;
+    } else {
+      this.pauseForCQTBE = configuredPauseForCQTBE;
+    }
     this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
       HConstants.DEFAULT_USE_META_REPLICAS);
     // how many times to try, one more than max *retry* time
@@ -751,6 +762,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       // Query the meta region
+      long pauseBase = this.pause;
       try {
         Result regionInfoRow = null;
         ReversedClientScanner rcs = null;
@@ -825,13 +837,17 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         if (e instanceof RemoteException) {
           e = ((RemoteException)e).unwrapRemoteException();
         }
+        if (e instanceof CallQueueTooBigException) {
+          // Give a special check on CallQueueTooBigException, see #HBASE-17114
+          pauseBase = this.pauseForCQTBE;
+        }
         if (tries < maxAttempts - 1) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("locateRegionInMeta parentTable=" +
                 TableName.META_TABLE_NAME + ", metaLocation=" +
               ", attempt=" + tries + " of " +
               maxAttempts + " failed; retrying after sleep of " +
-              ConnectionUtils.getPauseTime(this.pause, tries) + " because: " + e.getMessage());
+              ConnectionUtils.getPauseTime(pauseBase, tries) + " because: " + e.getMessage());
           }
         } else {
           throw e;
@@ -843,7 +859,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         }
       }
       try{
-        Thread.sleep(ConnectionUtils.getPauseTime(this.pause, tries));
+        Thread.sleep(ConnectionUtils.getPauseTime(pauseBase, tries));
       } catch (InterruptedException e) {
         throw new InterruptedIOException("Giving up trying to location region in " +
           "meta: thread is interrupted.");
