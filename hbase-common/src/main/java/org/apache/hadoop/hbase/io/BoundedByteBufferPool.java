@@ -105,7 +105,7 @@ public class BoundedByteBufferPool {
     if (LOG.isTraceEnabled()) {
       LOG.trace("runningAverage=" + this.runningAverage +
         ", totalCapacity=" + this.totalReservoirCapacity + ", count=" + this.buffers.size() +
-        ", alloctions=" + this.allocations.get());
+        ", allocations=" + this.allocations.get());
     }
     return bb;
   }

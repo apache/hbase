@@ -911,7 +911,7 @@ public class HBaseFsck extends Configured implements Closeable {
         if (!valid) {
           errors.reportError(ERROR_CODE.BOUNDARIES_ERROR, "Found issues with regions boundaries",
             tablesInfo.get(regionInfo.getTable()));
-          LOG.warn("Region's boundaries not alligned between stores and META for:");
+          LOG.warn("Region's boundaries not aligned between stores and META for:");
           LOG.warn(currentRegionBoundariesInformation);
         }
       }
@@ -945,7 +945,7 @@ public class HBaseFsck extends Configured implements Closeable {
     FileSystem fs = p.getFileSystem(getConf());
     FileStatus[] dirs = fs.listStatus(p);
     if (dirs == null) {
-      LOG.warn("Attempt to adopt ophan hdfs region skipped becuase no files present in " +
+      LOG.warn("Attempt to adopt orphan hdfs region skipped because no files present in " +
           p + ". This dir could probably be deleted.");
       return ;
     }
@@ -1115,7 +1115,7 @@ public class HBaseFsck extends Configured implements Closeable {
         Path rootDir = getSidelineDir();
         Path dst = new Path(rootDir, pathStr.substring(index + 1));
         fs.mkdirs(dst.getParent());
-        LOG.info("Trying to sildeline reference file "
+        LOG.info("Trying to sideline reference file "
           + path + " to " + dst);
         setShouldRerun();
 

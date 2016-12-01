@@ -601,7 +601,7 @@ public class ReplicationAdmin implements Closeable {
           } else if (!peerHtd.equals(htd)) {
             throw new IllegalArgumentException("Table " + tableName.getNameAsString()
                 + " exists in peer cluster " + repPeer.getId()
-                + ", but the table descriptors are not same when comapred with source cluster."
+                + ", but the table descriptors are not same when compared with source cluster."
                 + " Thus can not enable the table's replication switch.");
           }
         }

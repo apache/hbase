@@ -1558,7 +1558,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public HColumnDescriptor setDFSReplication(short replication) {
     if (replication < 1 && replication != DEFAULT_DFS_REPLICATION) {
       throw new IllegalArgumentException(
-          "DFS replication factor cannot be less than 1 if explictly set.");
+          "DFS replication factor cannot be less than 1 if explicitly set.");
     }
     setValue(DFS_REPLICATION, Short.toString(replication));
     return this;

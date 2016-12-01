@@ -176,7 +176,7 @@ public class HFileReplicator {
       // need to reload split keys each iteration.
       startEndKeys = locator.getStartEndKeys();
       if (count != 0) {
-        LOG.warn("Error occured while replicating HFiles, retry attempt " + count + " with "
+        LOG.warn("Error occurred while replicating HFiles, retry attempt " + count + " with "
             + queue.size() + " files still remaining to replicate.");
       }
 
