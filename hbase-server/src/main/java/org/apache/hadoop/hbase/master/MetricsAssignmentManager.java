@@ -60,4 +60,12 @@ public class MetricsAssignmentManager {
   public void updateRITOldestAge(long timestamp) {
     assignmentManagerSource.setRITOldestAge(timestamp);
   }
+
+  /**
+   * update the duration metrics of region is transition
+   * @param duration
+   */
+  public void updateRitDuration(long duration) {
+    assignmentManagerSource.updateRitDuration(duration);
+  }
 }

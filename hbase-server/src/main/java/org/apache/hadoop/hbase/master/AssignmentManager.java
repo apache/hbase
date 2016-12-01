@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
@@ -275,7 +274,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws KeeperException
    * @throws IOException
    */
-  public AssignmentManager(Server server, ServerManager serverManager,
+  public AssignmentManager(MasterServices server, ServerManager serverManager,
       CatalogTracker catalogTracker, final LoadBalancer balancer,
       final ExecutorService service, MetricsMaster metricsMaster,
       final TableLockManager tableLockManager) throws KeeperException, IOException {
@@ -341,6 +340,10 @@ public class AssignmentManager extends ZooKeeperListener {
       Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), server.getServerName()
           + ".timeoutMonitor");
     }
+  }
+
+  MetricsAssignmentManager getAssignmentManagerMetrics() {
+    return this.metricsAssignmentManager;
   }
 
   /**

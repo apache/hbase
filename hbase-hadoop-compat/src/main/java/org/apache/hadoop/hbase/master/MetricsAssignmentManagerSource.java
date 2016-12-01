@@ -45,6 +45,7 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_COUNT_NAME = "ritCount";
   String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
   String RIT_OLDEST_AGE_NAME = "ritOldestAge";
+  String RIT_DURATION_NAME = "ritDuration";
   String ASSIGN_TIME_NAME = "assign";
   String BULK_ASSIGN_TIME_NAME = "bulkAssign";
 
@@ -72,4 +73,6 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
    * @param age age of the oldest RIT.
    */
   void setRITOldestAge(long age);
+
+  void updateRitDuration(long duration);
 }

@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionTransition;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -111,7 +110,7 @@ public class TestAssignmentManager {
   private static boolean enabling = false;
 
   // Mocked objects or; get redone for each test.
-  private Server server;
+  private MasterServices server;
   private ServerManager serverManager;
   private ZooKeeperWatcher watcher;
   private LoadBalancer balancer;
@@ -136,7 +135,7 @@ public class TestAssignmentManager {
     // Mock a Server.  Have it return a legit Configuration and ZooKeeperWatcher.
     // If abort is called, be sure to fail the test (don't just swallow it
     // silently as is mockito default).
-    this.server = Mockito.mock(Server.class);
+    this.server = Mockito.mock(MasterServices.class);
     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Mockito.when(server.getConfiguration()).thenReturn(HTU.getConfiguration());
     Mockito.when(server.getCatalogTracker()).thenReturn(null);
@@ -957,7 +956,7 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     // To avoid cast exception in DisableTableHandler process.
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    Server server = new HMaster(HTU.getConfiguration());
+    MasterServices server = new HMaster(HTU.getConfiguration());
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
     AtomicBoolean gate = new AtomicBoolean(false);
@@ -999,7 +998,7 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    Server server = new HMaster(HTU.getConfiguration());
+    MasterServices server = new HMaster(HTU.getConfiguration());
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
@@ -1036,7 +1035,7 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    Server server = new HMaster(HTU.getConfiguration());
+    MasterServices server = new HMaster(HTU.getConfiguration());
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
@@ -1166,7 +1165,7 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws KeeperException
    */
-  private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final Server server,
+  private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final MasterServices server,
       final ServerManager manager) throws IOException, KeeperException, ServiceException {
     // We need a mocked catalog tracker. Its used by our AM instance.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
@@ -1235,7 +1234,7 @@ public class TestAssignmentManager {
     AtomicBoolean gate = new AtomicBoolean(true);
 
     public AssignmentManagerWithExtrasForTesting(
-        final Server master, final ServerManager serverManager,
+        final MasterServices master, final ServerManager serverManager,
         final CatalogTracker catalogTracker, final LoadBalancer balancer,
         final ExecutorService service, final TableLockManager tableLockManager)
             throws KeeperException, IOException {

@@ -29,6 +29,7 @@ public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl implement
   private MutableGaugeLong ritGauge;
   private MutableGaugeLong ritCountOverThresholdGauge;
   private MutableGaugeLong ritOldestAgeGauge;
+  private MutableHistogram ritDurationHisto;
   private MutableHistogram assignTimeHisto;
   private MutableHistogram bulkAssignTimeHisto;
 
@@ -48,6 +49,7 @@ public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl implement
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, "", 0l);
     assignTimeHisto = metricsRegistry.newTimeHistogram(ASSIGN_TIME_NAME);
     bulkAssignTimeHisto = metricsRegistry.newTimeHistogram(BULK_ASSIGN_TIME_NAME);
+    ritDurationHisto = metricsRegistry.newTimeHistogram(RIT_DURATION_NAME);
   }
 
   @Override
@@ -70,5 +72,10 @@ public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl implement
 
   public void setRITOldestAge(long ritCount) {
     ritOldestAgeGauge.set(ritCount);
+  }
+
+  @Override
+  public void updateRitDuration(long duration) {
+    ritDurationHisto.add(duration);
   }
 }

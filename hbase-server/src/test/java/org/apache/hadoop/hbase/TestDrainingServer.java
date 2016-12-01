@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -89,7 +90,7 @@ public class TestDrainingServer {
     AssignmentManager am;
     Configuration conf = TEST_UTIL.getConfiguration();
     final HMaster master = Mockito.mock(HMaster.class);
-    final Server server = Mockito.mock(Server.class);
+    final MasterServices server = Mockito.mock(MasterServices.class);
     final ServerManager serverManager = Mockito.mock(ServerManager.class);
     final ServerName SERVERNAME_A = ServerName.valueOf("mockserver_a.org", 1000, 8000);
     final ServerName SERVERNAME_B = ServerName.valueOf("mockserver_b.org", 1001, 8000);
@@ -163,7 +164,7 @@ public class TestDrainingServer {
     CatalogTracker catalogTracker = Mockito.mock(CatalogTracker.class);
     AssignmentManager am;
     final HMaster master = Mockito.mock(HMaster.class);
-    final Server server = Mockito.mock(Server.class);
+    final MasterServices server = Mockito.mock(MasterServices.class);
     final ServerManager serverManager = Mockito.mock(ServerManager.class);
     final ServerName SERVERNAME_A = ServerName.valueOf("mockserverbulk_a.org", 1000, 8000);
     final ServerName SERVERNAME_B = ServerName.valueOf("mockserverbulk_b.org", 1001, 8000);
