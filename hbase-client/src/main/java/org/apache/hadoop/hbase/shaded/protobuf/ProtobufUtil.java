@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ByteBufferCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -2077,17 +2078,38 @@ public final class ProtobufUtil {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
-    kvbuilder.setRow(UnsafeByteOperations.unsafeWrap(kv.getRowArray(), kv.getRowOffset(),
-        kv.getRowLength()));
-    kvbuilder.setFamily(UnsafeByteOperations.unsafeWrap(kv.getFamilyArray(),
-        kv.getFamilyOffset(), kv.getFamilyLength()));
-    kvbuilder.setQualifier(UnsafeByteOperations.unsafeWrap(kv.getQualifierArray(),
+    if (kv instanceof ByteBufferCell) {
+      kvbuilder.setRow(wrap(((ByteBufferCell) kv).getRowByteBuffer(),
+        ((ByteBufferCell) kv).getRowPosition(), kv.getRowLength()));
+      kvbuilder.setFamily(wrap(((ByteBufferCell) kv).getFamilyByteBuffer(),
+        ((ByteBufferCell) kv).getFamilyPosition(), kv.getFamilyLength()));
+      kvbuilder.setQualifier(wrap(((ByteBufferCell) kv).getQualifierByteBuffer(),
+        ((ByteBufferCell) kv).getQualifierPosition(), kv.getQualifierLength()));
+      kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
+      kvbuilder.setTimestamp(kv.getTimestamp());
+      kvbuilder.setValue(wrap(((ByteBufferCell) kv).getValueByteBuffer(),
+        ((ByteBufferCell) kv).getValuePosition(), kv.getValueLength()));
+      // TODO : Once tags become first class then we may have to set tags to kvbuilder.
+    } else {
+      kvbuilder.setRow(
+        UnsafeByteOperations.unsafeWrap(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
+      kvbuilder.setFamily(UnsafeByteOperations.unsafeWrap(kv.getFamilyArray(), kv.getFamilyOffset(),
+        kv.getFamilyLength()));
+      kvbuilder.setQualifier(UnsafeByteOperations.unsafeWrap(kv.getQualifierArray(),
         kv.getQualifierOffset(), kv.getQualifierLength()));
-    kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
-    kvbuilder.setTimestamp(kv.getTimestamp());
-    kvbuilder.setValue(UnsafeByteOperations.unsafeWrap(kv.getValueArray(), kv.getValueOffset(),
+      kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
+      kvbuilder.setTimestamp(kv.getTimestamp());
+      kvbuilder.setValue(UnsafeByteOperations.unsafeWrap(kv.getValueArray(), kv.getValueOffset(),
         kv.getValueLength()));
+    }
     return kvbuilder.build();
+  }
+
+  private static ByteString wrap(ByteBuffer b, int offset, int length) {
+    ByteBuffer dup = b.duplicate();
+    dup.position(offset);
+    dup.limit(offset + length);
+    return UnsafeByteOperations.unsafeWrap(dup);
   }
 
   public static Cell toCell(final CellProtos.Cell cell) {
