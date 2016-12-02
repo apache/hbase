@@ -175,6 +175,8 @@ public class TestMasterObserver {
     private boolean preGetTableNamesCalled;
     private boolean preDispatchMergeCalled;
     private boolean postDispatchMergeCalled;
+    private boolean preMergeRegionsCalled;
+    private boolean postMergeRegionsCalled;
 
     public void enableBypass(boolean bypass) {
       this.bypass = bypass;
@@ -261,6 +263,26 @@ public class TestMasterObserver {
       preGetTableNamesCalled = false;
       preDispatchMergeCalled = false;
       postDispatchMergeCalled = false;
+      preMergeRegionsCalled = false;
+      postMergeRegionsCalled = false;
+    }
+
+    @Override
+    public void preMergeRegions(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HRegionInfo[] regionsToMerge) throws IOException {
+      preMergeRegionsCalled = true;
+    }
+
+    @Override
+    public void postMergeRegions(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HRegionInfo[] regionsToMerge) throws IOException {
+      postMergeRegionsCalled = true;
+    }
+
+    public boolean wasMergeRegionsCalled() {
+      return preMergeRegionsCalled && postMergeRegionsCalled;
     }
 
     @Override
@@ -1512,8 +1534,41 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preRollBackSplitRegionAction(
+    public void postRollBackSplitRegionAction(
         final ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+    }
+
+    @Override
+    public void preMergeRegionsAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HRegionInfo[] regionsToMerge) throws IOException {
+    }
+
+    @Override
+    public void postCompletedMergeRegionsAction(
+        final ObserverContext<MasterCoprocessorEnvironment> c,
+        final HRegionInfo[] regionsToMerge,
+        final HRegionInfo mergedRegion) throws IOException {
+    }
+
+    @Override
+    public void preMergeRegionsCommitAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HRegionInfo[] regionsToMerge,
+        final List<Mutation> metaEntries) throws IOException {
+    }
+
+    @Override
+    public void postMergeRegionsCommitAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HRegionInfo[] regionsToMerge,
+        final HRegionInfo mergedRegion) throws IOException {
+    }
+
+    @Override
+    public void postRollBackMergeRegionsAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HRegionInfo[] regionsToMerge) throws IOException {
     }
   }
 
@@ -1593,7 +1648,7 @@ public class TestMasterObserver {
       admin.mergeRegionsAsync(regions.get(0).getRegionInfo().getEncodedNameAsBytes(),
         regions.get(1).getRegionInfo().getEncodedNameAsBytes(), true);
       assertTrue("Coprocessor should have been called on region merge",
-        cp.wasDispatchMergeCalled());
+        cp.wasMergeRegionsCalled());
 
       tableCreationLatch = new CountDownLatch(1);
       admin.disableTable(tableName);

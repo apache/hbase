@@ -647,7 +647,7 @@ public class HRegionFileSystem {
   //  Merge Helpers
   // ===========================================================================
   /** @return {@link Path} to the temp directory used during merge operations */
-  Path getMergesDir() {
+  public Path getMergesDir() {
     return new Path(getRegionDir(), REGION_MERGES_DIR);
   }
 
@@ -667,7 +667,7 @@ public class HRegionFileSystem {
    * @param mergedRegion {@link HRegionInfo}
    * @throws IOException
    */
-  void cleanupMergedRegion(final HRegionInfo mergedRegion) throws IOException {
+  public void cleanupMergedRegion(final HRegionInfo mergedRegion) throws IOException {
     Path regionDir = new Path(this.tableDir, mergedRegion.getEncodedName());
     if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
       throw new IOException("Failed delete of " + regionDir);
@@ -679,7 +679,7 @@ public class HRegionFileSystem {
    * @throws IOException If merges dir already exists or we fail to create it.
    * @see HRegionFileSystem#cleanupMergesDir()
    */
-  void createMergesDir() throws IOException {
+  public void createMergesDir() throws IOException {
     Path mergesdir = getMergesDir();
     if (fs.exists(mergesdir)) {
       LOG.info("The " + mergesdir
@@ -703,7 +703,7 @@ public class HRegionFileSystem {
    * @return Path to created reference.
    * @throws IOException
    */
-  Path mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
+  public Path mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
       final StoreFile f, final Path mergedDir)
       throws IOException {
     Path referenceDir = new Path(new Path(mergedDir,
@@ -728,7 +728,7 @@ public class HRegionFileSystem {
    * @param mergedRegionInfo merged region {@link HRegionInfo}
    * @throws IOException
    */
-  void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException {
+  public void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, mergedRegionInfo.getEncodedName());
     Path mergedRegionTmpDir = this.getMergesDir(mergedRegionInfo);
     // Move the tmp dir in the expected location

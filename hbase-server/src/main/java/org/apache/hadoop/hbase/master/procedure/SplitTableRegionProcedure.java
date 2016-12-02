@@ -161,9 +161,9 @@ public class SplitTableRegionProcedure
         break;
       case SPLIT_TABLE_REGION_SET_SPLITTING_TABLE_STATE:
         setRegionStateToSplitting(env);
-        setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_CLOSED_PARENT_REGION);
+        setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_CLOSE_PARENT_REGION);
         break;
-      case SPLIT_TABLE_REGION_CLOSED_PARENT_REGION:
+      case SPLIT_TABLE_REGION_CLOSE_PARENT_REGION:
         closeParentRegionForSplit(env);
         setNextState(SplitTableRegionState.SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS);
         break;
@@ -242,14 +242,14 @@ public class SplitTableRegionProcedure
       case SPLIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS:
         // Doing nothing, as re-open parent region would clean up daughter region directories.
         break;
-      case SPLIT_TABLE_REGION_CLOSED_PARENT_REGION:
+      case SPLIT_TABLE_REGION_CLOSE_PARENT_REGION:
         openParentRegion(env);
         break;
       case SPLIT_TABLE_REGION_SET_SPLITTING_TABLE_STATE:
         setRegionStateToRevertSplitting(env);
         break;
       case SPLIT_TABLE_REGION_PRE_OPERATION:
-        preSplitRegionRollback(env);
+        postRollBackSplitRegion(env);
         break;
       case SPLIT_TABLE_REGION_PREPARE:
         break; // nothing to do
@@ -408,15 +408,14 @@ public class SplitTableRegionProcedure
   }
 
   /**
-   * Action during rollback a pre split table region.
+   * Action after rollback a split table region action.
    * @param env MasterProcedureEnv
-   * @param state the procedure state
    * @throws IOException
    */
-  private void preSplitRegionRollback(final MasterProcedureEnv env) throws IOException {
+  private void postRollBackSplitRegion(final MasterProcedureEnv env) throws IOException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
-      cpHost.preRollBackSplitAction(getUser());
+      cpHost.postRollBackSplitRegionAction(getUser());
     }
   }
 
@@ -458,14 +457,13 @@ public class SplitTableRegionProcedure
   }
 
   /**
-   * RPC to region server that host the parent region, ask for close the parent regions and
-   * creating daughter regions
+   * RPC to region server that host the parent region, ask for close the parent regions
    * @param env MasterProcedureEnv
    * @throws IOException
    */
   @VisibleForTesting
   public void closeParentRegionForSplit(final MasterProcedureEnv env) throws IOException {
-    boolean success = env.getMasterServices().getServerManager().sendRegionCloseForSplit(
+    boolean success = env.getMasterServices().getServerManager().sendRegionCloseForSplitOrMerge(
       getParentRegionState(env).getServerName(), parentHRI);
     if (!success) {
       throw new IOException("Close parent region " + parentHRI + " for splitting failed."

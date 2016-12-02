@@ -96,8 +96,8 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -1384,25 +1384,28 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   @Override
   @QosPriority(priority=HConstants.ADMIN_QOS)
-  public CloseRegionForSplitResponse closeRegionForSplit(
+  public CloseRegionForSplitOrMergeResponse closeRegionForSplitOrMerge(
       final RpcController controller,
-      final CloseRegionForSplitRequest request) throws ServiceException {
+      final CloseRegionForSplitOrMergeRequest request) throws ServiceException {
     try {
       checkOpen();
 
-      final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion());
+      List<String> encodedRegionNameList = new ArrayList<>();
+      for(int i = 0; i < request.getRegionCount(); i++) {
+        final String encodedRegionName = ProtobufUtil.getRegionEncodedName(request.getRegion(i));
 
-      // Can be null if we're calling close on a region that's not online
-      final Region parentRegion = regionServer.getFromOnlineRegions(encodedRegionName);
-      if ((parentRegion != null) && (parentRegion.getCoprocessorHost() != null)) {
-        parentRegion.getCoprocessorHost().preClose(false);
+        // Can be null if we're calling close on a region that's not online
+        final Region targetRegion = regionServer.getFromOnlineRegions(encodedRegionName);
+        if ((targetRegion != null) && (targetRegion.getCoprocessorHost() != null)) {
+          targetRegion.getCoprocessorHost().preClose(false);
+          encodedRegionNameList.add(encodedRegionName);
+        }
       }
-
       requestCount.increment();
-      LOG.info("Close and offline " + encodedRegionName + " and prepare for split.");
-      boolean closed = regionServer.closeAndOfflineRegionForSplit(encodedRegionName);
-      CloseRegionForSplitResponse.Builder builder =
-          CloseRegionForSplitResponse.newBuilder().setClosed(closed);
+      LOG.info("Close and offline " + encodedRegionNameList + " regions.");
+      boolean closed = regionServer.closeAndOfflineRegionForSplitOrMerge(encodedRegionNameList);
+      CloseRegionForSplitOrMergeResponse.Builder builder =
+          CloseRegionForSplitOrMergeResponse.newBuilder().setClosed(closed);
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

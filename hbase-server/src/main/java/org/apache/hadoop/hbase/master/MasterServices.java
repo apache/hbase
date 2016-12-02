@@ -265,6 +265,21 @@ public interface MasterServices extends Server {
       throws IOException;
 
   /**
+   * Merge regions in a table.
+   * @param regionsToMerge daughter regions to merge
+   * @param forcible whether to force to merge even two regions are not adjacent
+   * @param nonceGroup used to detect duplicate
+   * @param nonce used to detect duplicate
+   * @return  procedure Id
+   * @throws IOException
+   */
+  long mergeRegions(
+      final HRegionInfo[] regionsToMerge,
+      final boolean forcible,
+      final long nonceGroup,
+      final long nonce) throws IOException;
+
+  /**
    * Split a region.
    * @param regionInfo region to split
    * @param splitRow split point
@@ -273,7 +288,7 @@ public interface MasterServices extends Server {
    * @return  procedure Id
    * @throws IOException
    */
-  public long splitRegion(
+  long splitRegion(
       final HRegionInfo regionInfo,
       final byte [] splitRow,
       final long nonceGroup,

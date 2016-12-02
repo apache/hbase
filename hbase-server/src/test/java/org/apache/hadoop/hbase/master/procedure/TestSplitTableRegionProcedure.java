@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.CompactionState;
@@ -311,8 +310,6 @@ public class TestSplitTableRegionProcedure {
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
     insertData(tableName);
-    int splitRowNum = startRowNum + rowCount / 2;
-    byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
     assertTrue("not able to find a splittable region", regions != null);
     assertTrue("not able to find a splittable region", regions.length == 1);
@@ -330,7 +327,7 @@ public class TestSplitTableRegionProcedure {
     }
   }
 
-  @Test(timeout = 600000)
+  @Test(timeout = 60000)
   public void testRollbackAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

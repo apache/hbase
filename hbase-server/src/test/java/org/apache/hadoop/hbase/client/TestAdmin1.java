@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -1180,10 +1179,10 @@ public class TestAdmin1 {
     gotException = false;
     // Try merging a replica with another. Should fail.
     try {
-      // TODO convert this to version that is synchronous (See HBASE-16668)
-      TEST_UTIL.getAdmin().mergeRegionsAsync(regions.get(1).getFirst().getEncodedNameAsBytes(),
-          regions.get(2).getFirst().getEncodedNameAsBytes(), true)
-          .get(60, TimeUnit.SECONDS);
+      TEST_UTIL.getHBaseAdmin().mergeRegionsSync(
+        regions.get(1).getFirst().getEncodedNameAsBytes(),
+        regions.get(2).getFirst().getEncodedNameAsBytes(),
+        true);
     } catch (IllegalArgumentException m) {
       gotException = true;
     }

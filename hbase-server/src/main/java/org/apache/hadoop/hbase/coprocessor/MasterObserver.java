@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 
@@ -1196,12 +1198,72 @@ public interface MasterObserver extends Coprocessor {
       throws IOException;
 
   /**
-   * This will be called before the roll back of the split region is completed
+   * This will be called after the roll back of the split region is completed
    * @param ctx the environment to interact with the framework and master
    * @throws IOException
    */
-  void preRollBackSplitRegionAction(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+  void postRollBackSplitRegionAction(final ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException;
+
+  /**
+   * Called before the regions merge.
+   * Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} to skip the merge.
+   * @throws IOException if an error occurred on the coprocessor
+   * @param ctx
+   * @param regionsToMerge
+   * @throws IOException
+   */
+  void preMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException;
+
+  /**
+   * called after the regions merge.
+   * @param c
+   * @param regionsToMerge
+   * @param mergedRegion
+   * @throws IOException
+   */
+  void postCompletedMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final HRegionInfo[] regionsToMerge,
+      final HRegionInfo mergedRegion) throws IOException;
+
+  /**
+   * This will be called before PONR step as part of regions merge transaction. Calling
+   * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the merge
+   * @param ctx
+   * @param regionsToMerge
+   * @param metaEntries mutations to execute on hbase:meta atomically with regions merge updates.
+   *        Any puts or deletes to execute on hbase:meta can be added to the mutations.
+   * @throws IOException
+   */
+  void preMergeRegionsCommitAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge,
+      @MetaMutationAnnotation List<Mutation> metaEntries) throws IOException;
+
+  /**
+   * This will be called after PONR step as part of regions merge transaction.
+   * @param ctx
+   * @param regionsToMerge
+   * @param mergedRegion
+   * @throws IOException
+   */
+  void postMergeRegionsCommitAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge,
+      final HRegionInfo mergedRegion) throws IOException;
+
+  /**
+   * This will be called after the roll back of the regions merge.
+   * @param ctx
+   * @param regionsToMerge
+   * @throws IOException
+   */
+  void postRollBackMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException;
 
   /**
    * Called prior to modifying the flag used to enable/disable region balancing.
@@ -1649,6 +1711,27 @@ public interface MasterObserver extends Coprocessor {
    */
   void postDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> c,
       final HRegionInfo regionA, final HRegionInfo regionB) throws IOException;
+
+  /**
+   * Called before merge regions request.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx coprocessor environment
+   * @param regionsToMerge regions to be merged
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void preMergeRegions(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException;
+
+  /**
+   * called after merge regions request.
+   * @param c coprocessor environment
+   * @param regionsToMerge regions to be merged
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void postMergeRegions(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final HRegionInfo[] regionsToMerge) throws IOException;
 
   /**
    * Called before servers are moved to target region server group

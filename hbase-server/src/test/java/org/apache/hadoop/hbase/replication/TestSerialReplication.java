@@ -55,12 +55,10 @@ import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestSerialReplication {
@@ -270,7 +268,7 @@ public class TestSerialReplication {
       }
       List<Pair<HRegionInfo, ServerName>> regions =
           MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), tableName);
-      utility1.getHBaseAdmin().mergeRegions(regions.get(0).getFirst().getRegionName(),
+      utility1.getHBaseAdmin().mergeRegionsAsync(regions.get(0).getFirst().getRegionName(),
           regions.get(1).getFirst().getRegionName(), true);
       waitTableHasRightNumberOfRegions(tableName, 1);
       for (int i = 11; i < 100; i += 10) {

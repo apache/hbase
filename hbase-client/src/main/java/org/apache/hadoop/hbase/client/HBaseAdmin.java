@@ -119,8 +119,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DispatchMergingRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
@@ -147,6 +145,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableD
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
@@ -1513,68 +1513,80 @@ public class HBaseAdmin implements Admin {
       final byte[] nameOfRegionA,
       final byte[] nameOfRegionB,
       final boolean forcible) throws IOException {
+    byte[][] nameofRegionsToMerge = new byte[2][];
+    nameofRegionsToMerge[0] = nameOfRegionA;
+    nameofRegionsToMerge[1] = nameOfRegionB;
+    return mergeRegionsAsync(nameofRegionsToMerge, forcible);
+  }
 
-    final byte[] encodedNameOfRegionA = isEncodedRegionName(nameOfRegionA) ?
-      nameOfRegionA : HRegionInfo.encodeRegionName(nameOfRegionA).getBytes();
-    final byte[] encodedNameOfRegionB = isEncodedRegionName(nameOfRegionB) ?
-      nameOfRegionB : HRegionInfo.encodeRegionName(nameOfRegionB).getBytes();
-
-    TableName tableName;
-    Pair<HRegionInfo, ServerName> pair = getRegion(nameOfRegionA);
-
-    if (pair != null) {
-      if (pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
-        throw new IllegalArgumentException ("Can't invoke merge on non-default regions directly");
-      }
-      tableName = pair.getFirst().getTable();
-    } else {
-      throw new UnknownRegionException (
-        "Can't invoke merge on unknown region " + Bytes.toStringBinary(encodedNameOfRegionA));
+  /**
+   * Merge two regions. Asynchronous operation.
+   * @param nameofRegionsToMerge encoded or full name of daughter regions
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          adjacent regions
+   * @throws IOException
+   */
+  @Override
+  public Future<Void> mergeRegionsAsync(
+      final byte[][] nameofRegionsToMerge,
+      final boolean forcible) throws IOException {
+    assert(nameofRegionsToMerge.length >= 2);
+    byte[][] encodedNameofRegionsToMerge = new byte[nameofRegionsToMerge.length][];
+    for(int i = 0; i < nameofRegionsToMerge.length; i++) {
+      encodedNameofRegionsToMerge[i] = isEncodedRegionName(nameofRegionsToMerge[i]) ?
+        nameofRegionsToMerge[i] : HRegionInfo.encodeRegionName(nameofRegionsToMerge[i]).getBytes();
     }
 
-    pair = getRegion(nameOfRegionB);
-    if (pair != null) {
-      if (pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
-        throw new IllegalArgumentException ("Can't invoke merge on non-default regions directly");
-      }
+    TableName tableName = null;
+    Pair<HRegionInfo, ServerName> pair;
 
-      if (!tableName.equals(pair.getFirst().getTable())) {
-        throw new IllegalArgumentException ("Cannot merge regions from two different tables " +
-          tableName + " and " + pair.getFirst().getTable());
+    for(int i = 0; i < nameofRegionsToMerge.length; i++) {
+      pair = getRegion(nameofRegionsToMerge[i]);
+
+      if (pair != null) {
+        if (pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+          throw new IllegalArgumentException ("Can't invoke merge on non-default regions directly");
+        }
+        if (tableName == null) {
+          tableName = pair.getFirst().getTable();
+        } else  if (!tableName.equals(pair.getFirst().getTable())) {
+          throw new IllegalArgumentException ("Cannot merge regions from two different tables " +
+              tableName + " and " + pair.getFirst().getTable());
+        }
+      } else {
+        throw new UnknownRegionException (
+          "Can't invoke merge on unknown region "
+          + Bytes.toStringBinary(encodedNameofRegionsToMerge[i]));
       }
-    } else {
-      throw new UnknownRegionException (
-        "Can't invoke merge on unknown region " + Bytes.toStringBinary(encodedNameOfRegionB));
     }
 
-    DispatchMergingRegionsResponse response =
-        executeCallable(new MasterCallable<DispatchMergingRegionsResponse>(getConnection(),
+    MergeTableRegionsResponse response =
+        executeCallable(new MasterCallable<MergeTableRegionsResponse>(getConnection(),
             getRpcControllerFactory()) {
       @Override
-      protected DispatchMergingRegionsResponse rpcCall() throws Exception {
-        DispatchMergingRegionsRequest request = RequestConverter
-            .buildDispatchMergingRegionsRequest(
-                encodedNameOfRegionA,
-                encodedNameOfRegionB,
+      protected MergeTableRegionsResponse rpcCall() throws Exception {
+        MergeTableRegionsRequest request = RequestConverter
+            .buildMergeTableRegionsRequest(
+                encodedNameofRegionsToMerge,
                 forcible,
                 ng.getNonceGroup(),
                 ng.newNonce());
-        return master.dispatchMergingRegions(getRpcController(), request);
+        return master.mergeTableRegions(getRpcController(), request);
       }
     });
-    return new DispatchMergingRegionsFuture(this, tableName, response);
+    return new MergeTableRegionsFuture(this, tableName, response);
   }
 
-  private static class DispatchMergingRegionsFuture extends TableFuture<Void> {
-    public DispatchMergingRegionsFuture(
+  private static class MergeTableRegionsFuture extends TableFuture<Void> {
+    public MergeTableRegionsFuture(
         final HBaseAdmin admin,
         final TableName tableName,
-        final DispatchMergingRegionsResponse response) {
+        final MergeTableRegionsResponse response) {
       super(admin, tableName,
           (response != null && response.hasProcId()) ? response.getProcId() : null);
     }
 
-    public DispatchMergingRegionsFuture(
+    public MergeTableRegionsFuture(
         final HBaseAdmin admin,
         final TableName tableName,
         final Long procId) {

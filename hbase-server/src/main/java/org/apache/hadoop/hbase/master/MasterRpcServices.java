@@ -553,6 +553,46 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  public MergeTableRegionsResponse mergeTableRegions(
+      RpcController c, MergeTableRegionsRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+
+    assert(request.getRegionCount() == 2);
+    HRegionInfo[] regionsToMerge = new HRegionInfo[request.getRegionCount()];
+    for (int i = 0; i < request.getRegionCount(); i++) {
+      final byte[] encodedNameOfRegion = request.getRegion(i).getValue().toByteArray();
+      if (request.getRegion(i).getType() != RegionSpecifierType.ENCODED_REGION_NAME) {
+        LOG.warn("MergeRegions specifier type: expected: "
+          + RegionSpecifierType.ENCODED_REGION_NAME + " actual: region " + i + " ="
+          + request.getRegion(i).getType());
+      }
+      RegionState regionState = regionStates.getRegionState(Bytes.toString(encodedNameOfRegion));
+      if (regionState == null) {
+        throw new ServiceException(
+          new UnknownRegionException(Bytes.toStringBinary(encodedNameOfRegion)));
+      }
+      regionsToMerge[i] = regionState.getRegion();
+    }
+
+    try {
+      long procId = master.mergeRegions(
+        regionsToMerge,
+        request.getForcible(),
+        request.getNonceGroup(),
+        request.getNonce());
+      return MergeTableRegionsResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
   public SplitTableRegionResponse splitRegion(
       final RpcController controller,
       final SplitTableRegionRequest request) throws ServiceException {

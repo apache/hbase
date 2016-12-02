@@ -907,6 +907,7 @@ public interface Admin extends Abortable, Closeable {
   void mergeRegions(final byte[] nameOfRegionA, final byte[] nameOfRegionB,
       final boolean forcible) throws IOException;
 
+
   /**
    * Merge two regions. Asynchronous operation.
    *
@@ -919,6 +920,18 @@ public interface Admin extends Abortable, Closeable {
   Future<Void> mergeRegionsAsync(
       final byte[] nameOfRegionA,
       final byte[] nameOfRegionB,
+      final boolean forcible) throws IOException;
+
+  /**
+   * Merge regions. Asynchronous operation.
+   *
+   * @param nameofRegionsToMerge encoded or full name of daughter regions
+   * @param forcible true if do a compulsory merge, otherwise we will only merge
+   *          adjacent regions
+   * @throws IOException
+   */
+  Future<Void> mergeRegionsAsync(
+      final byte[][] nameofRegionsToMerge,
       final boolean forcible) throws IOException;
 
   /**

@@ -105,8 +105,8 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionForSplitOrMergeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -1756,26 +1756,26 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A helper to close a region for split
+   * A helper to close a region for split or merge
    * using admin protocol.
    *
    * @param controller RPC controller
    * @param admin Admin service
    * @param server the RS that hosts the target region
-   * @param parentRegionInfo the target region info
+   * @param regionInfo the target region info
    * @return true if the region is closed
    * @throws IOException
    */
-  public static boolean closeRegionForSplit(
+  public static boolean closeRegionForSplitOrMerge(
       final RpcController controller,
       final AdminService.BlockingInterface admin,
       final ServerName server,
-      final HRegionInfo parentRegionInfo) throws IOException {
-    CloseRegionForSplitRequest closeRegionForSplitRequest =
-        ProtobufUtil.buildCloseRegionForSplitRequest(server, parentRegionInfo);
+      final HRegionInfo... regionInfo) throws IOException {
+    CloseRegionForSplitOrMergeRequest closeRegionForRequest =
+        ProtobufUtil.buildCloseRegionForSplitOrMergeRequest(server, regionInfo);
     try {
-      CloseRegionForSplitResponse response =
-          admin.closeRegionForSplit(controller, closeRegionForSplitRequest);
+      CloseRegionForSplitOrMergeResponse response =
+          admin.closeRegionForSplitOrMerge(controller, closeRegionForRequest);
       return ResponseConverter.isClosed(response);
     } catch (ServiceException se) {
       throw getRemoteException(se);
@@ -3130,19 +3130,22 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Create a CloseRegionForSplitRequest for a given region
+   * Create a CloseRegionForSplitOrMergeRequest for given regions
    *
    * @param server the RS server that hosts the region
-   * @param parentRegionInfo the info of the region to close
+   * @param regionsToClose the info of the regions to close
    * @return a CloseRegionForSplitRequest
    */
-  public static CloseRegionForSplitRequest buildCloseRegionForSplitRequest(
+  public static CloseRegionForSplitOrMergeRequest buildCloseRegionForSplitOrMergeRequest(
       final ServerName server,
-      final HRegionInfo parentRegionInfo) {
-    CloseRegionForSplitRequest.Builder builder = CloseRegionForSplitRequest.newBuilder();
-    RegionSpecifier parentRegion = RequestConverter.buildRegionSpecifier(
-      RegionSpecifierType.REGION_NAME, parentRegionInfo.getRegionName());
-    builder.setRegion(parentRegion);
+      final HRegionInfo... regionsToClose) {
+    CloseRegionForSplitOrMergeRequest.Builder builder =
+        CloseRegionForSplitOrMergeRequest.newBuilder();
+    for(int i = 0; i < regionsToClose.length; i++) {
+        RegionSpecifier regionToClose = RequestConverter.buildRegionSpecifier(
+          RegionSpecifierType.REGION_NAME, regionsToClose[i].getRegionName());
+        builder.addRegion(regionToClose);
+    }
     return builder.build();
   }
 

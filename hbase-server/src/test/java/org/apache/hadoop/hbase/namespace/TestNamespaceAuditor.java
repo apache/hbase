@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormatBase;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
@@ -73,9 +74,7 @@ import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -104,11 +103,11 @@ public class TestNamespaceAuditor {
 
   @BeforeClass
   public static void before() throws Exception {
-    UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-      CustomObserver.class.getName());
-    UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      MasterSyncObserver.class.getName());
     Configuration conf = UTIL.getConfiguration();
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, CustomObserver.class.getName());
+    conf.setStrings(
+      CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      MasterSyncObserver.class.getName(), CPMasterObserver.class.getName());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     conf.setClass("hbase.coprocessor.regionserver.classes", CPRegionServerObserver.class,
@@ -309,6 +308,33 @@ public class TestNamespaceAuditor {
     }
   }
 
+  public static class CPMasterObserver extends BaseMasterObserver {
+    private volatile boolean shouldFailMerge = false;
+
+    public void failMerge(boolean fail) {
+      shouldFailMerge = fail;
+    }
+
+    private boolean triggered = false;
+
+    public synchronized void waitUtilTriggered() throws InterruptedException {
+      while (!triggered) {
+        wait();
+      }
+    }
+
+    @Override
+    public synchronized void preMergeRegionsAction(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final HRegionInfo[] regionsToMerge) throws IOException {
+      triggered = true;
+      notifyAll();
+      if (shouldFailMerge) {
+        throw new IOException("fail merge");
+      }
+    }
+  }
+
   @Test
   public void testRegionMerge() throws Exception {
     String nsp1 = prefix + "_regiontest";
@@ -414,18 +440,17 @@ public class TestNamespaceAuditor {
 
     // fail region merge through Coprocessor hook
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
-    HRegionServer regionServer = cluster.getRegionServer(0);
-    RegionServerCoprocessorHost cpHost = regionServer.getRegionServerCoprocessorHost();
-    Coprocessor coprocessor = cpHost.findCoprocessor(CPRegionServerObserver.class.getName());
-    CPRegionServerObserver regionServerObserver = (CPRegionServerObserver) coprocessor;
-    regionServerObserver.failMerge(true);
-    regionServerObserver.triggered = false;
+    MasterCoprocessorHost cpHost = cluster.getMaster().getMasterCoprocessorHost();
+    Coprocessor coprocessor = cpHost.findCoprocessor(CPMasterObserver.class.getName());
+    CPMasterObserver masterObserver = (CPMasterObserver) coprocessor;
+    masterObserver.failMerge(true);
+    masterObserver.triggered = false;
 
     ADMIN.mergeRegionsAsync(
       hris.get(1).getEncodedNameAsBytes(),
       hris.get(2).getEncodedNameAsBytes(),
       false);
-    regionServerObserver.waitUtilTriggered();
+    masterObserver.waitUtilTriggered();
     hris = ADMIN.getTableRegions(tableTwo);
     assertEquals(initialRegions, hris.size());
     Collections.sort(hris);

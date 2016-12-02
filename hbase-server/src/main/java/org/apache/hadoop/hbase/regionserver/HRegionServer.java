@@ -48,7 +48,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.MalformedObjectNameException;
@@ -3026,54 +3025,58 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Close and offline the region for split
+   * Close and offline the region for split or merge
    *
-   * @param parentRegionEncodedName the name of the region to close
-   * @return True if closed the region successfully.
+   * @param regionEncodedName the name of the region(s) to close
+   * @return true if closed the region successfully.
    * @throws IOException
   */
- protected boolean closeAndOfflineRegionForSplit(
-     final String parentRegionEncodedName) throws IOException {
-   Region parentRegion = this.getFromOnlineRegions(parentRegionEncodedName);
-   if (parentRegion != null) {
-     Map<byte[], List<StoreFile>> hstoreFilesToSplit = null;
-     Exception exceptionToThrow = null;
-     try{
-       hstoreFilesToSplit = ((HRegion)parentRegion).close(false);
-     } catch (Exception e) {
-       exceptionToThrow = e;
-     }
-     if (exceptionToThrow == null && hstoreFilesToSplit == null) {
-       // The region was closed by someone else
-       exceptionToThrow =
-           new IOException("Failed to close region: already closed by another thread");
-     }
-
-     if (exceptionToThrow != null) {
-       if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
-       throw new IOException(exceptionToThrow);
-     }
-     if (parentRegion.getTableDesc().hasSerialReplicationScope()) {
-       // For serial replication, we need add a final barrier on this region. But the splitting may
-       // be reverted, so we should make sure if we reopen this region, the open barrier is same as
-       // this final barrier
-       long seq = parentRegion.getMaxFlushedSeqId();
-       if (seq == HConstants.NO_SEQNUM) {
-         // No edits in WAL for this region; get the sequence number when the region was opened.
-         seq = parentRegion.getOpenSeqNum();
-         if (seq == HConstants.NO_SEQNUM) {
-           // This region has no data
-           seq = 0;
-         }
-       } else {
-         seq++;
+ protected boolean closeAndOfflineRegionForSplitOrMerge(
+     final List<String> regionEncodedName) throws IOException {
+   for (int i = 0; i < regionEncodedName.size(); ++i) {
+     Region regionToClose = this.getFromOnlineRegions(regionEncodedName.get(i));
+     if (regionToClose != null) {
+       Map<byte[], List<StoreFile>> hstoreFiles = null;
+       Exception exceptionToThrow = null;
+       try{
+         hstoreFiles = ((HRegion)regionToClose).close(false);
+       } catch (Exception e) {
+         exceptionToThrow = e;
        }
-       Put finalBarrier = MetaTableAccessor.makeBarrierPut(Bytes.toBytes(parentRegionEncodedName),
-           seq, parentRegion.getTableDesc().getTableName().getName());
-       MetaTableAccessor.putToMetaTable(getConnection(), finalBarrier);
+       if (exceptionToThrow == null && hstoreFiles == null) {
+         // The region was closed by someone else
+         exceptionToThrow =
+             new IOException("Failed to close region: already closed by another thread");
+       }
+
+       if (exceptionToThrow != null) {
+         if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
+         throw new IOException(exceptionToThrow);
+       }
+       if (regionToClose.getTableDesc().hasSerialReplicationScope()) {
+         // For serial replication, we need add a final barrier on this region. But the splitting
+         // or merging may be reverted, so we should make sure if we reopen this region, the open
+         // barrier is same as this final barrier
+         long seq = regionToClose.getMaxFlushedSeqId();
+         if (seq == HConstants.NO_SEQNUM) {
+           // No edits in WAL for this region; get the sequence number when the region was opened.
+           seq = regionToClose.getOpenSeqNum();
+           if (seq == HConstants.NO_SEQNUM) {
+             // This region has no data
+             seq = 0;
+           }
+         } else {
+           seq++;
+         }
+         Put finalBarrier = MetaTableAccessor.makeBarrierPut(
+           Bytes.toBytes(regionEncodedName.get(i)),
+           seq,
+           regionToClose.getTableDesc().getTableName().getName());
+         MetaTableAccessor.putToMetaTable(getConnection(), finalBarrier);
+       }
+       // Offline the region
+       this.removeFromOnlineRegions(regionToClose, null);
      }
-     // Offline the region
-     this.removeFromOnlineRegions(parentRegion, null);
    }
    return true;
   }

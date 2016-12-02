@@ -896,6 +896,14 @@ public class RegionStates {
      }
    }
 
+  public void prepareAssignMergedRegion(HRegionInfo mergedRegion) {
+    synchronized (this) {
+      if (isRegionInState(mergedRegion, State.MERGING_NEW)) {
+        updateRegionState(mergedRegion, State.OFFLINE, null);
+      }
+    }
+  }
+
   void splitRegion(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
 

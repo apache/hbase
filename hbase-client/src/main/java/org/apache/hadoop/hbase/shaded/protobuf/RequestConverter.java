@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsCatalogJ
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
@@ -1090,6 +1091,22 @@ public final class RequestConverter {
         RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionA));
     builder.setRegionB(buildRegionSpecifier(
         RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionB));
+    builder.setForcible(forcible);
+    builder.setNonceGroup(nonceGroup);
+    builder.setNonce(nonce);
+    return builder.build();
+  }
+
+  public static MergeTableRegionsRequest buildMergeTableRegionsRequest(
+      final byte[][] encodedNameOfdaughaterRegions,
+      final boolean forcible,
+      final long nonceGroup,
+      final long nonce) throws DeserializationException {
+    MergeTableRegionsRequest.Builder builder = MergeTableRegionsRequest.newBuilder();
+    for (int i = 0; i< encodedNameOfdaughaterRegions.length; i++) {
+      builder.addRegion(buildRegionSpecifier(
+        RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfdaughaterRegions[i]));
+    }
     builder.setForcible(forcible);
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);

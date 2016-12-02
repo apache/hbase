@@ -287,6 +287,15 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public long mergeRegions(
+      final HRegionInfo[] regionsToMerge,
+      final boolean forcible,
+      final long nonceGroup,
+      final long nonce) throws IOException {
+    return -1;
+  }
+
+  @Override
   public long splitRegion(
       final HRegionInfo regionInfo,
       final byte[] splitRow,

@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.master.procedure.DispatchMergingRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
@@ -1415,6 +1416,50 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     if (cpHost != null) {
       cpHost.postDispatchMerge(regionInfoA, regionInfoB);
+    }
+    return procId;
+  }
+
+  @Override
+  public long mergeRegions(
+      final HRegionInfo[] regionsToMerge,
+      final boolean forcible,
+      final long nonceGroup,
+      final long nonce) throws IOException {
+    checkInitialized();
+
+    assert(regionsToMerge.length == 2);
+
+    TableName tableName = regionsToMerge[0].getTable();
+    if (tableName == null || regionsToMerge[1].getTable() == null) {
+      throw new UnknownRegionException ("Can't merge regions without table associated");
+    }
+
+    if (!tableName.equals(regionsToMerge[1].getTable())) {
+      throw new IOException (
+        "Cannot merge regions from two different tables " + regionsToMerge[0].getTable()
+        + " and " + regionsToMerge[1].getTable());
+    }
+
+    if (regionsToMerge[0].compareTo(regionsToMerge[1]) == 0) {
+      throw new MergeRegionException(
+        "Cannot merge a region to itself " + regionsToMerge[0] + ", " + regionsToMerge[1]);
+    }
+
+    if (cpHost != null) {
+      cpHost.preMergeRegions(regionsToMerge);
+    }
+
+    LOG.info(getClientIdAuditPrefix() + " Merge regions "
+        + regionsToMerge[0].getEncodedName() + " and " + regionsToMerge[1].getEncodedName());
+
+    long procId = this.procedureExecutor.submitProcedure(
+      new MergeTableRegionsProcedure(procedureExecutor.getEnvironment(), regionsToMerge, forcible),
+      nonceGroup,
+      nonce);
+
+    if (cpHost != null) {
+      cpHost.postMergeRegions(regionsToMerge);
     }
     return procId;
   }

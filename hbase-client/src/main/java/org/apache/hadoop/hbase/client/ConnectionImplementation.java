@@ -1274,6 +1274,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.MergeTableRegionsResponse mergeTableRegions(
+          RpcController controller, MasterProtos.MergeTableRegionsRequest request)
+          throws ServiceException {
+        return stub.mergeTableRegions(controller, request);
+      }
+
+      @Override
       public MasterProtos.AssignRegionResponse assignRegion(RpcController controller,
           MasterProtos.AssignRegionRequest request) throws ServiceException {
         return stub.assignRegion(controller, request);

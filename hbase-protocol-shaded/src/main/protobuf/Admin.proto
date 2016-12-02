@@ -119,14 +119,14 @@ message CloseRegionResponse {
 }
 
 /**
- * Closes the specified region and create
- * child region.
+ * Closes the specified region(s) for
+ * split or merge
  */
-message CloseRegionForSplitRequest {
-  required RegionSpecifier region = 1;
+message CloseRegionForSplitOrMergeRequest {
+  repeated RegionSpecifier region = 1;
 }
 
-message CloseRegionForSplitResponse {
+message CloseRegionForSplitOrMergeResponse {
   required bool closed = 1;
 }
 
@@ -295,8 +295,8 @@ service AdminService {
   rpc CloseRegion(CloseRegionRequest)
     returns(CloseRegionResponse);
 
-  rpc CloseRegionForSplit(CloseRegionForSplitRequest)
-    returns(CloseRegionForSplitResponse);
+  rpc CloseRegionForSplitOrMerge(CloseRegionForSplitOrMergeRequest)
+    returns(CloseRegionForSplitOrMergeResponse);
 
   rpc FlushRegion(FlushRegionRequest)
     returns(FlushRegionResponse);

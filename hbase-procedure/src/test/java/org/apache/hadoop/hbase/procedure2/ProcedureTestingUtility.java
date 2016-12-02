@@ -149,7 +149,8 @@ public class ProcedureTestingUtility {
     assertSingleExecutorForKillTests(procExecutor);
   }
 
-  private static <TEnv> void assertSingleExecutorForKillTests(final ProcedureExecutor<TEnv> procExecutor) {
+  private static <TEnv> void assertSingleExecutorForKillTests(
+      final ProcedureExecutor<TEnv> procExecutor) {
     if (procExecutor.testing == null) return;
     if (procExecutor.testing.killBeforeStoreUpdate ||
         procExecutor.testing.toggleKillBeforeStoreUpdate) {

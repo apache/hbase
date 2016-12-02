@@ -93,6 +93,20 @@ message DispatchMergingRegionsResponse {
   optional uint64 proc_id = 1;
 }
 
+/**
+ * Merging the specified regions in a table.
+ */
+message MergeTableRegionsRequest {
+  repeated RegionSpecifier region = 1;
+  optional bool forcible = 3 [default = false];
+  optional uint64 nonce_group = 4 [default = 0];
+  optional uint64 nonce = 5 [default = 0];
+}
+
+message MergeTableRegionsResponse {
+  optional uint64 proc_id = 1;
+}
+
 message AssignRegionRequest {
   required RegionSpecifier region = 1;
 }
@@ -592,6 +606,10 @@ service MasterService {
  /** Master dispatch merging the regions */
   rpc DispatchMergingRegions(DispatchMergingRegionsRequest)
     returns(DispatchMergingRegionsResponse);
+
+ /** Master merge the regions */
+  rpc MergeTableRegions(MergeTableRegionsRequest)
+    returns(MergeTableRegionsResponse);
 
   /** Assign a region to a server chosen at random. */
   rpc AssignRegion(AssignRegionRequest)

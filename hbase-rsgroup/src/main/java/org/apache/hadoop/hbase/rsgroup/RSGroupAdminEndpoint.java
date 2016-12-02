@@ -1030,6 +1030,18 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
+  public void preMergeRegions(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException {
+  }
+
+  @Override
+  public void postMergeRegions(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException {
+  }
+
+  @Override
   public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx, Set<HostAndPort>
       servers, String targetGroup) throws IOException {
   }
@@ -1133,7 +1145,40 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   }
 
   @Override
-  public void preRollBackSplitRegionAction(
+  public void postRollBackSplitRegionAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+  }
+
+  @Override
+  public void preMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException {
+  }
+
+  @Override
+  public void postCompletedMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final HRegionInfo[] regionsToMerge,
+      final HRegionInfo mergedRegion) throws IOException {
+  }
+
+  @Override
+  public void preMergeRegionsCommitAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge,
+      final List<Mutation> metaEntries) throws IOException {
+  }
+
+  @Override
+  public void postMergeRegionsCommitAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge,
+      final HRegionInfo mergedRegion) throws IOException {
+  }
+
+  @Override
+  public void postRollBackMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException {
   }
 }

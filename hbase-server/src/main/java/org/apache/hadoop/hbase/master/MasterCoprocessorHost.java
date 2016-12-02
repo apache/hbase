@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -792,6 +793,28 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preMergeRegions(final HRegionInfo[] regionsToMerge)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preMergeRegions(ctx, regionsToMerge);
+      }
+    });
+  }
+
+  public void postMergeRegions(final HRegionInfo[] regionsToMerge)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postMergeRegions(ctx, regionsToMerge);
+      }
+    });
+  }
+
   public boolean preBalance() throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -928,16 +951,110 @@ public class MasterCoprocessorHost
   }
 
   /**
-   * Invoked just before the rollback of a failed split is started
+   * Invoked just after the rollback of a failed split
    * @param user the user
    * @throws IOException
    */
-  public void preRollBackSplitAction(final User user) throws IOException {
+  public void postRollBackSplitRegionAction(final User user) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.preRollBackSplitRegionAction(ctx);
+        oserver.postRollBackSplitRegionAction(ctx);
+      }
+    });
+  }
+
+  /**
+   * Invoked just before a merge
+   * @param regionsToMerge the regions to merge
+   * @param user the user
+   * @throws IOException
+   */
+  public boolean preMergeRegionsAction(
+      final HRegionInfo[] regionsToMerge, final User user) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        oserver.preMergeRegionsAction(ctx, regionsToMerge);
+      }
+    });
+  }
+
+  /**
+   * Invoked after completing merge regions operation
+   * @param regionsToMerge the regions to merge
+   * @param mergedRegion the new merged region
+   * @param user the user
+   * @throws IOException
+   */
+  public void postCompletedMergeRegionsAction(
+      final HRegionInfo[] regionsToMerge,
+      final HRegionInfo mergedRegion,
+      final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        oserver.postCompletedMergeRegionsAction(ctx, regionsToMerge, mergedRegion);
+      }
+    });
+  }
+
+  /**
+   * Invoked before merge regions operation writes the new region to hbase:meta
+   * @param regionsToMerge the regions to merge
+   * @param metaEntries the meta entry
+   * @param user the user
+   * @throws IOException
+   */
+  public boolean preMergeRegionsCommit(
+      final HRegionInfo[] regionsToMerge,
+      final @MetaMutationAnnotation List<Mutation> metaEntries,
+      final User user) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        oserver.preMergeRegionsCommitAction(ctx, regionsToMerge, metaEntries);
+      }
+    });
+  }
+
+  /**
+   * Invoked after merge regions operation writes the new region to hbase:meta
+   * @param regionsToMerge the regions to merge
+   * @param mergedRegion the new merged region
+   * @param user the user
+   * @throws IOException
+   */
+  public void postMergeRegionsCommit(
+      final HRegionInfo[] regionsToMerge,
+      final HRegionInfo mergedRegion,
+      final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        oserver.postMergeRegionsCommitAction(ctx, regionsToMerge, mergedRegion);
+      }
+    });
+  }
+
+  /**
+   * Invoked after rollback merge regions operation
+   * @param regionsToMerge the regions to merge
+   * @param user the user
+   * @throws IOException
+   */
+  public void postRollBackMergeRegionsAction(
+      final HRegionInfo[] regionsToMerge, final User user) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation(user) {
+      @Override
+      public void call(MasterObserver oserver,
+          ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+        oserver.postRollBackMergeRegionsAction(ctx, regionsToMerge);
       }
     });
   }

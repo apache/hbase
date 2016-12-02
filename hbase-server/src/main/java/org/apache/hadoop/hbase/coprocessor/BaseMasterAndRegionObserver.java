@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.regionserver.Region;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -480,6 +479,18 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preMergeRegions(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException {
+  }
+
+  @Override
+  public void postMergeRegions(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException {
+  }
+
+  @Override
   public void preAbortProcedure(
       ObserverContext<MasterCoprocessorEnvironment> ctx,
       final ProcedureExecutor<MasterProcedureEnv> procEnv,
@@ -831,7 +842,40 @@ public class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
-  public void preRollBackSplitRegionAction(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+  public void postRollBackSplitRegionAction(final ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
+  }
+
+  @Override
+  public void preMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException {
+  }
+
+  @Override
+  public void postCompletedMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> c,
+      final HRegionInfo[] regionsToMerge,
+      final HRegionInfo mergedRegion) throws IOException {
+  }
+
+  @Override
+  public void preMergeRegionsCommitAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge,
+      final List<Mutation> metaEntries) throws IOException {
+  }
+
+  @Override
+  public void postMergeRegionsCommitAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge,
+      final HRegionInfo mergedRegion) throws IOException {
+  }
+
+  @Override
+  public void postRollBackMergeRegionsAction(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final HRegionInfo[] regionsToMerge) throws IOException {
   }
 }

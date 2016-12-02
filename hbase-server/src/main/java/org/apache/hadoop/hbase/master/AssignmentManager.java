@@ -2630,6 +2630,39 @@ public class AssignmentManager {
     return null;
   }
 
+  public void assignMergedRegion(
+      final HRegionInfo mergedRegion,
+      final HRegionInfo daughterAHRI,
+      final HRegionInfo daughterBHRI) throws InterruptedException, IOException {
+    //Offline the daughter regions
+    regionOffline(daughterAHRI, State.MERGED);
+    regionOffline(daughterBHRI, State.MERGED);
+
+    //Set merged region to offline
+    regionStates.prepareAssignMergedRegion(mergedRegion);
+
+    // Assign merged region
+    invokeAssign(mergedRegion);
+
+    Callable<Object> mergeReplicasCallable = new Callable<Object>() {
+      @Override
+      public Object call() {
+        doMergingOfReplicas(mergedRegion, daughterAHRI, daughterBHRI);
+        return null;
+      }
+    };
+    threadPoolExecutorService.submit(mergeReplicasCallable);
+
+    // wait for assignment completion
+    ArrayList<HRegionInfo> regionAssignSet = new ArrayList<HRegionInfo>(1);
+    regionAssignSet.add(mergedRegion);
+    while (!waitForAssignment(regionAssignSet, true, regionAssignSet.size(), Long.MAX_VALUE)) {
+      LOG.debug("The merged region " + mergedRegion + " is still in transition. ");
+    }
+
+    regionStateListener.onRegionMerged(mergedRegion);
+  }
+
   private String onRegionMerged(final RegionState current, final HRegionInfo hri,
       final ServerName serverName, final RegionStateTransition transition) {
     // The region must be in merging_new state, and the daughters must be

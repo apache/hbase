@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -61,6 +62,7 @@ public class TestRegionServerObserver {
    * Test verifies the hooks in regions merge.
    * @throws Exception
    */
+  @Ignore
   @Test
   public void testCoprocessorHooksInRegionsMerge() throws Exception {
     final int NUM_MASTERS = 1;
