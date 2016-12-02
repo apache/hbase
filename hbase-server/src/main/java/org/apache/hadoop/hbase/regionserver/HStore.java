@@ -229,7 +229,7 @@ public class HStore implements Store {
     this.dataBlockEncoder =
         new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
 
-    this.comparator = region.getCellCompartor();
+    this.comparator = region.getCellComparator();
     // used by ScanQueryMatcher
     long timeToPurgeDeletes =
         Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);

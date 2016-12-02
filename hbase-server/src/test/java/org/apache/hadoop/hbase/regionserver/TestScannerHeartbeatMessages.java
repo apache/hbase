@@ -500,9 +500,9 @@ public class TestScannerHeartbeatMessages {
     @Override
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
         List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
-      this.storeHeap = new HeartbeatReversedKVHeap(scanners, region.getCellCompartor());
+      this.storeHeap = new HeartbeatReversedKVHeap(scanners, region.getCellComparator());
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap = new HeartbeatReversedKVHeap(joinedScanners, region.getCellCompartor());
+        this.joinedHeap = new HeartbeatReversedKVHeap(joinedScanners, region.getCellComparator());
       }
     }
   }
@@ -527,9 +527,9 @@ public class TestScannerHeartbeatMessages {
     @Override
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
         List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
-      this.storeHeap = new HeartbeatKVHeap(scanners, region.getCellCompartor());
+      this.storeHeap = new HeartbeatKVHeap(scanners, region.getCellComparator());
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap = new HeartbeatKVHeap(joinedScanners, region.getCellCompartor());
+        this.joinedHeap = new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
       }
     }
   }

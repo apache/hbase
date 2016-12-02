@@ -5709,7 +5709,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } else {
         this.filter = null;
       }
-      this.comparator = region.getCellCompartor();
+      this.comparator = region.getCellComparator();
       /**
        * By default, calls to next/nextRaw must enforce the batch limit. Thus, construct a default
        * scanner context that can be used to enforce the batch limit in the event that a
@@ -8176,7 +8176,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public CellComparator getCellCompartor() {
+  public CellComparator getCellComparator() {
     return this.getRegionInfo().isMetaRegion() ? CellComparator.META_COMPARATOR
         : CellComparator.COMPARATOR;
   }

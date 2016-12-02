@@ -445,7 +445,7 @@ public interface Region extends ConfigurationObserver {
   RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException;
 
   /** The comparator to be used with the region */
-  CellComparator getCellCompartor();
+  CellComparator getCellComparator();
 
   /**
    * Perform one or more increment operations on a row.
