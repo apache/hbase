@@ -115,11 +115,11 @@ public class HFileTestUtil {
     try {
       // subtract 2 since iterateOnSplits doesn't include boundary keys
       for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, numRows - 2)) {
-        KeyValue kv = new KeyValue(key, family, qualifier, now, key);
+        Cell kv = new KeyValue(key, family, qualifier, now, key);
         if (withTag) {
           // add a tag.  Arbitrarily chose mob tag since we have a helper already.
           Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, key);
-          kv = MobUtils.createMobRefKeyValue(kv, key, tableNameTag);
+          kv = MobUtils.createMobRefCell(kv, key, tableNameTag);
 
           // verify that the kv has the tag.
           Tag t = CellUtil.getTag(kv, TagType.MOB_TABLE_NAME_TAG_TYPE);

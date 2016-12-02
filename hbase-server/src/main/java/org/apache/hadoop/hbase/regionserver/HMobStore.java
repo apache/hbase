@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
@@ -101,6 +103,13 @@ public class HMobStore extends HStore {
   private TableName tableLockName;
   private Map<String, List<Path>> map = new ConcurrentHashMap<String, List<Path>>();
   private final IdLock keyLock = new IdLock();
+  // When we add a MOB reference cell to the HFile, we will add 2 tags along with it
+  // 1. A ref tag with type TagType.MOB_REFERENCE_TAG_TYPE. This just denote this this cell is not
+  // original one but a ref to another MOB Cell.
+  // 2. Table name tag. It's very useful in cloning the snapshot. When reading from the cloning
+  // table, we need to find the original mob files by this table name. For details please see
+  // cloning snapshot for mob files.
+  private final byte[] refCellTags;
 
   public HMobStore(final HRegion region, final HColumnDescriptor family,
       final Configuration confParam) throws IOException {
@@ -120,6 +129,12 @@ public class HMobStore extends HStore {
       tableLockManager = region.getRegionServerServices().getTableLockManager();
       tableLockName = MobUtils.getTableLockName(getTableName());
     }
+    List<Tag> tags = new ArrayList<>(2);
+    tags.add(MobConstants.MOB_REF_TAG);
+    Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
+        getTableName().getName());
+    tags.add(tableNameTag);
+    this.refCellTags = TagUtil.fromList(tags);
   }
 
   /**
@@ -582,5 +597,9 @@ public class HMobStore extends HStore {
 
   public long getMobScanCellsSize() {
     return mobScanCellsSize;
+  }
+
+  public byte[] getRefCellTags() {
+    return this.refCellTags;
   }
 }

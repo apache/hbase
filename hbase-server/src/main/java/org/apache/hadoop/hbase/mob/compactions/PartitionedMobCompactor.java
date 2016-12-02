@@ -43,10 +43,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -92,7 +92,7 @@ public class PartitionedMobCompactor extends MobCompactor {
   private final Path tempPath;
   private final Path bulkloadPath;
   private final CacheConfig compactionCacheConfig;
-  private final Tag tableNameTag;
+  private final byte[] refCellTags;
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   public PartitionedMobCompactor(Configuration conf, FileSystem fs, TableName tableName,
@@ -113,7 +113,11 @@ public class PartitionedMobCompactor extends MobCompactor {
     Configuration copyOfConf = new Configuration(conf);
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     compactionCacheConfig = new CacheConfig(copyOfConf);
-    tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, tableName.getName());
+    List<Tag> tags = new ArrayList<>(2);
+    tags.add(MobConstants.MOB_REF_TAG);
+    Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, tableName.getName());
+    tags.add(tableNameTag);
+    this.refCellTags = TagUtil.fromList(tags);
     cryptoContext = EncryptionUtil.createEncryptionContext(copyOfConf, column);
   }
 
@@ -421,7 +425,7 @@ public class PartitionedMobCompactor extends MobCompactor {
             // write the mob cell to the mob file.
             writer.append(cell);
             // write the new reference cell to the store file.
-            KeyValue reference = MobUtils.createMobRefKeyValue(cell, fileName, tableNameTag);
+            Cell reference = MobUtils.createMobRefCell(cell, fileName, this.refCellTags);
             refFileWriter.append(reference);
             mobCells++;
           }

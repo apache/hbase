@@ -171,9 +171,20 @@ public class KeyValueUtil {
   /**
    * Copy the Cell content into the passed buf in KeyValue serialization format.
    */
-  public static int appendToByteBuffer(Cell cell, ByteBuffer buf, int offset, boolean withTags) {
+  public static int appendTo(Cell cell, ByteBuffer buf, int offset, boolean withTags) {
     offset = ByteBufferUtils.putInt(buf, offset, keyLength(cell));// Key length
     offset = ByteBufferUtils.putInt(buf, offset, cell.getValueLength());// Value length
+    offset = appendKeyTo(cell, buf, offset);
+    offset = CellUtil.copyValueTo(cell, buf, offset);// Value bytes
+    int tagsLength = cell.getTagsLength();
+    if (withTags && (tagsLength > 0)) {
+      offset = ByteBufferUtils.putAsShort(buf, offset, tagsLength);// Tags length
+      offset = CellUtil.copyTagTo(cell, buf, offset);// Tags bytes
+    }
+    return offset;
+  }
+
+  public static int appendKeyTo(Cell cell, ByteBuffer buf, int offset) {
     offset = ByteBufferUtils.putShort(buf, offset, cell.getRowLength());// RK length
     offset = CellUtil.copyRowTo(cell, buf, offset);// Row bytes
     offset = ByteBufferUtils.putByte(buf, offset, cell.getFamilyLength());// CF length
@@ -181,12 +192,6 @@ public class KeyValueUtil {
     offset = CellUtil.copyQualifierTo(cell, buf, offset);// Qualifier bytes
     offset = ByteBufferUtils.putLong(buf, offset, cell.getTimestamp());// TS
     offset = ByteBufferUtils.putByte(buf, offset, cell.getTypeByte());// Type
-    offset = CellUtil.copyValueTo(cell, buf, offset);// Value bytes
-    int tagsLength = cell.getTagsLength();
-    if (withTags && (tagsLength > 0)) {
-      offset = ByteBufferUtils.putAsShort(buf, offset, tagsLength);// Tags length
-      offset = CellUtil.copyTagTo(cell, buf, offset);// Tags bytes
-    }
     return offset;
   }
 

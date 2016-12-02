@@ -97,9 +97,9 @@ public class TestHMobStore {
   private byte[] value2 = Bytes.toBytes("value2");
   private Path mobFilePath;
   private Date currentDate = new Date();
-  private KeyValue seekKey1;
-  private KeyValue seekKey2;
-  private KeyValue seekKey3;
+  private Cell seekKey1;
+  private Cell seekKey2;
+  private Cell seekKey3;
   private NavigableSet<byte[]> qualifiers =
     new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
   private List<Cell> expected = new ArrayList<Cell>();
@@ -195,9 +195,9 @@ public class TestHMobStore {
     KeyValue kv1 = new KeyValue(row, family, qf1, Long.MAX_VALUE, referenceValue);
     KeyValue kv2 = new KeyValue(row, family, qf2, Long.MAX_VALUE, referenceValue);
     KeyValue kv3 = new KeyValue(row2, family, qf3, Long.MAX_VALUE, referenceValue);
-    seekKey1 = MobUtils.createMobRefKeyValue(kv1, referenceValue, tableNameTag);
-    seekKey2 = MobUtils.createMobRefKeyValue(kv2, referenceValue, tableNameTag);
-    seekKey3 = MobUtils.createMobRefKeyValue(kv3, referenceValue, tableNameTag);
+    seekKey1 = MobUtils.createMobRefCell(kv1, referenceValue, tableNameTag);
+    seekKey2 = MobUtils.createMobRefCell(kv2, referenceValue, tableNameTag);
+    seekKey3 = MobUtils.createMobRefCell(kv3, referenceValue, tableNameTag);
   }
 
   /**

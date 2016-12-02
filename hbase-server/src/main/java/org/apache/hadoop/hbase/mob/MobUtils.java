@@ -48,10 +48,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
@@ -424,7 +424,7 @@ public final class MobUtils {
    *                        cloning the snapshot.
    * @return The mob reference KeyValue.
    */
-  public static KeyValue createMobRefKeyValue(Cell cell, byte[] fileName, Tag tableNameTag) {
+  public static Cell createMobRefCell(Cell cell, byte[] fileName, Tag tableNameTag) {
     // Append the tags to the KeyValue.
     // The key is same, the value is the filename of the mob file
     List<Tag> tags = new ArrayList<Tag>();
@@ -437,15 +437,13 @@ public final class MobUtils {
     // snapshot for mob files.
     tags.add(tableNameTag);
     // Add the existing tags.
-    tags.addAll(CellUtil.getTags(cell));
-    int valueLength = cell.getValueLength();
-    byte[] refValue = Bytes.add(Bytes.toBytes(valueLength), fileName);
-    KeyValue reference = new KeyValue(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
-        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
-        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
-        cell.getTimestamp(), KeyValue.Type.Put, refValue, 0, refValue.length, tags);
-    reference.setSequenceId(cell.getSequenceId());
-    return reference;
+    TagUtil.carryForwardTags(tags, cell);
+    return createMobRefCell(cell, fileName, TagUtil.fromList(tags));
+  }
+
+  public static Cell createMobRefCell(Cell cell, byte[] fileName, byte[] refCellTags) {
+    byte[] refValue = Bytes.add(Bytes.toBytes(cell.getValueLength()), fileName);
+    return CellUtil.createCell(cell, refValue, TagUtil.concatTags(refCellTags, cell));
   }
 
   /**
@@ -666,7 +664,7 @@ public final class MobUtils {
    * @return The real mob value length.
    */
   public static int getMobValueLength(Cell cell) {
-    return Bytes.toInt(cell.getValueArray(), cell.getValueOffset(), Bytes.SIZEOF_INT);
+    return CellUtil.getValueAsInt(cell);
   }
 
   /**

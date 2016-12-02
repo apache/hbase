@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -433,6 +434,13 @@ public final class CellUtil {
     return new TagRewriteCell(cell, tags);
   }
 
+  public static Cell createCell(Cell cell, byte[] value, byte[] tags) {
+    if (cell instanceof ByteBufferCell) {
+      return new ValueAndTagRewriteByteBufferCell((ByteBufferCell) cell, value, tags);
+    }
+    return new ValueAndTagRewriteCell(cell, value, tags);
+  }
+
   /**
    * This can be used when a Cell has to change with addition/removal of one or more tags. This is an
    * efficient way to do so in which only the tags bytes part need to recreated and copied. All other
@@ -556,9 +564,9 @@ public final class CellUtil {
 
     @Override
     public long heapSize() {
-      long sum = HEAP_SIZE_OVERHEAD + CellUtil.estimatedHeapSizeOf(cell) - cell.getTagsLength();
+      long sum = HEAP_SIZE_OVERHEAD + CellUtil.estimatedHeapSizeOf(cell);
       if (this.tags != null) {
-        sum += ClassSize.ARRAY + this.tags.length;
+        sum += ClassSize.sizeOf(this.tags, this.tags.length);
       }
       return sum;
     }
@@ -605,7 +613,7 @@ public final class CellUtil {
 
     @Override
     public void write(ByteBuffer buf, int offset) {
-      offset = KeyValueUtil.appendToByteBuffer(this.cell, buf, offset, false);
+      offset = KeyValueUtil.appendTo(this.cell, buf, offset, false);
       int tagsLen = this.tags == null ? 0 : this.tags.length;
       if (tagsLen > 0) {
         offset = ByteBufferUtils.putAsShort(buf, offset, tagsLen);
@@ -763,9 +771,9 @@ public final class CellUtil {
 
     @Override
     public long heapSize() {
-      long sum = HEAP_SIZE_OVERHEAD + CellUtil.estimatedHeapSizeOf(cell) - cell.getTagsLength();
+      long sum = HEAP_SIZE_OVERHEAD + CellUtil.estimatedHeapSizeOf(cell);
       if (this.tags != null) {
-        sum += ClassSize.ARRAY + this.tags.length;
+        sum += ClassSize.sizeOf(this.tags, this.tags.length);
       }
       return sum;
     }
@@ -794,7 +802,7 @@ public final class CellUtil {
 
     @Override
     public void write(ByteBuffer buf, int offset) {
-      offset = KeyValueUtil.appendToByteBuffer(this.cell, buf, offset, false);
+      offset = KeyValueUtil.appendTo(this.cell, buf, offset, false);
       int tagsLen = this.tags == null ? 0 : this.tags.length;
       if (tagsLen > 0) {
         offset = ByteBufferUtils.putAsShort(buf, offset, tagsLen);
@@ -868,6 +876,184 @@ public final class CellUtil {
     @Override
     public int getTagsPosition() {
       return 0;
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class ValueAndTagRewriteCell extends TagRewriteCell {
+
+    protected byte[] value;
+
+    public ValueAndTagRewriteCell(Cell cell, byte[] value, byte[] tags) {
+      super(cell, tags);
+      this.value = value;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return this.value;
+    }
+
+    @Override
+    public int getValueOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getValueLength() {
+      return this.value == null ? 0 : this.value.length;
+    }
+
+    @Override
+    public long heapSize() {
+      long sum = ClassSize.REFERENCE + super.heapSize();
+      if (this.value != null) {
+        sum += ClassSize.sizeOf(this.value, this.value.length);
+      }
+      return sum;
+    }
+
+    @Override
+    public int write(OutputStream out, boolean withTags) throws IOException {
+      return write(out, withTags, this.cell, this.value, this.tags);
+    }
+
+    // Made into a static method so as to reuse the logic within ValueAndTagRewriteByteBufferCell
+    static int write(OutputStream out, boolean withTags, Cell cell, byte[] value, byte[] tags)
+        throws IOException {
+      int valLen = value == null ? 0 : value.length;
+      ByteBufferUtils.putInt(out, KeyValueUtil.keyLength(cell));// Key length
+      ByteBufferUtils.putInt(out, valLen);// Value length
+      int len = 2 * Bytes.SIZEOF_INT;
+      len += CellUtil.writeFlatKey(cell, out);// Key
+      if (valLen > 0) out.write(value);// Value
+      len += valLen;
+      if (withTags && tags != null) {
+        // Write the tagsLength 2 bytes
+        out.write((byte) (0xff & (tags.length >> 8)));
+        out.write((byte) (0xff & tags.length));
+        out.write(tags);
+        len += KeyValue.TAGS_LENGTH_SIZE + tags.length;
+      }
+      return len;
+    }
+
+    @Override
+    public int getSerializedSize(boolean withTags) {
+      return super.getSerializedSize(withTags) - this.cell.getValueLength() + this.value.length;
+    }
+
+    @Override
+    public void write(ByteBuffer buf, int offset) {
+      write(buf, offset, this.cell, this.value, this.tags);
+    }
+
+    // Made into a static method so as to reuse the logic within ValueAndTagRewriteByteBufferCell
+    static void write(ByteBuffer buf, int offset, Cell cell, byte[] value, byte[] tags) {
+      offset = ByteBufferUtils.putInt(buf, offset, KeyValueUtil.keyLength(cell));// Key length
+      offset = ByteBufferUtils.putInt(buf, offset, value.length);// Value length
+      offset = KeyValueUtil.appendKeyTo(cell, buf, offset);
+      ByteBufferUtils.copyFromArrayToBuffer(buf, offset, value, 0, value.length);
+      offset += value.length;
+      int tagsLen = tags == null ? 0 : tags.length;
+      if (tagsLen > 0) {
+        offset = ByteBufferUtils.putAsShort(buf, offset, tagsLen);
+        ByteBufferUtils.copyFromArrayToBuffer(buf, offset, tags, 0, tagsLen);
+      }
+    }
+
+    @Override
+    public long heapOverhead() {
+      long overhead = super.heapOverhead() + ClassSize.REFERENCE;
+      if (this.value != null) {
+        overhead += ClassSize.ARRAY;
+      }
+      return overhead;
+    }
+
+    @Override
+    public Cell deepClone() {
+      Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
+      return new ValueAndTagRewriteCell(clonedBaseCell, this.tags, this.value);
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class ValueAndTagRewriteByteBufferCell extends TagRewriteByteBufferCell {
+
+    protected byte[] value;
+
+    public ValueAndTagRewriteByteBufferCell(ByteBufferCell cell, byte[] value, byte[] tags) {
+      super(cell, tags);
+      this.value = value;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return this.value;
+    }
+
+    @Override
+    public int getValueOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getValueLength() {
+      return this.value == null ? 0 : this.value.length;
+    }
+
+    @Override
+    public ByteBuffer getValueByteBuffer() {
+      return ByteBuffer.wrap(this.value);
+    }
+
+    @Override
+    public int getValuePosition() {
+      return 0;
+    }
+
+    @Override
+    public long heapSize() {
+      long sum = ClassSize.REFERENCE + super.heapSize();
+      if (this.value != null) {
+        sum += ClassSize.sizeOf(this.value, this.value.length);
+      }
+      return sum;
+    }
+
+    @Override
+    public int write(OutputStream out, boolean withTags) throws IOException {
+      return ValueAndTagRewriteCell.write(out, withTags, this.cell, this.value, this.tags);
+    }
+
+    @Override
+    public int getSerializedSize(boolean withTags) {
+      return super.getSerializedSize(withTags) - this.cell.getValueLength() + this.value.length;
+    }
+
+    @Override
+    public void write(ByteBuffer buf, int offset) {
+      ValueAndTagRewriteCell.write(buf, offset, this.cell, this.value, this.tags);
+    }
+
+    @Override
+    public long heapOverhead() {
+      long overhead = super.heapOverhead() + ClassSize.REFERENCE;
+      if (this.value != null) {
+        overhead += ClassSize.ARRAY;
+      }
+      return overhead;
+    }
+
+    @Override
+    public Cell deepClone() {
+      Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
+      if (clonedBaseCell instanceof ByteBufferCell) {
+        return new ValueAndTagRewriteByteBufferCell((ByteBufferCell) clonedBaseCell, this.tags,
+            this.value);
+      }
+      return new ValueAndTagRewriteCell(clonedBaseCell, this.tags, this.value);
     }
   }
 
@@ -1577,6 +1763,34 @@ public final class CellUtil {
     out.writeByte(cell.getTypeByte());
   }
 
+  public static int writeFlatKey(Cell cell, OutputStream out) throws IOException {
+    short rowLen = cell.getRowLength();
+    byte fLen = cell.getFamilyLength();
+    int qLen = cell.getQualifierLength();
+    // Using just one if/else loop instead of every time checking before writing every
+    // component of cell
+    if (cell instanceof ByteBufferCell) {
+      StreamUtils.writeShort(out, rowLen);
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getRowByteBuffer(),
+        ((ByteBufferCell) cell).getRowPosition(), rowLen);
+      out.write(fLen);
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferCell) cell).getFamilyPosition(), fLen);
+      ByteBufferUtils.copyBufferToStream(out, ((ByteBufferCell) cell).getQualifierByteBuffer(),
+        ((ByteBufferCell) cell).getQualifierPosition(), qLen);
+    } else {
+      StreamUtils.writeShort(out, rowLen);
+      out.write(cell.getRowArray(), cell.getRowOffset(), rowLen);
+      out.write(fLen);
+      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), fLen);
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), qLen);
+    }
+    StreamUtils.writeLong(out, cell.getTimestamp());
+    out.write(cell.getTypeByte());
+    return Bytes.SIZEOF_SHORT + rowLen + Bytes.SIZEOF_BYTE + fLen + qLen + Bytes.SIZEOF_LONG
+        + Bytes.SIZEOF_BYTE;
+  }
+
   /**
    * Writes the row from the given cell to the output stream
    * @param out The outputstream to which the data has to be written
@@ -2016,6 +2230,20 @@ public final class CellUtil {
           ((ByteBufferCell) cell).getValuePosition());
     }
     return Bytes.toLong(cell.getValueArray(), cell.getValueOffset());
+  }
+
+  /**
+   * Converts the value bytes of the given cell into a int value
+   *
+   * @param cell
+   * @return value as int
+   */
+  public static int getValueAsInt(Cell cell) {
+    if (cell instanceof ByteBufferCell) {
+      return ByteBufferUtils.toInt(((ByteBufferCell) cell).getValueByteBuffer(),
+          ((ByteBufferCell) cell).getValuePosition());
+    }
+    return Bytes.toInt(cell.getValueArray(), cell.getValueOffset());
   }
 
   /**
@@ -2958,7 +3186,7 @@ public final class CellUtil {
       // Normally all Cell impls within Server will be of type ExtendedCell. Just considering the
       // other case also. The data fragments within Cell is copied into buf as in KeyValue
       // serialization format only.
-      KeyValueUtil.appendToByteBuffer(cell, buf, offset, true);
+      KeyValueUtil.appendTo(cell, buf, offset, true);
     }
     if (buf.hasArray()) {
       KeyValue newKv;

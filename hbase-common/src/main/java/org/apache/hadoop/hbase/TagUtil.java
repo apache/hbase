@@ -247,6 +247,23 @@ public final class TagUtil {
     return tags;
   }
 
+  public static byte[] concatTags(byte[] tags, Cell cell) {
+    int cellTagsLen = cell.getTagsLength();
+    if (cellTagsLen == 0) {
+      // If no Tags, return early.
+      return tags;
+    }
+    byte[] b = new byte[tags.length + cellTagsLen];
+    int pos = Bytes.putBytes(b, 0, tags, 0, tags.length);
+    if (cell instanceof ByteBufferCell) {
+      ByteBufferUtils.copyFromBufferToArray(b, ((ByteBufferCell) cell).getTagsByteBuffer(),
+          ((ByteBufferCell) cell).getTagsPosition(), pos, cellTagsLen);
+    } else {
+      Bytes.putBytes(b, pos, cell.getTagsArray(), cell.getTagsOffset(), cellTagsLen);
+    }
+    return b;
+  }
+
   /**
    * @return Carry forward the TTL tag.
    */
