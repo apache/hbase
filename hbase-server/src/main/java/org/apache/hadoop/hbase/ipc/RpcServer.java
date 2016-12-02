@@ -156,6 +156,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.MethodDesc
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.TextFormat;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * An RPC server that hosts protobuf described Services.
@@ -2148,11 +2149,11 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       // do its default 4k allocation for CodedInputStream.  We force it to use backing array.
       CodedInputStream cis;
       if (buf.hasArray()) {
-        cis = CodedInputStream.newInstance(buf.array(), offset, buf.limit());
+        cis = UnsafeByteOperations.unsafeWrap(buf.array(), 0, buf.limit()).newCodedInput();
       } else {
         cis = CodedInputStream.newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
-        cis.enableAliasing(true);
       }
+      cis.enableAliasing(true);
       int headerSize = cis.readRawVarint32();
       offset = cis.getTotalBytesRead();
       Message.Builder builder = RequestHeader.newBuilder();
