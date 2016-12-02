@@ -17,12 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
+import com.google.common.collect.Lists;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,17 +41,21 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegionAction;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import com.google.common.collect.Lists;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestBaseLoadBalancer extends BalancerTestBase {
@@ -209,6 +209,49 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     listOfServerNames = getListOfServerNames(servers3);
     assignment = loadBalancer.retainAssignment(existing, listOfServerNames);
     assertRetainedAssignment(existing, listOfServerNames, assignment);
+  }
+
+  @Test (timeout=30000)
+  public void testRandomAssignment() throws Exception {
+    for (int i = 1; i != 5; ++i) {
+      LOG.info("run testRandomAssignment() with idle servers:" + i);
+      testRandomAssignment(i);
+    }
+  }
+
+  private void testRandomAssignment(int numberOfIdleServers) throws Exception {
+    assert numberOfIdleServers > 0;
+    List<ServerName> idleServers = new ArrayList<>(numberOfIdleServers);
+    for (int i = 0; i != numberOfIdleServers; ++i) {
+      idleServers.add(ServerName.valueOf("server-" + i, 1000, 1L));
+    }
+    List<ServerName> allServers = new ArrayList<>(idleServers.size() + 1);
+    allServers.add(ServerName.valueOf("server-" + numberOfIdleServers, 1000, 1L));
+    allServers.addAll(idleServers);
+    LoadBalancer balancer = new MockBalancer() {
+      @Override
+      public boolean shouldBeOnMaster(HRegionInfo region) {
+        return false;
+      }
+    };
+    Configuration conf = HBaseConfiguration.create();
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
+    balancer.setConf(conf);
+    ServerManager sm = Mockito.mock(ServerManager.class);
+    Mockito.when(sm.getOnlineServersListWithPredicator(allServers, BaseLoadBalancer.IDLE_SERVER_PREDICATOR))
+           .thenReturn(idleServers);
+    MasterServices services = Mockito.mock(MasterServices.class);
+    Mockito.when(services.getServerManager()).thenReturn(sm);
+    balancer.setMasterServices(services);
+    HRegionInfo hri1 = new HRegionInfo(
+        TableName.valueOf("table"), "key1".getBytes(), "key2".getBytes(),
+        false, 100);
+    assertNull(balancer.randomAssignment(hri1, Collections.EMPTY_LIST));
+    assertNull(balancer.randomAssignment(hri1, null));
+    for (int i = 0; i != 3; ++i) {
+      ServerName sn = balancer.randomAssignment(hri1, allServers);
+      assertTrue("actual:" + sn + ", except:" + idleServers, idleServers.contains(sn));
+    }
   }
 
   @Test (timeout=180000)

@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -33,7 +38,7 @@ import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-
+import java.util.function.Predicate;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,6 +48,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -53,12 +59,6 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 /**
  * The base class for load balancers. It provides the the functions used to by
@@ -72,6 +72,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private volatile boolean stopped = false;
 
   private static final List<HRegionInfo> EMPTY_REGION_LIST = new ArrayList<HRegionInfo>(0);
+
+  static final Predicate<ServerLoad> IDLE_SERVER_PREDICATOR
+    = load -> load.getNumberOfRegions() == 0;
 
   protected final RegionLocationFinder regionFinder = new RegionLocationFinder();
 
@@ -1323,6 +1326,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         rackManager);
   }
 
+  private List<ServerName> findIdleServers(List<ServerName> servers) {
+    return this.services.getServerManager()
+            .getOnlineServersListWithPredicator(servers, IDLE_SERVER_PREDICATOR);
+  }
+
   /**
    * Used to assign a single region to a random server.
    */
@@ -1346,10 +1354,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     if (numServers == 1) { // Only one server, nothing fancy we can do here
       return servers.get(0);
     }
-
+    List<ServerName> idleServers = findIdleServers(servers);
+    if (idleServers.size() == 1) {
+      return idleServers.get(0);
+    }
+    final List<ServerName> finalServers = idleServers.isEmpty() ?
+            servers : idleServers;
     List<HRegionInfo> regions = Lists.newArrayList(regionInfo);
-    Cluster cluster = createCluster(servers, regions, false);
-    return randomAssignment(cluster, regionInfo, servers);
+    Cluster cluster = createCluster(finalServers, regions, false);
+    return randomAssignment(cluster, regionInfo, finalServers);
   }
 
   /**

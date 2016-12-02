@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 
 import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -37,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-
+import java.util.function.Predicate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1071,6 +1070,27 @@ public class ServerManager {
     // TODO: optimize the load balancer call so we don't need to make a new list
     // TODO: FIX. THIS IS POPULAR CALL.
     return new ArrayList<ServerName>(this.onlineServers.keySet());
+  }
+
+  /**
+   * @param keys The target server name
+   * @param idleServerPredicator Evaluates the server on the given load
+   * @return A copy of the internal list of online servers matched by the predicator
+   */
+  public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> keys,
+    Predicate<ServerLoad> idleServerPredicator) {
+    List<ServerName> names = new ArrayList<>();
+    if (keys != null && idleServerPredicator != null) {
+      keys.forEach(name -> {
+        ServerLoad load = onlineServers.get(name);
+        if (load != null) {
+          if (idleServerPredicator.test(load)) {
+            names.add(name);
+          }
+        }
+      });
+    }
+    return names;
   }
 
   /**
