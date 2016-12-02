@@ -208,7 +208,7 @@ function hadoopcheck_rebuild
       "${MAVEN}" clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-two.version="${hadoopver}"
-    count=$(${GREP} -c ERROR "${logfile}")
+    count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
       ((result=result+1))
@@ -222,7 +222,7 @@ function hadoopcheck_rebuild
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-three.version="${hadoopver} \
         -Dhadoop.profile=3.0"
-    count=$(${GREP} -c ERROR "${logfile}")
+    count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."
       ((result=result+1))
@@ -302,7 +302,7 @@ function hbaseprotoc_rebuild
     fn=$(module_file_fragment "${module}")
     logfile="${PATCH_DIR}/patch-hbaseprotoc-${fn}.txt"
 
-    count=$(${GREP} -c ERROR "${logfile}")
+    count=$(${GREP} -c '\[ERROR\]' "${logfile}")
 
     if [[ ${count} -gt 0 ]]; then
       module_status ${i} -1 "patch-hbaseprotoc-${fn}.txt" "Patch generated "\
