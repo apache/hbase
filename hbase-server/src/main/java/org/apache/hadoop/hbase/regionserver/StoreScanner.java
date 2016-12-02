@@ -24,10 +24,8 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -94,7 +92,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   // Collects all the KVHeap that are eagerly getting closed during the
   // course of a scan
-  protected Set<KeyValueHeap> heapsForDelayedClose = new HashSet<KeyValueHeap>();
+  protected List<KeyValueHeap> heapsForDelayedClose = new ArrayList<KeyValueHeap>();
 
   /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
