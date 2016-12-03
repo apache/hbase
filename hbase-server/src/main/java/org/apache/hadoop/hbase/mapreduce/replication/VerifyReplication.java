@@ -83,6 +83,7 @@ public class VerifyReplication extends Configured implements Tool {
   static String delimiter = "";
   static String peerId = null;
   static String rowPrefixes = null;
+  static boolean verbose = false;
 
   /**
    * Map-only comparator for 2 tables
@@ -95,6 +96,7 @@ public class VerifyReplication extends Configured implements Tool {
 
     private ResultScanner replicatedScanner;
     private Result currentCompareRowInPeerTable;
+    private boolean verbose = false;
 
     /**
      * Map method that compares every scanned row with the equivalent from
@@ -110,6 +112,7 @@ public class VerifyReplication extends Configured implements Tool {
         throws IOException {
       if (replicatedScanner == null) {
         Configuration conf = context.getConfiguration();
+        verbose = conf.getBoolean(NAME +".verbose", false);
         final Scan scan = new Scan();
         scan.setBatch(batch);
         scan.setCacheBlocks(false);
@@ -161,6 +164,9 @@ public class VerifyReplication extends Configured implements Tool {
           try {
             Result.compareResults(value, currentCompareRowInPeerTable);
             context.getCounter(Counters.GOODROWS).increment(1);
+            if (verbose) {
+              LOG.info("Good row key: " + delimiter + Bytes.toString(value.getRow()) + delimiter);
+            }
           } catch (Exception e) {
             logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value);
             LOG.error("Exception while comparing row : " + e);
@@ -260,6 +266,7 @@ public class VerifyReplication extends Configured implements Tool {
     conf.set(NAME+".tableName", tableName);
     conf.setLong(NAME+".startTime", startTime);
     conf.setLong(NAME+".endTime", endTime);
+    conf.setBoolean(NAME +".verbose", verbose);
     if (families != null) {
       conf.set(NAME+".families", families);
     }
@@ -395,6 +402,12 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
+        final String verboseKey = "--verbose";
+        if (cmd.startsWith(verboseKey)) {
+          verbose = true;
+          continue;
+        }
+
         if (i == args.length-2) {
           peerId = cmd;
         }
@@ -430,7 +443,8 @@ public class VerifyReplication extends Configured implements Tool {
       System.err.println("ERROR: " + errorMsg);
     }
     System.err.println("Usage: verifyrep [--starttime=X]" +
-        " [--endtime=Y] [--families=A] [--row-prefixes=B] [--delimiter=] <peerid> <tablename>");
+        " [--endtime=Y] [--families=A] [--row-prefixes=B] [--delimiter=] [--recomparesleep=] " +
+        "[--verbose] <peerid> <tablename>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" starttime    beginning of the time range");
@@ -440,6 +454,7 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println(" row-prefixes comma-separated list of row key prefixes to filter on ");
     System.err.println(" delimiter    the delimiter used in display around rowkey");
+    System.err.println(" verbose      logs row keys of good rows");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" peerid       Id of the peer used for verification, must match the one given for replication");
