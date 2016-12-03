@@ -92,9 +92,14 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
    * The partition id that consists of start key and date of the mob file name.
    */
   public static class CompactionPartitionId {
-
     private String startKey;
     private String date;
+
+    public CompactionPartitionId() {
+      // initialize these fields to empty string
+      this.startKey = "";
+      this.date = "";
+    }
 
     public CompactionPartitionId(String startKey, String date) {
       if (startKey == null || date == null) {
@@ -108,8 +113,16 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
       return this.startKey;
     }
 
+    public void setStartKey(final String startKey) {
+      this.startKey = startKey;
+    }
+
     public String getDate() {
       return this.date;
+    }
+
+    public void setDate(final String date) {
+      this.date = date;
     }
 
     @Override

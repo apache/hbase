@@ -41,11 +41,14 @@ import org.apache.hadoop.hbase.util.MD5Hash;
  */
 @InterfaceAudience.Private
 public final class MobFileName {
-
   private final String date;
   private final String startKey;
   private final String uuid;
   private final String fileName;
+
+  private static final int STARTKEY_END_INDEX = 32;
+  private static final int DATE_END_INDEX = 40;
+  private static final int UUID_END_INDEX = 72;
 
   /**
    * @param startKey
@@ -59,7 +62,7 @@ public final class MobFileName {
     this.startKey = MD5Hash.getMD5AsHex(startKey, 0, startKey.length);
     this.uuid = uuid;
     this.date = date;
-    this.fileName = this.startKey + date + uuid;
+    this.fileName = this.startKey + this.date + this.uuid;
   }
 
   /**
@@ -74,14 +77,14 @@ public final class MobFileName {
     this.startKey = startKey;
     this.uuid = uuid;
     this.date = date;
-    this.fileName = this.startKey + date + uuid;
+    this.fileName = this.startKey + this.date + this.uuid;
   }
 
   /**
    * Creates an instance of MobFileName
    *
    * @param startKey
-   *          The start key.
+   *          The md5 hex string of the start key.
    * @param date
    *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
    * @param uuid The uuid.
@@ -113,10 +116,28 @@ public final class MobFileName {
   public static MobFileName create(String fileName) {
     // The format of a file name is md5HexString(0-31bytes) + date(32-39bytes) + UUID
     // The date format is yyyyMMdd
-    String startKey = fileName.substring(0, 32);
-    String date = fileName.substring(32, 40);
-    String uuid = fileName.substring(40);
+    String startKey = fileName.substring(0, STARTKEY_END_INDEX);
+    String date = fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);
+    String uuid = fileName.substring(DATE_END_INDEX, UUID_END_INDEX);
     return new MobFileName(startKey, date, uuid);
+  }
+
+  /**
+   * get startKey from MobFileName.
+   * @param fileName file name.
+   * @return startKey
+   */
+  public static String getStartKeyFromName(final String fileName) {
+    return fileName.substring(0, STARTKEY_END_INDEX);
+  }
+
+  /**
+   * get date from MobFileName.
+   * @param fileName file name.
+   * @return date
+   */
+  public static String getDateFromName(final String fileName) {
+    return fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);
   }
 
   /**
@@ -137,11 +158,7 @@ public final class MobFileName {
 
   @Override
   public int hashCode() {
-    StringBuilder builder = new StringBuilder();
-    builder.append(startKey);
-    builder.append(date);
-    builder.append(uuid);
-    return builder.toString().hashCode();
+    return fileName.hashCode();
   }
 
   @Override
@@ -151,10 +168,7 @@ public final class MobFileName {
     }
     if (anObject instanceof MobFileName) {
       MobFileName another = (MobFileName) anObject;
-      if (this.startKey.equals(another.startKey) && this.date.equals(another.date)
-          && this.uuid.equals(another.uuid)) {
-        return true;
-      }
+      return this.getFileName().equals(another.getFileName());
     }
     return false;
   }

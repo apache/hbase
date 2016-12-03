@@ -144,10 +144,12 @@ public class PartitionedMobCompactor extends MobCompactor {
    */
   protected PartitionedMobCompactionRequest select(List<FileStatus> candidates,
     boolean allFiles) throws IOException {
-    Collection<FileStatus> allDelFiles = new ArrayList<>();
-    Map<CompactionPartitionId, CompactionPartition> filesToCompact = new HashMap<>();
+    final Collection<FileStatus> allDelFiles = new ArrayList<>();
+    final Map<CompactionPartitionId, CompactionPartition> filesToCompact = new HashMap<>();
+    final CompactionPartitionId id = new CompactionPartitionId();
     int selectedFileCount = 0;
     int irrelevantFileCount = 0;
+
     for (FileStatus file : candidates) {
       if (!file.isFile()) {
         irrelevantFileCount++;
@@ -166,15 +168,16 @@ public class PartitionedMobCompactor extends MobCompactor {
       }
       if (StoreFileInfo.isDelFile(linkedFile.getPath())) {
         allDelFiles.add(file);
-      } else if (allFiles || linkedFile.getLen() < mergeableSize) {
+      } else if (allFiles || (linkedFile.getLen() < mergeableSize)) {
         // add all files if allFiles is true,
         // otherwise add the small files to the merge pool
-        MobFileName fileName = MobFileName.create(linkedFile.getPath().getName());
-        CompactionPartitionId id = new CompactionPartitionId(fileName.getStartKey(),
-          fileName.getDate());
+        String fileName = linkedFile.getPath().getName();
+        id.setStartKey(MobFileName.getStartKeyFromName(fileName));
+        id.setDate(MobFileName.getDateFromName(fileName));
         CompactionPartition compactionPartition = filesToCompact.get(id);
         if (compactionPartition == null) {
-          compactionPartition = new CompactionPartition(id);
+          compactionPartition = new CompactionPartition(
+              new CompactionPartitionId(id.getStartKey(), id.getDate()));
           compactionPartition.addFile(file);
           filesToCompact.put(id, compactionPartition);
         } else {
