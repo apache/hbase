@@ -25,42 +25,31 @@
 namespace hbase {
 
 Get::~Get() {
-
 }
 
 Get::Get(const std::string &row)
-    : row_(row),
-      max_versions_(1),
-      cache_blocks_(true),
-      store_limit_(-1),
-      store_offset_(0),
-      check_existence_only_(false),
-      consistency_(hbase::pb::Consistency::STRONG),
-      tr_(TimeRange()) {
-  Get::CheckRow(&row_);
-  family_map_.clear();
+    : row_(row) {
+  CheckRow(row_);
 }
 
-Get::Get(const Get &cget) {
-  this->row_ = cget.row_;
-  this->max_versions_ = cget.max_versions_;
-  this->cache_blocks_ = cget.cache_blocks_;
-  this->store_limit_ = cget.store_limit_;
-  this->store_offset_ = cget.store_offset_;
-  this->check_existence_only_ = cget.check_existence_only_;
-  this->consistency_ = cget.consistency_;
-  this->tr_ = cget.tr_;
+Get::Get(const Get &get) {
+  row_ = get.row_;
+  max_versions_ = get.max_versions_;
+  cache_blocks_ = get.cache_blocks_;
+  check_existence_only_ = get.check_existence_only_;
+  consistency_ = get.consistency_;
+  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(), get.Timerange().MaxTimeStamp()));
+  family_map_.insert(get.family_map_.begin(), get.family_map_.end());
 }
 
-Get& Get::operator=(const Get &cget) {
-  this->row_ = cget.row_;
-  this->max_versions_ = cget.max_versions_;
-  this->cache_blocks_ = cget.cache_blocks_;
-  this->store_limit_ = cget.store_limit_;
-  this->store_offset_ = cget.store_offset_;
-  this->check_existence_only_ = cget.check_existence_only_;
-  this->consistency_ = cget.consistency_;
-  this->tr_ = cget.tr_;
+Get& Get::operator=(const Get &get) {
+  row_ = get.row_;
+  max_versions_ = get.max_versions_;
+  cache_blocks_ = get.cache_blocks_;
+  check_existence_only_ = get.check_existence_only_;
+  consistency_ = get.consistency_;
+  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(), get.Timerange().MaxTimeStamp()));
+  family_map_.insert(get.family_map_.begin(), get.family_map_.end());
   return *this;
 }
 
@@ -80,15 +69,14 @@ Get& Get::AddFamily(const std::string &family) {
 }
 
 Get& Get::AddColumn(const std::string &family, const std::string &qualifier) {
-  const auto &it = std::find(this->family_map_[family].begin(),
-                             this->family_map_[family].end(), qualifier);
+  const auto &it = std::find(family_map_[family].begin(), family_map_[family].end(), qualifier);
 
   /**
    * Check if any qualifiers are already present or not.
    * Add only if qualifiers for a given family are not present
    */
-  if (it == this->family_map_[family].end()) {
-    this->family_map_[family].push_back(qualifier);
+  if (it == family_map_[family].end()) {
+    family_map_[family].push_back(qualifier);
   }
   return *this;
 }
@@ -98,76 +86,67 @@ const std::string& Get::Row() const {
 }
 
 hbase::pb::Consistency Get::Consistency() const {
-  return this->consistency_;
+  return consistency_;
 }
 
 Get &Get::SetConsistency(hbase::pb::Consistency consistency) {
-  this->consistency_ = consistency;
+  consistency_ = consistency;
   return *this;
 }
 
-bool Get::HasFamilies() {
-  return !this->family_map_.empty();
+bool Get::HasFamilies() const {
+  return !family_map_.empty();
 }
 
-const FAMILY_MAP &Get::FamilyMap() const {
-  return this->family_map_;
+const FamilyMap &Get::Family() const {
+  return family_map_;
 }
 
 int Get::MaxVersions() const {
-  return this->max_versions_;
+  return max_versions_;
 }
 
 Get& Get::SetMaxVersions(uint32_t max_versions) {
   if (0 == max_versions)
     throw std::runtime_error("max_versions must be positive");
 
-  this->max_versions_ = max_versions;
+  max_versions_ = max_versions;
   return *this;
 }
 
 bool Get::CacheBlocks() const {
-  return this->cache_blocks_;
+  return cache_blocks_;
 }
 
 Get & Get::SetCacheBlocks(bool cache_blocks) {
-  this->cache_blocks_ = cache_blocks;
-  return *this;
-}
-
-int Get::MaxResultsPerColumnFamily() const {
-  return this->store_limit_;
-}
-
-Get& Get::SetMaxResultsPerColumnFamily(int store_limit) {
-  this->store_limit_ = store_limit;
+  cache_blocks_ = cache_blocks;
   return *this;
 }
 
 Get& Get::SetTimeRange(long min_timestamp, long max_timestamp) {
-  this->tr_ = TimeRange(min_timestamp, max_timestamp);
+  tr_.reset(new TimeRange(min_timestamp, max_timestamp));
   return *this;
 }
 
 Get& Get::SetTimeStamp(long timestamp) {
-  this->tr_ = TimeRange(timestamp, timestamp + 1);
+  tr_.reset(new TimeRange(timestamp, timestamp + 1));
   return *this;
 }
 
 const TimeRange& Get::Timerange() const {
-  return this->tr_;
+  return *tr_;
 }
 
-void Get::CheckRow(const std::string *row) {
-  int MAX_ROW_LENGTH = std::numeric_limits<short>::max();
-  int row_length = row->size();
+void Get::CheckRow(const std::string &row) {
+  const int kMaxRowLength = std::numeric_limits<short>::max();
+  int row_length = row.size();
   if (0 == row_length) {
     throw std::runtime_error("Row length can't be 0");
   }
-  if (row_length > MAX_ROW_LENGTH) {
+  if (row_length > kMaxRowLength) {
     throw std::runtime_error(
-        "Length of " + *row + " is greater than max row size: "
-            + std::to_string(MAX_ROW_LENGTH));
+        "Length of " + row + " is greater than max row size: " + std::to_string(kMaxRowLength));
   }
 }
+
 }
