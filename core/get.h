@@ -20,6 +20,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -31,7 +32,7 @@ namespace hbase {
 /**
  * @brief Map consisting of column families and qualifiers to be used for Get operation
  */
-using FAMILY_MAP = std::map<std::string, std::vector<std::string>>;
+using FamilyMap = std::map<std::string, std::vector<std::string>>;
 
 class Get {
 
@@ -69,20 +70,9 @@ class Get {
   Get& SetCacheBlocks(bool cache_blocks);
 
   /**
-   * @brief Method for retrieving the get's maximum number of values to return per Column Family
+   * @brief Returns the Get family map (FamilyMap) for this Get operation. Used for constructing Scan object with an already constructed Get
    */
-  int MaxResultsPerColumnFamily() const;
-
-  /**
-   * @brief Set the maximum number of values to return per row per Column Family
-   * @param the store_limit to be set
-   */
-  Get& SetMaxResultsPerColumnFamily(int store_limit);
-
-  /**
-   * @brief Returns the Get family map (FAMILY_MAP) for this Get operation.
-   */
-  const FAMILY_MAP &FamilyMap() const;
+  const FamilyMap &Family() const;
 
   /**
    * @brief Returns the timerange for this Get
@@ -121,9 +111,9 @@ class Get {
   const std::string& Row() const;
 
   /**
-   * @brief Returns true if family map (FAMILY_MAP) is non empty false otherwise
+   * @brief Returns true if family map (FamilyMap) is non empty false otherwise
    */
-  bool HasFamilies();
+  bool HasFamilies() const;
 
   /**
    * @brief Returns the consistency level for this Get operation
@@ -137,21 +127,19 @@ class Get {
   Get& SetConsistency(hbase::pb::Consistency consistency);
 
  private:
-  std::string row_;
-  uint32_t max_versions_;
-  bool cache_blocks_;
-  int store_limit_;
-  int store_offset_;
-  bool check_existence_only_;
-  FAMILY_MAP family_map_;
-  hbase::pb::Consistency consistency_;
-  TimeRange tr_;
+  std::string row_ = "";
+  uint32_t max_versions_ = 1;
+  bool cache_blocks_ = true;
+  bool check_existence_only_ = false;
+  FamilyMap family_map_;
+  hbase::pb::Consistency consistency_ = hbase::pb::Consistency::STRONG;
+  std::unique_ptr<TimeRange> tr_ = std::make_unique<TimeRange>();
 
   /**
    * @brief Checks if the row for this Get operation is proper or not
    * @param row Row to check
    * @throws std::runtime_error if row is empty or greater than MAX_ROW_LENGTH(i.e. std::numeric_limits<short>::max())
    */
-  void CheckRow(const std::string *row);
+  void CheckRow(const std::string &row);
 };
 }
