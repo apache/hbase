@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
@@ -293,9 +295,11 @@ public class MasterQuotaManager implements RegionStateListener {
     Quotas quotas = quotaOps.fetch();
     quotaOps.preApply(quotas);
 
+    // Copy the user request into the Quotas object
     Quotas.Builder builder = (quotas != null) ? quotas.toBuilder() : Quotas.newBuilder();
     if (req.hasThrottle()) applyThrottle(builder, req.getThrottle());
     if (req.hasBypassGlobals()) applyBypassGlobals(builder, req.getBypassGlobals());
+    if (req.hasSpaceLimit()) applySpaceLimit(builder, req.getSpaceLimit());
 
     // Submit new changes
     quotas = builder.build();
@@ -435,6 +439,32 @@ public class MasterQuotaManager implements RegionStateListener {
     } else {
       quotas.clearBypassGlobals();
     }
+  }
+
+  /**
+   * Adds the information from the provided {@link SpaceLimitRequest} to the {@link Quotas} builder.
+   *
+   * @param quotas The builder to update.
+   * @param req The request to extract space quota information from.
+   */
+  void applySpaceLimit(final Quotas.Builder quotas, final SpaceLimitRequest req) {
+    if (req.hasQuota()) {
+      applySpaceQuota(quotas, req.getQuota());
+    }
+  }
+
+  /**
+   * Merges the provided {@link SpaceQuota} into the given {@link Quotas} builder.
+   *
+   * @param quotas The Quotas builder instance to update
+   * @param quota The SpaceQuota instance to update from
+   */
+  void applySpaceQuota(final Quotas.Builder quotas, final SpaceQuota quota) {
+    // Create a builder for Quotas
+    SpaceQuota.Builder builder = quotas.hasSpace() ? quotas.getSpace().toBuilder() :
+        SpaceQuota.newBuilder();
+    // Update the values from the provided quota into the new one and set it on Quotas.
+    quotas.setSpace(builder.mergeFrom(quota).build());
   }
 
   private void validateTimedQuota(final TimedQuota timedQuota) throws IOException {

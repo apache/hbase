@@ -22,20 +22,32 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.common.collect.Iterables;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -233,8 +245,119 @@ public class TestQuotaAdmin {
     assertNumResults(0, null);
   }
 
+  @Test
+  public void testSetAndGetSpaceQuota() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    final TableName tn = TableName.valueOf("table1");
+    final long sizeLimit = 1024L * 1024L * 1024L * 1024L * 5L; // 5TB
+    final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_WRITES;
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, violationPolicy);
+    admin.setQuota(settings);
+
+    // Verify the Quotas in the table
+    try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      ResultScanner scanner = quotaTable.getScanner(new Scan());
+      try {
+        Result r = Iterables.getOnlyElement(scanner);
+        CellScanner cells = r.cellScanner();
+        assertTrue("Expected to find a cell", cells.advance());
+        assertSpaceQuota(sizeLimit, violationPolicy, cells.current());
+      } finally {
+        scanner.close();
+      }
+    }
+
+    // Verify we can retrieve it via the QuotaRetriever API
+    QuotaRetriever scanner = QuotaRetriever.open(admin.getConfiguration());
+    try {
+      assertSpaceQuota(sizeLimit, violationPolicy, Iterables.getOnlyElement(scanner));
+    } finally {
+      scanner.close();
+    }
+  }
+
+  @Test
+  public void testSetAndModifyQuota() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    final TableName tn = TableName.valueOf("table1");
+    final long originalSizeLimit = 1024L * 1024L * 1024L * 1024L * 5L; // 5TB
+    final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_WRITES;
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
+        tn, originalSizeLimit, violationPolicy);
+    admin.setQuota(settings);
+
+    // Verify the Quotas in the table
+    try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      ResultScanner scanner = quotaTable.getScanner(new Scan());
+      try {
+        Result r = Iterables.getOnlyElement(scanner);
+        CellScanner cells = r.cellScanner();
+        assertTrue("Expected to find a cell", cells.advance());
+        assertSpaceQuota(originalSizeLimit, violationPolicy, cells.current());
+      } finally {
+        scanner.close();
+      }
+    }
+
+    // Verify we can retrieve it via the QuotaRetriever API
+    QuotaRetriever quotaScanner = QuotaRetriever.open(admin.getConfiguration());
+    try {
+      assertSpaceQuota(originalSizeLimit, violationPolicy, Iterables.getOnlyElement(quotaScanner));
+    } finally {
+      quotaScanner.close();
+    }
+
+    // Setting a new size and policy should be reflected
+    final long newSizeLimit = 1024L * 1024L * 1024L * 1024L; // 1TB
+    final SpaceViolationPolicy newViolationPolicy = SpaceViolationPolicy.NO_WRITES_COMPACTIONS;
+    QuotaSettings newSettings = QuotaSettingsFactory.limitTableSpace(
+        tn, newSizeLimit, newViolationPolicy);
+    admin.setQuota(newSettings);
+
+    // Verify the new Quotas in the table
+    try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      ResultScanner scanner = quotaTable.getScanner(new Scan());
+      try {
+        Result r = Iterables.getOnlyElement(scanner);
+        CellScanner cells = r.cellScanner();
+        assertTrue("Expected to find a cell", cells.advance());
+        assertSpaceQuota(newSizeLimit, newViolationPolicy, cells.current());
+      } finally {
+        scanner.close();
+      }
+    }
+
+    // Verify we can retrieve the new quota via the QuotaRetriever API
+    quotaScanner = QuotaRetriever.open(admin.getConfiguration());
+    try {
+      assertSpaceQuota(newSizeLimit, newViolationPolicy, Iterables.getOnlyElement(quotaScanner));
+    } finally {
+      quotaScanner.close();
+    }
+  }
+
   private void assertNumResults(int expected, final QuotaFilter filter) throws Exception {
     assertEquals(expected, countResults(filter));
+  }
+
+  private void assertSpaceQuota(
+      long sizeLimit, SpaceViolationPolicy violationPolicy, Cell cell) throws Exception {
+    Quotas q = QuotaTableUtil.quotasFromData(
+        cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+    assertTrue("Quota should have space quota defined", q.hasSpace());
+    QuotaProtos.SpaceQuota spaceQuota = q.getSpace();
+    assertEquals(sizeLimit, spaceQuota.getSoftLimit());
+    assertEquals(violationPolicy, ProtobufUtil.toViolationPolicy(spaceQuota.getViolationPolicy()));
+  }
+
+  private void assertSpaceQuota(
+      long sizeLimit, SpaceViolationPolicy violationPolicy, QuotaSettings actualSettings) {
+    assertTrue("The actual QuotaSettings was not an instance of " + SpaceLimitSettings.class
+        + " but of " + actualSettings.getClass(), actualSettings instanceof SpaceLimitSettings);
+    SpaceLimitRequest spaceLimitRequest = ((SpaceLimitSettings) actualSettings).getProto();
+    assertEquals(sizeLimit, spaceLimitRequest.getQuota().getSoftLimit());
+    assertEquals(violationPolicy,
+        ProtobufUtil.toViolationPolicy(spaceLimitRequest.getQuota().getViolationPolicy()));
   }
 
   private int countResults(final QuotaFilter filter) throws Exception {
