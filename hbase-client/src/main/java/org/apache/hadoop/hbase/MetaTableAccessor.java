@@ -1686,7 +1686,10 @@ public class MetaTableAccessor {
             mergedRegion.getEncodedNameAsBytes());
         Put putBarrierB = makeDaughterPut(regionB.getEncodedNameAsBytes(),
             mergedRegion.getEncodedNameAsBytes());
-        mutations = new Mutation[] { putOfMerged, deleteA, deleteB, putBarrierA, putBarrierB };
+        Put putDaughter = makeParentPut(mergedRegion.getEncodedNameAsBytes(), Bytes.toBytes(
+            regionA.getEncodedName() + "," + regionB.getEncodedName()));
+        mutations = new Mutation[] { putOfMerged, deleteA, deleteB,
+            putBarrierA, putBarrierB, putDaughter};
       } else {
         mutations = new Mutation[] { putOfMerged, deleteA, deleteB };
       }
