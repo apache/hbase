@@ -818,3 +818,23 @@ The metrics sampling rate as described in <<hbase_metrics>>.
 
 .Coprocessor Metrics UI
 image::coprocessor_stats.png[]
+
+== Restricting Coprocessor Usage
+
+Restricting arbitrary user coprocessors can be a big concern in multitenant environments. HBase provides a continuum of options for ensuring only expected coprocessors are running:
+
+- `hbase.coprocessor.enabled`: Enables or disables all coprocessors. This will limit the functionality of HBase, as disabling all coprocessors will disable some security providers. An example coproccessor so affected is `org.apache.hadoop.hbase.security.access.AccessController`.
+* `hbase.coprocessor.user.enabled`: Enables or disables loading coprocessors on tables (i.e. user coprocessors).
+* One can statically load coprocessors via the following tunables in `hbase-site.xml`:
+** `hbase.coprocessor.regionserver.classes`: A comma-separated list of coprocessors that are loaded by region servers
+** `hbase.coprocessor.region.classes`: A comma-separated list of RegionObserver and Endpoint coprocessors
+** `hbase.coprocessor.user.region.classes`: A comma-separated list of coprocessors that are loaded by all regions
+** `hbase.coprocessor.master.classes`: A comma-separated list of coprocessors that are loaded by the master (MasterObserver coprocessors)
+** `hbase.coprocessor.wal.classes`: A comma-separated list of WALObserver coprocessors to load
+* `hbase.coprocessor.abortonerror`: Whether to abort the daemon which has loaded the coprocessor if the coprocessor should error other than `IOError`. If this is set to false and an access controller coprocessor should have a fatal error the coprocessor will be circumvented, as such in secure installations this is advised to be `true`; however, one may override this on a per-table basis for user coprocessors, to ensure they do not abort their running region server and are instead unloaded on error.
+* `hbase.coprocessor.region.whitelist.paths`: A comma separated list available for those loading `org.apache.hadoop.hbase.security.access.CoprocessorWhitelistMasterObserver` whereby one can use the following options to white-list paths from which coprocessors may be loaded.
+** Coprocessors on the classpath are implicitly white-listed
+** `*` to wildcard all coprocessor paths
+** An entire filesystem (e.g. `hdfs://my-cluster/`)
+** A wildcard path to be evaluated by link:https://commons.apache.org/proper/commons-io/javadocs/api-release/org/apache/commons/io/FilenameUtils.html[FilenameUtils.wildcardMatch]
+** Note: Path can specify scheme or not (e.g. `file:///usr/hbase/lib/coprocessors` or for all filesystems `/usr/hbase/lib/coprocessors`)
