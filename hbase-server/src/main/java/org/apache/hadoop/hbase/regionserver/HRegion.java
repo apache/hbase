@@ -136,7 +136,6 @@ import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
@@ -3749,24 +3748,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
             snapshotDir, desc, exnSnare);
     manifest.addRegion(this);
-
-    // The regionserver holding the first region of the table is responsible for taking the
-    // manifest of the mob dir.
-    if (!Bytes.equals(getRegionInfo().getStartKey(), HConstants.EMPTY_START_ROW))
-      return;
-
-    // if any cf's have is mob enabled, add the "mob region" to the manifest.
-    List<Store> stores = getStores();
-    for (Store store : stores) {
-      boolean hasMobStore = store.getFamily().isMobEnabled();
-      if (hasMobStore) {
-        // use the .mob as the start key and 0 as the regionid
-        HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(this.getTableDesc().getTableName());
-        mobRegionInfo.setOffline(true);
-        manifest.addMobRegion(mobRegionInfo, this.getTableDesc().getColumnFamilies());
-        return;
-      }
-    }
   }
 
   private void updateSequenceId(final Iterable<List<Cell>> cellItr, final long sequenceId)

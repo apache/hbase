@@ -169,6 +169,21 @@ public class HFileArchiver {
   public static void archiveFamily(FileSystem fs, Configuration conf,
       HRegionInfo parent, Path tableDir, byte[] family) throws IOException {
     Path familyDir = new Path(tableDir, new Path(parent.getEncodedName(), Bytes.toString(family)));
+    archiveFamilyByFamilyDir(fs, conf, parent, familyDir, family);
+  }
+
+  /**
+   * Removes from the specified region the store files of the specified column family,
+   * either by archiving them or outright deletion
+   * @param fs the filesystem where the store files live
+   * @param conf {@link Configuration} to examine to determine the archive directory
+   * @param parent Parent region hosting the store files
+   * @param familyDir {@link Path} to where the family is being stored
+   * @param family the family hosting the store files
+   * @throws IOException if the files could not be correctly disposed.
+   */
+  public static void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf,
+      HRegionInfo parent, Path familyDir, byte[] family) throws IOException {
     FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir);
     if (storeFiles == null) {
       LOG.debug("No store files to dispose for region=" + parent.getRegionNameAsString() +
@@ -178,7 +193,7 @@ public class HFileArchiver {
 
     FileStatusConverter getAsFile = new FileStatusConverter(fs);
     Collection<File> toArchive = Lists.transform(Arrays.asList(storeFiles), getAsFile);
-    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, tableDir, family);
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, family);
 
     // do the actual archive
     List<File> failedArchive = resolveAndArchive(fs, storeArchiveDir, toArchive,

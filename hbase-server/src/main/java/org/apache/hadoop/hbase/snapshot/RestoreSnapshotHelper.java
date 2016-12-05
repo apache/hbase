@@ -519,7 +519,7 @@ public class RestoreSnapshotHelper {
         // Family doesn't exists in the snapshot
         LOG.trace("Removing family=" + Bytes.toString(family) +
           " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
-        HFileArchiver.archiveFamily(fs, conf, regionInfo, tableDir, family);
+        HFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
         fs.delete(familyDir, true);
       }
     }

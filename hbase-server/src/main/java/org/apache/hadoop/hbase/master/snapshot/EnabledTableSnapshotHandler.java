@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -103,6 +104,14 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
           snapshotDisabledRegion(regionInfo);
         }
       }
+      // handle the mob files if any.
+      boolean mobEnabled = MobUtils.hasMobColumns(htd);
+      if (mobEnabled) {
+        LOG.info("Taking snapshot for mob files in table " + htd.getTableName());
+        // snapshot the mob files as a offline region.
+        HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(htd.getTableName());
+        snapshotMobRegion(mobRegionInfo);
+      }
     } catch (InterruptedException e) {
       ForeignException ee =
           new ForeignException("Interrupted while waiting for snapshot to finish", e);
@@ -111,5 +120,15 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
     } catch (ForeignException e) {
       monitor.receive(e);
     }
+  }
+
+  /**
+   * Takes a snapshot of the mob region
+   */
+  private void snapshotMobRegion(final HRegionInfo regionInfo)
+      throws IOException {
+    snapshotManifest.addMobRegion(regionInfo);
+    monitor.rethrowException();
+    status.setStatus("Completed referencing HFiles for the mob region of table: " + snapshotTable);
   }
 }
