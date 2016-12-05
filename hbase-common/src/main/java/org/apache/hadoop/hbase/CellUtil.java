@@ -974,7 +974,7 @@ public final class CellUtil {
     @Override
     public Cell deepClone() {
       Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
-      return new ValueAndTagRewriteCell(clonedBaseCell, this.tags, this.value);
+      return new ValueAndTagRewriteCell(clonedBaseCell, this.value, this.tags);
     }
   }
 
@@ -1050,10 +1050,10 @@ public final class CellUtil {
     public Cell deepClone() {
       Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
       if (clonedBaseCell instanceof ByteBufferCell) {
-        return new ValueAndTagRewriteByteBufferCell((ByteBufferCell) clonedBaseCell, this.tags,
-            this.value);
+        return new ValueAndTagRewriteByteBufferCell((ByteBufferCell) clonedBaseCell, this.value,
+            this.tags);
       }
-      return new ValueAndTagRewriteCell(clonedBaseCell, this.tags, this.value);
+      return new ValueAndTagRewriteCell(clonedBaseCell, this.value, this.tags);
     }
   }
 
