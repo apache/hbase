@@ -15,9 +15,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -euo pipefail
 IFS=$'\n\t'
 
+CPPLINT_LOC=https://raw.githubusercontent.com/google/styleguide/gh-pages/cpplint/cpplint.py
+OUTPUT=build/cpplint.py
 
-find core connection serde utils test-util -name "*.h" -or -name "*.cc" | xargs -P8 clang-format -i --style=Google
-find core connection serde utils third-party -name "BUCK" | xargs -P8 yapf -i
+# Download if not already there
+wget -nc $CPPLINT_LOC -O $OUTPUT
+
+# Execute the script
+find core connection serde utils test-util -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT

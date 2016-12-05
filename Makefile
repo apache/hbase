@@ -116,6 +116,9 @@ $(foreach bdir,$(RELEASE_BUILD_DIR),$(eval $(call make-goal-rel,$(bdir))))
 check:
 	$(shell buck test --all --no-results-cache)
 
+lint:
+	bin/cpplint.sh
+
 doc:
 	$(shell doxygen hbase.doxygen > /dev/null)
 
