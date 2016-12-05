@@ -42,28 +42,3 @@ index 3d53f2e..ad99372 100644
     * Writes the given {@link ByteString} to the provided {@link ByteOutput}. Calling this method may
     * result in multiple operations on the target {@link ByteOutput}
     * (i.e. for roped {@link ByteString}s).
-diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java
-index 0c8f34f..ee44c68 100644
---- a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java
-+++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java
-@@ -1908,8 +1908,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
-       if (buf.hasArray()) {
-         this.connectionHeader = ConnectionHeader.parseFrom(buf.array());
-       } else {
--        CodedInputStream cis = CodedInputStream
--            .newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
-+        CodedInputStream cis = UnsafeByteOperations
-+            .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
-         cis.enableAliasing(true);
-         this.connectionHeader = ConnectionHeader.parseFrom(cis);
-       }
-@@ -2151,7 +2151,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
-       if (buf.hasArray()) {
-         cis = UnsafeByteOperations.unsafeWrap(buf.array(), 0, buf.limit()).newCodedInput();
-       } else {
--        cis = CodedInputStream.newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
-+        cis = UnsafeByteOperations
-+            .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
-       }
-       cis.enableAliasing(true);
-       int headerSize = cis.readRawVarint32();
