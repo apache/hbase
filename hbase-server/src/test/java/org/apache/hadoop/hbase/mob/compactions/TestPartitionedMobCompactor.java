@@ -106,9 +106,21 @@ public class TestPartitionedMobCompactor {
   @Test
   public void testCompactionSelectWithAllFiles() throws Exception {
     String tableName = "testCompactionSelectWithAllFiles";
+    // If there is only 1 file, it will not be compacted with _del files, so
+    // It wont be CompactionType.ALL_FILES in this case, do not create with _del files.
     testCompactionAtMergeSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD,
-        CompactionType.ALL_FILES, false);
+        CompactionType.ALL_FILES, false, false);
   }
+
+  @Test
+  public void testCompactionSelectToAvoidCompactOneFileWithDelete() throws Exception {
+    String tableName = "testCompactionSelectToAvoidCompactOneFileWithDelete";
+    // If there is only 1 file, it will not be compacted with _del files, so
+    // It wont be CompactionType.ALL_FILES in this case, and expected compact file count will be 0.
+    testCompactionAtMergeSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD,
+        CompactionType.PART_FILES, false);
+  }
+
 
   @Test
   public void testCompactionSelectWithPartFiles() throws Exception {
@@ -125,20 +137,36 @@ public class TestPartitionedMobCompactor {
   private void testCompactionAtMergeSize(final String tableName,
       final long mergeSize, final CompactionType type, final boolean isForceAllFiles)
       throws Exception {
+    testCompactionAtMergeSize(tableName, mergeSize, type, isForceAllFiles, true);
+  }
+
+  private void testCompactionAtMergeSize(final String tableName,
+      final long mergeSize, final CompactionType type, final boolean isForceAllFiles,
+      final boolean createDelFiles)
+      throws Exception {
     resetConf();
     init(tableName);
     int count = 10;
     // create 10 mob files.
     createStoreFiles(basePath, family, qf, count, Type.Put);
-    // create 10 del files
-    createStoreFiles(basePath, family, qf, count, Type.Delete);
+
+    if (createDelFiles) {
+      // create 10 del files
+      createStoreFiles(basePath, family, qf, count, Type.Delete);
+    }
+
     listFiles();
     List<String> expectedStartKeys = new ArrayList<>();
     for(FileStatus file : mobFiles) {
       if(file.getLen() < mergeSize) {
         String fileName = file.getPath().getName();
         String startKey = fileName.substring(0, 32);
-        expectedStartKeys.add(startKey);
+
+        // If it is not an major mob compaction and del files are there,
+        // these mob files wont be compacted.
+        if (isForceAllFiles || !createDelFiles) {
+          expectedStartKeys.add(startKey);
+        }
       }
     }
     // set the mob compaction mergeable threshold
@@ -150,7 +178,7 @@ public class TestPartitionedMobCompactor {
   public void testCompactDelFilesWithDefaultBatchSize() throws Exception {
     String tableName = "testCompactDelFilesWithDefaultBatchSize";
     testCompactDelFilesAtBatchSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_BATCH_SIZE,
-      MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
+        MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
   }
 
   @Test

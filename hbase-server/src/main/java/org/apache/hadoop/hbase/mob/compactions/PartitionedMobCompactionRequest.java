@@ -86,6 +86,10 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
     public List<FileStatus> listFiles() {
       return Collections.unmodifiableList(files);
     }
+
+    public int getFileCount () {
+      return files.size();
+    }
   }
 
   /**
