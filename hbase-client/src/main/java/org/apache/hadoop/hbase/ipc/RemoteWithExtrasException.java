@@ -17,8 +17,16 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -30,10 +38,20 @@ import org.apache.hadoop.ipc.RemoteException;
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value = "DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", justification = "None. Address sometime.")
 public class RemoteWithExtrasException extends RemoteException {
   private final String hostname;
   private final int port;
   private final boolean doNotRetry;
+
+  private final static ClassLoader CLASS_LOADER;
+
+  static {
+    ClassLoader parent = RemoteWithExtrasException.class.getClassLoader();
+    Configuration conf = HBaseConfiguration.create();
+    CLASS_LOADER = new DynamicClassLoader(conf, parent);
+  }
 
   public RemoteWithExtrasException(String className, String msg, final boolean doNotRetry) {
     this(className, msg, null, -1, doNotRetry);
@@ -45,6 +63,38 @@ public class RemoteWithExtrasException extends RemoteException {
     this.hostname = hostname;
     this.port = port;
     this.doNotRetry = doNotRetry;
+  }
+
+  @Override
+  public IOException unwrapRemoteException() {
+    Class<?> realClass;
+    try {
+      // try to load a exception class from where the HBase classes are loaded or from Dynamic
+      // classloader.
+      realClass = Class.forName(getClassName(), false, CLASS_LOADER);
+    } catch (ClassNotFoundException cnfe) {
+      try {
+        // cause could be a hadoop exception, try to load from hadoop classpath
+        realClass = Class.forName(getClassName(), false, super.getClass().getClassLoader());
+      } catch (ClassNotFoundException e) {
+        return new DoNotRetryIOException(
+            "Unable to load exception received from server:" + e.getMessage(), this);
+      }
+    }
+    try {
+      return instantiateException(realClass.asSubclass(IOException.class));
+    } catch (Exception e) {
+      return new DoNotRetryIOException(
+          "Unable to instantiate exception received from server:" + e.getMessage(), this);
+    }
+  }
+
+  private IOException instantiateException(Class<? extends IOException> cls) throws Exception {
+    Constructor<? extends IOException> cn = cls.getConstructor(String.class);
+    cn.setAccessible(true);
+    IOException ex = cn.newInstance(this.getMessage());
+    ex.initCause(this);
+    return ex;
   }
 
   /**
