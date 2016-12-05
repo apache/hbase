@@ -150,11 +150,7 @@ public abstract class CodedInputStream {
   }
 
   /** Create a new CodedInputStream wrapping the given {@link ByteInput}. */
-  public static CodedInputStream newInstance(ByteInput buf, boolean bufferIsImmutable) {
-    return new ByteInputDecoder(buf, bufferIsImmutable);
-  }
-
-  public static CodedInputStream newInstance(ByteInput buf, int off, int len, boolean bufferIsImmutable) {
+  static CodedInputStream newInstance(ByteInput buf, int off, int len, boolean bufferIsImmutable) {
     return new ByteInputDecoder(buf, off, len, bufferIsImmutable);
   }
 

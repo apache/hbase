@@ -1,0 +1,69 @@
+ .../hbase/shaded/com/google/protobuf/CodedInputStream.java    |  6 +-----
+ .../shaded/com/google/protobuf/UnsafeByteOperations.java      | 11 +++++++++++
+ .../src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java  |  7 ++++---
+ 3 files changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/CodedInputStream.java b/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/CodedInputStream.java
+index 0ad20e5..0bff626 100644
+--- a/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/CodedInputStream.java
++++ b/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/CodedInputStream.java
+@@ -150,11 +150,7 @@ public abstract class CodedInputStream {
+   }
+ 
+   /** Create a new CodedInputStream wrapping the given {@link ByteInput}. */
+-  public static CodedInputStream newInstance(ByteInput buf, boolean bufferIsImmutable) {
+-    return new ByteInputDecoder(buf, bufferIsImmutable);
+-  }
+-
+-  public static CodedInputStream newInstance(ByteInput buf, int off, int len, boolean bufferIsImmutable) {
++  static CodedInputStream newInstance(ByteInput buf, int off, int len, boolean bufferIsImmutable) {
+     return new ByteInputDecoder(buf, off, len, bufferIsImmutable);
+   }
+ 
+diff --git a/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/UnsafeByteOperations.java b/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/UnsafeByteOperations.java
+index 3d53f2e..ad99372 100644
+--- a/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/UnsafeByteOperations.java
++++ b/hbase-protocol-shaded/src/main/java/org/apache/hadoop/hbase/shaded/com/google/protobuf/UnsafeByteOperations.java
+@@ -98,6 +98,17 @@ public final class UnsafeByteOperations {
+   }
+ 
+   /**
++   * An unsafe operation that returns a {@link ByteString} that is backed by the provided buffer.
++   * @param buffer the ByteInput buffer to be wrapped
++   * @param offset the offset of the wrapped byteinput
++   * @param length the number of bytes of the byteinput
++   * @return a {@link ByteString} backed by the provided buffer
++   */
++  public static ByteString unsafeWrap(ByteInput buffer, int offset, int len) {
++    return ByteString.wrap(buffer, offset, len);
++  }
++
++  /**
+    * Writes the given {@link ByteString} to the provided {@link ByteOutput}. Calling this method may
+    * result in multiple operations on the target {@link ByteOutput}
+    * (i.e. for roped {@link ByteString}s).
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java
+index 0c8f34f..ee44c68 100644
+--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServer.java
+@@ -1908,8 +1908,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
+       if (buf.hasArray()) {
+         this.connectionHeader = ConnectionHeader.parseFrom(buf.array());
+       } else {
+-        CodedInputStream cis = CodedInputStream
+-            .newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
++        CodedInputStream cis = UnsafeByteOperations
++            .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
+         cis.enableAliasing(true);
+         this.connectionHeader = ConnectionHeader.parseFrom(cis);
+       }
+@@ -2151,7 +2151,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
+       if (buf.hasArray()) {
+         cis = UnsafeByteOperations.unsafeWrap(buf.array(), 0, buf.limit()).newCodedInput();
+       } else {
+-        cis = CodedInputStream.newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
++        cis = UnsafeByteOperations
++            .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
+       }
+       cis.enableAliasing(true);
+       int headerSize = cis.readRawVarint32();

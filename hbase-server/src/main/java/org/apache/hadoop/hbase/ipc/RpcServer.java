@@ -1908,8 +1908,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       if (buf.hasArray()) {
         this.connectionHeader = ConnectionHeader.parseFrom(buf.array());
       } else {
-        CodedInputStream cis = CodedInputStream
-            .newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
+        CodedInputStream cis = UnsafeByteOperations
+            .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
         cis.enableAliasing(true);
         this.connectionHeader = ConnectionHeader.parseFrom(cis);
       }
@@ -2151,7 +2151,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       if (buf.hasArray()) {
         cis = UnsafeByteOperations.unsafeWrap(buf.array(), 0, buf.limit()).newCodedInput();
       } else {
-        cis = CodedInputStream.newInstance(new ByteBuffByteInput(buf, 0, buf.limit()), true);
+        cis = UnsafeByteOperations
+            .unsafeWrap(new ByteBuffByteInput(buf, 0, buf.limit()), 0, buf.limit()).newCodedInput();
       }
       cis.enableAliasing(true);
       int headerSize = cis.readRawVarint32();
