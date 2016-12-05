@@ -25,15 +25,13 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
-import org.apache.hadoop.hbase.ipc.RpcServer.Call;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
-
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
 
 /**
  * The request processing logic, which is usually executed in thread pools provided by an
@@ -47,7 +45,7 @@ public class CallRunner {
   private static final CallDroppedException CALL_DROPPED_EXCEPTION
     = new CallDroppedException();
 
-  private Call call;
+  private RpcCall call;
   private RpcServerInterface rpcServer;
   private MonitoredRPCHandler status;
   private volatile boolean sucessful;
@@ -58,7 +56,7 @@ public class CallRunner {
    * time we occupy heap.
    */
   // The constructor is shutdown so only RpcServer in this class can make one of these.
-  CallRunner(final RpcServerInterface rpcServer, final Call call) {
+  CallRunner(final RpcServerInterface rpcServer, final RpcCall call) {
     this.call = call;
     this.rpcServer = rpcServer;
     // Add size of the call to queue size.
@@ -67,8 +65,17 @@ public class CallRunner {
     }
   }
 
-  public Call getCall() {
+  public RpcCall getRpcCall() {
     return call;
+  }
+
+  /**
+   * Keep for backward compatibility.
+   * @deprecated As of release 2.0, this will be removed in HBase 3.0
+   */
+  @Deprecated
+  public RpcServer.Call getCall() {
+    return (RpcServer.Call) call;
   }
 
   public void setStatus(MonitoredRPCHandler status) {
@@ -85,23 +92,23 @@ public class CallRunner {
 
   public void run() {
     try {
-      if (!call.connection.channel.isOpen()) {
+      if (call.disconnectSince() >= 0) {
         if (RpcServer.LOG.isDebugEnabled()) {
           RpcServer.LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
         }
         return;
       }
-      call.startTime = System.currentTimeMillis();
-      if (call.startTime > call.deadline) {
+      call.setStartTime(System.currentTimeMillis());
+      if (call.getStartTime() > call.getDeadline()) {
         RpcServer.LOG.warn("Dropping timed out call: " + call);
         return;
       }
       this.status.setStatus("Setting up call");
-      this.status.setConnection(call.connection.getHostAddress(), call.connection.getRemotePort());
+      this.status.setConnection(call.getRemoteAddress().getHostAddress(), call.getRemotePort());
       if (RpcServer.LOG.isTraceEnabled()) {
-        UserGroupInformation remoteUser = call.connection.ugi;
+        User remoteUser = call.getRequestUser();
         RpcServer.LOG.trace(call.toShortString() + " executing as " +
-            ((remoteUser == null) ? "NULL principal" : remoteUser.getUserName()));
+            ((remoteUser == null) ? "NULL principal" : remoteUser.getName()));
       }
       Throwable errorThrowable = null;
       String error = null;
@@ -114,12 +121,15 @@ public class CallRunner {
           throw new ServerNotRunningYetException("Server " +
               (address != null ? address : "(channel closed)") + " is not running yet");
         }
-        if (call.tinfo != null) {
-          traceScope = Trace.startSpan(call.toTraceString(), call.tinfo);
+        if (call.getTraceInfo() != null) {
+          String serviceName =
+              call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
+          String methodName = (call.getMethod() != null) ? call.getMethod().getName() : "";
+          String traceString = serviceName + "." + methodName;
+          traceScope = Trace.startSpan(traceString, call.getTraceInfo());
         }
         // make the call
-        resultPair = this.rpcServer.call(call.service, call.md, call.param, call.cellScanner,
-            call.timestamp, this.status, call.startTime, call.timeout);
+        resultPair = this.rpcServer.call(call, this.status);
       } catch (TimeoutIOException e){
         RpcServer.LOG.warn("Can not complete this request in time, drop it: " + call);
         return;
@@ -181,7 +191,7 @@ public class CallRunner {
    */
   public void drop() {
     try {
-      if (!call.connection.channel.isOpen()) {
+      if (call.disconnectSince() >= 0) {
         if (RpcServer.LOG.isDebugEnabled()) {
           RpcServer.LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
         }

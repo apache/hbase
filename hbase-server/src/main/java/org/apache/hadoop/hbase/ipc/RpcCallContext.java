@@ -23,6 +23,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.security.User;
 
+/**
+ * Interface of all necessary to carry out a RPC service invocation on the server. This interface
+ * focus on the information needed or obtained during the actual execution of the service method.
+ */
 @InterfaceAudience.Private
 public interface RpcCallContext {
   /**
@@ -56,7 +60,7 @@ public interface RpcCallContext {
   String getRequestUserName();
 
   /**
-   * @return Address of remote client if a request is ongoing, else null
+   * @return Address of remote client in this call
    */
   InetAddress getRemoteAddress();
 
@@ -92,12 +96,6 @@ public interface RpcCallContext {
   void incrementResponseCellSize(long cellSize);
 
   long getResponseBlockSize();
-  void incrementResponseBlockSize(long blockSize);
 
-  /**
-   * Return the deadline of this call. If we can not complete this call in time, we can throw a
-   * TimeoutIOException and RPCServer will drop it.
-   * @return The system timestamp of deadline.
-   */
-  long getDeadline();
+  void incrementResponseBlockSize(long blockSize);
 }

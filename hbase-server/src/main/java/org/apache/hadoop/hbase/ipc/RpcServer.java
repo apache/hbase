@@ -214,7 +214,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
   /** This is set to Call object before Handler invokes an RPC and ybdie
    * after the call returns.
    */
-  protected static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
+  protected static final ThreadLocal<RpcCall> CurCall =
+      new ThreadLocal<RpcCall>();
 
   /** Keeps MonitoredRPCHandler per handler thread. */
   static final ThreadLocal<MonitoredRPCHandler> MONITORED_RPC
@@ -326,9 +327,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
    * the result.
    */
-  @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
-  @InterfaceStability.Evolving
-  public class Call implements RpcCallContext {
+  @InterfaceAudience.Private
+  public class Call implements RpcCall {
     protected int id;                             // the client's call id
     protected BlockingService service;
     protected MethodDescriptor md;
@@ -408,7 +408,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.connection.decRpcCount();  // Say that we're done with this call.
     }
 
-    protected void cleanup() {
+    @Override
+    public void cleanup() {
       if (this.reqCleanup != null) {
         this.reqCleanup.run();
         this.reqCleanup = null;
@@ -422,7 +423,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         " connection: " + connection.toString();
     }
 
-    protected RequestHeader getHeader() {
+    @Override
+    public RequestHeader getHeader() {
       return this.header;
     }
 
@@ -430,6 +432,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       return this.header.hasPriority();
     }
 
+    @Override
     public int getPriority() {
       return this.header.getPriority();
     }
@@ -438,7 +441,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
      * Short string representation without param info because param itself could be huge depends on
      * the payload of a command
      */
-    String toShortString() {
+    @Override
+    public String toShortString() {
       String serviceName = this.connection.service != null ?
           this.connection.service.getDescriptorForType().getName() : "null";
       return "callId: " + this.id + " service: " + serviceName +
@@ -446,13 +450,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
           " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
           " connection: " + connection.toString() +
           " deadline: " + deadline;
-    }
-
-    String toTraceString() {
-      String serviceName = this.connection.service != null ?
-                           this.connection.service.getDescriptorForType().getName() : "";
-      String methodName = (this.md != null) ? this.md.getName() : "";
-      return serviceName + "." + methodName;
     }
 
     protected synchronized void setSaslTokenResponse(ByteBuffer response) {
@@ -467,15 +464,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       this.response = new BufferChain(responseBufs);
     }
 
-    protected synchronized void setResponse(Object m, final CellScanner cells,
+    @Override
+    public synchronized void setResponse(Message m, final CellScanner cells,
         Throwable t, String errorMsg) {
       if (this.isError) return;
       if (t != null) this.isError = true;
       BufferChain bc = null;
       try {
         ResponseHeader.Builder headerBuilder = ResponseHeader.newBuilder();
-        // Presume it a pb Message.  Could be null.
-        Message result = (Message)m;
         // Call id.
         headerBuilder.setCallId(this.id);
         if (t != null) {
@@ -511,7 +507,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
         }
         Message header = headerBuilder.build();
         ByteBuffer headerBuf =
-            createHeaderAndMessageBytes(result, header, cellBlockSize, cellBlock);
+            createHeaderAndMessageBytes(m, header, cellBlockSize, cellBlock);
         ByteBuffer[] responseBufs = null;
         int cellBlockBufferSize = 0;
         if (cellBlock != null) {
@@ -681,10 +677,6 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       }
     }
 
-    public long getSize() {
-      return this.size;
-    }
-
     @Override
     public long getResponseCellSize() {
       return responseCellSize;
@@ -706,18 +698,20 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     }
 
     @Override
+    public long getSize() {
+      return this.size;
+    }
+
+    @Override
     public long getDeadline() {
       return deadline;
     }
 
+    @Override
     public synchronized void sendResponseIfReady() throws IOException {
       // set param null to reduce memory pressure
       this.param = null;
       this.responder.doRespond(this);
-    }
-
-    public UserGroupInformation getRemoteUser() {
-      return connection.ugi;
     }
 
     @Override
@@ -750,6 +744,64 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     public boolean isRetryImmediatelySupported() {
       return retryImmediatelySupported;
     }
+
+    @Override
+    public BlockingService getService() {
+      return service;
+    }
+
+    @Override
+    public MethodDescriptor getMethod() {
+      return md;
+    }
+
+    @Override
+    public Message getParam() {
+      return param;
+    }
+
+    @Override
+    public CellScanner getCellScanner() {
+      return cellScanner;
+    }
+
+    @Override
+    public long getReceiveTime() {
+      return timestamp;
+    }
+
+    @Override
+    public void setReceiveTime(long t) {
+      this.timestamp = t;
+
+    }
+
+    @Override
+    public long getStartTime() {
+      return startTime;
+    }
+
+    @Override
+    public void setStartTime(long t) {
+      this.startTime = t;
+
+    }
+
+    @Override
+    public int getTimeout() {
+      return timeout;
+    }
+
+    @Override
+    public int getRemotePort() {
+      return connection.getRemotePort();
+    }
+
+    @Override
+    public TraceInfo getTraceInfo() {
+      return tinfo;
+    }
+
   }
 
   @FunctionalInterface
@@ -2565,24 +2617,37 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
     return call(service, md, param, cellScanner, receiveTime, status, System.currentTimeMillis(),0);
   }
 
+  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md, Message param,
+      CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status, long startTime,
+      int timeout)
+      throws IOException {
+    Call fakeCall = new Call(-1, service, md, null, param, cellScanner, null, null, -1, null, null, timeout,
+      null);
+    fakeCall.setReceiveTime(receiveTime);
+    return call(fakeCall, status);
+  }
+
   /**
    * This is a server side method, which is invoked over RPC. On success
    * the return response has protobuf response payload. On failure, the
    * exception name and the stack trace are returned in the protobuf response.
    */
-  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
-      long startTime, int timeout)
+  public Pair<Message, CellScanner> call(RpcCall call, MonitoredRPCHandler status)
   throws IOException {
     try {
-      status.setRPC(md.getName(), new Object[]{param}, receiveTime);
+      MethodDescriptor md = call.getMethod();
+      Message param = call.getParam();
+      status.setRPC(md.getName(), new Object[]{param},
+        call.getReceiveTime());
       // TODO: Review after we add in encoded data blocks.
       status.setRPCPacket(param);
       status.resume("Servicing call");
       //get an instance of the method arg type
-      HBaseRpcController controller = new HBaseRpcControllerImpl(cellScanner);
-      controller.setCallTimeout(timeout);
-      Message result = service.callBlockingMethod(md, controller, param);
+      HBaseRpcController controller = new HBaseRpcControllerImpl(call.getCellScanner());
+      controller.setCallTimeout(call.getTimeout());
+      Message result = call.getService().callBlockingMethod(md, controller, param);
+      long receiveTime = call.getReceiveTime();
+      long startTime = call.getStartTime();
       long endTime = System.currentTimeMillis();
       int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
@@ -2596,6 +2661,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       }
       long requestSize = param.getSerializedSize();
       long responseSize = result.getSerializedSize();
+
       metrics.dequeuedCall(qTime);
       metrics.processedCall(processingTime);
       metrics.totalCall(totalTime);
@@ -3014,9 +3080,9 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
    *  @return InetAddress
    */
   public static InetAddress getRemoteIp() {
-    Call call = CurCall.get();
-    if (call != null && call.connection != null && call.connection.socket != null) {
-      return call.connection.socket.getInetAddress();
+    RpcCall call = CurCall.get();
+    if (call != null) {
+      return call.getRemoteAddress();
     }
     return null;
   }

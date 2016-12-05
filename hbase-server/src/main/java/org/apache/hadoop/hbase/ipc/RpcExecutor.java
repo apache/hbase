@@ -361,12 +361,12 @@ public abstract class RpcExecutor {
 
     @Override
     public int compare(CallRunner a, CallRunner b) {
-      RpcServer.Call callA = a.getCall();
-      RpcServer.Call callB = b.getCall();
-      long deadlineA = priority.getDeadline(callA.getHeader(), callA.param);
-      long deadlineB = priority.getDeadline(callB.getHeader(), callB.param);
-      deadlineA = callA.timestamp + Math.min(deadlineA, maxDelay);
-      deadlineB = callB.timestamp + Math.min(deadlineB, maxDelay);
+      RpcCall callA = a.getRpcCall();
+      RpcCall callB = b.getRpcCall();
+      long deadlineA = priority.getDeadline(callA.getHeader(), callA.getParam());
+      long deadlineB = priority.getDeadline(callB.getHeader(), callB.getParam());
+      deadlineA = callA.getReceiveTime() + Math.min(deadlineA, maxDelay);
+      deadlineB = callB.getReceiveTime() + Math.min(deadlineB, maxDelay);
       return Long.compare(deadlineA, deadlineB);
     }
   }

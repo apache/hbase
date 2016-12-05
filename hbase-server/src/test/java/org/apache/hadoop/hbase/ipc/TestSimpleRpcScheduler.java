@@ -99,6 +99,7 @@ public class TestSimpleRpcScheduler {/*
 
   @Test
   public void testBasic() throws IOException, InterruptedException {
+
     PriorityFunction qosFunction = mock(PriorityFunction.class);
     RpcScheduler scheduler = new SimpleRpcScheduler(
         conf, 10, 0, 0, qosFunction, 0);
@@ -113,6 +114,7 @@ public class TestSimpleRpcScheduler {/*
 
   @Test
   public void testHandlerIsolation() throws IOException, InterruptedException {
+
     CallRunner generalTask = createMockTask();
     CallRunner priorityTask = createMockTask();
     CallRunner replicationTask = createMockTask();
@@ -167,12 +169,13 @@ public class TestSimpleRpcScheduler {/*
   private CallRunner createMockTask() {
     Call call = mock(Call.class);
     CallRunner task = mock(CallRunner.class);
-    when(task.getCall()).thenReturn(call);
+    when(task.getRpcCall()).thenReturn(call);
     return task;
   }
 
   @Test
   public void testRpcScheduler() throws Exception {
+
     testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
     testRpcScheduler(RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE);
   }
@@ -194,19 +197,19 @@ public class TestSimpleRpcScheduler {/*
       CallRunner smallCallTask = mock(CallRunner.class);
       RpcServer.Call smallCall = mock(RpcServer.Call.class);
       RequestHeader smallHead = RequestHeader.newBuilder().setCallId(1).build();
-      when(smallCallTask.getCall()).thenReturn(smallCall);
+      when(smallCallTask.getRpcCall()).thenReturn(smallCall);
       when(smallCall.getHeader()).thenReturn(smallHead);
 
       CallRunner largeCallTask = mock(CallRunner.class);
       RpcServer.Call largeCall = mock(RpcServer.Call.class);
       RequestHeader largeHead = RequestHeader.newBuilder().setCallId(50).build();
-      when(largeCallTask.getCall()).thenReturn(largeCall);
+      when(largeCallTask.getRpcCall()).thenReturn(largeCall);
       when(largeCall.getHeader()).thenReturn(largeHead);
 
       CallRunner hugeCallTask = mock(CallRunner.class);
       RpcServer.Call hugeCall = mock(RpcServer.Call.class);
       RequestHeader hugeHead = RequestHeader.newBuilder().setCallId(100).build();
-      when(hugeCallTask.getCall()).thenReturn(hugeCall);
+      when(hugeCallTask.getRpcCall()).thenReturn(hugeCall);
       when(hugeCall.getHeader()).thenReturn(hugeHead);
 
       when(priority.getDeadline(eq(smallHead), any(Message.class))).thenReturn(0L);
@@ -255,6 +258,7 @@ public class TestSimpleRpcScheduler {/*
 
   @Test
   public void testScanQueueWithZeroScanRatio() throws Exception {
+
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.setFloat(RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
     schedConf.setFloat(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.5f);
@@ -290,21 +294,23 @@ public class TestSimpleRpcScheduler {/*
       putCall.param = RequestConverter.buildMutateRequest(
           Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
       RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
-      when(putCallTask.getCall()).thenReturn(putCall);
+      when(putCallTask.getRpcCall()).thenReturn(putCall);
       when(putCall.getHeader()).thenReturn(putHead);
+      when(putCall.getParam()).thenReturn(putCall.param);
 
       CallRunner getCallTask = mock(CallRunner.class);
       RpcServer.Call getCall = mock(RpcServer.Call.class);
       RequestHeader getHead = RequestHeader.newBuilder().setMethodName("get").build();
-      when(getCallTask.getCall()).thenReturn(getCall);
+      when(getCallTask.getRpcCall()).thenReturn(getCall);
       when(getCall.getHeader()).thenReturn(getHead);
 
       CallRunner scanCallTask = mock(CallRunner.class);
       RpcServer.Call scanCall = mock(RpcServer.Call.class);
       scanCall.param = ScanRequest.newBuilder().setScannerId(1).build();
       RequestHeader scanHead = RequestHeader.newBuilder().setMethodName("scan").build();
-      when(scanCallTask.getCall()).thenReturn(scanCall);
+      when(scanCallTask.getRpcCall()).thenReturn(scanCall);
       when(scanCall.getHeader()).thenReturn(scanHead);
+      when(scanCall.getParam()).thenReturn(scanCall.param);
 
       ArrayList<Integer> work = new ArrayList<Integer>();
       doAnswerTaskExecution(putCallTask, work, 1, 1000);
@@ -361,6 +367,7 @@ public class TestSimpleRpcScheduler {/*
 
   @Test
   public void testSoftAndHardQueueLimits() throws Exception {
+
     Configuration schedConf = HBaseConfiguration.create();
 
     schedConf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 0);
@@ -379,7 +386,7 @@ public class TestSimpleRpcScheduler {/*
       putCall.param = RequestConverter.buildMutateRequest(
         Bytes.toBytes("abc"), new Put(Bytes.toBytes("row")));
       RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
-      when(putCallTask.getCall()).thenReturn(putCall);
+      when(putCallTask.getRpcCall()).thenReturn(putCall);
       when(putCall.getHeader()).thenReturn(putHead);
 
       assertTrue(scheduler.dispatch(putCallTask));
@@ -512,6 +519,8 @@ public class TestSimpleRpcScheduler {/*
                                                              .build();
     when(putCall.getSize()).thenReturn(9L);
     when(putCall.getHeader()).thenReturn(putHead);
+    when(putCall.getReceiveTime()).thenReturn(putCall.timestamp);
+    when(putCall.getParam()).thenReturn(putCall.param);
 
     CallRunner cr = new CallRunner(null, putCall) {
       public void run() {
@@ -523,7 +532,7 @@ public class TestSimpleRpcScheduler {/*
         } catch (InterruptedException e) {
         }
       }
-      public Call getCall() {
+      public RpcCall getRpcCall() {
         return putCall;
       }
 

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
@@ -129,11 +130,11 @@ public class RWQueueRpcExecutor extends RpcExecutor {
 
   @Override
   public boolean dispatch(final CallRunner callTask) throws InterruptedException {
-    RpcServer.Call call = callTask.getCall();
+    RpcCall call = callTask.getRpcCall();
     int queueIndex;
-    if (isWriteRequest(call.getHeader(), call.param)) {
+    if (isWriteRequest(call.getHeader(), call.getParam())) {
       queueIndex = writeBalancer.getNextQueue();
-    } else if (numScanQueues > 0 && isScanRequest(call.getHeader(), call.param)) {
+    } else if (numScanQueues > 0 && isScanRequest(call.getHeader(), call.getParam())) {
       queueIndex = numWriteQueues + numReadQueues + scanBalancer.getNextQueue();
     } else {
       queueIndex = numWriteQueues + readBalancer.getNextQueue();

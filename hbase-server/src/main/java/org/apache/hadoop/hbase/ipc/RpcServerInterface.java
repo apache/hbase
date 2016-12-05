@@ -55,11 +55,18 @@ public interface RpcServerInterface {
   @Deprecated
   Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
     Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
-  throws IOException, ServiceException;
+  throws IOException;
 
+  /**
+   * @deprecated As of release 2.0, this will be removed in HBase 3.0
+   */
+  @Deprecated
   Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md, Message param,
       CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status, long startTime,
-      int timeout) throws IOException, ServiceException;
+      int timeout) throws IOException;
+
+  Pair<Message, CellScanner> call(RpcCall call, MonitoredRPCHandler status)
+      throws IOException;
 
   void setErrorHandler(HBaseRPCErrorHandler handler);
   HBaseRPCErrorHandler getErrorHandler();

@@ -161,7 +161,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
    */
   private boolean needToDrop(CallRunner callRunner) {
     long now = EnvironmentEdgeManager.currentTime();
-    long callDelay = now - callRunner.getCall().timestamp;
+    long callDelay = now - callRunner.getRpcCall().getReceiveTime();
 
     long localMinDelay = this.minDelay;
 
