@@ -73,6 +73,9 @@ public class TaskMonitor {
         new Class<?>[] { MonitoredTask.class },
         new PassthroughInvocationHandler<MonitoredTask>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
+    if (tasks.isFull()) {
+      purgeExpiredTasks();
+    }
     tasks.add(pair);
     return proxy;
   }
