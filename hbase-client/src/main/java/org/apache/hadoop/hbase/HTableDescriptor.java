@@ -1198,6 +1198,15 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   }
 
   /**
+   * Returns the count of the column families of the table.
+   *
+   * @return Count of column families of the table
+   */
+  public int getColumnFamilyCount() {
+    return families.size();
+  }
+
+  /**
    * Returns an array all the {@link HColumnDescriptor} of the column families
    * of the table.
    *

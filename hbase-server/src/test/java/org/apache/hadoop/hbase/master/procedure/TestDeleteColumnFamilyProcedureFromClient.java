@@ -107,7 +107,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
     assertTrue(admin.isTableAvailable(TABLENAME));
 
     // 2 - Check if all three families exist in descriptor
-    assertEquals(3, beforehtd.getColumnFamilies().length);
+    assertEquals(3, beforehtd.getColumnFamilyCount());
     HColumnDescriptor[] families = beforehtd.getColumnFamilies();
     for (int i = 0; i < families.length; i++) {
       assertTrue(families[i].getNameAsString().equals("cf" + (i + 1)));
@@ -147,7 +147,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
 
     // 5 - Check if only 2 column families exist in the descriptor
     HTableDescriptor afterhtd = admin.getTableDescriptor(TABLENAME);
-    assertEquals(2, afterhtd.getColumnFamilies().length);
+    assertEquals(2, afterhtd.getColumnFamilyCount());
     HColumnDescriptor[] newFamilies = afterhtd.getColumnFamilies();
     assertTrue(newFamilies[0].getNameAsString().equals("cf1"));
     assertTrue(newFamilies[1].getNameAsString().equals("cf3"));

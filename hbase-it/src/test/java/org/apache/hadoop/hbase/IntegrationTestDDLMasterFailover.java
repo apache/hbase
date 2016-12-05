@@ -733,7 +733,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
       Admin admin = connection.getAdmin();
       try {
-        if (selected.getColumnFamilies().length < 2) {
+        if (selected.getColumnFamilyCount() < 2) {
           LOG.info("No enough column families to delete in table " + selected.getTableName());
           return;
         }

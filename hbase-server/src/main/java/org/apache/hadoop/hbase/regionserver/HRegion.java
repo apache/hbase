@@ -802,7 +802,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private long initialize(final CancelableProgressable reporter) throws IOException {
 
     //Refuse to open the region if there is no column family in the table
-    if (htableDescriptor.getColumnFamilies().length == 0) {
+    if (htableDescriptor.getColumnFamilyCount() == 0) {
       throw new DoNotRetryIOException("Table " + htableDescriptor.getNameAsString() +
           " should have at least one column family.");
     }

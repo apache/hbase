@@ -246,7 +246,7 @@ public class TestReplicaWithCluster {
     HTU.getHBaseAdmin().enableTable(hdt.getTableName());
     HTableDescriptor nHdt = HTU.getHBaseAdmin().getTableDescriptor(hdt.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
-        bHdt.getColumnFamilies().length + 1, nHdt.getColumnFamilies().length);
+        bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 
     p = new Put(row);
     p.addColumn(row, row, row);
@@ -270,7 +270,7 @@ public class TestReplicaWithCluster {
     Admin admin = HTU.getHBaseAdmin();
     nHdt =admin.getTableDescriptor(hdt.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
-        bHdt.getColumnFamilies().length + 1, nHdt.getColumnFamilies().length);
+        bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 
     admin.disableTable(hdt.getTableName());
     admin.deleteTable(hdt.getTableName());

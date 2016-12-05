@@ -237,7 +237,7 @@ public class ModifyTableProcedure
     }
 
     // check that we have at least 1 CF
-    if (modifiedHTableDescriptor.getColumnFamilies().length == 0) {
+    if (modifiedHTableDescriptor.getColumnFamilyCount() == 0) {
       throw new DoNotRetryIOException("Table " + getTableName().toString() +
         " should have at least one column family.");
     }

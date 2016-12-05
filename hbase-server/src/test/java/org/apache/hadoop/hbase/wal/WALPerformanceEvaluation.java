@@ -138,7 +138,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       this.numIterations = numIterations;
       this.noSync = noSync;
       this.syncInterval = syncInterval;
-      this.numFamilies = htd.getColumnFamilies().length;
+      this.numFamilies = htd.getColumnFamilyCount();
       this.region = region;
       this.htd = htd;
       scopes = new TreeMap<byte[], Integer>(

@@ -231,7 +231,7 @@ public class CreateTableProcedure
     }
 
     // check that we have at least 1 CF
-    if (hTableDescriptor.getColumnFamilies().length == 0) {
+    if (hTableDescriptor.getColumnFamilyCount() == 0) {
       setFailure("master-create-table", new DoNotRetryIOException("Table " +
           getTableName().toString() + " should have at least one column family."));
       return false;

@@ -1694,7 +1694,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       warnOrThrowExceptionForFailure(false, CONF_KEY, e.getMessage(), e);
     }
     // check that we have at least 1 CF
-    if (htd.getColumnFamilies().length == 0) {
+    if (htd.getColumnFamilyCount() == 0) {
       String message = "Table should have at least one column family.";
       warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
     }
