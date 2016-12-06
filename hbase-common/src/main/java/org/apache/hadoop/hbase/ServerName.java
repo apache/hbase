@@ -98,7 +98,7 @@ import com.google.common.net.InetAddresses;
   private byte [] bytes;
   public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<ServerName>(0);
 
-  private ServerName(final String hostname, final int port, final long startcode) {
+  protected ServerName(final String hostname, final int port, final long startcode) {
     // Drop the domain is there is one; no need of it in a local cluster.  With it, we get long
     // unwieldy names.
     this.hostnameOnly = hostname;

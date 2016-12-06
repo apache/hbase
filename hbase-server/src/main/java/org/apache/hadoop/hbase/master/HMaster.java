@@ -83,6 +83,8 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
+import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -91,7 +93,6 @@ import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
-import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationMetaCleaner;
@@ -364,6 +365,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
+
+  /* Handle favored nodes information */
+  private FavoredNodesManager favoredNodesManager;
 
   /** jetty server for master to redirect requests to regionserver infoServer */
   private org.mortbay.jetty.Server masterJettyServer;
@@ -749,6 +753,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.initializationBeforeMetaAssignment = true;
 
+    if (this.balancer instanceof FavoredNodesPromoter) {
+      favoredNodesManager = new FavoredNodesManager(this);
+    }
     // Wait for regionserver to finish initialization.
     if (BaseLoadBalancer.tablesOnMaster(conf)) {
       waitForServerOnline();
@@ -770,6 +777,14 @@ public class HMaster extends HRegionServer implements MasterServices {
     // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
     if (isStopped()) return;
+
+    //Initialize after meta as it scans meta
+    if (favoredNodesManager != null) {
+      SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
+          new SnapshotOfRegionAssignmentFromMeta(getConnection());
+      snapshotOfRegionAssignment.initialize();
+      favoredNodesManager.initialize(snapshotOfRegionAssignment);
+    }
 
     // migrating existent table state from zk, so splitters
     // and recovery process treat states properly.
@@ -2994,5 +3009,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public LoadBalancer getLoadBalancer() {
     return balancer;
+  }
+
+  @Override
+  public FavoredNodesManager getFavoredNodesManager() {
+    return favoredNodesManager;
   }
 }

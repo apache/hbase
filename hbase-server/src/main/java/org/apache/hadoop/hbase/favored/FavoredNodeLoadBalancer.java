@@ -16,57 +16,70 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.balancer;
+package org.apache.hadoop.hbase.favored;
+
+import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
+import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
+import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.master.RackManager;
-import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
-import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
+import org.apache.hadoop.hbase.master.*;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.util.Pair;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 /**
- * An implementation of the {@link org.apache.hadoop.hbase.master.LoadBalancer} that 
- * assigns favored nodes for each region. There is a Primary RegionServer that hosts 
- * the region, and then there is Secondary and Tertiary RegionServers. Currently, the 
- * favored nodes information is used in creating HDFS files - the Primary RegionServer 
- * passes the primary, secondary, tertiary node addresses as hints to the 
- * DistributedFileSystem API for creating files on the filesystem. These nodes are 
- * treated as hints by the HDFS to place the blocks of the file. This alleviates the 
- * problem to do with reading from remote nodes (since we can make the Secondary 
- * RegionServer as the new Primary RegionServer) after a region is recovered. This 
- * should help provide consistent read latencies for the regions even when their 
+ * An implementation of the {@link org.apache.hadoop.hbase.master.LoadBalancer} that
+ * assigns favored nodes for each region. There is a Primary RegionServer that hosts
+ * the region, and then there is Secondary and Tertiary RegionServers. Currently, the
+ * favored nodes information is used in creating HDFS files - the Primary RegionServer
+ * passes the primary, secondary, tertiary node addresses as hints to the
+ * DistributedFileSystem API for creating files on the filesystem. These nodes are
+ * treated as hints by the HDFS to place the blocks of the file. This alleviates the
+ * problem to do with reading from remote nodes (since we can make the Secondary
+ * RegionServer as the new Primary RegionServer) after a region is recovered. This
+ * should help provide consistent read latencies for the regions even when their
  * primary region servers die.
  *
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
+public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements FavoredNodesPromoter {
   private static final Log LOG = LogFactory.getLog(FavoredNodeLoadBalancer.class);
 
-  private FavoredNodesPlan globalFavoredNodesAssignmentPlan;
   private RackManager rackManager;
+  private Configuration conf;
+  private FavoredNodesManager fnm;
 
   @Override
   public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public synchronized void initialize() throws HBaseIOException {
+    super.initialize();
     super.setConf(conf);
-    globalFavoredNodesAssignmentPlan = new FavoredNodesPlan();
+    this.fnm = services.getFavoredNodesManager();
     this.rackManager = new RackManager(conf);
     super.setConf(conf);
   }
@@ -84,7 +97,6 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
       LOG.warn("Not running balancer since exception was thrown " + ie);
       return plans;
     }
-    globalFavoredNodesAssignmentPlan = snaphotOfRegionAssignment.getExistingAssignmentPlan();
     Map<ServerName, ServerName> serverNameToServerNameWithoutCode =
         new HashMap<ServerName, ServerName>();
     Map<ServerName, ServerName> serverNameWithoutCodeToServerName =
@@ -102,11 +114,10 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
           currentServer.getPort(), ServerName.NON_STARTCODE);
       List<HRegionInfo> list = entry.getValue();
       for (HRegionInfo region : list) {
-        if(region.getTable().getNamespaceAsString()
-            .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+        if(region.getTable().isSystemTable()) {
           continue;
         }
-        List<ServerName> favoredNodes = globalFavoredNodesAssignmentPlan.getFavoredNodes(region);
+        List<ServerName> favoredNodes = fnm.getFavoredNodes(region);
         if (favoredNodes == null || favoredNodes.get(0).equals(currentServerWithoutStartCode)) {
           continue; //either favorednodes does not exist or we are already on the primary node
         }
@@ -201,7 +212,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
       if (!assignmentHelper.canPlaceFavoredNodes()) {
         return primary;
       }
-      List<ServerName> favoredNodes = globalFavoredNodesAssignmentPlan.getFavoredNodes(regionInfo);
+      List<ServerName> favoredNodes = fnm.getFavoredNodes(regionInfo);
       // check if we have a favored nodes mapping for this region and if so, return
       // a server from the favored nodes list if the passed 'servers' contains this
       // server as well (available servers, that is)
@@ -233,7 +244,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
         new HashMap<ServerName, List<HRegionInfo>>(regions.size() / 2);
     List<HRegionInfo> regionsWithNoFavoredNodes = new ArrayList<HRegionInfo>(regions.size()/2);
     for (HRegionInfo region : regions) {
-      List<ServerName> favoredNodes = globalFavoredNodesAssignmentPlan.getFavoredNodes(region);
+      List<ServerName> favoredNodes = fnm.getFavoredNodes(region);
       ServerName primaryHost = null;
       ServerName secondaryHost = null;
       ServerName tertiaryHost = null;
@@ -310,13 +321,13 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
     regionsOnServer.add(region);
   }
 
-  public List<ServerName> getFavoredNodes(HRegionInfo regionInfo) {
-    return this.globalFavoredNodesAssignmentPlan.getFavoredNodes(regionInfo);
+  public synchronized List<ServerName> getFavoredNodes(HRegionInfo regionInfo) {
+    return this.fnm.getFavoredNodes(regionInfo);
   }
 
   private void roundRobinAssignmentImpl(FavoredNodeAssignmentHelper assignmentHelper,
       Map<ServerName, List<HRegionInfo>> assignmentMap,
-      List<HRegionInfo> regions, List<ServerName> servers) {
+      List<HRegionInfo> regions, List<ServerName> servers) throws IOException {
     Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<HRegionInfo, ServerName>();
     // figure the primary RSs
     assignmentHelper.placePrimaryRSAsRoundRobin(assignmentMap, primaryRSMap, regions);
@@ -325,10 +336,12 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
 
   private void assignSecondaryAndTertiaryNodesForRegion(
       FavoredNodeAssignmentHelper assignmentHelper,
-      List<HRegionInfo> regions, Map<HRegionInfo, ServerName> primaryRSMap) {
+      List<HRegionInfo> regions, Map<HRegionInfo, ServerName> primaryRSMap) throws IOException {
     // figure the secondary and tertiary RSs
     Map<HRegionInfo, ServerName[]> secondaryAndTertiaryRSMap =
         assignmentHelper.placeSecondaryAndTertiaryRS(primaryRSMap);
+
+    Map<HRegionInfo, List<ServerName>> regionFNMap = Maps.newHashMap();
     // now record all the assignments so that we can serve queries later
     for (HRegionInfo region : regions) {
       // Store the favored nodes without startCode for the ServerName objects
@@ -344,8 +357,82 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
         favoredNodesForRegion.add(ServerName.valueOf(secondaryAndTertiaryNodes[1].getHostname(),
             secondaryAndTertiaryNodes[1].getPort(), ServerName.NON_STARTCODE));
       }
-      globalFavoredNodesAssignmentPlan.updateFavoredNodesMap(region, favoredNodesForRegion);
+      regionFNMap.put(region, favoredNodesForRegion);
     }
+    fnm.updateFavoredNodes(regionFNMap);
+  }
+
+  /*
+   * Generate Favored Nodes for daughters during region split.
+   *
+   * If the parent does not have FN, regenerates them for the daughters.
+   *
+   * If the parent has FN, inherit two FN from parent for each daughter and generate the remaining.
+   * The primary FN for both the daughters should be the same as parent. Inherit the secondary
+   * FN from the parent but keep it different for each daughter. Choose the remaining FN
+   * randomly. This would give us better distribution over a period of time after enough splits.
+   */
+  @Override
+  public void generateFavoredNodesForDaughter(List<ServerName> servers, HRegionInfo parent,
+      HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+
+    Map<HRegionInfo, List<ServerName>> result = new HashMap<>();
+    FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers, rackManager);
+    helper.initialize();
+
+    List<ServerName> parentFavoredNodes = getFavoredNodes(parent);
+    if (parentFavoredNodes == null) {
+      LOG.debug("Unable to find favored nodes for parent, " + parent
+          + " generating new favored nodes for daughter");
+      result.put(regionA, helper.generateFavoredNodes(regionA));
+      result.put(regionB, helper.generateFavoredNodes(regionB));
+
+    } else {
+
+      // Lets get the primary and secondary from parent for regionA
+      Set<ServerName> regionAFN =
+          getInheritedFNForDaughter(helper, parentFavoredNodes, PRIMARY, SECONDARY);
+      result.put(regionA, Lists.newArrayList(regionAFN));
+
+      // Lets get the primary and tertiary from parent for regionB
+      Set<ServerName> regionBFN =
+          getInheritedFNForDaughter(helper, parentFavoredNodes, PRIMARY, TERTIARY);
+      result.put(regionB, Lists.newArrayList(regionBFN));
+    }
+
+    fnm.updateFavoredNodes(result);
+  }
+
+  private Set<ServerName> getInheritedFNForDaughter(FavoredNodeAssignmentHelper helper,
+      List<ServerName> parentFavoredNodes, Position primary, Position secondary)
+      throws IOException {
+
+    Set<ServerName> daughterFN = Sets.newLinkedHashSet();
+    if (parentFavoredNodes.size() >= primary.ordinal()) {
+      daughterFN.add(parentFavoredNodes.get(primary.ordinal()));
+    }
+
+    if (parentFavoredNodes.size() >= secondary.ordinal()) {
+      daughterFN.add(parentFavoredNodes.get(secondary.ordinal()));
+    }
+
+    while (daughterFN.size() < FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
+      ServerName newNode = helper.generateMissingFavoredNode(Lists.newArrayList(daughterFN));
+      daughterFN.add(newNode);
+    }
+    return daughterFN;
+  }
+
+  /*
+   * Generate favored nodes for a region during merge. Choose the FN from one of the sources to
+   * keep it simple.
+   */
+  @Override
+  public void generateFavoredNodesForMergedRegion(HRegionInfo merged, HRegionInfo regionA,
+      HRegionInfo regionB) throws IOException {
+    Map<HRegionInfo, List<ServerName>> regionFNMap = Maps.newHashMap();
+    regionFNMap.put(merged, getFavoredNodes(regionA));
+    fnm.updateFavoredNodes(regionFNMap);
   }
 
   @Override

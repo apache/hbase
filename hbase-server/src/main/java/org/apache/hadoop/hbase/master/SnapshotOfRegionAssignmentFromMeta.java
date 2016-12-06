@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.PRIMARY;
+import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.SECONDARY;
+import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,6 +35,8 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
+import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -41,8 +47,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
-import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
 
 /**
  * Used internally for reading meta and constructing datastructures that are
@@ -66,7 +70,10 @@ public class SnapshotOfRegionAssignmentFromMeta {
   private final Map<String, HRegionInfo> regionNameToRegionInfoMap;
 
   /** the regionServer to region map */
-  private final Map<ServerName, List<HRegionInfo>> regionServerToRegionMap;
+  private final Map<ServerName, List<HRegionInfo>> currentRSToRegionMap;
+  private final Map<ServerName, List<HRegionInfo>> secondaryRSToRegionMap;
+  private final Map<ServerName, List<HRegionInfo>> teritiaryRSToRegionMap;
+  private final Map<ServerName, List<HRegionInfo>> primaryRSToRegionMap;
   /** the existing assignment plan in the hbase:meta region */
   private final FavoredNodesPlan existingAssignmentPlan;
   private final Set<TableName> disabledTables;
@@ -81,7 +88,10 @@ public class SnapshotOfRegionAssignmentFromMeta {
     this.connection = connection;
     tableToRegionMap = new HashMap<TableName, List<HRegionInfo>>();
     regionToRegionServerMap = new HashMap<HRegionInfo, ServerName>();
-    regionServerToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
+    currentRSToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
+    primaryRSToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
+    secondaryRSToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
+    teritiaryRSToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
     regionNameToRegionInfoMap = new TreeMap<String, HRegionInfo>();
     existingAssignmentPlan = new FavoredNodesPlan();
     this.disabledTables = disabledTables;
@@ -122,6 +132,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
             addRegion(hri);
           }
 
+          hri = rl.getRegionLocation(0).getRegionInfo();
           // the code below is to handle favored nodes
           byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
               FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);
@@ -132,6 +143,20 @@ public class SnapshotOfRegionAssignmentFromMeta {
           // Add the favored nodes into assignment plan
           existingAssignmentPlan.updateFavoredNodesMap(hri,
               Arrays.asList(favoredServerList));
+
+          /*
+           * Typically there should be FAVORED_NODES_NUM favored nodes for a region in meta. If
+           * there is less than FAVORED_NODES_NUM, lets use as much as we can but log a warning.
+           */
+          if (favoredServerList.length != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
+            LOG.warn("Insufficient favored nodes for region " + hri + " fn: " + Arrays
+                .toString(favoredServerList));
+          }
+          for (int i = 0; i < favoredServerList.length; i++) {
+            if (i == PRIMARY.ordinal()) addPrimaryAssignment(hri, favoredServerList[i]);
+            if (i == SECONDARY.ordinal()) addSecondaryAssignment(hri, favoredServerList[i]);
+            if (i == TERTIARY.ordinal()) addTeritiaryAssignment(hri, favoredServerList[i]);
+          }
           return true;
         } catch (RuntimeException e) {
           LOG.error("Catche remote exception " + e.getMessage() +
@@ -169,12 +194,42 @@ public class SnapshotOfRegionAssignmentFromMeta {
     if (server == null) return;
 
     // Process the region server to region map
-    List<HRegionInfo> regionList = regionServerToRegionMap.get(server);
+    List<HRegionInfo> regionList = currentRSToRegionMap.get(server);
     if (regionList == null) {
       regionList = new ArrayList<HRegionInfo>();
     }
     regionList.add(regionInfo);
-    regionServerToRegionMap.put(server, regionList);
+    currentRSToRegionMap.put(server, regionList);
+  }
+
+  private void addPrimaryAssignment(HRegionInfo regionInfo, ServerName server) {
+    // Process the region server to region map
+    List<HRegionInfo> regionList = primaryRSToRegionMap.get(server);
+    if (regionList == null) {
+      regionList = new ArrayList<HRegionInfo>();
+    }
+    regionList.add(regionInfo);
+    primaryRSToRegionMap.put(server, regionList);
+  }
+
+  private void addSecondaryAssignment(HRegionInfo regionInfo, ServerName server) {
+    // Process the region server to region map
+    List<HRegionInfo> regionList = secondaryRSToRegionMap.get(server);
+    if (regionList == null) {
+      regionList = new ArrayList<HRegionInfo>();
+    }
+    regionList.add(regionInfo);
+    secondaryRSToRegionMap.put(server, regionList);
+  }
+
+  private void addTeritiaryAssignment(HRegionInfo regionInfo, ServerName server) {
+    // Process the region server to region map
+    List<HRegionInfo> regionList = teritiaryRSToRegionMap.get(server);
+    if (regionList == null) {
+      regionList = new ArrayList<HRegionInfo>();
+    }
+    regionList.add(regionInfo);
+    teritiaryRSToRegionMap.put(server, regionList);
   }
 
   /**
@@ -206,7 +261,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
    * @return regionserver to region map
    */
   public Map<ServerName, List<HRegionInfo>> getRegionServerToRegionMap() {
-    return regionServerToRegionMap;
+    return currentRSToRegionMap;
   }
 
   /**
@@ -223,5 +278,17 @@ public class SnapshotOfRegionAssignmentFromMeta {
    */
   public Set<TableName> getTableSet() {
     return this.tableToRegionMap.keySet();
+  }
+
+  public Map<ServerName, List<HRegionInfo>> getSecondaryToRegionInfoMap() {
+    return this.secondaryRSToRegionMap;
+  }
+
+  public Map<ServerName, List<HRegionInfo>> getTertiaryToRegionInfoMap() {
+    return this.teritiaryRSToRegionMap;
+  }
+
+  public Map<ServerName, List<HRegionInfo>> getPrimaryToRegionInfoMap() {
+    return this.primaryRSToRegionMap;
   }
 }

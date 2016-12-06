@@ -28,15 +28,16 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
+import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
+import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
-import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -72,6 +73,7 @@ public class TestRegionPlacement2 {
   public void testFavoredNodesPresentForRoundRobinAssignment() throws HBaseIOException {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    balancer.initialize();
     List<ServerName> servers = new ArrayList<ServerName>();
     for (int i = 0; i < SLAVES; i++) {
       ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
@@ -85,7 +87,7 @@ public class TestRegionPlacement2 {
     Set<ServerName> serverBefore = assignmentMap.keySet();
     List<ServerName> favoredNodesBefore =
         ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesBefore.size() == 3);
+    assertTrue(favoredNodesBefore.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
     // the primary RS should be the one that the balancer's assignment returns
     assertTrue(ServerName.isSameHostnameAndPort(serverBefore.iterator().next(),
         favoredNodesBefore.get(PRIMARY)));
@@ -95,7 +97,7 @@ public class TestRegionPlacement2 {
     assignmentMap = balancer.roundRobinAssignment(regions, servers);
     List<ServerName> favoredNodesAfter =
         ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesAfter.size() == 3);
+    assertTrue(favoredNodesAfter.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
     // We don't expect the favored nodes assignments to change in multiple calls
     // to the roundRobinAssignment method in the balancer (relevant for AssignmentManager.assign
     // failures)
@@ -122,7 +124,7 @@ public class TestRegionPlacement2 {
     assignmentMap = balancer.roundRobinAssignment(regions, servers);
     List<ServerName> favoredNodesNow =
         ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesNow.size() == 3);
+    assertTrue(favoredNodesNow.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
     assertTrue(!favoredNodesNow.contains(favoredNodesAfter.get(PRIMARY)) &&
         !favoredNodesNow.contains(favoredNodesAfter.get(SECONDARY)) &&
         !favoredNodesNow.contains(favoredNodesAfter.get(TERTIARY)));
@@ -132,6 +134,7 @@ public class TestRegionPlacement2 {
   public void testFavoredNodesPresentForRandomAssignment() throws HBaseIOException {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    balancer.initialize();
     List<ServerName> servers = new ArrayList<ServerName>();
     for (int i = 0; i < SLAVES; i++) {
       ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
@@ -143,7 +146,7 @@ public class TestRegionPlacement2 {
     ServerName serverBefore = balancer.randomAssignment(region, servers);
     List<ServerName> favoredNodesBefore =
         ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesBefore.size() == 3);
+    assertTrue(favoredNodesBefore.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
     // the primary RS should be the one that the balancer's assignment returns
     assertTrue(ServerName.isSameHostnameAndPort(serverBefore,favoredNodesBefore.get(PRIMARY)));
     // now remove the primary from the list of servers
@@ -152,7 +155,7 @@ public class TestRegionPlacement2 {
     ServerName serverAfter = balancer.randomAssignment(region, servers);
     List<ServerName> favoredNodesAfter =
         ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesAfter.size() == 3);
+    assertTrue(favoredNodesAfter.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
     // We don't expect the favored nodes assignments to change in multiple calls
     // to the randomAssignment method in the balancer (relevant for AssignmentManager.assign
     // failures)
@@ -167,7 +170,7 @@ public class TestRegionPlacement2 {
     balancer.randomAssignment(region, servers);
     List<ServerName> favoredNodesNow =
         ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesNow.size() == 3);
+    assertTrue(favoredNodesNow.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
     assertTrue(!favoredNodesNow.contains(favoredNodesAfter.get(PRIMARY)) &&
         !favoredNodesNow.contains(favoredNodesAfter.get(SECONDARY)) &&
         !favoredNodesNow.contains(favoredNodesAfter.get(TERTIARY)));

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -409,4 +410,9 @@ public interface MasterServices extends Server {
    * @return True if this master is stopping.
    */
   boolean isStopping();
+
+  /**
+   * @return Favored Nodes Manager
+   */
+  public FavoredNodesManager getFavoredNodesManager();
 }

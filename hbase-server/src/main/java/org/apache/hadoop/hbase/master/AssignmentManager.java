@@ -69,12 +69,11 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
-import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
@@ -229,10 +228,6 @@ public class AssignmentManager {
     this.regionsToReopen = Collections.synchronizedMap
                            (new HashMap<String, HRegionInfo> ());
     Configuration conf = server.getConfiguration();
-    // Only read favored nodes if using the favored nodes load balancer.
-    this.shouldAssignRegionsWithFavoredNodes = conf.getClass(
-           HConstants.HBASE_MASTER_LOADBALANCER_CLASS, Object.class).equals(
-           FavoredNodeLoadBalancer.class);
 
     this.tableStateManager = tableStateManager;
 
@@ -242,6 +237,8 @@ public class AssignmentManager {
     this.sleepTimeBeforeRetryingMetaAssignment = this.server.getConfiguration().getLong(
         "hbase.meta.assignment.retry.sleeptime", 1000l);
     this.balancer = balancer;
+    // Only read favored nodes if using the favored nodes load balancer.
+    this.shouldAssignRegionsWithFavoredNodes = this.balancer instanceof FavoredNodesPromoter;
     int maxThreads = conf.getInt("hbase.assignment.threads.max", 30);
 
     this.threadPoolExecutorService = Threads.getBoundedCachedThreadPool(
@@ -629,23 +626,21 @@ public class AssignmentManager {
     }
   }
 
-  // TODO: processFavoredNodes might throw an exception, for e.g., if the
-  // meta could not be contacted/updated. We need to see how seriously to treat
-  // this problem as. Should we fail the current assignment. We should be able
-  // to recover from this problem eventually (if the meta couldn't be updated
-  // things should work normally and eventually get fixed up).
-  void processFavoredNodes(List<HRegionInfo> regions) throws IOException {
-    if (!shouldAssignRegionsWithFavoredNodes) return;
-    // The AM gets the favored nodes info for each region and updates the meta
-    // table with that info
-    Map<HRegionInfo, List<ServerName>> regionToFavoredNodes =
-        new HashMap<HRegionInfo, List<ServerName>>();
-    for (HRegionInfo region : regions) {
-      regionToFavoredNodes.put(region,
-          ((FavoredNodeLoadBalancer)this.balancer).getFavoredNodes(region));
+  void processFavoredNodesForDaughters(HRegionInfo parent,
+    HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+    if (shouldAssignRegionsWithFavoredNodes) {
+      List<ServerName> onlineServers = this.serverManager.getOnlineServersList();
+      ((FavoredNodesPromoter) this.balancer).
+          generateFavoredNodesForDaughter(onlineServers, parent, regionA, regionB);
     }
-    FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
-      this.server.getConnection());
+  }
+
+  void processFavoredNodesForMerge(HRegionInfo merged, HRegionInfo regionA, HRegionInfo regionB)
+    throws IOException {
+    if (shouldAssignRegionsWithFavoredNodes) {
+      ((FavoredNodesPromoter)this.balancer).
+        generateFavoredNodesForMergedRegion(merged, regionA, regionB);
+    }
   }
 
   /**
@@ -806,7 +801,7 @@ public class AssignmentManager {
             region, State.PENDING_OPEN, destination);
           List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
           if (this.shouldAssignRegionsWithFavoredNodes) {
-            favoredNodes = ((FavoredNodeLoadBalancer)this.balancer).getFavoredNodes(region);
+            favoredNodes = server.getFavoredNodesManager().getFavoredNodes(region);
           }
           regionOpenInfos.add(new Pair<HRegionInfo, List<ServerName>>(
             region, favoredNodes));
@@ -1114,7 +1109,7 @@ public class AssignmentManager {
         try {
           List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
           if (this.shouldAssignRegionsWithFavoredNodes) {
-            favoredNodes = ((FavoredNodeLoadBalancer)this.balancer).getFavoredNodes(region);
+            favoredNodes = server.getFavoredNodesManager().getFavoredNodes(region);
           }
           serverManager.sendRegionOpen(plan.getDestination(), region, favoredNodes);
           return; // we're done
@@ -1298,15 +1293,6 @@ public class AssignmentManager {
         } catch (IOException ex) {
           LOG.warn("Failed to create new plan.",ex);
           return null;
-        }
-        if (!region.isMetaTable() && shouldAssignRegionsWithFavoredNodes) {
-          List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
-          regions.add(region);
-          try {
-            processFavoredNodes(regions);
-          } catch (IOException ie) {
-            LOG.warn("Ignoring exception in processFavoredNodes " + ie);
-          }
         }
         this.regionPlans.put(encodedName, randomPlan);
       }
@@ -1579,7 +1565,6 @@ public class AssignmentManager {
 
     processBogusAssignments(bulkPlan);
 
-    processFavoredNodes(regions);
     assign(regions.size(), servers.size(), "round-robin=true", bulkPlan);
   }
 
@@ -1869,7 +1854,8 @@ public class AssignmentManager {
                 }
                 List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
                 if (shouldAssignRegionsWithFavoredNodes) {
-                  favoredNodes = ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(hri);
+                  favoredNodes =
+                    ((MasterServices)server).getFavoredNodesManager().getFavoredNodes(hri);
                 }
                 serverManager.sendRegionOpen(serverName, hri, favoredNodes);
                 return; // we're done
@@ -2424,6 +2410,7 @@ public class AssignmentManager {
 
     try {
       regionStates.splitRegion(hri, a, b, serverName);
+      processFavoredNodesForDaughters(hri, a ,b);
     } catch (IOException ioe) {
       LOG.info("Failed to record split region " + hri.getShortNameToLog());
       return "Failed to record the splitting in meta";
@@ -2691,6 +2678,26 @@ public class AssignmentManager {
     regionOffline(a, State.MERGED);
     regionOffline(b, State.MERGED);
     regionOnline(hri, serverName, 1);
+
+    try {
+      if (this.shouldAssignRegionsWithFavoredNodes) {
+        processFavoredNodesForMerge(hri, a, b);
+        /*
+         * This can be removed once HBASE-16119 (Procedure v2 Merge) is implemented and AM force
+         * assigns the merged region on the same region server. FavoredNodes for the region would
+         * be passed along with OpenRegionRequest and hence the following would become redundant.
+         */
+        List<ServerName> favoredNodes = server.getFavoredNodesManager().getFavoredNodes(hri);
+        if (favoredNodes != null) {
+          Map<HRegionInfo, List<ServerName>> regionFNMap = new HashMap<>(1);
+          regionFNMap.put(hri, favoredNodes);
+          server.getServerManager().sendFavoredNodes(serverName, regionFNMap);
+        }
+      }
+    } catch (IOException e) {
+      LOG.error("Error while processing favored nodes after merge.", e);
+      return StringUtils.stringifyException(e);
+    }
 
     // User could disable the table before master knows the new region.
     if (getTableStateManager().isTableState(hri.getTable(),

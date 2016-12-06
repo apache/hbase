@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminServic
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ServerInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
@@ -1235,6 +1236,29 @@ public class ServerManager {
   public void removeRegions(final List<HRegionInfo> regions) {
     for (HRegionInfo hri: regions) {
       removeRegion(hri);
+    }
+  }
+
+  public void sendFavoredNodes(final ServerName server,
+      Map<HRegionInfo, List<ServerName>> favoredNodes) throws IOException {
+    AdminService.BlockingInterface admin = getRsAdmin(server);
+    if (admin == null) {
+      LOG.warn("Attempting to send favored nodes update rpc to server " + server.toString()
+          + " failed because no RPC connection found to this server");
+    } else {
+      List<Pair<HRegionInfo, List<ServerName>>> regionUpdateInfos =
+          new ArrayList<Pair<HRegionInfo, List<ServerName>>>();
+      for (Entry<HRegionInfo, List<ServerName>> entry : favoredNodes.entrySet()) {
+        regionUpdateInfos.add(new Pair<HRegionInfo, List<ServerName>>(entry.getKey(),
+          entry.getValue()));
+      }
+      UpdateFavoredNodesRequest request =
+        RequestConverter.buildUpdateFavoredNodesRequest(regionUpdateInfos);
+      try {
+        admin.updateFavoredNodes(null, request);
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
     }
   }
 }

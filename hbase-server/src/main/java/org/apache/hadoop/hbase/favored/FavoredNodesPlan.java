@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.balancer;
+package org.apache.hadoop.hbase.favored;
 
 import java.util.List;
 import java.util.Map;
@@ -59,6 +59,15 @@ public class FavoredNodesPlan {
       return;
     }
     this.favoredNodesMap.put(region.getRegionNameAsString(), servers);
+  }
+
+  /**
+   * Remove a favored node assignment
+   * @param region region
+   * @return the list of favored region server for this region based on the plan
+   */
+  public List<ServerName> removeFavoredNodes(HRegionInfo region) {
+    return favoredNodesMap.remove(region.getRegionNameAsString());
   }
 
   /**
