@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -243,7 +244,7 @@ public class RegionStateStore {
       // Called when meta is not on master
       List<Put> list = shouldPutBarrier ?
           Arrays.asList(metaPut, MetaTableAccessor.makeBarrierPut(hri.getEncodedNameAsBytes(),
-              openSeqNum, hri.getTable().getName())) : Arrays.asList(metaPut);
+              openSeqNum, hri.getTable().getName())) : Collections.singletonList(metaPut);
       multiHConnection.processBatchCallback(list, TableName.META_TABLE_NAME, null, null);
 
     } catch (IOException ioe) {

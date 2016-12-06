@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -63,7 +64,7 @@ public class RackManager {
     }
     // just a note - switchMapping caches results (at least the implementation should unless the
     // resolution is really a lightweight process)
-    List<String> racks = switchMapping.resolve(Arrays.asList(server.getHostname()));
+    List<String> racks = switchMapping.resolve(Collections.singletonList(server.getHostname()));
     if (racks != null && !racks.isEmpty()) {
       return racks.get(0);
     }

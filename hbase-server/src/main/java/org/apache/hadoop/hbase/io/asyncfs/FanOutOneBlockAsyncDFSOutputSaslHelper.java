@@ -54,6 +54,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -355,7 +356,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         throw new IOException(String.format("Invalid cipher suite, %s=%s",
           DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuites));
       }
-      return Arrays.asList(new CipherOption(CipherSuite.AES_CTR_NOPADDING));
+      return Collections.singletonList(new CipherOption(CipherSuite.AES_CTR_NOPADDING));
     }
 
     private void sendSaslMessage(ChannelHandlerContext ctx, byte[] payload,

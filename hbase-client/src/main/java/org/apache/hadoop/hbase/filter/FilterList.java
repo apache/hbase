@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
@@ -194,7 +195,7 @@ final public class FilterList extends FilterBase {
    * @param filter another filter
    */
   public void addFilter(Filter filter) {
-    addFilter(Arrays.asList(filter));
+    addFilter(Collections.singletonList(filter));
   }
 
   @Override

@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,7 +68,7 @@ public final class MultiAction {
    * @param a
    */
   public void add(byte[] regionName, Action a) {
-    add(regionName, Arrays.asList(a));
+    add(regionName, Collections.singletonList(a));
   }
 
   /**

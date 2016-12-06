@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -129,7 +129,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
   @Override
   public void mutate(Mutation m) throws InterruptedIOException,
       RetriesExhaustedWithDetailsException {
-    mutate(Arrays.asList(m));
+    mutate(Collections.singletonList(m));
   }
 
   @Override
