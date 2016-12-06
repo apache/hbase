@@ -53,7 +53,7 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   protected AbstractStateMachineTableProcedure(final MasterProcedureEnv env,
       final ProcedurePrepareLatch latch) {
     this.user = env.getRequestUser();
-    this.setOwner(user.getShortName());
+    this.setOwner(user);
 
     // used for compatibility with clients without procedures
     // they need a sync TableExistsException, TableNotFoundException, TableNotDisabledException, ...

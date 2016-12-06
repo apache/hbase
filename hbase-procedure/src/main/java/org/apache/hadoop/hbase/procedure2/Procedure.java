@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 
@@ -390,6 +391,11 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   @InterfaceAudience.Private
   public void setOwner(final String owner) {
     this.owner = StringUtils.isEmpty(owner) ? null : owner;
+  }
+
+  public void setOwner(final User owner) {
+    assert owner != null : "expected owner to be not null";
+    setOwner(owner.getShortName());
   }
 
   /**

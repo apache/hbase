@@ -36,7 +36,7 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   }
 
   protected AbstractStateMachineNamespaceProcedure(final MasterProcedureEnv env) {
-    this.setOwner(env.getRequestUser().getShortName());
+    this.setOwner(env.getRequestUser());
   }
 
   protected abstract String getNamespaceName();

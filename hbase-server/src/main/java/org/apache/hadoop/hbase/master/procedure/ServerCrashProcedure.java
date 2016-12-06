@@ -153,7 +153,7 @@ implements ServerProcedureInterface {
     this.serverName = serverName;
     this.shouldSplitWal = shouldSplitWal;
     this.carryingMeta = carryingMeta;
-    this.setOwner(env.getRequestUser().getShortName());
+    this.setOwner(env.getRequestUser());
   }
 
   /**

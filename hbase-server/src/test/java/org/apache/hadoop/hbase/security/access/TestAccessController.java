@@ -548,7 +548,7 @@ public class TestAccessController extends SecureTestUtil {
         throws IOException {
       this.tableName = tableName;
       this.setTimeout(180000); // Timeout in 3 minutes
-      this.setOwner(env.getRequestUser().getUGI().getShortUserName());
+      this.setOwner(env.getRequestUser());
     }
 
     @Override
@@ -600,7 +600,7 @@ public class TestAccessController extends SecureTestUtil {
     final ProcedureExecutor<MasterProcedureEnv> procExec =
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
-    proc.setOwner(USER_OWNER.getShortName());
+    proc.setOwner(USER_OWNER);
     final long procId = procExec.submitProcedure(proc);
 
     AccessTestAction abortProcedureAction = new AccessTestAction() {
@@ -624,7 +624,7 @@ public class TestAccessController extends SecureTestUtil {
     final ProcedureExecutor<MasterProcedureEnv> procExec =
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
-    proc.setOwner(USER_OWNER.getShortName());
+    proc.setOwner(USER_OWNER);
     final long procId = procExec.submitProcedure(proc);
     final List<ProcedureInfo> procInfoList = procExec.listProcedures();
 
