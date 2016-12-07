@@ -24,6 +24,8 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import io.netty.util.HashedWheelTimer;
 
 import java.io.IOException;
@@ -56,7 +58,8 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private static final Log LOG = LogFactory.getLog(AsyncConnectionImpl.class);
 
-  private static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
+  @VisibleForTesting
+  static final HashedWheelTimer RETRY_TIMER = new HashedWheelTimer(
       Threads.newDaemonThreadFactory("Async-Client-Retry-Timer"), 10, TimeUnit.MILLISECONDS);
 
   private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
@@ -92,7 +95,7 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.conf = conf;
     this.user = user;
     this.connConf = new AsyncConnectionConfiguration(conf);
-    this.locator = new AsyncRegionLocator(this);
+    this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
     this.registry = AsyncRegistryFactory.getRegistry(conf);
     this.clusterId = Optional.ofNullable(registry.getClusterId()).orElseGet(() -> {
       if (LOG.isDebugEnabled()) {

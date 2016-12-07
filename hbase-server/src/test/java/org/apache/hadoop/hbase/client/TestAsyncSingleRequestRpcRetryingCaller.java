@@ -150,33 +150,35 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     AtomicBoolean errorTriggered = new AtomicBoolean(false);
     AtomicInteger count = new AtomicInteger(0);
     HRegionLocation loc = asyncConn.getRegionLocator(TABLE_NAME).getRegionLocation(ROW).get();
-    AsyncRegionLocator mockedLocator = new AsyncRegionLocator(asyncConn) {
-      @Override
-      CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row) {
-        if (tableName.equals(TABLE_NAME)) {
-          CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
-          if (count.getAndIncrement() == 0) {
-            errorTriggered.set(true);
-            future.completeExceptionally(new RuntimeException("Inject error!"));
-          } else {
-            future.complete(loc);
+    AsyncRegionLocator mockedLocator =
+        new AsyncRegionLocator(asyncConn, AsyncConnectionImpl.RETRY_TIMER) {
+          @Override
+          CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
+              long timeoutNs) {
+            if (tableName.equals(TABLE_NAME)) {
+              CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
+              if (count.getAndIncrement() == 0) {
+                errorTriggered.set(true);
+                future.completeExceptionally(new RuntimeException("Inject error!"));
+              } else {
+                future.complete(loc);
+              }
+              return future;
+            } else {
+              return super.getRegionLocation(tableName, row, timeoutNs);
+            }
           }
-          return future;
-        } else {
-          return super.getRegionLocation(tableName, row);
-        }
-      }
 
-      @Override
-      CompletableFuture<HRegionLocation> getPreviousRegionLocation(TableName tableName,
-          byte[] startRowOfCurrentRegion) {
-        return super.getPreviousRegionLocation(tableName, startRowOfCurrentRegion);
-      }
+          @Override
+          CompletableFuture<HRegionLocation> getPreviousRegionLocation(TableName tableName,
+              byte[] startRowOfCurrentRegion, long timeoutNs) {
+            return super.getPreviousRegionLocation(tableName, startRowOfCurrentRegion, timeoutNs);
+          }
 
-      @Override
-      void updateCachedLocation(HRegionLocation loc, Throwable exception) {
-      }
-    };
+          @Override
+          void updateCachedLocation(HRegionLocation loc, Throwable exception) {
+          }
+        };
     try (AsyncConnectionImpl mockedConn =
         new AsyncConnectionImpl(asyncConn.getConfiguration(), User.getCurrent()) {
 
