@@ -2659,8 +2659,13 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             " processingTime: " + processingTime +
             " totalTime: " + totalTime);
       }
-      long requestSize = param.getSerializedSize();
+      // Use the raw request call size for now.
+      long requestSize = call.getSize();
       long responseSize = result.getSerializedSize();
+      if (call.isClientCellBlockSupported()) {
+        // Include the payload size in HBaseRpcController
+        responseSize += call.getResponseCellSize();
+      }
 
       metrics.dequeuedCall(qTime);
       metrics.processedCall(processingTime);
