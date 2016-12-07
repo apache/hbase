@@ -38,6 +38,8 @@ public class BufferedMutatorParams {
   private long writeBufferSize = UNSET;
   private int maxKeyValueSize = UNSET;
   private ExecutorService pool = null;
+  private String implementationClassName = null;
+
   private BufferedMutator.ExceptionListener listener = new BufferedMutator.ExceptionListener() {
     @Override
     public void onException(RetriesExhaustedWithDetailsException exception,
@@ -93,6 +95,23 @@ public class BufferedMutatorParams {
    */
   public BufferedMutatorParams pool(ExecutorService pool) {
     this.pool = pool;
+    return this;
+  }
+
+  /**
+   * @return Name of the class we will use when we construct a
+   * {@link BufferedMutator} instance or null if default implementation.
+   */
+  public String getImplementationClassName() {
+    return this.implementationClassName;
+  }
+
+  /**
+   * Specify a BufferedMutator implementation other than the default.
+   * @param implementationClassName Name of the BufferedMutator implementation class
+   */
+  public BufferedMutatorParams implementationClassName(String implementationClassName) {
+    this.implementationClassName = implementationClassName;
     return this;
   }
 

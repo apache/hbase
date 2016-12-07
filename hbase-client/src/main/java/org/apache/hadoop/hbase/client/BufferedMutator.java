@@ -64,6 +64,11 @@ import java.util.List;
 @InterfaceStability.Evolving
 public interface BufferedMutator extends Closeable {
   /**
+   * Key to use setting non-default BufferedMutator implementation in Configuration.
+   */
+  public static final String CLASSNAME_KEY = "hbase.client.bufferedmutator.classname";
+
+  /**
    * Gets the fully qualified table name instance of the table that this BufferedMutator writes to.
    */
   TableName getName();

@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -185,6 +186,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final ClientBackoffPolicy backoffPolicy;
 
   /**
+   * Allow setting an alternate BufferedMutator implementation via
+   * config. If null, use default.
+   */
+  private final String alternateBufferedMutatorClassName;
+
+  /**
    * constructor
    * @param conf Configuration object
    */
@@ -243,6 +250,10 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
             ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
             ClusterStatusListener.Listener.class);
+
+    // Is there an alternate BufferedMutator to use?
+    this.alternateBufferedMutatorClassName =
+        this.conf.get(BufferedMutator.CLASSNAME_KEY);
 
     try {
       this.registry = setupRegistry();
@@ -315,7 +326,21 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (params.getMaxKeyValueSize() == BufferedMutatorParams.UNSET) {
       params.maxKeyValueSize(connectionConfig.getMaxKeyValueSize());
     }
-    return new BufferedMutatorImpl(this, rpcCallerFactory, rpcControllerFactory, params);
+    // Look to see if an alternate BufferedMutation implementation is wanted.
+    // Look in params and in config. If null, use default.
+    String implementationClassName = params.getImplementationClassName();
+    if (implementationClassName == null) {
+      implementationClassName = this.alternateBufferedMutatorClassName;
+    }
+    if (implementationClassName == null) {
+      return new BufferedMutatorImpl(this, rpcCallerFactory, rpcControllerFactory, params);
+    }
+    try {
+      return (BufferedMutator)ReflectionUtils.newInstance(Class.forName(implementationClassName),
+          this, rpcCallerFactory, rpcControllerFactory, params);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
