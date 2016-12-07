@@ -29,44 +29,38 @@
 
 == Introduction
 
-<<quickstart,Quickstart>> will get you up and running on a single-node, standalone instance of HBase, followed by a pseudo-distributed single-machine instance, and finally a fully-distributed cluster.
+<<quickstart,Quickstart>> will get you up and running on a single-node, standalone instance of HBase.
 
 [[quickstart]]
 == Quick Start - Standalone HBase
 
-This guide describes the setup of a standalone HBase instance running against the local filesystem.
-This is not an appropriate configuration for a production instance of HBase, but will allow you to experiment with HBase.
-This section shows you how to create a table in HBase using the `hbase shell` CLI, insert rows into the table, perform put and scan operations against the table, enable or disable the table, and start and stop HBase.
+This section describes the setup of a single-node standalone HBase.
+A _standalone_ instance has all HBase daemons -- the Master, RegionServers,
+and ZooKeeper -- running in a single JVM persisting to the local filesystem.
+It is our most basic deploy profile. We will show you how
+to create a table in HBase using the `hbase shell` CLI,
+insert rows into the table, perform put and scan operations against the
+table, enable or disable the table, and start and stop HBase.
+
 Apart from downloading HBase, this procedure should take less than 10 minutes.
 
-.Local Filesystem and Durability
-WARNING: _The following is fixed in HBase 0.98.3 and beyond. See link:https://issues.apache.org/jira/browse/HBASE-11272[HBASE-11272] and link:https://issues.apache.org/jira/browse/HBASE-11218[HBASE-11218]._
-
-Using HBase with a local filesystem does not guarantee durability.
-The HDFS local filesystem implementation will lose edits if files are not properly closed.
-This is very likely to happen when you are experimenting with new software, starting and stopping the daemons often and not always cleanly.
-You need to run HBase on HDFS to ensure all writes are preserved.
-Running against the local filesystem is intended as a shortcut to get you familiar with how the general system works, as the very first phase of evaluation.
-See link:https://issues.apache.org/jira/browse/HBASE-3696[HBASE-3696] and its associated issues for more details about the issues of running on the local filesystem.
-
 [[loopback.ip]]
-.Loopback IP - HBase 0.94.x and earlier
-NOTE: _The below advice is for hbase-0.94.x and older versions only. This is fixed in hbase-0.96.0 and beyond._
-
-Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1. Ubuntu and some other distributions default to 127.0.1.1 and this will cause problems for you. See link:http://devving.com/?p=414[Why does HBase care about /etc/hosts?] for detail
-
-
-.Example /etc/hosts File for Ubuntu
+[NOTE]
 ====
+.Loopback IP - HBase 0.94.x and earlier
+
+Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1.
+Ubuntu and some other distributions default to 127.0.1.1 and this will cause
+problems for you. See link:http://devving.com/?p=414[Why does HBase care about /etc/hosts?] for detail
+
 The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble.
 [listing]
 ----
 127.0.0.1 localhost
 127.0.0.1 ubuntu.ubuntu-domain ubuntu
 ----
-
+This issue has been fixed in hbase-0.96.0 and beyond.
 ====
-
 
 === JDK Version Requirements
 
@@ -75,16 +69,13 @@ See <<java,Java>> for information about supported JDK versions.
 
 === Get Started with HBase
 
-.Procedure: Download, Configure, and Start HBase
+.Procedure: Download, Configure, and Start HBase in Standalone Mode
 . Choose a download site from this list of link:http://www.apache.org/dyn/closer.cgi/hbase/[Apache Download Mirrors].
   Click on the suggested top link.
-  This will take you to a mirror of _HBase
-  Releases_.
+  This will take you to a mirror of _HBase Releases_.
   Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem.
-  Prior to 1.x version, be sure to choose the version that corresponds with the version of Hadoop you are
-  likely to use later (in most cases, you should choose the file for Hadoop 2, which will be called
-  something like _hbase-0.98.13-hadoop2-bin.tar.gz_).
   Do not download the file ending in _src.tar.gz_ for now.
+
 . Extract the downloaded file, and change to the newly-created directory.
 +
 [source,subs="attributes"]
@@ -94,10 +85,11 @@ $ tar xzvf hbase-{Version}-bin.tar.gz
 $ cd hbase-{Version}/
 ----
 
-. For HBase 0.98.5 and later, you are required to set the `JAVA_HOME` environment variable before starting HBase.
-  Prior to 0.98.5, HBase attempted to detect the location of Java if the variables was not set.
-  You can set the variable via your operating system's usual mechanism, but HBase provides a central mechanism, _conf/hbase-env.sh_.
-  Edit this file, uncomment the line starting with `JAVA_HOME`, and set it to the appropriate location for your operating system.
+. You are required to set the `JAVA_HOME` environment variable before starting HBase.
+  You can set the variable via your operating system's usual mechanism, but HBase
+  provides a central mechanism, _conf/hbase-env.sh_.
+  Edit this file, uncomment the line starting with `JAVA_HOME`, and set it to the
+  appropriate location for your operating system.
   The `JAVA_HOME` variable should be set to a directory which contains the executable file _bin/java_.
   Most modern Linux operating systems provide a mechanism, such as /usr/bin/alternatives on RHEL or CentOS, for transparently switching between versions of executables such as Java.
   In this case, you can set `JAVA_HOME` to the directory containing the symbolic link to _bin/java_, which is usually _/usr_.
@@ -106,8 +98,6 @@ $ cd hbase-{Version}/
 JAVA_HOME=/usr
 ----
 +
-NOTE: These instructions assume that each node of your cluster uses the same configuration.
-If this is not the case, you may need to set `JAVA_HOME` separately for each node.
 
 . Edit _conf/hbase-site.xml_, which is the main HBase configuration file.
   At this time, you only need to specify the directory on the local filesystem where HBase and ZooKeeper write data.
@@ -135,17 +125,27 @@ If this is not the case, you may need to set `JAVA_HOME` separately for each nod
 ====
 +
 You do not need to create the HBase data directory.
-HBase will do this for you.
-If you create the directory, HBase will attempt to do a migration, which is not what you want.
+HBase will do this for you.  If you create the directory,
+HBase will attempt to do a migration, which is not what you want.
++
+NOTE: The _hbase.rootdir_ in the above example points to a directory
+in the _local filesystem_. The 'file:/' prefix is how we denote local filesystem.
+To home HBase on an existing instance of HDFS, set the _hbase.rootdir_ to point at a
+directory up on your instance: e.g. _hdfs://namenode.example.org:8020/hbase_.
+For more on this variant, see the section below on Standalone HBase over HDFS.
 
 . The _bin/start-hbase.sh_ script is provided as a convenient way to start HBase.
   Issue the command, and if all goes well, a message is logged to standard output showing that HBase started successfully.
   You can use the `jps` command to verify that you have one running process called `HMaster`.
   In standalone mode HBase runs all daemons within this single JVM, i.e.
   the HMaster, a single HRegionServer, and the ZooKeeper daemon.
+  Go to _http://localhost:16010_ to view the HBase Web UI.
 +
 NOTE: Java needs to be installed and available.
-If you get an error indicating that Java is not installed, but it is on your system, perhaps in a non-standard location, edit the _conf/hbase-env.sh_ file and modify the `JAVA_HOME` setting to point to the directory that contains _bin/java_ your system.
+If you get an error indicating that Java is not installed,
+but it is on your system, perhaps in a non-standard location,
+edit the _conf/hbase-env.sh_ file and modify the `JAVA_HOME`
+setting to point to the directory that contains _bin/java_ your system.
 
 
 [[shell_exercises]]
@@ -285,12 +285,19 @@ $
 . After issuing the command, it can take several minutes for the processes to shut down.
   Use the `jps` to be sure that the HMaster and HRegionServer processes are shut down.
 
-[[quickstart_pseudo]]
-=== Intermediate - Pseudo-Distributed Local Install
+The above has shown you how to start and stop a standalone instance of HBase.
+In the next sections we give a quick overview of other modes of hbase deploy.
 
-After working your way through <<quickstart,quickstart>>, you can re-configure HBase to run in pseudo-distributed mode.
-Pseudo-distributed mode means that HBase still runs completely on a single host, but each HBase daemon (HMaster, HRegionServer, and ZooKeeper) runs as a separate process.
-By default, unless you configure the `hbase.rootdir` property as described in <<quickstart,quickstart>>, your data is still stored in _/tmp/_.
+[[quickstart_pseudo]]
+=== Pseudo-Distributed Local Install
+
+After working your way through <<quickstart,quickstart>> standalone mode,
+you can re-configure HBase to run in pseudo-distributed mode.
+Pseudo-distributed mode means that HBase still runs completely on a single host,
+but each HBase daemon (HMaster, HRegionServer, and ZooKeeper) runs as a separate process:
+in standalone mode all daemons ran in one jvm process/instance.
+By default, unless you configure the `hbase.rootdir` property as described in
+<<quickstart,quickstart>>, your data is still stored in _/tmp/_.
 In this walk-through, we store your data in HDFS instead, assuming you have HDFS available.
 You can skip the HDFS configuration to continue storing your data in the local filesystem.
 
