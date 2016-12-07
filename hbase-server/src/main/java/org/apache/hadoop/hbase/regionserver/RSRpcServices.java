@@ -1093,7 +1093,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @return an object that represents the last referenced block from this response.
    */
   Object addSize(RpcCallContext context, Result r, Object lastBlock) {
-    if (context != null && !r.isEmpty()) {
+    if (context != null && r != null && !r.isEmpty()) {
       for (Cell c : r.rawCells()) {
         context.incrementResponseCellSize(CellUtil.estimatedHeapSizeOf(c));
         // We're using the last block being the same as the current block as
@@ -2134,6 +2134,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           pbr = ProtobufUtil.toResultNoData(r);
           ((PayloadCarryingRpcController) controller)
               .setCellScanner(CellUtil.createCellScanner(r.rawCells()));
+          addSize(call, r, null);
         } else {
           pbr = ProtobufUtil.toResult(r);
         }
@@ -2307,6 +2308,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;
     CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
     OperationQuota quota = null;
+    RpcCallContext context = RpcServer.getCurrentCall();
     // Clear scanner so we are not holding on to reference across call.
     if (controller != null) {
       controller.setCellScanner(null);
@@ -2400,6 +2402,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       if (processed != null) builder.setProcessed(processed.booleanValue());
       addResult(builder, r, controller);
+      boolean clientCellBlockSupported = isClientCellBlockSupport(context);
+      if (clientCellBlockSupported) {
+        addSize(context, r, null);
+      }
       return builder.build();
     } catch (IOException ie) {
       regionServer.checkFileSystem();

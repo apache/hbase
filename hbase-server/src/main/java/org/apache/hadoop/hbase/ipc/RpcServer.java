@@ -2353,6 +2353,7 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
       int totalTime = (int) (endTime - receiveTime);
+      Call call = CurCall.get();
       if (LOG.isTraceEnabled()) {
         LOG.trace(CurCall.get().toString() +
             ", response " + TextFormat.shortDebugString(result) +
@@ -2360,8 +2361,14 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
             " processingTime: " + processingTime +
             " totalTime: " + totalTime);
       }
-      long requestSize = param.getSerializedSize();
+      // Use the raw request call size for now.
+      long requestSize = call.getSize();
       long responseSize = result.getSerializedSize();
+      if (call.isClientCellBlockSupported()) {
+        // Include the payload size in HBaseRpcController
+        responseSize += call.getResponseCellSize();
+      }
+
       metrics.dequeuedCall(qTime);
       metrics.processedCall(processingTime);
       metrics.totalCall(totalTime);
