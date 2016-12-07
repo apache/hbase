@@ -550,6 +550,57 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
+  /**
+   * A class that tracks exceptions that have been observed in one batch. Not thread safe.
+   */
+  static class ObservedExceptionsInBatch {
+    private boolean wrongRegion = false;
+    private boolean failedSanityCheck = false;
+    private boolean wrongFamily = false;
+
+    /**
+     * @return If a {@link WrongRegionException} has been observed.
+     */
+    boolean hasSeenWrongRegion() {
+      return wrongRegion;
+    }
+
+    /**
+     * Records that a {@link WrongRegionException} has been observed.
+     */
+    void sawWrongRegion() {
+      wrongRegion = true;
+    }
+
+    /**
+     * @return If a {@link FailedSanityCheckException} has been observed.
+     */
+    boolean hasSeenFailedSanityCheck() {
+      return failedSanityCheck;
+    }
+
+    /**
+     * Records that a {@link FailedSanityCheckException} has been observed.
+     */
+    void sawFailedSanityCheck() {
+      failedSanityCheck = true;
+    }
+
+    /**
+     * @return If a {@link NoSuchColumnFamilyException} has been observed.
+     */
+    boolean hasSeenNoSuchFamily() {
+      return wrongFamily;
+    }
+
+    /**
+     * Records that a {@link NoSuchColumnFamilyException} has been observed.
+     */
+    void sawNoSuchFamily() {
+      wrongFamily = true;
+    }
+  }
+
   final WriteState writestate = new WriteState();
 
   long memstoreFlushSize;
@@ -3107,12 +3158,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
     MemstoreSize memstoreSize = new MemstoreSize();
+    final ObservedExceptionsInBatch observedExceptions = new ObservedExceptionsInBatch();
     try {
       // STEP 1. Try to acquire as many locks as we can, and ensure we acquire at least one.
       int numReadyToWrite = 0;
       long now = EnvironmentEdgeManager.currentTime();
       while (lastIndexExclusive < batchOp.operations.length) {
-        if (checkBatchOp(batchOp, lastIndexExclusive, familyMaps, now)) {
+        if (checkBatchOp(batchOp, lastIndexExclusive, familyMaps, now, observedExceptions)) {
           lastIndexExclusive++;
           continue;
         }
@@ -3477,7 +3529,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   private boolean checkBatchOp(BatchOperation<?> batchOp, final int lastIndexExclusive,
-      final Map<byte[], List<Cell>>[] familyMaps, final long now)
+      final Map<byte[], List<Cell>>[] familyMaps, final long now,
+      final ObservedExceptionsInBatch observedExceptions)
   throws IOException {
     boolean skip = false;
     // Skip anything that "ran" already
@@ -3493,17 +3546,35 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       checkAndPrepareMutation(mutation, batchOp.isInReplay(), familyMap, now);
     } catch (NoSuchColumnFamilyException nscf) {
-      LOG.warn("No such column family in batch mutation", nscf);
+      final String msg = "No such column family in batch mutation. ";
+      if (observedExceptions.hasSeenNoSuchFamily()) {
+        LOG.warn(msg + nscf.getMessage());
+      } else {
+        LOG.warn(msg, nscf);
+        observedExceptions.sawNoSuchFamily();
+      }
       batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
           OperationStatusCode.BAD_FAMILY, nscf.getMessage());
       skip = true;
     } catch (FailedSanityCheckException fsce) {
-      LOG.warn("Batch Mutation did not pass sanity check", fsce);
+      final String msg = "Batch Mutation did not pass sanity check. ";
+      if (observedExceptions.hasSeenFailedSanityCheck()) {
+        LOG.warn(msg + fsce.getMessage());
+      } else {
+        LOG.warn(msg, fsce);
+        observedExceptions.sawFailedSanityCheck();
+      }
       batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
           OperationStatusCode.SANITY_CHECK_FAILURE, fsce.getMessage());
       skip = true;
     } catch (WrongRegionException we) {
-      LOG.warn("Batch mutation had a row that does not belong to this region", we);
+      final String msg = "Batch mutation had a row that does not belong to this region. ";
+      if (observedExceptions.hasSeenWrongRegion()) {
+        LOG.warn(msg + we.getMessage());
+      } else {
+        LOG.warn(msg, we);
+        observedExceptions.sawWrongRegion();
+      }
       batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
           OperationStatusCode.SANITY_CHECK_FAILURE, we.getMessage());
       skip = true;
