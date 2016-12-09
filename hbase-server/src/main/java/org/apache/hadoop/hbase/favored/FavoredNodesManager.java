@@ -83,6 +83,14 @@ public class FavoredNodesManager {
     return this.globalFavoredNodesAssignmentPlan.getFavoredNodes(regionInfo);
   }
 
+  /*
+   * Favored nodes are not applicable for system tables. We will use this to check before
+   * we apply any favored nodes logic on a region.
+   */
+  public static boolean isFavoredNodeApplicable(HRegionInfo regionInfo) {
+    return !regionInfo.isSystemTable();
+  }
+
   public synchronized void updateFavoredNodes(Map<HRegionInfo, List<ServerName>> regionFNMap)
       throws IOException {
 
@@ -99,8 +107,8 @@ public class FavoredNodesManager {
         throw new IOException("Duplicates found: " + servers);
       }
 
-      if (regionInfo.isSystemTable()) {
-        throw new IOException("Can't update FN for system region: "
+      if (!isFavoredNodeApplicable(regionInfo)) {
+        throw new IOException("Can't update FN for a un-applicable region: "
             + regionInfo.getRegionNameAsString() + " with " + servers);
       }
 

@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -622,7 +623,7 @@ public class AssignmentManager {
 
   void processFavoredNodesForDaughters(HRegionInfo parent,
     HRegionInfo regionA, HRegionInfo regionB) throws IOException {
-    if (shouldAssignRegionsWithFavoredNodes) {
+    if (shouldAssignFavoredNodes(parent)) {
       List<ServerName> onlineServers = this.serverManager.getOnlineServersList();
       ((FavoredNodesPromoter) this.balancer).
           generateFavoredNodesForDaughter(onlineServers, parent, regionA, regionB);
@@ -631,10 +632,19 @@ public class AssignmentManager {
 
   void processFavoredNodesForMerge(HRegionInfo merged, HRegionInfo regionA, HRegionInfo regionB)
     throws IOException {
-    if (shouldAssignRegionsWithFavoredNodes) {
+    if (shouldAssignFavoredNodes(merged)) {
       ((FavoredNodesPromoter)this.balancer).
         generateFavoredNodesForMergedRegion(merged, regionA, regionB);
     }
+  }
+
+  /*
+   * Favored nodes should be applied only when FavoredNodes balancer is configured and the region
+   * belongs to a non-system table.
+   */
+  private boolean shouldAssignFavoredNodes(HRegionInfo region) {
+    return this.shouldAssignRegionsWithFavoredNodes
+        && FavoredNodesManager.isFavoredNodeApplicable(region);
   }
 
   /**
@@ -794,7 +804,7 @@ public class AssignmentManager {
           regionStates.updateRegionState(
             region, State.PENDING_OPEN, destination);
           List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
-          if (this.shouldAssignRegionsWithFavoredNodes) {
+          if (shouldAssignFavoredNodes(region)) {
             favoredNodes = server.getFavoredNodesManager().getFavoredNodes(region);
           }
           regionOpenInfos.add(new Pair<HRegionInfo, List<ServerName>>(
@@ -1102,7 +1112,7 @@ public class AssignmentManager {
             " to " + plan.getDestination();
         try {
           List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
-          if (this.shouldAssignRegionsWithFavoredNodes) {
+          if (shouldAssignFavoredNodes(region)) {
             favoredNodes = server.getFavoredNodesManager().getFavoredNodes(region);
           }
           serverManager.sendRegionOpen(plan.getDestination(), region, favoredNodes);
@@ -1847,7 +1857,7 @@ public class AssignmentManager {
                   return; // Region is not in the expected state any more
                 }
                 List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
-                if (shouldAssignRegionsWithFavoredNodes) {
+                if (shouldAssignFavoredNodes(hri)) {
                   favoredNodes =
                     ((MasterServices)server).getFavoredNodesManager().getFavoredNodes(hri);
                 }

@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.favored.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -323,6 +324,30 @@ public class TestTableFavoredNodes {
       assertEquals("Inconsistent FN bet RS and Master, RS diff: " + fnFromRS
         + " List on master: "  + fnList, 0, fnFromRS.size());
     }
+  }
+
+  /*
+   * Check favored nodes for system tables
+   */
+  @Test
+  public void testSystemTables() throws Exception {
+
+    TableName tableName = TableName.valueOf("createTable");
+    TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+
+    // All regions should have favored nodes
+    checkIfFavoredNodeInformationIsCorrect(tableName);
+
+    for (TableName sysTable :
+        admin.listTableNamesByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+      List<HRegionInfo> regions = admin.getTableRegions(sysTable);
+      for (HRegionInfo region : regions) {
+        assertNull("FN should be null for sys region", fnm.getFavoredNodes(region));
+      }
+    }
+
+    TEST_UTIL.deleteTable(tableName);
   }
 
   private void checkIfDaughterInherits2FN(List<ServerName> parentFN, List<ServerName> daughterFN) {

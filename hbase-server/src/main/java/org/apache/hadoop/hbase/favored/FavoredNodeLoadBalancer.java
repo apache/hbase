@@ -114,7 +114,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
           currentServer.getPort(), ServerName.NON_STARTCODE);
       List<HRegionInfo> list = entry.getValue();
       for (HRegionInfo region : list) {
-        if(region.getTable().isSystemTable()) {
+        if(!FavoredNodesManager.isFavoredNodeApplicable(region)) {
           continue;
         }
         List<ServerName> favoredNodes = fnm.getFavoredNodes(region);
@@ -209,7 +209,8 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer implements Favored
           new FavoredNodeAssignmentHelper(servers, rackManager);
       assignmentHelper.initialize();
       ServerName primary = super.randomAssignment(regionInfo, servers);
-      if (!assignmentHelper.canPlaceFavoredNodes()) {
+      if (!FavoredNodesManager.isFavoredNodeApplicable(regionInfo)
+          || !assignmentHelper.canPlaceFavoredNodes()) {
         return primary;
       }
       List<ServerName> favoredNodes = fnm.getFavoredNodes(regionInfo);
