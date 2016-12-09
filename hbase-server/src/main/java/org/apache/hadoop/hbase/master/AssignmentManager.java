@@ -2684,20 +2684,7 @@ public class AssignmentManager {
     regionOnline(hri, serverName, 1);
 
     try {
-      if (this.shouldAssignRegionsWithFavoredNodes) {
-        processFavoredNodesForMerge(hri, a, b);
-        /*
-         * This can be removed once HBASE-16119 (Procedure v2 Merge) is implemented and AM force
-         * assigns the merged region on the same region server. FavoredNodes for the region would
-         * be passed along with OpenRegionRequest and hence the following would become redundant.
-         */
-        List<ServerName> favoredNodes = server.getFavoredNodesManager().getFavoredNodes(hri);
-        if (favoredNodes != null) {
-          Map<HRegionInfo, List<ServerName>> regionFNMap = new HashMap<>(1);
-          regionFNMap.put(hri, favoredNodes);
-          server.getServerManager().sendFavoredNodes(serverName, regionFNMap);
-        }
-      }
+      processFavoredNodesForMerge(hri, a, b);
     } catch (IOException e) {
       LOG.error("Error while processing favored nodes after merge.", e);
       return StringUtils.stringifyException(e);
