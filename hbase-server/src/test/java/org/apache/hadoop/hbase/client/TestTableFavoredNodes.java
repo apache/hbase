@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position.TERTIARY
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -99,6 +100,7 @@ public class TestTableFavoredNodes {
     fnm = TEST_UTIL.getMiniHBaseCluster().getMaster().getFavoredNodesManager();
     admin = TEST_UTIL.getAdmin();
     admin.setBalancerRunning(false, true);
+    admin.enableCatalogJanitor(false);
     regionStates =
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
   }
@@ -115,6 +117,36 @@ public class TestTableFavoredNodes {
 
     // All regions should have favored nodes
     checkIfFavoredNodeInformationIsCorrect(tableName);
+
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+
+    TEST_UTIL.deleteTable(tableName);
+
+    checkNoFNForDeletedTable(regions);
+  }
+
+  /*
+   * Checks if favored node information is removed on table truncation.
+   */
+  @Test
+  public void testTruncateTable() throws Exception {
+
+    TableName tableName = TableName.valueOf("truncateTable");
+    TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+
+    // All regions should have favored nodes
+    checkIfFavoredNodeInformationIsCorrect(tableName);
+
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+    TEST_UTIL.truncateTable(tableName, true);
+
+    checkNoFNForDeletedTable(regions);
+    checkIfFavoredNodeInformationIsCorrect(tableName);
+
+    regions = admin.getTableRegions(tableName);
+    TEST_UTIL.truncateTable(tableName, false);
+    checkNoFNForDeletedTable(regions);
 
     TEST_UTIL.deleteTable(tableName);
   }
@@ -156,16 +188,25 @@ public class TestTableFavoredNodes {
     checkIfDaughterInherits2FN(parentFN, daughter2FN);
 
     assertEquals("Daughter's PRIMARY FN should be PRIMARY of parent",
-      parentFN.get(PRIMARY.ordinal()), daughter1FN.get(PRIMARY.ordinal()));
+        parentFN.get(PRIMARY.ordinal()), daughter1FN.get(PRIMARY.ordinal()));
     assertEquals("Daughter's SECONDARY FN should be SECONDARY of parent",
-      parentFN.get(SECONDARY.ordinal()), daughter1FN.get(SECONDARY.ordinal()));
+        parentFN.get(SECONDARY.ordinal()), daughter1FN.get(SECONDARY.ordinal()));
 
     assertEquals("Daughter's PRIMARY FN should be PRIMARY of parent",
         parentFN.get(PRIMARY.ordinal()), daughter2FN.get(PRIMARY.ordinal()));
     assertEquals("Daughter's SECONDARY FN should be TERTIARY of parent",
         parentFN.get(TERTIARY.ordinal()), daughter2FN.get(SECONDARY.ordinal()));
 
+    // Major compact table and run catalog janitor. Parent's FN should be removed
+    TEST_UTIL.getMiniHBaseCluster().compact(tableName, true);
+    assertEquals("Parent region should have been cleaned", 1, admin.runCatalogScan());
+    assertNull("Parent FN should be null", fnm.getFavoredNodes(parent));
+
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+
     TEST_UTIL.deleteTable(tableName);
+
+    checkNoFNForDeletedTable(regions);
   }
 
   /*
@@ -204,7 +245,23 @@ public class TestTableFavoredNodes {
     assertArrayEquals("Merged region doesn't match regionA's FN",
         regionAFN.toArray(), mergedFN.toArray());
 
+    // Major compact table and run catalog janitor. Parent FN should be removed
+    TEST_UTIL.getMiniHBaseCluster().compact(tableName, true);
+    assertEquals("Merge parents should have been cleaned", 1, admin.runCatalogScan());
+    assertNull("Parent FN should be null", fnm.getFavoredNodes(regionA));
+    assertNull("Parent FN should be null", fnm.getFavoredNodes(regionB));
+
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
+
     TEST_UTIL.deleteTable(tableName);
+
+    checkNoFNForDeletedTable(regions);
+  }
+
+  private void checkNoFNForDeletedTable(List<HRegionInfo> regions) {
+    for (HRegionInfo region : regions) {
+      assertNull("FN not null for deleted table's region: " + region, fnm.getFavoredNodes(region));
+    }
   }
 
   /*

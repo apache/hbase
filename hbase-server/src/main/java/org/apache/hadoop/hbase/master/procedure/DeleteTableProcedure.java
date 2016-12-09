@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -365,6 +366,12 @@ public class DeleteTableProcedure
 
     // clean region references from the server manager
     env.getMasterServices().getServerManager().removeRegions(regions);
+
+    // Clear Favored Nodes for this table
+    FavoredNodesManager fnm = env.getMasterServices().getFavoredNodesManager();
+    if (fnm != null) {
+      fnm.deleteFavoredNodesForRegions(regions);
+    }
   }
 
   protected static void deleteAssignmentState(final MasterProcedureEnv env,

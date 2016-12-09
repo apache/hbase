@@ -165,7 +165,7 @@ public class FavoredNodesManager {
     teritiaryRSToRegionMap.put(serverToUse, regionList);
   }
 
-  private synchronized void deleteFavoredNodesForRegions(Collection<HRegionInfo> regionInfoList) {
+  public synchronized void deleteFavoredNodesForRegions(Collection<HRegionInfo> regionInfoList) {
     for (HRegionInfo hri : regionInfoList) {
       List<ServerName> favNodes = getFavoredNodes(hri);
       if (favNodes != null) {

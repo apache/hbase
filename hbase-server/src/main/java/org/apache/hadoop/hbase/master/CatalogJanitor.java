@@ -27,6 +27,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -215,6 +217,10 @@ public class CatalogJanitor extends ScheduledChore {
       MetaTableAccessor.deleteMergeQualifiers(services.getConnection(), mergedRegion);
       services.getServerManager().removeRegion(regionA);
       services.getServerManager().removeRegion(regionB);
+      FavoredNodesManager fnm = this.services.getFavoredNodesManager();
+      if (fnm != null) {
+        fnm.deleteFavoredNodesForRegions(Lists.newArrayList(regionA, regionB));
+      }
       return true;
     }
     return false;
@@ -360,6 +366,10 @@ public class CatalogJanitor extends ScheduledChore {
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
       MetaTableAccessor.deleteRegion(this.connection, parent);
       services.getServerManager().removeRegion(parent);
+      FavoredNodesManager fnm = this.services.getFavoredNodesManager();
+      if (fnm != null) {
+        fnm.deleteFavoredNodesForRegions(Lists.newArrayList(parent));
+      }
       result = true;
     }
     return result;
