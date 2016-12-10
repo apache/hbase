@@ -99,8 +99,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
       return;
     }
     // ZK Node is in CLOSED state, assign it.
-    assignmentManager.getRegionStates().updateRegionState(
-      regionInfo, RegionState.State.CLOSED);
+    assignmentManager.getRegionStates().setRegionStateTOCLOSED(regionInfo, null);
     // This below has to do w/ online enable/disable of a table
     assignmentManager.removeClosedRegion(regionInfo);
     assignmentManager.invokeAssign(regionInfo, false);

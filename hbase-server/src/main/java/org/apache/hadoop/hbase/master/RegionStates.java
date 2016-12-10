@@ -420,6 +420,31 @@ public class RegionStates {
   }
 
   /**
+   * Set the region state to CLOSED
+   */
+  public RegionState setRegionStateTOCLOSED(
+      final HRegionInfo regionInfo,
+      final ServerName serverName) {
+    ServerName sn = serverName;
+    if (sn == null) {
+      RegionState regionState = getRegionState(regionInfo.getEncodedName());
+      if (regionState != null) {
+        sn = regionState.getServerName();
+      }
+      // TODO: if sn is null, should we dig into
+      // lastAssignments.get(regionInfo.getEncodedName() to get the server name?
+      // For now, I just keep the same logic that works in the past
+    }
+    // We have to make sure that the last region server is set to be the same as the
+    // current RS.  If we don't do that, we could run into situation that both AM and SSH
+    // think other would do the assignment work; at the end, neither does the work and
+    // region remains RIT.
+    // See HBASE-13330 and HBASE-17023
+    setLastRegionServerOfRegion(sn, regionInfo.getEncodedName());
+    return updateRegionState(regionInfo, State.CLOSED, sn);
+  }
+
+  /**
    * Update a region state. It will be put in transition if not already there.
    */
   public RegionState updateRegionState(
