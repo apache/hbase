@@ -99,6 +99,8 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationMetaCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKLockCleanerChore;
+import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleaner;
+import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleanerChore;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
@@ -324,6 +326,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   CatalogJanitor catalogJanitorChore;
   private ReplicationZKLockCleanerChore replicationZKLockCleanerChore;
+  private ReplicationZKNodeCleanerChore replicationZKNodeCleanerChore;
   private ReplicationMetaCleaner replicationMetaCleaner;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
@@ -1183,6 +1186,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     try {
+      replicationZKNodeCleanerChore = new ReplicationZKNodeCleanerChore(this, cleanerInterval,
+          new ReplicationZKNodeCleaner(this.conf, this.getZooKeeper(), this));
+      getChoreService().scheduleChore(replicationZKNodeCleanerChore);
+    } catch (Exception e) {
+      LOG.error("start replicationZKNodeCleanerChore failed", e);
+    }
+    try {
       replicationMetaCleaner = new ReplicationMetaCleaner(this, this, cleanerInterval);
       getChoreService().scheduleChore(replicationMetaCleaner);
     } catch (Exception e) {
@@ -1222,6 +1232,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.logCleaner != null) this.logCleaner.cancel(true);
     if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
     if (this.replicationZKLockCleanerChore != null) this.replicationZKLockCleanerChore.cancel(true);
+    if (this.replicationZKNodeCleanerChore != null) this.replicationZKNodeCleanerChore.cancel(true);
     if (this.replicationMetaCleaner != null) this.replicationMetaCleaner.cancel(true);
     if (this.quotaManager != null) this.quotaManager.stop();
     if (this.activeMasterManager != null) this.activeMasterManager.stop();

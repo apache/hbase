@@ -69,7 +69,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   /** Znode containing all replication queues for this region server. */
   private String myQueuesZnode;
   /** Name of znode we use to lock during failover */
-  private final static String RS_LOCK_ZNODE = "lock";
+  public final static String RS_LOCK_ZNODE = "lock";
 
   private static final Log LOG = LogFactory.getLog(ReplicationQueuesZKImpl.class);
 
