@@ -228,6 +228,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>elserj</id>
+      <name>Josh Elser</name>
+      <email>elserj@apache.org</email>
+      <timezone>-5</timezone>
+    </developer>
+    <developer>
       <id>enis</id>
       <name>Enis Soztutar</name>
       <email>enis@apache.org</email>
