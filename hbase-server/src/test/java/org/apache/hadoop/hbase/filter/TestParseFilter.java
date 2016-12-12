@@ -508,6 +508,22 @@ public class TestParseFilter {
   }
 
   @Test
+  public void testCompoundFilter5() throws IOException {
+    String filterStr = "(ValueFilter(!=, 'substring:pre'))";
+    ValueFilter valueFilter = doTestFilter(filterStr, ValueFilter.class);
+    assertTrue(valueFilter.getComparator() instanceof SubstringComparator);
+
+    filterStr = "(ValueFilter(>=,'binary:x') AND (ValueFilter(<=,'binary:y')))"
+            + " OR ValueFilter(=,'binary:ab')";
+    filter = f.parseFilterString(filterStr);
+    assertTrue(filter instanceof FilterList);
+    List<Filter> list = ((FilterList) filter).getFilters();
+    assertEquals(2, list.size());
+    assertTrue(list.get(0) instanceof FilterList);
+    assertTrue(list.get(1) instanceof ValueFilter);
+  }
+
+  @Test
   public void testIncorrectCompareOperator() throws IOException {
     String filterString = "RowFilter ('>>' , 'binary:region')";
     try {
