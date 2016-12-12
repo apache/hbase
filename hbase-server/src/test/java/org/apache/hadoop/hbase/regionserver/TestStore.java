@@ -381,7 +381,7 @@ public class TestStore {
     Assert.assertEquals(lowestTimeStampFromManager,lowestTimeStampFromFS);
 
     // after compact; check the lowest time stamp
-    store.compact(store.requestCompaction(), NoLimitThroughputController.INSTANCE);
+    store.compact(store.requestCompaction(), NoLimitThroughputController.INSTANCE, null);
     lowestTimeStampFromManager = StoreUtils.getLowestTimestamp(store.getStorefiles());
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs, store.getStorefiles());
     Assert.assertEquals(lowestTimeStampFromManager, lowestTimeStampFromFS);

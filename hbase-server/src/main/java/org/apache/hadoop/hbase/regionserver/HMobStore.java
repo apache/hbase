@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -463,28 +464,24 @@ public class HMobStore extends HStore {
   }
 
   /**
-   * The compaction in the store of mob.
+   * The compaction in the mob store.
    * The cells in this store contains the path of the mob files. There might be race
-   * condition between the major compaction and the sweeping in mob files.
-   * In order to avoid this, we need mutually exclude the running of the major compaction and
-   * sweeping in mob files.
+   * condition between the major compaction and the mob major compaction.
+   * In order to avoid this, we need mutually exclude the running of the major compaction
+   * and the mob major compaction.
    * The minor compaction is not affected.
-   * The major compaction is marked as retainDeleteMarkers when a sweeping is in progress.
+   * The major compaction is marked as retainDeleteMarkers when a mob major
+   * compaction is in progress.
    */
   @Override
   public List<StoreFile> compact(CompactionContext compaction,
-      ThroughputController throughputController) throws IOException {
-    // If it's major compaction, try to find whether there's a sweeper is running
+    ThroughputController throughputController, User user) throws IOException {
+    // If it's major compaction, try to find whether there's a mob major compaction is running
     // If yes, mark the major compaction as retainDeleteMarkers
     if (compaction.getRequest().isAllFiles()) {
-      // Use the ZooKeeper to coordinate.
-      // 1. Acquire a operation lock.
-      //   1.1. If no, mark the major compaction as retainDeleteMarkers and continue the compaction.
-      //   1.2. If the lock is obtained, search the node of sweeping.
-      //      1.2.1. If the node is there, the sweeping is in progress, mark the major
-      //             compaction as retainDeleteMarkers and continue the compaction.
-      //      1.2.2. If the node is not there, add a child to the major compaction node, and
-      //             run the compaction directly.
+      // Acquire a table lock to coordinate.
+      // 1. If no, mark the major compaction as retainDeleteMarkers and continue the compaction.
+      // 2. If the lock is obtained, run the compaction directly.
       TableLock lock = null;
       if (tableLockManager != null) {
         lock = tableLockManager.readLock(tableLockName, "Major compaction in HMobStore");
@@ -510,7 +507,7 @@ public class HMobStore extends HStore {
               + tableName + "], forcing the delete markers to be retained");
           compaction.getRequest().forceRetainDeleteMarkers();
         }
-        return super.compact(compaction, throughputController);
+        return super.compact(compaction, throughputController, user);
       } finally {
         if (tableLocked && lock != null) {
           try {
@@ -522,7 +519,7 @@ public class HMobStore extends HStore {
       }
     } else {
       // If it's not a major compaction, continue the compaction.
-      return super.compact(compaction, throughputController);
+      return super.compact(compaction, throughputController, user);
     }
   }
 
