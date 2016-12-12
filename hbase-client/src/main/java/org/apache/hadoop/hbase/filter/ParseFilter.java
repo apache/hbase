@@ -161,6 +161,10 @@ public class ParseFilter {
           throw new IllegalArgumentException("Mismatched parenthesis");
         }
         ByteBuffer argumentOnTopOfStack = operatorStack.peek();
+        if (argumentOnTopOfStack.equals(ParseConstants.LPAREN_BUFFER)) {
+          operatorStack.pop();
+          continue;
+        }
         while (!(argumentOnTopOfStack.equals(ParseConstants.LPAREN_BUFFER))) {
           filterStack.push(popArguments(operatorStack, filterStack));
           if (operatorStack.empty()) {
@@ -180,6 +184,9 @@ public class ParseFilter {
     // Finished parsing filterString
     while (!operatorStack.empty()) {
       filterStack.push(popArguments(operatorStack, filterStack));
+    }
+    if (filterStack.empty()) {
+        throw new IllegalArgumentException("Incorrect Filter String");
     }
     filter = filterStack.pop();
     if (!filterStack.empty()) {
