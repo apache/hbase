@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
@@ -108,6 +109,22 @@ public class TestReplicationAdmin {
       // OK!
     }
     assertEquals(1, admin.getPeersCount());
+
+    // try adding a peer contains "-"
+    try {
+      admin.addPeer(ID_ONE + "-" + ID_SECOND, KEY_ONE);
+    } catch (IllegalArgumentException iae) {
+      // OK!
+    }
+    assertEquals(1, admin.getPeersCount());
+    // try adding a peer named "lock"
+    try {
+      admin.addPeer(ReplicationQueuesZKImpl.RS_LOCK_ZNODE, KEY_ONE);
+    } catch (IllegalArgumentException iae) {
+      // OK!
+    }
+    assertEquals(1, admin.getPeersCount());
+
     // Try to remove an inexisting peer
     try {
       admin.removePeer(ID_SECOND);

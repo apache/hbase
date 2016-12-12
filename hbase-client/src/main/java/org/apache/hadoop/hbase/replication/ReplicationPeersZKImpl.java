@@ -113,7 +113,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
             + " because that id already exists.");
       }
 
-      if(id.contains("-")){
+      if(id.contains("-") || id.equals(ReplicationQueuesZKImpl.RS_LOCK_ZNODE)) {
         throw new IllegalArgumentException("Found invalid peer name:" + id);
       }
 
