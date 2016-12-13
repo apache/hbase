@@ -371,6 +371,24 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
+    define_test "set_peer_bandwidth: works with peer bandwidth upper limit" do
+      cluster_key = "localhost:2181:/hbase-test"
+      args = { CLUSTER_KEY => cluster_key }
+      command(:add_peer, @peer_id, args)
+      # Normally the ReplicationSourceManager will call ReplicationPeer#peer_added
+      # but here we have to do it ourselves
+      replication_admin.peer_added(@peer_id)
+
+      peer_config = command(:get_peer_config, @peer_id)
+      assert_equal(0, peer_config.get_bandwidth)
+      command(:set_peer_bandwidth, @peer_id, 2097152)
+      peer_config = command(:get_peer_config, @peer_id)
+      assert_equal(2097152, peer_config.get_bandwidth)
+
+      #cleanup
+      command(:remove_peer, @peer_id)
+    end
+
     define_test "get_peer_config: works with simple clusterKey peer" do
       cluster_key = "localhost:2181:/hbase-test"
       args = { CLUSTER_KEY => cluster_key }

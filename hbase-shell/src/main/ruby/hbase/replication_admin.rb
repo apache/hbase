@@ -252,6 +252,15 @@ module Hbase
       end
     end
 
+    # Set new bandwidth config for the specified peer
+    def set_peer_bandwidth(id, bandwidth)
+      rpc = get_peer_config(id)
+      unless rpc.nil?
+        rpc.setBandwidth(bandwidth)
+        @replication_admin.updatePeerConfig(id, rpc)
+      end
+    end
+
     #----------------------------------------------------------------------------------------------
     # Enables a table's replication switch
     def enable_tablerep(table_name)

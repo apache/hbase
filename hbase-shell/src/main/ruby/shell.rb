@@ -375,6 +375,7 @@ Shell.load_command_group(
     remove_peer_namespaces
     show_peer_tableCFs
     set_peer_tableCFs
+    set_peer_bandwidth
     list_replicated_tables
     append_peer_tableCFs
     remove_peer_tableCFs

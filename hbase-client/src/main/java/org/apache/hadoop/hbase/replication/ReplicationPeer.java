@@ -78,6 +78,12 @@ public interface ReplicationPeer {
    */
   public Set<String> getNamespaces();
 
+  /**
+   * Get the per node bandwidth upper limit for this peer
+   * @return the bandwidth upper limit
+   */
+  public long getPeerBandwidth();
+
   void trackPeerConfigChanges(ReplicationPeerConfigListener listener);
 
 }

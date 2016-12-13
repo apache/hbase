@@ -287,6 +287,9 @@ public final class ReplicationSerDeHelper {
       }
       peerConfig.setNamespaces(namespaces);
     }
+    if (peer.hasBandwidth()) {
+      peerConfig.setBandwidth(peer.getBandwidth());
+    }
     return peerConfig;
   }
 
@@ -326,6 +329,7 @@ public final class ReplicationSerDeHelper {
       }
     }
 
+    builder.setBandwidth(peerConfig.getBandwidth());
     return builder.build();
   }
 

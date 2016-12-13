@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -144,6 +145,8 @@ public class ReplicationSource extends Thread
   private WALEntryFilter walEntryFilter;
   // throttler
   private ReplicationThrottler throttler;
+  private long defaultBandwidth;
+  private long currentBandwidth;
   private ConcurrentHashMap<String, ReplicationSourceWorkerThread> workerThreads =
       new ConcurrentHashMap<String, ReplicationSourceWorkerThread>();
 
@@ -179,8 +182,6 @@ public class ReplicationSource extends Thread
     this.maxRetriesMultiplier =
         this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
     this.queueSizePerGroup = this.conf.getInt("hbase.regionserver.maxlogs", 32);
-    long bandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
-    this.throttler = new ReplicationThrottler((double)bandwidth/10.0);
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.manager = manager;
@@ -196,6 +197,15 @@ public class ReplicationSource extends Thread
     this.actualPeerId = replicationQueueInfo.getPeerId();
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
     this.replicationEndpoint = replicationEndpoint;
+
+    defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
+    currentBandwidth = getCurrentBandwidth();
+    this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
+
+    LOG.info("peerClusterZnode=" + peerClusterZnode + ", ReplicationSource : " + peerId
+        + " inited, replicationQueueSizeCapacity=" + replicationQueueSizeCapacity
+        + ", replicationQueueNbCapacity=" + replicationQueueNbCapacity + ", curerntBandwidth="
+        + this.currentBandwidth);
   }
 
   private void decorateConf() {
@@ -492,6 +502,13 @@ public class ReplicationSource extends Thread
    */
   public MetricsSource getSourceMetrics() {
     return this.metrics;
+  }
+
+  private long getCurrentBandwidth() {
+    ReplicationPeer replicationPeer = this.replicationPeers.getConnectedPeer(peerId);
+    long peerBandwidth = replicationPeer != null ? replicationPeer.getPeerBandwidth() : 0;
+    // user can set peer bandwidth to 0 to use default bandwidth
+    return peerBandwidth != 0 ? peerBandwidth : defaultBandwidth;
   }
 
   public class ReplicationSourceWorkerThread extends Thread {
@@ -1087,6 +1104,16 @@ public class ReplicationSource extends Thread
       return distinctRowKeys + totalHFileEntries;
     }
 
+    private void checkBandwidthChangeAndResetThrottler() {
+      long peerBandwidth = getCurrentBandwidth();
+      if (peerBandwidth != currentBandwidth) {
+        currentBandwidth = peerBandwidth;
+        throttler.setBandwidth((double) currentBandwidth / 10.0);
+        LOG.info("ReplicationSource : " + peerId
+            + " bandwidth throttling changed, currentBandWidth=" + currentBandwidth);
+      }
+    }
+
     /**
      * Do the shipping logic
      * @param currentWALisBeingWrittenTo was the current WAL being (seemingly)
@@ -1101,6 +1128,7 @@ public class ReplicationSource extends Thread
       }
       while (isWorkerActive()) {
         try {
+          checkBandwidthChangeAndResetThrottler();
           if (throttler.isEnabled()) {
             long sleepTicks = throttler.getNextSleepInterval(currentSize);
             if (sleepTicks > 0) {

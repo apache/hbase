@@ -122,6 +122,7 @@ message ReplicationPeer {
   repeated NameStringPair configuration = 4;
   repeated TableCF table_cfs = 5;
   repeated bytes namespaces = 6;
+  optional int64 bandwidth = 7;
 }
 
 /**

@@ -174,6 +174,11 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
   }
 
   @Override
+  public long getPeerBandwidth() {
+    return this.peerConfig.getBandwidth();
+  }
+
+  @Override
   public void trackPeerConfigChanges(ReplicationPeerConfigListener listener) {
     if (this.peerConfigTracker != null){
       this.peerConfigTracker.setListener(listener);
