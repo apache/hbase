@@ -73,6 +73,7 @@ include::_chapters/case_studies.adoc[]
 include::_chapters/ops_mgt.adoc[]
 include::_chapters/developer.adoc[]
 include::_chapters/unit_testing.adoc[]
+include::_chapters/protobuf.adoc[]
 include::_chapters/zookeeper.adoc[]
 include::_chapters/community.adoc[]
 

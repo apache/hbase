@@ -233,8 +233,13 @@ Take some time crafting your question.
 See link:http://www.mikeash.com/getting_answers.html[Getting Answers] for ideas on crafting good questions.
 A quality question that includes all context and exhibits evidence the author has tried to find answers in the manual and out on lists is more likely to get a prompt response.
 
+[[trouble.resources.slack]]
+=== Slack
+See  http://apache-hbase.slack.com Channel on Slack
+
 [[trouble.resources.irc]]
 === IRC
+(You will probably get a more prompt response on the Slack channel)
 
 #hbase on irc.freenode.net
 

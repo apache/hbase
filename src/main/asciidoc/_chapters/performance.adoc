@@ -156,6 +156,10 @@ See <<block.cache>>
 
 See <<recommended_configurations>>.
 
+[[perf.99th.percentile]]
+=== Improving the 99th Percentile
+Try link:[hedged_reads].
+
 [[perf.compactions.and.splits]]
 === Managing Compactions
 
@@ -751,15 +755,35 @@ Most people should leave this alone.
 Default = 7, or can collapse to at least 1/128th of original size.
 See the _Development Process_ section of the document link:https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf[BloomFilters in HBase] for more on what this option means.
 
+[[hedged.reads]]
 === Hedged Reads
 
-Hedged reads are a feature of HDFS, introduced in link:https://issues.apache.org/jira/browse/HDFS-5776[HDFS-5776].
+Hedged reads are a feature of HDFS, introduced in Hadoop 2.4.0 with link:https://issues.apache.org/jira/browse/HDFS-5776[HDFS-5776].
 Normally, a single thread is spawned for each read request.
-However, if hedged reads are enabled, the client waits some configurable amount of time, and if the read does not return, the client spawns a second read request, against a different block replica of the same data.
-Whichever read returns first is used, and the other read request is discarded.
-Hedged reads can be helpful for times where a rare slow read is caused by a transient error such as a failing disk or flaky network connection.
+However, if hedged reads are enabled, the client waits some
+configurable amount of time, and if the read does not return,
+the client spawns a second read request, against a different
+block replica of the same data. Whichever read returns first is
+used, and the other read request is discarded.
 
-Because an HBase RegionServer is a HDFS client, you can enable hedged reads in HBase, by adding the following properties to the RegionServer's hbase-site.xml and tuning the values to suit your environment.
+Hedged reads are "...very good at eliminating outlier datanodes, which
+in turn makes them very good choice for latency sensitive setups.
+But, if you are looking for maximizing throughput, hedged reads tend to
+create load amplification as things get slower in general. In short,
+the thing to watch out for is the non-graceful performance degradation
+when you are running close a certain throughput threshold." (Quote from Ashu Pachauri in HBASE-17083).
+
+Other concerns to keep in mind while running with hedged reads enabled
+include:
+
+* They may lead to network congestion. See link:https://issues.apache.org/jira/browse/HBASE-17083[HBASE-17083]
+* Make sure you set the thread pool large enough so as blocking on the pool does not become a bottleneck (Again see link:https://issues.apache.org/jira/browse/HBASE-17083[HBASE-17083])
+
+(From Yu Li up in HBASE-17083)
+
+Because an HBase RegionServer is a HDFS client, you can enable hedged
+reads in HBase, by adding the following properties to the RegionServer's
+hbase-site.xml and tuning the values to suit your environment.
 
 .Configuration for Hedged Reads
 * `dfs.client.hedged.read.threadpool.size` - the number of threads dedicated to servicing hedged reads.
@@ -789,6 +813,7 @@ See <<hbase_metrics>>  for more information.
   This could indicate that read requests are often slow, or that hedged reads are triggered too quickly.
 * hedgeReadOpsWin - the number of times the hedged read thread was faster than the original thread.
   This could indicate that a given RegionServer is having trouble servicing requests.
+
 
 [[perf.deleting]]
 == Deleting from HBase

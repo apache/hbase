@@ -100,7 +100,7 @@ In case the table goes out of date, the unit tests which check for accuracy of p
 |        | stopMaster | superuser\|global(A)
 |        | snapshot | superuser\|global(A)\|NS(A)\|TableOwner\|table(A)
 |        | listSnapshot | superuser\|global(A)\|SnapshotOwner
-|        | cloneSnapshot | superuser\|global(A)
+|        | cloneSnapshot | superuser\|global(A)\|(SnapshotOwner & TableName matches)
 |        | restoreSnapshot | superuser\|global(A)\|SnapshotOwner & (NS(A)\|TableOwner\|table(A))
 |        | deleteSnapshot | superuser\|global(A)\|SnapshotOwner
 |        | createNamespace | superuser\|global(A)

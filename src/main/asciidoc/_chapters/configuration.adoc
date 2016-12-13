@@ -225,22 +225,22 @@ Use the following legend to interpret this table:
 * "X" = not supported
 * "NT" = Not tested
 
-[cols="1,1,1,1,1,1,1", options="header"]
+[cols="1,1,1,1,1,1,1,1", options="header"]
 |===
-| | HBase-0.94.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x | HBase-1.2.x | HBase-1.3.x
-|Hadoop-1.0.x  | X | X | X | X | X | X
-|Hadoop-1.1.x | S | NT | X | X | X | X
-|Hadoop-0.23.x | S | X | X | X | X | X
-|Hadoop-2.0.x-alpha | NT | X | X | X | X | X
-|Hadoop-2.1.0-beta | NT | X | X | X | X | X
-|Hadoop-2.2.0 | NT | S | NT | NT | X  | X
-|Hadoop-2.3.x | NT | S | NT | NT | X  | X
-|Hadoop-2.4.x | NT | S | S | S | S | S
-|Hadoop-2.5.x | NT | S | S | S | S | S
-|Hadoop-2.6.0 | X | X | X | X | X | X
-|Hadoop-2.6.1+ | NT | NT | NT | NT | S | S
-|Hadoop-2.7.0 | X | X | X | X | X | X
-|Hadoop-2.7.1+ | NT | NT | NT | NT | S | S
+| | HBase-0.94.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x | HBase-1.2.x | HBase-1.3.x | HBase-2.0.x
+|Hadoop-1.0.x  | X | X | X | X | X | X | X
+|Hadoop-1.1.x | S | NT | X | X | X | X | X
+|Hadoop-0.23.x | S | X | X | X | X | X | X
+|Hadoop-2.0.x-alpha | NT | X | X | X | X | X | X
+|Hadoop-2.1.0-beta | NT | X | X | X | X | X | X
+|Hadoop-2.2.0 | NT | S | NT | NT | X  | X | X
+|Hadoop-2.3.x | NT | S | NT | NT | X  | X | X
+|Hadoop-2.4.x | NT | S | S | S | S | S | X
+|Hadoop-2.5.x | NT | S | S | S | S | S | X
+|Hadoop-2.6.0 | X | X | X | X | X | X | X
+|Hadoop-2.6.1+ | NT | NT | NT | NT | S | S | S
+|Hadoop-2.7.0 | X | X | X | X | X | X | X
+|Hadoop-2.7.1+ | NT | NT | NT | NT | S | S | S
 |===
 
 .Hadoop 2.6.x
@@ -406,6 +406,36 @@ Standalone mode is what is described in the <<quickstart,quickstart>> section.
 In standalone mode, HBase does not use HDFS -- it uses the local filesystem instead -- and it runs all HBase daemons and a local ZooKeeper all up in the same JVM.
 ZooKeeper binds to a well known port so clients may talk to HBase.
 
+[[standalone.over.hdfs]]
+==== Standalone HBase over HDFS
+A sometimes useful variation on standalone hbase has all daemons running inside the
+one JVM but rather than persist to the local filesystem, instead
+they persist to an HDFS instance.
+
+You might consider this profile when you are intent on
+a simple deploy profile, the loading is light, but the
+data must persist across node comings and goings. Writing to
+HDFS where data is replicated ensures the latter.
+
+To configure this standalone variant, edit your _hbase-site.xml_
+setting the _hbase.rootdir_ to point at a directory in your
+HDFS instance but then set _hbase.cluster.distributed_
+to _false_. For example:
+
+[source,xml]
+----
+<configuration>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://namenode.example.org:8020/hbase</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>false</value>
+  </property>
+</configuration>
+----
+ 
 [[distributed]]
 === Distributed
 
@@ -729,7 +759,7 @@ The following lines in the _hbase-env.sh_ file show how to set the `JAVA_HOME` e
 
 ----
 # The java implementation to use.
-export JAVA_HOME=/usr/java/jdk1.7.0/
+export JAVA_HOME=/usr/java/jdk1.8.0/
 
 # The maximum amount of heap to use. Default is left to JVM default.
 export HBASE_HEAPSIZE=4G

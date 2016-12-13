@@ -49,8 +49,15 @@ Sign up for the dev-list and the user-list.
 See the link:http://hbase.apache.org/mail-lists.html[mailing lists] page.
 Posing questions - and helping to answer other people's questions - is encouraged! There are varying levels of experience on both lists so patience and politeness are encouraged (and please stay on topic.)
 
+[[slack]]
+=== Slack
+The Apache HBase project has its own link: http://apache-hbase.slack.com[Slack Channel] for real-time questions
+and discussion. Mail dev@hbase.apache.org to request an invite.
+
 [[irc]]
 === Internet Relay Chat (IRC)
+
+(NOTE: Our IRC channel seems to have been deprecated in favor of the above Slack channel)
 
 For real-time questions and discussions, use the `#hbase` IRC channel on the link:https://freenode.net/[FreeNode] IRC network.
 FreeNode offers a web-based client, but most people prefer a native client, and several clients are available for each operating system.
@@ -108,7 +115,7 @@ We encourage you to have this formatter in place in eclipse when editing HBase c
 . In Preferences, Go to `Java->Code Style->Formatter`.
 . Click btn:[Import] and browse to the location of the _hbase_eclipse_formatter.xml_ file, which is in the _dev-support/_ directory.
   Click btn:[Apply].
-. Still in Preferences, click .
+. Still in Preferences, click `Java->Editor->Save Actions`.
   Be sure the following options are selected:
 +
 * Perform the selected actions on save

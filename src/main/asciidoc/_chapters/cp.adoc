@@ -184,13 +184,15 @@ WalObserver::
 <<cp_example,Examples>> provides working examples of observer coprocessors.
 
 
+
+[[cpeps]]
 === Endpoint Coprocessor
 
 Endpoint processors allow you to perform computation at the location of the data.
 See <<cp_analogies, Coprocessor Analogy>>. An example is the need to calculate a running
 average or summation for an entire table which spans hundreds of regions.
 
-In contract to observer coprocessors, where your code is run transparently, endpoint
+In contrast to observer coprocessors, where your code is run transparently, endpoint
 coprocessors must be explicitly invoked using the
 link:https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Table.html#coprocessorService%28java.lang.Class,%20byte%5B%5D,%20byte%5B%5D,%20org.apache.hadoop.hbase.client.coprocessor.Batch.Call%29[CoprocessorService()]
 method available in
@@ -207,6 +209,18 @@ See
 link:https://issues.apache.org/jira/browse/HBASE-5448[HBASE-5448]). To upgrade your
 HBase cluster from 0.94 or earlier to 0.96 or later, you need to reimplement your
 coprocessor.
+
+Coprocessor Endpoints should make no use of HBase internals and
+only avail of public APIs; ideally a CPEP should depend on Interfaces
+and data structures only. This is not always possible but beware
+that doing so makes the Endpoint brittle, liable to breakage as HBase
+internals evolve. HBase internal APIs annotated as private or evolving
+do not have to respect semantic versioning rules or general java rules on
+deprecation before removal. While generated protobuf files are
+absent the hbase audience annotations -- they are created by the
+protobuf protoc tool which knows nothing of how HBase works --
+they should be consided `@InterfaceAudience.Private` so are liable to
+change.
 
 <<cp_example,Examples>> provides working examples of endpoint coprocessors.
 
@@ -256,7 +270,7 @@ When calling out to registered observers, the framework executes their callbacks
 sorted order of their priority. +
 Ties are broken arbitrarily.
 
-. Put your code HBase's classpath. One easy way to do this is to drop the jar
+. Put your code on HBase's classpath. One easy way to do this is to drop the jar
   (containing you code and all the dependencies) into the `lib/` directory in the
   HBase installation.
 
@@ -324,10 +338,9 @@ it in HDFS. +
 https://issues.apache.org/jira/browse/HBASE-14548[HBASE-14548] allows a directory containing the jars
 or some wildcards to be specified, such as: hdfs://<namenode>:<port>/user/<hadoop-user>/ or
 hdfs://<namenode>:<port>/user/<hadoop-user>/*.jar. Please note that if a directory is specified,
-all jar files(.jar) directly in the directory are added,
-but it does not search files in the subtree rooted in the directory.
-And do not contain any wildcard if you would like to specify a directory.
-This enhancement applies to the ways of using the JAVA API as well.
+all jar files(.jar) in the directory are added. It does not search for files in sub-directories.
+Do not use a wildcard if you would like to specify a directory. This enhancement applies to the
+usage via the JAVA API as well.
 * Class name: The full class name of the Coprocessor.
 * Priority: An integer. The framework will determine the execution sequence of all configured
 observers registered at the same hook using priorities. This field can be left blank. In that
@@ -462,10 +475,7 @@ In HBase 0.96 and newer, you can instead use the `removeCoprocessor()` method of
 
 [[cp_example]]
 == Examples
-HBase ships examples for Observer Coprocessor in
-link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/coprocessor/example/ZooKeeperScanPolicyObserver.html[ZooKeeperScanPolicyObserver]
-and for Endpoint Coprocessor in
-link:http://hbase.apache.org/xref/org/apache/hadoop/hbase/coprocessor/example/RowCountEndpoint.html[RowCountEndpoint]
+HBase ships examples for Observer Coprocessor.
 
 A more detailed example is given below.
 
@@ -808,3 +818,23 @@ The metrics sampling rate as described in <<hbase_metrics>>.
 
 .Coprocessor Metrics UI
 image::coprocessor_stats.png[]
+
+== Restricting Coprocessor Usage
+
+Restricting arbitrary user coprocessors can be a big concern in multitenant environments. HBase provides a continuum of options for ensuring only expected coprocessors are running:
+
+- `hbase.coprocessor.enabled`: Enables or disables all coprocessors. This will limit the functionality of HBase, as disabling all coprocessors will disable some security providers. An example coproccessor so affected is `org.apache.hadoop.hbase.security.access.AccessController`.
+* `hbase.coprocessor.user.enabled`: Enables or disables loading coprocessors on tables (i.e. user coprocessors).
+* One can statically load coprocessors via the following tunables in `hbase-site.xml`:
+** `hbase.coprocessor.regionserver.classes`: A comma-separated list of coprocessors that are loaded by region servers
+** `hbase.coprocessor.region.classes`: A comma-separated list of RegionObserver and Endpoint coprocessors
+** `hbase.coprocessor.user.region.classes`: A comma-separated list of coprocessors that are loaded by all regions
+** `hbase.coprocessor.master.classes`: A comma-separated list of coprocessors that are loaded by the master (MasterObserver coprocessors)
+** `hbase.coprocessor.wal.classes`: A comma-separated list of WALObserver coprocessors to load
+* `hbase.coprocessor.abortonerror`: Whether to abort the daemon which has loaded the coprocessor if the coprocessor should error other than `IOError`. If this is set to false and an access controller coprocessor should have a fatal error the coprocessor will be circumvented, as such in secure installations this is advised to be `true`; however, one may override this on a per-table basis for user coprocessors, to ensure they do not abort their running region server and are instead unloaded on error.
+* `hbase.coprocessor.region.whitelist.paths`: A comma separated list available for those loading `org.apache.hadoop.hbase.security.access.CoprocessorWhitelistMasterObserver` whereby one can use the following options to white-list paths from which coprocessors may be loaded.
+** Coprocessors on the classpath are implicitly white-listed
+** `*` to wildcard all coprocessor paths
+** An entire filesystem (e.g. `hdfs://my-cluster/`)
+** A wildcard path to be evaluated by link:https://commons.apache.org/proper/commons-io/javadocs/api-release/org/apache/commons/io/FilenameUtils.html[FilenameUtils.wildcardMatch]
+** Note: Path can specify scheme or not (e.g. `file:///usr/hbase/lib/coprocessors` or for all filesystems `/usr/hbase/lib/coprocessors`)
