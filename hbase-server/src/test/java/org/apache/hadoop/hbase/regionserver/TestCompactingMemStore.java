@@ -82,7 +82,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void setUp() throws Exception {
     compactingSetUp();
     this.memstore = new CompactingMemStore(HBaseConfiguration.create(), CellComparator.COMPARATOR,
-        store, regionServicesForStores);
+        store, regionServicesForStores, HColumnDescriptor.MemoryCompaction.EAGER);
   }
 
   protected void compactingSetUp() throws Exception {
@@ -135,7 +135,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
 
     // use case 3: first in snapshot second in kvset
     this.memstore = new CompactingMemStore(HBaseConfiguration.create(),
-        CellComparator.COMPARATOR, store, regionServicesForStores);
+        CellComparator.COMPARATOR, store, regionServicesForStores,
+        HColumnDescriptor.MemoryCompaction.EAGER);
     this.memstore.add(kv1.clone(), null);
     // As compaction is starting in the background the repetition
     // of the k1 might be removed BUT the scanners created earlier
@@ -468,8 +469,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       throws IOException {
 
     // set memstore to do data compaction and not to use the speculative scan
-    memstore.getConfiguration().set("hbase.hregion.compacting.memstore.type", "data-compaction");
-    ((CompactingMemStore)memstore).initiateType();
+    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.EAGER;
+    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(compactionType));
+    ((CompactingMemStore)memstore).initiateType(compactionType);
 
     byte[] row = Bytes.toBytes("testrow");
     byte[] fam = Bytes.toBytes("testfamily");
@@ -549,8 +552,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void testCompaction1Bucket() throws IOException {
 
     // set memstore to do data compaction and not to use the speculative scan
-    memstore.getConfiguration().set("hbase.hregion.compacting.memstore.type", "data-compaction");
-    ((CompactingMemStore)memstore).initiateType();
+    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.EAGER;
+    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(compactionType));
+    ((CompactingMemStore)memstore).initiateType(compactionType);
 
     String[] keys1 = { "A", "A", "B", "C" }; //A1, A2, B3, C4
 
@@ -584,8 +589,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void testCompaction2Buckets() throws IOException {
 
     // set memstore to do data compaction and not to use the speculative scan
-    memstore.getConfiguration().set("hbase.hregion.compacting.memstore.type", "data-compaction");
-    ((CompactingMemStore)memstore).initiateType();
+    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.EAGER;
+    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(compactionType));
+    ((CompactingMemStore)memstore).initiateType(compactionType);
     String[] keys1 = { "A", "A", "B", "C" };
     String[] keys2 = { "A", "B", "D" };
 
@@ -637,8 +644,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void testCompaction3Buckets() throws IOException {
 
     // set memstore to do data compaction and not to use the speculative scan
-    memstore.getConfiguration().set("hbase.hregion.compacting.memstore.type", "data-compaction");
-    ((CompactingMemStore)memstore).initiateType();
+    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.EAGER;
+    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(compactionType));
+    ((CompactingMemStore)memstore).initiateType(compactionType);
     String[] keys1 = { "A", "A", "B", "C" };
     String[] keys2 = { "A", "B", "D" };
     String[] keys3 = { "D", "B", "B" };

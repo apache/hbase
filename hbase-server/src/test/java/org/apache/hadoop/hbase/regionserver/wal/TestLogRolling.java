@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -74,14 +75,15 @@ public class TestLogRolling extends AbstractTestLogRolling {
     /**** configuration for testLogRollOnDatanodeDeath ****/
     // lower the namenode & datanode heartbeat so the namenode
     // quickly detects datanode failures
-    TEST_UTIL.getConfiguration().setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
-    TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
+    Configuration conf= TEST_UTIL.getConfiguration();
+    conf.setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
+    conf.setInt("dfs.heartbeat.interval", 1);
     // the namenode might still try to choose the recently-dead datanode
     // for a pipeline, so try to a new pipeline multiple times
-    TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.tolerable.lowreplication", 2);
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.lowreplication.rolllimit", 3);
-    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "filesystem");
+    conf.setInt("dfs.client.block.write.retries", 30);
+    conf.setInt("hbase.regionserver.hlog.tolerable.lowreplication", 2);
+    conf.setInt("hbase.regionserver.hlog.lowreplication.rolllimit", 3);
+    conf.set(WALFactory.WAL_PROVIDER, "filesystem");
     AbstractTestLogRolling.setUpBeforeClass();
   }
 

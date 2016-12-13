@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -100,6 +101,8 @@ public class TestAcidGuarantees implements Tool {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
             ConstantSizeRegionSplitPolicy.class.getName());
     conf.setInt("hfile.format.version", 3); // for mob tests
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.NONE));
     util = new HBaseTestingUtility(conf);
   }
 

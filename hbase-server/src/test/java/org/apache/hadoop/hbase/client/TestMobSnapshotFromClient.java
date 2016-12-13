@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.client;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -50,6 +52,8 @@ public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
   protected static void setupConf(Configuration conf) {
     TestSnapshotFromClient.setupConf(conf);
     conf.setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.NONE));
   }
 
   @Override

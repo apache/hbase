@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HColumnDescriptor.MemoryCompaction;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -53,15 +54,6 @@ public class MemStoreCompactor {
           + ClassSize.ATOMIC_BOOLEAN    // isInterrupted (the internals)
       );
 
-  // Configuration options for MemStore compaction
-  static final String INDEX_COMPACTION_CONFIG = "index-compaction";
-  static final String DATA_COMPACTION_CONFIG  = "data-compaction";
-
-  // The external setting of the compacting MemStore behaviour
-  // Compaction of the index without the data is the default
-  static final String COMPACTING_MEMSTORE_TYPE_KEY = "hbase.hregion.compacting.memstore.type";
-  static final String COMPACTING_MEMSTORE_TYPE_DEFAULT = INDEX_COMPACTION_CONFIG;
-
   // The upper bound for the number of segments we store in the pipeline prior to merging.
   // This constant is subject to further experimentation.
   private static final int THRESHOLD_PIPELINE_SEGMENTS = 1;
@@ -93,11 +85,12 @@ public class MemStoreCompactor {
 
   private Action action = Action.FLATTEN;
 
-  public MemStoreCompactor(CompactingMemStore compactingMemStore) {
+  public MemStoreCompactor(CompactingMemStore compactingMemStore,
+      MemoryCompaction compactionPolicy) {
     this.compactingMemStore = compactingMemStore;
     this.compactionKVMax = compactingMemStore.getConfiguration()
         .getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
-    initiateAction();
+    initiateAction(compactionPolicy);
   }
 
   /**----------------------------------------------------------------------
@@ -277,17 +270,17 @@ public class MemStoreCompactor {
    * Initiate the action according to user config, after its default is Action.MERGE
    */
   @VisibleForTesting
-  void initiateAction() {
-    String memStoreType = compactingMemStore.getConfiguration().get(COMPACTING_MEMSTORE_TYPE_KEY,
-        COMPACTING_MEMSTORE_TYPE_DEFAULT);
+  void initiateAction(MemoryCompaction compType) {
 
-    switch (memStoreType) {
-    case INDEX_COMPACTION_CONFIG: action = Action.MERGE;
+    switch (compType){
+    case NONE: action = Action.NOOP;
       break;
-    case DATA_COMPACTION_CONFIG: action = Action.COMPACT;
+    case BASIC: action = Action.MERGE;
+      break;
+    case EAGER: action = Action.COMPACT;
       break;
     default:
-      throw new RuntimeException("Unknown memstore type " + memStoreType); // sanity check
+      throw new RuntimeException("Unknown memstore type " + compType); // sanity check
     }
   }
 }

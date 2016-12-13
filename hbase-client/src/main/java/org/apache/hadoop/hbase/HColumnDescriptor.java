@@ -66,6 +66,32 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   public static final String IN_MEMORY_COMPACTION = "IN_MEMORY_COMPACTION";
 
+  /**
+   * Enum describing all possible memory compaction policies
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public enum MemoryCompaction {
+    /**
+     * No memory compaction, when size threshold is exceeded data is flushed to disk
+     */
+    NONE,
+    /**
+     * Basic policy applies optimizations which modify the index to a more compacted representation.
+     * This is beneficial in all access patterns. The smaller the cells are the greater the
+     * benefit of this policy.
+     * This is the default policy.
+     */
+    BASIC,
+    /**
+     * In addition to compacting the index representation as the basic policy, eager policy
+     * eliminates duplication while the data is still in memory (much like the
+     * on-disk compaction does after the data is flushed to disk). This policy is most useful for
+     * applications with high data churn or small working sets.
+     */
+    EAGER
+  }
+
   // These constants are used as FileInfo keys
   public static final String COMPRESSION = "COMPRESSION";
   public static final String COMPRESSION_COMPACT = "COMPRESSION_COMPACT";
@@ -174,11 +200,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   public static final boolean DEFAULT_IN_MEMORY = false;
 
   /**
-   * Default setting for whether to set the memstore of this column family as compacting or not.
-   */
-  public static final boolean DEFAULT_IN_MEMORY_COMPACTION = false;
-
-  /**
    * Default setting for preventing deleted from being collected immediately.
    */
   public static final KeepDeletedCells DEFAULT_KEEP_DELETED = KeepDeletedCells.FALSE;
@@ -263,7 +284,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     DEFAULT_VALUES.put(TTL, String.valueOf(DEFAULT_TTL));
     DEFAULT_VALUES.put(BLOCKSIZE, String.valueOf(DEFAULT_BLOCKSIZE));
     DEFAULT_VALUES.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
-    DEFAULT_VALUES.put(IN_MEMORY_COMPACTION, String.valueOf(DEFAULT_IN_MEMORY_COMPACTION));
     DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
     DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
     DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
@@ -329,7 +349,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     setMinVersions(DEFAULT_MIN_VERSIONS);
     setKeepDeletedCells(DEFAULT_KEEP_DELETED);
     setInMemory(DEFAULT_IN_MEMORY);
-    setInMemoryCompaction(DEFAULT_IN_MEMORY_COMPACTION);
     setBlockCacheEnabled(DEFAULT_BLOCKCACHE);
     setTimeToLive(DEFAULT_TTL);
     setCompressionType(Compression.Algorithm.valueOf(DEFAULT_COMPRESSION.toUpperCase(Locale.ROOT)));
@@ -688,24 +707,24 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   }
 
   /**
-   * @return True if we prefer to keep the in-memory data compacted
+   * @return in-memory compaction policy if set for the cf. Returns null if no policy is set for
    *          for this column family
    */
-  public boolean isInMemoryCompaction() {
+  public MemoryCompaction getInMemoryCompaction() {
     String value = getValue(IN_MEMORY_COMPACTION);
     if (value != null) {
-      return Boolean.parseBoolean(value);
+      return MemoryCompaction.valueOf(value);
     }
-    return DEFAULT_IN_MEMORY_COMPACTION;
+    return null;
   }
 
   /**
-   * @param inMemoryCompaction True if we prefer to keep the in-memory data compacted
+   * @param inMemoryCompaction the prefered in-memory compaction policy
    *                  for this column family
    * @return this (for chained invocation)
    */
-  public HColumnDescriptor setInMemoryCompaction(boolean inMemoryCompaction) {
-    return setValue(IN_MEMORY_COMPACTION, Boolean.toString(inMemoryCompaction));
+  public HColumnDescriptor setInMemoryCompaction(MemoryCompaction inMemoryCompaction) {
+    return setValue(IN_MEMORY_COMPACTION, inMemoryCompaction.toString());
   }
 
   public KeepDeletedCells getKeepDeletedCells() {

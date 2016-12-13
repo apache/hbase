@@ -74,6 +74,8 @@ public class TestRecoveredEdits {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     // Set it so we flush every 1M or so.  Thats a lot.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.NONE));
     // The file of recovered edits has a column family of 'meta'. Also has an encoded regionname
     // of 4823016d8fca70b25503ee07f4c6d79f which needs to match on replay.
     final String encodedRegionName = "4823016d8fca70b25503ee07f4c6d79f";

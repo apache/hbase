@@ -241,12 +241,22 @@ public class HStore implements Store {
     // to clone it?
     scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.comparator);
     String className = conf.get(MEMSTORE_CLASS_NAME, DefaultMemStore.class.getName());
-    if (family.isInMemoryCompaction()) {
-      className = CompactingMemStore.class.getName();
-      this.memstore = new CompactingMemStore(conf, this.comparator, this,
-          this.getHRegion().getRegionServicesForStores());
-    } else {
-      this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
+    HColumnDescriptor.MemoryCompaction inMemoryCompaction = family.getInMemoryCompaction();
+    if(inMemoryCompaction == null) {
+      inMemoryCompaction = HColumnDescriptor.MemoryCompaction.valueOf(conf.get
+          (CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+              CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT));
+    }
+    switch (inMemoryCompaction) {
+      case BASIC :
+      case EAGER :
+        className = CompactingMemStore.class.getName();
+        this.memstore = new CompactingMemStore(conf, this.comparator, this,
+            this.getHRegion().getRegionServicesForStores(), inMemoryCompaction);
+        break;
+      case NONE :
+      default:
+          this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
           Configuration.class, CellComparator.class }, new Object[] { conf, this.comparator });
     }
     LOG.info("Memstore class name is " + className);

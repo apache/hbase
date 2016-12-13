@@ -71,7 +71,12 @@ public class TestWalAndCompactingMemStoreFlush {
     for (byte[] family : FAMILIES) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       // even column families are going to have compacted memstore
-      if(i%2 == 0) hcd.setInMemoryCompaction(true);
+      if(i%2 == 0) {
+        hcd.setInMemoryCompaction(HColumnDescriptor.MemoryCompaction.valueOf(
+            conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
+      } else {
+        hcd.setInMemoryCompaction(HColumnDescriptor.MemoryCompaction.NONE);
+      }
       htd.addFamily(hcd);
       i++;
     }
@@ -123,7 +128,7 @@ public class TestWalAndCompactingMemStoreFlush {
   }
 
   @Test(timeout = 180000)
-  public void testSelectiveFlushWithDataCompaction() throws IOException {
+  public void testSelectiveFlushWithEager() throws IOException {
 
     // Set up the configuration
     Configuration conf = HBaseConfiguration.create();
@@ -133,10 +138,11 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.25);
     // set memstore to do data compaction
-    conf.set("hbase.hregion.compacting.memstore.type", "data-compaction");
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.EAGER));
 
     // Intialize the region
-    Region region = initHRegion("testSelectiveFlushWithDataCompaction", conf);
+    Region region = initHRegion("testSelectiveFlushWithEager", conf);
 
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
@@ -368,7 +374,8 @@ public class TestWalAndCompactingMemStoreFlush {
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to index-compaction
-    conf.set("hbase.hregion.compacting.memstore.type", "index-compaction");
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.BASIC));
 
     // Initialize the region
     Region region = initHRegion("testSelectiveFlushWithIndexCompaction", conf);
@@ -621,7 +628,8 @@ public class TestWalAndCompactingMemStoreFlush {
         1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to do data compaction and not to use the speculative scan
-    conf.set("hbase.hregion.compacting.memstore.type", "data-compaction");
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.EAGER));
 
     // Intialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushAndWALinDataCompaction", conf);
@@ -751,7 +759,8 @@ public class TestWalAndCompactingMemStoreFlush {
         200 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to do data compaction and not to use the speculative scan
-    conf.set("hbase.hregion.compacting.memstore.type", "index-compaction");
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.BASIC));
 
     // Intialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushAndWALinDataCompaction", conf);
@@ -874,7 +883,8 @@ public class TestWalAndCompactingMemStoreFlush {
         200 * 1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to do data compaction and not to use the speculative scan
-    conf.set("hbase.hregion.compacting.memstore.type", "index-compaction");
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.BASIC));
 
     // Successfully initialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushAndWALinDataCompaction", conf);

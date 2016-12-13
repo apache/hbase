@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -92,27 +93,30 @@ public abstract class AbstractTestLogRolling  {
 
     /**** configuration for testLogRolling ****/
     // Force a region split after every 768KB
-    TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE, 768L * 1024L);
+    Configuration conf= TEST_UTIL.getConfiguration();
+    conf.setLong(HConstants.HREGION_MAX_FILESIZE, 768L * 1024L);
 
     // We roll the log after every 32 writes
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.maxlogentries", 32);
+    conf.setInt("hbase.regionserver.maxlogentries", 32);
 
-    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.logroll.errors.tolerated", 2);
-    TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
+    conf.setInt("hbase.regionserver.logroll.errors.tolerated", 2);
+    conf.setInt("hbase.rpc.timeout", 10 * 1000);
 
     // For less frequently updated regions flush after every 2 flushes
-    TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.optionalflushcount", 2);
+    conf.setInt("hbase.hregion.memstore.optionalflushcount", 2);
 
     // We flush the cache after every 8192 bytes
-    TEST_UTIL.getConfiguration().setInt(
-        HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 8192);
+    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 8192);
 
     // Increase the amount of time between client retries
-    TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 10 * 1000);
+    conf.setLong("hbase.client.pause", 10 * 1000);
 
     // Reduce thread wake frequency so that other threads can get
     // a chance to run.
-    TEST_UTIL.getConfiguration().setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
+    conf.setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
+
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.NONE));
   }
 
   @Before

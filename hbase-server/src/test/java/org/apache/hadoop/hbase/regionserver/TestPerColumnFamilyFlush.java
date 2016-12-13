@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -81,6 +82,12 @@ public class TestPerColumnFamilyFlush {
   public static final byte[] FAMILY2 = FAMILIES[1];
 
   public static final byte[] FAMILY3 = FAMILIES[2];
+
+  @Before
+  public void setUp() throws IOException {
+    TEST_UTIL.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.NONE));
+  }
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
@@ -128,7 +135,9 @@ public class TestPerColumnFamilyFlush {
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllLargeStoresPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
-      40 * 1024);
+        40 * 1024);
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.NONE));
     // Intialize the region
     Region region = initHRegion("testSelectiveFlushWithDataCompaction", conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3

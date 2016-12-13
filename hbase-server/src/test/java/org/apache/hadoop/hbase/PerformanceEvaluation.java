@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.*;
@@ -375,9 +376,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     if (opts.inMemoryCF) {
       family.setInMemory(true);
     }
-    if(opts.inMemoryCompaction) {
-      family.setInMemoryCompaction(true);
-    }
+    family.setInMemoryCompaction(opts.inMemoryCompaction);
     desc.addFamily(family);
     if (opts.replicas != DEFAULT_OPTS.replicas) {
       desc.setRegionReplication(opts.replicas);
@@ -636,7 +635,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int columns = 1;
     int caching = 30;
     boolean addColumns = true;
-    boolean inMemoryCompaction = false;
+    HColumnDescriptor.MemoryCompaction inMemoryCompaction =
+        HColumnDescriptor.MemoryCompaction.valueOf(
+            CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT);
 
     public TestOptions() {}
 
@@ -981,11 +982,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.addColumns = addColumns;
     }
 
-    public void setInMemoryCompaction(boolean inMemoryCompaction) {
+    public void setInMemoryCompaction(HColumnDescriptor.MemoryCompaction inMemoryCompaction) {
       this.inMemoryCompaction = inMemoryCompaction;
     }
 
-    public boolean getInMemoryCompaction() {
+    public HColumnDescriptor.MemoryCompaction getInMemoryCompaction() {
       return this.inMemoryCompaction;
     }
   }
@@ -2139,7 +2140,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       final String inMemoryCompaction = "--inmemoryCompaction=";
       if (cmd.startsWith(inMemoryCompaction)) {
-        opts.inMemoryCompaction = Boolean.parseBoolean(cmd.substring(inMemoryCompaction.length()));
+        opts.inMemoryCompaction = opts.inMemoryCompaction.valueOf(cmd.substring
+            (inMemoryCompaction.length()));
         continue;
       }
 

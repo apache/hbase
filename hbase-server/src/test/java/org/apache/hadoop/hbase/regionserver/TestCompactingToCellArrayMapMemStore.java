@@ -62,12 +62,13 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     compactingSetUp();
     Configuration conf = HBaseConfiguration.create();
 
-    // set memstore to do data compaction and not to use the speculative scan
-    conf.set("hbase.hregion.compacting.memstore.type", "data-compaction");
+    // set memstore to do data compaction
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(HColumnDescriptor.MemoryCompaction.EAGER));
 
     this.memstore =
         new CompactingMemStore(conf, CellComparator.COMPARATOR, store,
-            regionServicesForStores);
+            regionServicesForStores, HColumnDescriptor.MemoryCompaction.EAGER);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -266,8 +267,10 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     String[] keys2 = { "A", "B", "D", "G", "I", "J"};
     String[] keys3 = { "D", "B", "B", "E" };
 
-    memstore.getConfiguration().set("hbase.hregion.compacting.memstore.type", "index-compaction");
-    ((CompactingMemStore)memstore).initiateType();
+    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.BASIC;
+    memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+        String.valueOf(compactionType));
+    ((CompactingMemStore)memstore).initiateType(compactionType);
     addRowsByKeys(memstore, keys1);
 
     ((CompactingMemStore) memstore).flushInMemory(); // push keys to pipeline should not compact

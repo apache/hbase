@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -51,6 +52,11 @@ import org.apache.hadoop.hbase.wal.WAL;
 @InterfaceAudience.Private
 public class CompactingMemStore extends AbstractMemStore {
 
+  // The external setting of the compacting MemStore behaviour
+  public static final String COMPACTING_MEMSTORE_TYPE_KEY =
+      "hbase.hregion.compacting.memstore.type";
+  public static final String COMPACTING_MEMSTORE_TYPE_DEFAULT =
+      String.valueOf(HColumnDescriptor.MemoryCompaction.BASIC);
   // Default fraction of in-memory-flush size w.r.t. flush-to-disk size
   public static final String IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY =
       "hbase.memstore.inmemoryflush.threshold.factor";
@@ -75,12 +81,13 @@ public class CompactingMemStore extends AbstractMemStore {
       + CompactionPipeline.DEEP_OVERHEAD + MemStoreCompactor.DEEP_OVERHEAD;
 
   public CompactingMemStore(Configuration conf, CellComparator c,
-      HStore store, RegionServicesForStores regionServices) throws IOException {
+      HStore store, RegionServicesForStores regionServices,
+      HColumnDescriptor.MemoryCompaction compactionPolicy) throws IOException {
     super(conf, c);
     this.store = store;
     this.regionServices = regionServices;
     this.pipeline = new CompactionPipeline(getRegionServices());
-    this.compactor = new MemStoreCompactor(this);
+    this.compactor = new MemStoreCompactor(this, compactionPolicy);
     initInmemoryFlushSize(conf);
   }
 
@@ -416,8 +423,8 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   @VisibleForTesting
-  void initiateType() {
-    compactor.initiateAction();
+  void initiateType(HColumnDescriptor.MemoryCompaction compactionType) {
+    compactor.initiateAction(compactionType);
   }
 
   /**
