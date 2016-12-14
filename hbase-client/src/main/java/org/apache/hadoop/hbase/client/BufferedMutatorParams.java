@@ -126,4 +126,18 @@ public class BufferedMutatorParams {
     this.listener = listener;
     return this;
   }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see java.lang.Object#clone()
+   */
+  public BufferedMutatorParams clone() {
+    BufferedMutatorParams clone = new BufferedMutatorParams(this.tableName);
+    clone.writeBufferSize = this.writeBufferSize;
+    clone.maxKeyValueSize = maxKeyValueSize;
+    clone.pool = this.pool;
+    clone.listener = this.listener;
+    return clone;
+  }
 }
