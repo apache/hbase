@@ -71,6 +71,12 @@ public interface ReplicationPeer {
   public Map<TableName, List<String>> getTableCFs();
 
   /**
+   * Get the per node bandwidth upper limit for this peer
+   * @return the bandwidth up limit
+   */
+  public long getPeerBandwidth();
+
+  /**
    * Setup a callback for chanages to the replication peer config
    * @param listener Listener for config changes, usually a replication endpoint
    */

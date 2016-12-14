@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.Private
 public class ReplicationThrottler {
-  private final boolean enabled;
-  private final double bandwidth;
+  private boolean enabled;
+  private double bandwidth;
   private long cyclePushSize;
   private long cycleStartTick;
 
@@ -117,5 +117,10 @@ public class ReplicationThrottler {
     if (this.enabled) {
       this.cycleStartTick = EnvironmentEdgeManager.currentTime();
     }
+  }
+
+  public void setBandwidth(double bandwidth) {
+    this.bandwidth = bandwidth;
+    this.enabled = this.bandwidth > 0;
   }
 }

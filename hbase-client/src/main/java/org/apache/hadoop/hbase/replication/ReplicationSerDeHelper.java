@@ -264,6 +264,10 @@ public final class ReplicationSerDeHelper {
     if (tableCFsMap != null) {
       peerConfig.setTableCFsMap(tableCFsMap);
     }
+
+    if (peer.hasBandwidth()) {
+      peerConfig.setBandwidth(peer.getBandwidth());
+    }
     return peerConfig;
   }
 
@@ -308,6 +312,7 @@ public final class ReplicationSerDeHelper {
       }
     }
 
+    builder.setBandwidth(peerConfig.getBandwidth());
     return builder.build();
   }
 }

@@ -363,4 +363,21 @@ public class TestReplicationAdmin {
     assertNull(admin.getPeerConfig(ID_ONE).getTableCFsMap());
     admin.removePeer(ID_ONE);
   }
+
+  @Test
+  public void testPeerBandwidth() throws ReplicationException {
+    ReplicationPeerConfig rpc = new ReplicationPeerConfig();
+    rpc.setClusterKey(KEY_ONE);
+    admin.addPeer(ID_ONE, rpc);
+    admin.peerAdded(ID_ONE);
+
+    rpc = admin.getPeerConfig(ID_ONE);
+    assertEquals(0, rpc.getBandwidth());
+
+    rpc.setBandwidth(2097152);
+    admin.updatePeerConfig(ID_ONE, rpc);
+
+    assertEquals(2097152, admin.getPeerConfig(ID_ONE).getBandwidth());
+    admin.removePeer(ID_ONE);
+  }
 }

@@ -163,6 +163,12 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase implements Rep
     return this.tableCFs;
   }
 
+
+  @Override
+  public long getPeerBandwidth() {
+    return this.peerConfig.getBandwidth();
+  }
+
   @Override
   public void trackPeerConfigChanges(ReplicationPeerConfigListener listener) {
     if (this.peerConfigTracker != null){

@@ -135,6 +135,7 @@ message ReplicationPeer {
   repeated BytesBytesPair data = 3;
   repeated NameStringPair configuration = 4;
   repeated TableCF table_cfs = 5;
+  optional int64 bandwidth = 6;
 }
 
 /**

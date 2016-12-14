@@ -41,6 +41,7 @@ public class ReplicationPeerConfig {
   private final Map<byte[], byte[]> peerData;
   private final Map<String, String> configuration;
   private Map<TableName, ? extends Collection<String>> tableCFsMap = null;
+  private long bandwidth = 0;
 
   public ReplicationPeerConfig() {
     this.peerData = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
@@ -89,13 +90,23 @@ public class ReplicationPeerConfig {
     this.tableCFsMap = tableCFsMap;
   }
 
+  public long getBandwidth() {
+    return this.bandwidth;
+  }
+
+  public ReplicationPeerConfig setBandwidth(long bandwidth) {
+    this.bandwidth = bandwidth;
+    return this;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder("clusterKey=").append(clusterKey).append(",");
     builder.append("replicationEndpointImpl=").append(replicationEndpointImpl);
     if (tableCFsMap != null) {
-      builder.append(tableCFsMap.toString());
+      builder.append(tableCFsMap.toString()).append(",");
     }
+    builder.append("bandwidth=").append(bandwidth);
     return builder.toString();
   }
 }

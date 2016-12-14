@@ -20,31 +20,22 @@
 
 module Shell
   module Commands
-    class ListPeers< Command
+    class SetPeerBandwidth< Command
       def help
         return <<-EOF
-List all replication peer clusters.
+Set the replication source per node bandwidth for the specified peer.
+Examples:
 
-  hbase> list_peers
+  # set bandwidth=2MB per regionserver for a peer
+  hbase> set_peer_bandwidth '1', 2097152
+  # unset bandwidth for a peer to use the default bandwidth configured in server-side
+  hbase> set_peer_bandwidth '1'
+
 EOF
       end
 
-      def command()
-        now = Time.now
-        peers = replication_admin.list_peers
-
-        formatter.header(["PEER_ID", "CLUSTER_KEY", "ENDPOINT_CLASSNAME",
-          "STATE", "TABLE_CFS", "BANDWIDTH"])
-
-        peers.entrySet().each do |e|
-          state = replication_admin.get_peer_state(e.key)
-          tableCFs = replication_admin.show_peer_tableCFs(e.key)
-          formatter.row([ e.key, e.value.getClusterKey,
-            e.value.getReplicationEndpointImpl, state, tableCFs,
-            e.value.getBandwidth ])
-        end
-
-        formatter.footer(now)
+      def command(id, bandwidth = 0)
+        replication_admin.set_peer_bandwidth(id, bandwidth)
       end
     end
   end
