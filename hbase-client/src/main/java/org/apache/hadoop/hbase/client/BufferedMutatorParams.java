@@ -138,6 +138,7 @@ public class BufferedMutatorParams {
     clone.maxKeyValueSize = maxKeyValueSize;
     clone.pool = this.pool;
     clone.listener = this.listener;
+    clone.implementationClassName = this.implementationClassName;
     return clone;
   }
 }
