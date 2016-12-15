@@ -18,33 +18,30 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 
 /**
- * A {@link SpaceQuotaViolationNotifier} which uses the hbase:quota table.
+ * A {@link SpaceQuotaSnapshotNotifier} which uses the hbase:quota table.
  */
-public class TableSpaceQuotaViolationNotifier implements SpaceQuotaViolationNotifier {
+public class TableSpaceQuotaSnapshotNotifier implements SpaceQuotaSnapshotNotifier {
+  private static final Log LOG = LogFactory.getLog(TableSpaceQuotaSnapshotNotifier.class);
 
   private Connection conn;
 
   @Override
-  public void transitionTableToViolation(
-      TableName tableName, SpaceViolationPolicy violationPolicy) throws IOException {
-    final Put p = QuotaTableUtil.createEnableViolationPolicyUpdate(tableName, violationPolicy);
+  public void transitionTable(
+      TableName tableName, SpaceQuotaSnapshot snapshot) throws IOException {
+    final Put p = QuotaTableUtil.createPutSpaceSnapshot(tableName, snapshot);
     try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Persisting a space quota snapshot " + snapshot + " for " + tableName);
+      }
       quotaTable.put(p);
-    }
-  }
-
-  @Override
-  public void transitionTableToObservance(TableName tableName) throws IOException {
-    final Delete d = QuotaTableUtil.createRemoveViolationPolicyUpdate(tableName);
-    try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
-      quotaTable.delete(d);
     }
   }
 

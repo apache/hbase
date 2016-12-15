@@ -96,7 +96,7 @@ public class TestTablesWithQuotas {
     final Map<TableName,Integer> reportedRegions = new HashMap<>();
     final Map<TableName,Integer> actualRegions = new HashMap<>();
     final Configuration conf = HBaseConfiguration.create();
-    conf.setDouble(QuotaObserverChore.VIOLATION_OBSERVER_CHORE_REPORT_PERCENT_KEY, 0.95);
+    conf.setDouble(QuotaObserverChore.QUOTA_OBSERVER_CHORE_REPORT_PERCENT_KEY, 0.95);
 
     TableName tooFewRegionsTable = TableName.valueOf("tn1");
     TableName sufficientRegionsTable = TableName.valueOf("tn2");
@@ -114,7 +114,7 @@ public class TestTablesWithQuotas {
       }
 
       @Override
-      int getNumReportedRegions(TableName table, QuotaViolationStore<TableName> tableStore) {
+      int getNumReportedRegions(TableName table, QuotaSnapshotStore<TableName> tableStore) {
         return reportedRegions.get(table);
       }
     };
@@ -177,13 +177,13 @@ public class TestTablesWithQuotas {
 
     QuotaObserverChore chore = mock(QuotaObserverChore.class);
     Map<HRegionInfo,Long> regionUsage = new HashMap<>();
-    TableQuotaViolationStore store = new TableQuotaViolationStore(conn, chore, regionUsage);
+    TableQuotaSnapshotStore store = new TableQuotaSnapshotStore(conn, chore, regionUsage);
 
     // A super dirty hack to verify that, after getting no regions for our table,
     // we bail out and start processing the next element (which there is none).
     final TablesWithQuotas tables = new TablesWithQuotas(conn, conf) {
       @Override
-      int getNumReportedRegions(TableName table, QuotaViolationStore<TableName> tableStore) {
+      int getNumReportedRegions(TableName table, QuotaSnapshotStore<TableName> tableStore) {
         throw new RuntimeException("Should should not reach here");
       }
     };

@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
@@ -30,7 +31,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
  * An entity is presently a table or a namespace.
  */
 @InterfaceAudience.Private
-public interface QuotaViolationStore<T> {
+public interface QuotaSnapshotStore<T> {
 
   /**
    * The current state of a table with respect to the policy set forth by a quota.
@@ -42,6 +43,12 @@ public interface QuotaViolationStore<T> {
   }
 
   /**
+   * Singleton to represent a table without a quota defined. It is never in violation.
+   */
+  public static final SpaceQuotaSnapshot NO_QUOTA = new SpaceQuotaSnapshot(
+      SpaceQuotaStatus.notInViolation(), -1, -1);
+
+  /**
    * Fetch the Quota for the given {@code subject}. May be null.
    *
    * @param subject The object for which the quota should be fetched
@@ -49,20 +56,20 @@ public interface QuotaViolationStore<T> {
   SpaceQuota getSpaceQuota(T subject) throws IOException;
 
   /**
-   * Returns the current {@link ViolationState} for the given {@code subject}.
+   * Returns the current {@link SpaceQuotaSnapshot} for the given {@code subject}.
    *
-   * @param subject The object which the quota violation state should be fetched
+   * @param subject The object which the quota snapshot should be fetched
    */
-  ViolationState getCurrentState(T subject);
+  SpaceQuotaSnapshot getCurrentState(T subject);
 
   /**
-   * Computes the target {@link ViolationState} for the given {@code subject} and
+   * Computes the target {@link SpaceQuotaSnapshot} for the given {@code subject} and
    * {@code spaceQuota}.
    *
-   * @param subject The object which to determine the target quota violation state of
+   * @param subject The object which to determine the target SpaceQuotaSnapshot of
    * @param spaceQuota The quota "definition" for the {@code subject}
    */
-  ViolationState getTargetState(T subject, SpaceQuota spaceQuota);
+  SpaceQuotaSnapshot getTargetState(T subject, SpaceQuota spaceQuota);
 
   /**
    * Filters the provided <code>regions</code>, returning those which match the given
@@ -73,12 +80,12 @@ public interface QuotaViolationStore<T> {
   Iterable<Entry<HRegionInfo,Long>> filterBySubject(T subject);
 
   /**
-   * Persists the current {@link ViolationState} for the {@code subject}.
+   * Persists the current {@link SpaceQuotaSnapshot} for the {@code subject}.
    *
-   * @param subject The object which the {@link ViolationState} is being persisted for
-   * @param state The current {@link ViolationState} of the {@code subject}
+   * @param subject The object which the {@link SpaceQuotaSnapshot} is being persisted for
+   * @param state The current state of the {@code subject}
    */
-  void setCurrentState(T subject, ViolationState state);
+  void setCurrentState(T subject, SpaceQuotaSnapshot state);
 
   /**
    * Updates {@code this} with the latest snapshot of filesystem use by region.

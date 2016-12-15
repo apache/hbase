@@ -19,36 +19,37 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 
 /**
- * A SpaceQuotaViolationNotifier implementation for verifying testing.
+ * A SpaceQuotaSnapshotNotifier implementation for testing.
  */
 @InterfaceAudience.Private
-public class SpaceQuotaViolationNotifierForTest implements SpaceQuotaViolationNotifier {
+public class SpaceQuotaSnapshotNotifierForTest implements SpaceQuotaSnapshotNotifier {
+  private static final Log LOG = LogFactory.getLog(SpaceQuotaSnapshotNotifierForTest.class);
 
-  private final Map<TableName,SpaceViolationPolicy> tablesInViolation = new HashMap<>();
+  private final Map<TableName,SpaceQuotaSnapshot> tableQuotaSnapshots = new HashMap<>();
 
   @Override
   public void initialize(Connection conn) {}
 
   @Override
-  public void transitionTableToViolation(TableName tableName, SpaceViolationPolicy violationPolicy) {
-    tablesInViolation.put(tableName, violationPolicy);
+  public synchronized void transitionTable(TableName tableName, SpaceQuotaSnapshot snapshot) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Persisting " + tableName + "=>" + snapshot);
+    }
+    tableQuotaSnapshots.put(tableName, snapshot);
   }
 
-  @Override
-  public void transitionTableToObservance(TableName tableName) {
-    tablesInViolation.remove(tableName);
+  public synchronized Map<TableName,SpaceQuotaSnapshot> copySnapshots() {
+    return new HashMap<>(this.tableQuotaSnapshots);
   }
 
-  public Map<TableName,SpaceViolationPolicy> snapshotTablesInViolation() {
-    return new HashMap<>(this.tablesInViolation);
-  }
-
-  public void clearTableViolations() {
-    this.tablesInViolation.clear();
+  public synchronized void clearSnapshots() {
+    this.tableQuotaSnapshots.clear();
   }
 }

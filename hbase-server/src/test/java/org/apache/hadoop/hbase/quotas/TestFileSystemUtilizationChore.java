@@ -144,6 +144,7 @@ public class TestFileSystemUtilizationChore {
     assertEquals(timeUnit, chore.getTimeUnit());
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void testProcessingLeftoverRegions() {
     final Configuration conf = getDefaultHBaseConfiguration();
@@ -176,6 +177,7 @@ public class TestFileSystemUtilizationChore {
     chore.chore();
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void testProcessingNowOfflineLeftoversAreIgnored() {
     final Configuration conf = getDefaultHBaseConfiguration();
@@ -185,7 +187,6 @@ public class TestFileSystemUtilizationChore {
     final List<Long> leftover1Sizes = Arrays.asList(1024L, 4096L);
     final long leftover1Sum = sum(leftover1Sizes);
     final List<Long> leftover2Sizes = Arrays.asList(2048L);
-    final long leftover2Sum = sum(leftover2Sizes);
 
     final Region lr1 = mockRegionWithSize(leftover1Sizes);
     final Region lr2 = mockRegionWithSize(leftover2Sizes);

@@ -16,33 +16,29 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.apache.hadoop.hbase.util.Bytes.toBytes;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
+import org.apache.hadoop.hbase.quotas.policies.DisableTableViolationPolicyEnforcement;
+import org.apache.hadoop.hbase.quotas.policies.NoInsertsViolationPolicyEnforcement;
+import org.apache.hadoop.hbase.quotas.policies.NoWritesCompactionsViolationPolicyEnforcement;
+import org.apache.hadoop.hbase.quotas.policies.NoWritesViolationPolicyEnforcement;
+import org.apache.hadoop.hbase.quotas.policies.BulkLoadVerifyingViolationPolicyEnforcement;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Test class for {@link RegionServerSpaceQuotaManager}.
@@ -51,77 +47,105 @@ import org.mockito.stubbing.Answer;
 public class TestRegionServerSpaceQuotaManager {
 
   private RegionServerSpaceQuotaManager quotaManager;
-  private Connection conn;
-  private Table quotaTable;
-  private ResultScanner scanner;
+  private RegionServerServices rss;
 
   @Before
-  @SuppressWarnings("unchecked")
   public void setup() throws Exception {
     quotaManager = mock(RegionServerSpaceQuotaManager.class);
-    conn = mock(Connection.class);
-    quotaTable = mock(Table.class);
-    scanner = mock(ResultScanner.class);
-    // Call the real getViolationPoliciesToEnforce()
-    when(quotaManager.getViolationPoliciesToEnforce()).thenCallRealMethod();
-    // Mock out creating a scanner
-    when(quotaManager.getConnection()).thenReturn(conn);
-    when(conn.getTable(QuotaUtil.QUOTA_TABLE_NAME)).thenReturn(quotaTable);
-    when(quotaTable.getScanner(any(Scan.class))).thenReturn(scanner);
-    // Mock out the static method call with some indirection
-    doAnswer(new Answer<Void>(){
-      @Override
-      public Void answer(InvocationOnMock invocation) throws Throwable {
-        Result result = invocation.getArgumentAt(0, Result.class);
-        Map<TableName,SpaceViolationPolicy> policies = invocation.getArgumentAt(1, Map.class);
-        QuotaTableUtil.extractViolationPolicy(result, policies);
-        return null;
-      }
-    }).when(quotaManager).extractViolationPolicy(any(Result.class), any(Map.class));
+    rss = mock(RegionServerServices.class);
   }
 
   @Test
-  public void testMissingAllColumns() {
-    List<Result> results = new ArrayList<>();
-    results.add(Result.create(Collections.emptyList()));
-    when(scanner.iterator()).thenReturn(results.iterator());
-    try {
-      quotaManager.getViolationPoliciesToEnforce();
-      fail("Expected an IOException, but did not receive one.");
-    } catch (IOException e) {
-      // Expected an error because we had no cells in the row.
-      // This should only happen due to programmer error.
-    }
+  public void testSpacePoliciesFromEnforcements() {
+    final Map<TableName, SpaceViolationPolicyEnforcement> enforcements = new HashMap<>();
+    final Map<TableName, SpaceQuotaSnapshot> expectedPolicies = new HashMap<>();
+    when(quotaManager.copyActiveEnforcements()).thenReturn(enforcements);
+    when(quotaManager.getActivePoliciesAsMap()).thenCallRealMethod();
+
+    NoInsertsViolationPolicyEnforcement noInsertsPolicy = new NoInsertsViolationPolicyEnforcement();
+    SpaceQuotaSnapshot noInsertsSnapshot = new SpaceQuotaSnapshot(
+        new SpaceQuotaStatus(SpaceViolationPolicy.NO_INSERTS), 256L, 1024L);
+    noInsertsPolicy.initialize(rss, TableName.valueOf("no_inserts"), noInsertsSnapshot);
+    enforcements.put(noInsertsPolicy.getTableName(), noInsertsPolicy);
+    expectedPolicies.put(noInsertsPolicy.getTableName(), noInsertsSnapshot);
+
+    NoWritesViolationPolicyEnforcement noWritesPolicy = new NoWritesViolationPolicyEnforcement();
+    SpaceQuotaSnapshot noWritesSnapshot = new SpaceQuotaSnapshot(
+        new SpaceQuotaStatus(SpaceViolationPolicy.NO_WRITES), 512L, 2048L);
+    noWritesPolicy.initialize(rss, TableName.valueOf("no_writes"), noWritesSnapshot);
+    enforcements.put(noWritesPolicy.getTableName(), noWritesPolicy);
+    expectedPolicies.put(noWritesPolicy.getTableName(), noWritesSnapshot);
+
+    NoWritesCompactionsViolationPolicyEnforcement noWritesCompactionsPolicy =
+        new NoWritesCompactionsViolationPolicyEnforcement();
+    SpaceQuotaSnapshot noWritesCompactionsSnapshot = new SpaceQuotaSnapshot(
+        new SpaceQuotaStatus(SpaceViolationPolicy.NO_WRITES_COMPACTIONS), 1024L, 4096L);
+    noWritesCompactionsPolicy.initialize(
+        rss, TableName.valueOf("no_writes_compactions"), noWritesCompactionsSnapshot);
+    enforcements.put(noWritesCompactionsPolicy.getTableName(), noWritesCompactionsPolicy);
+    expectedPolicies.put(noWritesCompactionsPolicy.getTableName(),
+        noWritesCompactionsSnapshot);
+
+    DisableTableViolationPolicyEnforcement disablePolicy =
+        new DisableTableViolationPolicyEnforcement();
+    SpaceQuotaSnapshot disableSnapshot = new SpaceQuotaSnapshot(
+        new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 2048L, 8192L);
+    disablePolicy.initialize(rss, TableName.valueOf("disable"), disableSnapshot);
+    enforcements.put(disablePolicy.getTableName(), disablePolicy);
+    expectedPolicies.put(disablePolicy.getTableName(), disableSnapshot);
+
+    enforcements.put(
+        TableName.valueOf("no_policy"), new BulkLoadVerifyingViolationPolicyEnforcement());
+
+    Map<TableName, SpaceQuotaSnapshot> actualPolicies = quotaManager.getActivePoliciesAsMap();
+    assertEquals(expectedPolicies, actualPolicies);
   }
 
   @Test
-  public void testMissingDesiredColumn() {
-    List<Result> results = new ArrayList<>();
-    // Give a column that isn't the one we want
-    Cell c = new KeyValue(toBytes("t:inviolation"), toBytes("q"), toBytes("s"), new byte[0]);
-    results.add(Result.create(Collections.singletonList(c)));
-    when(scanner.iterator()).thenReturn(results.iterator());
-    try {
-      quotaManager.getViolationPoliciesToEnforce();
-      fail("Expected an IOException, but did not receive one.");
-    } catch (IOException e) {
-      // Expected an error because we were missing the column we expected in this row.
-      // This should only happen due to programmer error.
-    }
+  public void testExceptionOnPolicyEnforcementEnable() throws Exception {
+    final TableName tableName = TableName.valueOf("foo");
+    final SpaceQuotaSnapshot snapshot = new SpaceQuotaSnapshot(
+        new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 1024L, 2048L);
+    RegionServerServices rss = mock(RegionServerServices.class);
+    SpaceViolationPolicyEnforcementFactory factory = mock(
+        SpaceViolationPolicyEnforcementFactory.class);
+    SpaceViolationPolicyEnforcement enforcement = mock(SpaceViolationPolicyEnforcement.class);
+    RegionServerSpaceQuotaManager realManager = new RegionServerSpaceQuotaManager(rss, factory);
+
+    when(factory.create(rss, tableName, snapshot)).thenReturn(enforcement);
+    doThrow(new IOException("Failed for test!")).when(enforcement).enable();
+
+    realManager.enforceViolationPolicy(tableName, snapshot);
+    Map<TableName, SpaceViolationPolicyEnforcement> enforcements =
+        realManager.copyActiveEnforcements();
+    assertTrue("Expected active enforcements to be empty, but were " + enforcements,
+        enforcements.isEmpty());
   }
 
   @Test
-  public void testParsingError() {
-    List<Result> results = new ArrayList<>();
-    Cell c = new KeyValue(toBytes("t:inviolation"), toBytes("u"), toBytes("v"), new byte[0]);
-    results.add(Result.create(Collections.singletonList(c)));
-    when(scanner.iterator()).thenReturn(results.iterator());
-    try {
-      quotaManager.getViolationPoliciesToEnforce();
-      fail("Expected an IOException, but did not receive one.");
-    } catch (IOException e) {
-      // We provided a garbage serialized protobuf message (empty byte array), this should
-      // in turn throw an IOException
-    }
+  public void testExceptionOnPolicyEnforcementDisable() throws Exception {
+    final TableName tableName = TableName.valueOf("foo");
+    final SpaceQuotaSnapshot snapshot = new SpaceQuotaSnapshot(
+        new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 1024L, 2048L);
+    RegionServerServices rss = mock(RegionServerServices.class);
+    SpaceViolationPolicyEnforcementFactory factory = mock(
+        SpaceViolationPolicyEnforcementFactory.class);
+    SpaceViolationPolicyEnforcement enforcement = mock(SpaceViolationPolicyEnforcement.class);
+    RegionServerSpaceQuotaManager realManager = new RegionServerSpaceQuotaManager(rss, factory);
+
+    when(factory.create(rss, tableName, snapshot)).thenReturn(enforcement);
+    doNothing().when(enforcement).enable();
+    doThrow(new IOException("Failed for test!")).when(enforcement).disable();
+
+    // Enabling should work
+    realManager.enforceViolationPolicy(tableName, snapshot);
+    Map<TableName, SpaceViolationPolicyEnforcement> enforcements =
+        realManager.copyActiveEnforcements();
+    assertEquals(1, enforcements.size());
+
+    // If the disable fails, we should still treat it as "active"
+    realManager.disableViolationPolicyEnforcement(tableName);
+    enforcements = realManager.copyActiveEnforcements();
+    assertEquals(1, enforcements.size());
   }
 }

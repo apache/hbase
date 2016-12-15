@@ -95,3 +95,18 @@ message SpaceQuota {
 message SpaceLimitRequest {
   optional SpaceQuota quota = 1;
 }
+
+// Represents the state of a quota on a table. Either the quota is not in violation
+// or it is in violatino there is a violation policy which should be in effect.
+message SpaceQuotaStatus {
+  optional SpaceViolationPolicy policy = 1;
+  optional bool in_violation = 2;
+}
+
+// Message stored in the value of hbase:quota table to denote the status of a table WRT
+// the quota applicable to it.
+message SpaceQuotaSnapshot {
+  optional SpaceQuotaStatus status = 1;
+  optional uint64 usage = 2;
+  optional uint64 limit = 3;
+}

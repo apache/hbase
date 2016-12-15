@@ -29,4 +29,8 @@ public class QuotaExceededException extends DoNotRetryIOException {
   public QuotaExceededException(String msg) {
     super(msg);
   }
+
+  public QuotaExceededException(String msg, Throwable cause) {
+    super(msg, cause);
+  }
 }

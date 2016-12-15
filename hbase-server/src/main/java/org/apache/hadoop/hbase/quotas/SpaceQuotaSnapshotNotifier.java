@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.client.Connection;
  * must have a no-args constructor.
  */
 @InterfaceAudience.Private
-public interface SpaceQuotaViolationNotifier {
+public interface SpaceQuotaSnapshotNotifier {
 
   /**
    * Initializes the notifier.
@@ -36,19 +36,10 @@ public interface SpaceQuotaViolationNotifier {
   void initialize(Connection conn);
 
   /**
-   * Instructs the cluster that the given table is in violation of a space quota. The
-   * provided violation policy is the action which should be taken on the table.
+   * Informs the cluster of the current state of a space quota for a table.
    *
-   * @param tableName The name of the table in violation of the quota.
-   * @param violationPolicy The policy which should be enacted on the table.
+   * @param tableName The name of the table.
+   * @param snapshot The details of the space quota utilization.
    */
-  void transitionTableToViolation(
-      TableName tableName, SpaceViolationPolicy violationPolicy) throws IOException;
-
-  /**
-   * Instructs the cluster that the given table is in observance of any applicable space quota.
-   *
-   * @param tableName The name of the table in observance.
-   */
-  void transitionTableToObservance(TableName tableName) throws IOException;
+  void transitionTable(TableName tableName, SpaceQuotaSnapshot snapshot) throws IOException;
 }

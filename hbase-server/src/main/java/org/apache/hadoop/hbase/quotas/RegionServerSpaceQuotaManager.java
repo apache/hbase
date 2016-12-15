@@ -20,24 +20,29 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A manager for filesystem space quotas in the RegionServer.
  *
- * This class is responsible for reading quota violation policies from the quota
- * table and then enacting them on the given table.
+ * This class is the centralized point for what a RegionServer knows about space quotas
+ * on tables. For each table, it tracks two different things: the {@link SpaceQuotaSnapshot}
+ * and a {@link SpaceViolationPolicyEnforcement} (which may be null when a quota is not
+ * being violated). Both of these are sensitive on when they were last updated. The
+ * {link SpaceQutoaViolationPolicyRefresherChore} periodically runs and updates
+ * the state on <code>this</code>.
  */
 @InterfaceAudience.Private
 public class RegionServerSpaceQuotaManager {
@@ -45,12 +50,23 @@ public class RegionServerSpaceQuotaManager {
 
   private final RegionServerServices rsServices;
 
-  private SpaceQuotaViolationPolicyRefresherChore spaceQuotaRefresher;
-  private Map<TableName,SpaceViolationPolicy> enforcedPolicies;
+  private SpaceQuotaRefresherChore spaceQuotaRefresher;
+  private AtomicReference<Map<TableName, SpaceQuotaSnapshot>> currentQuotaSnapshots;
   private boolean started = false;
+  private ConcurrentHashMap<TableName,SpaceViolationPolicyEnforcement> enforcedPolicies;
+  private SpaceViolationPolicyEnforcementFactory factory;
 
   public RegionServerSpaceQuotaManager(RegionServerServices rsServices) {
+    this(rsServices, SpaceViolationPolicyEnforcementFactory.getInstance());
+  }
+
+  @VisibleForTesting
+  RegionServerSpaceQuotaManager(
+      RegionServerServices rsServices, SpaceViolationPolicyEnforcementFactory factory) {
     this.rsServices = Objects.requireNonNull(rsServices);
+    this.factory = factory;
+    this.enforcedPolicies = new ConcurrentHashMap<>();
+    this.currentQuotaSnapshots = new AtomicReference<>(new HashMap<>());
   }
 
   public synchronized void start() throws IOException {
@@ -59,8 +75,12 @@ public class RegionServerSpaceQuotaManager {
       return;
     }
 
-    spaceQuotaRefresher = new SpaceQuotaViolationPolicyRefresherChore(this);
-    enforcedPolicies = new HashMap<>();
+    if (started) {
+      LOG.warn("RegionServerSpaceQuotaManager has already been started!");
+      return;
+    }
+    this.spaceQuotaRefresher = new SpaceQuotaRefresherChore(this, rsServices.getClusterConnection());
+    rsServices.getChoreService().scheduleChore(spaceQuotaRefresher);
     started = true;
   }
 
@@ -79,91 +99,136 @@ public class RegionServerSpaceQuotaManager {
     return started;
   }
 
-  Connection getConnection() {
-    return rsServices.getConnection();
+  /**
+   * Copies the last {@link SpaceQuotaSnapshot}s that were recorded. The current view
+   * of what the RegionServer thinks the table's utilization is.
+   */
+  public Map<TableName,SpaceQuotaSnapshot> copyQuotaSnapshots() {
+    return new HashMap<>(currentQuotaSnapshots.get());
+  }
+
+  /**
+   * Updates the current {@link SpaceQuotaSnapshot}s for the RegionServer.
+   *
+   * @param newSnapshots The space quota snapshots.
+   */
+  public void updateQuotaSnapshot(Map<TableName,SpaceQuotaSnapshot> newSnapshots) {
+    currentQuotaSnapshots.set(Objects.requireNonNull(newSnapshots));
+  }
+
+  /**
+   * Creates an object well-suited for the RegionServer to use in verifying active policies.
+   */
+  public ActivePolicyEnforcement getActiveEnforcements() {
+    return new ActivePolicyEnforcement(copyActiveEnforcements(), copyQuotaSnapshots(), rsServices);
+  }
+
+  /**
+   * Converts a map of table to {@link SpaceViolationPolicyEnforcement}s into
+   * {@link SpaceViolationPolicy}s.
+   */
+  public Map<TableName, SpaceQuotaSnapshot> getActivePoliciesAsMap() {
+    final Map<TableName, SpaceViolationPolicyEnforcement> enforcements =
+        copyActiveEnforcements();
+    final Map<TableName, SpaceQuotaSnapshot> policies = new HashMap<>();
+    for (Entry<TableName, SpaceViolationPolicyEnforcement> entry : enforcements.entrySet()) {
+      final SpaceQuotaSnapshot snapshot = entry.getValue().getQuotaSnapshot();
+      if (null != snapshot) {
+        policies.put(entry.getKey(), snapshot);
+      }
+    }
+    return policies;
+  }
+
+  /**
+   * Enforces the given violationPolicy on the given table in this RegionServer.
+   */
+  public void enforceViolationPolicy(TableName tableName, SpaceQuotaSnapshot snapshot) {
+    SpaceQuotaStatus status = snapshot.getQuotaStatus();
+    if (!status.isInViolation()) {
+      throw new IllegalStateException(
+          tableName + " is not in violation. Violation policy should not be enabled.");
+    }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(
+          "Enabling violation policy enforcement on " + tableName
+          + " with policy " + status.getPolicy());
+    }
+    // Construct this outside of the lock
+    final SpaceViolationPolicyEnforcement enforcement = getFactory().create(
+        getRegionServerServices(), tableName, snapshot);
+    // "Enables" the policy
+    // TODO Should this synchronize on the actual table name instead of the map? That would allow
+    // policy enable/disable on different tables to happen concurrently. As written now, only one
+    // table will be allowed to transition at a time.
+    synchronized (enforcedPolicies) {
+      try {
+        enforcement.enable();
+      } catch (IOException e) {
+        LOG.error("Failed to enable space violation policy for " + tableName
+            + ". This table will not enter violation.", e);
+        return;
+      }
+      enforcedPolicies.put(tableName, enforcement);
+    }
+  }
+
+  /**
+   * Disables enforcement on any violation policy on the given <code>tableName</code>.
+   */
+  public void disableViolationPolicyEnforcement(TableName tableName) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Disabling violation policy enforcement on " + tableName);
+    }
+    // "Disables" the policy
+    // TODO Should this synchronize on the actual table name instead of the map?
+    synchronized (enforcedPolicies) {
+      SpaceViolationPolicyEnforcement enforcement = enforcedPolicies.remove(tableName);
+      if (null != enforcement) {
+        try {
+          enforcement.disable();
+        } catch (IOException e) {
+          LOG.error("Failed to disable space violation policy for " + tableName
+              + ". This table will remain in violation.", e);
+          enforcedPolicies.put(tableName, enforcement);
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns whether or not compactions should be disabled for the given <code>tableName</code> per
+   * a space quota violation policy. A convenience method.
+   *
+   * @param tableName The table to check
+   * @return True if compactions should be disabled for the table, false otherwise.
+   */
+  public boolean areCompactionsDisabled(TableName tableName) {
+    SpaceViolationPolicyEnforcement enforcement = this.enforcedPolicies.get(Objects.requireNonNull(tableName));
+    if (null != enforcement) {
+      return enforcement.areCompactionsDisabled();
+    }
+    return false;
   }
 
   /**
    * Returns the collection of tables which have quota violation policies enforced on
    * this RegionServer.
    */
-  public synchronized Map<TableName,SpaceViolationPolicy> getActiveViolationPolicyEnforcements()
-      throws IOException {
+  Map<TableName,SpaceViolationPolicyEnforcement> copyActiveEnforcements() {
+    // Allows reads to happen concurrently (or while the map is being updated)
     return new HashMap<>(this.enforcedPolicies);
-  }
-
-  /**
-   * Wrapper around {@link QuotaTableUtil#extractViolationPolicy(Result, Map)} for testing.
-   */
-  void extractViolationPolicy(Result result, Map<TableName,SpaceViolationPolicy> activePolicies) {
-    QuotaTableUtil.extractViolationPolicy(result, activePolicies);
-  }
-
-  /**
-   * Reads all quota violation policies which are to be enforced from the quota table.
-   *
-   * @return The collection of tables which are in violation of their quota and the policy which
-   *    should be enforced.
-   */
-  public Map<TableName, SpaceViolationPolicy> getViolationPoliciesToEnforce() throws IOException {
-    try (Table quotaTable = getConnection().getTable(QuotaUtil.QUOTA_TABLE_NAME);
-        ResultScanner scanner = quotaTable.getScanner(QuotaTableUtil.makeQuotaViolationScan())) {
-      Map<TableName,SpaceViolationPolicy> activePolicies = new HashMap<>();
-      for (Result result : scanner) {
-        try {
-          extractViolationPolicy(result, activePolicies);
-        } catch (IllegalArgumentException e) {
-          final String msg = "Failed to parse result for row " + Bytes.toString(result.getRow());
-          LOG.error(msg, e);
-          throw new IOException(msg, e);
-        }
-      }
-      return activePolicies;
-    }
-  }
-
-  /**
-   * Enforces the given violationPolicy on the given table in this RegionServer.
-   */
-  synchronized void enforceViolationPolicy(
-      TableName tableName, SpaceViolationPolicy violationPolicy) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(
-          "Enabling violation policy enforcement on " + tableName
-          + " with policy " + violationPolicy);
-    }
-    // Enact the policy
-    enforceOnRegionServer(tableName, violationPolicy);
-    // Publicize our enacting of the policy
-    enforcedPolicies.put(tableName, violationPolicy);
-  }
-
-  /**
-   * Enacts the given violation policy on this table in the RegionServer.
-   */
-  void enforceOnRegionServer(TableName tableName, SpaceViolationPolicy violationPolicy) {
-    throw new UnsupportedOperationException("TODO");
-  }
-
-  /**
-   * Disables enforcement on any violation policy on the given <code>tableName</code>.
-   */
-  synchronized void disableViolationPolicyEnforcement(TableName tableName) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Disabling violation policy enforcement on " + tableName);
-    }
-    disableOnRegionServer(tableName);
-    enforcedPolicies.remove(tableName);
-  }
-
-  /**
-   * Disables any violation policy on this table in the RegionServer.
-   */
-  void disableOnRegionServer(TableName tableName) {
-    throw new UnsupportedOperationException("TODO");
   }
 
   RegionServerServices getRegionServerServices() {
     return rsServices;
+  }
+
+  Connection getConnection() {
+    return rsServices.getConnection();
+  }
+
+  SpaceViolationPolicyEnforcementFactory getFactory() {
+    return factory;
   }
 }

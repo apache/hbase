@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.quotas.QuotaViolationStore.ViolationState;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
@@ -45,7 +44,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
- * Test class for {@link NamespaceQuotaViolationStore}.
+ * Test class for {@link NamespaceQuotaSnapshotStore}.
  */
 @Category(SmallTests.class)
 public class TestNamespaceQuotaViolationStore {
@@ -54,19 +53,19 @@ public class TestNamespaceQuotaViolationStore {
   private Connection conn;
   private QuotaObserverChore chore;
   private Map<HRegionInfo, Long> regionReports;
-  private NamespaceQuotaViolationStore store;
+  private NamespaceQuotaSnapshotStore store;
 
   @Before
   public void setup() {
     conn = mock(Connection.class);
     chore = mock(QuotaObserverChore.class);
     regionReports = new HashMap<>();
-    store = new NamespaceQuotaViolationStore(conn, chore, regionReports);
+    store = new NamespaceQuotaSnapshotStore(conn, chore, regionReports);
   }
 
   @Test
   public void testGetSpaceQuota() throws Exception {
-    NamespaceQuotaViolationStore mockStore = mock(NamespaceQuotaViolationStore.class);
+    NamespaceQuotaSnapshotStore mockStore = mock(NamespaceQuotaSnapshotStore.class);
     when(mockStore.getSpaceQuota(any(String.class))).thenCallRealMethod();
 
     Quotas quotaWithSpace = Quotas.newBuilder().setSpace(
@@ -113,17 +112,18 @@ public class TestNamespaceQuotaViolationStore {
     regionReports.put(new HRegionInfo(tn1, Bytes.toBytes(1), Bytes.toBytes(2)), 1024L * 256L);
 
     // Below the quota
-    assertEquals(ViolationState.IN_OBSERVANCE, store.getTargetState(NS, quota));
+    assertEquals(false, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
 
     regionReports.put(new HRegionInfo(tn2, Bytes.toBytes(2), Bytes.toBytes(3)), 1024L * 256L);
 
     // Equal to the quota is still in observance
-    assertEquals(ViolationState.IN_OBSERVANCE, store.getTargetState(NS, quota));
+    assertEquals(false, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
 
     regionReports.put(new HRegionInfo(tn2, Bytes.toBytes(3), Bytes.toBytes(4)), 1024L);
 
     // Exceeds the quota, should be in violation
-    assertEquals(ViolationState.IN_VIOLATION, store.getTargetState(NS, quota));
+    assertEquals(true, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
+    assertEquals(SpaceViolationPolicy.DISABLE, store.getTargetState(NS, quota).getQuotaStatus().getPolicy());
   }
 
   @Test
