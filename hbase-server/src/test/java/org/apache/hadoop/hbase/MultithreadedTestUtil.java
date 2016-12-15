@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -143,12 +144,17 @@ public abstract class MultithreadedTestUtil {
     }
 
     public final void doWork() throws Exception {
-      while (ctx.shouldRun() && !stopped) {
-        doAnAction();
+      try {
+        while (ctx.shouldRun() && !stopped) {
+          doAnAction();
+        }
+      } finally {
+        workDone();
       }
     }
 
     public abstract void doAnAction() throws Exception;
+    public void workDone() throws IOException {}
   }
 
   /**

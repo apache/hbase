@@ -118,6 +118,7 @@ public class TestAcidGuarantees implements Tool {
     byte data[] = new byte[10];
     byte targetRows[][];
     byte targetFamilies[][];
+    Connection connection;
     Table table;
     AtomicLong numWritten = new AtomicLong();
 
@@ -126,7 +127,7 @@ public class TestAcidGuarantees implements Tool {
       super(ctx);
       this.targetRows = targetRows;
       this.targetFamilies = targetFamilies;
-      Connection connection = ConnectionFactory.createConnection(ctx.getConf());
+      connection = ConnectionFactory.createConnection(ctx.getConf());
       table = connection.getTable(TABLE_NAME);
     }
     public void doAnAction() throws Exception {
@@ -144,6 +145,15 @@ public class TestAcidGuarantees implements Tool {
       table.put(p);
       numWritten.getAndIncrement();
     }
+
+    @Override
+    public void workDone() throws IOException {
+      try {
+        table.close();
+      } finally {
+        connection.close();
+      }
+    }
   }
 
   /**
@@ -153,6 +163,7 @@ public class TestAcidGuarantees implements Tool {
   public static class AtomicGetReader extends RepeatingTestThread {
     byte targetRow[];
     byte targetFamilies[][];
+    Connection connection;
     Table table;
     int numVerified = 0;
     AtomicLong numRead = new AtomicLong();
@@ -162,7 +173,7 @@ public class TestAcidGuarantees implements Tool {
       super(ctx);
       this.targetRow = targetRow;
       this.targetFamilies = targetFamilies;
-      Connection connection = ConnectionFactory.createConnection(ctx.getConf());
+      connection = ConnectionFactory.createConnection(ctx.getConf());
       table = connection.getTable(TABLE_NAME);
     }
 
@@ -191,6 +202,15 @@ public class TestAcidGuarantees implements Tool {
       numRead.getAndIncrement();
     }
 
+    @Override
+    public void workDone() throws IOException {
+      try {
+        table.close();
+      } finally {
+        connection.close();
+      }
+    }
+
     private void gotFailure(byte[] expected, Result res) {
       StringBuilder msg = new StringBuilder();
       msg.append("Failed after ").append(numVerified).append("!");
@@ -213,6 +233,7 @@ public class TestAcidGuarantees implements Tool {
   public static class AtomicScanReader extends RepeatingTestThread {
     byte targetFamilies[][];
     Table table;
+    Connection connection;
     AtomicLong numScans = new AtomicLong();
     AtomicLong numRowsScanned = new AtomicLong();
 
@@ -220,7 +241,7 @@ public class TestAcidGuarantees implements Tool {
                            byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.targetFamilies = targetFamilies;
-      Connection connection = ConnectionFactory.createConnection(ctx.getConf());
+      connection = ConnectionFactory.createConnection(ctx.getConf());
       table = connection.getTable(TABLE_NAME);
     }
 
@@ -247,6 +268,15 @@ public class TestAcidGuarantees implements Tool {
         numRowsScanned.getAndIncrement();
       }
       numScans.getAndIncrement();
+    }
+
+    @Override
+    public void workDone() throws IOException {
+      try {
+        table.close();
+      } finally {
+        connection.close();
+      }
     }
 
     private void gotFailure(byte[] expected, Result res) {
