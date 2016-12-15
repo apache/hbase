@@ -40,7 +40,7 @@ namespace hbase {
  * It should throw exceptions if anything goes wrong.
  */
 class RpcSerde {
-public:
+ public:
   /**
    * Constructor assumes the default auth type.
    */
@@ -94,23 +94,23 @@ public:
    * - A protobuf var int32
    * - The message object seriailized after that.
    */
-  std::unique_ptr<folly::IOBuf>
-  SerializeDelimited(const google::protobuf::Message &msg);
+  std::unique_ptr<folly::IOBuf> SerializeDelimited(
+      const google::protobuf::Message &msg);
 
   /**
    * Serilalize a message. This does not add any length prepend.
    */
-  std::unique_ptr<folly::IOBuf>
-  SerializeMessage(const google::protobuf::Message &msg);
+  std::unique_ptr<folly::IOBuf> SerializeMessage(
+      const google::protobuf::Message &msg);
 
   /**
    * Prepend a length IOBuf to the given IOBuf chain.
    * This involves no copies or moves of the passed in data.
    */
-  std::unique_ptr<folly::IOBuf>
-  PrependLength(std::unique_ptr<folly::IOBuf> msg);
+  std::unique_ptr<folly::IOBuf> PrependLength(
+      std::unique_ptr<folly::IOBuf> msg);
 
-private:
+ private:
   /* data */
   uint8_t auth_type_;
 };

@@ -29,7 +29,7 @@ namespace hbase {
  * @brief Class to deal with a local instance cluster for testing.
  */
 class TestUtil {
-public:
+ public:
   /**
    * Creating a TestUtil will spin up a cluster.
    */
@@ -55,7 +55,7 @@ public:
    */
   static std::string RandString(int len = 32);
 
-private:
+ private:
   folly::test::TemporaryDirectory temp_dir_;
 };
-} // namespace hbase
+}  // namespace hbase

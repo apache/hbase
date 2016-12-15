@@ -18,8 +18,8 @@
  */
 #pragma once
 
-#include <boost/functional/hash.hpp>
 #include <folly/SharedMutex.h>
+#include <boost/functional/hash.hpp>
 #include <mutex>
 #include <unordered_map>
 
@@ -31,7 +31,6 @@ namespace hbase {
 
 /** Equals function for server name that ignores start time */
 struct ServerNameEquals {
-
   /** equals */
   bool operator()(const hbase::pb::ServerName &lhs,
                   const hbase::pb::ServerName &rhs) const {
@@ -59,7 +58,7 @@ struct ServerNameHash {
  * regionserver has on it.
  */
 class ConnectionPool {
-public:
+ public:
   /** Create connection pool wit default connection factory */
   ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
 
@@ -87,7 +86,7 @@ public:
    */
   void Close(const hbase::pb::ServerName &sn);
 
-private:
+ private:
   std::shared_ptr<HBaseService> GetCached(const hbase::pb::ServerName &sn);
   std::shared_ptr<HBaseService> GetNew(const hbase::pb::ServerName &sn);
   std::unordered_map<hbase::pb::ServerName, std::shared_ptr<HBaseService>,
@@ -102,4 +101,4 @@ private:
   std::shared_ptr<ConnectionFactory> cf_;
 };
 
-} // namespace hbase
+}  // namespace hbase

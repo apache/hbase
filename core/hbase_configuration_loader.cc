@@ -19,10 +19,10 @@
 
 #include "core/hbase_configuration_loader.h"
 
+#include <glog/logging.h>
 #include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-#include <glog/logging.h>
 
 namespace hbase {
 
@@ -172,7 +172,7 @@ bool HBaseConfigurationLoader::LoadProperties(const std::string &file,
 
     // Iterate over configuration section.
     // Store all found properties in ConfigMap
-    BOOST_FOREACH(ptree::value_type & v, pt.get_child("configuration")) {
+    BOOST_FOREACH (ptree::value_type &v, pt.get_child("configuration")) {
       if ("property" == v.first) {
         std::string name_node = v.second.get<std::string>("name");
         std::string value_node = v.second.get<std::string>("value");
@@ -183,8 +183,7 @@ bool HBaseConfigurationLoader::LoadProperties(const std::string &file,
         }
       }
     }
-  }
-  catch (std::exception &ex) {
+  } catch (std::exception &ex) {
     DLOG(WARNING) << "Exception in parsing file [" << file << "]:[" << ex.what()
                   << "]";
     return false;

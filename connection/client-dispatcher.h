@@ -37,7 +37,7 @@ namespace hbase {
 class ClientDispatcher
     : public wangle::ClientDispatcherBase<SerializePipeline,
                                           std::unique_ptr<Request>, Response> {
-public:
+ public:
   /** Create a new ClientDispatcher */
   ClientDispatcher();
   /** Read a response off the pipeline. */
@@ -49,7 +49,7 @@ public:
   /** Close the dispatcher and the associated pipeline. */
   folly::Future<folly::Unit> close() override;
 
-private:
+ private:
   folly::AtomicHashMap<uint32_t, folly::Promise<Response>> requests_;
   // Start at some number way above what could
   // be there for un-initialized call id counters.
@@ -61,4 +61,4 @@ private:
   // not a big deal.
   std::atomic<uint32_t> current_call_id_;
 };
-} // namespace hbase
+}  // namespace hbase

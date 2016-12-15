@@ -33,7 +33,7 @@ using ::testing::Return;
 using ::testing::_;
 
 class MockConnectionFactory : public ConnectionFactory {
-public:
+ public:
   MockConnectionFactory() : ConnectionFactory(nullptr) {}
   MOCK_METHOD0(MakeBootstrap,
                std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>());
@@ -46,7 +46,7 @@ public:
 class MockBootstrap : public wangle::ClientBootstrap<SerializePipeline> {};
 
 class MockServiceBase : public HBaseService {
-public:
+ public:
   folly::Future<Response> operator()(std::unique_ptr<Request> req) override {
     return do_operation(req.get());
   }
@@ -56,7 +56,7 @@ public:
 };
 
 class MockService : public MockServiceBase {
-public:
+ public:
   MOCK_METHOD1(do_operation, folly::Future<Response>(Request *));
 };
 

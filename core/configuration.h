@@ -88,7 +88,7 @@ class Configuration {
   struct ConfigData {
     std::string value;
     bool final;
-    ConfigData() : final(false) {};
+    ConfigData() : final(false){};
     ConfigData(const std::string &value) : value(value), final(false) {}
     void operator=(const std::string &new_value) {
       value = new_value;

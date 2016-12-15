@@ -34,7 +34,7 @@ enum CellType {
 };
 
 class Cell {
-public:
+ public:
   Cell(const std::string &row, const std::string &family,
        const std::string &qualifier, const long &timestamp,
        const std::string &value, const hbase::CellType &cell_type);
@@ -47,7 +47,7 @@ public:
   CellType Type() const;
   long SequenceId() const;
 
-private:
+ private:
   std::string row_;
   std::string family_;
   std::string qualifier_;

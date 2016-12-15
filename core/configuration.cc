@@ -21,8 +21,8 @@
 
 #include <stdexcept>
 
-#include <boost/lexical_cast.hpp>
 #include <glog/logging.h>
+#include <boost/lexical_cast.hpp>
 
 namespace hbase {
 
@@ -129,7 +129,6 @@ optional<std::string> Configuration::GetEnv(const std::string &key) const {
 }
 
 optional<std::string> Configuration::GetProperty(const std::string &key) const {
-
   auto found = hb_property_.find(key);
   if (found != hb_property_.end()) {
     return std::experimental::make_optional(found->second.value);
@@ -158,8 +157,7 @@ optional<int32_t> Configuration::GetInt(const std::string &key) const {
     try {
       return std::experimental::make_optional(
           boost::lexical_cast<int32_t>(*raw));
-    }
-    catch (const boost::bad_lexical_cast &blex) {
+    } catch (const boost::bad_lexical_cast &blex) {
       throw std::runtime_error(blex.what());
     }
   }
@@ -177,8 +175,7 @@ optional<int64_t> Configuration::GetLong(const std::string &key) const {
     try {
       return std::experimental::make_optional(
           boost::lexical_cast<int64_t>(*raw));
-    }
-    catch (const boost::bad_lexical_cast &blex) {
+    } catch (const boost::bad_lexical_cast &blex) {
       throw std::runtime_error(blex.what());
     }
   }
@@ -196,8 +193,7 @@ optional<double> Configuration::GetDouble(const std::string &key) const {
     try {
       return std::experimental::make_optional(
           boost::lexical_cast<double>(*raw));
-    }
-    catch (const boost::bad_lexical_cast &blex) {
+    } catch (const boost::bad_lexical_cast &blex) {
       throw std::runtime_error(blex.what());
     }
   }

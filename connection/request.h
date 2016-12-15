@@ -32,7 +32,7 @@ namespace hbase {
  * response object.
  */
 class Request {
-public:
+ public:
   /** Create a request object for a get */
   static std::unique_ptr<Request> get();
   /** Create a request object for a mutate */
@@ -62,10 +62,10 @@ public:
    * method type to decode. */
   std::string method() { return method_; }
 
-private:
+ private:
   uint32_t call_id_;
   std::shared_ptr<google::protobuf::Message> req_msg_ = nullptr;
   std::shared_ptr<google::protobuf::Message> resp_msg_ = nullptr;
   std::string method_ = "Get";
 };
-} // namespace hbase
+}  // namespace hbase

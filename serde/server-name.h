@@ -19,14 +19,15 @@
 
 #pragma once
 
-#include "if/HBase.pb.h"
 #include <folly/Conv.h>
 #include <folly/String.h>
+#include "if/HBase.pb.h"
 
 namespace hbase {
 namespace pb {
 
-template <class String> void parseTo(String in, ServerName &out) {
+template <class String>
+void parseTo(String in, ServerName &out) {
   // TODO see about getting rsplit into folly.
   std::string s = folly::to<std::string>(in);
 

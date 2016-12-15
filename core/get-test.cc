@@ -19,8 +19,8 @@
 
 #include "core/get.h"
 
-#include <gtest/gtest.h>
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 using namespace hbase;
 const int NUMBER_OF_GETS = 5;
 
@@ -135,15 +135,16 @@ void GetMethods(Get &get, const std::string &row) {
   ASSERT_THROW(get.SetTimeRange(-1000, 2000), std::runtime_error);
   ASSERT_THROW(get.SetTimeRange(1000, -2000), std::runtime_error);
   ASSERT_THROW(get.SetTimeRange(1000, 200), std::runtime_error);
-  ASSERT_THROW(get.SetTimeStamp(std::numeric_limits<long>::max()), std::runtime_error);
+  ASSERT_THROW(get.SetTimeStamp(std::numeric_limits<long>::max()),
+               std::runtime_error);
 
-  //Test some exceptions
+  // Test some exceptions
   ASSERT_THROW(get.SetMaxVersions(0), std::runtime_error);
   ASSERT_THROW(get.SetMaxVersions(std::numeric_limits<unsigned int>::max() + 1),
                std::runtime_error);
 }
 
-TEST (Get, SingleGet) {
+TEST(Get, SingleGet) {
   std::string row_str = "row-test";
   Get get(row_str);
   GetMethods(get, row_str);
@@ -156,7 +157,8 @@ TEST (Get, SingleGet) {
   geteq = get_tmp;
   GetMethods(geteq, row_str);
 
-  // Adding the below tests as there were some concerns raised that the same vector of qualifiers in FamilyMap is being shared between copied objects
+  // Adding the below tests as there were some concerns raised that the same
+  // vector of qualifiers in FamilyMap is being shared between copied objects
   // Verify the source object's family map size before using it to copy.
   EXPECT_EQ(3, get.Family().size());
 
@@ -192,11 +194,12 @@ TEST (Get, SingleGet) {
   ++it;
   EXPECT_EQ(it, get.Family().end());
 
-  //Verifying the copied object's families. It will remain unchanged and below tests should pass
+  // Verifying the copied object's families. It will remain unchanged and below
+  // tests should pass
   CheckFamiliesAfterCopy(getcp_fam);
 }
 
-TEST (Get, MultiGet) {
+TEST(Get, MultiGet) {
   std::vector<Get *> gets;
   for (int i = 0; i < NUMBER_OF_GETS; i++) {
     std::string row_str = "row-test";
@@ -214,7 +217,7 @@ TEST (Get, MultiGet) {
   gets.clear();
 }
 
-TEST (Get, Exception) {
+TEST(Get, Exception) {
   std::string row(std::numeric_limits<short>::max() + 1, 'X');
   ASSERT_THROW(Get tmp = Get(row), std::runtime_error);
   ASSERT_THROW(Get tmp = Get(""), std::runtime_error);

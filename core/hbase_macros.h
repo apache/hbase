@@ -52,5 +52,5 @@ extern "C" {
 #endif
 
 #ifdef __cplusplus
-} // extern "C"
-#endif // __cplusplus
+}  // extern "C"
+#endif  // __cplusplus

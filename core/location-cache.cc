@@ -53,8 +53,12 @@ LocationCache::LocationCache(
     std::string quorum_spec,
     std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
     std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
-    : quorum_spec_(quorum_spec), cpu_executor_(cpu_executor),
-      meta_promise_(nullptr), meta_lock_(), cp_(io_executor), meta_util_(),
+    : quorum_spec_(quorum_spec),
+      cpu_executor_(cpu_executor),
+      meta_promise_(nullptr),
+      meta_lock_(),
+      cp_(io_executor),
+      meta_util_(),
       zk_(nullptr) {
   zk_ = zookeeper_init(quorum_spec.c_str(), nullptr, 1000, 0, 0, 0);
 }
@@ -111,8 +115,8 @@ ServerName LocationCache::ReadMetaLocation() {
   return mrs.server();
 }
 
-Future<std::shared_ptr<RegionLocation>>
-LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
+Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
+    const TableName &tn, const string &row) {
   return this->LocateMeta()
       .via(cpu_executor_.get())
       .then([this](ServerName sn) { return this->cp_.Get(sn); })
@@ -139,8 +143,8 @@ LocationCache::LocateFromMeta(const TableName &tn, const string &row) {
       });
 }
 
-std::shared_ptr<RegionLocation>
-LocationCache::CreateLocation(const Response &resp) {
+std::shared_ptr<RegionLocation> LocationCache::CreateLocation(
+    const Response &resp) {
   auto resp_msg = static_pointer_cast<ScanResponse>(resp.resp_msg());
   auto &results = resp_msg->results().Get(0);
   auto &cells = results.cell();

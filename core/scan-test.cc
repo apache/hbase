@@ -168,15 +168,17 @@ void ScanMethods(Scan &scan) {
   ASSERT_THROW(scan.SetTimeRange(-1000, 2000), std::runtime_error);
   ASSERT_THROW(scan.SetTimeRange(1000, -2000), std::runtime_error);
   ASSERT_THROW(scan.SetTimeRange(1000, 200), std::runtime_error);
-  ASSERT_THROW(scan.SetTimeStamp(std::numeric_limits<long>::max()), std::runtime_error);
+  ASSERT_THROW(scan.SetTimeStamp(std::numeric_limits<long>::max()),
+               std::runtime_error);
 }
 
-TEST (Scan, Object) {
+TEST(Scan, Object) {
   Scan scan;
   ScanMethods(scan);
   CheckFamilies(scan);
 
-  // Resetting TimeRange values so that the copy construction and assignment operator tests pass.
+  // Resetting TimeRange values so that the copy construction and assignment
+  // operator tests pass.
   scan.SetTimeRange(0, std::numeric_limits<long>::max());
   Scan scancp(scan);
   ScanMethods(scancp);
@@ -188,22 +190,21 @@ TEST (Scan, Object) {
   CheckFamiliesAfterCopy(scaneq);
 }
 
-TEST (Scan, WithStartRow) {
+TEST(Scan, WithStartRow) {
   Scan("row-test");
   Scan scan("row-test");
   ScanMethods(scan);
   CheckFamilies(scan);
 }
 
-TEST (Scan, WithStartAndStopRow) {
+TEST(Scan, WithStartAndStopRow) {
   Scan("start-row", "stop-row");
   Scan scan("start-row", "stop-row");
   ScanMethods(scan);
   CheckFamilies(scan);
 }
 
-TEST (Scan,FromGet) {
-
+TEST(Scan, FromGet) {
   std::string row_str = "row-test";
   Get get = Get(row_str);
 
@@ -226,7 +227,7 @@ TEST (Scan,FromGet) {
   CheckFamiliesAfterCopy(scan);
 }
 
-TEST (Scan, Exception) {
+TEST(Scan, Exception) {
   std::string row(std::numeric_limits<short>::max() + 1, 'X');
   ASSERT_THROW(Scan tmp(row), std::runtime_error);
   ASSERT_THROW(Scan tmp(""), std::runtime_error);

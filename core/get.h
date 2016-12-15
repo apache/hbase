@@ -19,31 +19,30 @@
 
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <cstdint>
 #include "core/time_range.h"
 #include "if/Client.pb.h"
 
 namespace hbase {
 
 /**
- * @brief Map consisting of column families and qualifiers to be used for Get operation
+ * @brief Map consisting of column families and qualifiers to be used for Get
+ * operation
  */
 using FamilyMap = std::map<std::string, std::vector<std::string>>;
 
 class Get {
-
  public:
-
   /**
    * Constructors
    */
-  Get(const std::string &row);
-  Get(const Get &cget);
-  Get& operator=(const Get &cget);
+  Get(const std::string& row);
+  Get(const Get& cget);
+  Get& operator=(const Get& cget);
 
   ~Get();
 
@@ -53,7 +52,8 @@ class Get {
   int MaxVersions() const;
 
   /**
-   * @brief Get up to the specified number of versions of each column. default is 1.
+   * @brief Get up to the specified number of versions of each column. default
+   * is 1.
    * @param max_versions max_versons to set
    */
   Get& SetMaxVersions(uint32_t max_versions = 1);
@@ -70,9 +70,10 @@ class Get {
   Get& SetCacheBlocks(bool cache_blocks);
 
   /**
-   * @brief Returns the Get family map (FamilyMap) for this Get operation. Used for constructing Scan object with an already constructed Get
+   * @brief Returns the Get family map (FamilyMap) for this Get operation. Used
+   * for constructing Scan object with an already constructed Get
    */
-  const FamilyMap &Family() const;
+  const FamilyMap& Family() const;
 
   /**
    * @brief Returns the timerange for this Get
@@ -80,7 +81,8 @@ class Get {
   const TimeRange& Timerange() const;
 
   /**
-   * @brief Get versions of columns only within the specified timestamp range, [minStamp, maxStamp).
+   * @brief Get versions of columns only within the specified timestamp range,
+   * [minStamp, maxStamp).
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
    */
@@ -96,14 +98,15 @@ class Get {
    * @brief Get all columns from the specified family.
    * @param family to be retrieved
    */
-  Get& AddFamily(const std::string &family);
+  Get& AddFamily(const std::string& family);
 
   /**
-   *  @brief Get the column from the specific family with the specified qualifier.
+   *  @brief Get the column from the specific family with the specified
+   * qualifier.
    *  @param family to be retrieved
    *  @param qualifier to be retrieved
    */
-  Get& AddColumn(const std::string &family, const std::string &qualifier);
+  Get& AddColumn(const std::string& family, const std::string& qualifier);
 
   /**
    * @brief Returns the row for this Get operation
@@ -138,8 +141,9 @@ class Get {
   /**
    * @brief Checks if the row for this Get operation is proper or not
    * @param row Row to check
-   * @throws std::runtime_error if row is empty or greater than MAX_ROW_LENGTH(i.e. std::numeric_limits<short>::max())
+   * @throws std::runtime_error if row is empty or greater than
+   * MAX_ROW_LENGTH(i.e. std::numeric_limits<short>::max())
    */
-  void CheckRow(const std::string &row);
+  void CheckRow(const std::string& row);
 };
 }

@@ -34,7 +34,7 @@ namespace hbase {
  * pipeline.
  */
 class ConnectionFactory {
-public:
+ public:
   /**
    * Constructor.
    * There should only be one ConnectionFactory per client.
@@ -54,12 +54,12 @@ public:
    *
    * This is mostly visible so that mocks can override socket connections.
    */
-  virtual std::shared_ptr<HBaseService>
-  Connect(std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client,
-          const std::string &hostname, int port);
+  virtual std::shared_ptr<HBaseService> Connect(
+      std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client,
+      const std::string &hostname, int port);
 
-private:
+ private:
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool_;
   std::shared_ptr<RpcPipelineFactory> pipeline_factory_;
 };
-} // namespace hbase
+}  // namespace hbase

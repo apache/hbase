@@ -21,12 +21,13 @@
 
 #include "if/HBase.pb.h"
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <folly/Conv.h>
+#include <boost/algorithm/string/predicate.hpp>
 
 namespace hbase {
 namespace pb {
-template <class String> void parseTo(String in, RegionInfo &out) {
+template <class String>
+void parseTo(String in, RegionInfo &out) {
   // TODO(eclark): there has to be something better.
   std::string s = folly::to<std::string>(in);
 
@@ -37,5 +38,5 @@ template <class String> void parseTo(String in, RegionInfo &out) {
     throw std::runtime_error("Bad protobuf for RegionInfo");
   }
 }
-} // namespace pb
-} // namespace hbase
+}  // namespace pb
+}  // namespace hbase

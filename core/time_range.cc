@@ -27,9 +27,7 @@ namespace hbase {
 TimeRange::TimeRange()
     : min_timestamp_(0L),
       max_timestamp_(std::numeric_limits<long>::max()),
-      all_time_(true) {
-
-}
+      all_time_(true) {}
 
 TimeRange::TimeRange(const TimeRange &tr) {
   this->all_time_ = tr.all_time_;
@@ -37,16 +35,14 @@ TimeRange::TimeRange(const TimeRange &tr) {
   this->min_timestamp_ = tr.min_timestamp_;
 }
 
-TimeRange &TimeRange::operator =(const TimeRange &tr) {
+TimeRange &TimeRange::operator=(const TimeRange &tr) {
   this->all_time_ = tr.all_time_;
   this->max_timestamp_ = tr.max_timestamp_;
   this->min_timestamp_ = tr.min_timestamp_;
   return *this;
 }
 
-TimeRange::~TimeRange() {
-
-}
+TimeRange::~TimeRange() {}
 
 TimeRange::TimeRange(long min_timestamp) {
   this->min_timestamp_ = min_timestamp;
@@ -56,16 +52,15 @@ TimeRange::TimeRange(long min_timestamp) {
 
 TimeRange::TimeRange(long min_timestamp, long max_timestamp) {
   if (min_timestamp < 0 || max_timestamp < 0) {
-    throw std::runtime_error(
-        "Timestamp cannot be negative. min_timestamp: "
-            + std::to_string(min_timestamp) + ", max_timestamp:"
-            + std::to_string(max_timestamp));
+    throw std::runtime_error("Timestamp cannot be negative. min_timestamp: " +
+                             std::to_string(min_timestamp) +
+                             ", max_timestamp:" +
+                             std::to_string(max_timestamp));
   }
   if (max_timestamp < min_timestamp) {
-    throw std::runtime_error(
-        "max_timestamp [" + std::to_string(max_timestamp)
-            + "] should be greater than min_timestamp ["
-            + std::to_string(min_timestamp) + "]");
+    throw std::runtime_error("max_timestamp [" + std::to_string(max_timestamp) +
+                             "] should be greater than min_timestamp [" +
+                             std::to_string(min_timestamp) + "]");
   }
 
   this->min_timestamp_ = min_timestamp;
@@ -73,16 +68,9 @@ TimeRange::TimeRange(long min_timestamp, long max_timestamp) {
   this->all_time_ = false;
 }
 
-long TimeRange::MinTimeStamp() const {
-  return this->min_timestamp_;
+long TimeRange::MinTimeStamp() const { return this->min_timestamp_; }
 
-}
+long TimeRange::MaxTimeStamp() const { return this->max_timestamp_; }
 
-long TimeRange::MaxTimeStamp() const {
-  return this->max_timestamp_;
-}
-
-bool TimeRange::IsAllTime() const {
-  return this->all_time_;
-}
+bool TimeRange::IsAllTime() const { return this->all_time_; }
 }

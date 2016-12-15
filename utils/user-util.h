@@ -31,7 +31,7 @@ namespace hbase {
  * the user information after the first invocation.
  */
 class UserUtil {
-public:
+ public:
   /**
    * Constructor.
    */
@@ -43,7 +43,7 @@ public:
    */
   std::string user_name();
 
-private:
+ private:
   /**
    * Compute the username. This will block.
    */
@@ -51,4 +51,4 @@ private:
   std::once_flag once_flag_;
   std::string user_name_;
 };
-} // namespace hbase
+}  // namespace hbase

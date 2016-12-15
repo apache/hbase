@@ -30,7 +30,7 @@ namespace hbase {
  * @brief Utility for meta operations.
  */
 class MetaUtil {
-public:
+ public:
   /**
    * Given a table and a row give the row key from which to start a scan to find
    * region locations.
@@ -45,4 +45,4 @@ public:
   std::unique_ptr<Request> MetaRequest(const hbase::pb::TableName tn,
                                        const std::string &row) const;
 };
-} // namespace hbase
+}  // namespace hbase

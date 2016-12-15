@@ -20,4 +20,4 @@ IFS=$'\n\t'
 
 
 find core connection serde utils test-util -name "*.h" -or -name "*.cc" | xargs -P8 clang-format -i --style=Google
-find core connection serde utils third-party -name "BUCK" | xargs -P8 yapf -i
+find core connection serde utils third-party -name "BUCK" | xargs -P8 yapf -i --style=google

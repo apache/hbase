@@ -30,7 +30,8 @@
 namespace hbase {
 
 /**
- * @brief Map consisting of column families and qualifiers to be used for Get operation
+ * @brief Map consisting of column families and qualifiers to be used for Get
+ * operation
  */
 using FamilyMap = std::map<std::string, std::vector<std::string>>;
 
@@ -41,12 +42,13 @@ class Scan {
    */
   Scan();
   Scan(const Scan &scan);
-  Scan& operator=(const Scan &scan);
+  Scan &operator=(const Scan &scan);
 
   ~Scan();
 
   /**
-   * @brief Create a Scan operation starting at the specified row. If the specified row does not exist,
+   * @brief Create a Scan operation starting at the specified row. If the
+   * specified row does not exist,
    * the Scanner will start from the next closest row after the specified row.
    * @param start_row - row to start scanner at or after
    */
@@ -66,52 +68,60 @@ class Scan {
   Scan(const Get &get);
 
   /**
-   * @brief Get all columns from the specified family.Overrides previous calls to AddColumn for this family.
+   * @brief Get all columns from the specified family.Overrides previous calls
+   * to AddColumn for this family.
    * @param family - family name
    */
-  Scan& AddFamily(const std::string &family);
+  Scan &AddFamily(const std::string &family);
 
   /**
-   * @brief Get the column from the specified family with the specified qualifier.Overrides previous calls to AddFamily for this family.
+   * @brief Get the column from the specified family with the specified
+   * qualifier.Overrides previous calls to AddFamily for this family.
    * @param family - family name.
    * @param qualifier - column qualifier.
    */
-  Scan& AddColumn(const std::string &family, const std::string &qualifier);
+  Scan &AddColumn(const std::string &family, const std::string &qualifier);
 
   /**
-   * @brief Set whether this scan is a reversed one. This is false by default which means forward(normal) scan.
+   * @brief Set whether this scan is a reversed one. This is false by default
+   * which means forward(normal) scan.
    * @param reversed - if true, scan will be backward order
    */
   void SetReversed(bool reversed);
 
   /**
-   * @brief Get whether this scan is a reversed one. Returns  true if backward scan, false if forward(default) scan
+   * @brief Get whether this scan is a reversed one. Returns  true if backward
+   * scan, false if forward(default) scan
    */
   bool IsReversed() const;
 
   /**
-   * @brief Set the start row of the scan.If the specified row does not exist, the Scanner will start from the next closest row after the specified row.
+   * @brief Set the start row of the scan.If the specified row does not exist,
+   * the Scanner will start from the next closest row after the specified row.
    * @param start_row - row to start scanner at or after
-   * @throws std::runtime_error if start_row length is 0 or greater than MAX_ROW_LENGTH
+   * @throws std::runtime_error if start_row length is 0 or greater than
+   * MAX_ROW_LENGTH
    */
   void SetStartRow(std::string &start_row);
 
   /**
    * @brief returns start_row of the Scan.
    */
-  const std::string& StartRow() const;
+  const std::string &StartRow() const;
 
   /**
-   * @brief Set the stop row of the scan. The scan will include rows that are lexicographically less than the provided stop_row.
+   * @brief Set the stop row of the scan. The scan will include rows that are
+   * lexicographically less than the provided stop_row.
    * @param stop_row - row to end at (exclusive)
-   * @throws std::runtime_error if stop_row length is 0 or greater than MAX_ROW_LENGTH
+   * @throws std::runtime_error if stop_row length is 0 or greater than
+   * MAX_ROW_LENGTH
    */
   void SetStopRow(std::string &stop_row);
 
   /**
    * @brief returns stop_row of the Scan.
    */
-  const std::string& StopRow() const;
+  const std::string &StopRow() const;
 
   /**
    * @brief Set whether this scan is a small scan.
@@ -124,7 +134,8 @@ class Scan {
   bool IsSmall() const;
 
   /**
-   * @brief Set the number of rows for caching that will be passed to scanners. Higher caching values will enable faster scanners but will use more memory.
+   * @brief Set the number of rows for caching that will be passed to scanners.
+   * Higher caching values will enable faster scanners but will use more memory.
    * @param caching - the number of rows for caching.
    */
   void SetCaching(int caching);
@@ -138,7 +149,7 @@ class Scan {
    * @brief Sets the consistency level for this operation.
    * @param consistency - the consistency level
    */
-  Scan& SetConsistency(const hbase::pb::Consistency consistency);
+  Scan &SetConsistency(const hbase::pb::Consistency consistency);
 
   /**
    * @brief Returns the consistency level for this operation.
@@ -146,8 +157,12 @@ class Scan {
   hbase::pb::Consistency Consistency() const;
 
   /**
-   * @brief Set whether blocks should be cached for this Scan.This is true by default. When true, default settings of the table and family are used (this will never override caching blocks if the block cache is disabled for that family or entirely).
-   * @param cache_blocks - if false, default settings are overridden and blocks will not be cached
+   * @brief Set whether blocks should be cached for this Scan.This is true by
+   * default. When true, default settings of the table and family are used (this
+   * will never override caching blocks if the block cache is disabled for that
+   * family or entirely).
+   * @param cache_blocks - if false, default settings are overridden and blocks
+   * will not be cached
    */
   void SetCacheBlocks(bool cache_blocks);
 
@@ -157,18 +172,25 @@ class Scan {
   bool CacheBlocks() const;
 
   /**
-   * @brief Setting whether the caller wants to see the partial results that may be returned from the server. By default this value is false and the complete results will be assembled client side before being delivered to the caller.
+   * @brief Setting whether the caller wants to see the partial results that may
+   * be returned from the server. By default this value is false and the
+   * complete results will be assembled client side before being delivered to
+   * the caller.
    * @param allow_partial_results - if true partial results will be returned.
    */
   void SetAllowPartialResults(bool allow_partial_results);
 
   /**
-   * @brief true when the constructor of this scan understands that the results they will see may only represent a partial portion of a row. The entire row would be retrieved by subsequent calls to ResultScanner.next()
+   * @brief true when the constructor of this scan understands that the results
+   * they will see may only represent a partial portion of a row. The entire row
+   * would be retrieved by subsequent calls to ResultScanner.next()
    */
   bool AllowPartialResults() const;
 
   /**
-   * @brief Set the value indicating whether loading CFs on demand should be allowed (cluster default is false). On-demand CF loading doesn't load column families until necessary.
+   * @brief Set the value indicating whether loading CFs on demand should be
+   * allowed (cluster default is false). On-demand CF loading doesn't load
+   * column families until necessary.
    * @param load_column_families_on_demand
    */
   void SetLoadColumnFamiliesOnDemand(bool load_column_families_on_demand);
@@ -179,7 +201,8 @@ class Scan {
   bool LoadColumnFamiliesOnDemand() const;
 
   /**
-   * @brief Get up to the specified number of versions of each column if specified else get default i.e. one.
+   * @brief Get up to the specified number of versions of each column if
+   * specified else get default i.e. one.
    * @param max_versions - maximum versions for each column.
    */
   Scan &SetMaxVersions(uint32_t max_versions = 1);
@@ -190,7 +213,9 @@ class Scan {
   int MaxVersions() const;
 
   /**
-   * @brief Set the maximum result size. The default is -1; this means that no specific maximum result size will be set for this scan, and the global configured value will be used instead. (Defaults to unlimited).
+   * @brief Set the maximum result size. The default is -1; this means that no
+   * specific maximum result size will be set for this scan, and the global
+   * configured value will be used instead. (Defaults to unlimited).
    * @param The maximum result size in bytes.
    */
   void SetMaxResultSize(long max_result_size);
@@ -201,14 +226,20 @@ class Scan {
   long MaxResultSize() const;
 
   /**
-   * @brief Get versions of columns only within the specified timestamp range, [min_stamp, max_stamp). Note, default maximum versions to return is 1. If your time range spans more than one version and you want all versions returned, up the number of versions beyond the default.
+   * @brief Get versions of columns only within the specified timestamp range,
+   * [min_stamp, max_stamp). Note, default maximum versions to return is 1. If
+   * your time range spans more than one version and you want all versions
+   * returned, up the number of versions beyond the default.
    * @param min_stamp - minimum timestamp value, inclusive.
    * @param max_stamp - maximum timestamp value, exclusive.
    */
   Scan &SetTimeRange(long min_stamp, long max_stamp);
 
   /**
-   * @brief Get versions of columns with the specified timestamp. Note, default maximum versions to return is 1. If your time range spans more than one version and you want all versions returned, up the number of versions beyond the defaut.
+   * @brief Get versions of columns with the specified timestamp. Note, default
+   * maximum versions to return is 1. If your time range spans more than one
+   * version and you want all versions returned, up the number of versions
+   * beyond the defaut.
    * @param timestamp - version timestamp
    */
   Scan &SetTimeStamp(long timestamp);
@@ -216,7 +247,7 @@ class Scan {
   /**
    * @brief Return Timerange
    */
-  const TimeRange& Timerange() const;
+  const TimeRange &Timerange() const;
 
   /**
    * @brief Returns true if family map (FamilyMap) is non empty false otherwise
@@ -244,9 +275,11 @@ class Scan {
   FamilyMap family_map_;
 
   /**
-   * @brief Checks for row length validity, throws if length check fails, returns null otherwise.
+   * @brief Checks for row length validity, throws if length check fails,
+   * returns null otherwise.
    * @param row - row whose validity needs to be checked
-   * @throws std::runtime_error if row length equals 0 or greater than std::numeric_limits<short>::max();
+   * @throws std::runtime_error if row length equals 0 or greater than
+   * std::numeric_limits<short>::max();
    */
   void CheckRow(const std::string &row);
 };

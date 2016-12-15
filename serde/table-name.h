@@ -21,15 +21,16 @@
 #include <memory>
 #include <string>
 
-#include "if/HBase.pb.h"
 #include <folly/Conv.h>
 #include <folly/String.h>
+#include "if/HBase.pb.h"
 
 namespace hbase {
 namespace pb {
 
 // Provide folly::to<std::string>(TableName);
-template <class String> void toAppend(const TableName &in, String *result) {
+template <class String>
+void toAppend(const TableName &in, String *result) {
   if (!in.has_namespace_() || in.namespace_() == "default") {
     folly::toAppend(in.qualifier(), result);
   } else {
@@ -37,7 +38,8 @@ template <class String> void toAppend(const TableName &in, String *result) {
   }
 }
 
-template <class String> void parseTo(String in, TableName &out) {
+template <class String>
+void parseTo(String in, TableName &out) {
   std::vector<std::string> v;
   folly::split(":", in, v);
 
@@ -50,5 +52,5 @@ template <class String> void parseTo(String in, TableName &out) {
   }
 }
 
-} // namespace pb
-} // namespace hbase
+}  // namespace pb
+}  // namespace hbase

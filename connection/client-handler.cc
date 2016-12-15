@@ -37,7 +37,8 @@ using hbase::pb::GetResponse;
 using google::protobuf::Message;
 
 ClientHandler::ClientHandler(std::string user_name)
-    : user_name_(user_name), serde_(),
+    : user_name_(user_name),
+      serde_(),
       once_flag_(std::make_unique<std::once_flag>()),
       resp_msgs_(
           make_unique<folly::AtomicHashMap<

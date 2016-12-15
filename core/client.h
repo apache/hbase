@@ -39,7 +39,7 @@ namespace hbase {
  * have only one Client per cluster around.
  */
 class Client {
-public:
+ public:
   /**
    * Create a new client.
    * @param quorum_spec Where to connect to get Zookeeper bootstrap information.
@@ -47,10 +47,10 @@ public:
   explicit Client(std::string quorum_spec);
   ~Client();
 
-private:
+ private:
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
   LocationCache location_cache_;
 };
 
-} // namespace hbase
+}  // namespace hbase

@@ -32,7 +32,6 @@ using google::protobuf::Message;
 static const std::string MAGIC_STRING = "PBUF";
 
 bool ZkDeserializer::Parse(IOBuf *buf, Message *out) {
-
   // The format is like this
   // 1 byte of magic number. 255
   // 4 bytes of id length.
