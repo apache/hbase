@@ -150,13 +150,21 @@ public class TestDurability {
     final WAL wal = wals.getWAL(tableName, null);
     HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);
 
-    // col1: amount = 1, 1 write back to WAL
+    // col1: amount = 0, 1 write back to WAL
     Increment inc1 = new Increment(row1);
-    inc1.addColumn(FAMILY, col1, 1);
+    inc1.addColumn(FAMILY, col1, 0);
     Result res = region.increment(inc1);
     assertEquals(1, res.size());
-    assertEquals(1, Bytes.toLong(res.getValue(FAMILY, col1)));
+    assertEquals(0, Bytes.toLong(res.getValue(FAMILY, col1)));
     verifyWALCount(wals, wal, 1);
+
+    // col1: amount = 1, 1 write back to WAL
+    inc1 = new Increment(row1);
+    inc1.addColumn(FAMILY, col1, 1);
+    res = region.increment(inc1);
+    assertEquals(1, res.size());
+    assertEquals(1, Bytes.toLong(res.getValue(FAMILY, col1)));
+    verifyWALCount(wals, wal, 2);
 
     // col1: amount = 0, 0 write back to WAL
     inc1 = new Increment(row1);
@@ -164,10 +172,10 @@ public class TestDurability {
     res = region.increment(inc1);
     assertEquals(1, res.size());
     assertEquals(1, Bytes.toLong(res.getValue(FAMILY, col1)));
-    verifyWALCount(wals, wal, 1);
+    verifyWALCount(wals, wal, 2);
 
     // col1: amount = 0, col2: amount = 0, col3: amount = 0
-    // 0 write back to WAL
+    // 1 write back to WAL
     inc1 = new Increment(row1);
     inc1.addColumn(FAMILY, col1, 0);
     inc1.addColumn(FAMILY, col2, 0);
@@ -177,7 +185,7 @@ public class TestDurability {
     assertEquals(1, Bytes.toLong(res.getValue(FAMILY, col1)));
     assertEquals(0, Bytes.toLong(res.getValue(FAMILY, col2)));
     assertEquals(0, Bytes.toLong(res.getValue(FAMILY, col3)));
-    verifyWALCount(wals, wal, 1);
+    verifyWALCount(wals, wal, 3);
 
     // col1: amount = 5, col2: amount = 4, col3: amount = 3
     // 1 write back to WAL
@@ -190,7 +198,7 @@ public class TestDurability {
     assertEquals(6, Bytes.toLong(res.getValue(FAMILY, col1)));
     assertEquals(4, Bytes.toLong(res.getValue(FAMILY, col2)));
     assertEquals(3, Bytes.toLong(res.getValue(FAMILY, col3)));
-    verifyWALCount(wals, wal, 2);
+    verifyWALCount(wals, wal, 4);
   }
   
   /*
