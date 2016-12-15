@@ -48,6 +48,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.MalformedObjectNameException;
@@ -574,7 +575,7 @@ public class HRegionServer extends HasThread implements
     // or process owner as default super user.
     Superusers.initialize(conf);
 
-    regionServerAccounting = new RegionServerAccounting();
+    regionServerAccounting = new RegionServerAccounting(conf);
     cacheConfig = new CacheConfig(conf);
     mobCacheConfig = new MobCacheConfig(conf);
     uncaughtExceptionHandler = new UncaughtExceptionHandler() {
@@ -1482,7 +1483,7 @@ public class HRegionServer extends HasThread implements
       // it.
       Pair<Long, MemoryType> pair = MemorySizeUtil.getGlobalMemstoreSize(conf);
       long globalMemStoreSize = pair.getFirst();
-      boolean offheap = pair.getSecond() == MemoryType.NON_HEAP;
+      boolean offheap = this.regionServerAccounting.isOffheap();
       // When off heap memstore in use, take full area for chunk pool.
       float poolSizePercentage = offheap ? 1.0F
           : conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
@@ -3588,8 +3589,7 @@ public class HRegionServer extends HasThread implements
       // return 0 during RS initialization
       return 0.0;
     }
-    return getRegionServerAccounting().getGlobalMemstoreSize() * 1.0
-        / cacheFlusher.globalMemStoreLimitLowMark;
+    return getRegionServerAccounting().getFlushPressure();
   }
 
   @Override

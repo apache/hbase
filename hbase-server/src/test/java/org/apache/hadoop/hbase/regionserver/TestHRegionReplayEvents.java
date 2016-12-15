@@ -170,7 +170,7 @@ public class TestHRegionReplayEvents {
     rss = mock(RegionServerServices.class);
     when(rss.getServerName()).thenReturn(ServerName.valueOf("foo", 1, 1));
     when(rss.getConfiguration()).thenReturn(CONF);
-    when(rss.getRegionServerAccounting()).thenReturn(new RegionServerAccounting());
+    when(rss.getRegionServerAccounting()).thenReturn(new RegionServerAccounting(CONF));
     String string = org.apache.hadoop.hbase.executor.EventType.RS_COMPACTED_FILES_DISCHARGER
         .toString();
     ExecutorService es = new ExecutorService(string);
@@ -281,12 +281,12 @@ public class TestHRegionReplayEvents {
       }
     }
 
-    assertTrue(rss.getRegionServerAccounting().getGlobalMemstoreSize() > 0);
+    assertTrue(rss.getRegionServerAccounting().getGlobalMemstoreDataSize() > 0);
     // now close the region which should not cause hold because of un-committed flush
     secondaryRegion.close();
 
     // verify that the memstore size is back to what it was
-    assertEquals(0, rss.getRegionServerAccounting().getGlobalMemstoreSize());
+    assertEquals(0, rss.getRegionServerAccounting().getGlobalMemstoreDataSize());
   }
 
   static int replayEdit(HRegion region, WAL.Entry entry) throws IOException {

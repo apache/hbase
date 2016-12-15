@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class is for maintaining the various regionserver's heap memory manager statistics and

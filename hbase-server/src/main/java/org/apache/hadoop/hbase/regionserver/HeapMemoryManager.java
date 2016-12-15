@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 
 import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +78,7 @@ public class HeapMemoryManager {
   private float heapOccupancyPercent;
 
   private final ResizableBlockCache blockCache;
+  // TODO : remove this and mark regionServerAccounting as the observer directly
   private final FlushRequester memStoreFlusher;
   private final Server server;
   private final RegionServerAccounting regionServerAccounting;
@@ -240,6 +242,8 @@ public class HeapMemoryManager {
       Class<? extends HeapMemoryTuner> tunerKlass = server.getConfiguration().getClass(
           HBASE_RS_HEAP_MEMORY_TUNER_CLASS, DefaultHeapMemoryTuner.class, HeapMemoryTuner.class);
       heapMemTuner = ReflectionUtils.newInstance(tunerKlass, server.getConfiguration());
+      tunerContext
+          .setOffheapMemstore(regionServerAccounting.isOffheap());
     }
 
     @Override
@@ -298,10 +302,10 @@ public class HeapMemoryManager {
       unblockedFlushCnt = unblockedFlushCount.getAndSet(0);
       tunerContext.setUnblockedFlushCount(unblockedFlushCnt);
       metricsHeapMemoryManager.updateUnblockedFlushCount(unblockedFlushCnt);
+      // TODO : add support for offheap metrics
       tunerContext.setCurBlockCacheUsed((float) blockCache.getCurrentSize() / maxHeapSize);
       metricsHeapMemoryManager.setCurBlockCacheSizeGauge(blockCache.getCurrentSize());
-      long globalMemstoreHeapSize = regionServerAccounting.getGlobalMemstoreSize()
-          + regionServerAccounting.getGlobalMemstoreHeapOverhead();
+      long globalMemstoreHeapSize = regionServerAccounting.getGlobalMemstoreSize();
       tunerContext.setCurMemStoreUsed((float) globalMemstoreHeapSize / maxHeapSize);
       metricsHeapMemoryManager.setCurMemStoreSizeGauge(globalMemstoreHeapSize);
       tunerContext.setCurBlockCacheSize(blockCachePercent);
@@ -354,14 +358,20 @@ public class HeapMemoryManager {
           metricsHeapMemoryManager.updateMemStoreDeltaSizeHistogram(memStoreDeltaSize);
           metricsHeapMemoryManager.updateBlockCacheDeltaSizeHistogram(blockCacheDeltaSize);
           long newBlockCacheSize = (long) (maxHeapSize * blockCacheSize);
+          // we could have got an increase or decrease in size for the offheap memstore
+          // also if the flush had happened due to heap overhead. In that case it is ok
+          // to adjust the onheap memstore limit configs
           long newMemstoreSize = (long) (maxHeapSize * memstoreSize);
           LOG.info("Setting block cache heap size to " + newBlockCacheSize
               + " and memstore heap size to " + newMemstoreSize);
           blockCachePercent = blockCacheSize;
           blockCache.setMaxSize(newBlockCacheSize);
           globalMemStorePercent = memstoreSize;
+          // Internally sets it to RegionServerAccounting
+          // TODO : Set directly on RSAccounting??
           memStoreFlusher.setGlobalMemstoreLimit(newMemstoreSize);
           for (HeapMemoryTuneObserver observer : tuneObservers) {
+            // Risky.. If this newMemstoreSize decreases we reduce the count in offheap chunk pool
             observer.onHeapMemoryTune(newMemstoreSize, newBlockCacheSize);
           }
         }
@@ -376,14 +386,16 @@ public class HeapMemoryManager {
     @Override
     public void flushRequested(FlushType type, Region region) {
       switch (type) {
-      case ABOVE_HIGHER_MARK:
+      case ABOVE_ONHEAP_HIGHER_MARK:
         blockedFlushCount.incrementAndGet();
         break;
-      case ABOVE_LOWER_MARK:
+      case ABOVE_ONHEAP_LOWER_MARK:
         unblockedFlushCount.incrementAndGet();
         break;
+      // Removed the counting of the offheap related flushes (after reviews). Will add later if
+      // needed
       default:
-        // In case of normal flush don't do any action.
+        // In case of any other flush don't do any action.
         break;
       }
     }
@@ -403,6 +415,7 @@ public class HeapMemoryManager {
     private float curMemStoreUsed;
     private float curMemStoreSize;
     private float curBlockCacheSize;
+    private boolean offheapMemstore;
 
     public long getBlockedFlushCount() {
       return blockedFlushCount;
@@ -466,6 +479,14 @@ public class HeapMemoryManager {
 
     public void setCurMemStoreUsed(float d) {
         this.curMemStoreUsed = d;
+    }
+
+    public void setOffheapMemstore(boolean offheapMemstore) {
+      this.offheapMemstore = offheapMemstore;
+    }
+
+    public boolean isOffheapMemstore() {
+      return this.offheapMemstore;
     }
   }
 

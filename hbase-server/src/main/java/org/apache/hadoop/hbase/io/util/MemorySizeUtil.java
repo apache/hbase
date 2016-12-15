@@ -157,9 +157,19 @@ public class MemorySizeUtil {
             + " Going with on heap global memstore size ('" + MEMSTORE_SIZE_KEY + "')");
       }
     }
+    return new Pair<Long, MemoryType>(getOnheapGlobalMemstoreSize(conf), MemoryType.HEAP);
+  }
+
+  /**
+   * Returns the onheap global memstore limit based on the config
+   * 'hbase.regionserver.global.memstore.size'.
+   * @param conf
+   * @return the onheap global memstore limt
+   */
+  public static long getOnheapGlobalMemstoreSize(Configuration conf) {
     long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
     float globalMemStorePercent = getGlobalMemStoreHeapPercent(conf, true);
-    return new Pair<Long, MemoryType>((long) (max * globalMemStorePercent), MemoryType.HEAP);
+    return ((long) (max * globalMemStorePercent));
   }
 
   /**

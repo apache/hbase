@@ -22,8 +22,7 @@ import static org.apache.hadoop.hbase.wal.AbstractFSWALProvider.WAL_FILE_NAME_DE
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
+import java.lang.management.MemoryType;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -285,9 +284,9 @@ public abstract class AbstractFSWAL<W> implements WAL {
     return Long.parseLong(chompedPath);
   }
 
-  private int calculateMaxLogFiles(float memstoreSizeRatio, long logRollSize) {
-    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    return Math.round(mu.getMax() * memstoreSizeRatio * 2 / logRollSize);
+  private int calculateMaxLogFiles(Configuration conf, long logRollSize) {
+    Pair<Long, MemoryType> globalMemstoreSize = MemorySizeUtil.getGlobalMemstoreSize(conf);
+    return (int) ((globalMemstoreSize.getFirst() * 2) / logRollSize);
   }
 
   // must be power of 2
@@ -386,13 +385,12 @@ public abstract class AbstractFSWAL<W> implements WAL {
     this.logrollsize = (long) (blocksize
         * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
 
-    float memstoreRatio = MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false);
     boolean maxLogsDefined = conf.get("hbase.regionserver.maxlogs") != null;
     if (maxLogsDefined) {
       LOG.warn("'hbase.regionserver.maxlogs' was deprecated.");
     }
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs",
-      Math.max(32, calculateMaxLogFiles(memstoreRatio, logrollsize)));
+      Math.max(32, calculateMaxLogFiles(conf, logrollsize)));
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) + ", rollsize="
         + StringUtils.byteDesc(this.logrollsize) + ", prefix=" + this.walFilePrefix + ", suffix="

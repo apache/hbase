@@ -92,7 +92,7 @@ public class TestGlobalMemStoreSize {
           server.getFromOnlineRegions(regionInfo.getEncodedName()).
           getMemstoreSize();
       }
-      assertEquals(server.getRegionServerAccounting().getGlobalMemstoreSize(),
+      assertEquals(server.getRegionServerAccounting().getGlobalMemstoreDataSize(),
         globalMemStoreSize);
     }
 
@@ -100,7 +100,7 @@ public class TestGlobalMemStoreSize {
     int i = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
       LOG.info("Starting flushes on " + server.getServerName() +
-        ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());
+        ", size=" + server.getRegionServerAccounting().getGlobalMemstoreDataSize());
 
       for (HRegionInfo regionInfo :
           ProtobufUtil.getOnlineRegions(null, server.getRSRpcServices())) {
@@ -110,11 +110,11 @@ public class TestGlobalMemStoreSize {
       LOG.info("Post flush on " + server.getServerName());
       long now = System.currentTimeMillis();
       long timeout = now + 1000;
-      while(server.getRegionServerAccounting().getGlobalMemstoreSize() != 0 &&
+      while(server.getRegionServerAccounting().getGlobalMemstoreDataSize() != 0 &&
           timeout < System.currentTimeMillis()) {
         Threads.sleep(10);
       }
-      long size = server.getRegionServerAccounting().getGlobalMemstoreSize();
+      long size = server.getRegionServerAccounting().getGlobalMemstoreDataSize();
       if (size > 0) {
         // If size > 0, see if its because the meta region got edits while
         // our test was running....
@@ -131,7 +131,7 @@ public class TestGlobalMemStoreSize {
           }
         }
       }
-      size = server.getRegionServerAccounting().getGlobalMemstoreSize();
+      size = server.getRegionServerAccounting().getGlobalMemstoreDataSize();
       assertEquals("Server=" + server.getServerName() + ", i=" + i++, 0, size);
     }
 
@@ -149,7 +149,7 @@ public class TestGlobalMemStoreSize {
   throws IOException {
     LOG.info("Flush " + r.toString() + " on " + server.getServerName() +
       ", " +  r.flush(true) + ", size=" +
-      server.getRegionServerAccounting().getGlobalMemstoreSize());
+      server.getRegionServerAccounting().getGlobalMemstoreDataSize());
   }
 
   private List<HRegionServer> getOnlineRegionServers() {

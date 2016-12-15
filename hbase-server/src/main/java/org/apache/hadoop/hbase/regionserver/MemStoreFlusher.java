@@ -49,12 +49,10 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
@@ -90,10 +88,6 @@ class MemStoreFlusher implements FlushRequester {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final Object blockSignal = new Object();
 
-  protected long globalMemStoreLimit;
-  protected float globalMemStoreLimitLowMarkPercent;
-  protected long globalMemStoreLimitLowMark;
-
   private long blockingWaitTime;
   private final LongAdder updatesBlockedMsHighWater = new LongAdder();
 
@@ -111,32 +105,18 @@ class MemStoreFlusher implements FlushRequester {
     this.server = server;
     this.threadWakeFrequency =
         conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-    Pair<Long, MemoryType> pair = MemorySizeUtil.getGlobalMemstoreSize(conf);
-    this.globalMemStoreLimit = pair.getFirst();
-    boolean onheap = pair.getSecond() == MemoryType.HEAP;
-    // When off heap memstore in use we configure the global off heap space for memstore as bytes
-    // not as % of max memory size. In such case, the lower water mark should be specified using the
-    // key "hbase.regionserver.global.memstore.size.lower.limit" which says % of the global upper
-    // bound and defaults to 95%. In on heap case also specifying this way is ideal. But in the past
-    // we used to take lower bound also as the % of xmx (38% as default). For backward compatibility
-    // for this deprecated config,we will fall back to read that config when new one is missing.
-    // Only for on heap case, do this fallback mechanism. For off heap it makes no sense.
-    // TODO When to get rid of the deprecated config? ie
-    // "hbase.regionserver.global.memstore.lowerLimit". Can get rid of this boolean passing then.
-    this.globalMemStoreLimitLowMarkPercent = MemorySizeUtil.getGlobalMemStoreHeapLowerMark(conf,
-        onheap);
-    this.globalMemStoreLimitLowMark =
-        (long) (this.globalMemStoreLimit * this.globalMemStoreLimitLowMarkPercent);
-
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
     int handlerCount = conf.getInt("hbase.hstore.flusher.count", 2);
     this.flushHandlers = new FlushHandler[handlerCount];
     LOG.info("globalMemStoreLimit="
-        + TraditionalBinaryPrefix.long2String(this.globalMemStoreLimit, "", 1)
+        + TraditionalBinaryPrefix
+            .long2String(this.server.getRegionServerAccounting().getGlobalMemstoreLimit(), "", 1)
         + ", globalMemStoreLimitLowMark="
-        + TraditionalBinaryPrefix.long2String(this.globalMemStoreLimitLowMark, "", 1)
-        + ", Offheap=" + !onheap);
+        + TraditionalBinaryPrefix.long2String(
+          this.server.getRegionServerAccounting().getGlobalMemstoreLimitLowMark(), "", 1)
+        + ", Offheap="
+        + (this.server.getRegionServerAccounting().isOffheap()));
   }
 
   public LongAdder getUpdatesBlockedMsHighWater() {
@@ -210,7 +190,7 @@ class MemStoreFlusher implements FlushRequester {
         LOG.info("Refreshing storefiles of region " + bestRegionReplica
             + " due to global heap pressure. Total memstore size="
             + StringUtils
-                .humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize())
+                .humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreDataSize())
             + " memstore heap overhead=" + StringUtils.humanReadableInt(
                 server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead()));
         flushedOne = refreshStoreFilesAndReclaimMemory(bestRegionReplica);
@@ -222,7 +202,7 @@ class MemStoreFlusher implements FlushRequester {
       } else {
         LOG.info("Flush of region " + regionToFlush + " due to global heap pressure. "
             + "Total Memstore size="
-            + humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize())
+            + humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreDataSize())
             + ", Region memstore size="
             + humanReadableInt(regionToFlush.getMemstoreSize()));
         flushedOne = flushRegion(regionToFlush, true, true);
@@ -251,9 +231,15 @@ class MemStoreFlusher implements FlushRequester {
           wakeupPending.set(false); // allow someone to wake us up again
           fqe = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
           if (fqe == null || fqe instanceof WakeupFlushThread) {
-            if (isAboveLowWaterMark()) {
+            FlushType type = isAboveLowWaterMark();
+            if (type != FlushType.NORMAL) {
               LOG.debug("Flush thread woke up because memory above low water="
-                  + TraditionalBinaryPrefix.long2String(globalMemStoreLimitLowMark, "", 1));
+                  + TraditionalBinaryPrefix.long2String(
+                    server.getRegionServerAccounting().getGlobalMemstoreLimitLowMark(), "", 1));
+              // For offheap memstore, even if the lower water mark was breached due to heap overhead
+              // we still select the regions based on the region's memstore data size.
+              // TODO : If we want to decide based on heap over head it can be done without tracking
+              // it per region.
               if (!flushOneForGlobalPressure()) {
                 // Wasn't able to flush any region, but we're above low water mark
                 // This is unlikely to happen, but might happen when closing the
@@ -355,17 +341,15 @@ class MemStoreFlusher implements FlushRequester {
   /**
    * Return true if global memory usage is above the high watermark
    */
-  private boolean isAboveHighWaterMark() {
-    return server.getRegionServerAccounting().getGlobalMemstoreSize()
-        + server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead() >= globalMemStoreLimit;
+  private FlushType isAboveHighWaterMark() {
+    return server.getRegionServerAccounting().isAboveHighWaterMark();
   }
 
   /**
-   * Return true if we're above the high watermark
+   * Return true if we're above the low watermark
    */
-  private boolean isAboveLowWaterMark() {
-    return server.getRegionServerAccounting().getGlobalMemstoreSize() + server
-        .getRegionServerAccounting().getGlobalMemstoreHeapOverhead() >= globalMemStoreLimitLowMark;
+  private FlushType isAboveLowWaterMark() {
+    return server.getRegionServerAccounting().isAboveLowWaterMark();
   }
 
   @Override
@@ -548,9 +532,12 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   private void notifyFlushRequest(Region region, boolean emergencyFlush) {
-    FlushType type = FlushType.NORMAL;
+    FlushType type = null;
     if (emergencyFlush) {
-      type = isAboveHighWaterMark() ? FlushType.ABOVE_HIGHER_MARK : FlushType.ABOVE_LOWER_MARK;
+      type = isAboveHighWaterMark();
+      if (type == null) {
+        type = isAboveLowWaterMark();
+      }
     }
     for (FlushRequestListener listener : flushRequestListeners) {
       listener.flushRequested(type, region);
@@ -586,7 +573,8 @@ class MemStoreFlusher implements FlushRequester {
    */
   public void reclaimMemStoreMemory() {
     TraceScope scope = Trace.startSpan("MemStoreFluser.reclaimMemStoreMemory");
-    if (isAboveHighWaterMark()) {
+    FlushType flushType = isAboveHighWaterMark();
+    if (flushType != FlushType.NORMAL) {
       if (Trace.isTracing()) {
         scope.getSpan().addTimelineAnnotation("Force Flush. We're above high water mark.");
       }
@@ -596,17 +584,24 @@ class MemStoreFlusher implements FlushRequester {
         long startTime = 0;
         boolean interrupted = false;
         try {
-          while (isAboveHighWaterMark() && !server.isStopped()) {
+          flushType = isAboveHighWaterMark();
+          while (flushType != FlushType.NORMAL && !server.isStopped()) {
             if (!blocked) {
               startTime = EnvironmentEdgeManager.currentTime();
-              LOG.info("Blocking updates on " + server.toString() + ": the global memstore size "
-                  + TraditionalBinaryPrefix.long2String(
-                      server.getRegionServerAccounting().getGlobalMemstoreSize(), "", 1)
-                  + " + global memstore heap overhead "
-                  + TraditionalBinaryPrefix.long2String(
-                      server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead(), "", 1)
-                  + " is >= than blocking "
-                  + TraditionalBinaryPrefix.long2String(globalMemStoreLimit, "", 1) + " size");
+              if (!server.getRegionServerAccounting().isOffheap()) {
+                logMsg("the global memstore size", "global memstore heap overhead");
+              } else {
+                switch (flushType) {
+                case ABOVE_OFFHEAP_HIGHER_MARK:
+                  logMsg("the global offheap memstore size", "global memstore heap overhead");
+                  break;
+                case ABOVE_ONHEAP_HIGHER_MARK:
+                  logMsg("global memstore heap overhead", "");
+                  break;
+                default:
+                  break;
+                }
+              }
             }
             blocked = true;
             wakeupFlushThread();
@@ -620,6 +615,7 @@ class MemStoreFlusher implements FlushRequester {
             }
             long took = EnvironmentEdgeManager.currentTime() - start;
             LOG.warn("Memstore is above high water mark and block " + took + "ms");
+            flushType = isAboveHighWaterMark();
           }
         } finally {
           if (interrupted) {
@@ -635,11 +631,24 @@ class MemStoreFlusher implements FlushRequester {
           LOG.info("Unblocking updates for server " + server.toString());
         }
       }
-    } else if (isAboveLowWaterMark()) {
+    } else if (isAboveLowWaterMark() != FlushType.NORMAL) {
       wakeupFlushThread();
     }
     scope.close();
   }
+
+  private void logMsg(String string1, String string2) {
+    LOG.info("Blocking updates on " + server.toString() + ": " + string1 + " "
+        + TraditionalBinaryPrefix
+            .long2String(server.getRegionServerAccounting().getGlobalMemstoreDataSize(), "", 1)
+        + " + " + string2 + " "
+        + TraditionalBinaryPrefix
+            .long2String(server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead(), "", 1)
+        + " is >= than blocking " + TraditionalBinaryPrefix.long2String(
+          server.getRegionServerAccounting().getGlobalMemstoreLimit(), "", 1)
+        + " size");
+  }
+
   @Override
   public String toString() {
     return "flush_queue="
@@ -685,14 +694,8 @@ class MemStoreFlusher implements FlushRequester {
    */
   @Override
   public void setGlobalMemstoreLimit(long globalMemStoreSize) {
-    this.globalMemStoreLimit = globalMemStoreSize;
-    this.globalMemStoreLimitLowMark =
-        (long) (this.globalMemStoreLimitLowMarkPercent * globalMemStoreSize);
+    this.server.getRegionServerAccounting().setGlobalMemstoreLimits(globalMemStoreSize);
     reclaimMemStoreMemory();
-  }
-
-  public long getMemoryLimit() {
-    return this.globalMemStoreLimit;
   }
 
   interface FlushQueueEntry extends Delayed {
@@ -825,5 +828,11 @@ class MemStoreFlusher implements FlushRequester {
 }
 
 enum FlushType {
-  NORMAL, ABOVE_LOWER_MARK, ABOVE_HIGHER_MARK;
+  NORMAL,
+  ABOVE_ONHEAP_LOWER_MARK, /* happens due to lower mark breach of onheap memstore settings
+                              An offheap memstore can even breach the onheap_lower_mark*/
+  ABOVE_ONHEAP_HIGHER_MARK,/* happens due to higher mark breach of onheap memstore settings
+                              An offheap memstore can even breach the onheap_higher_mark*/
+  ABOVE_OFFHEAP_LOWER_MARK,/* happens due to lower mark breach of offheap memstore settings*/
+  ABOVE_OFFHEAP_HIGHER_MARK;/*/* happens due to higer mark breach of offheap memstore settings*/
 }

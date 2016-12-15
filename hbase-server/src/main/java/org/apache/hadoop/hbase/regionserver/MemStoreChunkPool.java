@@ -234,6 +234,11 @@ public class MemStoreChunkPool implements HeapMemoryTuneObserver {
 
   @Override
   public void onHeapMemoryTune(long newMemstoreSize, long newBlockCacheSize) {
+    // don't do any tuning in case of offheap memstore
+    if (this.offheap) {
+      LOG.warn("Not tuning the chunk pool as it is offheap");
+      return;
+    }
     int newMaxCount = (int) (newMemstoreSize * poolSizePercentage / chunkSize);
     if (newMaxCount != this.maxCount) {
       // We need an adjustment in the chunks numbers

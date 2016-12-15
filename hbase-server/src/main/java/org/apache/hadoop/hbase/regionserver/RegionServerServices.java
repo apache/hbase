@@ -264,6 +264,7 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    *         or equal to 0.0, and any value greater than 1.0 means we enter the emergency state that
    *         global memstore size already exceeds lower limit.
    */
+  @Deprecated
   double getFlushPressure();
 
   /**
