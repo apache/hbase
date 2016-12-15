@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -343,6 +344,49 @@ public class TestIncrementsFromClientSide {
     assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 2);
 
     ht.close();
+  }
+
+  @Test
+  public void testIncrementIncrZeroAtFirst() throws Exception {
+    LOG.info("Starting " + this.name.getMethodName());
+    final TableName TABLENAME =
+            TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+
+    byte[] col1 = Bytes.toBytes("col1");
+    byte[] col2 = Bytes.toBytes("col2");
+    byte[] col3 = Bytes.toBytes("col3");
+
+    // Now increment zero at first time incr
+    Increment inc = new Increment(ROW);
+    inc.addColumn(FAMILY, col1, 0);
+    ht.increment(inc);
+
+    // Verify expected results
+    Get get = new Get(ROW);
+    Result r = ht.get(get);
+    Cell [] kvs = r.rawCells();
+    assertEquals(1, kvs.length);
+    assertNotNull(kvs[0]);
+    assertIncrementKey(kvs[0], ROW, FAMILY, col1, 0);
+
+    // Now try multiple columns by different amounts
+    inc = new Increment(ROW);
+    inc.addColumn(FAMILY, col1, 1);
+    inc.addColumn(FAMILY, col2, 0);
+    inc.addColumn(FAMILY, col3, 2);
+    ht.increment(inc);
+    // Verify
+    get = new Get(ROW);
+    r = ht.get(get);
+    kvs = r.rawCells();
+    assertEquals(3, kvs.length);
+    assertNotNull(kvs[0]);
+    assertNotNull(kvs[1]);
+    assertNotNull(kvs[2]);
+    assertIncrementKey(kvs[0], ROW, FAMILY, col1, 1);
+    assertIncrementKey(kvs[1], ROW, FAMILY, col2, 0);
+    assertIncrementKey(kvs[2], ROW, FAMILY, col3, 2);
   }
 
   @Test

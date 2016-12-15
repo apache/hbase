@@ -7508,12 +7508,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (int i = 0; i < deltas.size(); i++) {
       Cell delta = deltas.get(i);
       Cell currentValue = null;
+      boolean firstWrite = false;
       if (currentValuesIndex < currentValues.size() &&
           CellUtil.matchingQualifier(currentValues.get(currentValuesIndex), delta)) {
         currentValue = currentValues.get(currentValuesIndex);
         if (i < (deltas.size() - 1) && !CellUtil.matchingQualifier(delta, deltas.get(i + 1))) {
           currentValuesIndex++;
         }
+      } else {
+        firstWrite = true;
       }
       // Switch on whether this an increment or an append building the new Cell to apply.
       Cell newCell = null;
@@ -7542,7 +7545,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             coprocessorHost.postMutationBeforeWAL(mutationType, mutation, currentValue, newCell);
       }
       // If apply, we need to update memstore/WAL with new value; add it toApply.
-      if (apply) {
+      if (apply || firstWrite) {
         toApply.add(newCell);
       }
       // Add to results to get returned to the Client. If null, cilent does not want results.
