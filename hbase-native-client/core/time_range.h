@@ -21,11 +21,10 @@
 
 namespace hbase {
 class TimeRange {
-
  public:
-
   /**
-   * @brief  Default constructor. Represents interval [0, Long.MAX_VALUE) (allTime)
+   * @brief  Default constructor. Represents interval [0, Long.MAX_VALUE)
+   * (allTime)
    */
   TimeRange();
   TimeRange(const TimeRange &tr);
@@ -39,7 +38,8 @@ class TimeRange {
    * @brief Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
-   * @throws std::runtime_error if min_timestamp < 0 or max_timestamp < 0 or max_timestamp < min_timestamp
+   * @throws std::runtime_error if min_timestamp < 0 or max_timestamp < 0 or
+   * max_timestamp < min_timestamp
    */
   TimeRange(long min_timestamp, long max_timestamp);
   long MinTimeStamp() const;

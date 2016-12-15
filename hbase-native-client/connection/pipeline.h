@@ -35,7 +35,7 @@ using SerializePipeline =
  * Factory to create new pipelines for HBase RPC's.
  */
 class RpcPipelineFactory : public wangle::PipelineFactory<SerializePipeline> {
-public:
+ public:
   /**
    * Constructor. This will create user util.
    */
@@ -50,10 +50,10 @@ public:
    * - Length Field Based Frame Decoder
    * - Client Handler
    */
-  SerializePipeline::Ptr
-  newPipeline(std::shared_ptr<folly::AsyncTransportWrapper> sock) override;
+  SerializePipeline::Ptr newPipeline(
+      std::shared_ptr<folly::AsyncTransportWrapper> sock) override;
 
-private:
+ private:
   UserUtil user_util_;
 };
-} // namespace hbase
+}  // namespace hbase

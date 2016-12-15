@@ -53,46 +53,41 @@ cxx_library(
         "//third-party:zookeeper_mt",
     ],
     compiler_flags=['-Weffc++'],
-    visibility=[
-        'PUBLIC',
-    ], )
-cxx_test(name="location-cache-test",
-         srcs=[
-             "location-cache-test.cc",
-         ],
-         deps=[":core",
-               "//test-util:test-util", ],
-         run_test_separately=True, )
-cxx_test(name="cell-test",
-         srcs=[
-             "cell-test.cc",
-         ],
-         deps=[":core", ],
-         run_test_separately=True, )
-cxx_test(name="get-test",
-         srcs=[
-             "get-test.cc",
-         ],
-         deps=[":core", ],
-         run_test_separately=True, )
-cxx_test(name="time_range-test",
-         srcs=[
-             "time_range-test.cc",
-         ],
-         deps=[":core", ],
-         run_test_separately=True, )
-cxx_test(name="hbase_configuration-test",
-         srcs=[
-             "hbase_configuration-test.cc",
-         ],
-         deps=[":core", ],
-         run_test_separately=True, )
-cxx_test(name="scan-test",
-         srcs=[
-             "scan-test.cc",
-         ],
-         deps=[":core", ],
-         run_test_separately=True, )
-cxx_binary(name="simple-client",
-           srcs=["simple-client.cc", ],
-           deps=[":core", "//connection:connection"], )
+    visibility=['PUBLIC',],)
+cxx_test(
+    name="location-cache-test",
+    srcs=["location-cache-test.cc",],
+    deps=[
+        ":core",
+        "//test-util:test-util",
+    ],
+    run_test_separately=True,)
+cxx_test(
+    name="cell-test",
+    srcs=["cell-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="get-test",
+    srcs=["get-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="time_range-test",
+    srcs=["time_range-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="hbase_configuration-test",
+    srcs=["hbase_configuration-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="scan-test",
+    srcs=["scan-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
+cxx_binary(
+    name="simple-client",
+    srcs=["simple-client.cc",],
+    deps=[":core", "//connection:connection"],)

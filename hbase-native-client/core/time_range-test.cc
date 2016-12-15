@@ -19,13 +19,12 @@
 
 #include "core/time_range.h"
 
-#include <gtest/gtest.h>
 #include <glog/logging.h>
+#include <gtest/gtest.h>
 
 using namespace hbase;
 
-TEST (TimeRange, DefaultObject) {
-
+TEST(TimeRange, DefaultObject) {
   TimeRange *timerange_def = nullptr;
   ASSERT_NO_THROW(timerange_def = new TimeRange());
 
@@ -37,8 +36,7 @@ TEST (TimeRange, DefaultObject) {
   timerange_def = nullptr;
 }
 
-TEST (TimeRange, Exception) {
-
+TEST(TimeRange, Exception) {
   // Negative Min TS
   ASSERT_THROW(TimeRange(-1000, 2000), std::runtime_error);
 

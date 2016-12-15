@@ -32,7 +32,7 @@ namespace hbase {
  * region name, and a connection to the service used for connecting to it.
  */
 class RegionLocation {
-public:
+ public:
   /**
    * Constructor.
    * @param region_name The region name of this region.
@@ -79,11 +79,11 @@ public:
    */
   void set_server_name(hbase::pb::ServerName sn) { sn_ = sn; }
 
-private:
+ private:
   std::string region_name_;
   hbase::pb::RegionInfo ri_;
   hbase::pb::ServerName sn_;
   std::shared_ptr<HBaseService> service_;
 };
 
-} // namespace hbase
+}  // namespace hbase

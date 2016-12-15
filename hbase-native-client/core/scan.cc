@@ -26,20 +26,16 @@
 
 namespace hbase {
 
-Scan::Scan() {
-}
+Scan::Scan() {}
 
-Scan::~Scan() {
-}
+Scan::~Scan() {}
 
-Scan::Scan(const std::string &start_row)
-    : start_row_(start_row) {
+Scan::Scan(const std::string &start_row) : start_row_(start_row) {
   CheckRow(start_row_);
 }
 
 Scan::Scan(const std::string &start_row, const std::string &stop_row)
-    : start_row_(start_row),
-      stop_row_(stop_row) {
+    : start_row_(start_row), stop_row_(stop_row) {
   CheckRow(start_row_);
   CheckRow(stop_row_);
 }
@@ -60,7 +56,7 @@ Scan::Scan(const Scan &scan) {
   family_map_.insert(scan.family_map_.begin(), scan.family_map_.end());
 }
 
-Scan& Scan::operator=(const Scan &scan) {
+Scan &Scan::operator=(const Scan &scan) {
   start_row_ = scan.start_row_;
   stop_row_ = scan.stop_row_;
   max_versions_ = scan.max_versions_;
@@ -80,15 +76,17 @@ Scan& Scan::operator=(const Scan &scan) {
 Scan::Scan(const Get &get) {
   cache_blocks_ = get.CacheBlocks();
   max_versions_ = get.MaxVersions();
-  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(), get.Timerange().MaxTimeStamp()));
+  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(),
+                          get.Timerange().MaxTimeStamp()));
   family_map_.insert(get.Family().begin(), get.Family().end());
 }
 
-Scan& Scan::AddFamily(const std::string &family) {
+Scan &Scan::AddFamily(const std::string &family) {
   const auto &it = family_map_.find(family);
   /**
    * Check if any qualifiers are already present or not.
-   * Remove all existing qualifiers if the given family is already present in the map
+   * Remove all existing qualifiers if the given family is already present in
+   * the map
    */
   if (family_map_.end() != it) {
     it->second.clear();
@@ -98,8 +96,9 @@ Scan& Scan::AddFamily(const std::string &family) {
   return *this;
 }
 
-Scan& Scan::AddColumn(const std::string &family, const std::string &qualifier) {
-  const auto &it = std::find(family_map_[family].begin(), family_map_[family].end(), qualifier);
+Scan &Scan::AddColumn(const std::string &family, const std::string &qualifier) {
+  const auto &it = std::find(family_map_[family].begin(),
+                             family_map_[family].end(), qualifier);
   /**
    * Check if any qualifiers are already present or not.
    * Add only if qualifiers for a given family are not present
@@ -110,72 +109,48 @@ Scan& Scan::AddColumn(const std::string &family, const std::string &qualifier) {
   return *this;
 }
 
-void Scan::SetReversed(bool reversed) {
-  reversed_ = reversed;
-}
+void Scan::SetReversed(bool reversed) { reversed_ = reversed; }
 
-bool Scan::IsReversed() const {
-  return reversed_;
-}
+bool Scan::IsReversed() const { return reversed_; }
 
 void Scan::SetStartRow(std::string &start_row) {
   CheckRow(start_row);
   start_row_ = start_row;
 }
 
-const std::string& Scan::StartRow() const {
-  return start_row_;
-}
+const std::string &Scan::StartRow() const { return start_row_; }
 
 void Scan::SetStopRow(std::string &stop_row) {
   CheckRow(stop_row);
   stop_row_ = stop_row;
 }
 
-const std::string& Scan::StopRow() const {
-  return stop_row_;
-}
+const std::string &Scan::StopRow() const { return stop_row_; }
 
-void Scan::SetSmall(bool small) {
-  small_ = small;
-}
+void Scan::SetSmall(bool small) { small_ = small; }
 
-bool Scan::IsSmall() const {
-  return small_;
-}
+bool Scan::IsSmall() const { return small_; }
 
-void Scan::SetCaching(int caching) {
-  caching_ = caching;
-}
+void Scan::SetCaching(int caching) { caching_ = caching; }
 
-int Scan::Caching() const {
-  return caching_;
-}
+int Scan::Caching() const { return caching_; }
 
-Scan& Scan::SetConsistency(const hbase::pb::Consistency consistency) {
+Scan &Scan::SetConsistency(const hbase::pb::Consistency consistency) {
   consistency_ = consistency;
   return *this;
 }
 
-hbase::pb::Consistency Scan::Consistency() const {
-  return consistency_;
-}
+hbase::pb::Consistency Scan::Consistency() const { return consistency_; }
 
-void Scan::SetCacheBlocks(bool cache_blocks) {
-  cache_blocks_ = cache_blocks;
-}
+void Scan::SetCacheBlocks(bool cache_blocks) { cache_blocks_ = cache_blocks; }
 
-bool Scan::CacheBlocks() const {
-  return cache_blocks_;
-}
+bool Scan::CacheBlocks() const { return cache_blocks_; }
 
 void Scan::SetAllowPartialResults(bool allow_partial_results) {
   allow_partial_results_ = allow_partial_results;
 }
 
-bool Scan::AllowPartialResults() const {
-  return allow_partial_results_;
-}
+bool Scan::AllowPartialResults() const { return allow_partial_results_; }
 
 void Scan::SetLoadColumnFamiliesOnDemand(bool load_column_families_on_demand) {
   load_column_families_on_demand_ = load_column_families_on_demand;
@@ -185,36 +160,30 @@ bool Scan::LoadColumnFamiliesOnDemand() const {
   return load_column_families_on_demand_;
 }
 
-Scan& Scan::SetMaxVersions(uint32_t max_versions) {
+Scan &Scan::SetMaxVersions(uint32_t max_versions) {
   max_versions_ = max_versions;
   return *this;
 }
 
-int Scan::MaxVersions() const {
-  return max_versions_;
-}
+int Scan::MaxVersions() const { return max_versions_; }
 
 void Scan::SetMaxResultSize(long max_result_size) {
   max_result_size_ = max_result_size;
 }
 
-long Scan::MaxResultSize() const {
-  return max_result_size_;
-}
+long Scan::MaxResultSize() const { return max_result_size_; }
 
 Scan &Scan::SetTimeRange(long min_stamp, long max_stamp) {
   tr_.reset(new TimeRange(min_stamp, max_stamp));
   return *this;
 }
 
-Scan& Scan::SetTimeStamp(long timestamp) {
+Scan &Scan::SetTimeStamp(long timestamp) {
   tr_.reset(new TimeRange(timestamp, timestamp + 1));
   return *this;
 }
 
-const TimeRange& Scan::Timerange() const {
-  return *tr_;
-}
+const TimeRange &Scan::Timerange() const { return *tr_; }
 
 void Scan::CheckRow(const std::string &row) {
   const int kMaxRowLength = std::numeric_limits<short>::max();
@@ -223,17 +192,14 @@ void Scan::CheckRow(const std::string &row) {
     throw std::runtime_error("Row length can't be 0");
   }
   if (row_length > kMaxRowLength) {
-    throw std::runtime_error(
-        "Length of " + row + " is greater than max row size: " + std::to_string(kMaxRowLength));
+    throw std::runtime_error("Length of " + row +
+                             " is greater than max row size: " +
+                             std::to_string(kMaxRowLength));
   }
 }
 
-bool Scan::HasFamilies() const {
-  return !family_map_.empty();
-}
+bool Scan::HasFamilies() const { return !family_map_.empty(); }
 
-const FamilyMap &Scan::Family() const {
-  return family_map_;
-}
+const FamilyMap &Scan::Family() const { return family_map_; }
 }
 /* namespace hbase */

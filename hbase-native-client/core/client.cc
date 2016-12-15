@@ -21,8 +21,8 @@
 
 #include <glog/logging.h>
 
-#include <string>
 #include <unistd.h>
+#include <string>
 
 using namespace folly;
 using namespace std;
@@ -43,4 +43,4 @@ Client::~Client() {
   io_executor_->stop();
 }
 
-} // namespace hbase
+}  // namespace hbase

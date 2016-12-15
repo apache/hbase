@@ -32,8 +32,8 @@ using namespace wangle;
 
 RpcPipelineFactory::RpcPipelineFactory() : user_util_() {}
 
-SerializePipeline::Ptr
-RpcPipelineFactory::newPipeline(std::shared_ptr<AsyncTransportWrapper> sock) {
+SerializePipeline::Ptr RpcPipelineFactory::newPipeline(
+    std::shared_ptr<AsyncTransportWrapper> sock) {
   auto pipeline = SerializePipeline::create();
   pipeline->addBack(AsyncSocketHandler{sock});
   pipeline->addBack(EventBaseHandler{});

@@ -33,8 +33,10 @@ using folly::SocketAddress;
 
 ConnectionPool::ConnectionPool(
     std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
-    : cf_(std::make_shared<ConnectionFactory>(io_executor)), clients_(),
-      connections_(), map_mutex_() {}
+    : cf_(std::make_shared<ConnectionFactory>(io_executor)),
+      clients_(),
+      connections_(),
+      map_mutex_() {}
 ConnectionPool::ConnectionPool(std::shared_ptr<ConnectionFactory> cf)
     : cf_(cf), clients_(), connections_(), map_mutex_() {}
 

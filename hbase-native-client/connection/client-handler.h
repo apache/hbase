@@ -51,7 +51,7 @@ namespace hbase {
 class ClientHandler : public wangle::Handler<std::unique_ptr<folly::IOBuf>,
                                              Response, std::unique_ptr<Request>,
                                              std::unique_ptr<folly::IOBuf>> {
-public:
+ public:
   /**
    * Create the handler
    * @param user_name the user name of the user running this process.
@@ -71,7 +71,7 @@ public:
   folly::Future<folly::Unit> write(Context *ctx,
                                    std::unique_ptr<Request> r) override;
 
-private:
+ private:
   std::unique_ptr<std::once_flag> once_flag_;
   std::string user_name_;
   RpcSerde serde_;
@@ -81,4 +81,4 @@ private:
       uint32_t, std::shared_ptr<google::protobuf::Message>>>
       resp_msgs_;
 };
-} // namespace hbase
+}  // namespace hbase

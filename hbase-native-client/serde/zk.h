@@ -35,7 +35,7 @@ namespace hbase {
  *
  */
 class ZkDeserializer {
-public:
+ public:
   /**
    * Merge the data from a buffer into a given message.
    *
@@ -46,4 +46,4 @@ public:
    */
   bool Parse(folly::IOBuf *buf, google::protobuf::Message *out);
 };
-} // namespace hbase
+}  // namespace hbase

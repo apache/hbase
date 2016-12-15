@@ -34,7 +34,6 @@ template <class T>
 using optional = std::experimental::optional<T>;
 
 class HBaseConfigurationLoader {
-
  public:
   HBaseConfigurationLoader();
   ~HBaseConfigurationLoader();

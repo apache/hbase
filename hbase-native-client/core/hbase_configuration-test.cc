@@ -20,16 +20,18 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/filesystem.hpp>
-#include <gtest/gtest.h>
 #include <glog/logging.h>
-#include "core/hbase_configuration_loader.h"
+#include <gtest/gtest.h>
+#include <boost/filesystem.hpp>
 #include "core/configuration.h"
+#include "core/hbase_configuration_loader.h"
 
 using namespace hbase;
 
-const std::string kDefHBaseConfPath("./build/test-data/hbase-configuration-test/conf/");
-const std::string kHBaseConfPath("./build/test-data/hbase-configuration-test/custom-conf/");
+const std::string kDefHBaseConfPath(
+    "./build/test-data/hbase-configuration-test/conf/");
+const std::string kHBaseConfPath(
+    "./build/test-data/hbase-configuration-test/custom-conf/");
 
 const std::string kHBaseDefaultXml("hbase-default.xml");
 const std::string kHBaseSiteXml("hbase-site.xml");
@@ -131,7 +133,6 @@ void CreateHBaseConf(const std::string &dir, const std::string &file,
 }
 
 void CreateHBaseConfWithEnv() {
-
   CreateHBaseConf(kDefHBaseConfPath, kHBaseDefaultXml, kHBaseDefaultXmlData);
   CreateHBaseConf(kDefHBaseConfPath, kHBaseSiteXml, kHBaseSiteXmlData);
   setenv("HBASE_CONF", kDefHBaseConfPath.c_str(), 1);
@@ -178,7 +179,7 @@ TEST(Configuration, LoadConfFromCustomLocation) {
 
 /*
  * Config will be loaded from hbase-defualt.xml and hbase-site.xml @
- * kDefHBaseConfPath and kHBaseConfPath respectively. 
+ * kDefHBaseConfPath and kHBaseConfPath respectively.
  */
 TEST(Configuration, LoadConfFromMultipleLocatons) {
   // Remove already configured env if present.

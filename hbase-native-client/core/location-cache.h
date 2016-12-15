@@ -46,7 +46,7 @@ class ServerName;
  * Class that can look up and cache locations.
  */
 class LocationCache {
-public:
+ public:
   /**
    * Constructor.
    * @param quorum_spec Where to connect for Zookeeper.
@@ -79,15 +79,15 @@ public:
    * @param row of the table to look up. This object must live until after the
    * future is returned
    */
-  folly::Future<std::shared_ptr<RegionLocation>>
-  LocateFromMeta(const hbase::pb::TableName &tn, const std::string &row);
+  folly::Future<std::shared_ptr<RegionLocation>> LocateFromMeta(
+      const hbase::pb::TableName &tn, const std::string &row);
 
   /**
    * Remove the cached location of meta.
    */
   void InvalidateMeta();
 
-private:
+ private:
   void RefreshMetaLocation();
   hbase::pb::ServerName ReadMetaLocation();
   std::shared_ptr<RegionLocation> CreateLocation(const Response &resp);
@@ -103,4 +103,4 @@ private:
   // TODO: migrate this to a smart pointer with a deleter.
   zhandle_t *zk_;
 };
-} // namespace hbase
+}  // namespace hbase

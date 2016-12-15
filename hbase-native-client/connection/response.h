@@ -35,7 +35,7 @@ namespace hbase {
  * This is the class sent to a service.
  */
 class Response {
-public:
+ public:
   /**
    * Constructor.
    * Initinalizes the call id to 0. 0 should never be a valid call id.
@@ -62,8 +62,8 @@ public:
     resp_msg_ = std::move(response);
   }
 
-private:
+ private:
   uint32_t call_id_;
   std::shared_ptr<google::protobuf::Message> resp_msg_;
 };
-} // namespace hbase
+}  // namespace hbase

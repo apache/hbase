@@ -25,9 +25,13 @@ namespace hbase {
 Cell::Cell(const std::string &row, const std::string &family,
            const std::string &qualifier, const long &timestamp,
            const std::string &value, const hbase::CellType &cell_type)
-    : row_(row), family_(family), qualifier_(qualifier), timestamp_(timestamp),
-      cell_type_(cell_type), value_(value), sequence_id_(0) {
-
+    : row_(row),
+      family_(family),
+      qualifier_(qualifier),
+      timestamp_(timestamp),
+      cell_type_(cell_type),
+      value_(value),
+      sequence_id_(0) {
   if (0 == row.size())
     throw std::runtime_error("Row size should be greater than 0");
 
