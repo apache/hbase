@@ -149,17 +149,22 @@ public final class ProcedureSyncWait {
 
   protected static List<HRegionInfo> getRegionsFromMeta(final MasterProcedureEnv env,
       final TableName tableName) throws IOException {
+    return getRegionsFromMeta(env, tableName, false);
+  }
+
+  protected static List<HRegionInfo> getRegionsFromMeta(final MasterProcedureEnv env,
+      final TableName tableName,  final boolean excludeOfflinedSplitParents) throws IOException {
     return ProcedureSyncWait.waitFor(env, "regions of table=" + tableName + " from meta",
         new ProcedureSyncWait.Predicate<List<HRegionInfo>>() {
-      @Override
-      public List<HRegionInfo> evaluate() throws IOException {
-        if (TableName.META_TABLE_NAME.equals(tableName)) {
-          return new MetaTableLocator().getMetaRegions(env.getMasterServices().getZooKeeper());
-        }
-        return MetaTableAccessor.getTableRegions(env.getMasterServices().getZooKeeper(),
-            env.getMasterServices().getConnection(), tableName);
-      }
-    });
+          @Override
+          public List<HRegionInfo> evaluate() throws IOException {
+            if (TableName.META_TABLE_NAME.equals(tableName)) {
+              return new MetaTableLocator().getMetaRegions(env.getMasterServices().getZooKeeper());
+            }
+            return MetaTableAccessor.getTableRegions(env.getMasterServices().getZooKeeper(),
+                env.getMasterServices().getConnection(), tableName, excludeOfflinedSplitParents);
+          }
+        });
   }
 
   protected static void waitRegionInTransition(final MasterProcedureEnv env,

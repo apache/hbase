@@ -85,7 +85,7 @@ public class TruncateTableProcedure
 
           // TODO: Move out... in the acquireLock()
           LOG.debug("waiting for '" + getTableName() + "' regions in transition");
-          regions = ProcedureSyncWait.getRegionsFromMeta(env, getTableName());
+          regions = ProcedureSyncWait.getRegionsFromMeta(env, getTableName(), true);
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
           ProcedureSyncWait.waitRegionInTransition(env, regions);
 
@@ -102,15 +102,17 @@ public class TruncateTableProcedure
           break;
         case TRUNCATE_TABLE_CLEAR_FS_LAYOUT:
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
+          setNextState(TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT);
+          break;
+        case TRUNCATE_TABLE_CREATE_FS_LAYOUT:
           if (!preserveSplits) {
             // if we are not preserving splits, generate a new single region
+            //recreateRegionInfo in TRUNCATE_TABLE_CREATE_FS_LAYOUT phase, since if create fs layout fails
+            //we need to refresh the region encoded name to prevent dir name conflict
             regions = Arrays.asList(ModifyRegionUtils.createHRegionInfos(hTableDescriptor, null));
           } else {
             regions = recreateRegionInfo(regions);
           }
-          setNextState(TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT);
-          break;
-        case TRUNCATE_TABLE_CREATE_FS_LAYOUT:
           regions = CreateTableProcedure.createFsLayout(env, hTableDescriptor, regions);
           CreateTableProcedure.updateTableDescCache(env, getTableName());
           setNextState(TruncateTableState.TRUNCATE_TABLE_ADD_TO_META);
