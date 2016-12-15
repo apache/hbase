@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -72,6 +73,7 @@ public class CompactingMemStore extends AbstractMemStore {
   private final AtomicBoolean inMemoryFlushInProgress = new AtomicBoolean(false);
   @VisibleForTesting
   private final AtomicBoolean allowCompaction = new AtomicBoolean(true);
+  private boolean compositeSnapshot = true;
 
   public static final long DEEP_OVERHEAD = AbstractMemStore.DEEP_OVERHEAD
       + 6 * ClassSize.REFERENCE // Store, RegionServicesForStores, CompactionPipeline,
@@ -160,7 +162,12 @@ public class CompactingMemStore extends AbstractMemStore {
       stopCompaction();
       pushActiveToPipeline(this.active);
       snapshotId = EnvironmentEdgeManager.currentTime();
-      pushTailToSnapshot();
+      // in both cases whatever is pushed to snapshot is cleared from the pipeline
+      if (compositeSnapshot) {
+        pushPipelineToSnapshot();
+      } else {
+        pushTailToSnapshot();
+      }
     }
     return new MemStoreSnapshot(snapshotId, this.snapshot);
   }
@@ -173,8 +180,13 @@ public class CompactingMemStore extends AbstractMemStore {
   public MemstoreSize getFlushableSize() {
     MemstoreSize snapshotSize = getSnapshotSize();
     if (snapshotSize.getDataSize() == 0) {
-      // if snapshot is empty the tail of the pipeline is flushed
-      snapshotSize = pipeline.getTailSize();
+      // if snapshot is empty the tail of the pipeline (or everything in the memstore) is flushed
+      if (compositeSnapshot) {
+        snapshotSize = pipeline.getPipelineSize();
+        snapshotSize.incMemstoreSize(this.active.keySize(), this.active.heapOverhead());
+      } else {
+        snapshotSize = pipeline.getTailSize();
+      }
     }
     return snapshotSize.getDataSize() > 0 ? snapshotSize
         : new MemstoreSize(this.active.keySize(), this.active.heapOverhead());
@@ -213,14 +225,26 @@ public class CompactingMemStore extends AbstractMemStore {
     }
   }
 
+  // the getSegments() method is used for tests only
+  @VisibleForTesting
   @Override
   public List<Segment> getSegments() {
     List<Segment> pipelineList = pipeline.getSegments();
     List<Segment> list = new ArrayList<Segment>(pipelineList.size() + 2);
     list.add(this.active);
     list.addAll(pipelineList);
-    list.add(this.snapshot);
+    list.addAll(this.snapshot.getAllSegments());
+
     return list;
+  }
+
+  // the following three methods allow to manipulate the settings of composite snapshot
+  public void setCompositeSnapshot(boolean useCompositeSnapshot) {
+    this.compositeSnapshot = useCompositeSnapshot;
+  }
+
+  public boolean isCompositeSnapshot() {
+    return this.compositeSnapshot;
   }
 
   public boolean swapCompactedSegments(VersionedSegmentsList versionedList, ImmutableSegment result,
@@ -262,18 +286,21 @@ public class CompactingMemStore extends AbstractMemStore {
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
-    List<Segment> pipelineList = pipeline.getSegments();
-    long order = pipelineList.size();
-    // The list of elements in pipeline + the active element + the snapshot segment
-    // TODO : This will change when the snapshot is made of more than one element
-    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(pipelineList.size() + 2);
-    list.add(this.active.getScanner(readPt, order + 1));
-    for (Segment item : pipelineList) {
-      list.add(item.getScanner(readPt, order));
-      order--;
-    }
-    list.add(this.snapshot.getScanner(readPt, order));
-    return Collections.<KeyValueScanner> singletonList(new MemStoreScanner(getComparator(), list));
+
+    int order = 1;                        // for active segment
+    order += pipeline.size();             // for all segments in the pipeline
+    order += snapshot.getNumOfSegments(); // for all segments in the snapshot
+    // TODO: check alternatives to using this order
+    // The list of elements in pipeline + the active element + the snapshot segments
+    // The order is the Segment ordinal
+    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(order);
+    list.add(this.active.getScanner(readPt, order));
+    order--;
+    list.addAll(pipeline.getScanners(readPt,order));
+    order -= pipeline.size();
+    list.addAll(snapshot.getScanners(readPt,order));
+
+    return Collections.<KeyValueScanner>singletonList(new MemStoreScanner(getComparator(), list));
   }
 
   /**
@@ -380,6 +407,14 @@ public class CompactingMemStore extends AbstractMemStore {
     }
   }
 
+  private void pushPipelineToSnapshot() {
+    List<ImmutableSegment> segments = pipeline.drain();
+    if (!segments.isEmpty()) {
+      this.snapshot =
+          SegmentFactory.instance().createCompositeImmutableSegment(getComparator(),segments);
+    }
+  }
+
   private RegionServicesForStores getRegionServices() {
     return regionServices;
   }
@@ -425,24 +460,6 @@ public class CompactingMemStore extends AbstractMemStore {
   @VisibleForTesting
   void initiateType(HColumnDescriptor.MemoryCompaction compactionType) {
     compactor.initiateAction(compactionType);
-  }
-
-  /**
-   * @param cell Find the row that comes after this one.  If null, we return the
-   *             first.
-   * @return Next row or null if none found.
-   */
-  Cell getNextRow(final Cell cell) {
-    Cell lowest = null;
-    List<Segment> segments = getSegments();
-    for (Segment segment : segments) {
-      if (lowest == null) {
-        lowest = getNextRow(cell, segment.getCellSet());
-      } else {
-        lowest = getLowest(lowest, getNextRow(cell, segment.getCellSet()));
-      }
-    }
-    return lowest;
   }
 
   // debug method

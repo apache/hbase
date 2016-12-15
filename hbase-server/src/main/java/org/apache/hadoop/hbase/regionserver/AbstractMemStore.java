@@ -159,14 +159,12 @@ public abstract class AbstractMemStore implements MemStore {
   public String toString() {
     StringBuffer buf = new StringBuffer();
     int i = 1;
-    try {
-      for (Segment segment : getSegments()) {
-        buf.append("Segment (" + i + ") " + segment.toString() + "; ");
-        i++;
-      }
-    } catch (IOException e){
-      return e.toString();
+
+    for (Segment segment : getSegments()) {
+      buf.append("Segment (" + i + ") " + segment.toString() + "; ");
+      i++;
     }
+
     return buf.toString();
   }
 
@@ -232,6 +230,7 @@ public abstract class AbstractMemStore implements MemStore {
    * @return Next row or null if none found.  If one found, will be a new
    * KeyValue -- can be destroyed by subsequent calls to this method.
    */
+  @VisibleForTesting
   protected Cell getNextRow(final Cell key,
       final NavigableSet<Cell> set) {
     Cell result = null;
@@ -247,6 +246,26 @@ public abstract class AbstractMemStore implements MemStore {
       break;
     }
     return result;
+  }
+
+  /**
+   * @param cell Find the row that comes after this one.  If null, we return the
+   *             first.
+   * @return Next row or null if none found.
+   */
+  @VisibleForTesting
+  Cell getNextRow(final Cell cell) {
+    Cell lowest = null;
+    List<Segment> segments = getSegments();
+    for (Segment segment : segments) {
+      if (lowest == null) {
+        //TODO: we may want to move the getNextRow ability to the segment
+        lowest = getNextRow(cell, segment.getCellSet());
+      } else {
+        lowest = getLowest(lowest, getNextRow(cell, segment.getCellSet()));
+      }
+    }
+    return lowest;
   }
 
   private Cell maybeCloneWithAllocator(Cell cell) {
@@ -307,6 +326,6 @@ public abstract class AbstractMemStore implements MemStore {
   /**
    * @return an ordered list of segments from most recent to oldest in memstore
    */
-  protected abstract List<Segment> getSegments() throws IOException;
+  protected abstract List<Segment> getSegments();
 
 }

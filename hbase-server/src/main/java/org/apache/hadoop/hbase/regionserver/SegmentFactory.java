@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -45,6 +46,13 @@ public final class SegmentFactory {
   public ImmutableSegment createImmutableSegment(final Configuration conf,
       final CellComparator comparator, MemStoreSegmentsIterator iterator) {
     return new ImmutableSegment(comparator, iterator, MemStoreLAB.newInstance(conf));
+  }
+
+  // create composite immutable segment from a list of segments
+  public CompositeImmutableSegment createCompositeImmutableSegment(
+      final CellComparator comparator, List<ImmutableSegment> segments) {
+    return new CompositeImmutableSegment(comparator, segments);
+
   }
 
   // create new flat immutable segment from compacting old immutable segments
@@ -102,6 +110,9 @@ public final class SegmentFactory {
 
   private MemStoreLAB getMergedMemStoreLAB(Configuration conf, List<ImmutableSegment> segments) {
     List<MemStoreLAB> mslabs = new ArrayList<MemStoreLAB>();
+    if (!conf.getBoolean(MemStoreLAB.USEMSLAB_KEY, MemStoreLAB.USEMSLAB_DEFAULT)) {
+      return null;
+    }
     for (ImmutableSegment segment : segments) {
       mslabs.add(segment.getMemStoreLAB());
     }
