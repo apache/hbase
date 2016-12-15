@@ -3133,14 +3133,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // TODO: This needs a rewrite. Doesn't have to be this long. St.Ack 20160120
   private void doMiniBatchMutate(BatchOperation<?> batchOp) throws IOException {
     boolean replay = batchOp.isInReplay();
-    // Variable to note if all Put items are for the same CF -- metrics related
-    boolean putsCfSetConsistent = true;
-    // Variable to note if all Delete items are for the same CF -- metrics related
-    boolean deletesCfSetConsistent = true;
-    // The set of columnFamilies first seen for Put.
-    Set<byte[]> putsCfSet = null;
-    // The set of columnFamilies first seen for Delete.
-    Set<byte[]> deletesCfSet = null;
     long currentNonceGroup = HConstants.NO_NONCE;
     long currentNonce = HConstants.NO_NONCE;
     WALEdit walEdit = null;
@@ -3188,24 +3180,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (replay) {
           for (List<Cell> cells : mutation.getFamilyCellMap().values()) {
             cellCount += cells.size();
-          }
-        }
-        if (mutation instanceof Put) {
-          // If Column Families stay consistent through out all of the
-          // individual puts then metrics can be reported as a multiput across
-          // column families in the first put.
-          if (putsCfSet == null) {
-            putsCfSet = mutation.getFamilyCellMap().keySet();
-          } else {
-            putsCfSetConsistent = putsCfSetConsistent
-                && mutation.getFamilyCellMap().keySet().equals(putsCfSet);
-          }
-        } else {
-          if (deletesCfSet == null) {
-            deletesCfSet = mutation.getFamilyCellMap().keySet();
-          } else {
-            deletesCfSetConsistent = deletesCfSetConsistent
-                && mutation.getFamilyCellMap().keySet().equals(deletesCfSet);
           }
         }
       }
