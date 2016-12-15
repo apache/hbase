@@ -1470,6 +1470,26 @@ public class RegionCoprocessorHost
     });
   }
 
+  public boolean preCommitStoreFile(final byte[] family, final List<Pair<Path, Path>> pairs)
+      throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
+      @Override
+      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preCommitStoreFile(ctx, family, pairs);
+      }
+    });
+  }
+  public void postCommitStoreFile(final byte[] family, Path srcPath, Path dstPath) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
+      @Override
+      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postCommitStoreFile(ctx, family, srcPath, dstPath);
+      }
+    });
+  }
+
   /**
    * @param familyPaths pairs of { CF, file path } submitted for bulk load
    * @param map Map of CF to List of file paths for the final loaded files

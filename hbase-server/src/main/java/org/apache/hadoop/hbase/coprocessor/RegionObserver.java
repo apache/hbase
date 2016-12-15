@@ -1336,6 +1336,31 @@ public interface RegionObserver extends Coprocessor {
     List<Pair<byte[], String>> familyPaths) throws IOException;
 
   /**
+   * Called before moving bulk loaded hfile to region directory.
+   *
+   * @param ctx
+   * @param family column family
+   * @param pairs List of pairs of { HFile location in staging dir, HFile path in region dir }
+   * Each pair are for the same hfile.
+   * @throws IOException
+   */
+  default void preCommitStoreFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      final byte[] family, final List<Pair<Path, Path>> pairs) throws IOException {
+  }
+
+  /**
+   * Called after moving bulk loaded hfile to region directory.
+   *
+   * @param ctx
+   * @param family column family
+   * @param srcPath Path to file before the move
+   * @param dstPath Path to file after the move
+   */
+  default void postCommitStoreFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      final byte[] family, Path srcPath, Path dstPath) throws IOException {
+  }
+
+  /**
    * Called after bulkLoadHFile.
    *
    * @param ctx

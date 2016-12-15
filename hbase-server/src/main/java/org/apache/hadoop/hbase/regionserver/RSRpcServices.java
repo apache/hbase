@@ -2153,15 +2153,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         if (region.getCoprocessorHost() != null) {
           bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
         }
-        if (!bypass) {
-          map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
-              request.getCopyFile());
-          if (map != null) {
-            loaded = true;
+        try { 
+          if (!bypass) {
+            map = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum(), null,
+                request.getCopyFile());
+            if (map != null) {
+              loaded = true;
+            }
           }
-        }
-        if (region.getCoprocessorHost() != null) {
-          loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map, loaded);
+        } finally {
+          if (region.getCoprocessorHost() != null) {
+            loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, map, loaded);
+          }
         }
       } else {
         // secure bulk load
