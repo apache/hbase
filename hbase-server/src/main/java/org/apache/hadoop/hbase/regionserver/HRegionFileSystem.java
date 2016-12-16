@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.collect.Lists;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -54,7 +52,10 @@ import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+
+import com.google.common.collect.Lists;
 
 /**
  * View to an on-disk Region.
@@ -494,7 +495,7 @@ public class HRegionFileSystem {
    * @return The destination {@link Path} of the bulk loaded file
    * @throws IOException
    */
-  Path bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
+  Pair<Path, Path> bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
       throws IOException {
     // Copy the file if it's on another filesystem
     FileSystem srcFs = srcPath.getFileSystem(conf);
@@ -512,7 +513,7 @@ public class HRegionFileSystem {
       srcPath = tmpPath;
     }
 
-    return preCommitStoreFile(familyName, srcPath, seqNum, true);
+    return new Pair<>(srcPath, preCommitStoreFile(familyName, srcPath, seqNum, true));
   }
 
   // ===========================================================================
