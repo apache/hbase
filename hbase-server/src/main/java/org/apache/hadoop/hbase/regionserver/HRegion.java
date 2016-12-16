@@ -81,6 +81,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -130,6 +131,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -188,7 +190,6 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
-
 
 @SuppressWarnings("deprecation")
 @InterfaceAudience.Private
@@ -1160,14 +1161,29 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     FileSystem fs = tablePath.getFileSystem(conf);
 
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tablePath, regionInfo);
-    for (HColumnDescriptor family: tableDescriptor.getFamilies()) {
-      Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family.getNameAsString());
-      if (storeFiles == null) continue;
-      for (StoreFileInfo storeFileInfo : storeFiles) {
-        try {
-          hdfsBlocksDistribution.add(storeFileInfo.computeHDFSBlocksDistribution(fs));
-        } catch (IOException ioe) {
-          LOG.warn("Error getting hdfs block distribution for " + storeFileInfo);
+    for (HColumnDescriptor family : tableDescriptor.getFamilies()) {
+      List<LocatedFileStatus> locatedFileStatusList = HRegionFileSystem
+          .getStoreFilesLocatedStatus(regionFs, family.getNameAsString(), true);
+      if (locatedFileStatusList == null) {
+        continue;
+      }
+
+      for (LocatedFileStatus status : locatedFileStatusList) {
+        Path p = status.getPath();
+        if (StoreFileInfo.isReference(p) || HFileLink.isHFileLink(p)) {
+          // Only construct StoreFileInfo object if its not a hfile, save obj
+          // creation
+          StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, status);
+          hdfsBlocksDistribution.add(storeFileInfo
+              .computeHDFSBlocksDistribution(fs));
+        } else if (StoreFileInfo.isHFile(p)) {
+          // If its a HFile, then lets just add to the block distribution
+          // lets not create more objects here, not even another HDFSBlocksDistribution
+          FSUtils.addToHDFSBlocksDistribution(hdfsBlocksDistribution,
+              status.getBlockLocations());
+        } else {
+          throw new IOException("path=" + p
+              + " doesn't look like a valid StoreFile");
         }
       }
     }

@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.collect.Lists;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -30,24 +32,23 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -218,6 +219,36 @@ public class HRegionFileSystem {
 
     }
     return storeFiles;
+  }
+
+  /**
+   * Returns the store files' LocatedFileStatus which available for the family.
+   * This methods performs the filtering based on the valid store files.
+   * @param familyName Column Family Name
+   * @return a list of store files' LocatedFileStatus for the specified family.
+   */
+  public static List<LocatedFileStatus> getStoreFilesLocatedStatus(
+      final HRegionFileSystem regionfs, final String familyName,
+      final boolean validate) throws IOException {
+    Path familyDir = regionfs.getStoreDir(familyName);
+    List<LocatedFileStatus> locatedFileStatuses = FSUtils.listLocatedStatus(
+        regionfs.getFileSystem(), familyDir);
+    if (locatedFileStatuses == null) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("No StoreFiles for: " + familyDir);
+      }
+      return null;
+    }
+
+    List<LocatedFileStatus> validStoreFiles = Lists.newArrayList();
+    for (LocatedFileStatus status : locatedFileStatuses) {
+      if (validate && !StoreFileInfo.isValid(status)) {
+        LOG.warn("Invalid StoreFile: " + status.getPath());
+      } else {
+        validStoreFiles.add(status);
+      }
+    }
+    return validStoreFiles;
   }
 
   /**
