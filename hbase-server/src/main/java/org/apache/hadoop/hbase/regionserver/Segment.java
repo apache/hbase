@@ -18,9 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -66,15 +64,6 @@ public abstract class Segment {
   protected final TimeRangeTracker timeRangeTracker;
   protected volatile boolean tagsPresent;
 
-  // Empty constructor to be used when Segment is used as interface,
-  // and there is no need in true Segments state
-  protected Segment(CellComparator comparator) {
-    this.comparator = comparator;
-    this.dataSize = new AtomicLong(0);
-    this.heapOverhead = new AtomicLong(0);
-    this.timeRangeTracker = new TimeRangeTracker();
-  }
-
   // This constructor is used to create empty Segments.
   protected Segment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB) {
     this.cellSet.set(cellSet);
@@ -102,7 +91,7 @@ public abstract class Segment {
    * Creates the scanner for the given read point
    * @return a scanner for the given read point
    */
-  public KeyValueScanner getScanner(long readPoint) {
+  public SegmentScanner getScanner(long readPoint) {
     return new SegmentScanner(this, readPoint);
   }
 
@@ -110,14 +99,8 @@ public abstract class Segment {
    * Creates the scanner for the given read point, and a specific order in a list
    * @return a scanner for the given read point
    */
-  public KeyValueScanner getScanner(long readPoint, long order) {
+  public SegmentScanner getScanner(long readPoint, long order) {
     return new SegmentScanner(this, readPoint, order);
-  }
-
-  public List<KeyValueScanner> getScanners(long readPoint, long order) {
-    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(1);
-    scanners.add(getScanner(readPoint, order));
-    return scanners;
   }
 
   /**

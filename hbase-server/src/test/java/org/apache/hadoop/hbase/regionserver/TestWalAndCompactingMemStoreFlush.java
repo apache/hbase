@@ -22,7 +22,13 @@ import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -32,7 +38,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -50,48 +55,40 @@ public class TestWalAndCompactingMemStoreFlush {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Path DIR = TEST_UTIL.getDataTestDir("TestHRegion");
-  public static final TableName TABLENAME =
-      TableName.valueOf("TestWalAndCompactingMemStoreFlush", "t1");
+  public static final TableName TABLENAME = TableName.valueOf("TestWalAndCompactingMemStoreFlush",
+      "t1");
 
-  public static final byte[][] FAMILIES =
-      { Bytes.toBytes("f1"), Bytes.toBytes("f2"), Bytes.toBytes("f3"), Bytes.toBytes("f4"), Bytes.toBytes("f5") };
+  public static final byte[][] FAMILIES = { Bytes.toBytes("f1"), Bytes.toBytes("f2"),
+      Bytes.toBytes("f3"), Bytes.toBytes("f4"), Bytes.toBytes("f5") };
 
   public static final byte[] FAMILY1 = FAMILIES[0];
   public static final byte[] FAMILY2 = FAMILIES[1];
   public static final byte[] FAMILY3 = FAMILIES[2];
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
-    MemstoreSize memstrsize1 = MemstoreSize.EMPTY_SIZE;
-    assertEquals(memstrsize1.getDataSize(), 0);
-    assertEquals(MemstoreSize.EMPTY_SIZE.getDataSize(), 0);
-    int i = 0;
+    int i=0;
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     for (byte[] family : FAMILIES) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       // even column families are going to have compacted memstore
-
       if(i%2 == 0) {
         hcd.setInMemoryCompaction(HColumnDescriptor.MemoryCompaction.valueOf(
             conf.get(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY)));
       } else {
         hcd.setInMemoryCompaction(HColumnDescriptor.MemoryCompaction.NONE);
       }
-
       htd.addFamily(hcd);
       i++;
     }
-    assertEquals(MemstoreSize.EMPTY_SIZE.getDataSize(), 0);
+
     HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
     Path path = new Path(DIR, callingMethod);
-    assertEquals(MemstoreSize.EMPTY_SIZE.getDataSize(), 0);
-    HRegion result = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
-    assertEquals(MemstoreSize.EMPTY_SIZE.getDataSize(), 0);
-    return result;
+    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
   }
 
   // A helper function to create puts.
   private Put createPut(int familyNum, int putNum) {
-    byte[] qf = Bytes.toBytes("q" + familyNum);
+    byte[] qf  = Bytes.toBytes("q" + familyNum);
     byte[] row = Bytes.toBytes("row" + familyNum + "-" + putNum);
     byte[] val = Bytes.toBytes("val" + familyNum + "-" + putNum);
     Put p = new Put(row);
@@ -101,7 +98,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
   // A helper function to create double puts, so something can be compacted later.
   private Put createDoublePut(int familyNum, int putNum) {
-    byte[] qf = Bytes.toBytes("q" + familyNum);
+    byte[] qf  = Bytes.toBytes("q" + familyNum);
     byte[] row = Bytes.toBytes("row" + familyNum + "-" + putNum);
     byte[] val = Bytes.toBytes("val" + familyNum + "-" + putNum);
     Put p = new Put(row);
@@ -125,21 +122,16 @@ public class TestWalAndCompactingMemStoreFlush {
     byte[] val = Bytes.toBytes("val" + familyNum + "-" + putNum);
     assertNotNull(("Missing Put#" + putNum + " for CF# " + familyNum), r.getFamilyMap(family));
     assertNotNull(("Missing Put#" + putNum + " for CF# " + familyNum),
-        r.getFamilyMap(family).get(qf));
+      r.getFamilyMap(family).get(qf));
     assertTrue(("Incorrect value for Put#" + putNum + " for CF# " + familyNum),
-        Arrays.equals(r.getFamilyMap(family).get(qf), val));
+      Arrays.equals(r.getFamilyMap(family).get(qf), val));
   }
 
-  @Before public void setUp() throws Exception {
-    assertEquals(MemstoreSize.EMPTY_SIZE.getDataSize(), 0);
-  }
-
-  // test selective flush with data-compaction
   @Test(timeout = 180000)
   public void testSelectiveFlushWithEager() throws IOException {
+
     // Set up the configuration
     Configuration conf = HBaseConfiguration.create();
-
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
         FlushNonSloppyStoresFirstPolicy.class.getName());
@@ -183,14 +175,17 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf3MemstoreSizePhaseI = region.getStore(FAMILY3).getSizeOfMemStore();
 
     // Get the overall smallest LSN in the region's memstores.
-    long smallestSeqInRegionCurrentMemstorePhaseI =
-        getWAL(region).getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstorePhaseI = getWAL(region)
+        .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     String s = "\n\n----------------------------------\n"
-        + "Upon initial insert and before any flush, size of CF1 is:" + cf1MemstoreSizePhaseI + ", is CF1 compacted memstore?:"
-        + region.getStore(FAMILY1).isSloppyMemstore() + ". Size of CF2 is:" + cf2MemstoreSizePhaseI + ", is CF2 compacted memstore?:"
-        + region.getStore(FAMILY2).isSloppyMemstore() + ". Size of CF3 is:" + cf3MemstoreSizePhaseI
-        + ", is CF3 compacted memstore?:" + region.getStore(FAMILY3).isSloppyMemstore() + "\n";
+        + "Upon initial insert and before any flush, size of CF1 is:"
+        + cf1MemstoreSizePhaseI + ", is CF1 compacted memstore?:"
+        + region.getStore(FAMILY1).isSloppyMemstore() + ". Size of CF2 is:"
+        + cf2MemstoreSizePhaseI + ", is CF2 compacted memstore?:"
+        + region.getStore(FAMILY2).isSloppyMemstore() + ". Size of CF3 is:"
+        + cf3MemstoreSizePhaseI + ", is CF3 compacted memstore?:"
+        + region.getStore(FAMILY3).isSloppyMemstore() + "\n";
 
     // The overall smallest LSN in the region's memstores should be the same as
     // the LSN of the smallest edit in CF1
@@ -205,12 +200,12 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
-    String msg = "totalMemstoreSize=" + totalMemstoreSize +
-        " cf1MemstoreSizePhaseI=" + cf1MemstoreSizePhaseI +
-        " cf2MemstoreSizePhaseI=" + cf2MemstoreSizePhaseI +
-        " cf3MemstoreSizePhaseI=" + cf3MemstoreSizePhaseI;
-    assertEquals(msg, totalMemstoreSize,
-        cf1MemstoreSizePhaseI.getDataSize() + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize());
+    String msg = "totalMemstoreSize="+totalMemstoreSize +
+        " cf1MemstoreSizePhaseI="+cf1MemstoreSizePhaseI +
+        " cf2MemstoreSizePhaseI="+cf2MemstoreSizePhaseI +
+        " cf3MemstoreSizePhaseI="+cf3MemstoreSizePhaseI ;
+    assertEquals(msg, totalMemstoreSize, cf1MemstoreSizePhaseI.getDataSize()
+        + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize());
 
     // Flush!!!!!!!!!!!!!!!!!!!!!!
     // We have big compacting memstore CF1 and two small memstores:
@@ -230,8 +225,8 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf2MemstoreSizePhaseII = region.getStore(FAMILY2).getSizeOfMemStore();
     MemstoreSize cf3MemstoreSizePhaseII = region.getStore(FAMILY3).getSizeOfMemStore();
 
-    long smallestSeqInRegionCurrentMemstorePhaseII =
-        getWAL(region).getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstorePhaseII = getWAL(region)
+        .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
     // Find the smallest LSNs for edits wrt to each CF.
     long smallestSeqCF1PhaseII = region.getOldestSeqIdOfStore(FAMILY1);
     long smallestSeqCF2PhaseII = region.getOldestSeqIdOfStore(FAMILY2);
@@ -265,20 +260,16 @@ public class TestWalAndCompactingMemStoreFlush {
 
     s = s + "The smallest sequence in region WAL is: " + smallestSeqInRegionCurrentMemstorePhaseII
         + ", the smallest sequence in CF1:" + smallestSeqCF1PhaseII + ", " +
-        "the smallest sequence in CF2:" + smallestSeqCF2PhaseII + ", the smallest sequence in CF3:"
-        + smallestSeqCF3PhaseII + "\n";
+        "the smallest sequence in CF2:"
+        + smallestSeqCF2PhaseII +", the smallest sequence in CF3:" + smallestSeqCF3PhaseII + "\n";
 
     // How much does the CF1 memstore occupy? Will be used later.
     MemstoreSize cf1MemstoreSizePhaseIII = region.getStore(FAMILY1).getSizeOfMemStore();
     long smallestSeqCF1PhaseIII = region.getOldestSeqIdOfStore(FAMILY1);
 
     s = s + "----After more puts into CF1 its size is:" + cf1MemstoreSizePhaseIII
-        + ", and its sequence is:" + smallestSeqCF1PhaseIII + " ----\n"
-        + "The sizes of snapshots are cf1: " + region.getStore(FAMILY1).getFlushedCellsSize()
-        + ", cf2: " + region.getStore(FAMILY2).getFlushedCellsSize() + ", cf3: " + region
-        .getStore(FAMILY3).getFlushedCellsSize() + ", cf4: " + region.getStore(FAMILIES[4])
-        .getFlushedCellsSize() + "; the entire region size is: " + region.getMemstoreSize() + "\n";
-    ;
+        + ", and its sequence is:" + smallestSeqCF1PhaseIII + " ----\n" ;
+
 
     // Flush!!!!!!!!!!!!!!!!!!!!!!
     // Flush again, CF1 is flushed to disk
@@ -291,22 +282,21 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf2MemstoreSizePhaseIV = region.getStore(FAMILY2).getSizeOfMemStore();
     MemstoreSize cf3MemstoreSizePhaseIV = region.getStore(FAMILY3).getSizeOfMemStore();
 
-    long smallestSeqInRegionCurrentMemstorePhaseIV =
-        getWAL(region).getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstorePhaseIV = getWAL(region)
+        .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
     long smallestSeqCF1PhaseIV = region.getOldestSeqIdOfStore(FAMILY1);
     long smallestSeqCF2PhaseIV = region.getOldestSeqIdOfStore(FAMILY2);
     long smallestSeqCF3PhaseIV = region.getOldestSeqIdOfStore(FAMILY3);
 
     s = s + "----After SECOND FLUSH, CF1 size is:" + cf1MemstoreSizePhaseIV + ", CF2 size is:"
-        + cf2MemstoreSizePhaseIV + " and CF3 size is:" + cf3MemstoreSizePhaseIV + "\n" + "The sizes of snapshots are cf1: " + region.getStore(FAMILY1).getFlushedCellsSize()
-        + ", cf2: " + region.getStore(FAMILY2).getFlushedCellsSize() + ", cf3: " + region
-        .getStore(FAMILY3).getFlushedCellsSize() + ", cf4: " + region.getStore(FAMILIES[4])
-        .getFlushedCellsSize() + "\n";
+        + cf2MemstoreSizePhaseIV + " and CF3 size is:" + cf3MemstoreSizePhaseIV
+        + "\n";
 
     s = s + "The smallest sequence in region WAL is: " + smallestSeqInRegionCurrentMemstorePhaseIV
         + ", the smallest sequence in CF1:" + smallestSeqCF1PhaseIV + ", " +
-        "the smallest sequence in CF2:" + smallestSeqCF2PhaseIV + ", the smallest sequence in CF3:"
-        + smallestSeqCF3PhaseIV + "\n" + "the entire region size is: " + region.getMemstoreSize() + "\n";
+        "the smallest sequence in CF2:"
+        + smallestSeqCF2PhaseIV +", the smallest sequence in CF3:" + smallestSeqCF3PhaseIV
+        + "\n";
 
     // CF1's pipeline component (inserted before first flush) should be flushed to disk
     // CF2 should be flushed to disk
@@ -331,20 +321,12 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf1MemstoreSizePhaseV = region.getStore(FAMILY1).getSizeOfMemStore();
     MemstoreSize cf2MemstoreSizePhaseV = region.getStore(FAMILY2).getSizeOfMemStore();
     MemstoreSize cf3MemstoreSizePhaseV = region.getStore(FAMILY3).getSizeOfMemStore();
-    long smallestSeqInRegionCurrentMemstorePhaseV =
-        getWAL(region).getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstorePhaseV = getWAL(region)
+        .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
-    assertEquals(MemstoreSize.EMPTY_SIZE, cf1MemstoreSizePhaseV);
+    assertEquals(MemstoreSize.EMPTY_SIZE , cf1MemstoreSizePhaseV);
     assertEquals(MemstoreSize.EMPTY_SIZE, cf2MemstoreSizePhaseV);
     assertEquals(MemstoreSize.EMPTY_SIZE, cf3MemstoreSizePhaseV);
-
-    s = s + "----AFTER THIRD FLUSH, the entire region size is:" + region.getMemstoreSize()
-        + " (empty memstore size is " + MemstoreSize.EMPTY_SIZE
-        + "), while the sizes of each memstore are as following \ncf1: " + cf1MemstoreSizePhaseV
-        + ", cf2: " + cf2MemstoreSizePhaseV + ", cf3: " + cf3MemstoreSizePhaseV + ", cf4: " + region
-        .getStore(FAMILIES[4]).getSizeOfMemStore() + "\n" + "The sizes of snapshots are cf1: " + region.getStore(FAMILY1).getFlushedCellsSize()
-        + ", cf2: " + region.getStore(FAMILY2).getFlushedCellsSize() + ", cf3: " + region.getStore(FAMILY3).getFlushedCellsSize()
-        + ", cf4: " + region.getStore(FAMILIES[4]).getFlushedCellsSize() + "\n";
 
     // What happens when we hit the memstore limit, but we are not able to find
     // any Column Family above the threshold?
@@ -363,22 +345,24 @@ public class TestWalAndCompactingMemStoreFlush {
 
     region.flush(false);
 
-    s = s + "----AFTER FORTH FLUSH, The smallest sequence in region WAL is: "
+    s = s + "----AFTER THIRD AND FORTH FLUSH, The smallest sequence in region WAL is: "
         + smallestSeqInRegionCurrentMemstorePhaseV
         + ". After additional inserts and last flush, the entire region size is:" + region
-        .getMemstoreSize() + "\n----------------------------------\n";
+        .getMemstoreSize()
+        + "\n----------------------------------\n";
 
     // Since we won't find any CF above the threshold, and hence no specific
     // store to flush, we should flush all the memstores
     // Also compacted memstores are flushed to disk.
-    assertEquals(s, 0, region.getMemstoreSize());
+    assertEquals(0, region.getMemstoreSize());
     System.out.println(s);
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /*------------------------------------------------------------------------------*/
   /* Check the same as above but for index-compaction type of compacting memstore */
-  @Test(timeout = 180000) public void testSelectiveFlushWithIndexCompaction() throws IOException {
+  @Test(timeout = 180000)
+  public void testSelectiveFlushWithIndexCompaction() throws IOException {
 
     /*------------------------------------------------------------------------------*/
     /* SETUP */
@@ -395,7 +379,7 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // Initialize the region
     Region region = initHRegion("testSelectiveFlushWithIndexCompaction", conf);
-    assertEquals(MemstoreSize.EMPTY_SIZE.getDataSize(), 0);
+
     /*------------------------------------------------------------------------------*/
     /* PHASE I - insertions */
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
@@ -426,8 +410,8 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf2MemstoreSizePhaseI = region.getStore(FAMILY2).getSizeOfMemStore();
     MemstoreSize cf3MemstoreSizePhaseI = region.getStore(FAMILY3).getSizeOfMemStore();
     // Get the overall smallest LSN in the region's memstores.
-    long smallestSeqInRegionCurrentMemstorePhaseI =
-        getWAL(region).getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstorePhaseI = getWAL(region)
+        .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     /*------------------------------------------------------------------------------*/
     /* PHASE I - validation */
@@ -443,8 +427,8 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
-    assertEquals(totalMemstoreSizePhaseI,
-        cf1MemstoreSizePhaseI.getDataSize() + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize());
+    assertEquals(totalMemstoreSizePhaseI, cf1MemstoreSizePhaseI.getDataSize()
+        + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize());
 
     /*------------------------------------------------------------------------------*/
     /* PHASE I - Flush */
@@ -475,8 +459,8 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf1MemstoreSizePhaseII = region.getStore(FAMILY1).getSizeOfMemStore();
     MemstoreSize cf2MemstoreSizePhaseII = region.getStore(FAMILY2).getSizeOfMemStore();
     MemstoreSize cf3MemstoreSizePhaseII = region.getStore(FAMILY3).getSizeOfMemStore();
-    long smallestSeqInRegionCurrentMemstorePhaseII =
-        getWAL(region).getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstorePhaseII = getWAL(region)
+        .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
     // Find the smallest LSNs for edits wrt to each CF.
     long smallestSeqCF3PhaseII = region.getOldestSeqIdOfStore(FAMILY3);
     long totalMemstoreSizePhaseII = region.getMemstoreSize();
@@ -484,13 +468,13 @@ public class TestWalAndCompactingMemStoreFlush {
     /*------------------------------------------------------------------------------*/
     /* PHASE II - validation */
     // CF1 was flushed to memory, should be flattened and take less space
-    assertEquals(cf1MemstoreSizePhaseII.getDataSize(), cf1MemstoreSizePhaseI.getDataSize());
+    assertEquals(cf1MemstoreSizePhaseII.getDataSize() , cf1MemstoreSizePhaseI.getDataSize());
     assertTrue(cf1MemstoreSizePhaseII.getHeapOverhead() < cf1MemstoreSizePhaseI.getHeapOverhead());
     // CF2 should become empty
     assertEquals(MemstoreSize.EMPTY_SIZE, cf2MemstoreSizePhaseII);
     // verify that CF3 was flushed to memory and was not compacted (this is an approximation check)
     // if compacted CF# should be at least twice less because its every key was duplicated
-    assertEquals(cf3MemstoreSizePhaseII.getDataSize(), cf3MemstoreSizePhaseI.getDataSize());
+    assertEquals(cf3MemstoreSizePhaseII.getDataSize() , cf3MemstoreSizePhaseI.getDataSize());
     assertTrue(
         cf3MemstoreSizePhaseI.getHeapOverhead() / 2 < cf3MemstoreSizePhaseII.getHeapOverhead());
 
@@ -500,8 +484,8 @@ public class TestWalAndCompactingMemStoreFlush {
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3. Counting the empty active segments in CF1/2/3 and pipeline
     // items in CF1/2
-    assertEquals(totalMemstoreSizePhaseII,
-        cf1MemstoreSizePhaseII.getDataSize() + cf2MemstoreSizePhaseII.getDataSize() + cf3MemstoreSizePhaseII.getDataSize());
+    assertEquals(totalMemstoreSizePhaseII, cf1MemstoreSizePhaseII.getDataSize()
+        + cf2MemstoreSizePhaseII.getDataSize() + cf3MemstoreSizePhaseII.getDataSize());
 
     /*------------------------------------------------------------------------------*/
     /*------------------------------------------------------------------------------*/
@@ -529,8 +513,8 @@ public class TestWalAndCompactingMemStoreFlush {
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3. Counting the empty active segments in CF1/2/3 and pipeline
     // items in CF1/2
-    assertEquals(totalMemstoreSizePhaseIII,
-        cf1MemstoreSizePhaseIII.getDataSize() + cf2MemstoreSizePhaseII.getDataSize() + cf3MemstoreSizePhaseII.getDataSize());
+    assertEquals(totalMemstoreSizePhaseIII, cf1MemstoreSizePhaseIII.getDataSize()
+        + cf2MemstoreSizePhaseII.getDataSize() + cf3MemstoreSizePhaseII.getDataSize());
 
     /*------------------------------------------------------------------------------*/
     /* PHASE III - Flush */
@@ -546,8 +530,8 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf1MemstoreSizePhaseIV = region.getStore(FAMILY1).getSizeOfMemStore();
     MemstoreSize cf2MemstoreSizePhaseIV = region.getStore(FAMILY2).getSizeOfMemStore();
     MemstoreSize cf3MemstoreSizePhaseIV = region.getStore(FAMILY3).getSizeOfMemStore();
-    long smallestSeqInRegionCurrentMemstorePhaseIV =
-        getWAL(region).getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstorePhaseIV = getWAL(region)
+        .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
     long smallestSeqCF3PhaseIV = region.getOldestSeqIdOfStore(FAMILY3);
 
     /*------------------------------------------------------------------------------*/
@@ -577,8 +561,8 @@ public class TestWalAndCompactingMemStoreFlush {
     MemstoreSize cf1MemstoreSizePhaseV = region.getStore(FAMILY1).getSizeOfMemStore();
     MemstoreSize cf2MemstoreSizePhaseV = region.getStore(FAMILY2).getSizeOfMemStore();
     MemstoreSize cf3MemstoreSizePhaseV = region.getStore(FAMILY3).getSizeOfMemStore();
-    long smallestSeqInRegionCurrentMemstorePhaseV =
-        getWAL(region).getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstorePhaseV = getWAL(region)
+        .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
     long totalMemstoreSizePhaseV = region.getMemstoreSize();
 
     /*------------------------------------------------------------------------------*/
@@ -633,30 +617,22 @@ public class TestWalAndCompactingMemStoreFlush {
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-  // test WAL behavior together with selective flush while data-compaction
-  @Test(timeout = 180000) public void testDCwithWAL() throws IOException {
-
-    MemstoreSize checkSize = MemstoreSize.EMPTY_SIZE;
-    assertEquals(MemstoreSize.EMPTY_SIZE.getDataSize(), 0);
+  @Test(timeout = 180000)
+  public void testSelectiveFlushAndWALinDataCompaction() throws IOException {
     // Set up the configuration
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-        FlushNonSloppyStoresFirstPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 * 1024);
+    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushNonSloppyStoresFirstPolicy.class
+        .getName());
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 75 *
+        1024);
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.5);
     // set memstore to do data compaction and not to use the speculative scan
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(HColumnDescriptor.MemoryCompaction.EAGER));
 
-    MemstoreSize memstrsize1 = MemstoreSize.EMPTY_SIZE;
-    assertEquals(MemstoreSize.EMPTY_SIZE.getDataSize(), 0);
     // Intialize the HRegion
     HRegion region = initHRegion("testSelectiveFlushAndWALinDataCompaction", conf);
-
-    MemstoreSize cf2MemstoreSizePhase0 = region.getStore(FAMILY2).getSizeOfMemStore();
-    MemstoreSize cf1MemstoreSizePhase0 = region.getStore(FAMILY1).getSizeOfMemStore();
-
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));
@@ -676,7 +652,6 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // Find the sizes of the memstores of each CF.
     MemstoreSize cf1MemstoreSizePhaseI = region.getStore(FAMILY1).getSizeOfMemStore();
-    //boolean oldCF2 = region.getStore(FAMILY2).isSloppyMemstore();
     MemstoreSize cf2MemstoreSizePhaseI = region.getStore(FAMILY2).getSizeOfMemStore();
     MemstoreSize cf3MemstoreSizePhaseI = region.getStore(FAMILY3).getSizeOfMemStore();
 
@@ -687,20 +662,16 @@ public class TestWalAndCompactingMemStoreFlush {
 
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
-    String msg = "\n<<< totalMemstoreSize=" + totalMemstoreSize +
-        " DefaultMemStore.DEEP_OVERHEAD=" + DefaultMemStore.DEEP_OVERHEAD +
-        " cf1MemstoreSizePhaseI=" + cf1MemstoreSizePhaseI +
-        " cf2MemstoreSizePhaseI=" + cf2MemstoreSizePhaseI +
-        " cf3MemstoreSizePhaseI=" + cf3MemstoreSizePhaseI;
-    assertEquals(msg, totalMemstoreSize,
-        cf1MemstoreSizePhaseI.getDataSize() + cf2MemstoreSizePhaseI.getDataSize()
-            + cf3MemstoreSizePhaseI.getDataSize());
+    String msg = "totalMemstoreSize="+totalMemstoreSize +
+        " DefaultMemStore.DEEP_OVERHEAD="+DefaultMemStore.DEEP_OVERHEAD +
+        " cf1MemstoreSizePhaseI="+cf1MemstoreSizePhaseI +
+        " cf2MemstoreSizePhaseI="+cf2MemstoreSizePhaseI +
+        " cf3MemstoreSizePhaseI="+cf3MemstoreSizePhaseI ;
+    assertEquals(msg, totalMemstoreSize, cf1MemstoreSizePhaseI.getDataSize()
+        + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize());
 
     // Flush!
     CompactingMemStore cms1 = (CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore;
-    MemStore cms2 = ((HStore) region.getStore(FAMILY2)).memstore;
-    MemstoreSize memstrsize2 = cms2.getSnapshotSize();
-    MemstoreSize flshsize2 = cms2.getFlushableSize();
     CompactingMemStore cms3 = (CompactingMemStore) ((HStore) region.getStore(FAMILY3)).memstore;
     cms1.flushInMemory();
     cms3.flushInMemory();
@@ -713,22 +684,15 @@ public class TestWalAndCompactingMemStoreFlush {
     long smallestSeqCF1PhaseII = region.getOldestSeqIdOfStore(FAMILY1);
     long smallestSeqCF2PhaseII = region.getOldestSeqIdOfStore(FAMILY2);
     long smallestSeqCF3PhaseII = region.getOldestSeqIdOfStore(FAMILY3);
-    MemstoreSize newSize = new MemstoreSize();
 
     // CF2 should have been cleared
-    assertEquals(
-        msg + "\n<<< CF2 is compacting " + ((HStore) region.getStore(FAMILY2)).memstore.isSloppy()
-            + ", snapshot and flushable size BEFORE flush " + memstrsize2 + "; " + flshsize2
-            + ", snapshot and flushable size AFTER flush " + cms2.getSnapshotSize() + "; " + cms2
-            .getFlushableSize() + "\n<<< cf2 size " + cms2.size() + "; the checked size "
-            + cf2MemstoreSizePhaseII + "; memstore empty size " + MemstoreSize.EMPTY_SIZE
-            + "; check size " + checkSize + "\n<<< first first first CF2 size "
-            + cf2MemstoreSizePhase0 + "; first first first CF1 size " + cf1MemstoreSizePhase0
-            + "; new new new size " + newSize + "\n", MemstoreSize.EMPTY_SIZE,
-        cf2MemstoreSizePhaseII);
+    assertEquals(MemstoreSize.EMPTY_SIZE, cf2MemstoreSizePhaseII);
 
-    String s = "\n\n----------------------------------\n" + "Upon initial insert and flush, LSN of CF1 is:"
-        + smallestSeqCF1PhaseII + ". LSN of CF2 is:" + smallestSeqCF2PhaseII + ". LSN of CF3 is:" + smallestSeqCF3PhaseII + ", smallestSeqInRegionCurrentMemstore:"
+    String s = "\n\n----------------------------------\n"
+        + "Upon initial insert and flush, LSN of CF1 is:"
+        + smallestSeqCF1PhaseII + ". LSN of CF2 is:"
+        + smallestSeqCF2PhaseII + ". LSN of CF3 is:"
+        + smallestSeqCF3PhaseII + ", smallestSeqInRegionCurrentMemstore:"
         + smallestSeqInRegionCurrentMemstorePhaseII + "\n";
 
     // Add same entries to compact them later
@@ -754,8 +718,8 @@ public class TestWalAndCompactingMemStoreFlush {
 
     s = s + "The smallest sequence in region WAL is: " + smallestSeqInRegionCurrentMemstorePhaseIII
         + ", the smallest sequence in CF1:" + smallestSeqCF1PhaseIII + ", " +
-        "the smallest sequence in CF2:" + smallestSeqCF2PhaseIII + ", the smallest sequence in CF3:"
-        + smallestSeqCF3PhaseIII + "\n";
+        "the smallest sequence in CF2:"
+        + smallestSeqCF2PhaseIII +", the smallest sequence in CF3:" + smallestSeqCF3PhaseIII + "\n";
 
     // Flush!
     cms1 = (CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore;
@@ -772,22 +736,20 @@ public class TestWalAndCompactingMemStoreFlush {
 
     s = s + "The smallest sequence in region WAL is: " + smallestSeqInRegionCurrentMemstorePhaseIV
         + ", the smallest sequence in CF1:" + smallestSeqCF1PhaseIV + ", " +
-        "the smallest sequence in CF2:" + smallestSeqCF2PhaseIV + ", the smallest sequence in CF3:"
-        + smallestSeqCF3PhaseIV + "\n";
+        "the smallest sequence in CF2:"
+        + smallestSeqCF2PhaseIV +", the smallest sequence in CF3:" + smallestSeqCF3PhaseIV + "\n";
 
     // now check that the LSN of the entire WAL, of CF1 and of CF3 has progressed due to compaction
-    assertTrue(s,
-        smallestSeqInRegionCurrentMemstorePhaseIV > smallestSeqInRegionCurrentMemstorePhaseIII);
+    assertTrue(s, smallestSeqInRegionCurrentMemstorePhaseIV >
+        smallestSeqInRegionCurrentMemstorePhaseIII);
     assertTrue(smallestSeqCF1PhaseIV > smallestSeqCF1PhaseIII);
     assertTrue(smallestSeqCF3PhaseIV > smallestSeqCF3PhaseIII);
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
-  // test WAL behavior together with selective flush while index-compaction
   @Test(timeout = 180000)
-  public void tstICwithWAL() throws IOException {
-
+  public void testSelectiveFlushAndWALinIndexCompaction() throws IOException {
     // Set up the configuration
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 600 * 1024);
