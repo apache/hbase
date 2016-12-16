@@ -62,6 +62,11 @@ public class NoopProcedureStore extends ProcedureStoreBase {
   }
 
   @Override
+  public void insert(Procedure[] proc) {
+    // no-op
+  }
+
+  @Override
   public void update(Procedure proc) {
     // no-op
   }

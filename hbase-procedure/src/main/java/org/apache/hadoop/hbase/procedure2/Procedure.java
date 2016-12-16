@@ -58,8 +58,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
-  protected static final long NO_PROC_ID = -1;
-  protected static final int NO_TIMEOUT = -1;
+  public static final long NO_PROC_ID = -1;
+  public static final int NO_TIMEOUT = -1;
 
   // unchanged after initialization
   private NonceKey nonceKey = null;

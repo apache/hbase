@@ -675,25 +675,19 @@ public class ProcedureExecutor<TEnvironment> {
    */
   public long submitProcedure(final Procedure proc, final long nonceGroup, final long nonce) {
     Preconditions.checkArgument(lastProcId.get() >= 0);
-    Preconditions.checkArgument(proc.getState() == ProcedureState.INITIALIZING);
     Preconditions.checkArgument(isRunning(), "executor not running");
-    Preconditions.checkArgument(!proc.hasParent(), "unexpected parent", proc);
-    if (this.checkOwnerSet) {
-      Preconditions.checkArgument(proc.hasOwner(), "missing owner");
-    }
 
-    // Initialize the Procedure ID
-    final long currentProcId = nextProcId();
-    proc.setProcId(currentProcId);
+    // Prepare procedure
+    prepareProcedure(proc);
 
     // Check whether the proc exists.  If exist, just return the proc id.
     // This is to prevent the same proc to submit multiple times (it could happen
     // when client could not talk to server and resubmit the same request).
     if (nonce != HConstants.NO_NONCE) {
-      NonceKey noncekey = new NonceKey(nonceGroup, nonce);
+      final NonceKey noncekey = new NonceKey(nonceGroup, nonce);
       proc.setNonceKey(noncekey);
 
-      Long oldProcId = nonceKeysToProcIdsMap.putIfAbsent(noncekey, currentProcId);
+      Long oldProcId = nonceKeysToProcIdsMap.putIfAbsent(noncekey, proc.getProcId());
       if (oldProcId != null) {
         // Found the proc
         return oldProcId.longValue();
@@ -705,6 +699,51 @@ public class ProcedureExecutor<TEnvironment> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Procedure " + proc + " added to the store.");
     }
+
+    // Add the procedure to the executor
+    return pushProcedure(proc);
+  }
+
+  /**
+   * Add a set of new root-procedure to the executor.
+   * @param procs the new procedures to execute.
+   */
+  public void submitProcedures(final Procedure[] procs) {
+    Preconditions.checkArgument(lastProcId.get() >= 0);
+    Preconditions.checkArgument(isRunning(), "executor not running");
+
+    // Prepare procedure
+    for (int i = 0; i < procs.length; ++i) {
+      prepareProcedure(procs[i]);
+    }
+
+    // Commit the transaction
+    store.insert(procs);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Procedures added to the store: " + Arrays.toString(procs));
+    }
+
+    // Add the procedure to the executor
+    for (int i = 0; i < procs.length; ++i) {
+      pushProcedure(procs[i]);
+    }
+  }
+
+  private void prepareProcedure(final Procedure proc) {
+    Preconditions.checkArgument(proc.getState() == ProcedureState.INITIALIZING);
+    Preconditions.checkArgument(isRunning(), "executor not running");
+    Preconditions.checkArgument(!proc.hasParent(), "unexpected parent", proc);
+    if (this.checkOwnerSet) {
+      Preconditions.checkArgument(proc.hasOwner(), "missing owner");
+    }
+
+    // Initialize the Procedure ID
+    final long currentProcId = nextProcId();
+    proc.setProcId(currentProcId);
+  }
+
+  private long pushProcedure(final Procedure proc) {
+    final long currentProcId = proc.getProcId();
 
     // Create the rollback stack for the procedure
     RootProcedureState stack = new RootProcedureState();

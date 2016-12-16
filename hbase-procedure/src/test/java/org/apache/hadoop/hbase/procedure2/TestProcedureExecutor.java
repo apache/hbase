@@ -128,6 +128,25 @@ public class TestProcedureExecutor {
     ProcedureTestingUtility.assertProcNotFailed(procExecutor, busyProcId2);
   }
 
+  @Test
+  public void testSubmitBatch() throws Exception {
+    Procedure[] procs = new Procedure[5];
+    for (int i = 0; i < procs.length; ++i) {
+      procs[i] = new NoopProcedure<TestProcEnv>();
+    }
+
+    // submit procedures
+    createNewExecutor(htu.getConfiguration(), 3);
+    procExecutor.submitProcedures(procs);
+
+    // wait for procs to be completed
+    for (int i = 0; i < procs.length; ++i) {
+      final long procId = procs[i].getProcId();
+      ProcedureTestingUtility.waitProcedure(procExecutor, procId);
+      ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
+    }
+  }
+
   private int waitThreadCount(final int expectedThreads) {
     while (procExecutor.isRunning()) {
       if (procExecutor.getWorkerThreadCount() == expectedThreads) {

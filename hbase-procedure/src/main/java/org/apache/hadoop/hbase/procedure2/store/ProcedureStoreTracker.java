@@ -477,6 +477,12 @@ public class ProcedureStoreTracker {
     trackProcIds(procId);
   }
 
+  public void insert(final long[] procIds) {
+    for (int i = 0; i < procIds.length; ++i) {
+      insert(procIds[i]);
+    }
+  }
+
   public void insert(final long procId, final long[] subProcIds) {
     update(procId);
     for (int i = 0; i < subProcIds.length; ++i) {

@@ -175,6 +175,15 @@ public interface ProcedureStore {
   void insert(Procedure proc, Procedure[] subprocs);
 
   /**
+   * Serialize a set of new procedures.
+   * These procedures are freshly submitted to the executor and each procedure
+   * has a 'RUNNABLE' state and the initial information required to start up.
+   *
+   * @param procs the procedures to serialize and write to the store.
+   */
+  void insert(Procedure[] procs);
+
+  /**
    * The specified procedure was executed,
    * and the new state should be written to the store.
    * @param proc the procedure to serialize and write to the store.

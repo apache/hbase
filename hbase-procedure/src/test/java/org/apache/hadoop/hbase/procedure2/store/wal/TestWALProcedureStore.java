@@ -784,6 +784,25 @@ public class TestWALProcedureStore {
     }
   }
 
+  @Test
+  public void testBatchInsert() throws Exception {
+    final int count = 10;
+    final TestProcedure[] procs = new TestProcedure[count];
+    for (int i = 0; i < procs.length; ++i) {
+      procs[i] = new TestProcedure(i + 1);
+    }
+    procStore.insert(procs);
+    restartAndAssert(count, count, 0, 0);
+
+    for (int i = 0; i < procs.length; ++i) {
+      final long procId = procs[i].getProcId();
+      procStore.delete(procId);
+      restartAndAssert(procId != count ? count : 0, count - (i + 1), 0, 0);
+    }
+    procStore.removeInactiveLogsForTesting();
+    assertEquals("WALs=" + procStore.getActiveLogs(), 1, procStore.getActiveLogs().size());
+  }
+
   private LoadCounter restartAndAssert(long maxProcId, long runnableCount,
       int completedCount, int corruptedCount) throws Exception {
     return ProcedureTestingUtility.storeRestartAndAssert(procStore, maxProcId,
