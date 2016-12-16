@@ -131,6 +131,8 @@ public class CellCounter extends Configured implements Tool {
      */
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification="Findbugs is blind to the Precondition null check")
     public void map(ImmutableBytesWritable row, Result values,
                     Context context)
         throws IOException {

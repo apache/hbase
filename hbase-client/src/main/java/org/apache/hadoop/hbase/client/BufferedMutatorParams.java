@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class BufferedMutatorParams {
+public class BufferedMutatorParams implements Cloneable {
 
   static final int UNSET = -1;
 
