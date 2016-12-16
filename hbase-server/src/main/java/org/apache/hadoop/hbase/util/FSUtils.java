@@ -18,6 +18,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.base.Throwables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -52,7 +59,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -60,8 +66,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
@@ -71,6 +79,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -88,12 +97,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
-import com.google.common.primitives.Ints;
-
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -1063,6 +1066,21 @@ public abstract class FSUtils {
     return blocksDistribution;
   }
 
+  /**
+   * Update blocksDistribution with blockLocations
+   * @param blocksDistribution the hdfs blocks distribution
+   * @param blockLocations an array containing block location
+   */
+  static public void addToHDFSBlocksDistribution(
+      HDFSBlocksDistribution blocksDistribution, BlockLocation[] blockLocations)
+      throws IOException {
+    for (BlockLocation bl : blockLocations) {
+      String[] hosts = bl.getHosts();
+      long len = bl.getLength();
+      blocksDistribution.addHostsAndBlockWeight(hosts, len);
+    }
+  }
+
   // TODO move this method OUT of FSUtils. No dependencies to HMaster
   /**
    * Returns the total overall fragmentation percentage. Includes hbase:meta and
@@ -1885,6 +1903,34 @@ public abstract class FSUtils {
    */
   public static FileStatus[] listStatus(final FileSystem fs, final Path dir) throws IOException {
     return listStatus(fs, dir, null);
+  }
+
+  /**
+   * Calls fs.listFiles() to get FileStatus and BlockLocations together for reducing rpc call
+   *
+   * @param fs file system
+   * @param dir directory
+   * @return LocatedFileStatus list
+   */
+  public static List<LocatedFileStatus> listLocatedStatus(final FileSystem fs,
+      final Path dir) throws IOException {
+    List<LocatedFileStatus> status = null;
+    try {
+      RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator = fs
+          .listFiles(dir, false);
+      while (locatedFileStatusRemoteIterator.hasNext()) {
+        if (status == null) {
+          status = Lists.newArrayList();
+        }
+        status.add(locatedFileStatusRemoteIterator.next());
+      }
+    } catch (FileNotFoundException fnfe) {
+      // if directory doesn't exist, return null
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(dir + " doesn't exist");
+      }
+    }
+    return status;
   }
 
   /**
