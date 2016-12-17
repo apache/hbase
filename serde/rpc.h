@@ -114,4 +114,4 @@ class RpcSerde {
   /* data */
   uint8_t auth_type_;
 };
-}
+}  // namespace hbase

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "connection/service.h"
 #include "if/HBase.pb.h"

@@ -22,8 +22,10 @@
 #include <wangle/channel/Handler.h>
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 
 #include "serde/rpc.h"
 
@@ -56,7 +58,7 @@ class ClientHandler : public wangle::Handler<std::unique_ptr<folly::IOBuf>,
    * Create the handler
    * @param user_name the user name of the user running this process.
    */
-  ClientHandler(std::string user_name);
+  explicit ClientHandler(std::string user_name);
 
   /**
    * Get bytes from the wire.

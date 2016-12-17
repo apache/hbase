@@ -20,11 +20,12 @@
 #include "serde/rpc.h"
 
 #include <folly/Logging.h>
-#include <folly/Logging.h>
 #include <folly/io/Cursor.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <google/protobuf/message.h>
+
+#include <utility>
 
 #include "if/HBase.pb.h"
 #include "if/RPC.pb.h"

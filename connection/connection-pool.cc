@@ -22,6 +22,9 @@
 #include <folly/SocketAddress.h>
 #include <wangle/service/Service.h>
 
+#include <memory>
+#include <utility>
+
 using std::mutex;
 using std::unique_ptr;
 using std::shared_ptr;

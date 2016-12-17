@@ -19,21 +19,24 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace hbase {
 class TimeRange {
  public:
   /**
-   * @brief  Default constructor. Represents interval [0, Long.MAX_VALUE)
+   * @brief  Default constructor. Represents interval [0,
+   * std::numeric_limits<int64_t>::max())
    * (allTime)
    */
   TimeRange();
   TimeRange(const TimeRange &tr);
   TimeRange &operator=(const TimeRange &tr);
   /**
-   * @brief Represents interval [minStamp, Long.MAX_VALUE)
+   * @brief Represents interval [minStamp, std::numeric_limits<int64_t>::max())
    * @param minStamp the minimum timestamp value, inclusive
    */
-  TimeRange(long min_timestamp);
+  explicit TimeRange(int64_t min_timestamp);
   /**
    * @brief Represents interval [minStamp, maxStamp)
    * @param minStamp the minimum timestamp, inclusive
@@ -41,15 +44,15 @@ class TimeRange {
    * @throws std::runtime_error if min_timestamp < 0 or max_timestamp < 0 or
    * max_timestamp < min_timestamp
    */
-  TimeRange(long min_timestamp, long max_timestamp);
-  long MinTimeStamp() const;
-  long MaxTimeStamp() const;
+  TimeRange(int64_t min_timestamp, int64_t max_timestamp);
+  int64_t MinTimeStamp() const;
+  int64_t MaxTimeStamp() const;
   bool IsAllTime() const;
   ~TimeRange();
 
  private:
-  long min_timestamp_;
-  long max_timestamp_;
+  int64_t min_timestamp_;
+  int64_t max_timestamp_;
   bool all_time_;
 };
-}
+}  // namespace hbase

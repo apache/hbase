@@ -40,7 +40,7 @@ class Get {
   /**
    * Constructors
    */
-  Get(const std::string& row);
+  explicit Get(const std::string& row);
   Get(const Get& cget);
   Get& operator=(const Get& cget);
 
@@ -56,7 +56,7 @@ class Get {
    * is 1.
    * @param max_versions max_versons to set
    */
-  Get& SetMaxVersions(uint32_t max_versions = 1);
+  Get& SetMaxVersions(int32_t max_versions = 1);
 
   /**
    * @brief Returns whether blocks should be cached for this Get operation.
@@ -86,13 +86,13 @@ class Get {
    * @param minStamp the minimum timestamp, inclusive
    * @param maxStamp the maximum timestamp, exclusive
    */
-  Get& SetTimeRange(long min_timestamp, long max_timestamp);
+  Get& SetTimeRange(int64_t min_timestamp, int64_t max_timestamp);
 
   /**
    * @brief Get versions of columns with the specified timestamp.
    * @param The timestamp to be set
    */
-  Get& SetTimeStamp(long timestamp);
+  Get& SetTimeStamp(int64_t timestamp);
 
   /**
    * @brief Get all columns from the specified family.
@@ -131,7 +131,7 @@ class Get {
 
  private:
   std::string row_ = "";
-  uint32_t max_versions_ = 1;
+  int32_t max_versions_ = 1;
   bool cache_blocks_ = true;
   bool check_existence_only_ = false;
   FamilyMap family_map_;
@@ -146,4 +146,5 @@ class Get {
    */
   void CheckRow(const std::string& row);
 };
-}
+
+}  // namespace hbase

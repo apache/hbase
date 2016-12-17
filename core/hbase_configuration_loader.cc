@@ -127,7 +127,8 @@ optional<Configuration> HBaseConfigurationLoader::LoadDefaultResources() {
     }
   }
   if (success) {
-    return std::experimental::make_optional<Configuration>(conf_property);
+    return std::experimental::make_optional<Configuration>(
+    		Configuration(conf_property));
   } else {
     return optional<Configuration>();
   }
@@ -151,7 +152,8 @@ optional<Configuration> HBaseConfigurationLoader::LoadResources(
     }
   }
   if (success) {
-    return std::experimental::make_optional<Configuration>(conf_property);
+    return std::experimental::make_optional<Configuration>(
+    		Configuration(conf_property));
   } else {
     return optional<Configuration>();
   }

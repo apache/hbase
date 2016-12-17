@@ -24,6 +24,8 @@
 #include <folly/Conv.h>
 #include <boost/algorithm/string/predicate.hpp>
 
+#include <string>
+
 namespace hbase {
 namespace pb {
 template <class String>

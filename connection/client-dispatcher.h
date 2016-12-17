@@ -24,6 +24,7 @@
 #include <wangle/service/ClientDispatcher.h>
 
 #include <atomic>
+#include <memory>
 
 #include "connection/pipeline.h"
 #include "connection/request.h"

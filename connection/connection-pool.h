@@ -20,6 +20,7 @@
 
 #include <folly/SharedMutex.h>
 #include <boost/functional/hash.hpp>
+#include <memory>
 #include <mutex>
 #include <unordered_map>
 
@@ -60,7 +61,8 @@ struct ServerNameHash {
 class ConnectionPool {
  public:
   /** Create connection pool wit default connection factory */
-  ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
+  explicit ConnectionPool(
+      std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
 
   /**
    * Desctructor.

@@ -21,6 +21,8 @@
 #include <folly/io/IOBufQueue.h>
 #include <wangle/service/Service.h>
 
+#include <memory>
+
 #include "connection/request.h"
 #include "connection/response.h"
 #include "utils/user-util.h"

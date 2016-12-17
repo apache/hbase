@@ -113,14 +113,14 @@ void Scan::SetReversed(bool reversed) { reversed_ = reversed; }
 
 bool Scan::IsReversed() const { return reversed_; }
 
-void Scan::SetStartRow(std::string &start_row) {
+void Scan::SetStartRow(const std::string &start_row) {
   CheckRow(start_row);
   start_row_ = start_row;
 }
 
 const std::string &Scan::StartRow() const { return start_row_; }
 
-void Scan::SetStopRow(std::string &stop_row) {
+void Scan::SetStopRow(const std::string &stop_row) {
   CheckRow(stop_row);
   stop_row_ = stop_row;
 }
@@ -167,18 +167,18 @@ Scan &Scan::SetMaxVersions(uint32_t max_versions) {
 
 int Scan::MaxVersions() const { return max_versions_; }
 
-void Scan::SetMaxResultSize(long max_result_size) {
+void Scan::SetMaxResultSize(int64_t max_result_size) {
   max_result_size_ = max_result_size;
 }
 
-long Scan::MaxResultSize() const { return max_result_size_; }
+int64_t Scan::MaxResultSize() const { return max_result_size_; }
 
-Scan &Scan::SetTimeRange(long min_stamp, long max_stamp) {
+Scan &Scan::SetTimeRange(int64_t min_stamp, int64_t max_stamp) {
   tr_.reset(new TimeRange(min_stamp, max_stamp));
   return *this;
 }
 
-Scan &Scan::SetTimeStamp(long timestamp) {
+Scan &Scan::SetTimeStamp(int64_t timestamp) {
   tr_.reset(new TimeRange(timestamp, timestamp + 1));
   return *this;
 }
@@ -186,7 +186,7 @@ Scan &Scan::SetTimeStamp(long timestamp) {
 const TimeRange &Scan::Timerange() const { return *tr_; }
 
 void Scan::CheckRow(const std::string &row) {
-  const int kMaxRowLength = std::numeric_limits<short>::max();
+  const int32_t kMaxRowLength = std::numeric_limits<int16_t>::max();
   int row_length = row.size();
   if (0 == row_length) {
     throw std::runtime_error("Row length can't be 0");
@@ -201,5 +201,4 @@ void Scan::CheckRow(const std::string &row) {
 bool Scan::HasFamilies() const { return !family_map_.empty(); }
 
 const FamilyMap &Scan::Family() const { return family_map_; }
-}
-/* namespace hbase */
+}  // namespace hbase

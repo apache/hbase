@@ -24,6 +24,7 @@
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
 
+#include <memory>
 #include <string>
 
 #include "core/location-cache.h"

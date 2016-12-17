@@ -29,7 +29,7 @@ TEST(TimeRange, DefaultObject) {
   ASSERT_NO_THROW(timerange_def = new TimeRange());
 
   EXPECT_EQ(0, timerange_def->MinTimeStamp());
-  EXPECT_EQ(std::numeric_limits<long>::max(), timerange_def->MaxTimeStamp());
+  EXPECT_EQ(std::numeric_limits<int64_t>::max(), timerange_def->MaxTimeStamp());
   EXPECT_NE(1000, timerange_def->MinTimeStamp());
   EXPECT_NE(2000, timerange_def->MaxTimeStamp());
   delete timerange_def;

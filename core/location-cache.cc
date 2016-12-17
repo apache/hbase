@@ -23,6 +23,8 @@
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
 
+#include <utility>
+
 #include "connection/response.h"
 #include "if/Client.pb.h"
 #include "if/ZooKeeper.pb.h"

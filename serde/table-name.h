@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <folly/Conv.h>
 #include <folly/String.h>

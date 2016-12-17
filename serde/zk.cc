@@ -23,6 +23,8 @@
 #include <folly/io/IOBuf.h>
 #include <google/protobuf/message.h>
 
+#include <string>
+
 using hbase::ZkDeserializer;
 using std::runtime_error;
 using folly::IOBuf;

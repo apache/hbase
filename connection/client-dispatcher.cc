@@ -18,6 +18,8 @@
  */
 #include "connection/client-dispatcher.h"
 
+#include <utility>
+
 using namespace folly;
 using namespace hbase;
 using namespace wangle;
