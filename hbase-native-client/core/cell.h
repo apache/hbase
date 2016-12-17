@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace hbase {
@@ -36,25 +37,28 @@ enum CellType {
 class Cell {
  public:
   Cell(const std::string &row, const std::string &family,
-       const std::string &qualifier, const long &timestamp,
+       const std::string &qualifier, const int64_t timestamp,
        const std::string &value, const hbase::CellType &cell_type);
   virtual ~Cell();
   const std::string &Row() const;
   const std::string &Family() const;
   const std::string &Qualifier() const;
-  unsigned long Timestamp() const;
+  int64_t Timestamp() const;
   const std::string &Value() const;
   CellType Type() const;
-  long SequenceId() const;
+  int64_t SequenceId() const;
 
  private:
   std::string row_;
   std::string family_;
   std::string qualifier_;
-  unsigned long timestamp_;
+  // Since java does not have unsigned, we are also using signed numerics here
+  // so that we won't have surprises when large uint64's are treated as
+  // negative values in the java server side
+  int64_t timestamp_;
   hbase::CellType cell_type_;
   std::string value_;
-  long sequence_id_;
+  int64_t sequence_id_;
 };
 
-} /* namespace hbase */
+}  // namespace hbase

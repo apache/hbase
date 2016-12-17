@@ -23,7 +23,7 @@
 namespace hbase {
 
 Cell::Cell(const std::string &row, const std::string &family,
-           const std::string &qualifier, const long &timestamp,
+           const std::string &qualifier, const int64_t timestamp,
            const std::string &value, const hbase::CellType &cell_type)
     : row_(row),
       family_(family),
@@ -50,12 +50,12 @@ const std::string &Cell::Family() const { return family_; }
 
 const std::string &Cell::Qualifier() const { return qualifier_; }
 
-unsigned long Cell::Timestamp() const { return timestamp_; }
+int64_t Cell::Timestamp() const { return timestamp_; }
 
 const std::string &Cell::Value() const { return value_; }
 
 hbase::CellType Cell::Type() const { return cell_type_; }
 
-long Cell::SequenceId() const { return sequence_id_; }
+int64_t Cell::SequenceId() const { return sequence_id_; }
 
 } /* namespace hbase */

@@ -20,6 +20,7 @@
 
 #include <wangle/service/Service.h>
 
+#include <memory>
 #include <string>
 
 #include "connection/pipeline.h"
@@ -39,7 +40,8 @@ class ConnectionFactory {
    * Constructor.
    * There should only be one ConnectionFactory per client.
    */
-  ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool);
+  explicit ConnectionFactory(
+      std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool);
   /** Default Desctructor */
   virtual ~ConnectionFactory() = default;
 

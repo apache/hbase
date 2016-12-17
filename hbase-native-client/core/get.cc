@@ -96,7 +96,7 @@ const FamilyMap &Get::Family() const { return family_map_; }
 
 int Get::MaxVersions() const { return max_versions_; }
 
-Get &Get::SetMaxVersions(uint32_t max_versions) {
+Get &Get::SetMaxVersions(int32_t max_versions) {
   if (0 == max_versions)
     throw std::runtime_error("max_versions must be positive");
 
@@ -111,12 +111,12 @@ Get &Get::SetCacheBlocks(bool cache_blocks) {
   return *this;
 }
 
-Get &Get::SetTimeRange(long min_timestamp, long max_timestamp) {
+Get &Get::SetTimeRange(int64_t min_timestamp, int64_t max_timestamp) {
   tr_.reset(new TimeRange(min_timestamp, max_timestamp));
   return *this;
 }
 
-Get &Get::SetTimeStamp(long timestamp) {
+Get &Get::SetTimeStamp(int64_t timestamp) {
   tr_.reset(new TimeRange(timestamp, timestamp + 1));
   return *this;
 }
@@ -124,7 +124,7 @@ Get &Get::SetTimeStamp(long timestamp) {
 const TimeRange &Get::Timerange() const { return *tr_; }
 
 void Get::CheckRow(const std::string &row) {
-  const int kMaxRowLength = std::numeric_limits<short>::max();
+  const int kMaxRowLength = std::numeric_limits<int16_t>::max();
   int row_length = row.size();
   if (0 == row_length) {
     throw std::runtime_error("Row length can't be 0");
@@ -135,4 +135,4 @@ void Get::CheckRow(const std::string &row) {
                              std::to_string(kMaxRowLength));
   }
 }
-}
+}  // namespace hbase

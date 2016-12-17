@@ -26,7 +26,7 @@ namespace hbase {
 
 TimeRange::TimeRange()
     : min_timestamp_(0L),
-      max_timestamp_(std::numeric_limits<long>::max()),
+      max_timestamp_(std::numeric_limits<int64_t>::max()),
       all_time_(true) {}
 
 TimeRange::TimeRange(const TimeRange &tr) {
@@ -44,13 +44,13 @@ TimeRange &TimeRange::operator=(const TimeRange &tr) {
 
 TimeRange::~TimeRange() {}
 
-TimeRange::TimeRange(long min_timestamp) {
+TimeRange::TimeRange(int64_t min_timestamp) {
   this->min_timestamp_ = min_timestamp;
-  this->max_timestamp_ = std::numeric_limits<long>::max();
+  this->max_timestamp_ = std::numeric_limits<int64_t>::max();
   this->all_time_ = false;
 }
 
-TimeRange::TimeRange(long min_timestamp, long max_timestamp) {
+TimeRange::TimeRange(int64_t min_timestamp, int64_t max_timestamp) {
   if (min_timestamp < 0 || max_timestamp < 0) {
     throw std::runtime_error("Timestamp cannot be negative. min_timestamp: " +
                              std::to_string(min_timestamp) +
@@ -68,9 +68,9 @@ TimeRange::TimeRange(long min_timestamp, long max_timestamp) {
   this->all_time_ = false;
 }
 
-long TimeRange::MinTimeStamp() const { return this->min_timestamp_; }
+int64_t TimeRange::MinTimeStamp() const { return this->min_timestamp_; }
 
-long TimeRange::MaxTimeStamp() const { return this->max_timestamp_; }
+int64_t TimeRange::MaxTimeStamp() const { return this->max_timestamp_; }
 
 bool TimeRange::IsAllTime() const { return this->all_time_; }
-}
+}  // namespace hbase

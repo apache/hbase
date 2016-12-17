@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
@@ -52,7 +53,7 @@ class Scan {
    * the Scanner will start from the next closest row after the specified row.
    * @param start_row - row to start scanner at or after
    */
-  Scan(const std::string &start_row);
+  explicit Scan(const std::string &start_row);
 
   /**
    * @brief Create a Scan operation for the range of rows specified.
@@ -65,7 +66,7 @@ class Scan {
    * @brief Builds a scan object with the same specs as get.
    * @param get - get to model scan after
    */
-  Scan(const Get &get);
+  explicit Scan(const Get &get);
 
   /**
    * @brief Get all columns from the specified family.Overrides previous calls
@@ -102,7 +103,7 @@ class Scan {
    * @throws std::runtime_error if start_row length is 0 or greater than
    * MAX_ROW_LENGTH
    */
-  void SetStartRow(std::string &start_row);
+  void SetStartRow(const std::string &start_row);
 
   /**
    * @brief returns start_row of the Scan.
@@ -116,7 +117,7 @@ class Scan {
    * @throws std::runtime_error if stop_row length is 0 or greater than
    * MAX_ROW_LENGTH
    */
-  void SetStopRow(std::string &stop_row);
+  void SetStopRow(const std::string &stop_row);
 
   /**
    * @brief returns stop_row of the Scan.
@@ -218,12 +219,12 @@ class Scan {
    * configured value will be used instead. (Defaults to unlimited).
    * @param The maximum result size in bytes.
    */
-  void SetMaxResultSize(long max_result_size);
+  void SetMaxResultSize(int64_t max_result_size);
 
   /**
    * @brief the maximum result size in bytes.
    */
-  long MaxResultSize() const;
+  int64_t MaxResultSize() const;
 
   /**
    * @brief Get versions of columns only within the specified timestamp range,
@@ -233,7 +234,7 @@ class Scan {
    * @param min_stamp - minimum timestamp value, inclusive.
    * @param max_stamp - maximum timestamp value, exclusive.
    */
-  Scan &SetTimeRange(long min_stamp, long max_stamp);
+  Scan &SetTimeRange(int64_t min_stamp, int64_t max_stamp);
 
   /**
    * @brief Get versions of columns with the specified timestamp. Note, default
@@ -242,7 +243,7 @@ class Scan {
    * beyond the defaut.
    * @param timestamp - version timestamp
    */
-  Scan &SetTimeStamp(long timestamp);
+  Scan &SetTimeStamp(int64_t timestamp);
 
   /**
    * @brief Return Timerange
@@ -264,7 +265,7 @@ class Scan {
   std::string stop_row_ = "";
   uint32_t max_versions_ = 1;
   int caching_ = -1;
-  long max_result_size_ = -1;
+  int64_t max_result_size_ = -1;
   bool cache_blocks_ = true;
   bool load_column_families_on_demand_ = false;
   bool reversed_ = false;

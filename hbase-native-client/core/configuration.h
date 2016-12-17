@@ -88,8 +88,9 @@ class Configuration {
   struct ConfigData {
     std::string value;
     bool final;
-    ConfigData() : final(false){};
-    ConfigData(const std::string &value) : value(value), final(false) {}
+    ConfigData() : final(false) {}
+    explicit ConfigData(const std::string &value)
+        : value(value), final(false) {}
     void operator=(const std::string &new_value) {
       value = new_value;
       final = false;
@@ -105,7 +106,7 @@ class Configuration {
    * @brief Create Configuration object using config_map;
    * @param config_map - Map consisting of properties.
    */
-  Configuration(ConfigMap &config_map);
+  explicit Configuration(ConfigMap &config_map);
 
   // Property map filled all the properties loaded by ConfigurationLoader
   ConfigMap hb_property_;

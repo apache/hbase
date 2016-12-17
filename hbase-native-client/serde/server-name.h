@@ -21,6 +21,9 @@
 
 #include <folly/Conv.h>
 #include <folly/String.h>
+
+#include <string>
+
 #include "if/HBase.pb.h"
 
 namespace hbase {
@@ -39,5 +42,6 @@ void parseTo(String in, ServerName &out) {
   // Now keep everything after the : (delim + 1) to the end.
   out.set_port(folly::to<int>(s.substr(delim + 1)));
 }
-}
-}
+
+}  // namespace pb
+}  // namespace hbase

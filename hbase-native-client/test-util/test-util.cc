@@ -45,16 +45,16 @@ TestUtil::TestUtil() : temp_dir_(TestUtil::RandString()) {
   auto p = temp_dir_.path().string();
   auto cmd = std::string{"bin/start-local-hbase.sh " + p};
   auto res_code = std::system(cmd.c_str());
-  CHECK(res_code == 0);
+  CHECK_EQ(res_code, 0);
 }
 
 TestUtil::~TestUtil() {
   auto res_code = std::system("bin/stop-local-hbase.sh");
-  CHECK(res_code == 0);
+  CHECK_EQ(res_code, 0);
 }
 
 void TestUtil::RunShellCmd(const std::string &command) {
   auto cmd_string = folly::sformat("echo \"{}\" | ../bin/hbase shell", command);
   auto res_code = std::system(cmd_string.c_str());
-  CHECK(res_code == 0);
+  CHECK_EQ(res_code, 0);
 }

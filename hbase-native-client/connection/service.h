@@ -20,6 +20,8 @@
 
 #include <wangle/service/Service.h>
 
+#include <memory>
+
 #include "connection/request.h"
 #include "connection/response.h"
 

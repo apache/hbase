@@ -1,6 +1,7 @@
 /.arc_jira_lib
 /.externalToolBuilders
 .project
+.cproject
 *.settings/
 .classpath
 */build/

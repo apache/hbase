@@ -20,6 +20,7 @@
 #include "core/meta-utils.h"
 
 #include <folly/Conv.h>
+#include <memory>
 
 #include "connection/request.h"
 #include "connection/response.h"

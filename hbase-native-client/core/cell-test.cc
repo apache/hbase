@@ -30,7 +30,7 @@ TEST(CellTest, CellFailureTest) {
   std::string family = "family";
   std::string column = "column";
   std::string value = "value";
-  long timestamp = std::numeric_limits<long>::max();
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
   std::string tags = "";
   std::unique_ptr<Cell> cell(
       new Cell(row, family, column, timestamp, value, cell_type));
@@ -49,7 +49,7 @@ TEST(CellTest, CellSuceessTest) {
   std::string family = "family-value";
   std::string column = "column-value";
   std::string value = "value-value";
-  long timestamp = std::numeric_limits<long>::max();
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
   const std::unique_ptr<Cell> cell(
       new Cell(row, family, column, timestamp, value, cell_type));
@@ -70,7 +70,7 @@ TEST(CellTest, MultipleCellsTest) {
     std::string family = "family-value";
     std::string column = "column-value";
     std::string value = "value-value";
-    long timestamp = std::numeric_limits<long>::max();
+    int64_t timestamp = std::numeric_limits<int64_t>::max();
     row += std::to_string(i);
     value += std::to_string(i);
     CellType cell_type = CellType::PUT;
@@ -88,7 +88,7 @@ TEST(CellTest, MultipleCellsTest) {
     EXPECT_EQ("family-value", cell->Family());
     EXPECT_EQ("column-value", cell->Qualifier());
     EXPECT_EQ(value, cell->Value());
-    EXPECT_EQ(std::numeric_limits<long>::max(), cell->Timestamp());
+    EXPECT_EQ(std::numeric_limits<int64_t>::max(), cell->Timestamp());
     EXPECT_EQ(CellType::PUT, cell->Type());
     i += 1;
   }
@@ -103,7 +103,7 @@ TEST(CellTest, CellRowTest) {
   std::string family = "D";
   std::string column = "";
   std::string value = "";
-  long timestamp = std::numeric_limits<long>::max();
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
   std::unique_ptr<Cell> cell(
       new Cell(row, family, column, timestamp, value, cell_type));
@@ -122,7 +122,7 @@ TEST(CellTest, CellRowFamilyTest) {
   std::string family = "only-family";
   std::string column = "";
   std::string value = "";
-  long timestamp = std::numeric_limits<long>::max();
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
   const std::unique_ptr<Cell> cell(
       new Cell(row, family, column, timestamp, value, cell_type));
@@ -141,7 +141,7 @@ TEST(CellTest, CellRowFamilyValueTest) {
   std::string family = "only-family";
   std::string column = "";
   std::string value = "only-value";
-  long timestamp = std::numeric_limits<long>::max();
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
   const std::unique_ptr<Cell> cell(
       new Cell(row, family, column, timestamp, value, cell_type));
@@ -160,7 +160,7 @@ TEST(CellTest, CellRowFamilyColumnValueTest) {
   std::string family = "only-family";
   std::string column = "only-column";
   std::string value = "only-value";
-  long timestamp = std::numeric_limits<long>::max();
+  int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
   std::unique_ptr<Cell> cell(
       new Cell(row, family, column, timestamp, value, cell_type));

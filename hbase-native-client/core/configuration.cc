@@ -17,9 +17,11 @@
  *
  */
 
-#include "configuration.h"
+#include "core/configuration.h"
 
+#include <memory>
 #include <stdexcept>
+#include <utility>
 
 #include <glog/logging.h>
 #include <boost/lexical_cast.hpp>
