@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * Thread Pool that executes the submitted procedures.
@@ -654,45 +655,134 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   // ==========================================================================
+  //  Nonce Procedure helpers
+  // ==========================================================================
+  /**
+   * Create a NoneKey from the specified nonceGroup and nonce.
+   * @param nonceGroup
+   * @param nonce
+   * @return the generated NonceKey
+   */
+  public NonceKey createNonceKey(final long nonceGroup, final long nonce) {
+    return (nonce == HConstants.NO_NONCE) ? null : new NonceKey(nonceGroup, nonce);
+  }
+
+  /**
+   * Register a nonce for a procedure that is going to be submitted.
+   * A procId will be reserved and on submitProcedure(),
+   * the procedure with the specified nonce will take the reserved ProcId.
+   * If someone already reserved the nonce, this method will return the procId reserved,
+   * otherwise an invalid procId will be returned. and the caller should procede
+   * and submit the procedure.
+   *
+   * @param nonceKey A unique identifier for this operation from the client or process.
+   * @return the procId associated with the nonce, if any otherwise an invalid procId.
+   */
+  public long registerNonce(final NonceKey nonceKey) {
+    if (nonceKey == null) return -1;
+
+    // check if we have already a Reserved ID for the nonce
+    Long oldProcId = nonceKeysToProcIdsMap.get(nonceKey);
+    if (oldProcId == null) {
+      // reserve a new Procedure ID, this will be associated with the nonce
+      // and the procedure submitted with the specified nonce will use this ID.
+      final long newProcId = nextProcId();
+      oldProcId = nonceKeysToProcIdsMap.putIfAbsent(nonceKey, newProcId);
+      if (oldProcId == null) return -1;
+    }
+
+    // we found a registered nonce, but the procedure may not have been submitted yet.
+    // since the client expect the procedure to be submitted, spin here until it is.
+    final boolean isTraceEnabled = LOG.isTraceEnabled();
+    while (isRunning() &&
+           !(procedures.containsKey(oldProcId) || completed.containsKey(oldProcId)) &&
+           nonceKeysToProcIdsMap.containsKey(nonceKey)) {
+      if (isTraceEnabled) {
+        LOG.trace("waiting for procId=" + oldProcId.longValue() + " to be submitted");
+      }
+      Threads.sleep(100);
+    }
+    return oldProcId.longValue();
+  }
+
+  /**
+   * Remove the NonceKey if the procedure was not submitted to the executor.
+   * @param nonceKey A unique identifier for this operation from the client or process.
+   */
+  public void unregisterNonceIfProcedureWasNotSubmitted(final NonceKey nonceKey) {
+    if (nonceKey == null) return;
+
+    final Long procId = nonceKeysToProcIdsMap.get(nonceKey);
+    if (procId == null) return;
+
+    // if the procedure was not submitted, remove the nonce
+    if (!(procedures.containsKey(procId) || completed.containsKey(procId))) {
+      nonceKeysToProcIdsMap.remove(nonceKey);
+    }
+  }
+
+  /**
+   * If the failure failed before submitting it, we may want to give back the
+   * same error to the requests with the same nonceKey.
+   *
+   * @param nonceKey A unique identifier for this operation from the client or process
+   * @param procName name of the procedure, used to inform the user
+   * @param procOwner name of the owner of the procedure, used to inform the user
+   * @param exception the failure to report to the user
+   */
+  public void setFailureResultForNonce(final NonceKey nonceKey, final String procName,
+      final User procOwner, final IOException exception) {
+    if (nonceKey == null) return;
+
+    final Long procId = nonceKeysToProcIdsMap.get(nonceKey);
+    if (procId == null || completed.containsKey(procId)) return;
+
+    final long currentTime = EnvironmentEdgeManager.currentTime();
+    final ProcedureInfo result = new ProcedureInfo(procId.longValue(),
+      procName, procOwner != null ? procOwner.getShortName() : null,
+      ProcedureUtil.convertToProcedureState(ProcedureState.ROLLEDBACK),
+      -1, nonceKey, exception, currentTime, currentTime, null);
+    completed.putIfAbsent(procId, result);
+  }
+
+  // ==========================================================================
   //  Submit/Abort Procedure
   // ==========================================================================
-
   /**
    * Add a new root-procedure to the executor.
    * @param proc the new procedure to execute.
    * @return the procedure id, that can be used to monitor the operation
    */
   public long submitProcedure(final Procedure proc) {
-    return submitProcedure(proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return submitProcedure(proc, null);
   }
 
   /**
    * Add a new root-procedure to the executor.
    * @param proc the new procedure to execute.
-   * @param nonceGroup
-   * @param nonce
+   * @param nonceKey the registered unique identifier for this operation from the client or process.
    * @return the procedure id, that can be used to monitor the operation
    */
-  public long submitProcedure(final Procedure proc, final long nonceGroup, final long nonce) {
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+      justification = "FindBugs is blind to the check-for-null")
+  public long submitProcedure(final Procedure proc, final NonceKey nonceKey) {
     Preconditions.checkArgument(lastProcId.get() >= 0);
     Preconditions.checkArgument(isRunning(), "executor not running");
 
-    // Prepare procedure
     prepareProcedure(proc);
 
-    // Check whether the proc exists.  If exist, just return the proc id.
-    // This is to prevent the same proc to submit multiple times (it could happen
-    // when client could not talk to server and resubmit the same request).
-    if (nonce != HConstants.NO_NONCE) {
-      final NonceKey noncekey = new NonceKey(nonceGroup, nonce);
-      proc.setNonceKey(noncekey);
-
-      Long oldProcId = nonceKeysToProcIdsMap.putIfAbsent(noncekey, proc.getProcId());
-      if (oldProcId != null) {
-        // Found the proc
-        return oldProcId.longValue();
-      }
+    final Long currentProcId;
+    if (nonceKey != null) {
+      currentProcId = nonceKeysToProcIdsMap.get(nonceKey);
+      Preconditions.checkArgument(currentProcId != null,
+        "expected nonceKey=" + nonceKey + " to be reserved, use registerNonce()");
+    } else {
+      currentProcId = nextProcId();
     }
+
+    // Initialize the procedure
+    proc.setNonceKey(nonceKey);
+    proc.setProcId(currentProcId.longValue());
 
     // Commit the transaction
     store.insert(proc, null);
@@ -708,13 +798,14 @@ public class ProcedureExecutor<TEnvironment> {
    * Add a set of new root-procedure to the executor.
    * @param procs the new procedures to execute.
    */
+  // TODO: Do we need to take nonces here?
   public void submitProcedures(final Procedure[] procs) {
     Preconditions.checkArgument(lastProcId.get() >= 0);
     Preconditions.checkArgument(isRunning(), "executor not running");
 
     // Prepare procedure
     for (int i = 0; i < procs.length; ++i) {
-      prepareProcedure(procs[i]);
+      prepareProcedure(procs[i]).setProcId(nextProcId());
     }
 
     // Commit the transaction
@@ -729,17 +820,14 @@ public class ProcedureExecutor<TEnvironment> {
     }
   }
 
-  private void prepareProcedure(final Procedure proc) {
+  private Procedure prepareProcedure(final Procedure proc) {
     Preconditions.checkArgument(proc.getState() == ProcedureState.INITIALIZING);
     Preconditions.checkArgument(isRunning(), "executor not running");
     Preconditions.checkArgument(!proc.hasParent(), "unexpected parent", proc);
     if (this.checkOwnerSet) {
       Preconditions.checkArgument(proc.hasOwner(), "missing owner");
     }
-
-    // Initialize the Procedure ID
-    final long currentProcId = nextProcId();
-    proc.setProcId(currentProcId);
+    return proc;
   }
 
   private long pushProcedure(final Procedure proc) {
@@ -754,7 +842,7 @@ public class ProcedureExecutor<TEnvironment> {
     procedures.put(currentProcId, proc);
     sendProcedureAddedNotification(currentProcId);
     scheduler.addBack(proc);
-    return currentProcId;
+    return proc.getProcId();
   }
 
   /**

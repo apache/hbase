@@ -201,7 +201,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
+      new ModifyTableProcedure(procExec.getEnvironment(), htd));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyTableState.values().length;
@@ -239,7 +239,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
+      new ModifyTableProcedure(procExec.getEnvironment(), htd));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyTableState.values().length;
@@ -276,7 +276,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
+      new ModifyTableProcedure(procExec.getEnvironment(), htd));
 
     int numberOfSteps = 1; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
@@ -308,7 +308,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
+      new ModifyTableProcedure(procExec.getEnvironment(), htd));
 
     // Restart the executor and rollback the step twice
     int numberOfSteps = 1; // failing at pre operation

@@ -163,32 +163,6 @@ public class TestMergeTableRegionsProcedure {
   }
 
   @Test(timeout=60000)
-  public void testMergeRegionsTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testMergeRegionsTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    List<HRegionInfo> tableRegions = createTable(tableName);
-
-    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
-    regionsToMerge[0] = tableRegions.get(0);
-    regionsToMerge[1] = tableRegions.get(1);
-
-    long procId1 = procExec.submitProcedure(new MergeTableRegionsProcedure(
-      procExec.getEnvironment(), regionsToMerge, true), nonceGroup, nonce);
-    long procId2 = procExec.submitProcedure(new MergeTableRegionsProcedure(
-      procExec.getEnvironment(), regionsToMerge, true), nonceGroup, nonce);
-    assertEquals(procId1, procId2);
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    // The second proc should succeed too - because it is the same proc.
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-
-    assertRegionCount(tableName, initialRegionCount - 1);
-  }
-
-  @Test(timeout=60000)
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

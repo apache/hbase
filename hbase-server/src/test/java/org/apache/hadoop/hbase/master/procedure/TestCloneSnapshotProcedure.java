@@ -118,29 +118,6 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
       clonedTableName);
   }
 
-  @Test(timeout = 60000)
-  public void testCloneSnapshotTwiceWithSameNonce() throws Exception {
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final TableName clonedTableName = TableName.valueOf("testCloneSnapshotTwiceWithSameNonce");
-    final HTableDescriptor htd = createHTableDescriptor(clonedTableName, CF);
-
-    // take the snapshot
-    HBaseProtos.SnapshotDescription snapshotDesc = getSnapshot();
-
-    long procId1 = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
-    long procId2 = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
-
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    // The second proc should succeed too - because it is the same proc.
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
-  }
-
   @Test(timeout=60000)
   public void testCloneSnapshotToSameTable() throws Exception {
     // take the snapshot
@@ -172,7 +149,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
 
     // Start the Clone snapshot procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = CloneSnapshotState.values().length;
@@ -197,7 +174,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
 
     // Start the Clone snapshot procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc), nonceGroup, nonce);
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
 
     int numberOfSteps = 0; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);

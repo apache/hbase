@@ -216,10 +216,9 @@ public class TableNamespaceManager {
    * Note, by-passes notifying coprocessors and name checks. Use for system namespaces only.
    */
   private void blockingCreateNamespace(final NamespaceDescriptor namespaceDescriptor)
-  throws IOException {
+      throws IOException {
     ClusterSchema clusterSchema = this.masterServices.getClusterSchema();
-    long procId =
-      clusterSchema.createNamespace(namespaceDescriptor, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    long procId = clusterSchema.createNamespace(namespaceDescriptor, null);
     block(this.masterServices, procId);
   }
 

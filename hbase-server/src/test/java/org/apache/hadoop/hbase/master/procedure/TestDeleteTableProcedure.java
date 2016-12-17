@@ -74,10 +74,10 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
     // delete the table (that exists)
     long procId1 = procExec.submitProcedure(
-        new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup, nonce);
+        new DeleteTableProcedure(procExec.getEnvironment(), tableName));
     // delete the table (that will no longer exist)
     long procId2 = procExec.submitProcedure(
-        new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup + 1, nonce + 1);
+        new DeleteTableProcedure(procExec.getEnvironment(), tableName));
 
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
@@ -93,36 +93,6 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     assertTrue(result.isFailed());
     LOG.debug("Delete failed with exception: " + result.getExceptionFullMessage());
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
-  }
-
-  @Test(timeout=60000)
-  public void testDoubleDeletedTableWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testDoubleDeletedTableWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      procExec, tableName, null, "f");
-    UTIL.getHBaseAdmin().disableTable(tableName);
-
-    // delete the table (that exists)
-    long procId1 = procExec.submitProcedure(
-        new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup, nonce);
-    // delete the table (that will no longer exist)
-    long procId2 = procExec.submitProcedure(
-        new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup, nonce);
-
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-
-    // First delete should succeed
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName);
-
-    // Second delete should not fail, because it is the same delete
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
   }
 
   @Test(timeout=60000)
@@ -171,7 +141,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup, nonce);
+      new DeleteTableProcedure(procExec.getEnvironment(), tableName));
 
     // Restart the executor and execute the step twice
     // NOTE: the 6 (number of DeleteTableState steps) is hardcoded,

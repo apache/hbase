@@ -49,35 +49,12 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Enable the table
     long procId = procExec.submitProcedure(
-      new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+      new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     MasterProcedureTestingUtility.validateTableIsEnabled(UTIL.getHBaseCluster().getMaster(),
       tableName);
-  }
-
-  @Test(timeout = 60000)
-  public void testEnableTableTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testEnableTableTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2");
-    UTIL.getHBaseAdmin().disableTable(tableName);
-
-    // Enable the table
-    long procId1 = procExec.submitProcedure(
-      new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
-    long procId2 = procExec.submitProcedure(
-      new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
-
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    // The second proc should succeed too - because it is the same proc.
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
   }
 
   @Test(timeout=60000, expected=TableNotDisabledException.class)
@@ -89,7 +66,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Enable the table - expect failure
     long procId1 = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
     ProcedureInfo result = procExec.getResult(procId1);
@@ -100,9 +77,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Enable the table with skipping table state check flag (simulate recovery scenario)
     long procId2 = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, true),
-        nonceGroup + 1,
-        nonce + 1);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, true));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -110,9 +85,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     // Enable the table - expect failure from ProcedurePrepareLatch
     final ProcedurePrepareLatch prepareLatch = new ProcedurePrepareLatch.CompatibilityLatch();
     long procId3 = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false, prepareLatch),
-        nonceGroup + 2,
-        nonce + 2);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, false, prepareLatch));
     prepareLatch.await();
     Assert.fail("Enable should throw exception through latch.");
   }
@@ -132,7 +105,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Enable procedure && kill the executor
     long procId = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = EnableTableState.values().length;
@@ -156,7 +129,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Enable procedure && kill the executor
     long procId = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
 
     int numberOfSteps = 1; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);

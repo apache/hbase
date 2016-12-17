@@ -53,9 +53,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Test 1: modify the column family online
     columnDescriptor.setBlocksize(newBlockSize);
     long procId1 = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -66,9 +64,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
     UTIL.getHBaseAdmin().disableTable(tableName);
     columnDescriptor.setBlocksize(newBlockSize * 2);
     long procId2 = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup + 1,
-      nonce + 1);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -91,9 +87,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Modify the column family that does not exist
     columnDescriptor.setBlocksize(newBlockSize);
     long procId1 = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
@@ -123,9 +117,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Start the Modify procedure && kill the executor
     columnDescriptor.setBlocksize(newBlockSize);
     long procId = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyColumnFamilyState.values().length;
@@ -153,9 +145,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Start the Modify procedure && kill the executor
     columnDescriptor.setBlocksize(newBlockSize);
     long procId = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyColumnFamilyState.values().length;
@@ -183,9 +173,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Start the Modify procedure && kill the executor
     columnDescriptor.setBlocksize(newBlockSize);
     long procId = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     int numberOfSteps = 1; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);

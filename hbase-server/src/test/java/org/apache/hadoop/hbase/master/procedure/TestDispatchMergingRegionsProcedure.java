@@ -54,8 +54,6 @@ public class TestDispatchMergingRegionsProcedure {
   private static final Log LOG = LogFactory.getLog(TestDispatchMergingRegionsProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
 
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
   final static Configuration conf = UTIL.getConfiguration();
@@ -89,9 +87,7 @@ public class TestDispatchMergingRegionsProcedure {
   @Before
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
+
     // Turn off balancer so it doesn't cut in and mess up our placements.
     UTIL.getHBaseAdmin().setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
@@ -185,33 +181,6 @@ public class TestDispatchMergingRegionsProcedure {
       completedTaskCount += server.getRegionServer().getCompactSplitThread().getCompletedMergeTaskCount();
     }
     return completedTaskCount;
-  }
-
-  @Test(timeout=60000)
-  public void testMergeRegionsTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testMergeRegionsTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    List<HRegionInfo> tableRegions = createTable(tableName, 3);
-
-    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
-    regionsToMerge[0] = tableRegions.get(0);
-    regionsToMerge[1] = tableRegions.get(1);
-
-    final int initCompletedTaskCount = countOfCompletedMergeTaskCount();
-    long procId1 = procExec.submitProcedure(new DispatchMergingRegionsProcedure(
-      procExec.getEnvironment(), tableName, regionsToMerge, true), nonceGroup, nonce);
-    long procId2 = procExec.submitProcedure(new DispatchMergingRegionsProcedure(
-      procExec.getEnvironment(), tableName, regionsToMerge, true), nonceGroup, nonce);
-    assertEquals(procId1, procId2);
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    // The second proc should succeed too - because it is the same proc.
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-
-    assertRegionCount(tableName, 2, 1, initCompletedTaskCount);
   }
 
   @Test(timeout=60000)

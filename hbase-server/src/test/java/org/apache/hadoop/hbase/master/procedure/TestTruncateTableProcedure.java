@@ -164,9 +164,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
     // Start the Truncate procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new TruncateTableProcedure(procExec.getEnvironment(), tableName, preserveSplits),
-      nonceGroup,
-      nonce);
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, preserveSplits));
 
     // Restart the executor and execute the step twice
     // NOTE: the 7 (number of TruncateTableState steps) is hardcoded,

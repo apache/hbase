@@ -151,30 +151,6 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     validateSnapshotRestore();
   }
 
-  @Test(timeout = 60000)
-  public void testRestoreSnapshotTwiceWithSameNonce() throws Exception {
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    long procId1 = procExec.submitProcedure(
-      new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot),
-      nonceGroup,
-      nonce);
-    long procId2 = procExec.submitProcedure(
-      new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot),
-      nonceGroup,
-      nonce);
-
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    // The second proc should succeed too - because it is the same proc.
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
-
-    validateSnapshotRestore();
-  }
-
   @Test(timeout=60000)
   public void testRestoreSnapshotToDifferentTable() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -218,9 +194,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
 
     // Start the Restore snapshot procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot),
-      nonceGroup,
-      nonce);
+      new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = RestoreSnapshotState.values().length;

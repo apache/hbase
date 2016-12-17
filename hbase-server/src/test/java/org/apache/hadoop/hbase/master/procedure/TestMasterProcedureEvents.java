@@ -53,9 +53,6 @@ public class TestMasterProcedureEvents {
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
-
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
@@ -156,7 +153,7 @@ public class TestMasterProcedureEvents {
 
     // submit the procedure
     LOG.debug("submit " + proc);
-    long procId = procExec.submitProcedure(proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    long procId = procExec.submitProcedure(proc);
 
     // wait until the event is in the queue (proc executed and got into suspended state)
     LOG.debug("wait procedure suspended on " + event);

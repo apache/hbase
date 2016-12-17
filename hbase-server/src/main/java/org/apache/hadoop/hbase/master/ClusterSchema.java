@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.NonceKey;
 
 /**
  * View and edit the current cluster schema. Use this API making any modification to
@@ -77,39 +78,33 @@ public interface ClusterSchema {
   /**
    * Create a new Namespace.
    * @param namespaceDescriptor descriptor for new Namespace
-   * @param nonceGroup Identifier for the source of the request, a client or process.
-   * @param nonce A unique identifier for this operation from the client or process identified by
-   *    <code>nonceGroup</code> (the source must ensure each operation gets a unique id).
+   * @param nonceKey A unique identifier for this operation from the client or process.
    * @return procedure id
    * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
    *    as well as {@link IOException}
    */
-  long createNamespace(NamespaceDescriptor namespaceDescriptor, long nonceGroup, long nonce)
+  long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey)
   throws IOException;
 
   /**
    * Modify an existing Namespace.
-   * @param nonceGroup Identifier for the source of the request, a client or process.
-   * @param nonce A unique identifier for this operation from the client or process identified by
-   *    <code>nonceGroup</code> (the source must ensure each operation gets a unique id).
+   * @param nonceKey A unique identifier for this operation from the client or process.
    * @return procedure id
    * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
    *    as well as {@link IOException}
    */
-  long modifyNamespace(NamespaceDescriptor descriptor, long nonceGroup, long nonce)
+  long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey)
   throws IOException;
 
   /**
    * Delete an existing Namespace.
    * Only empty Namespaces (no tables) can be removed.
-   * @param nonceGroup Identifier for the source of the request, a client or process.
-   * @param nonce A unique identifier for this operation from the client or process identified by
-   *    <code>nonceGroup</code> (the source must ensure each operation gets a unique id).
+   * @param nonceKey A unique identifier for this operation from the client or process.
    * @return procedure id
    * @throws IOException Throws {@link ClusterSchemaException} and {@link InterruptedIOException}
    *    as well as {@link IOException}
    */
-  long deleteNamespace(String name, long nonceGroup, long nonce)
+  long deleteNamespace(String name, NonceKey nonceKey)
   throws IOException;
 
   /**

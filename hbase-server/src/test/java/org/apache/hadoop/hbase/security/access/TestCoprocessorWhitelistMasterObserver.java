@@ -20,36 +20,33 @@ package org.apache.hadoop.hbase.security.access;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.apache.hadoop.hbase.CategoryBasedTimeout;
-import org.junit.rules.TestRule;
 import org.junit.After;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
+import org.junit.rules.TestRule;
 
 /**
  * Performs coprocessor loads for variuos paths and malformed strings
@@ -58,7 +55,6 @@ import java.io.IOException;
 public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   private static final Log LOG = LogFactory.getLog(TestCoprocessorWhitelistMasterObserver.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static Configuration conf;
   private static final TableName TEST_TABLE = TableName.valueOf("testTable");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("fam1");
 
@@ -106,8 +102,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
     // set retries low to raise exception quickly
     conf.setInt("hbase.client.retries.number", 1);
     UTIL.startMiniCluster();
-    Table table = UTIL.createTable(TEST_TABLE,
-        new byte[][] { TEST_FAMILY });
+    UTIL.createTable(TEST_TABLE, new byte[][] { TEST_FAMILY });
     UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
     Connection connection = ConnectionFactory.createConnection(conf);
     Table t = connection.getTable(TEST_TABLE);
@@ -139,18 +134,17 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   private static void negativeTestCase(String[] whitelistedPaths,
       String coprocessorPath) throws Exception {
     Configuration conf = UTIL.getConfiguration();
+    conf.setInt("hbase.client.retries.number", 1);
     // load coprocessor under test
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         CoprocessorWhitelistMasterObserver.class.getName());
     // set retries low to raise exception quickly
-    conf.setInt("hbase.client.retries.number", 1);
     // set a coprocessor whitelist path for test
     conf.setStrings(
         CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
         whitelistedPaths);
     UTIL.startMiniCluster();
-    Table table = UTIL.createTable(TEST_TABLE,
-        new byte[][] { TEST_FAMILY });
+    UTIL.createTable(TEST_TABLE, new byte[][] { TEST_FAMILY });
     UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
@@ -175,7 +169,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    *         to show coprocessor is working as desired
    */
   @Test
-  @Category(MediumTests.class)
   public void testSubstringNonWhitelisted() throws Exception {
     positiveTestCase(new String[]{"/permitted/*"},
         "file:///notpermitted/couldnotpossiblyexist.jar");
@@ -189,7 +182,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    *         the added coprocessor not actually existing on disk
    */
   @Test
-  @Category(MediumTests.class)
   public void testDifferentFileSystemNonWhitelisted() throws Exception {
     positiveTestCase(new String[]{"hdfs://foo/bar"},
         "file:///notpermitted/couldnotpossiblyexist.jar");
@@ -203,7 +195,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    *         the added coprocessor not actually existing on disk
    */
   @Test
-  @Category(MediumTests.class)
   public void testSchemeAndDirectorywhitelisted() throws Exception {
     negativeTestCase(new String[]{"/tmp","file:///permitted/*"},
         "file:///permitted/couldnotpossiblyexist.jar");
@@ -217,7 +208,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    *         the added coprocessor not actually existing on disk
    */
   @Test
-  @Category(MediumTests.class)
   public void testSchemeWhitelisted() throws Exception {
     negativeTestCase(new String[]{"file:///"},
         "file:///permitted/couldnotpossiblyexist.jar");
@@ -231,7 +221,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    *         the added coprocessor not actually existing on disk
    */
   @Test
-  @Category(MediumTests.class)
   public void testDFSNameWhitelistedWorks() throws Exception {
     negativeTestCase(new String[]{"hdfs://Your-FileSystem"},
         "hdfs://Your-FileSystem/permitted/couldnotpossiblyexist.jar");
@@ -245,7 +234,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    *         the added coprocessor not actually existing on disk
    */
   @Test
-  @Category(MediumTests.class)
   public void testDFSNameNotWhitelistedFails() throws Exception {
     positiveTestCase(new String[]{"hdfs://Your-FileSystem"},
         "hdfs://My-FileSystem/permitted/couldnotpossiblyexist.jar");
@@ -259,7 +247,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    *         the added coprocessor not actually existing on disk
    */
   @Test
-  @Category(MediumTests.class)
   public void testBlanketWhitelist() throws Exception {
     negativeTestCase(new String[]{"*"},
         "hdfs:///permitted/couldnotpossiblyexist.jar");
@@ -271,7 +258,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    * @result Table will not be created due to the offending coprocessor
    */
   @Test
-  @Category(MediumTests.class)
   public void testCreationNonWhitelistedCoprocessorPath() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // load coprocessor under test
@@ -309,7 +295,6 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
    * @result Table will be created with the coprocessor
    */
   @Test
-  @Category(MediumTests.class)
   public void testCreationClasspathCoprocessor() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // load coprocessor under test

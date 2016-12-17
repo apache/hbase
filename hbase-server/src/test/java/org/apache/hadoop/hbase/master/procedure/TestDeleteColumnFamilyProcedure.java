@@ -53,9 +53,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // Test 1: delete the column family that exists online
     long procId1 = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf1.getBytes()),
-      nonceGroup,
-      nonce);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf1.getBytes()));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -66,9 +64,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Test 2: delete the column family that exists offline
     UTIL.getHBaseAdmin().disableTable(tableName);
     long procId2 = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()),
-      nonceGroup,
-      nonce);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -85,9 +81,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // delete the column family that exists
     long procId1 = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()),
-      nonceGroup,
-      nonce);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     // First delete should succeed
@@ -98,9 +92,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // delete the column family that does not exist
     long procId2 = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()),
-      nonceGroup + 1,
-      nonce + 1);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()));
 
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
@@ -115,9 +107,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Try again, this time with table disabled.
     UTIL.getHBaseAdmin().disableTable(tableName);
     long procId3 = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()),
-      nonceGroup + 2,
-      nonce + 2);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId3);
     // Expect fail with InvalidFamilyOperationException
@@ -126,37 +116,6 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     LOG.debug("Delete offline failed with exception: " + result.getExceptionFullMessage());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
-  }
-
-  @Test(timeout=60000)
-  public void testDeleteColumnFamilyTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testDeleteColumnFamilyTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    final String cf2 = "cf2";
-
-    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", cf2);
-
-    // delete the column family that exists
-    long procId1 = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()),
-      nonceGroup,
-      nonce);
-    long procId2 = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()),
-      nonceGroup,
-      nonce);
-
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf2);
-
-    // Wait the completion and expect not fail - because it is the same proc
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
   }
 
   @Test(timeout=60000)
@@ -170,9 +129,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // delete the column family that does not exist
     long procId1 = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf3.getBytes()),
-      nonceGroup,
-      nonce);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf3.getBytes()));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
@@ -198,9 +155,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf4.getBytes()),
-      nonceGroup,
-      nonce);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf4.getBytes()));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = DeleteColumnFamilyState.values().length;
@@ -224,9 +179,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf5.getBytes()),
-      nonceGroup,
-      nonce);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf5.getBytes()));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = DeleteColumnFamilyState.values().length;
@@ -251,9 +204,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf5.getBytes()),
-      nonceGroup,
-      nonce);
+      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf5.getBytes()));
 
     int numberOfSteps = 1; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);

@@ -63,9 +63,6 @@ public class TestSplitTableRegionProcedure {
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
-
   private static String ColumnFamilyName1 = "cf1";
   private static String ColumnFamilyName2 = "cf2";
 
@@ -95,9 +92,6 @@ public class TestSplitTableRegionProcedure {
   @Before
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
     UTIL.getHBaseAdmin().setBalancerRunning(false, true);
@@ -130,9 +124,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -155,9 +147,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -183,9 +173,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -210,9 +198,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -242,9 +228,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -267,42 +251,6 @@ public class TestSplitTableRegionProcedure {
   }
 
   @Test(timeout=60000)
-  public void testSplitTableRegionTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testSplitTableRegionTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
-      procExec, tableName, null, ColumnFamilyName1, ColumnFamilyName2);
-    insertData(tableName);
-    int splitRowNum = startRowNum + rowCount / 2;
-    byte[] splitKey = Bytes.toBytes("" + splitRowNum);
-
-    assertTrue("not able to find a splittable region", regions != null);
-    assertTrue("not able to find a splittable region", regions.length == 1);
-
-    // Split region of the table
-    long procId1 = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
-    // Split region of the table with the same nonce
-    long procId2 = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
-
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    // The second proc should succeed too - because it is the same proc.
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
-
-    verify(tableName, splitRowNum);
-  }
-
-  @Test(timeout=60000)
   public void testInvalidSplitKey() throws Exception {
     final TableName tableName = TableName.valueOf("testInvalidSplitKey");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -317,9 +265,7 @@ public class TestSplitTableRegionProcedure {
     // Split region of the table with null split key
     try {
       long procId1 = procExec.submitProcedure(
-        new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], null),
-        nonceGroup,
-        nonce);
+        new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], null));
       ProcedureTestingUtility.waitProcedure(procExec, procId1);
       fail("unexpected procedure start with invalid split-key");
     } catch (DoNotRetryIOException e) {
@@ -345,9 +291,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
 
     // Failing before SPLIT_TABLE_REGION_UPDATE_META we should trigger the
     // rollback
@@ -378,9 +322,7 @@ public class TestSplitTableRegionProcedure {
 
     // Split region of the table
     long procId = procExec.submitProcedure(
-      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey),
-      nonceGroup,
-      nonce);
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = SplitTableRegionState.values().length;

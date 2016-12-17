@@ -1199,16 +1199,8 @@ public class MasterRpcServices extends RSRpcServices
   public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
       RestoreSnapshotRequest request) throws ServiceException {
     try {
-      master.checkInitialized();
-      master.snapshotManager.checkSnapshotSupport();
-
-      // Ensure namespace exists. Will throw exception if non-known NS.
-      TableName dstTable = TableName.valueOf(request.getSnapshot().getTable());
-      master.getClusterSchema().getNamespace(dstTable.getNamespaceAsString());
-
-      SnapshotDescription reqSnapshot = request.getSnapshot();
-      long procId = master.snapshotManager.restoreOrCloneSnapshot(
-        reqSnapshot, request.getNonceGroup(), request.getNonce());
+      long procId = master.restoreSnapshot(request.getSnapshot(),
+          request.getNonceGroup(), request.getNonce());
       return RestoreSnapshotResponse.newBuilder().setProcId(procId).build();
     } catch (ForeignException e) {
       throw new ServiceException(e.getCause());
@@ -1356,7 +1348,7 @@ public class MasterRpcServices extends RSRpcServices
       master.checkServiceStarted();
       RegionStateTransition rt = req.getTransition(0);
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-      for (RegionInfo ri : rt.getRegionInfoList())  { 
+      for (RegionInfo ri : rt.getRegionInfoList())  {
         TableName tableName = ProtobufUtil.toTableName(ri.getTableName());
         if (!(TableName.META_TABLE_NAME.equals(tableName)
             && regionStates.getRegionState(HRegionInfo.FIRST_META_REGIONINFO) != null)

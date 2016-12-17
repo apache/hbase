@@ -92,43 +92,18 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
     // create the table
     long procId1 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // create another with the same name
     ProcedurePrepareLatch latch2 = new ProcedurePrepareLatch.CompatibilityLatch();
     long procId2 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions, latch2),
-      nonceGroup + 1,
-      nonce + 1);
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions, latch2));
 
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
 
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     latch2.await();
-  }
-
-  @Test(timeout=60000)
-  public void testCreateTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testCreateTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f");
-    final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
-
-    // create the table
-    long procId1 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
-
-    // create another with the same name
-    long procId2 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
-    assertTrue(procId1 == procId2);
   }
 
   @Test(timeout=60000)
@@ -144,7 +119,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // Restart the executor and execute the step twice
     // NOTE: the 6 (number of CreateTableState steps) is hardcoded,
@@ -181,7 +156,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     htd.setRegionReplication(3);
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     int numberOfSteps = 0; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);

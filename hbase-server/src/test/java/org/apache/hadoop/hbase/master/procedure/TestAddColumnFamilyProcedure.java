@@ -51,9 +51,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // Test 1: Add a column family online
     long procId1 = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor1),
-      nonceGroup,
-      nonce);
+      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor1));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -64,9 +62,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Test 2: Add a column family offline
     UTIL.getHBaseAdmin().disableTable(tableName);
     long procId2 = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor2),
-      nonceGroup + 1,
-      nonce + 1);
+      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor2));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -86,9 +82,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // add the column family
     long procId1 = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -97,9 +91,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // add the column family that exists
     long procId2 = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup + 1,
-      nonce + 1);
+      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
 
@@ -113,9 +105,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Do the same add the existing column family - this time offline
     UTIL.getHBaseAdmin().disableTable(tableName);
     long procId3 = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup + 2,
-      nonce + 2);
+      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId3);
 
@@ -125,37 +115,6 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
     LOG.debug("Add failed with exception: " + result.getExceptionFullMessage());
     assertTrue(
       ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
-  }
-
-  @Test(timeout=60000)
-  public void testAddSameColumnFamilyTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testAddSameColumnFamilyTwiceWithSameNonce");
-    final String cf2 = "cf2";
-    final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf2);
-
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1");
-
-    // add the column family
-    long procId1 = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
-    long procId2 = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateColumnFamilyAddition(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf2);
-
-    // Wait the completion and expect not fail - because it is the same proc
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
   }
 
   @Test(timeout = 60000)
@@ -173,9 +132,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // Start the AddColumnFamily procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = AddColumnFamilyState.values().length;
@@ -199,9 +156,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // Start the AddColumnFamily procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = AddColumnFamilyState.values().length;
@@ -225,9 +180,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // Start the AddColumnFamily procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     int numberOfSteps = 1; // failing at "pre operations"
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);

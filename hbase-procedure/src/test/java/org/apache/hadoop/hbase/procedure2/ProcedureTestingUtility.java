@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Threads;
 
 import static org.junit.Assert.assertEquals;
@@ -178,11 +179,18 @@ public class ProcedureTestingUtility {
   }
 
   public static <TEnv> long submitAndWait(ProcedureExecutor<TEnv> procExecutor, Procedure proc,
-      final long nonceGroup,
-      final long nonce) {
-    long procId = procExecutor.submitProcedure(proc, nonceGroup, nonce);
+      final long nonceGroup, final long nonce) {
+    long procId = submitProcedure(procExecutor, proc, nonceGroup, nonce);
     waitProcedure(procExecutor, procId);
     return procId;
+  }
+
+  public static <TEnv> long submitProcedure(ProcedureExecutor<TEnv> procExecutor, Procedure proc,
+      final long nonceGroup, final long nonce) {
+    final NonceKey nonceKey = procExecutor.createNonceKey(nonceGroup, nonce);
+    long procId = procExecutor.registerNonce(nonceKey);
+    assertFalse(procId >= 0);
+    return procExecutor.submitProcedure(proc, nonceKey);
   }
 
   public static <TEnv> void waitProcedure(ProcedureExecutor<TEnv> procExecutor, Procedure proc) {
