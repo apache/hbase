@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -90,7 +91,7 @@ public class TestAsyncRegionLocatorTimeout {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    CONN.close();
+    IOUtils.closeQuietly(CONN);
     TEST_UTIL.shutdownMiniCluster();
   }
 

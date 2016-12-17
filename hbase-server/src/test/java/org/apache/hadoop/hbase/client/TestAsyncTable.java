@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -103,7 +104,7 @@ public class TestAsyncTable {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    ASYNC_CONN.close();
+    IOUtils.closeQuietly(ASYNC_CONN);
     TEST_UTIL.shutdownMiniCluster();
   }
 

@@ -38,6 +38,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -97,7 +98,7 @@ public class TestAsyncGetMultiThread {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    CONN.close();
+    IOUtils.closeQuietly(CONN);
     TEST_UTIL.shutdownMiniCluster();
   }
 

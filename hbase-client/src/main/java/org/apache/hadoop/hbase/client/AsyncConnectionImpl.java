@@ -95,7 +95,6 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.conf = conf;
     this.user = user;
     this.connConf = new AsyncConnectionConfiguration(conf);
-    this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
     this.registry = AsyncRegistryFactory.getRegistry(conf);
     this.clusterId = Optional.ofNullable(registry.getClusterId()).orElseGet(() -> {
       if (LOG.isDebugEnabled()) {
@@ -107,6 +106,7 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     this.rpcTimeout = conf.getInt(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT);
+    this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
     this.callerFactory = new AsyncRpcRetryingCallerFactory(this, RETRY_TIMER);
     if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
       nonceGenerator = PerClientRandomNonceGenerator.get();
