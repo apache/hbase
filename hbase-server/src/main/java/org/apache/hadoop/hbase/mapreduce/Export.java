@@ -110,9 +110,8 @@ public class Export extends Configured implements Tool {
     if (raw) {
       s.setRaw(raw);
     }
-    
-    if (conf.get(TableInputFormat.SCAN_COLUMN_FAMILY) != null) {
-      s.addFamily(Bytes.toBytes(conf.get(TableInputFormat.SCAN_COLUMN_FAMILY)));
+    for (String columnFamily : conf.getTrimmedStrings(TableInputFormat.SCAN_COLUMN_FAMILY)) {
+      s.addFamily(Bytes.toBytes(columnFamily));
     }
     // Set RowFilter or Prefix Filter if applicable.
     Filter exportFilter = getExportFilter(args);
@@ -163,7 +162,7 @@ public class Export extends Configured implements Tool {
     System.err.println("   -D mapreduce.output.fileoutputformat.compress.type=BLOCK");
     System.err.println("  Additionally, the following SCAN properties can be specified");
     System.err.println("  to control/limit what is exported..");
-    System.err.println("   -D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=<familyName>");
+    System.err.println("   -D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=<family1>,<family2>, ...");
     System.err.println("   -D " + RAW_SCAN + "=true");
     System.err.println("   -D " + TableInputFormat.SCAN_ROW_START + "=<ROWSTART>");
     System.err.println("   -D " + TableInputFormat.SCAN_ROW_STOP + "=<ROWSTOP>");

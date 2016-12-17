@@ -572,16 +572,18 @@ public class TestImportExport {
       fail("should be SecurityException");
     } catch (SecurityException e) {
       assertEquals(-1, newSecurityManager.getExitCode());
-      assertTrue(data.toString().contains("Wrong number of arguments:"));
-      assertTrue(data.toString().contains(
+      String errMsg = data.toString();
+      assertTrue(errMsg.contains("Wrong number of arguments:"));
+      assertTrue(errMsg.contains(
               "Usage: Export [-D <property=value>]* <tablename> <outputdir> [<versions> " +
               "[<starttime> [<endtime>]] [^[regex pattern] or [Prefix] to filter]]"));
-      assertTrue(data.toString().contains("-D hbase.mapreduce.scan.column.family=<familyName>"));
-      assertTrue(data.toString().contains("-D hbase.mapreduce.include.deleted.rows=true"));
-      assertTrue(data.toString().contains("-Dhbase.client.scanner.caching=100"));
-      assertTrue(data.toString().contains("-Dmapreduce.map.speculative=false"));
-      assertTrue(data.toString().contains("-Dmapreduce.reduce.speculative=false"));
-      assertTrue(data.toString().contains("-Dhbase.export.scanner.batch=10"));
+      assertTrue(
+        errMsg.contains("-D hbase.mapreduce.scan.column.family=<family1>,<family2>, ..."));
+      assertTrue(errMsg.contains("-D hbase.mapreduce.include.deleted.rows=true"));
+      assertTrue(errMsg.contains("-Dhbase.client.scanner.caching=100"));
+      assertTrue(errMsg.contains("-Dmapreduce.map.speculative=false"));
+      assertTrue(errMsg.contains("-Dmapreduce.reduce.speculative=false"));
+      assertTrue(errMsg.contains("-Dhbase.export.scanner.batch=10"));
     } finally {
       System.setErr(oldPrintStream);
       System.setSecurityManager(SECURITY_MANAGER);

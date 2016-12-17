@@ -310,7 +310,7 @@ public class TestCellCounter {
   /**
    * Test CellCounter for complete table all data should print to output
    */
-  @Test(timeout = 300000)
+  @Test(timeout = 600000)
   public void testCellCounterForCompleteTable() throws Exception {
     TableName sourceTable = TableName.valueOf("testCellCounterForCompleteTable");
     String outputPath = OUTPUT_DIR + sourceTable;
@@ -346,8 +346,18 @@ public class TestCellCounter {
       assertTrue(data.contains("row1;b;q_Versions" + "\t" + "1"));
       assertTrue(data.contains("row2;a;q_Versions" + "\t" + "1"));
       assertTrue(data.contains("row2;b;q_Versions" + "\t" + "1"));
+
+      FileUtil.fullyDelete(new File(outputPath));
+      args = new String[] { "-D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=a, b",
+                  sourceTable.getNameAsString(), outputDir.toString(), ";"};
+      runCount(args);
+      inputStream = new FileInputStream(outputPath + File.separator + "part-r-00000");
+      String data2 = IOUtils.toString(inputStream);
+      inputStream.close();
+      assertEquals(data, data2);
     } finally {
       t.close();
+      localFileSystem.close();
       FileUtil.fullyDelete(new File(outputPath));
     }
   }

@@ -65,7 +65,7 @@ public abstract class TestTableInputFormatScanBase {
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   static final TableName TABLE_NAME = TableName.valueOf("scantest");
-  static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
+  static final byte[][] INPUT_FAMILYS = {Bytes.toBytes("content1"), Bytes.toBytes("content2")};
   static final String KEY_STARTROW = "startRow";
   static final String KEY_LASTROW = "stpRow";
 
@@ -83,8 +83,8 @@ public abstract class TestTableInputFormatScanBase {
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
-    table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, INPUT_FAMILY);
-    TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
+    table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, INPUT_FAMILYS);
+    TEST_UTIL.loadTable(table, INPUT_FAMILYS, null, false);
   }
 
   @AfterClass
@@ -110,21 +110,23 @@ public abstract class TestTableInputFormatScanBase {
     public void map(ImmutableBytesWritable key, Result value,
       Context context)
     throws IOException, InterruptedException {
-      if (value.size() != 1) {
-        throw new IOException("There should only be one input column");
+      if (value.size() != 2) {
+        throw new IOException("There should be two input columns");
       }
       Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
-        cf = value.getMap();
-      if(!cf.containsKey(INPUT_FAMILY)) {
+        cfMap = value.getMap();
+
+      if (!cfMap.containsKey(INPUT_FAMILYS[0]) || !cfMap.containsKey(INPUT_FAMILYS[1])) {
         throw new IOException("Wrong input columns. Missing: '" +
-          Bytes.toString(INPUT_FAMILY) + "'.");
+          Bytes.toString(INPUT_FAMILYS[0]) + "' or '" + Bytes.toString(INPUT_FAMILYS[1]) + "'.");
       }
-      String val = Bytes.toStringBinary(value.getValue(INPUT_FAMILY, null));
+
+      String val0 = Bytes.toStringBinary(value.getValue(INPUT_FAMILYS[0], null));
+      String val1 = Bytes.toStringBinary(value.getValue(INPUT_FAMILYS[1], null));
       LOG.info("map: key -> " + Bytes.toStringBinary(key.get()) +
-        ", value -> " + val);
+               ", value -> (" + val0 + ", " + val1 + ")");
       context.write(key, key);
     }
-
   }
 
   /**
@@ -181,7 +183,8 @@ public abstract class TestTableInputFormatScanBase {
       "To" + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     c.set(TableInputFormat.INPUT_TABLE, TABLE_NAME.getNameAsString());
-    c.set(TableInputFormat.SCAN_COLUMN_FAMILY, Bytes.toString(INPUT_FAMILY));
+    c.set(TableInputFormat.SCAN_COLUMN_FAMILY, Bytes.toString(INPUT_FAMILYS[0]) + ", "
+          + Bytes.toString(INPUT_FAMILYS[1]));
     c.set(KEY_STARTROW, start != null ? start : "");
     c.set(KEY_LASTROW, last != null ? last : "");
 
@@ -219,7 +222,8 @@ public abstract class TestTableInputFormatScanBase {
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     Scan scan = new Scan();
-    scan.addFamily(INPUT_FAMILY);
+    scan.addFamily(INPUT_FAMILYS[0]);
+    scan.addFamily(INPUT_FAMILYS[1]);
     if (start != null) {
       scan.setStartRow(Bytes.toBytes(start));
     }
@@ -256,7 +260,8 @@ public abstract class TestTableInputFormatScanBase {
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     Scan scan = new Scan();
-    scan.addFamily(INPUT_FAMILY);
+    scan.addFamily(INPUT_FAMILYS[0]);
+    scan.addFamily(INPUT_FAMILYS[1]);
     c.set("hbase.mapreduce.input.autobalance", "true");
     c.set("hbase.mapreduce.input.autobalance.maxskewratio", ratio);
     c.set(KEY_STARTROW, "");

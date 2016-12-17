@@ -161,8 +161,8 @@ implements Configurable {
       addColumns(scan, conf.get(SCAN_COLUMNS));
     }
 
-    if (conf.get(SCAN_COLUMN_FAMILY) != null) {
-      scan.addFamily(Bytes.toBytes(conf.get(SCAN_COLUMN_FAMILY)));
+    for (String columnFamily : conf.getTrimmedStrings(SCAN_COLUMN_FAMILY)) {
+      scan.addFamily(Bytes.toBytes(columnFamily));
     }
 
     if (conf.get(SCAN_TIMESTAMP) != null) {
