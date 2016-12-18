@@ -72,7 +72,7 @@ public class SplitLogTask {
   SplitLogTask(final ZooKeeperProtos.SplitLogTask slt) {
     this.originServer = ProtobufUtil.toServerName(slt.getServerName());
     this.state = slt.getState();
-    this.mode = (slt.hasMode()) ? slt.getMode() : 
+    this.mode = (slt.hasMode()) ? slt.getMode() :
       ZooKeeperProtos.SplitLogTask.RecoveryMode.UNKNOWN;
   }
 

@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.hbase.io.hadoopbackport;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * The ThrottleInputStream provides bandwidth throttling on a specified
@@ -43,8 +47,6 @@ public class ThrottledInputStream extends InputStream {
 
   private long bytesRead = 0;
   private long totalSleepTime = 0;
-
-  private static final long SLEEP_DURATION_MS = 50;
 
   public ThrottledInputStream(InputStream rawStream) {
     this(rawStream, Long.MAX_VALUE);
@@ -118,14 +120,35 @@ public class ThrottledInputStream extends InputStream {
     return readLen;
   }
 
-  private void throttle() throws IOException {
-    while (getBytesPerSec() > maxBytesPerSec) {
-      try {
-        Thread.sleep(SLEEP_DURATION_MS);
-        totalSleepTime += SLEEP_DURATION_MS;
-      } catch (InterruptedException e) {
-        throw new IOException("Thread aborted", e);
-      }
+  private long calSleepTimeMs() {
+    return calSleepTimeMs(bytesRead, maxBytesPerSec,
+      EnvironmentEdgeManager.currentTime() - startTime);
+  }
+
+  @VisibleForTesting
+  static long calSleepTimeMs(long bytesRead, long maxBytesPerSec, long elapsed) {
+    assert elapsed > 0 : "The elapsed time should be greater than zero";
+    if (bytesRead <= 0 || maxBytesPerSec <= 0) {
+      return 0;
+    }
+    // We use this class to load the single source file, so the bytesRead
+    // and maxBytesPerSec aren't greater than Double.MAX_VALUE.
+    // We can get the precise sleep time by using the double value.
+    long rval = (long) ((((double) bytesRead) / ((double) maxBytesPerSec)) * 1000 - elapsed);
+    if (rval <= 0) {
+      return 0;
+    } else {
+      return rval;
+    }
+  }
+
+  private void throttle() throws InterruptedIOException {
+    long sleepTime = calSleepTimeMs();
+    totalSleepTime += sleepTime;
+    try {
+      TimeUnit.MILLISECONDS.sleep(sleepTime);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Thread aborted");
     }
   }
 
