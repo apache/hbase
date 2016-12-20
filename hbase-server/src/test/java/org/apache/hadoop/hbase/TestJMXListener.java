@@ -30,8 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -93,5 +95,19 @@ public class TestJMXListener {
 
   }
 
-
+  @Test
+  public void testGetRegionServerCoprocessors() throws Exception {
+    for (JVMClusterUtil.RegionServerThread rs : UTIL.getHBaseCluster().getRegionServerThreads()) {
+      boolean find = false;
+      for (String s : rs.getRegionServer().getRegionServerCoprocessors()) {
+        if (s.equals(JMXListener.class.getSimpleName())) {
+          find = true;
+          break;
+        }
+      }
+      if (!find) {
+        fail("where is the JMXListener?");
+      }
+    }
+  }
 }

@@ -2928,6 +2928,7 @@ public class HRegionServer extends HasThread implements
         LOG.debug("Exception details for failure to fetch wal coprocessor information.", exception);
       }
     }
+    coprocessors.addAll(rsHost.getCoprocessors());
     return coprocessors.toArray(new String[coprocessors.size()]);
   }
 
