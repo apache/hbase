@@ -474,6 +474,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>zghao</id>
+      <name>Guanghao Zhang</name>
+      <email>zghao@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>zhangduo</id>
       <name>Duo Zhang</name>
       <email>zhangduo@apache.org</email>
