@@ -28,7 +28,6 @@
 using std::mutex;
 using std::unique_ptr;
 using std::shared_ptr;
-using hbase::pb::ServerName;
 using hbase::ConnectionPool;
 using hbase::HBaseService;
 using folly::SharedMutexWritePriority;
@@ -47,33 +46,36 @@ ConnectionPool::~ConnectionPool() {
   SharedMutexWritePriority::WriteHolder holder(map_mutex_);
   for (auto &item : connections_) {
     auto &con = item.second;
-    con->close();
+    con->Close();
   }
   connections_.clear();
   clients_.clear();
 }
 
-std::shared_ptr<HBaseService> ConnectionPool::Get(const ServerName &sn) {
+std::shared_ptr<RpcConnection> ConnectionPool::GetConnection(
+    std::shared_ptr<ConnectionId> remote_id) {
   // Try and get th cached connection.
-  auto found_ptr = GetCached(sn);
+  auto found_ptr = GetCachedConnection(remote_id);
 
   // If there's no connection then create it.
   if (found_ptr == nullptr) {
-    found_ptr = GetNew(sn);
+    found_ptr = GetNewConnection(remote_id);
   }
   return found_ptr;
 }
 
-std::shared_ptr<HBaseService> ConnectionPool::GetCached(const ServerName &sn) {
+std::shared_ptr<RpcConnection> ConnectionPool::GetCachedConnection(
+    std::shared_ptr<ConnectionId> remote_id) {
   SharedMutexWritePriority::ReadHolder holder(map_mutex_);
-  auto found = connections_.find(sn);
+  auto found = connections_.find(remote_id);
   if (found == connections_.end()) {
     return nullptr;
   }
   return found->second;
 }
 
-std::shared_ptr<HBaseService> ConnectionPool::GetNew(const ServerName &sn) {
+std::shared_ptr<RpcConnection> ConnectionPool::GetNewConnection(
+    std::shared_ptr<ConnectionId> remote_id) {
   // Grab the upgrade lock. While we are double checking other readers can
   // continue on
   SharedMutexWritePriority::UpgradeHolder u_holder{map_mutex_};
@@ -81,7 +83,7 @@ std::shared_ptr<HBaseService> ConnectionPool::GetNew(const ServerName &sn) {
   // Now check if someone else created the connection before we got the lock
   // This is safe since we hold the upgrade lock.
   // upgrade lock is more power than the reader lock.
-  auto found = connections_.find(sn);
+  auto found = connections_.find(remote_id);
   if (found != connections_.end() && found->second != nullptr) {
     return found->second;
   } else {
@@ -89,24 +91,29 @@ std::shared_ptr<HBaseService> ConnectionPool::GetNew(const ServerName &sn) {
     SharedMutexWritePriority::WriteHolder w_holder{std::move(u_holder)};
 
     // Make double sure there are not stale connections hanging around.
-    connections_.erase(sn);
+    connections_.erase(remote_id);
 
-    // Nope we are the ones who should create the new connection.
-    auto client = cf_->MakeBootstrap();
-    auto dispatcher = cf_->Connect(client, sn.host_name(), sn.port());
-    clients_.insert(std::make_pair(sn, client));
-    connections_.insert(std::make_pair(sn, dispatcher));
-    return dispatcher;
+    /* create new connection */
+    auto clientBootstrap = cf_->MakeBootstrap();
+    auto dispatcher =
+        cf_->Connect(clientBootstrap, remote_id->host(), remote_id->port());
+
+    auto conneciton = std::make_shared<RpcConnection>(remote_id, dispatcher);
+
+    connections_.insert(std::make_pair(remote_id, conneciton));
+    clients_.insert(std::make_pair(remote_id, clientBootstrap));
+
+    return conneciton;
   }
 }
 
-void ConnectionPool::Close(const ServerName &sn) {
+void ConnectionPool::Close(std::shared_ptr<ConnectionId> remote_id) {
   SharedMutexWritePriority::WriteHolder holder{map_mutex_};
 
-  auto found = connections_.find(sn);
+  auto found = connections_.find(remote_id);
   if (found == connections_.end() || found->second == nullptr) {
     return;
   }
-  auto service = found->second;
+  found->second->Close();
   connections_.erase(found);
 }

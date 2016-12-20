@@ -25,38 +25,24 @@
 #include <unordered_map>
 
 #include "connection/connection-factory.h"
+#include "connection/connection-id.h"
+#include "connection/rpc-connection.h"
 #include "connection/service.h"
 #include "if/HBase.pb.h"
 
+
+using hbase::ConnectionId;
+using hbase::ConnectionIdEquals;
+using hbase::ConnectionIdHash;
+using hbase::RpcConnection;
+
 namespace hbase {
-
-/** Equals function for server name that ignores start time */
-struct ServerNameEquals {
-  /** equals */
-  bool operator()(const hbase::pb::ServerName &lhs,
-                  const hbase::pb::ServerName &rhs) const {
-    return lhs.host_name() == rhs.host_name() && lhs.port() == rhs.port();
-  }
-};
-
-/** Hash for ServerName that ignores the start time. */
-struct ServerNameHash {
-  /** hash */
-  std::size_t operator()(hbase::pb::ServerName const &s) const {
-    std::size_t h = 0;
-    boost::hash_combine(h, s.host_name());
-    boost::hash_combine(h, s.port());
-    return h;
-  }
-};
 
 /**
  * @brief Connection pooling for HBase rpc connection.
  *
  * This is a thread safe connection pool. It allows getting
- * a shared connection to HBase by server name. This is
- * useful for keeping a single connection no matter how many regions a
- * regionserver has on it.
+ * a shared rpc connection to HBase servers by connection id.
  */
 class ConnectionPool {
  public:
@@ -81,23 +67,27 @@ class ConnectionPool {
    * Get a connection to the server name. Start time is ignored.
    * This can be a blocking operation for a short time.
    */
-  std::shared_ptr<HBaseService> Get(const hbase::pb::ServerName &sn);
+  std::shared_ptr<RpcConnection> GetConnection(
+      std::shared_ptr<ConnectionId> remote_id);
 
   /**
    * Close/remove a connection.
    */
-  void Close(const hbase::pb::ServerName &sn);
+  void Close(std::shared_ptr<ConnectionId> remote_id);
 
  private:
-  std::shared_ptr<HBaseService> GetCached(const hbase::pb::ServerName &sn);
-  std::shared_ptr<HBaseService> GetNew(const hbase::pb::ServerName &sn);
-  std::unordered_map<hbase::pb::ServerName, std::shared_ptr<HBaseService>,
-                     ServerNameHash, ServerNameEquals>
+  std::shared_ptr<RpcConnection> GetCachedConnection(
+      std::shared_ptr<ConnectionId> remote_id);
+  std::shared_ptr<RpcConnection> GetNewConnection(
+      std::shared_ptr<ConnectionId> remote_id);
+  std::unordered_map<std::shared_ptr<ConnectionId>,
+                     std::shared_ptr<RpcConnection>, ConnectionIdHash,
+                     ConnectionIdEquals>
       connections_;
   std::unordered_map<
-      hbase::pb::ServerName,
+      std::shared_ptr<ConnectionId>,
       std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>,
-      ServerNameHash, ServerNameEquals>
+      ConnectionIdHash, ConnectionIdEquals>
       clients_;
   folly::SharedMutexWritePriority map_mutex_;
   std::shared_ptr<ConnectionFactory> cf_;

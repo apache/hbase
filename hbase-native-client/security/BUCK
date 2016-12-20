@@ -18,38 +18,13 @@
 # This is the library dealing with a single connection
 # to a single server.
 cxx_library(
-    name="connection",
+    name="security",
     exported_headers=[
-        "client-dispatcher.h",
-        "client-handler.h",
-        "connection-factory.h",
-        "connection-pool.h",
-        "connection-id.h",
-        "pipeline.h",
-        "request.h",
-        "rpc-connection.h",
-        "response.h",
-        "service.h",
+        "user.h",
     ],
     srcs=[
-        "client-dispatcher.cc",
-        "client-handler.cc",
-        "connection-factory.cc",
-        "connection-pool.cc",
-        "pipeline.cc",
-        "request.cc",
     ],
     deps=[
-        "//if:if",
-        "//utils:utils",
-        "//serde:serde",
-        "//security:security",
-        "//third-party:folly",
-        "//third-party:wangle",
     ],
     compiler_flags=['-Weffc++'],
-    visibility=['//core/...',],)
-cxx_test(
-    name="connection-pool-test",
-    srcs=["connection-pool-test.cc",],
-    deps=[":connection",],)
+    visibility=['//core/...','//connection/...'],)
