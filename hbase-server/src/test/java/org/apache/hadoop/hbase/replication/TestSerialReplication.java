@@ -106,13 +106,13 @@ public class TestSerialReplication {
     utility2.setZkCluster(miniZK);
     new ZooKeeperWatcher(conf2, "cluster2", null, true);
 
+    utility1.startMiniCluster(1, 10);
+    utility2.startMiniCluster(1, 1);
+
     ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(utility2.getClusterKey());
     admin1.addPeer("1", rpc, null);
-
-    utility1.startMiniCluster(1, 10);
-    utility2.startMiniCluster(1, 1);
 
     utility1.getHBaseAdmin().setBalancerRunning(false, true);
   }

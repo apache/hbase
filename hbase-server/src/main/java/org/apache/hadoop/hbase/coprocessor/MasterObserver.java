@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 
@@ -1827,4 +1828,45 @@ public interface MasterObserver extends Coprocessor {
   void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
                           String groupName, boolean balancerRan) throws IOException;
 
+  /**
+   * Called before add a replication peer
+   * @param ctx the environment to interact with the framework and master
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig configuration for the replication peer
+   * @throws IOException on failure
+   */
+  default void preAddReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId, ReplicationPeerConfig peerConfig) throws IOException {
+  }
+
+  /**
+   * Called after add a replication peer
+   * @param ctx the environment to interact with the framework and master
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig configuration for the replication peer
+   * @throws IOException on failure
+   */
+  default void postAddReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId, ReplicationPeerConfig peerConfig) throws IOException {
+  }
+
+  /**
+   * Called before remove a replication peer
+   * @param ctx
+   * @param peerId a short name that identifies the peer
+   * @throws IOException on failure
+   */
+  default void preRemoveReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId) throws IOException {
+  }
+
+  /**
+   * Called after remove a replication peer
+   * @param ctx
+   * @param peerId a short name that identifies the peer
+   * @throws IOException on failure
+   */
+  default void postRemoveReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId) throws IOException {
+  }
 }

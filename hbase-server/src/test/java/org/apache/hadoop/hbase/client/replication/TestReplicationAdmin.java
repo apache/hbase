@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
@@ -76,8 +77,9 @@ public class TestReplicationAdmin {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniZKCluster();
+    TEST_UTIL.startMiniCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     admin = new ReplicationAdmin(conf);
   }
 
@@ -86,7 +88,7 @@ public class TestReplicationAdmin {
     if (admin != null) {
       admin.close();
     }
-    TEST_UTIL.shutdownMiniZKCluster();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   /**
@@ -105,7 +107,7 @@ public class TestReplicationAdmin {
     // try adding the same (fails)
     try {
       admin.addPeer(ID_ONE, rpc1, null);
-    } catch (IllegalArgumentException iae) {
+    } catch (Exception e) {
       // OK!
     }
     assertEquals(1, admin.getPeersCount());
@@ -113,14 +115,14 @@ public class TestReplicationAdmin {
     try {
       admin.removePeer(ID_SECOND);
       fail();
-    } catch (IllegalArgumentException iae) {
+    } catch (Exception iae) {
       // OK!
     }
     assertEquals(1, admin.getPeersCount());
     // Add a second since multi-slave is supported
     try {
       admin.addPeer(ID_SECOND, rpc2, null);
-    } catch (IllegalStateException iae) {
+    } catch (Exception iae) {
       fail();
     }
     assertEquals(2, admin.getPeersCount());
@@ -170,7 +172,7 @@ public class TestReplicationAdmin {
     try {
       admin.addPeer(ID_ONE, rpc1, null);
       fail();
-    } catch (ReplicationException e) {
+    } catch (Exception e) {
       // OK!
     }
     repQueues.removeQueue(ID_ONE);
@@ -181,7 +183,7 @@ public class TestReplicationAdmin {
     try {
       admin.addPeer(ID_ONE, rpc2, null);
       fail();
-    } catch (ReplicationException e) {
+    } catch (Exception e) {
       // OK!
     }
     repQueues.removeAllQueues();
@@ -422,7 +424,7 @@ public class TestReplicationAdmin {
   }
 
   @Test
-  public void testNamespacesAndTableCfsConfigConflict() throws ReplicationException {
+  public void testNamespacesAndTableCfsConfigConflict() throws Exception {
     String ns1 = "ns1";
     String ns2 = "ns2";
     TableName tab1 = TableName.valueOf("ns1:tabl");
@@ -471,7 +473,7 @@ public class TestReplicationAdmin {
   }
 
   @Test
-  public void testPeerBandwidth() throws ReplicationException {
+  public void testPeerBandwidth() throws Exception {
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
     admin.addPeer(ID_ONE, rpc);

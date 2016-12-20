@@ -44,8 +44,10 @@ import org.apache.hadoop.hbase.client.RegionCoprocessorServiceExec;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -110,6 +112,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1559,5 +1564,20 @@ public final class RequestConverter {
         break;
     }
     throw new UnsupportedOperationException("Unsupport switch type:" + switchType);
+  }
+
+  public static ReplicationProtos.AddReplicationPeerRequest buildAddReplicationPeerRequest(
+      String peerId, ReplicationPeerConfig peerConfig) {
+    AddReplicationPeerRequest.Builder builder = AddReplicationPeerRequest.newBuilder();
+    builder.setPeerId(peerId);
+    builder.setPeerConfig(ReplicationSerDeHelper.convert(peerConfig));
+    return builder.build();
+  }
+
+  public static ReplicationProtos.RemoveReplicationPeerRequest buildRemoveReplicationPeerRequest(
+      String peerId) {
+    RemoveReplicationPeerRequest.Builder builder = RemoveReplicationPeerRequest.newBuilder();
+    builder.setPeerId(peerId);
+    return builder.build();
   }
 }

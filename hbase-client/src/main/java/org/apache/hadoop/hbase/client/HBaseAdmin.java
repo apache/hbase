@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -3743,5 +3744,30 @@ public class HBaseAdmin implements Admin {
 
   private RpcControllerFactory getRpcControllerFactory() {
     return this.rpcControllerFactory;
+  }
+
+  @Override
+  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+      throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        master.addReplicationPeer(getRpcController(),
+          RequestConverter.buildAddReplicationPeerRequest(peerId, peerConfig));
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public void removeReplicationPeer(String peerId) throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        master.removeReplicationPeer(getRpcController(),
+          RequestConverter.buildRemoveReplicationPeerRequest(peerId));
+        return null;
+      }
+    });
   }
 }

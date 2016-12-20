@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -379,5 +381,14 @@ public class MockNoopMasterServices implements MasterServices, Server {
    @Override
   public MasterProcedureManagerHost getMasterProcedureManagerHost() {
     return null;
+  }
+
+  @Override
+  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+      throws ReplicationException {
+  }
+
+  @Override
+  public void removeReplicationPeer(String peerId) throws ReplicationException {
   }
 }

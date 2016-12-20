@@ -88,6 +88,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -1636,6 +1640,18 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       public SecurityCapabilitiesResponse getSecurityCapabilities(RpcController controller,
           SecurityCapabilitiesRequest request) throws ServiceException {
         return stub.getSecurityCapabilities(controller, request);
+      }
+
+      @Override
+      public AddReplicationPeerResponse addReplicationPeer(RpcController controller,
+          AddReplicationPeerRequest request) throws ServiceException {
+        return stub.addReplicationPeer(controller, request);
+      }
+
+      @Override
+      public RemoveReplicationPeerResponse removeReplicationPeer(RpcController controller,
+          RemoveReplicationPeerRequest request) throws ServiceException {
+        return stub.removeReplicationPeer(controller, request);
       }
     };
   }

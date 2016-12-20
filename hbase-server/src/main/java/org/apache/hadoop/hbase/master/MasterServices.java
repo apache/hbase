@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 
 import com.google.protobuf.Service;
 
@@ -415,4 +417,18 @@ public interface MasterServices extends Server {
    * @return Favored Nodes Manager
    */
   public FavoredNodesManager getFavoredNodesManager();
+
+  /**
+   * Add a new replication peer for replicating data to slave cluster
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig configuration for the replication slave cluster
+   */
+  void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+      throws ReplicationException, IOException;
+
+  /**
+   * Removes a peer and stops the replication
+   * @param peerId a short name that identifies the peer
+   */
+  void removeReplicationPeer(String peerId) throws ReplicationException, IOException;
 }

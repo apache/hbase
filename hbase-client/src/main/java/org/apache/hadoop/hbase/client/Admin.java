@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -1823,4 +1824,22 @@ public interface Admin extends Abortable, Closeable {
    * @return true if the switch is enabled, false otherwise.
    */
   boolean isSplitOrMergeEnabled(final MasterSwitchType switchType) throws IOException;
+
+  /**
+   * Add a new replication peer for replicating data to slave cluster
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig configuration for the replication slave cluster
+   * @throws IOException
+   */
+  default void addReplicationPeer(final String peerId, final ReplicationPeerConfig peerConfig)
+      throws IOException {
+  }
+
+  /**
+   * Remove a peer and stop the replication
+   * @param peerId a short name that identifies the peer
+   * @throws IOException
+   */
+  default void removeReplicationPeer(final String peerId) throws IOException {
+  }
 }

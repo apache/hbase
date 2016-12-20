@@ -105,6 +105,7 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -2694,5 +2695,17 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                 String groupName) throws IOException {
     requirePermission(getActiveUser(ctx), "balanceRSGroup", Action.ADMIN);
+  }
+
+  @Override
+  public void preAddReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId, ReplicationPeerConfig peerConfig) throws IOException {
+    requirePermission(getActiveUser(ctx), "addReplicationPeer", Action.ADMIN);
+  }
+
+  @Override
+  public void preRemoveReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId) throws IOException {
+    requirePermission(getActiveUser(ctx), "removeReplicationPeer", Action.ADMIN);
   }
 }

@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.SplitTableRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
+import org.apache.hadoop.hbase.master.replication.ReplicationManager;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
@@ -138,7 +139,12 @@ import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeers;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -290,6 +296,9 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
+
+  // manager of replication
+  private ReplicationManager replicationManager;
 
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
@@ -639,6 +648,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.balancer, this.service, this.metricsMaster,
       this.tableLockManager, tableStateManager);
+
+    this.replicationManager = new ReplicationManager(conf, zooKeeper, this);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
     this.regionServerTracker.start();
@@ -3134,5 +3145,31 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public FavoredNodesManager getFavoredNodesManager() {
     return favoredNodesManager;
+  }
+
+  @Override
+  public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
+      throws ReplicationException, IOException {
+    if (cpHost != null) {
+      cpHost.preAddReplicationPeer(peerId, peerConfig);
+    }
+    LOG.info(getClientIdAuditPrefix() + " creating replication peer, id=" + peerId + ", config="
+        + peerConfig);
+    this.replicationManager.addReplicationPeer(peerId, peerConfig);
+    if (cpHost != null) {
+      cpHost.postAddReplicationPeer(peerId, peerConfig);
+    }
+  }
+
+  @Override
+  public void removeReplicationPeer(String peerId) throws ReplicationException, IOException {
+    if (cpHost != null) {
+      cpHost.preRemoveReplicationPeer(peerId);
+    }
+    LOG.info(getClientIdAuditPrefix() + " removing replication peer, id=" + peerId);
+    this.replicationManager.removeReplicationPeer(peerId);
+    if (cpHost != null) {
+      cpHost.postRemoveReplicationPeer(peerId);
+    }
   }
 }

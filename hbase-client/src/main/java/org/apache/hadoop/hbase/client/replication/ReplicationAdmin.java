@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -80,9 +81,12 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * To see which commands are available in the shell, type
  * <code>replication</code>.
  * </p>
+ *
+ * @deprecated use {@link org.apache.hadoop.hbase.client.Admin} instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public class ReplicationAdmin implements Closeable {
   private static final Log LOG = LogFactory.getLog(ReplicationAdmin.class);
 
@@ -108,6 +112,8 @@ public class ReplicationAdmin implements Closeable {
    */
   private final ZooKeeperWatcher zkw;
 
+  private Admin admin;
+
   /**
    * Constructor that creates a connection to the local ZooKeeper ensemble.
    * @param conf Configuration to use
@@ -116,6 +122,7 @@ public class ReplicationAdmin implements Closeable {
    */
   public ReplicationAdmin(Configuration conf) throws IOException {
     this.connection = ConnectionFactory.createConnection(conf);
+    admin = connection.getAdmin();
     try {
       zkw = createZooKeeperWatcher();
       try {
@@ -133,9 +140,7 @@ public class ReplicationAdmin implements Closeable {
         throw exception;
       }
     } catch (Exception exception) {
-      if (connection != null) {
-        connection.close();
-      }
+      connection.close();
       if (exception instanceof IOException) {
         throw (IOException) exception;
       } else if (exception instanceof RuntimeException) {
@@ -176,11 +181,12 @@ public class ReplicationAdmin implements Closeable {
    */
   @Deprecated
   public void addPeer(String id, ReplicationPeerConfig peerConfig,
-      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException {
+      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException,
+      IOException {
     if (tableCfs != null) {
       peerConfig.setTableCFsMap(tableCfs);
     }
-    this.replicationPeers.registerPeer(id, peerConfig);
+    this.admin.addReplicationPeer(id, peerConfig);
   }
 
   /**
@@ -188,10 +194,11 @@ public class ReplicationAdmin implements Closeable {
    * @param id a short name that identifies the cluster
    * @param peerConfig configuration for the replication slave cluster
    */
-  public void addPeer(String id, ReplicationPeerConfig peerConfig) throws ReplicationException {
+  public void addPeer(String id, ReplicationPeerConfig peerConfig) throws ReplicationException,
+      IOException {
     checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
       peerConfig.getTableCFsMap());
-    this.replicationPeers.registerPeer(id, peerConfig);
+    this.admin.addReplicationPeer(id, peerConfig);
   }
 
   /**
@@ -213,8 +220,8 @@ public class ReplicationAdmin implements Closeable {
    * Removes a peer cluster and stops the replication to it.
    * @param id a short name that identifies the cluster
    */
-  public void removePeer(String id) throws ReplicationException {
-    this.replicationPeers.unregisterPeer(id);
+  public void removePeer(String id) throws IOException {
+    this.admin.removeReplicationPeer(id);
   }
 
   /**
@@ -403,6 +410,7 @@ public class ReplicationAdmin implements Closeable {
     if (this.connection != null) {
       this.connection.close();
     }
+    admin.close();
   }
 
 

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.security.User;
@@ -1645,4 +1646,45 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preAddReplicationPeer(final String peerId, final ReplicationPeerConfig peerConfig)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preAddReplicationPeer(ctx, peerId, peerConfig);
+      }
+    });
+  }
+
+  public void postAddReplicationPeer(final String peerId, final ReplicationPeerConfig peerConfig)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postAddReplicationPeer(ctx, peerId, peerConfig);
+      }
+    });
+  }
+
+  public void preRemoveReplicationPeer(final String peerId) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preRemoveReplicationPeer(ctx, peerId);
+      }
+    });
+  }
+
+  public void postRemoveReplicationPeer(final String peerId) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postRemoveReplicationPeer(ctx, peerId);
+      }
+    });
+  }
 }
