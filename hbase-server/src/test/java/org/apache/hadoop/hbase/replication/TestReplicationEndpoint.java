@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -360,7 +361,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     @Override
     public boolean replicate(ReplicateContext replicateContext) {
       replicateCount.incrementAndGet();
-      lastEntries = replicateContext.entries;
+      lastEntries = new ArrayList<>(replicateContext.entries);
       return true;
     }
 

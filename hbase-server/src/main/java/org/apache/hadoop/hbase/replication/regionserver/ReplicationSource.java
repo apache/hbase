@@ -38,6 +38,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang.StringUtils;
@@ -150,6 +151,9 @@ public class ReplicationSource extends Thread
   private ConcurrentHashMap<String, ReplicationSourceWorkerThread> workerThreads =
       new ConcurrentHashMap<String, ReplicationSourceWorkerThread>();
 
+  private AtomicInteger totalBufferUsed;
+  private int totalBufferQuota;
+
   /**
    * Instantiation method used by region servers
    *
@@ -201,7 +205,9 @@ public class ReplicationSource extends Thread
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
-
+    this.totalBufferUsed = manager.getTotalBufferUsed();
+    this.totalBufferQuota = conf.getInt(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
+        HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
     LOG.info("peerClusterZnode=" + peerClusterZnode + ", ReplicationSource : " + peerId
         + " inited, replicationQueueSizeCapacity=" + replicationQueueSizeCapacity
         + ", replicationQueueNbCapacity=" + replicationQueueNbCapacity + ", curerntBandwidth="
@@ -534,7 +540,7 @@ public class ReplicationSource extends Thread
     private boolean workerRunning = true;
     // Current number of hfiles that we need to replicate
     private long currentNbHFiles = 0;
-
+    List<WAL.Entry> entries;
     // Use guava cache to set ttl for each key
     private LoadingCache<String, Boolean> canSkipWaitingSet = CacheBuilder.newBuilder()
         .expireAfterAccess(1, TimeUnit.DAYS).build(
@@ -553,6 +559,7 @@ public class ReplicationSource extends Thread
       this.replicationQueueInfo = replicationQueueInfo;
       this.repLogReader = new ReplicationWALReaderManager(fs, conf);
       this.source = source;
+      this.entries = new ArrayList<>();
     }
 
     @Override
@@ -625,8 +632,7 @@ public class ReplicationSource extends Thread
         boolean gotIOE = false;
         currentNbOperations = 0;
         currentNbHFiles = 0;
-        List<WAL.Entry> entries = new ArrayList<WAL.Entry>(1);
-
+        entries.clear();
         Map<String, Long> lastPositionsForSerialScope = new HashMap<>();
         currentSize = 0;
         try {
@@ -718,6 +724,7 @@ public class ReplicationSource extends Thread
           continue;
         }
         shipEdits(currentWALisBeingWrittenTo, entries, lastPositionsForSerialScope);
+        releaseBufferQuota();
       }
       if (replicationQueueInfo.isQueueRecovered()) {
         // use synchronize to make sure one last thread will clean the queue
@@ -807,6 +814,7 @@ public class ReplicationSource extends Thread
             }
           }
         }
+        boolean totalBufferTooLarge = false;
         // don't replicate if the log entries have already been consumed by the cluster
         if (replicationEndpoint.canReplicateToSameCluster()
             || !entry.getKey().getClusterIds().contains(peerClusterId)) {
@@ -824,15 +832,16 @@ public class ReplicationSource extends Thread
             logKey.addClusterId(clusterId);
             currentNbOperations += countDistinctRowKeys(edit);
             entries.add(entry);
-            currentSize += entry.getEdit().heapSize();
-            currentSize += calculateTotalSizeOfStoreFiles(edit);
+            int delta = (int)entry.getEdit().heapSize() + calculateTotalSizeOfStoreFiles(edit);
+            currentSize += delta;
+            totalBufferTooLarge = acquireBufferQuota(delta);
           } else {
             metrics.incrLogEditsFiltered();
           }
         }
         // Stop if too many entries or too big
         // FIXME check the relationship between single wal group and overall
-        if (currentSize >= replicationQueueSizeCapacity
+        if (totalBufferTooLarge || currentSize >= replicationQueueSizeCapacity
             || entries.size() >= replicationQueueNbCapacity) {
           break;
         }
@@ -1314,6 +1323,20 @@ public class ReplicationSource extends Thread
 
     public void setWorkerRunning(boolean workerRunning) {
       this.workerRunning = workerRunning;
+    }
+
+    /**
+     * @param size delta size for grown buffer
+     * @return true if we should clear buffer and push all
+     */
+    private boolean acquireBufferQuota(int size) {
+      return totalBufferUsed.addAndGet(size) >= totalBufferQuota;
+    }
+
+    private void releaseBufferQuota() {
+      totalBufferUsed.addAndGet(-currentSize);
+      currentSize = 0;
+      entries.clear();
     }
   }
 }
