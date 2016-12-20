@@ -1035,7 +1035,15 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
           .toBuilder()
           .setName(targetName)
           .build();
-      SnapshotDescriptionUtils.writeSnapshotInfo(snapshotDesc, snapshotTmpDir, outputFs);
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshotDesc, initialOutputSnapshotDir, outputFs);
+      if (filesUser != null || filesGroup != null) {
+        outputFs.setOwner(new Path(initialOutputSnapshotDir,
+          SnapshotDescriptionUtils.SNAPSHOTINFO_FILE), filesUser, filesGroup);
+      }
+      if (filesMode > 0) {
+        outputFs.setPermission(new Path(initialOutputSnapshotDir,
+          SnapshotDescriptionUtils.SNAPSHOTINFO_FILE), new FsPermission((short)filesMode));
+      }
     }
 
     // Step 2 - Start MR Job to copy files
