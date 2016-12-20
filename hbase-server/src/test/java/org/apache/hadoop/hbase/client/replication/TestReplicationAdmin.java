@@ -380,4 +380,42 @@ public class TestReplicationAdmin {
     assertEquals(2097152, admin.getPeerConfig(ID_ONE).getBandwidth());
     admin.removePeer(ID_ONE);
   }
+
+  @Test
+  public void testUpdatePeerConfig() throws Exception {
+    TableName tab1 = TableName.valueOf("t1");
+    TableName tab2 = TableName.valueOf("t2");
+    Map<TableName, List<String>> tableCFs = new HashMap<>();
+
+    ReplicationPeerConfig config = new ReplicationPeerConfig();
+    config.setClusterKey(KEY_ONE);
+    config.getConfiguration().put("key1", "value1");
+    tableCFs.put(tab1, new ArrayList<String>());
+    config.setTableCFsMap(tableCFs);
+    admin.addPeer(ID_ONE, config, null);
+    admin.peerAdded(ID_ONE);
+
+    config = admin.getPeerConfig(ID_ONE);
+    assertEquals("value1", config.getConfiguration().get("key1"));
+    assertNull(config.getConfiguration().get("key2"));
+    assertTrue(config.getTableCFsMap().containsKey(tab1));
+    assertFalse(config.getTableCFsMap().containsKey(tab2));
+
+    // Update replication peer config
+    config = new ReplicationPeerConfig();
+    config.setClusterKey(KEY_ONE);
+    config.getConfiguration().put("key2", "value2");
+    tableCFs.clear();
+    tableCFs.put(tab2, new ArrayList<String>());
+    config.setTableCFsMap(tableCFs);
+    admin.updatePeerConfig(ID_ONE, config);
+
+    config = admin.getPeerConfig(ID_ONE);
+    assertEquals("value1", config.getConfiguration().get("key1"));
+    assertEquals("value2", config.getConfiguration().get("key2"));
+    assertFalse(config.getTableCFsMap().containsKey(tab1));
+    assertTrue(config.getTableCFsMap().containsKey(tab2));
+
+    admin.removePeer(ID_ONE);
+  }
 }

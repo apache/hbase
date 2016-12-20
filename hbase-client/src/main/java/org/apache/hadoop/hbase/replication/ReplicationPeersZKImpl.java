@@ -375,6 +375,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     // or data that weren't explicitly changed
     existingConfig.getConfiguration().putAll(newConfig.getConfiguration());
     existingConfig.getPeerData().putAll(newConfig.getPeerData());
+    existingConfig.setTableCFsMap(newConfig.getTableCFsMap());
     existingConfig.setBandwidth(newConfig.getBandwidth());
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(id),
