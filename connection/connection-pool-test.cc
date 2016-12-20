@@ -17,20 +17,22 @@
  *
  */
 
+#include "connection/connection-id.h"
 #include "connection/connection-pool.h"
+#include "connection/connection-factory.h"
+
+#include "if/HBase.pb.h"
+#include "serde/server-name.h"
 
 #include <folly/Logging.h>
 #include <gmock/gmock.h>
-
-#include "connection/connection-factory.h"
-#include "if/HBase.pb.h"
-#include "serde/server-name.h"
 
 using namespace hbase;
 
 using hbase::pb::ServerName;
 using ::testing::Return;
 using ::testing::_;
+using hbase::ConnectionId;
 
 class MockConnectionFactory : public ConnectionFactory {
  public:
@@ -75,13 +77,10 @@ TEST(TestConnectionPool, TestOnlyCreateOnce) {
       .WillRepeatedly(Return(mock_boot));
   ConnectionPool cp{mock_cf};
 
-  ServerName sn;
-  sn.set_host_name(hostname);
-  sn.set_port(port);
-
-  auto result = cp.Get(sn);
+  auto remote_id = std::make_shared<ConnectionId>(hostname, port);
+  auto result = cp.GetConnection(remote_id);
   ASSERT_TRUE(result != nullptr);
-  result = cp.Get(sn);
+  result = cp.GetConnection(remote_id);
 }
 
 TEST(TestConnectionPool, TestOnlyCreateMultipleDispose) {
@@ -102,13 +101,13 @@ TEST(TestConnectionPool, TestOnlyCreateMultipleDispose) {
   ConnectionPool cp{mock_cf};
 
   {
-    auto result_one = cp.Get(folly::to<ServerName>(
-        hostname_one + ":" + folly::to<std::string>(port)));
-    auto result_two = cp.Get(folly::to<ServerName>(
-        hostname_two + ":" + folly::to<std::string>(port)));
+    auto remote_id = std::make_shared<ConnectionId>(hostname_one, port);
+    auto result_one = cp.GetConnection(remote_id);
+    auto remote_id2 = std::make_shared<ConnectionId>(hostname_two, port);
+    auto result_two = cp.GetConnection(remote_id2);
   }
-  auto result_one = cp.Get(
-      folly::to<ServerName>(hostname_one + ":" + folly::to<std::string>(port)));
-  auto result_two = cp.Get(
-      folly::to<ServerName>(hostname_two + ":" + folly::to<std::string>(port)));
+  auto remote_id = std::make_shared<ConnectionId>(hostname_one, port);
+  auto result_one = cp.GetConnection(remote_id);
+  auto remote_id2 = std::make_shared<ConnectionId>(hostname_two, port);
+  auto result_two = cp.GetConnection(remote_id2);
 }

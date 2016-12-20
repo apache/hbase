@@ -26,6 +26,7 @@
 #include <utility>
 
 #include "connection/response.h"
+#include "connection/rpc-connection.h"
 #include "if/Client.pb.h"
 #include "if/ZooKeeper.pb.h"
 #include "serde/region-info.h"
@@ -34,6 +35,7 @@
 
 using namespace std;
 using namespace folly;
+using hbase::RpcConnection;
 
 using wangle::ServiceFilter;
 using hbase::Request;
@@ -121,9 +123,14 @@ Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
     const TableName &tn, const string &row) {
   return this->LocateMeta()
       .via(cpu_executor_.get())
-      .then([this](ServerName sn) { return this->cp_.Get(sn); })
-      .then([tn, row, this](std::shared_ptr<HBaseService> service) {
-        return (*service)(std::move(meta_util_.MetaRequest(tn, row)));
+      .then([this](ServerName sn) {
+        auto remote_id =
+            std::make_shared<ConnectionId>(sn.host_name(), sn.port());
+        return this->cp_.GetConnection(remote_id);
+      })
+      .then([tn, row, this](std::shared_ptr<RpcConnection> rpc_connection) {
+        return (*rpc_connection->get_service())(
+            std::move(meta_util_.MetaRequest(tn, row)));
       })
       .then([this](Response resp) {
         // take the protobuf response and make it into
@@ -139,8 +146,10 @@ Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
         return rl;
       })
       .then([this](std::shared_ptr<RegionLocation> rl) {
+        auto remote_id = std::make_shared<ConnectionId>(
+            rl->server_name().host_name(), rl->server_name().port());
         // Now fill out the connection.
-        rl->set_service(cp_.Get(rl->server_name()));
+        rl->set_service(cp_.GetConnection(remote_id)->get_service());
         return rl;
       });
 }
