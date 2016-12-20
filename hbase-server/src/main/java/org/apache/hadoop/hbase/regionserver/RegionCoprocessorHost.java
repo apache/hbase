@@ -1507,6 +1507,27 @@ public class RegionCoprocessorHost
     postWALRestore(info, (WALKey)logKey, logEdit);
   }
 
+  public boolean preCommitStoreFile(final byte[] family, final List<Pair<Path, Path>> pairs)
+      throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
+      @Override
+      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preCommitStoreFile(ctx, family, pairs);
+      }
+    });
+  }
+  public void postCommitStoreFile(final byte[] family, final Path srcPath, final Path dstPath)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
+      @Override
+      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postCommitStoreFile(ctx, family, srcPath, dstPath);
+      }
+    });
+  }
+
   /**
    * @param familyPaths pairs of { CF, file path } submitted for bulk load
    * @return true if the default operation should be bypassed

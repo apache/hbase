@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.collect.Lists;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -54,7 +52,10 @@ import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+
+import com.google.common.collect.Lists;
 
 /**
  * View to an on-disk Region.
@@ -396,19 +397,21 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   public Path commitStoreFile(final String familyName, final Path buildPath) throws IOException {
-    return commitStoreFile(familyName, buildPath, -1, false);
+    Path dstPath = preCommitStoreFile(familyName, buildPath, -1, false);
+    return commitStoreFile(buildPath, dstPath);
   }
 
   /**
-   * Move the file from a build/temp location to the main family store directory.
+   * Generate the filename in the main family store directory for moving the file from a build/temp
+   *  location.
    * @param familyName Family that will gain the file
    * @param buildPath {@link Path} to the file to commit.
    * @param seqNum Sequence Number to append to the file name (less then 0 if no sequence number)
    * @param generateNewName False if you want to keep the buildPath name
-   * @return The new {@link Path} of the committed file
+   * @return The new {@link Path} of the to be committed file
    * @throws IOException
    */
-  private Path commitStoreFile(final String familyName, final Path buildPath,
+  private Path preCommitStoreFile(final String familyName, final Path buildPath,
       final long seqNum, final boolean generateNewName) throws IOException {
     Path storeDir = getStoreDir(familyName);
     if(!fs.exists(storeDir) && !createDir(storeDir))
@@ -425,13 +428,23 @@ public class HRegionFileSystem {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Committing store file " + buildPath + " as " + dstPath);
     }
+    return dstPath;
+  }
+
+  /*
+   * Moves file from staging dir to region dir
+   * @param buildPath {@link Path} to the file to commit.
+   * @param dstPath {@link Path} to the file under region dir
+   * @return The {@link Path} of the committed file
+   * @throws IOException
+   */
+  Path commitStoreFile(final Path buildPath, Path dstPath) throws IOException {
     // buildPath exists, therefore not doing an exists() check.
     if (!rename(buildPath, dstPath)) {
       throw new IOException("Failed rename of " + buildPath + " to " + dstPath);
     }
     return dstPath;
   }
-
 
   /**
    * Moves multiple store files to the relative region's family store directory.
@@ -482,7 +495,7 @@ public class HRegionFileSystem {
    * @return The destination {@link Path} of the bulk loaded file
    * @throws IOException
    */
-  Path bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
+  Pair<Path, Path> bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
       throws IOException {
     // Copy the file if it's on another filesystem
     FileSystem srcFs = srcPath.getFileSystem(conf);
@@ -500,7 +513,7 @@ public class HRegionFileSystem {
       srcPath = tmpPath;
     }
 
-    return commitStoreFile(familyName, srcPath, seqNum, true);
+    return new Pair<>(srcPath, preCommitStoreFile(familyName, srcPath, seqNum, true));
   }
 
   // ===========================================================================

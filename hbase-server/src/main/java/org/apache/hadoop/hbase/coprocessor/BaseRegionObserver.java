@@ -497,6 +497,16 @@ public class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
+  public void preCommitStoreFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      final byte[] family, final List<Pair<Path, Path>> pairs) throws IOException {
+  }
+
+  @Override
+  public void postCommitStoreFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      final byte[] family, Path srcPath, Path dstPath) throws IOException {
+  }
+
+  @Override
   public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException {
     return hasLoaded;
