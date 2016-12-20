@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNull;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALProvider;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import static org.mockito.Mockito.mock;
 
@@ -140,11 +143,15 @@ public class TestReplicationSource {
       }
     };
     replicationEndpoint.start();
-    ReplicationPeers mockPeers = mock(ReplicationPeers.class);
+    ReplicationPeers mockPeers = Mockito.mock(ReplicationPeers.class);
+    ReplicationPeer mockPeer = Mockito.mock(ReplicationPeer.class);
+    Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     Configuration testConf = HBaseConfiguration.create();
     testConf.setInt("replication.source.maxretriesmultiplier", 1);
-    source.init(testConf, null, null, null, mockPeers, null, "testPeer", null, replicationEndpoint,
-      null);
+    ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
+    Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
+    source.init(testConf, null, manager, null, mockPeers, null, "testPeer",
+        null, replicationEndpoint, null);
     ExecutorService executor = Executors.newSingleThreadExecutor();
     final Future<?> future = executor.submit(new Runnable() {
 

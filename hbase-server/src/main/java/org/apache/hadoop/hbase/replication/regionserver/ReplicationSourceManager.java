@@ -42,6 +42,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -125,6 +126,8 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   private Connection connection;
   private long replicationWaitTime;
+
+  private AtomicLong totalBufferUsed = new AtomicLong();
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
@@ -444,6 +447,11 @@ public class ReplicationSourceManager implements ReplicationListener {
     for (ReplicationSourceInterface source : this.sources) {
       source.enqueueLog(newLog);
     }
+  }
+
+  @VisibleForTesting
+  public AtomicLong getTotalBufferUsed() {
+    return totalBufferUsed;
   }
 
   /**

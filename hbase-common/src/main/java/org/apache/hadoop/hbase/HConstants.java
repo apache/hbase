@@ -921,6 +921,15 @@ public final class HConstants {
       REPLICATION_SERIALLY_WAITING_DEFAULT = 10000;
 
   /**
+   * Max total size of buffered entries in all replication peers. It will prevent server getting
+   * OOM if there are many peers. Default value is 256MB which is four times to default
+   * replication.source.size.capacity.
+   */
+  public static final String REPLICATION_SOURCE_TOTAL_BUFFER_KEY = "replication.total.buffer.quota";
+  public static final int REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT = 256 * 1024 * 1024;
+
+
+  /**
    * Directory where the source cluster file system client configuration are placed which is used by
    * sink cluster to copy HFiles from source cluster file system
    */
