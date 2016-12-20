@@ -32,9 +32,9 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * especially for the {@link #scan(Scan, RawScanResultConsumer)} below.
  * <p>
  * TODO: For now the only difference between this interface and {@link AsyncTable} is the scan
- * method. The {@link RawScanResultConsumer} exposes the implementation details of a scan(heartbeat) so
- * it is not suitable for a normal user. If it is still the only difference after we implement most
- * features of AsyncTable, we can think about merge these two interfaces.
+ * method. The {@link RawScanResultConsumer} exposes the implementation details of a scan(heartbeat)
+ * so it is not suitable for a normal user. If it is still the only difference after we implement
+ * most features of AsyncTable, we can think about merge these two interfaces.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -42,13 +42,13 @@ public interface RawAsyncTable extends AsyncTableBase {
 
   /**
    * The basic scan API uses the observer pattern. All results that match the given scan object will
-   * be passed to the given {@code consumer} by calling {@link RawScanResultConsumer#onNext(Result[])}.
-   * {@link RawScanResultConsumer#onComplete()} means the scan is finished, and
-   * {@link RawScanResultConsumer#onError(Throwable)} means we hit an unrecoverable error and the scan
-   * is terminated. {@link RawScanResultConsumer#onHeartbeat()} means the RS is still working but we
-   * can not get a valid result to call {@link RawScanResultConsumer#onNext(Result[])}. This is usually
-   * because the matched results are too sparse, for example, a filter which almost filters out
-   * everything is specified.
+   * be passed to the given {@code consumer} by calling
+   * {@link RawScanResultConsumer#onNext(Result[])}. {@link RawScanResultConsumer#onComplete()}
+   * means the scan is finished, and {@link RawScanResultConsumer#onError(Throwable)} means we hit
+   * an unrecoverable error and the scan is terminated. {@link RawScanResultConsumer#onHeartbeat()}
+   * means the RS is still working but we can not get a valid result to call
+   * {@link RawScanResultConsumer#onNext(Result[])}. This is usually because the matched results are
+   * too sparse, for example, a filter which almost filters out everything is specified.
    * <p>
    * Notice that, the methods of the given {@code consumer} will be called directly in the rpc
    * framework's callback thread, so typically you should not do any time consuming work inside

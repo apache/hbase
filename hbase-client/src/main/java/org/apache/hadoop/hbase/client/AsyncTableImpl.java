@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -190,5 +191,10 @@ class AsyncTableImpl implements AsyncTable {
   @Override
   public void scan(Scan scan, ScanResultConsumer consumer) {
     pool.execute(() -> scan0(scan, consumer));
+  }
+
+  @Override
+  public List<CompletableFuture<Result>> get(List<Get> gets) {
+    return rawTable.get(gets).stream().map(this::wrap).collect(Collectors.toList());
   }
 }

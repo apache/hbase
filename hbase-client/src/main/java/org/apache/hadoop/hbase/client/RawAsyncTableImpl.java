@@ -405,4 +405,11 @@ class RawAsyncTableImpl implements RawAsyncTable {
   public long getScanTimeout(TimeUnit unit) {
     return TimeUnit.NANOSECONDS.convert(scanTimeoutNs, unit);
   }
+
+  @Override
+  public List<CompletableFuture<Result>> get(List<Get> gets) {
+    return conn.callerFactory.multiGet().table(tableName).gets(gets)
+        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
+        .rpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS).call();
+  }
 }

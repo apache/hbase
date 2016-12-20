@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -351,4 +352,27 @@ public interface AsyncTableBase {
    *         {@link CompletableFuture}.
    */
   CompletableFuture<List<Result>> smallScan(Scan scan, int limit);
+
+  /**
+   * Extracts certain cells from the given rows, in batch.
+   * <p>
+   * Notice that you may not get all the results with this function, which means some of the
+   * returned {@link CompletableFuture}s may succeed while some of the other returned
+   * {@link CompletableFuture}s may fail.
+   * @param gets The objects that specify what data to fetch and from which rows.
+   * @return A list of {@link CompletableFuture}s that represent the result for each get.
+   */
+  List<CompletableFuture<Result>> get(List<Get> gets);
+
+  /**
+   * A simple version for batch get. It will fail if there are any failures and you will get the
+   * whole result list at once if the operation is succeeded.
+   * @param gets The objects that specify what data to fetch and from which rows.
+   * @return A {@link CompletableFuture} that wrapper the result list.
+   */
+  default CompletableFuture<List<Result>> getAll(List<Get> gets) {
+    List<CompletableFuture<Result>> futures = get(gets);
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(Collectors.toList()));
+  }
 }

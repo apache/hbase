@@ -257,4 +257,49 @@ class AsyncRpcRetryingCallerFactory {
   public ScanSingleRegionCallerBuilder scanSingleRegion() {
     return new ScanSingleRegionCallerBuilder();
   }
+
+  public class MultiGetCallerBuilder {
+
+    private TableName tableName;
+
+    private List<Get> gets;
+
+    private long operationTimeoutNs = -1L;
+
+    private long rpcTimeoutNs = -1L;
+
+    public MultiGetCallerBuilder table(TableName tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public MultiGetCallerBuilder gets(List<Get> gets) {
+      this.gets = gets;
+      return this;
+    }
+
+    public MultiGetCallerBuilder operationTimeout(long operationTimeout, TimeUnit unit) {
+      this.operationTimeoutNs = unit.toNanos(operationTimeout);
+      return this;
+    }
+
+    public MultiGetCallerBuilder rpcTimeout(long rpcTimeout, TimeUnit unit) {
+      this.rpcTimeoutNs = unit.toNanos(rpcTimeout);
+      return this;
+    }
+
+    public AsyncMultiGetRpcRetryingCaller build() {
+      return new AsyncMultiGetRpcRetryingCaller(retryTimer, conn, tableName, gets,
+          conn.connConf.getPauseNs(), conn.connConf.getMaxRetries(), operationTimeoutNs,
+          rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
+    }
+
+    public List<CompletableFuture<Result>> call() {
+      return build().call();
+    }
+  }
+
+  public MultiGetCallerBuilder multiGet() {
+    return new MultiGetCallerBuilder();
+  }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
@@ -51,9 +52,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 class AsyncSingleRequestRpcRetryingCaller<T> {
 
   private static final Log LOG = LogFactory.getLog(AsyncSingleRequestRpcRetryingCaller.class);
-
-  // Add a delta to avoid timeout immediately after a retry sleeping.
-  private static final long SLEEP_DELTA_NS = TimeUnit.MILLISECONDS.toNanos(1);
 
   @FunctionalInterface
   public interface Callable<T> {
@@ -146,7 +144,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
     }
     long delayNs;
     if (operationTimeoutNs > 0) {
-      long maxDelayNs = operationTimeoutNs - (System.nanoTime() - startNs) - SLEEP_DELTA_NS;
+      long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
         completeExceptionally();
         return;

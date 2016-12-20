@@ -324,4 +324,7 @@ public final class ConnectionUtils {
     return Result.create(Arrays.copyOfRange(rawCells, index, rawCells.length), null,
       result.isStale(), true);
   }
+
+  // Add a delta to avoid timeout immediately after a retry sleeping.
+  static final long SLEEP_DELTA_NS = TimeUnit.MILLISECONDS.toNanos(1);
 }
