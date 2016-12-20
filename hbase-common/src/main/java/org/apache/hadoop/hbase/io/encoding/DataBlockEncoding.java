@@ -16,14 +16,12 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
+import java.io.IOException;
+import java.io.OutputStream;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Provide access to all data block encoding algorithms. All of the algorithms
@@ -54,24 +52,21 @@ public enum DataBlockEncoding {
   public static final int ID_SIZE = Bytes.SIZEOF_SHORT;
 
   /** Maps data block encoding ids to enum instances. */
-  private static Map<Short, DataBlockEncoding> idToEncoding =
-      new HashMap<Short, DataBlockEncoding>();
+  private static DataBlockEncoding[] idArray = new DataBlockEncoding[Byte.MAX_VALUE + 1];
 
   static {
     for (DataBlockEncoding algo : values()) {
-      if (idToEncoding.containsKey(algo.id)) {
+      if (idArray[algo.id] != null) {
         throw new RuntimeException(String.format(
-            "Two data block encoder algorithms '%s' and '%s' have " +
-            "the same id %d",
-            idToEncoding.get(algo.id).toString(), algo.toString(),
-            (int) algo.id));
+          "Two data block encoder algorithms '%s' and '%s' have " + "the same id %d",
+          idArray[algo.id].toString(), algo.toString(), (int) algo.id));
       }
-      idToEncoding.put(algo.id, algo);
+      idArray[algo.id] = algo;
     }
   }
 
   private DataBlockEncoding(int id, String encoderClsName) {
-    if (id < Short.MIN_VALUE || id > Short.MAX_VALUE) {
+    if (id < 0 || id > Byte.MAX_VALUE) {
       throw new AssertionError(
           "Data block encoding algorithm id is out of range: " + id);
     }
@@ -139,13 +134,7 @@ public enum DataBlockEncoding {
    * @return Newly created data block encoder.
    */
   public static DataBlockEncoder getDataBlockEncoderById(short encoderId) {
-    if (!idToEncoding.containsKey(encoderId)) {
-      throw new IllegalArgumentException(String.format(
-          "There is no data block encoder for given id '%d'",
-          (int) encoderId));
-    }
-
-    return idToEncoding.get(encoderId).getEncoder();
+    return getEncodingById(encoderId).getEncoder();
   }
 
   /**
@@ -154,7 +143,7 @@ public enum DataBlockEncoding {
    * @return name, same as used in options in column family
    */
   public static String getNameFromId(short encoderId) {
-    return idToEncoding.get(encoderId).toString();
+    return getEncodingById(encoderId).toString();
   }
 
   /**
@@ -167,19 +156,22 @@ public enum DataBlockEncoding {
    */
   public static boolean isCorrectEncoder(DataBlockEncoder encoder,
       short encoderId) {
-    if (!idToEncoding.containsKey(encoderId)) {
-      throw new IllegalArgumentException(String.format(
-          "There is no data block encoder for given id '%d'",
-          (int) encoderId));
-    }
-
-    DataBlockEncoding algorithm = idToEncoding.get(encoderId);
+    DataBlockEncoding algorithm = getEncodingById(encoderId);
     String encoderCls = encoder.getClass().getName();
     return encoderCls.equals(algorithm.encoderCls);
   }
 
   public static DataBlockEncoding getEncodingById(short dataBlockEncodingId) {
-    return idToEncoding.get(dataBlockEncodingId);
+    DataBlockEncoding algorithm = null;
+    if (dataBlockEncodingId >= 0 && dataBlockEncodingId <= Byte.MAX_VALUE) {
+      algorithm = idArray[dataBlockEncodingId];
+    }
+    if (algorithm == null) {
+      throw new IllegalArgumentException(String.format(
+          "There is no data block encoder for given id '%d'",
+          (int) dataBlockEncodingId));
+    }
+    return algorithm;
   }
 
   protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName){
