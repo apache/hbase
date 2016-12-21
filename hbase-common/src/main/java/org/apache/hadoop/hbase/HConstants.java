@@ -932,10 +932,6 @@ public final class HConstants {
   public static final long
       REPLICATION_SERIALLY_WAITING_DEFAULT = 10000;
 
-  public static final String REPLICATION_SOURCE_TOTAL_BUFFER_KEY = "replication.total.buffer.quota";
-  public static final int REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT = 256 * 1024 * 1024;
-
-
   /**
    * Directory where the source cluster file system client configuration are placed which is used by
    * sink cluster to copy HFiles from source cluster file system
