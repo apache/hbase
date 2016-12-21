@@ -17,7 +17,7 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
-# 
+#
 # Runs a Hadoop hbase command as a daemon.
 #
 # Environment Variables
@@ -33,7 +33,9 @@
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
- (start|stop|restart|autorestart|foreground_start) <hbase-command> \
+ [--autostart-window-size <window size in hours>]\
+ [--autostart-window-retry-limit <retry count limit for autostart>]\
+ (start|stop|restart|autostart|autorestart|foreground_start) <hbase-command> \
  <args...>"
 
 # if no args specified, show usage
@@ -41,6 +43,10 @@ if [ $# -le 1 ]; then
   echo $usage
   exit 1
 fi
+
+# default autostart args value indicating infinite window size and no retry limit
+AUTOSTART_WINDOW_SIZE=0
+AUTOSTART_WINDOW_RETRY_LIMIT=0
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin">/dev/null; pwd`
@@ -153,7 +159,7 @@ if [ -z "${HBASE_ROOT_LOGGER}" ]; then
 export HBASE_ROOT_LOGGER=${HBASE_ROOT_LOGGER:-"INFO,RFA"}
 fi
 
-if [ -z "${HBASE_SECURITY_LOGGER}" ]; then 
+if [ -z "${HBASE_SECURITY_LOGGER}" ]; then
 export HBASE_SECURITY_LOGGER=${HBASE_SECURITY_LOGGER:-"INFO,RFAS"}
 fi
 
@@ -162,7 +168,7 @@ HBASE_LOGGC=${HBASE_LOGGC:-"$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.gc"}
 HBASE_LOGLOG=${HBASE_LOGLOG:-"${HBASE_LOG_DIR}/${HBASE_LOGFILE}"}
 HBASE_PID=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
 export HBASE_ZNODE_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.znode
-export HBASE_START_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.autorestart
+export HBASE_AUTOSTART_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.autostart
 
 if [ -n "$SERVER_GC_OPTS" ]; then
   export SERVER_GC_OPTS=${SERVER_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${HBASE_LOGGC}"}
@@ -185,19 +191,38 @@ case $startStop in
     check_before_start
     hbase_rotate_log $HBASE_LOGOUT
     hbase_rotate_log $HBASE_LOGGC
-    echo starting $command, logging to $HBASE_LOGOUT
+    echo running $command, logging to $HBASE_LOGOUT
     $thiscmd --config "${HBASE_CONF_DIR}" \
         foreground_start $command $args < /dev/null > ${HBASE_LOGOUT} 2>&1  &
     disown -h -r
     sleep 1; head "${HBASE_LOGOUT}"
   ;;
 
-(autorestart)
+(autostart)
     check_before_start
     hbase_rotate_log $HBASE_LOGOUT
     hbase_rotate_log $HBASE_LOGGC
-    nohup $thiscmd --config "${HBASE_CONF_DIR}" \
-        internal_autorestart $command $args < /dev/null > ${HBASE_LOGOUT} 2>&1  &
+    echo running $command, logging to $HBASE_LOGOUT
+    nohup $thiscmd --config "${HBASE_CONF_DIR}" --autostart-window-size ${AUTOSTART_WINDOW_SIZE} --autostart-window-retry-limit ${AUTOSTART_WINDOW_RETRY_LIMIT} \
+        internal_autostart $command $args < /dev/null > ${HBASE_LOGOUT} 2>&1  &
+  ;;
+
+(autorestart)
+    echo running $command, logging to $HBASE_LOGOUT
+    # stop the command
+    $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
+    wait_until_done $!
+    # wait a user-specified sleep period
+    sp=${HBASE_RESTART_SLEEP:-3}
+    if [ $sp -gt 0 ]; then
+      sleep $sp
+    fi
+
+    check_before_start
+    hbase_rotate_log $HBASE_LOGOUT
+    hbase_rotate_log $HBASE_LOGGC
+    nohup $thiscmd --config "${HBASE_CONF_DIR}" --autostart-window-size ${AUTOSTART_WINDOW_SIZE} --autostart-window-retry-limit ${AUTOSTART_WINDOW_RETRY_LIMIT} \
+        internal_autostart $command $args < /dev/null > ${HBASE_LOGOUT} 2>&1  &
   ;;
 
 (foreground_start)
@@ -226,48 +251,84 @@ case $startStop in
     wait $hbase_pid
   ;;
 
-(internal_autorestart)
-    touch "$HBASE_START_FILE"
-    #keep starting the command until asked to stop. Reloop on software crash
+(internal_autostart)
+    ONE_HOUR_IN_SECS=3600
+    autostartWindowStartDate=`date +%s`
+    autostartCount=0
+    touch "$HBASE_AUTOSTART_FILE"
+
+    # keep starting the command until asked to stop. Reloop on software crash
     while true
-      do
-        lastLaunchDate=`date +%s`
-        $thiscmd --config "${HBASE_CONF_DIR}" foreground_start $command $args
-
+    do
+      if [ -f $HBASE_PID ] &&  kill -0 "$(cat "$HBASE_PID")" > /dev/null 2>&1 ; then
+        wait "$(cat "$HBASE_PID")"
+      else
         #if the file does not exist it means that it was not stopped properly by the stop command
-        if [ ! -f "$HBASE_START_FILE" ]; then
+        if [ ! -f "$HBASE_AUTOSTART_FILE" ]; then
+          echo "`date` HBase might be stopped removing the autostart file. Exiting Autostart process" >> ${HBASE_LOGOUT}
           exit 1
         fi
 
-        #if the cluster is being stopped then do not restart it again.
-        zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
-        if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
-        zkrunning=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.state`
-        if [ "$zkrunning" == "null" ]; then zkrunning="running"; fi
-        zkFullRunning=$zparent/$zkrunning
-        $bin/hbase zkcli stat $zkFullRunning 2>&1 | grep "Node does not exist"  1>/dev/null 2>&1
-        #grep returns 0 if it found something, 1 otherwise
-        if [ $? -eq 0 ]; then
-          exit 1
-        fi
+        echo "`date` Autostarting hbase $command service. Attempt no: $(( $autostartCount + 1))" >> ${HBASE_LOGLOG}
+        touch "$HBASE_AUTOSTART_FILE"
+        $thiscmd --config "${HBASE_CONF_DIR}" foreground_start $command $args
+        autostartCount=$(( $autostartCount + 1 ))
 
-        #If ZooKeeper cannot be found, then do not restart
-        $bin/hbase zkcli stat $zkFullRunning 2>&1 | grep Exception | grep ConnectionLoss  1>/dev/null 2>&1
-        if [ $? -eq 0 ]; then
-          exit 1
-        fi
+        # HBASE-6504 - only take the first line of the output in case verbose gc is on
+        distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
 
-        #if it was launched less than 5 minutes ago, then wait for 5 minutes before starting it again.
-        curDate=`date +%s`
-        limitDate=`expr $lastLaunchDate + 300`
-        if [ $limitDate -gt $curDate ]; then
-          sleep 300
+        if [ "$distMode" != 'false' ]; then
+          #if the cluster is being stopped then do not restart it again.
+          zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
+          if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
+          zkrunning=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.state`
+          if [ "$zkrunning" == "null" ]; then zkrunning="running"; fi
+          zkFullRunning=$zparent/$zkrunning
+          $bin/hbase zkcli stat $zkFullRunning 2>&1 | grep "Node does not exist"  1>/dev/null 2>&1
+
+          #grep returns 0 if it found something, 1 otherwise
+          if [ $? -eq 0 ]; then
+            echo "`date` hbase znode does not exist. Exiting Autostart process" >> ${HBASE_LOGOUT}
+            rm -f "$HBASE_AUTOSTART_FILE"
+            exit 1
+          fi
+
+          #If ZooKeeper cannot be found, then do not restart
+          $bin/hbase zkcli stat $zkFullRunning 2>&1 | grep Exception | grep ConnectionLoss  1>/dev/null 2>&1
+          if [ $? -eq 0 ]; then
+            echo "`date` zookeeper not found. Exiting Autostart process" >> ${HBASE_LOGOUT}
+            rm -f "$HBASE_AUTOSTART_FILE"
+            exit 1
+          fi
         fi
-      done
-    ;;
+      fi
+
+      curDate=`date +%s`
+      autostartWindowReset=false
+
+      # reset the auto start window size if it exceeds
+      if [ $AUTOSTART_WINDOW_SIZE -gt 0 ] && [ $(( $curDate - $autostartWindowStartDate )) -gt $(( $AUTOSTART_WINDOW_SIZE * $ONE_HOUR_IN_SECS )) ]; then
+        echo "Resetting Autorestart window size: $autostartWindowStartDate" >> ${HBASE_LOGOUT}
+        autostartWindowStartDate=$curDate
+        autostartWindowReset=true
+        autostartCount=0
+      fi
+
+      # kill autostart if the retry limit is exceeded within the given window size (window size other then 0)
+      if ! $autostartWindowReset && [ $AUTOSTART_WINDOW_RETRY_LIMIT -gt 0 ] && [ $autostartCount -gt $AUTOSTART_WINDOW_RETRY_LIMIT ]; then
+        echo "`date` Autostart window retry limit: $AUTOSTART_WINDOW_RETRY_LIMIT exceeded for given window size: $AUTOSTART_WINDOW_SIZE hours.. Exiting..." >> ${HBASE_LOGLOG}
+        rm -f "$HBASE_AUTOSTART_FILE"
+        exit 1
+      fi
+
+      # wait for shutdown hook to complete
+      sleep 20
+    done
+  ;;
 
 (stop)
-    rm -f "$HBASE_START_FILE"
+    echo running $command, logging to $HBASE_LOGOUT
+    rm -f "$HBASE_AUTOSTART_FILE"
     if [ -f $HBASE_PID ]; then
       pidToKill=`cat $HBASE_PID`
       # kill -0 == see if the PID exists
@@ -287,6 +348,7 @@ case $startStop in
   ;;
 
 (restart)
+    echo running $command, logging to $HBASE_LOGOUT
     # stop the command
     $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
     wait_until_done $!

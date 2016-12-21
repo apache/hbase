@@ -17,7 +17,7 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
-# 
+#
 # Run a shell command on all regionserver hosts.
 #
 # Environment Variables
@@ -27,12 +27,14 @@
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #   HBASE_CONF_DIR  Alternate hbase conf dir. Default is ${HBASE_HOME}/conf.
 #   HBASE_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
-#   HBASE_SLAVE_TIMEOUT Seconds to wait for timing out a remote command. 
+#   HBASE_SLAVE_TIMEOUT Seconds to wait for timing out a remote command.
 #   HBASE_SSH_OPTS Options passed to ssh when running remote commands.
 #
 # Modelled after $HADOOP_HOME/bin/slaves.sh.
 
-usage_str="Usage: `basename $0` [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful] [--maxthreads xx]"
+usage_str="Usage: `basename $0` [--config <hbase-confdir>] [--autostart-window-size <window size in hours>]\
+      [--autostart-window-retry-limit <retry count limit for autostart>] [--autostart] [--rs-only] [--master-only] \
+      [--graceful] [--maxthreads xx]"
 
 function usage() {
   echo "${usage_str}"
@@ -40,6 +42,10 @@ function usage() {
 
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
+
+# default autostart args value indicating infinite window size and no retry limit
+AUTOSTART_WINDOW_SIZE=0
+AUTOSTART_WINDOW_RETRY_LIMIT=0
 
 . "$bin"/hbase-config.sh
 
@@ -54,6 +60,9 @@ RR_RS=1
 RR_MASTER=1
 RR_GRACEFUL=0
 RR_MAXTHREADS=1
+START_CMD_NON_DIST_MODE=restart
+START_CMD_DIST_MODE=start
+RESTART_CMD_REGIONSERVER=restart
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -61,6 +70,12 @@ while [ $# -gt 0 ]; do
       RR_RS=1
       RR_MASTER=0
       RR_GRACEFUL=0
+      shift
+      ;;
+    --autostart)
+      START_CMD_NON_DIST_MODE="--autostart-window-size ${AUTOSTART_WINDOW_SIZE} --autostart-window-retry-limit ${AUTOSTART_WINDOW_RETRY_LIMIT} autorestart"
+      START_CMD_DIST_MODE="--autostart-window-size ${AUTOSTART_WINDOW_SIZE} --autostart-window-retry-limit ${AUTOSTART_WINDOW_RETRY_LIMIT} autostart"
+      RESTART_CMD_REGIONSERVER="--autostart-window-size ${AUTOSTART_WINDOW_SIZE} --autostart-window-retry-limit ${AUTOSTART_WINDOW_RETRY_LIMIT} autorestart"
       shift
       ;;
     --master-only)
@@ -100,14 +115,14 @@ if [ "$distMode" == 'false' ]; then
     echo Cant do selective rolling restart if not running distributed
     exit 1
   fi
-  "$bin"/hbase-daemon.sh restart master
-else 
+  "$bin"/hbase-daemon.sh ${START_CMD_NON_DIST_MODE} master
+else
   zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
   if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
 
   if [ $RR_MASTER -eq 1 ]; then
     # stop all masters before re-start to avoid races for master znode
-    "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master 
+    "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master
     "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
       --hosts "${HBASE_BACKUP_MASTERS}" stop master-backup
 
@@ -123,9 +138,9 @@ else
     echo #force a newline
 
     # all masters are down, now restart
-    "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master 
+    "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" ${START_CMD_DIST_MODE} master
     "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
-      --hosts "${HBASE_BACKUP_MASTERS}" start master-backup
+      --hosts "${HBASE_BACKUP_MASTERS}" ${START_CMD_DIST_MODE} master-backup
 
     echo "Wait a minute for master to come up join cluster"
     sleep 60
@@ -153,7 +168,7 @@ else
     # unlike the masters, roll all regionservers one-at-a-time
     export HBASE_SLAVE_PARALLEL=false
     "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
-      --hosts "${HBASE_REGIONSERVERS}" restart regionserver
+      --hosts "${HBASE_REGIONSERVERS}" ${RESTART_CMD_REGIONSERVER} regionserver
   fi
 
   if [ $RR_GRACEFUL -eq 1 ]; then

@@ -59,7 +59,12 @@ fi
 
 regionservers=`cat "$HOSTLIST"`
 if [ "$regionservers" = "localhost" ]; then
-  "$bin"/local-regionservers.sh start 1
+  HBASE_REGIONSERVER_ARGS="\
+    -Dhbase.regionserver.port=16201 \
+    -Dhbase.regionserver.info.port=16301"
+
+  $"${@// /\\ }" ${HBASE_REGIONSERVER_ARGS} \
+        2>&1 | sed "s/^/$regionserver: /" &
 else
   for regionserver in `cat "$HOSTLIST"`; do
     if ${HBASE_SLAVE_PARALLEL:-true}; then
