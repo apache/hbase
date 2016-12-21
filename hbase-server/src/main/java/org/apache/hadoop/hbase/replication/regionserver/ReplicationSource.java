@@ -405,9 +405,11 @@ public class ReplicationSource extends Thread
       }
       if (future != null) {
         try {
-          future.get();
+          future.get(sleepForRetries * maxRetriesMultiplier, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-          LOG.warn("Got exception:" + e);
+          LOG.warn("Got exception while waiting for endpoint to shutdown for replication source :"
+              + this.peerClusterZnode,
+            e);
         }
       }
     }
