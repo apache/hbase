@@ -509,10 +509,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   /**
-   * Per client, how many tasks will we run?  We divide number of rows by this number and have the
-   * client do the resulting count in a map task.
+   * Each client has one mapper to do the work,  and client do the resulting count in a map task.
    */
-  static int TASKS_PER_CLIENT = 10;
 
   static String JOB_INPUT_FILENAME = "input.txt";
 
@@ -542,17 +540,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Hash h = MurmurHash.getInstance();
     int perClientRows = (opts.totalRows / opts.numClientThreads);
     try {
-      for (int i = 0; i < TASKS_PER_CLIENT; i++) {
-        for (int j = 0; j < opts.numClientThreads; j++) {
-          TestOptions next = new TestOptions(opts);
-          next.startRow = (j * perClientRows) + (i * (perClientRows/10));
-          next.perClientRunRows = perClientRows / 10;
-          String s = MAPPER.writeValueAsString(next);
-          LOG.info("Client=" + j + ", maptask=" + i + ", input=" + s);
-          byte[] b = Bytes.toBytes(s);
-          int hash = h.hash(new ByteArrayHashKey(b, 0, b.length), -1);
-          m.put(hash, s);
-        }
+      for (int j = 0; j < opts.numClientThreads; j++) {
+        TestOptions next = new TestOptions(opts);
+        next.startRow = j * perClientRows;
+        next.perClientRunRows = perClientRows;
+        String s = MAPPER.writeValueAsString(next);
+        LOG.info("Client=" + j + ", input=" + s);
+        byte[] b = Bytes.toBytes(s);
+        int hash = h.hash(new ByteArrayHashKey(b, 0, b.length), -1);
+        m.put(hash, s);
       }
       for (Map.Entry<Integer, String> e: m.entrySet()) {
         out.println(e.getValue());

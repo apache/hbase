@@ -90,7 +90,7 @@ public class TestPerformanceEvaluation {
       while (br.readLine() != null) {
         count++;
       }
-      assertEquals(clients * PerformanceEvaluation.TASKS_PER_CLIENT, count);
+      assertEquals(clients, count);
     } finally {
       dis.close();
     }
