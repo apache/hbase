@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.HConstants.ZEROES;
 import static org.apache.hadoop.hbase.HRegionInfo.createRegionName;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocator.updateCachedLoation;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.util.Bytes.BYTES_COMPARATOR;
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
@@ -77,16 +78,16 @@ class AsyncNonMetaRegionLocator {
 
     public final byte[] row;
 
-    public final boolean locateToPrevious;
+    public final RegionLocateType locateType;
 
-    public LocateRequest(byte[] row, boolean locateToPrevious) {
+    public LocateRequest(byte[] row, RegionLocateType locateType) {
       this.row = row;
-      this.locateToPrevious = locateToPrevious;
+      this.locateType = locateType;
     }
 
     @Override
     public int hashCode() {
-      return Bytes.hashCode(row) ^ Boolean.hashCode(locateToPrevious);
+      return Bytes.hashCode(row) ^ locateType.hashCode();
     }
 
     @Override
@@ -95,7 +96,7 @@ class AsyncNonMetaRegionLocator {
         return false;
       }
       LocateRequest that = (LocateRequest) obj;
-      return locateToPrevious == that.locateToPrevious && Bytes.equals(row, that.row);
+      return locateType.equals(that.locateType) && Bytes.equals(row, that.row);
     }
   }
 
@@ -192,8 +193,14 @@ class AsyncNonMetaRegionLocator {
       return true;
     }
     boolean completed;
-    if (req.locateToPrevious) {
-      completed = Bytes.equals(loc.getRegionInfo().getEndKey(), req.row);
+    if (req.locateType.equals(RegionLocateType.BEFORE)) {
+      // for locating the row before current row, the common case is to find the previous region in
+      // reverse scan, so we check the endKey first. In general, the condition should be startKey <
+      // req.row and endKey >= req.row. Here we split it to endKey == req.row || (endKey > req.row
+      // && startKey < req.row). The two conditions are equal since startKey < endKey.
+      int c = Bytes.compareTo(loc.getRegionInfo().getEndKey(), req.row);
+      completed =
+          c == 0 || (c > 0 && Bytes.compareTo(loc.getRegionInfo().getStartKey(), req.row) < 0);
     } else {
       completed = loc.getRegionInfo().containsRow(req.row);
     }
@@ -206,11 +213,11 @@ class AsyncNonMetaRegionLocator {
   }
 
   private void complete(TableName tableName, LocateRequest req, HRegionLocation loc,
-      Throwable error, String rowNameInErrorMsg) {
+      Throwable error) {
     if (error != null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to locate region in '" + tableName + "', " + rowNameInErrorMsg + "='"
-            + Bytes.toStringBinary(req.row) + "'",
+        LOG.debug("Failed to locate region in '" + tableName + "', row='"
+            + Bytes.toStringBinary(req.row) + "', locateType=" + req.locateType,
           error);
       }
     }
@@ -254,87 +261,67 @@ class AsyncNonMetaRegionLocator {
       }
     }
     if (toSend != null) {
-      if (toSend.locateToPrevious) {
-        locatePreviousInMeta(tableName, toSend);
-      } else {
-        locateInMeta(tableName, toSend);
-      }
+      locateInMeta(tableName, toSend);
     }
   }
 
   private void onScanComplete(TableName tableName, LocateRequest req, List<Result> results,
-      Throwable error, String rowNameInErrorMsg) {
+      Throwable error) {
     if (error != null) {
-      complete(tableName, req, null, error, rowNameInErrorMsg);
+      complete(tableName, req, null, error);
       return;
     }
     if (results.isEmpty()) {
-      complete(tableName, req, null, new TableNotFoundException(tableName), rowNameInErrorMsg);
+      complete(tableName, req, null, new TableNotFoundException(tableName));
       return;
     }
     RegionLocations locs = MetaTableAccessor.getRegionLocations(results.get(0));
     if (LOG.isDebugEnabled()) {
-      LOG.debug("The fetched location of '" + tableName + "', " + rowNameInErrorMsg + "='"
-          + Bytes.toStringBinary(req.row) + "' is " + locs);
+      LOG.debug("The fetched location of '" + tableName + "', row='" + Bytes.toStringBinary(req.row)
+          + "', locateType=" + req.locateType + " is " + locs);
     }
     if (locs == null || locs.getDefaultRegionLocation() == null) {
       complete(tableName, req, null,
-        new IOException(String.format("No location found for '%s', %s='%s'", tableName,
-          rowNameInErrorMsg, Bytes.toStringBinary(req.row))),
-        rowNameInErrorMsg);
+        new IOException(String.format("No location found for '%s', row='%s', locateType=%s",
+          tableName, Bytes.toStringBinary(req.row), req.locateType)));
       return;
     }
     HRegionLocation loc = locs.getDefaultRegionLocation();
     HRegionInfo info = loc.getRegionInfo();
     if (info == null) {
       complete(tableName, req, null,
-        new IOException(String.format("HRegionInfo is null for '%s', %s='%s'", tableName,
-          rowNameInErrorMsg, Bytes.toStringBinary(req.row))),
-        rowNameInErrorMsg);
+        new IOException(String.format("HRegionInfo is null for '%s', row='%s', locateType=%s",
+          tableName, Bytes.toStringBinary(req.row), req.locateType)));
       return;
     }
     if (!info.getTable().equals(tableName)) {
-      complete(tableName, req, null,
-        new TableNotFoundException(
-            "Table '" + tableName + "' was not found, got: '" + info.getTable() + "'"),
-        rowNameInErrorMsg);
+      complete(tableName, req, null, new TableNotFoundException(
+          "Table '" + tableName + "' was not found, got: '" + info.getTable() + "'"));
       return;
     }
     if (info.isSplit()) {
       complete(tableName, req, null,
         new RegionOfflineException(
             "the only available region for the required row is a split parent,"
-                + " the daughters should be online soon: '" + info.getRegionNameAsString() + "'"),
-        rowNameInErrorMsg);
+                + " the daughters should be online soon: '" + info.getRegionNameAsString() + "'"));
       return;
     }
     if (info.isOffline()) {
-      complete(tableName, req, null,
-        new RegionOfflineException("the region is offline, could"
-            + " be caused by a disable table call: '" + info.getRegionNameAsString() + "'"),
-        rowNameInErrorMsg);
+      complete(tableName, req, null, new RegionOfflineException("the region is offline, could"
+          + " be caused by a disable table call: '" + info.getRegionNameAsString() + "'"));
       return;
     }
     if (loc.getServerName() == null) {
       complete(tableName, req, null,
         new NoServerForRegionException(
-            String.format("No server address listed for region '%s', %s='%s'",
-              info.getRegionNameAsString(), rowNameInErrorMsg, Bytes.toStringBinary(req.row))),
-        rowNameInErrorMsg);
+            String.format("No server address listed for region '%s', row='%s', locateType=%s",
+              info.getRegionNameAsString(), Bytes.toStringBinary(req.row), req.locateType)));
       return;
     }
-    if (req.locateToPrevious && !Bytes.equals(info.getEndKey(), req.row)) {
-      complete(tableName, req, null,
-        new DoNotRetryIOException("The end key of '" + info.getRegionNameAsString() + "' is '"
-            + Bytes.toStringBinary(info.getEndKey()) + "', expected '"
-            + Bytes.toStringBinary(req.row) + "'"),
-        rowNameInErrorMsg);
-      return;
-    }
-    complete(tableName, req, loc, null, rowNameInErrorMsg);
+    complete(tableName, req, loc, null);
   }
 
-  private HRegionLocation locateInCache(TableCache tableCache, TableName tableName, byte[] row) {
+  private HRegionLocation locateRowInCache(TableCache tableCache, TableName tableName, byte[] row) {
     Map.Entry<byte[], HRegionLocation> entry = tableCache.cache.floorEntry(row);
     if (entry == null) {
       return null;
@@ -344,7 +331,7 @@ class AsyncNonMetaRegionLocator {
     if (isEmptyStopRow(endKey) || Bytes.compareTo(row, endKey) < 0) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Found " + loc + " in cache for '" + tableName + "', row='"
-            + Bytes.toStringBinary(row) + "'");
+            + Bytes.toStringBinary(row) + "', locateType=" + RegionLocateType.CURRENT);
       }
       return loc;
     } else {
@@ -352,22 +339,19 @@ class AsyncNonMetaRegionLocator {
     }
   }
 
-  private HRegionLocation locatePreviousInCache(TableCache tableCache, TableName tableName,
-      byte[] startRowOfCurrentRegion) {
-    Map.Entry<byte[], HRegionLocation> entry;
-    if (isEmptyStopRow(startRowOfCurrentRegion)) {
-      entry = tableCache.cache.lastEntry();
-    } else {
-      entry = tableCache.cache.lowerEntry(startRowOfCurrentRegion);
-    }
+  private HRegionLocation locateRowBeforeInCache(TableCache tableCache, TableName tableName,
+      byte[] row) {
+    Map.Entry<byte[], HRegionLocation> entry =
+        isEmptyStopRow(row) ? tableCache.cache.lastEntry() : tableCache.cache.lowerEntry(row);
     if (entry == null) {
       return null;
     }
     HRegionLocation loc = entry.getValue();
-    if (Bytes.equals(loc.getRegionInfo().getEndKey(), startRowOfCurrentRegion)) {
+    if (isEmptyStopRow(loc.getRegionInfo().getEndKey())
+        || Bytes.compareTo(loc.getRegionInfo().getEndKey(), row) >= 0) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Found " + loc + " in cache for '" + tableName + "', startRowOfCurrentRegion='"
-            + Bytes.toStringBinary(startRowOfCurrentRegion) + "'");
+        LOG.trace("Found " + loc + " in cache for '" + tableName + "', row='"
+            + Bytes.toStringBinary(row) + "', locateType=" + RegionLocateType.BEFORE);
       }
       return loc;
     } else {
@@ -377,46 +361,41 @@ class AsyncNonMetaRegionLocator {
 
   private void locateInMeta(TableName tableName, LocateRequest req) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace(
-        "Try locate '" + tableName + "', row='" + Bytes.toStringBinary(req.row) + "' in meta");
-    }
-    byte[] metaKey = createRegionName(tableName, req.row, NINES, false);
-    conn.getRawTable(META_TABLE_NAME)
-        .smallScan(new Scan(metaKey).setReversed(true).setSmall(true).addFamily(CATALOG_FAMILY), 1)
-        .whenComplete((results, error) -> onScanComplete(tableName, req, results, error, "row"));
-  }
-
-  private void locatePreviousInMeta(TableName tableName, LocateRequest req) {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Try locate '" + tableName + "', startRowOfCurrentRegion='"
-          + Bytes.toStringBinary(req.row) + "' in meta");
+      LOG.trace("Try locate '" + tableName + "', row='" + Bytes.toStringBinary(req.row)
+          + "', locateType=" + req.locateType + " in meta");
     }
     byte[] metaKey;
-    if (isEmptyStopRow(req.row)) {
-      byte[] binaryTableName = tableName.getName();
-      metaKey = Arrays.copyOf(binaryTableName, binaryTableName.length + 1);
+    if (req.locateType.equals(RegionLocateType.BEFORE)) {
+      if (isEmptyStopRow(req.row)) {
+        byte[] binaryTableName = tableName.getName();
+        metaKey = Arrays.copyOf(binaryTableName, binaryTableName.length + 1);
+      } else {
+        metaKey = createRegionName(tableName, req.row, ZEROES, false);
+      }
     } else {
-      metaKey = createRegionName(tableName, req.row, ZEROES, false);
+      metaKey = createRegionName(tableName, req.row, NINES, false);
     }
     conn.getRawTable(META_TABLE_NAME)
         .smallScan(new Scan(metaKey).setReversed(true).setSmall(true).addFamily(CATALOG_FAMILY), 1)
-        .whenComplete((results, error) -> onScanComplete(tableName, req, results, error,
-          "startRowOfCurrentRegion"));
+        .whenComplete((results, error) -> onScanComplete(tableName, req, results, error));
   }
 
   private HRegionLocation locateInCache(TableCache tableCache, TableName tableName, byte[] row,
-      boolean locateToPrevious) {
-    return locateToPrevious ? locatePreviousInCache(tableCache, tableName, row)
-        : locateInCache(tableCache, tableName, row);
+      RegionLocateType locateType) {
+    return locateType.equals(RegionLocateType.BEFORE)
+        ? locateRowBeforeInCache(tableCache, tableName, row)
+        : locateRowInCache(tableCache, tableName, row);
   }
 
   // locateToPrevious is true means we will use the start key of a region to locate the region
   // placed before it. Used for reverse scan. See the comment of
   // AsyncRegionLocator.getPreviousRegionLocation.
-  private CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      boolean locateToPrevious) {
+  private CompletableFuture<HRegionLocation> getRegionLocationInternal(TableName tableName,
+      byte[] row, RegionLocateType locateType) {
+    // AFTER should be convert to CURRENT before calling this method
+    assert !locateType.equals(RegionLocateType.AFTER);
     TableCache tableCache = getTableCache(tableName);
-    HRegionLocation loc = locateInCache(tableCache, tableName, row, locateToPrevious);
+    HRegionLocation loc = locateInCache(tableCache, tableName, row, locateType);
     if (loc != null) {
       return CompletableFuture.completedFuture(loc);
     }
@@ -425,11 +404,11 @@ class AsyncNonMetaRegionLocator {
     boolean sendRequest = false;
     synchronized (tableCache) {
       // check again
-      loc = locateInCache(tableCache, tableName, row, locateToPrevious);
+      loc = locateInCache(tableCache, tableName, row, locateType);
       if (loc != null) {
         return CompletableFuture.completedFuture(loc);
       }
-      req = new LocateRequest(row, locateToPrevious);
+      req = new LocateRequest(row, locateType);
       future = tableCache.allRequests.get(req);
       if (future == null) {
         future = new CompletableFuture<>();
@@ -441,25 +420,23 @@ class AsyncNonMetaRegionLocator {
       }
     }
     if (sendRequest) {
-      if (locateToPrevious) {
-        locatePreviousInMeta(tableName, req);
-      } else {
-        locateInMeta(tableName, req);
-      }
+      locateInMeta(tableName, req);
     }
     return future;
   }
 
-  CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row) {
-    return getRegionLocation(tableName, row, false);
-  }
-
-  // Used for reverse scan. See the comment of AsyncRegionLocator.getPreviousRegionLocation.
-  // TODO: need to deal with region merge where the startRowOfCurrentRegion will not be the endRow
-  // of a region.
-  CompletableFuture<HRegionLocation> getPreviousRegionLocation(TableName tableName,
-      byte[] startRowOfCurrentRegion) {
-    return getRegionLocation(tableName, startRowOfCurrentRegion, true);
+  CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
+      RegionLocateType locateType) {
+    if (locateType.equals(RegionLocateType.BEFORE)) {
+      return getRegionLocationInternal(tableName, row, locateType);
+    } else {
+      // as we know the exact row after us, so we can just create the new row, and use the same
+      // algorithm to locate it.
+      if (locateType.equals(RegionLocateType.AFTER)) {
+        row = createClosestRowAfter(row);
+      }
+      return getRegionLocationInternal(tableName, row, RegionLocateType.CURRENT);
+    }
   }
 
   void updateCachedLocation(HRegionLocation loc, Throwable exception) {

@@ -95,7 +95,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private final Runnable completeWhenNoMoreResultsInRegion;
 
-  private final CompletableFuture<Boolean> future;
+  private final CompletableFuture<RegionLocateType> future;
 
   private final HBaseRpcController controller;
 
@@ -172,7 +172,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private void completeWithNextStartRow(byte[] nextStartRow) {
     scan.setStartRow(nextStartRow);
-    future.complete(scan.isReversed());
+    future.complete(scan.isReversed() ? RegionLocateType.BEFORE : RegionLocateType.CURRENT);
   }
 
   private byte[] createNextStartRowWhenError() {
@@ -193,7 +193,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
         includeNextStartRowWhenError ? nextStartRowWhenError : createNextStartRowWhenError.get());
     }
     future.complete(
-      scan.isReversed() && Bytes.equals(scan.getStartRow(), loc.getRegionInfo().getEndKey()));
+      scan.isReversed() && Bytes.equals(scan.getStartRow(), loc.getRegionInfo().getEndKey())
+          ? RegionLocateType.BEFORE : RegionLocateType.CURRENT);
   }
 
   private void onError(Throwable error) {
@@ -344,7 +345,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   /**
    * @return return locate direction for next open scanner call, or null if we should stop.
    */
-  public CompletableFuture<Boolean> start() {
+  public CompletableFuture<RegionLocateType> start() {
     next();
     return future;
   }

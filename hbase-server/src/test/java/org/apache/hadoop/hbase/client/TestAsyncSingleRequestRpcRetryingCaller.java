@@ -154,7 +154,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
         new AsyncRegionLocator(asyncConn, AsyncConnectionImpl.RETRY_TIMER) {
           @Override
           CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-              long timeoutNs) {
+              RegionLocateType locateType, long timeoutNs) {
             if (tableName.equals(TABLE_NAME)) {
               CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
               if (count.getAndIncrement() == 0) {
@@ -165,14 +165,8 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
               }
               return future;
             } else {
-              return super.getRegionLocation(tableName, row, timeoutNs);
+              return super.getRegionLocation(tableName, row, locateType, timeoutNs);
             }
-          }
-
-          @Override
-          CompletableFuture<HRegionLocation> getPreviousRegionLocation(TableName tableName,
-              byte[] startRowOfCurrentRegion, long timeoutNs) {
-            return super.getPreviousRegionLocation(tableName, startRowOfCurrentRegion, timeoutNs);
           }
 
           @Override

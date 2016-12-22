@@ -58,7 +58,7 @@ class AsyncRpcRetryingCallerFactory {
 
     private long rpcTimeoutNs = -1L;
 
-    private boolean locateToPreviousRegion;
+    private RegionLocateType locateType = RegionLocateType.CURRENT;
 
     public SingleRequestCallerBuilder<T> table(TableName tableName) {
       this.tableName = tableName;
@@ -86,15 +86,15 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public SingleRequestCallerBuilder<T> locateToPreviousRegion(boolean locateToPreviousRegion) {
-      this.locateToPreviousRegion = locateToPreviousRegion;
+    public SingleRequestCallerBuilder<T> locateType(RegionLocateType locateType) {
+      this.locateType = locateType;
       return this;
     }
 
     public AsyncSingleRequestRpcRetryingCaller<T> build() {
       return new AsyncSingleRequestRpcRetryingCaller<>(retryTimer, conn,
           checkNotNull(tableName, "tableName is null"), checkNotNull(row, "row is null"),
-          locateToPreviousRegion, checkNotNull(callable, "action is null"),
+          checkNotNull(locateType, "locateType is null"), checkNotNull(callable, "action is null"),
           conn.connConf.getPauseNs(), conn.connConf.getMaxRetries(), operationTimeoutNs,
           rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
     }
@@ -246,7 +246,7 @@ class AsyncRpcRetryingCallerFactory {
     /**
      * Short cut for {@code build().start()}.
      */
-    public CompletableFuture<Boolean> start() {
+    public CompletableFuture<RegionLocateType> start() {
       return build().start();
     }
   }

@@ -118,23 +118,22 @@ class AsyncClientScanner {
         .setScan(scan).consumer(consumer).resultCache(resultCache)
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).start()
-        .whenComplete((locateToPreviousRegion, error) -> {
+        .whenComplete((locateType, error) -> {
           if (error != null) {
             consumer.onError(error);
             return;
           }
-          if (locateToPreviousRegion == null) {
+          if (locateType == null) {
             consumer.onComplete();
           } else {
-            openScanner(locateToPreviousRegion.booleanValue());
+            openScanner(locateType);
           }
         });
   }
 
-  private void openScanner(boolean locateToPreviousRegion) {
+  private void openScanner(RegionLocateType locateType) {
     conn.callerFactory.<OpenScannerResponse> single().table(tableName).row(scan.getStartRow())
-        .locateToPreviousRegion(locateToPreviousRegion)
-        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+        .locateType(locateType).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).action(this::callOpenScanner).call()
         .whenComplete((resp, error) -> {
           if (error != null) {
@@ -146,6 +145,7 @@ class AsyncClientScanner {
   }
 
   public void start() {
-    openScanner(scan.isReversed() && isEmptyStartRow(scan.getStartRow()));
+    openScanner(scan.isReversed() && isEmptyStartRow(scan.getStartRow()) ? RegionLocateType.BEFORE
+        : RegionLocateType.CURRENT);
   }
 }

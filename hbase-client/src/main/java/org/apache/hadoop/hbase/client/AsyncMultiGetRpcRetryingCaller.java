@@ -374,7 +374,8 @@ class AsyncMultiGetRpcRetryingCaller {
         new ConcurrentHashMap<>();
     ConcurrentLinkedQueue<Get> locateFailed = new ConcurrentLinkedQueue<>();
     CompletableFuture.allOf(gets.map(get -> conn.getLocator()
-        .getRegionLocation(tableName, get.getRow(), locateTimeoutNs).whenComplete((loc, error) -> {
+        .getRegionLocation(tableName, get.getRow(), RegionLocateType.CURRENT, locateTimeoutNs)
+        .whenComplete((loc, error) -> {
           if (error != null) {
             error = translateException(error);
             if (error instanceof DoNotRetryIOException) {

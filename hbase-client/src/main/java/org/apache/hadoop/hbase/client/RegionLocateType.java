@@ -17,34 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.concurrent.CompletableFuture;
-
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * The implementation of AsyncRegionLocator.
+ * Indicate which row you want to locate.
+ * <ul>
+ * <li>{@link #BEFORE} locate the region which contains the row before the given row.</li>
+ * <li>{@link #CURRENT} locate the region which contains the given row.</li>
+ * <li>{@link #AFTER} locate the region which contains the row after the given row.</li>
+ * </ul>
  */
 @InterfaceAudience.Private
-class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
-
-  private final TableName tableName;
-
-  private final AsyncRegionLocator locator;
-
-  public AsyncTableRegionLocatorImpl(TableName tableName, AsyncRegionLocator locator) {
-    this.tableName = tableName;
-    this.locator = locator;
-  }
-
-  @Override
-  public TableName getName() {
-    return tableName;
-  }
-
-  @Override
-  public CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, boolean reload) {
-    return locator.getRegionLocation(tableName, row, RegionLocateType.CURRENT, -1L);
-  }
+enum RegionLocateType {
+  BEFORE, CURRENT, AFTER
 }

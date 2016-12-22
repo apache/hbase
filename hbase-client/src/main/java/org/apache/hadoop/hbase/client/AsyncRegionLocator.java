@@ -79,31 +79,16 @@ class AsyncRegionLocator {
   }
 
   CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-      long timeoutNs) {
+      RegionLocateType type, long timeoutNs) {
+    // meta region can not be split right now so we always call the same method.
+    // Change it later if the meta table can have more than one regions.
     CompletableFuture<HRegionLocation> future =
         tableName.equals(META_TABLE_NAME) ? metaRegionLocator.getRegionLocation()
-            : nonMetaRegionLocator.getRegionLocation(tableName, row);
+            : nonMetaRegionLocator.getRegionLocation(tableName, row, type);
     return withTimeout(future, timeoutNs,
       () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
           + "ms) waiting for region location for " + tableName + ", row='"
           + Bytes.toStringBinary(row) + "'");
-  }
-
-  /**
-   * Locate the previous region using the current regions start key. Used for reverse scan as the
-   * end key is not included in a region so we need to treat it differently.
-   */
-  CompletableFuture<HRegionLocation> getPreviousRegionLocation(TableName tableName,
-      byte[] startRowOfCurrentRegion, long timeoutNs) {
-    // meta region can not be split right now so we call the same method as getRegionLocation.
-    // Change it later if the meta table can have more than one regions.
-    CompletableFuture<HRegionLocation> future =
-        tableName.equals(META_TABLE_NAME) ? metaRegionLocator.getRegionLocation()
-            : nonMetaRegionLocator.getPreviousRegionLocation(tableName, startRowOfCurrentRegion);
-    return withTimeout(future, timeoutNs,
-      () -> "Timeout(" + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
-          + "ms) waiting for region location for " + tableName + ", startRowOfCurrentRegion='"
-          + Bytes.toStringBinary(startRowOfCurrentRegion) + "'");
   }
 
   static boolean canUpdate(HRegionLocation loc, HRegionLocation oldLoc) {

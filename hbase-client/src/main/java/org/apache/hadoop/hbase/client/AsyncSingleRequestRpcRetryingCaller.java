@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
@@ -67,7 +66,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
 
   private final byte[] row;
 
-  private final Function<Long, CompletableFuture<HRegionLocation>> locate;
+  private final RegionLocateType locateType;
 
   private final Callable<T> callable;
 
@@ -90,18 +89,14 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
   private final long startNs;
 
   public AsyncSingleRequestRpcRetryingCaller(HashedWheelTimer retryTimer, AsyncConnectionImpl conn,
-      TableName tableName, byte[] row, boolean locateToPreviousRegion, Callable<T> callable,
+      TableName tableName, byte[] row, RegionLocateType locateType, Callable<T> callable,
       long pauseNs, int maxRetries, long operationTimeoutNs, long rpcTimeoutNs,
       int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.tableName = tableName;
     this.row = row;
-    if (locateToPreviousRegion) {
-      this.locate = this::locatePrevious;
-    } else {
-      this.locate = this::locate;
-    }
+    this.locateType = locateType;
     this.callable = callable;
     this.pauseNs = pauseNs;
     this.maxAttempts = retries2Attempts(maxRetries);
@@ -210,27 +205,20 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
     } else {
       locateTimeoutNs = -1L;
     }
-    locate.apply(locateTimeoutNs).whenComplete((loc, error) -> {
-      if (error != null) {
-        onError(error,
-          () -> "Locate '" + Bytes.toStringBinary(row) + "' in " + tableName + " failed, tries = "
-              + tries + ", maxAttempts = " + maxAttempts + ", timeout = "
-              + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs) + " ms, time elapsed = "
-              + elapsedMs() + " ms",
-          err -> {
-          });
-        return;
-      }
-      call(loc);
-    });
-  }
-
-  private CompletableFuture<HRegionLocation> locate(long timeoutNs) {
-    return conn.getLocator().getRegionLocation(tableName, row, timeoutNs);
-  }
-
-  private CompletableFuture<HRegionLocation> locatePrevious(long timeoutNs) {
-    return conn.getLocator().getPreviousRegionLocation(tableName, row, timeoutNs);
+    conn.getLocator().getRegionLocation(tableName, row, locateType, locateTimeoutNs)
+        .whenComplete((loc, error) -> {
+          if (error != null) {
+            onError(error,
+              () -> "Locate '" + Bytes.toStringBinary(row) + "' in " + tableName
+                  + " failed, tries = " + tries + ", maxAttempts = " + maxAttempts + ", timeout = "
+                  + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs) + " ms, time elapsed = "
+                  + elapsedMs() + " ms",
+              err -> {
+              });
+            return;
+          }
+          call(loc);
+        });
   }
 
   public CompletableFuture<T> call() {

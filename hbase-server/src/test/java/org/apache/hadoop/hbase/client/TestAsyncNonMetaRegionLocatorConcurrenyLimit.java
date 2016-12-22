@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
-import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.AsyncNonMetaRegionLocator.MAX_CONCURRENT_LOCATE_REQUEST_PER_TABLE;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
@@ -28,7 +26,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -147,12 +144,10 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
 
   @Test
   public void test() throws InterruptedException, ExecutionException {
-    List<CompletableFuture<HRegionLocation>> futures = IntStream.range(0, 128)
-        .mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
-        .map(r -> LOCATOR.getRegionLocation(TABLE_NAME, r)).collect(toCollection(ArrayList::new));
-    futures.addAll(IntStream.range(129, 257)
-        .mapToObj(i -> i < 256 ? Bytes.toBytes(String.format("%02x", i)) : EMPTY_START_ROW)
-        .map(r -> LOCATOR.getPreviousRegionLocation(TABLE_NAME, r)).collect(toList()));
+    List<CompletableFuture<HRegionLocation>> futures =
+        IntStream.range(0, 256).mapToObj(i -> Bytes.toBytes(String.format("%02x", i)))
+            .map(r -> LOCATOR.getRegionLocation(TABLE_NAME, r, RegionLocateType.CURRENT))
+            .collect(toList());
     assertLocs(futures);
     assertTrue(MAX_CONCURRENCY.get() <= MAX_ALLOWED);
   }
