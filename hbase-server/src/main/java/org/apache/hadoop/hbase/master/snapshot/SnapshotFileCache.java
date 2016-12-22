@@ -205,14 +205,10 @@ public class SnapshotFileCache implements Stoppable {
   }
 
   private synchronized void refreshCache() throws IOException {
-    long lastTimestamp = Long.MAX_VALUE;
-    boolean hasChanges = false;
-
     // get the status of the snapshots directory and check if it is has changes
+    FileStatus dirStatus;
     try {
-      FileStatus dirStatus = fs.getFileStatus(snapshotDir);
-      lastTimestamp = dirStatus.getModificationTime();
-      hasChanges |= (lastTimestamp >= lastModifiedTime);
+      dirStatus = fs.getFileStatus(snapshotDir);
     } catch (FileNotFoundException e) {
       if (this.cache.size() > 0) {
         LOG.error("Snapshot directory: " + snapshotDir + " doesn't exist");
@@ -220,30 +216,8 @@ public class SnapshotFileCache implements Stoppable {
       return;
     }
 
-    // get the status of the snapshots temporary directory and check if it has changes
-    // The top-level directory timestamp is not updated, so we have to check the inner-level.
-    try {
-      Path snapshotTmpDir = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
-      FileStatus tempDirStatus = fs.getFileStatus(snapshotTmpDir);
-      lastTimestamp = Math.min(lastTimestamp, tempDirStatus.getModificationTime());
-      hasChanges |= (lastTimestamp >= lastModifiedTime);
-      if (!hasChanges) {
-        FileStatus[] tmpSnapshots = FSUtils.listStatus(fs, snapshotDir);
-        if (tmpSnapshots != null) {
-          for (FileStatus dirStatus: tmpSnapshots) {
-            lastTimestamp = Math.min(lastTimestamp, dirStatus.getModificationTime());
-          }
-          hasChanges |= (lastTimestamp >= lastModifiedTime);
-        }
-      }
-    } catch (FileNotFoundException e) {
-      // Nothing todo, if the tmp dir is empty
-    }
-
     // if the snapshot directory wasn't modified since we last check, we are done
-    if (!hasChanges) {
-      return;
-    }
+    if (dirStatus.getModificationTime() <= this.lastModifiedTime) return;
 
     // directory was modified, so we need to reload our cache
     // there could be a slight race here where we miss the cache, check the directory modification
@@ -251,7 +225,7 @@ public class SnapshotFileCache implements Stoppable {
     // However, snapshot directories are only created once, so this isn't an issue.
 
     // 1. update the modified time
-    this.lastModifiedTime = lastTimestamp;
+    this.lastModifiedTime = dirStatus.getModificationTime();
 
     // 2.clear the cache
     this.cache.clear();
