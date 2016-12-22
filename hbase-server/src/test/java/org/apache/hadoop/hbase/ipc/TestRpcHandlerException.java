@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
@@ -36,25 +37,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.BlockingService;
 
 @Category({ RPCTests.class, SmallTests.class })
 public class TestRpcHandlerException {
 
   private final static Configuration CONF = HBaseConfiguration.create();
-
-  /**
-   * Instance of server. We actually don't do anything speical in here so could just use
-   * HBaseRpcServer directly.
-   */
-  private static class TestRpcServer extends RpcServer {
-
-    TestRpcServer(RpcScheduler scheduler) throws IOException {
-      super(null, "testRpcServer",
-          Lists.newArrayList(new BlockingServiceAndInterface((BlockingService) SERVICE, null)),
-          new InetSocketAddress("localhost", 0), CONF, scheduler);
-    }
-  }
 
   /**
    * Tests that the rpc scheduler is called when requests arrive. When Rpc handler thread dies, the
@@ -85,7 +74,9 @@ public class TestRpcHandlerException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
     Abortable abortable = new AbortServer();
     RpcScheduler scheduler = new SimpleRpcScheduler(CONF, 2, 0, 0, qosFunction, abortable, 0);
-    RpcServer rpcServer = new TestRpcServer(scheduler);
+    RpcServer rpcServer = RpcServerFactory.createRpcServer(null, "testRpcServer",
+        Lists.newArrayList(new BlockingServiceAndInterface((BlockingService) SERVICE, null)),
+        new InetSocketAddress("localhost", 0), CONF, scheduler);
     try (BlockingRpcClient client = new BlockingRpcClient(CONF)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());

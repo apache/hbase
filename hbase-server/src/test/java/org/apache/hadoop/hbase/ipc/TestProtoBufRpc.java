@@ -65,7 +65,7 @@ public class TestProtoBufRpc {
     log.setLevel(Level.TRACE);
     // Create server side implementation
     // Get RPC server for server side implementation
-    this.server = new RpcServer(null, "testrpc",
+    this.server = RpcServerFactory.createRpcServer(null, "testrpc",
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
         new InetSocketAddress(ADDRESS, PORT), conf, new FifoRpcScheduler(conf, 10));
     InetSocketAddress address = server.getListenerAddress();

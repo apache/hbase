@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -250,7 +251,7 @@ public class TestSecureIPC {
 
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
 
-    RpcServerInterface rpcServer = new RpcServer(null, "AbstractTestSecureIPC",
+    RpcServerInterface rpcServer = RpcServerFactory.createRpcServer(null, "AbstractTestSecureIPC",
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)), isa,
         serverConf, new FifoRpcScheduler(serverConf, 1));
     rpcServer.start();
