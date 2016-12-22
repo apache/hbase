@@ -120,7 +120,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
   }
 
   private void completeExceptionally() {
-    future.completeExceptionally(new RetriesExhaustedException(tries, exceptions));
+    future.completeExceptionally(new RetriesExhaustedException(tries - 1, exceptions));
   }
 
   private void onError(Throwable error, Supplier<String> errMsg,

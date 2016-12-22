@@ -161,7 +161,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     if (closeScanner) {
       closeScanner();
     }
-    future.completeExceptionally(new RetriesExhaustedException(tries, exceptions));
+    future.completeExceptionally(new RetriesExhaustedException(tries - 1, exceptions));
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NONNULL_PARAM_VIOLATION",

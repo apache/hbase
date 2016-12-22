@@ -258,48 +258,55 @@ class AsyncRpcRetryingCallerFactory {
     return new ScanSingleRegionCallerBuilder();
   }
 
-  public class MultiGetCallerBuilder {
+  public class BatchCallerBuilder {
 
     private TableName tableName;
 
-    private List<Get> gets;
+    private List<? extends Row> actions;
 
     private long operationTimeoutNs = -1L;
 
-    private long rpcTimeoutNs = -1L;
+    private long readRpcTimeoutNs = -1L;
 
-    public MultiGetCallerBuilder table(TableName tableName) {
+    private long writeRpcTimeoutNs = -1L;
+
+    public BatchCallerBuilder table(TableName tableName) {
       this.tableName = tableName;
       return this;
     }
 
-    public MultiGetCallerBuilder gets(List<Get> gets) {
-      this.gets = gets;
+    public BatchCallerBuilder actions(List<? extends Row> actions) {
+      this.actions = actions;
       return this;
     }
 
-    public MultiGetCallerBuilder operationTimeout(long operationTimeout, TimeUnit unit) {
+    public BatchCallerBuilder operationTimeout(long operationTimeout, TimeUnit unit) {
       this.operationTimeoutNs = unit.toNanos(operationTimeout);
       return this;
     }
 
-    public MultiGetCallerBuilder rpcTimeout(long rpcTimeout, TimeUnit unit) {
-      this.rpcTimeoutNs = unit.toNanos(rpcTimeout);
+    public BatchCallerBuilder readRpcTimeout(long rpcTimeout, TimeUnit unit) {
+      this.readRpcTimeoutNs = unit.toNanos(rpcTimeout);
       return this;
     }
 
-    public AsyncMultiGetRpcRetryingCaller build() {
-      return new AsyncMultiGetRpcRetryingCaller(retryTimer, conn, tableName, gets,
-          conn.connConf.getPauseNs(), conn.connConf.getMaxRetries(), operationTimeoutNs,
-          rpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
+    public BatchCallerBuilder writeRpcTimeout(long rpcTimeout, TimeUnit unit) {
+      this.writeRpcTimeoutNs = unit.toNanos(rpcTimeout);
+      return this;
     }
 
-    public List<CompletableFuture<Result>> call() {
-      return build().call();
+    public <T> AsyncBatchRpcRetryingCaller<T> build() {
+      return new AsyncBatchRpcRetryingCaller<T>(retryTimer, conn, tableName, actions,
+          conn.connConf.getPauseNs(), conn.connConf.getMaxRetries(), operationTimeoutNs,
+          readRpcTimeoutNs, writeRpcTimeoutNs, conn.connConf.getStartLogErrorsCnt());
+    }
+
+    public <T> List<CompletableFuture<T>> call() {
+      return this.<T> build().call();
     }
   }
 
-  public MultiGetCallerBuilder multiGet() {
-    return new MultiGetCallerBuilder();
+  public BatchCallerBuilder batch() {
+    return new BatchCallerBuilder();
   }
 }

@@ -29,13 +29,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
@@ -58,7 +58,7 @@ import org.junit.experimental.categories.Category;
  * Will split the table, and move region randomly when testing.
  */
 @Category({ LargeTests.class, ClientTests.class })
-public class TestAsyncGetMultiThread {
+public class TestAsyncTableGetMultiThreaded {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static TableName TABLE_NAME = TableName.valueOf("async");
@@ -88,12 +88,11 @@ public class TestAsyncGetMultiThread {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
-    RawAsyncTable table = CONN.getRawTable(TABLE_NAME);
-    List<CompletableFuture<?>> futures = new ArrayList<>();
-    IntStream.range(0, COUNT)
-        .forEach(i -> futures.add(table.put(new Put(Bytes.toBytes(String.format("%03d", i)))
-            .addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i)))));
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get();
+    CONN.getRawTable(TABLE_NAME)
+        .putAll(
+          IntStream.range(0, COUNT).mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
+              .addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))).collect(Collectors.toList()))
+        .get();
   }
 
   @AfterClass

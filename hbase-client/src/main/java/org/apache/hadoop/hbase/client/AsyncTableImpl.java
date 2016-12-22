@@ -194,7 +194,7 @@ class AsyncTableImpl implements AsyncTable {
   }
 
   @Override
-  public List<CompletableFuture<Result>> get(List<Get> gets) {
-    return rawTable.get(gets).stream().map(this::wrap).collect(Collectors.toList());
+  public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
+    return rawTable.<T> batch(actions).stream().map(this::wrap).collect(Collectors.toList());
   }
 }

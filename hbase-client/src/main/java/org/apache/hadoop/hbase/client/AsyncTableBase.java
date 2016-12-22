@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static java.util.stream.Collectors.toList;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.voidBatch;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.voidBatchAll;
+
 import com.google.common.base.Preconditions;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -30,7 +34,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * The base interface for asynchronous version of Table. Obtain an instance from a
@@ -126,11 +129,7 @@ public interface AsyncTableBase {
    *         be wrapped by a {@link CompletableFuture}.
    */
   default CompletableFuture<Boolean> exists(Get get) {
-    if (!get.isCheckExistenceOnly()) {
-      get = ReflectionUtils.newInstance(get.getClass(), get);
-      get.setCheckExistenceOnly(true);
-    }
-    return get(get).thenApply(r -> r.getExists());
+    return get(toCheckExistenceOnly(get)).thenApply(r -> r.getExists());
   }
 
   /**
@@ -362,7 +361,9 @@ public interface AsyncTableBase {
    * @param gets The objects that specify what data to fetch and from which rows.
    * @return A list of {@link CompletableFuture}s that represent the result for each get.
    */
-  List<CompletableFuture<Result>> get(List<Get> gets);
+  default List<CompletableFuture<Result>> get(List<Get> gets) {
+    return batch(gets);
+  }
 
   /**
    * A simple version for batch get. It will fail if there are any failures and you will get the
@@ -371,8 +372,90 @@ public interface AsyncTableBase {
    * @return A {@link CompletableFuture} that wrapper the result list.
    */
   default CompletableFuture<List<Result>> getAll(List<Get> gets) {
-    List<CompletableFuture<Result>> futures = get(gets);
+    return batchAll(gets);
+  }
+
+  /**
+   * Test for the existence of columns in the table, as specified by the Gets.
+   * <p>
+   * This will return a list of booleans. Each value will be true if the related Get matches one or
+   * more keys, false if not.
+   * <p>
+   * This is a server-side call so it prevents any data from being transferred to the client.
+   * @param gets the Gets
+   * @return A list of {@link CompletableFuture}s that represent the existence for each get.
+   */
+  default List<CompletableFuture<Boolean>> exists(List<Get> gets) {
+    return get(toCheckExistenceOnly(gets)).stream().map(f -> f.thenApply(r -> r.getExists()))
+        .collect(toList());
+  }
+
+  /**
+   * A simple version for batch exists. It will fail if there are any failures and you will get the
+   * whole result boolean list at once if the operation is succeeded.
+   * @param gets the Gets
+   * @return A {@link CompletableFuture} that wrapper the result boolean list.
+   */
+  default CompletableFuture<List<Boolean>> existsAll(List<Get> gets) {
+    return getAll(toCheckExistenceOnly(gets))
+        .thenApply(l -> l.stream().map(r -> r.getExists()).collect(toList()));
+  }
+
+  /**
+   * Puts some data in the table, in batch.
+   * @param puts The list of mutations to apply.
+   * @return A list of {@link CompletableFuture}s that represent the result for each put.
+   */
+  default List<CompletableFuture<Void>> put(List<Put> puts) {
+    return voidBatch(this, puts);
+  }
+
+  /**
+   * A simple version of batch put. It will fail if there are any failures.
+   * @param puts The list of mutations to apply.
+   * @return A {@link CompletableFuture} that always returns null when complete normally.
+   */
+  default CompletableFuture<Void> putAll(List<Put> puts) {
+    return voidBatchAll(this, puts);
+  }
+
+  /**
+   * Deletes the specified cells/rows in bulk.
+   * @param deletes list of things to delete.
+   * @return A list of {@link CompletableFuture}s that represent the result for each delete.
+   */
+  default List<CompletableFuture<Void>> delete(List<Delete> deletes) {
+    return voidBatch(this, deletes);
+  }
+
+  /**
+   * A simple version of batch delete. It will fail if there are any failures.
+   * @param deletes list of things to delete.
+   * @return A {@link CompletableFuture} that always returns null when complete normally.
+   */
+  default CompletableFuture<Void> deleteAll(List<Delete> deletes) {
+    return voidBatchAll(this, deletes);
+  }
+
+  /**
+   * Method that does a batch call on Deletes, Gets, Puts, Increments and Appends. The ordering of
+   * execution of the actions is not defined. Meaning if you do a Put and a Get in the same
+   * {@link #batch} call, you will not necessarily be guaranteed that the Get returns what the Put
+   * had put.
+   * @param actions list of Get, Put, Delete, Increment, Append objects
+   * @return A list of {@link CompletableFuture}s that represent the result for each action.
+   */
+  <T> List<CompletableFuture<T>> batch(List<? extends Row> actions);
+
+  /**
+   * A simple version of batch. It will fail if there are any failures and you will get the whole
+   * result list at once if the operation is succeeded.
+   * @param actions list of Get, Put, Delete, Increment, Append objects
+   * @return A list of the result for the actions. Wrapped by a {@link CompletableFuture}.
+   */
+  default <T> CompletableFuture<List<T>> batchAll(List<? extends Row> actions) {
+    List<CompletableFuture<T>> futures = batch(actions);
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(Collectors.toList()));
+        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
   }
 }

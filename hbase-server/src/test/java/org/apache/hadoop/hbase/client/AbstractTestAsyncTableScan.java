@@ -22,10 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -62,12 +60,10 @@ public abstract class AbstractTestAsyncTableScan {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, splitKeys);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
-    RawAsyncTable table = ASYNC_CONN.getRawTable(TABLE_NAME);
-    List<CompletableFuture<?>> futures = new ArrayList<>();
-    IntStream.range(0, COUNT).forEach(
-      i -> futures.add(table.put(new Put(Bytes.toBytes(String.format("%03d", i)))
-          .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))));
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get();
+    ASYNC_CONN.getRawTable(TABLE_NAME).putAll(IntStream.range(0, COUNT)
+        .mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
+            .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))
+        .collect(Collectors.toList())).get();
   }
 
   @AfterClass

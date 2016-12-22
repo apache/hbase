@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 
@@ -28,6 +29,8 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +52,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -59,11 +63,11 @@ public final class ConnectionUtils {
 
   private static final Log LOG = LogFactory.getLog(ConnectionUtils.class);
 
-  private ConnectionUtils() {}
+  private ConnectionUtils() {
+  }
 
   /**
-   * Calculate pause time.
-   * Built on {@link HConstants#RETRY_BACKOFF}.
+   * Calculate pause time. Built on {@link HConstants#RETRY_BACKOFF}.
    * @param pause time to pause
    * @param tries amount of tries
    * @return How long to wait after <code>tries</code> retries
@@ -82,7 +86,6 @@ public final class ConnectionUtils {
     long jitter = (long) (normalPause * ThreadLocalRandom.current().nextFloat() * 0.01f);
     return normalPause + jitter;
   }
-
 
   /**
    * Adds / subs an up to 50% jitter to a pause time. Minimum is 1.
@@ -103,24 +106,23 @@ public final class ConnectionUtils {
    * @param cnm Replaces the nonce generator used, for testing.
    * @return old nonce generator.
    */
-  public static NonceGenerator injectNonceGeneratorForTesting(
-      ClusterConnection conn, NonceGenerator cnm) {
+  public static NonceGenerator injectNonceGeneratorForTesting(ClusterConnection conn,
+      NonceGenerator cnm) {
     return ConnectionImplementation.injectNonceGeneratorForTesting(conn, cnm);
   }
 
   /**
-   * Changes the configuration to set the number of retries needed when using Connection
-   * internally, e.g. for  updating catalog tables, etc.
-   * Call this method before we create any Connections.
+   * Changes the configuration to set the number of retries needed when using Connection internally,
+   * e.g. for updating catalog tables, etc. Call this method before we create any Connections.
    * @param c The Configuration instance to set the retries into.
    * @param log Used to log what we set in here.
    */
-  public static void setServerSideHConnectionRetriesConfig(
-      final Configuration c, final String sn, final Log log) {
+  public static void setServerSideHConnectionRetriesConfig(final Configuration c, final String sn,
+      final Log log) {
     // TODO: Fix this. Not all connections from server side should have 10 times the retries.
     int hcRetries = c.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
-    // Go big.  Multiply by 10.  If we can't get to meta after this many retries
+    // Go big. Multiply by 10. If we can't get to meta after this many retries
     // then something seriously wrong.
     int serversideMultiplier = c.getInt("hbase.client.serverside.retries.multiplier", 10);
     int retries = hcRetries * serversideMultiplier;
@@ -141,9 +143,9 @@ public final class ConnectionUtils {
    * @throws IOException if IO failure occurred
    */
   public static ClusterConnection createShortCircuitConnection(final Configuration conf,
-    ExecutorService pool, User user, final ServerName serverName,
-    final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
-    throws IOException {
+      ExecutorService pool, User user, final ServerName serverName,
+      final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
+      throws IOException {
     if (user == null) {
       user = UserProvider.instantiate(conf).getCurrent();
     }
@@ -166,8 +168,7 @@ public final class ConnectionUtils {
    */
   @VisibleForTesting
   public static void setupMasterlessConnection(Configuration conf) {
-    conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
-      MasterlessConnection.class.getName());
+    conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL, MasterlessConnection.class.getName());
   }
 
   /**
@@ -175,8 +176,7 @@ public final class ConnectionUtils {
    * region re-lookups.
    */
   static class MasterlessConnection extends ConnectionImplementation {
-    MasterlessConnection(Configuration conf,
-      ExecutorService pool, User user) throws IOException {
+    MasterlessConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
       super(conf, pool, user);
     }
 
@@ -197,8 +197,7 @@ public final class ConnectionUtils {
   /**
    * Get a unique key for the rpc stub to the given server.
    */
-  static String getStubKey(String serviceName, ServerName serverName,
-      boolean hostnameCanChange) {
+  static String getStubKey(String serviceName, ServerName serverName, boolean hostnameCanChange) {
     // Sometimes, servers go down and they come back up with the same hostname but a different
     // IP address. Force a resolution of the rsHostname by trying to instantiate an
     // InetSocketAddress, and this way we will rightfully get a new stubKey.
@@ -327,4 +326,25 @@ public final class ConnectionUtils {
 
   // Add a delta to avoid timeout immediately after a retry sleeping.
   static final long SLEEP_DELTA_NS = TimeUnit.MILLISECONDS.toNanos(1);
+
+  static Get toCheckExistenceOnly(Get get) {
+    if (get.isCheckExistenceOnly()) {
+      return get;
+    }
+    return ReflectionUtils.newInstance(get.getClass(), get).setCheckExistenceOnly(true);
+  }
+
+  static List<Get> toCheckExistenceOnly(List<Get> gets) {
+    return gets.stream().map(ConnectionUtils::toCheckExistenceOnly).collect(toList());
+  }
+
+  static List<CompletableFuture<Void>> voidBatch(AsyncTableBase table,
+      List<? extends Row> actions) {
+    return table.<Object> batch(actions).stream().map(f -> f.<Void> thenApply(r -> null))
+        .collect(toList());
+  }
+
+  static CompletableFuture<Void> voidBatchAll(AsyncTableBase table, List<? extends Row> actions) {
+    return table.<Object> batchAll(actions).thenApply(r -> null);
+  }
 }

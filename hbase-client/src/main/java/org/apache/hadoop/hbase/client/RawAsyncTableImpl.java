@@ -407,9 +407,10 @@ class RawAsyncTableImpl implements RawAsyncTable {
   }
 
   @Override
-  public List<CompletableFuture<Result>> get(List<Get> gets) {
-    return conn.callerFactory.multiGet().table(tableName).gets(gets)
+  public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
+    return conn.callerFactory.batch().table(tableName).actions(actions)
         .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-        .rpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS).call();
+        .readRpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS)
+        .writeRpcTimeout(writeRpcTimeoutNs, TimeUnit.NANOSECONDS).call();
   }
 }
