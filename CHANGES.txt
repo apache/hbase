@@ -1,5 +1,47 @@
 HBase Change Log
 
+Release 0.98.24 - 1/2/2017
+
+** Bug
+    * [HBASE-16409] - Row key for bad row should be properly delimited in VerifyReplication
+    * [HBASE-16663] - JMX ConnectorServer stopped when unauthorized user try to stop HM/RS/cluster
+    * [HBASE-16723] - RMI registry is not destroyed after stopping JMX Connector Server
+    * [HBASE-16765] - New SteppingRegionSplitPolicy, avoid too aggressive spread of regions for small tables.
+    * [HBASE-16807] - RegionServer will fail to report new active Hmaster until HMaster/RegionServer failover
+    * [HBASE-16816] - HMaster.move() should throw exception if region to move is not online
+    * [HBASE-16853] - Regions are assigned to Region Servers in /hbase/draining after HBase Master failover
+    * [HBASE-16870] - Add the metrics of replication sources which were transformed from other dead rs to ReplicationLoad
+    * [HBASE-16934] - Revert ITBLL misconfiguration check introduced in HBASE-16562
+    * [HBASE-16980] - TestRowProcessorEndpoint failing consistently
+    * [HBASE-17020] - keylen in midkey() dont computed correctly
+    * [HBASE-17044] - Fix merge failed before creating merged region leaves meta inconsistent
+    * [HBASE-17072] - CPU usage starts to climb up to 90-100% when using G1GC; purge ThreadLocal usage
+    * [HBASE-17074] - PreCommit job always fails because of OOM
+    * [HBASE-17096] - checkAndMutateApi doesn't work correctly on 0.98.19+
+    * [HBASE-17108] - ZKConfig.getZKQuorumServersString does not return the correct client port number
+    * [HBASE-17112] - Prevent setting timestamp of delta operations the same as previous value's
+    * [HBASE-17116] - [PerformanceEvaluation] Add option to configure block size
+    * [HBASE-17127] - Locate region should fail fast if underlying Connection already closed
+    * [HBASE-17224] - There are lots of spelling errors in the HBase logging and exception messages
+    * [HBASE-17256] - Rpc handler monitoring will be removed when the task queue is full
+    * [HBASE-17297] - Single Filter in parenthesis cannot be parsed correctly
+    * [HBASE-17328] - Properly dispose of looped replication peers
+    * [HBASE-17341] - Add a timeout during replication endpoint termination
+
+** Improvement
+    * [HBASE-16008] - A robust way deal with early termination of HBCK
+    * [HBASE-16450] - Shell tool to dump replication queues 
+    * [HBASE-16708] - Expose endpoint Coprocessor name in "responseTooSlow" log messages
+    * [HBASE-16772] - Add verbose option to VerifyReplication for logging good rows
+    * [HBASE-16947] - Some improvements for DumpReplicationQueues tool
+    * [HBASE-17077] - Don't copy the replication queue belonging to the peer which has been deleted
+    * [HBASE-17211] - Add more details in log when UnknownScannerException thrown in ScannerCallable
+    * [HBASE-17276] - Reduce log spam from WrongRegionException in large multi()'s
+
+** Task
+    * [HBASE-16335] - update to latest apache parent pom
+
+
 Release 0.98.23 - 10/11/2016
 
 ** Sub-task
