@@ -2708,4 +2708,16 @@ public class AccessController extends BaseMasterAndRegionObserver
       String peerId) throws IOException {
     requirePermission(getActiveUser(ctx), "removeReplicationPeer", Action.ADMIN);
   }
+
+  @Override
+  public void preEnableReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId) throws IOException {
+    requirePermission(getActiveUser(ctx), "enableReplicationPeer", Action.ADMIN);
+  }
+
+  @Override
+  public void preDisableReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId) throws IOException {
+    requirePermission(getActiveUser(ctx), "disableReplicationPeer", Action.ADMIN);
+  }
 }

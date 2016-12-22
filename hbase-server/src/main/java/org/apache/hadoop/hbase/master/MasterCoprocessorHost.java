@@ -1687,4 +1687,44 @@ public class MasterCoprocessorHost
       }
     });
   }
+
+  public void preEnableReplicationPeer(final String peerId) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preEnableReplicationPeer(ctx, peerId);
+      }
+    });
+  }
+
+  public void postEnableReplicationPeer(final String peerId) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postEnableReplicationPeer(ctx, peerId);
+      }
+    });
+  }
+
+  public void preDisableReplicationPeer(final String peerId) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preDisableReplicationPeer(ctx, peerId);
+      }
+    });
+  }
+
+  public void postDisableReplicationPeer(final String peerId) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postDisableReplicationPeer(ctx, peerId);
+      }
+    });
+  }
 }

@@ -89,6 +89,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -1663,6 +1667,28 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.removeReplicationPeer(request.getPeerId());
       return RemoveReplicationPeerResponse.newBuilder().build();
+    } catch (ReplicationException | IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public EnableReplicationPeerResponse enableReplicationPeer(RpcController controller,
+      EnableReplicationPeerRequest request) throws ServiceException {
+    try {
+      master.enableReplicationPeer(request.getPeerId());
+      return EnableReplicationPeerResponse.newBuilder().build();
+    } catch (ReplicationException | IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DisableReplicationPeerResponse disableReplicationPeer(RpcController controller,
+      DisableReplicationPeerRequest request) throws ServiceException {
+    try {
+      master.disableReplicationPeer(request.getPeerId());
+      return DisableReplicationPeerResponse.newBuilder().build();
     } catch (ReplicationException | IOException e) {
       throw new ServiceException(e);
     }

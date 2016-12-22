@@ -1842,4 +1842,20 @@ public interface Admin extends Abortable, Closeable {
    */
   default void removeReplicationPeer(final String peerId) throws IOException {
   }
+
+  /**
+   * Restart the replication stream to the specified peer
+   * @param peerId a short name that identifies the peer
+   * @throws IOException
+   */
+  default void enableReplicationPeer(final String peerId) throws IOException {
+  }
+
+  /**
+   * Stop the replication stream to the specified peer
+   * @param peerId a short name that identifies the peer
+   * @throws IOException
+   */
+  default void disableReplicationPeer(final String peerId) throws IOException {
+  }
 }

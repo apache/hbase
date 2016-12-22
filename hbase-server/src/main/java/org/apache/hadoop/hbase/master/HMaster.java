@@ -3172,4 +3172,28 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.postRemoveReplicationPeer(peerId);
     }
   }
+
+  @Override
+  public void enableReplicationPeer(String peerId) throws ReplicationException, IOException {
+    if (cpHost != null) {
+      cpHost.preEnableReplicationPeer(peerId);
+    }
+    LOG.info(getClientIdAuditPrefix() + " enable replication peer, id=" + peerId);
+    this.replicationManager.enableReplicationPeer(peerId);
+    if (cpHost != null) {
+      cpHost.postEnableReplicationPeer(peerId);
+    }
+  }
+
+  @Override
+  public void disableReplicationPeer(String peerId) throws ReplicationException, IOException {
+    if (cpHost != null) {
+      cpHost.preDisableReplicationPeer(peerId);
+    }
+    LOG.info(getClientIdAuditPrefix() + " disable replication peer, id=" + peerId);
+    this.replicationManager.disableReplicationPeer(peerId);
+    if (cpHost != null) {
+      cpHost.postDisableReplicationPeer(peerId);
+    }
+  }
 }

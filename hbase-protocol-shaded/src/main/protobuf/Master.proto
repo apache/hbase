@@ -855,4 +855,12 @@ service MasterService {
   /** Remove a replication peer */
   rpc RemoveReplicationPeer(RemoveReplicationPeerRequest)
     returns(RemoveReplicationPeerResponse);
+
+  /** Enable a replication peer */
+  rpc EnableReplicationPeer(EnableReplicationPeerRequest)
+    returns(EnableReplicationPeerResponse);
+
+  /** Disable a replication peer */
+  rpc DisableReplicationPeer(DisableReplicationPeerRequest)
+    returns(DisableReplicationPeerResponse);
 }

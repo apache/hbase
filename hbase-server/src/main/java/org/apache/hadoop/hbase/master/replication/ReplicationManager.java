@@ -73,6 +73,14 @@ public class ReplicationManager {
     this.replicationPeers.unregisterPeer(peerId);
   }
 
+  public void enableReplicationPeer(String peerId) throws ReplicationException {
+    this.replicationPeers.enablePeer(peerId);
+  }
+
+  public void disableReplicationPeer(String peerId) throws ReplicationException {
+    this.replicationPeers.disablePeer(peerId);
+  }
+
   /**
    * Set a namespace in the peer config means that all tables in this namespace
    * will be replicated to the peer cluster.

@@ -90,6 +90,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormali
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1652,6 +1656,18 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       public RemoveReplicationPeerResponse removeReplicationPeer(RpcController controller,
           RemoveReplicationPeerRequest request) throws ServiceException {
         return stub.removeReplicationPeer(controller, request);
+      }
+
+      @Override
+      public EnableReplicationPeerResponse enableReplicationPeer(RpcController controller,
+          EnableReplicationPeerRequest request) throws ServiceException {
+        return stub.enableReplicationPeer(controller, request);
+      }
+
+      @Override
+      public DisableReplicationPeerResponse disableReplicationPeer(RpcController controller,
+          DisableReplicationPeerRequest request) throws ServiceException {
+        return stub.disableReplicationPeer(controller, request);
       }
     };
   }

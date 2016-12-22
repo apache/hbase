@@ -391,4 +391,12 @@ public class MockNoopMasterServices implements MasterServices, Server {
   @Override
   public void removeReplicationPeer(String peerId) throws ReplicationException {
   }
+
+  @Override
+  public void enableReplicationPeer(String peerId) throws ReplicationException, IOException {
+  }
+
+  @Override
+  public void disableReplicationPeer(String peerId) throws ReplicationException, IOException {
+  }
 }

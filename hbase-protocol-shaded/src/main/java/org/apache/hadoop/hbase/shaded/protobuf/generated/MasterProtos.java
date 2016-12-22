@@ -66368,6 +66368,30 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse> done);
 
+      /**
+       * <pre>
+       ** Enable a replication peer 
+       * </pre>
+       *
+       * <code>rpc EnableReplicationPeer(.hbase.pb.EnableReplicationPeerRequest) returns (.hbase.pb.EnableReplicationPeerResponse);</code>
+       */
+      public abstract void enableReplicationPeer(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse> done);
+
+      /**
+       * <pre>
+       ** Disable a replication peer 
+       * </pre>
+       *
+       * <code>rpc DisableReplicationPeer(.hbase.pb.DisableReplicationPeerRequest) returns (.hbase.pb.DisableReplicationPeerResponse);</code>
+       */
+      public abstract void disableReplicationPeer(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse> done);
+
     }
 
     public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Service newReflectiveService(
@@ -66853,6 +66877,22 @@ public final class MasterProtos {
           impl.removeReplicationPeer(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void enableReplicationPeer(
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse> done) {
+          impl.enableReplicationPeer(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void disableReplicationPeer(
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse> done) {
+          impl.disableReplicationPeer(controller, request, done);
+        }
+
       };
     }
 
@@ -66995,6 +67035,10 @@ public final class MasterProtos {
               return impl.addReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest)request);
             case 59:
               return impl.removeReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest)request);
+            case 60:
+              return impl.enableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest)request);
+            case 61:
+              return impl.disableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -67129,6 +67173,10 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest.getDefaultInstance();
             case 59:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest.getDefaultInstance();
+            case 60:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest.getDefaultInstance();
+            case 61:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -67263,6 +67311,10 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse.getDefaultInstance();
             case 59:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance();
+            case 60:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance();
+            case 61:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -68020,6 +68072,30 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest request,
         org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse> done);
 
+    /**
+     * <pre>
+     ** Enable a replication peer 
+     * </pre>
+     *
+     * <code>rpc EnableReplicationPeer(.hbase.pb.EnableReplicationPeerRequest) returns (.hbase.pb.EnableReplicationPeerResponse);</code>
+     */
+    public abstract void enableReplicationPeer(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest request,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse> done);
+
+    /**
+     * <pre>
+     ** Disable a replication peer 
+     * </pre>
+     *
+     * <code>rpc DisableReplicationPeer(.hbase.pb.DisableReplicationPeerRequest) returns (.hbase.pb.DisableReplicationPeerResponse);</code>
+     */
+    public abstract void disableReplicationPeer(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse> done);
+
     public static final
         org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -68342,6 +68418,16 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse>specializeCallback(
               done));
           return;
+        case 60:
+          this.enableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest)request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse>specializeCallback(
+              done));
+          return;
+        case 61:
+          this.disableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest)request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -68476,6 +68562,10 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest.getDefaultInstance();
         case 59:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest.getDefaultInstance();
+        case 60:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest.getDefaultInstance();
+        case 61:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -68610,6 +68700,10 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse.getDefaultInstance();
         case 59:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance();
+        case 60:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance();
+        case 61:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -69530,6 +69624,36 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.class,
             org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance()));
       }
+
+      public  void enableReplicationPeer(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(60),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance(),
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.class,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance()));
+      }
+
+      public  void disableReplicationPeer(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(61),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance(),
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.class,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -69836,6 +69960,16 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse removeReplicationPeer(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse enableReplicationPeer(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse disableReplicationPeer(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
     }
 
@@ -70563,6 +70697,30 @@ public final class MasterProtos {
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse enableReplicationPeer(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(60),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse disableReplicationPeer(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(61),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance());
       }
 
     }
@@ -71346,7 +71504,7 @@ public final class MasterProtos {
       "ENTICATION\020\000\022\031\n\025SECURE_AUTHENTICATION\020\001\022",
       "\021\n\rAUTHORIZATION\020\002\022\026\n\022CELL_AUTHORIZATION" +
       "\020\003\022\023\n\017CELL_VISIBILITY\020\004*(\n\020MasterSwitchT" +
-      "ype\022\t\n\005SPLIT\020\000\022\t\n\005MERGE\020\0012\374*\n\rMasterServ" +
+      "ype\022\t\n\005SPLIT\020\000\022\t\n\005MERGE\020\0012\323,\n\rMasterServ" +
       "ice\022e\n\024GetSchemaAlterStatus\022%.hbase.pb.G" +
       "etSchemaAlterStatusRequest\032&.hbase.pb.Ge" +
       "tSchemaAlterStatusResponse\022b\n\023GetTableDe" +
@@ -71484,9 +71642,14 @@ public final class MasterProtos {
       "eplicationPeerResponse\022h\n\025RemoveReplicat" +
       "ionPeer\022&.hbase.pb.RemoveReplicationPeer" +
       "Request\032\'.hbase.pb.RemoveReplicationPeer",
-      "ResponseBI\n1org.apache.hadoop.hbase.shad" +
-      "ed.protobuf.generatedB\014MasterProtosH\001\210\001\001" +
-      "\240\001\001"
+      "Response\022h\n\025EnableReplicationPeer\022&.hbas" +
+      "e.pb.EnableReplicationPeerRequest\032\'.hbas" +
+      "e.pb.EnableReplicationPeerResponse\022k\n\026Di" +
+      "sableReplicationPeer\022\'.hbase.pb.DisableR" +
+      "eplicationPeerRequest\032(.hbase.pb.Disable" +
+      "ReplicationPeerResponseBI\n1org.apache.ha" +
+      "doop.hbase.shaded.protobuf.generatedB\014Ma" +
+      "sterProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

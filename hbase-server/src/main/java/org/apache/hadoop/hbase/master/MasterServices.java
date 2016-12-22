@@ -431,4 +431,16 @@ public interface MasterServices extends Server {
    * @param peerId a short name that identifies the peer
    */
   void removeReplicationPeer(String peerId) throws ReplicationException, IOException;
+
+  /**
+   * Restart the replication stream to the specified peer
+   * @param peerId a short name that identifies the peer
+   */
+  void enableReplicationPeer(String peerId) throws ReplicationException, IOException;
+
+  /**
+   * Stop the replication stream to the specified peer
+   * @param peerId a short name that identifies the peer
+   */
+  void disableReplicationPeer(String peerId) throws ReplicationException, IOException;
 }

@@ -3770,4 +3770,28 @@ public class HBaseAdmin implements Admin {
       }
     });
   }
+
+  @Override
+  public void enableReplicationPeer(final String peerId) throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        master.enableReplicationPeer(getRpcController(),
+          RequestConverter.buildEnableReplicationPeerRequest(peerId));
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public void disableReplicationPeer(final String peerId) throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        master.disableReplicationPeer(getRpcController(),
+          RequestConverter.buildDisableReplicationPeerRequest(peerId));
+        return null;
+      }
+    });
+  }
 }

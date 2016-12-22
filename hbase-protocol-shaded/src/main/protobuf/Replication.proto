@@ -40,3 +40,17 @@ message RemoveReplicationPeerRequest {
 
 message RemoveReplicationPeerResponse {
 }
+
+message EnableReplicationPeerRequest {
+  required string peer_id = 1;
+}
+
+message EnableReplicationPeerResponse {
+}
+
+message DisableReplicationPeerRequest {
+  required string peer_id = 1;
+}
+
+message DisableReplicationPeerResponse {
+}

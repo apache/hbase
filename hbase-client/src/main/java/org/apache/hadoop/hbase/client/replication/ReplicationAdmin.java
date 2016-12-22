@@ -228,16 +228,16 @@ public class ReplicationAdmin implements Closeable {
    * Restart the replication stream to the specified peer.
    * @param id a short name that identifies the cluster
    */
-  public void enablePeer(String id) throws ReplicationException {
-    this.replicationPeers.enablePeer(id);
+  public void enablePeer(String id) throws IOException {
+    this.admin.enableReplicationPeer(id);
   }
 
   /**
    * Stop the replication stream to the specified peer.
    * @param id a short name that identifies the cluster
    */
-  public void disablePeer(String id) throws ReplicationException {
-    this.replicationPeers.disablePeer(id);
+  public void disablePeer(String id) throws IOException {
+    this.admin.disableReplicationPeer(id);
   }
 
   /**

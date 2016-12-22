@@ -114,6 +114,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -1577,6 +1579,20 @@ public final class RequestConverter {
   public static ReplicationProtos.RemoveReplicationPeerRequest buildRemoveReplicationPeerRequest(
       String peerId) {
     RemoveReplicationPeerRequest.Builder builder = RemoveReplicationPeerRequest.newBuilder();
+    builder.setPeerId(peerId);
+    return builder.build();
+  }
+
+  public static ReplicationProtos.EnableReplicationPeerRequest buildEnableReplicationPeerRequest(
+      String peerId) {
+    EnableReplicationPeerRequest.Builder builder = EnableReplicationPeerRequest.newBuilder();
+    builder.setPeerId(peerId);
+    return builder.build();
+  }
+
+  public static ReplicationProtos.DisableReplicationPeerRequest buildDisableReplicationPeerRequest(
+      String peerId) {
+    DisableReplicationPeerRequest.Builder builder = DisableReplicationPeerRequest.newBuilder();
     builder.setPeerId(peerId);
     return builder.build();
   }
