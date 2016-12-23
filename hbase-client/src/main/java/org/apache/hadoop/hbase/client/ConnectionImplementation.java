@@ -78,12 +78,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
@@ -1668,6 +1674,25 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       public DisableReplicationPeerResponse disableReplicationPeer(RpcController controller,
           DisableReplicationPeerRequest request) throws ServiceException {
         return stub.disableReplicationPeer(controller, request);
+      }
+
+      @Override
+      public ListDrainingRegionServersResponse listDrainingRegionServers(RpcController controller,
+          ListDrainingRegionServersRequest request) throws ServiceException {
+        return stub.listDrainingRegionServers(controller, request);
+      }
+
+      @Override
+      public DrainRegionServersResponse drainRegionServers(RpcController controller,
+          DrainRegionServersRequest request) throws ServiceException {
+        return stub.drainRegionServers(controller, request);
+      }
+
+      @Override
+      public RemoveDrainFromRegionServersResponse removeDrainFromRegionServers(
+          RpcController controller, RemoveDrainFromRegionServersRequest request)
+          throws ServiceException {
+        return stub.removeDrainFromRegionServers(controller, request);
       }
     };
   }

@@ -120,6 +120,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
@@ -140,6 +141,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedur
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
@@ -155,6 +157,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyName
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
@@ -3790,6 +3793,61 @@ public class HBaseAdmin implements Admin {
       protected Void rpcCall() throws Exception {
         master.disableReplicationPeer(getRpcController(),
           RequestConverter.buildDisableReplicationPeerRequest(peerId));
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public void drainRegionServers(List<ServerName> servers) throws IOException {
+    final List<HBaseProtos.ServerName> pbServers = new ArrayList<HBaseProtos.ServerName>();
+    for (ServerName server : servers) {
+      // Parse to ServerName to do simple validation.
+      ServerName.parseServerName(server.toString());
+      pbServers.add(ProtobufUtil.toServerName(server));
+    }
+
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      public Void rpcCall() throws ServiceException {
+        DrainRegionServersRequest req =
+            DrainRegionServersRequest.newBuilder().addAllServerName(pbServers).build();
+        master.drainRegionServers(getRpcController(), req);
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public List<ServerName> listDrainingRegionServers() throws IOException {
+    return executeCallable(new MasterCallable<List<ServerName>>(getConnection(),
+              getRpcControllerFactory()) {
+      @Override
+      public List<ServerName> rpcCall() throws ServiceException {
+        ListDrainingRegionServersRequest req = ListDrainingRegionServersRequest.newBuilder().build();
+        List<ServerName> servers = new ArrayList<ServerName>();
+        for (HBaseProtos.ServerName server : master.listDrainingRegionServers(null, req)
+            .getServerNameList()) {
+          servers.add(ProtobufUtil.toServerName(server));
+        }
+        return servers;
+      }
+    });
+  }
+
+  @Override
+  public void removeDrainFromRegionServers(List<ServerName> servers) throws IOException {
+    final List<HBaseProtos.ServerName> pbServers = new ArrayList<HBaseProtos.ServerName>();
+    for (ServerName server : servers) {
+      pbServers.add(ProtobufUtil.toServerName(server));
+    }
+
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      public Void rpcCall() throws ServiceException {
+        RemoveDrainFromRegionServersRequest req = RemoveDrainFromRegionServersRequest.newBuilder()
+            .addAllServerName(pbServers).build();
+        master.removeDrainFromRegionServers(getRpcController(), req);
         return null;
       }
     });

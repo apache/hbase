@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.security.auth.login.AppConfigurationEntry;
@@ -317,6 +318,26 @@ public class TestZooKeeperACL {
     public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
       return null;
     }
+  }
+
+  @Test(timeout = 10000)
+  public void testAdminDrainAllowedOnSecureZK() throws Exception {
+    if (!secureZKAvailable) {
+      return;
+    }
+    List<ServerName> drainingServers = new ArrayList<ServerName>();
+    drainingServers.add(ServerName.parseServerName("ZZZ,123,123"));
+
+    // If unable to connect to secure ZK cluster then this operation would fail.
+    TEST_UTIL.getAdmin().drainRegionServers(drainingServers);
+
+    drainingServers = TEST_UTIL.getAdmin().listDrainingRegionServers();
+    assertEquals(1, drainingServers.size());
+    assertEquals(ServerName.parseServerName("ZZZ,123,123"), drainingServers.get(0));
+
+    TEST_UTIL.getAdmin().removeDrainFromRegionServers(drainingServers);
+    drainingServers = TEST_UTIL.getAdmin().listDrainingRegionServers();
+    assertEquals(0, drainingServers.size());
   }
 
 }

@@ -3196,4 +3196,54 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.postDisableReplicationPeer(peerId);
     }
   }
+
+  @Override
+  public void drainRegionServer(final ServerName server) {
+    String parentZnode = getZooKeeper().znodePaths.drainingZNode;
+    try {
+      String node = ZKUtil.joinZNode(parentZnode, server.getServerName());
+      ZKUtil.createAndFailSilent(getZooKeeper(), node);
+    } catch (KeeperException ke) {
+      LOG.warn(this.zooKeeper.prefix("Unable to add drain for '" + server.getServerName() + "'."),
+        ke);
+    }
+  }
+
+  @Override
+  public List<ServerName> listDrainingRegionServers() {
+    String parentZnode = getZooKeeper().znodePaths.drainingZNode;
+    List<ServerName> serverNames = new ArrayList<ServerName>();
+    List<String> serverStrs = null;
+    try {
+      serverStrs = ZKUtil.listChildrenNoWatch(getZooKeeper(), parentZnode);
+    } catch (KeeperException ke) {
+      LOG.warn(this.zooKeeper.prefix("Unable to list draining servers."), ke);
+    }
+    // No nodes is empty draining list or ZK connectivity issues.
+    if (serverStrs == null) {
+      return serverNames;
+    }
+
+    // Skip invalid ServerNames in result
+    for (String serverStr : serverStrs) {
+      try {
+        serverNames.add(ServerName.parseServerName(serverStr));
+      } catch (IllegalArgumentException iae) {
+        LOG.warn("Unable to cast '" + serverStr + "' to ServerName.", iae);
+      }
+    }
+    return serverNames;
+  }
+
+  @Override
+  public void removeDrainFromRegionServer(ServerName server) {
+    String parentZnode = getZooKeeper().znodePaths.drainingZNode;
+    String node = ZKUtil.joinZNode(parentZnode, server.getServerName());
+    try {
+      ZKUtil.deleteNodeFailSilent(getZooKeeper(), node);
+    } catch (KeeperException ke) {
+      LOG.warn(
+        this.zooKeeper.prefix("Unable to remove drain for '" + server.getServerName() + "'."), ke);
+    }
+  }
 }

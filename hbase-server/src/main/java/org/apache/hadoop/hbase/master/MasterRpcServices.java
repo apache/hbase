@@ -1693,4 +1693,55 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(e);
     }
   }
+
+  @Override
+  public ListDrainingRegionServersResponse listDrainingRegionServers(RpcController controller,
+      ListDrainingRegionServersRequest request) throws ServiceException {
+    ListDrainingRegionServersResponse.Builder response =
+        ListDrainingRegionServersResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      List<ServerName> servers = master.listDrainingRegionServers();
+      for (ServerName server : servers) {
+        response.addServerName(ProtobufUtil.toServerName(server));
+      }
+    } catch (IOException io) {
+      throw new ServiceException(io);
+    }
+
+    return response.build();
+  }
+
+  @Override
+  public DrainRegionServersResponse drainRegionServers(RpcController controller,
+      DrainRegionServersRequest request) throws ServiceException {
+    DrainRegionServersResponse.Builder response = DrainRegionServersResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
+        master.drainRegionServer(ProtobufUtil.toServerName(pbServer));
+      }
+    } catch (IOException io) {
+      throw new ServiceException(io);
+    }
+
+    return response.build();
+  }
+
+  @Override
+  public RemoveDrainFromRegionServersResponse removeDrainFromRegionServers(RpcController controller,
+      RemoveDrainFromRegionServersRequest request) throws ServiceException {
+    RemoveDrainFromRegionServersResponse.Builder response =
+        RemoveDrainFromRegionServersResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      for (HBaseProtos.ServerName pbServer : request.getServerNameList()) {
+        master.removeDrainFromRegionServer(ProtobufUtil.toServerName(pbServer));
+      }
+    } catch (IOException io) {
+      throw new ServiceException(io);
+    }
+
+    return response.build();
+  }
 }

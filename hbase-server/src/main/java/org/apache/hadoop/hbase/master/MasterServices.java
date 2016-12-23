@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -443,4 +444,23 @@ public interface MasterServices extends Server {
    * @param peerId a short name that identifies the peer
    */
   void disableReplicationPeer(String peerId) throws ReplicationException, IOException;
+
+  /**
+   * Mark a region server as draining to prevent additional regions from getting assigned to it.
+   * @param server Region servers to drain.
+   */
+  void drainRegionServer(final ServerName server);
+
+  /**
+   * List region servers marked as draining to not get additional regions assigned to them.
+   * @return List of draining servers.
+   */
+  List<ServerName> listDrainingRegionServers();
+
+  /**
+   * Remove drain from a region server to allow additional regions assignments.
+   * @param server Region server to remove drain from.
+   */
+  void removeDrainFromRegionServer(final ServerName server);
+
 }

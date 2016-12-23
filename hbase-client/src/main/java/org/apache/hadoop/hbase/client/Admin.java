@@ -1858,4 +1858,23 @@ public interface Admin extends Abortable, Closeable {
    */
   default void disableReplicationPeer(final String peerId) throws IOException {
   }
+
+  /**
+   * Mark a region server as draining to prevent additional regions from getting assigned to it.
+   * @param servers List of region servers to drain.
+   */
+  void drainRegionServers(List<ServerName> servers) throws IOException;
+
+  /**
+   * List region servers marked as draining to not get additional regions assigned to them.
+   * @return List of draining region servers.
+   */
+  List<ServerName> listDrainingRegionServers() throws IOException;
+
+  /**
+   * Remove drain from a region server to allow additional regions assignments.
+   * @param servers List of region servers to remove drain from.
+   */
+  void removeDrainFromRegionServers(List<ServerName> servers) throws IOException;
+
 }

@@ -568,6 +568,27 @@ message SecurityCapabilitiesResponse {
   repeated Capability capabilities = 1;
 }
 
+message ListDrainingRegionServersRequest {
+}
+
+message ListDrainingRegionServersResponse {
+ repeated ServerName server_name = 1;
+}
+
+message DrainRegionServersRequest {
+ repeated ServerName server_name = 1;
+}
+
+message DrainRegionServersResponse {
+}
+
+message RemoveDrainFromRegionServersRequest {
+ repeated ServerName server_name = 1;
+}
+
+message RemoveDrainFromRegionServersResponse {
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -863,4 +884,16 @@ service MasterService {
   /** Disable a replication peer */
   rpc DisableReplicationPeer(DisableReplicationPeerRequest)
     returns(DisableReplicationPeerResponse);
+
+  /** Returns a list of ServerNames marked as draining. */
+  rpc listDrainingRegionServers(ListDrainingRegionServersRequest)
+    returns(ListDrainingRegionServersResponse);
+
+  /** Mark a list of ServerNames as draining. */
+  rpc drainRegionServers(DrainRegionServersRequest)
+    returns(DrainRegionServersResponse);
+
+  /** Unmark a list of ServerNames marked as draining. */
+  rpc removeDrainFromRegionServers(RemoveDrainFromRegionServersRequest)
+    returns(RemoveDrainFromRegionServersResponse);
 }

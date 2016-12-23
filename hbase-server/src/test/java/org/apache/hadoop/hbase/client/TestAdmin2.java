@@ -24,8 +24,14 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -757,5 +763,76 @@ public class TestAdmin2 {
   public void testListProcedures() throws Exception {
     ProcedureInfo[] procList = admin.listProcedures();
     assertTrue(procList.length >= 0);
+  }
+
+  /*
+   * Test that invalid draining server names (invalid start code) don't get added to drain list.
+   */
+  @Test(timeout = 10000, expected = IllegalArgumentException.class)
+  public void testCheckDrainServerName() throws Exception {
+    List<ServerName> servers = new ArrayList<ServerName>();
+    servers.add(ServerName.parseServerName("127.0.0.1:123"));
+    admin.drainRegionServers(servers);
+  }
+
+  /*
+   * This test drains all regions so cannot be run in parallel with other tests.
+   */
+  @Test(timeout = 30000)
+  public void testDrainRegionServers() throws Exception {
+    List<ServerName> drainingServers = admin.listDrainingRegionServers();
+    assertTrue(drainingServers.isEmpty());
+
+    // Drain all region servers.
+    Collection<ServerName> clusterServers = admin.getClusterStatus().getServers();
+    drainingServers = new ArrayList<ServerName>();
+    for (ServerName server : clusterServers) {
+      drainingServers.add(server);
+    }
+    admin.drainRegionServers(drainingServers);
+
+    // Check that drain lists all region servers.
+    drainingServers = admin.listDrainingRegionServers();
+    assertEquals(clusterServers.size(), drainingServers.size());
+    for (ServerName server : clusterServers) {
+      assertTrue(drainingServers.contains(server));
+    }
+
+    // Try for 20 seconds to create table (new region). Will not complete because all RSs draining.
+    TableName hTable = TableName.valueOf("testDrainRegionServer");
+    final HTableDescriptor htd = new HTableDescriptor(hTable);
+    htd.addFamily(new HColumnDescriptor("cf"));
+
+    final Runnable createTable = new Thread() {
+      @Override
+      public void run() {
+        try {
+          admin.createTable(htd);
+        } catch (IOException ioe) {
+          assertTrue(false); // Should not get IOException.
+        }
+      }
+    };
+
+    final ExecutorService executor = Executors.newSingleThreadExecutor();
+    final java.util.concurrent.Future<?> future = executor.submit(createTable);
+    executor.shutdown();
+    try {
+      future.get(20, TimeUnit.SECONDS);
+    } catch (TimeoutException ie) {
+      assertTrue(true); // Expecting timeout to happen.
+    }
+
+    // Kill executor if still processing.
+    if (!executor.isTerminated()) {
+      executor.shutdownNow();
+      assertTrue(true);
+    }
+
+    // Remove drain list.
+    admin.removeDrainFromRegionServers(drainingServers);
+    drainingServers = admin.listDrainingRegionServers();
+    assertTrue(drainingServers.isEmpty());
+
   }
 }
