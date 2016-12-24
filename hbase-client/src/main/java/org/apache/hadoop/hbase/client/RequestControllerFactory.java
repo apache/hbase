@@ -1,4 +1,5 @@
-/**
+/*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,29 +16,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.client;
 
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
- * Provide a way to access the inner buffer.
- * The purpose is to reduce the elapsed time to move a large number
- * of elements between collections.
- * @param <T>
+ * A factory class that constructs an {@link org.apache.hadoop.hbase.client.RequestController}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface RowAccess<T> extends Iterable<T> {
+public final class RequestControllerFactory {
+  public static final String REQUEST_CONTROLLER_IMPL_CONF_KEY = "hbase.client.request.controller.impl";
   /**
-   * @return true if there are no elements.
+   * Constructs a {@link org.apache.hadoop.hbase.client.RequestController}.
+   * @param conf The {@link Configuration} to use.
+   * @return A RequestController which is built according to the configuration.
    */
-  boolean isEmpty();
-
-  /**
-   * @return the number of elements in this list.
-   */
-  int size();
+  public static RequestController create(Configuration conf) {
+    Class<? extends RequestController> clazz= conf.getClass(REQUEST_CONTROLLER_IMPL_CONF_KEY,
+      SimpleRequestController.class, RequestController.class);
+    return ReflectionUtils.newInstance(clazz, conf);
+  }
 }

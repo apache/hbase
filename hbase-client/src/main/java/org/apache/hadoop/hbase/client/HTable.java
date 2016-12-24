@@ -103,27 +103,28 @@ import org.apache.hadoop.hbase.util.Threads;
 @InterfaceStability.Stable
 public class HTable implements Table {
   private static final Log LOG = LogFactory.getLog(HTable.class);
-  protected ClusterConnection connection;
+  private static final Consistency DEFAULT_CONSISTENCY = Consistency.STRONG;
+  private final ClusterConnection connection;
   private final TableName tableName;
-  private volatile Configuration configuration;
-  private ConnectionConfiguration connConfiguration;
-  protected BufferedMutatorImpl mutator;
+  private final Configuration configuration;
+  private final ConnectionConfiguration connConfiguration;
+  @VisibleForTesting
+  BufferedMutatorImpl mutator;
   private boolean closed = false;
-  protected int scannerCaching;
-  protected long scannerMaxResultSize;
-  private ExecutorService pool;  // For Multi & Scan
+  private final int scannerCaching;
+  private final long scannerMaxResultSize;
+  private final ExecutorService pool;  // For Multi & Scan
   private int operationTimeout; // global timeout for each blocking method with retrying rpc
   private int readRpcTimeout; // timeout for each read rpc request
   private int writeRpcTimeout; // timeout for each write rpc request
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
-  private final boolean cleanupConnectionOnClose; // close the connection in close()
-  private Consistency defaultConsistency = Consistency.STRONG;
-  private HRegionLocator locator;
+  private final HRegionLocator locator;
 
   /** The Async process for batch */
-  protected AsyncProcess multiAp;
-  private RpcRetryingCallerFactory rpcCallerFactory;
-  private RpcControllerFactory rpcControllerFactory;
+  @VisibleForTesting
+  AsyncProcess multiAp;
+  private final RpcRetryingCallerFactory rpcCallerFactory;
+  private final RpcControllerFactory rpcControllerFactory;
 
   // Marked Private @since 1.0
   @InterfaceAudience.Private
@@ -167,22 +168,42 @@ public class HTable implements Table {
       throw new IllegalArgumentException("Given table name is null");
     }
     this.tableName = tableName;
-    this.cleanupConnectionOnClose = false;
     this.connection = connection;
     this.configuration = connection.getConfiguration();
-    this.connConfiguration = tableConfig;
-    this.pool = pool;
+    if (tableConfig == null) {
+      connConfiguration = new ConnectionConfiguration(configuration);
+    } else {
+      connConfiguration = tableConfig;
+    }
     if (pool == null) {
       this.pool = getDefaultExecutor(this.configuration);
       this.cleanupPoolOnClose = true;
     } else {
+      this.pool = pool;
       this.cleanupPoolOnClose = false;
     }
+    if (rpcCallerFactory == null) {
+      this.rpcCallerFactory = connection.getNewRpcRetryingCallerFactory(configuration);
+    } else {
+      this.rpcCallerFactory = rpcCallerFactory;
+    }
 
-    this.rpcCallerFactory = rpcCallerFactory;
-    this.rpcControllerFactory = rpcControllerFactory;
+    if (rpcControllerFactory == null) {
+      this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);
+    } else {
+      this.rpcControllerFactory = rpcControllerFactory;
+    }
 
-    this.finishSetup();
+    this.operationTimeout = tableName.isSystemTable() ?
+        connConfiguration.getMetaOperationTimeout() : connConfiguration.getOperationTimeout();
+    this.readRpcTimeout = connConfiguration.getReadRpcTimeout();
+    this.writeRpcTimeout = connConfiguration.getWriteRpcTimeout();
+    this.scannerCaching = connConfiguration.getScannerCaching();
+    this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
+
+    // puts need to track errors globally due to how the APIs currently work.
+    multiAp = this.connection.getAsyncProcess();
+    this.locator = new HRegionLocator(tableName, connection);
   }
 
   /**
@@ -190,20 +211,23 @@ public class HTable implements Table {
    * @throws IOException
    */
   @VisibleForTesting
-  protected HTable(ClusterConnection conn, BufferedMutatorParams params) throws IOException {
+  protected HTable(ClusterConnection conn, BufferedMutatorImpl mutator) throws IOException {
     connection = conn;
-    tableName = params.getTableName();
-    connConfiguration = new ConnectionConfiguration(connection.getConfiguration());
+    this.tableName = mutator.getName();
+    this.configuration = connection.getConfiguration();
+    connConfiguration = new ConnectionConfiguration(configuration);
     cleanupPoolOnClose = false;
-    cleanupConnectionOnClose = false;
-    // used from tests, don't trust the connection is real
-    this.mutator = new BufferedMutatorImpl(conn, null, null, params);
-    this.readRpcTimeout = conn.getConfiguration().getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
-        conn.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-    this.writeRpcTimeout = conn.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
-        conn.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    this.mutator = mutator;
+    this.operationTimeout = tableName.isSystemTable() ?
+        connConfiguration.getMetaOperationTimeout() : connConfiguration.getOperationTimeout();
+    this.readRpcTimeout = connConfiguration.getReadRpcTimeout();
+    this.writeRpcTimeout = connConfiguration.getWriteRpcTimeout();
+    this.scannerCaching = connConfiguration.getScannerCaching();
+    this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
+    this.rpcControllerFactory = null;
+    this.rpcCallerFactory = null;
+    this.pool = mutator.getPool();
+    this.locator = null;
   }
 
   /**
@@ -211,36 +235,6 @@ public class HTable implements Table {
    */
   public static int getMaxKeyValueSize(Configuration conf) {
     return conf.getInt("hbase.client.keyvalue.maxsize", -1);
-  }
-
-  /**
-   * setup this HTable's parameter based on the passed configuration
-   */
-  private void finishSetup() throws IOException {
-    if (connConfiguration == null) {
-      connConfiguration = new ConnectionConfiguration(configuration);
-    }
-
-    this.operationTimeout = tableName.isSystemTable() ?
-        connConfiguration.getMetaOperationTimeout() : connConfiguration.getOperationTimeout();
-    this.readRpcTimeout = configuration.getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
-        configuration.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-    this.writeRpcTimeout = configuration.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
-        configuration.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-    this.scannerCaching = connConfiguration.getScannerCaching();
-    this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
-    if (this.rpcCallerFactory == null) {
-      this.rpcCallerFactory = connection.getNewRpcRetryingCallerFactory(configuration);
-    }
-    if (this.rpcControllerFactory == null) {
-      this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);
-    }
-
-    // puts need to track errors globally due to how the APIs currently work.
-    multiAp = this.connection.getAsyncProcess();
-    this.locator = new HRegionLocator(getName(), connection);
   }
 
   /**
@@ -423,7 +417,7 @@ public class HTable implements Table {
       get = ReflectionUtils.newInstance(get.getClass(), get);
       get.setCheckExistenceOnly(checkExistenceOnly);
       if (get.getConsistency() == null){
-        get.setConsistency(defaultConsistency);
+        get.setConsistency(DEFAULT_CONSISTENCY);
       }
     }
 
@@ -483,13 +477,37 @@ public class HTable implements Table {
   @Override
   public void batch(final List<? extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    batch(actions, results, -1);
+    int rpcTimeout = writeRpcTimeout;
+    boolean hasRead = false;
+    boolean hasWrite = false;
+    for (Row action : actions) {
+      if (action instanceof Mutation) {
+        hasWrite = true;
+      } else {
+        hasRead = true;
+      }
+      if (hasRead && hasWrite) {
+        break;
+      }
+    }
+    if (hasRead && !hasWrite) {
+      rpcTimeout = readRpcTimeout;
+    }
+    batch(actions, results, rpcTimeout);
   }
 
   public void batch(final List<? extends Row> actions, final Object[] results, int rpcTimeout)
       throws InterruptedException, IOException {
-    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, actions, null, results, null,
-        rpcTimeout);
+    AsyncProcessTask task = AsyncProcessTask.newBuilder()
+            .setPool(pool)
+            .setTableName(tableName)
+            .setRowAccess(actions)
+            .setResults(results)
+            .setRpcTimeout(rpcTimeout)
+            .setOperationTimeout(operationTimeout)
+            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+            .build();
+    AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -509,8 +527,20 @@ public class HTable implements Table {
   public static <R> void doBatchWithCallback(List<? extends Row> actions, Object[] results,
     Callback<R> callback, ClusterConnection connection, ExecutorService pool, TableName tableName)
     throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    AsyncRequestFuture ars = connection.getAsyncProcess().submitAll(
-      pool, tableName, actions, callback, results);
+    int operationTimeout = connection.getConnectionConfiguration().getOperationTimeout();
+    int writeTimeout = connection.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
+        connection.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    AsyncProcessTask<R> task = AsyncProcessTask.newBuilder(callback)
+            .setPool(pool)
+            .setTableName(tableName)
+            .setRowAccess(actions)
+            .setResults(results)
+            .setOperationTimeout(operationTimeout)
+            .setRpcTimeout(writeTimeout)
+            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+            .build();
+    AsyncRequestFuture ars = connection.getAsyncProcess().submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -536,8 +566,16 @@ public class HTable implements Table {
       }
     };
     List<Delete> rows = Collections.singletonList(delete);
-    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rows,
-        null, null, callable, writeRpcTimeout);
+    AsyncProcessTask task = AsyncProcessTask.newBuilder()
+            .setPool(pool)
+            .setTableName(tableName)
+            .setRowAccess(rows)
+            .setCallable(callable)
+            .setRpcTimeout(writeRpcTimeout)
+            .setOperationTimeout(operationTimeout)
+            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+            .build();
+    AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -615,8 +653,16 @@ public class HTable implements Table {
         return ResponseConverter.getResults(request, response, getRpcControllerCellScanner());
       }
     };
-    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rm.getMutations(),
-        null, null, callable, writeRpcTimeout);
+    AsyncProcessTask task = AsyncProcessTask.newBuilder()
+            .setPool(pool)
+            .setTableName(tableName)
+            .setRowAccess(rm.getMutations())
+            .setCallable(callable)
+            .setRpcTimeout(writeRpcTimeout)
+            .setOperationTimeout(operationTimeout)
+            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+            .build();
+    AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -795,8 +841,18 @@ public class HTable implements Table {
     };
     List<Delete> rows = Collections.singletonList(delete);
     Object[] results = new Object[1];
-    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rows,
-        null, results, callable, -1);
+    AsyncProcessTask task = AsyncProcessTask.newBuilder()
+            .setPool(pool)
+            .setTableName(tableName)
+            .setRowAccess(rows)
+            .setCallable(callable)
+            // TODO any better timeout?
+            .setRpcTimeout(Math.max(readRpcTimeout, writeRpcTimeout))
+            .setOperationTimeout(operationTimeout)
+            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+            .setResults(results)
+            .build();
+    AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -839,8 +895,18 @@ public class HTable implements Table {
      *  It is excessive to send such a large array, but that is required by the framework right now
      * */
     Object[] results = new Object[rm.getMutations().size()];
-    AsyncRequestFuture ars = multiAp.submitAll(pool, tableName, rm.getMutations(),
-      null, results, callable, -1);
+    AsyncProcessTask task = AsyncProcessTask.newBuilder()
+            .setPool(pool)
+            .setTableName(tableName)
+            .setRowAccess(rm.getMutations())
+            .setResults(results)
+            .setCallable(callable)
+            // TODO any better timeout?
+            .setRpcTimeout(Math.max(readRpcTimeout, writeRpcTimeout))
+            .setOperationTimeout(operationTimeout)
+            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+            .build();
+    AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
       throw ars.getErrors();
@@ -926,6 +992,10 @@ public class HTable implements Table {
       return;
     }
     flushCommits();
+    if (mutator != null) {
+      mutator.close();
+      mutator = null;
+    }
     if (cleanupPoolOnClose) {
       this.pool.shutdown();
       try {
@@ -937,11 +1007,6 @@ public class HTable implements Table {
       } catch (InterruptedException e) {
         this.pool.shutdownNow();
         LOG.warn("waitForTermination interrupted");
-      }
-    }
-    if (cleanupConnectionOnClose) {
-      if (this.connection != null) {
-        this.connection.close();
       }
     }
     this.closed = true;
@@ -1102,7 +1167,6 @@ public class HTable implements Table {
     if (mutator != null) {
       mutator.setOperationTimeout(operationTimeout);
     }
-    multiAp.setOperationTimeout(operationTimeout);
   }
 
   @Override
@@ -1134,7 +1198,6 @@ public class HTable implements Table {
     if (mutator != null) {
       mutator.setRpcTimeout(writeRpcTimeout);
     }
-    multiAp.setRpcTimeout(writeRpcTimeout);
   }
 
   @Override
@@ -1217,37 +1280,41 @@ public class HTable implements Table {
     Object[] results = new Object[execs.size()];
 
     AsyncProcess asyncProcess =
-        new AsyncProcess(connection, configuration, pool,
+        new AsyncProcess(connection, configuration,
             RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
-            true, RpcControllerFactory.instantiate(configuration), readRpcTimeout,
-            operationTimeout);
+            true, RpcControllerFactory.instantiate(configuration));
 
-    AsyncRequestFuture future = asyncProcess.submitAll(null, tableName, execs,
-        new Callback<ClientProtos.CoprocessorServiceResult>() {
-          @Override
-          public void update(byte[] region, byte[] row,
-                              ClientProtos.CoprocessorServiceResult serviceResult) {
-            if (LOG.isTraceEnabled()) {
-              LOG.trace("Received result for endpoint " + methodDescriptor.getFullName() +
-                  ": region=" + Bytes.toStringBinary(region) +
-                  ", row=" + Bytes.toStringBinary(row) +
-                  ", value=" + serviceResult.getValue().getValue());
-            }
-            try {
-              Message.Builder builder = responsePrototype.newBuilderForType();
-              org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builder,
-                  serviceResult.getValue().getValue().toByteArray());
-              callback.update(region, row, (R) builder.build());
-            } catch (IOException e) {
-              LOG.error("Unexpected response type from endpoint " + methodDescriptor.getFullName(),
-                  e);
-              callbackErrorExceptions.add(e);
-              callbackErrorActions.add(execsByRow.get(row));
-              callbackErrorServers.add("null");
-            }
-          }
-        }, results);
-
+    Callback<ClientProtos.CoprocessorServiceResult> resultsCallback
+    = (byte[] region, byte[] row, ClientProtos.CoprocessorServiceResult serviceResult) -> {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Received result for endpoint " + methodDescriptor.getFullName() +
+            ": region=" + Bytes.toStringBinary(region) +
+            ", row=" + Bytes.toStringBinary(row) +
+            ", value=" + serviceResult.getValue().getValue());
+      }
+      try {
+        Message.Builder builder = responsePrototype.newBuilderForType();
+        org.apache.hadoop.hbase.protobuf.ProtobufUtil.mergeFrom(builder,
+            serviceResult.getValue().getValue().toByteArray());
+        callback.update(region, row, (R) builder.build());
+      } catch (IOException e) {
+        LOG.error("Unexpected response type from endpoint " + methodDescriptor.getFullName(),
+            e);
+        callbackErrorExceptions.add(e);
+        callbackErrorActions.add(execsByRow.get(row));
+        callbackErrorServers.add("null");
+      }
+    };
+    AsyncProcessTask<ClientProtos.CoprocessorServiceResult> task = AsyncProcessTask.newBuilder(resultsCallback)
+            .setPool(pool)
+            .setTableName(tableName)
+            .setRowAccess(execs)
+            .setResults(results)
+            .setRpcTimeout(readRpcTimeout)
+            .setOperationTimeout(operationTimeout)
+            .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+            .build();
+    AsyncRequestFuture future = asyncProcess.submit(task);
     future.waitUntilDone();
 
     if (future.hasError()) {
@@ -1270,10 +1337,10 @@ public class HTable implements Table {
               .pool(pool)
               .writeBufferSize(connConfiguration.getWriteBufferSize())
               .maxKeyValueSize(connConfiguration.getMaxKeyValueSize())
+              .opertationTimeout(operationTimeout)
+              .rpcTimeout(writeRpcTimeout)
       );
     }
-    mutator.setRpcTimeout(writeRpcTimeout);
-    mutator.setOperationTimeout(operationTimeout);
     return mutator;
   }
 }

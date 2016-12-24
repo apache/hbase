@@ -563,9 +563,17 @@ public class TestReplicasClient {
       gets.add(g);
       Object[] results = new Object[2];
 
-      AsyncRequestFuture reqs = ap.submitAll(
-          HTable.getDefaultExecutor(HTU.getConfiguration()),
-          table.getName(), gets, null, results);
+      int operationTimeout = ((ClusterConnection) HTU.getConnection()).getConnectionConfiguration().getOperationTimeout();
+      int readTimeout = ((ClusterConnection) HTU.getConnection()).getConnectionConfiguration().getReadRpcTimeout();
+      AsyncProcessTask task = AsyncProcessTask.newBuilder()
+              .setPool(HTable.getDefaultExecutor(HTU.getConfiguration()))
+              .setTableName(table.getName())
+              .setRowAccess(gets)
+              .setResults(results)
+              .setOperationTimeout(operationTimeout)
+              .setRpcTimeout(readTimeout)
+              .build();
+      AsyncRequestFuture reqs = ap.submit(task);
       reqs.waitUntilDone();
       // verify we got the right results back
       for (Object r : results) {

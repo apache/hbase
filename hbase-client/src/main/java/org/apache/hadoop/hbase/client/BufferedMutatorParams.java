@@ -39,7 +39,8 @@ public class BufferedMutatorParams implements Cloneable {
   private int maxKeyValueSize = UNSET;
   private ExecutorService pool = null;
   private String implementationClassName = null;
-
+  private int rpcTimeout = UNSET;
+  private int operationTimeout = UNSET;
   private BufferedMutator.ExceptionListener listener = new BufferedMutator.ExceptionListener() {
     @Override
     public void onException(RetriesExhaustedWithDetailsException exception,
@@ -59,6 +60,24 @@ public class BufferedMutatorParams implements Cloneable {
 
   public long getWriteBufferSize() {
     return writeBufferSize;
+  }
+
+  public BufferedMutatorParams rpcTimeout(final int rpcTimeout) {
+    this.rpcTimeout = rpcTimeout;
+    return this;
+  }
+
+  public int getRpcTimeout() {
+    return rpcTimeout;
+  }
+
+  public BufferedMutatorParams opertationTimeout(final int operationTimeout) {
+    this.operationTimeout = operationTimeout;
+    return this;
+  }
+
+  public int getOperationTimeout() {
+    return operationTimeout;
   }
 
   /**

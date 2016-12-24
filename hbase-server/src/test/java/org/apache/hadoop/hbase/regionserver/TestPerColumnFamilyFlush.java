@@ -501,7 +501,6 @@ public class TestPerColumnFamilyFlush {
           Thread.sleep(100);
         }
       }
-      table.close();
       assertEquals(maxLogs, getNumRolledLogFiles(desiredRegion));
       assertTrue(desiredRegion.getStore(FAMILY1).getMemStoreSize() > cfFlushSizeLowerBound);
       assertTrue(desiredRegion.getStore(FAMILY2).getMemStoreSize() < cfFlushSizeLowerBound);

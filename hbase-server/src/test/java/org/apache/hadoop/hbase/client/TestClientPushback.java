@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.AsyncProcessTask;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ExponentialClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
@@ -137,14 +138,20 @@ public class TestClientPushback {
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicLong endTime = new AtomicLong();
     long startTime = EnvironmentEdgeManager.currentTime();
-
-    ((HTable) table).mutator.ap.submit(null, tableName, ops, true, new Batch.Callback<Result>() {
-      @Override
-      public void update(byte[] region, byte[] row, Result result) {
+    BufferedMutatorImpl mutator = ((HTable) table).mutator;
+    Batch.Callback<Result> callback = (byte[] r, byte[] row, Result result) -> {
         endTime.set(EnvironmentEdgeManager.currentTime());
         latch.countDown();
-      }
-    }, true);
+    };
+    AsyncProcessTask<Result> task = AsyncProcessTask.newBuilder(callback)
+            .setPool(mutator.getPool())
+            .setTableName(tableName)
+            .setRowAccess(ops)
+            .setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
+            .setOperationTimeout(conn.getConnectionConfiguration().getOperationTimeout())
+            .setRpcTimeout(60 * 1000)
+            .build();
+    mutator.getAsyncProcess().submit(task);
     // Currently the ExponentialClientBackoffPolicy under these test conditions
     // produces a backoffTime of 151 milliseconds. This is long enough so the
     // wait and related checks below are reasonable. Revisit if the backoff

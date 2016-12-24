@@ -443,7 +443,7 @@ public class HTableMultiplexer {
     private final AtomicInteger retryInQueue = new AtomicInteger(0);
     private final int writeRpcTimeout; // needed to pass in through AsyncProcess constructor
     private final int operationTimeout;
-
+    private final ExecutorService pool;
     public FlushWorker(Configuration conf, ClusterConnection conn, HRegionLocation addr,
         HTableMultiplexer htableMultiplexer, int perRegionServerBufferQueueSize,
         ExecutorService pool, ScheduledExecutorService executor) {
@@ -457,10 +457,10 @@ public class HTableMultiplexer {
               HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
       this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
           HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-      this.ap = new AsyncProcess(conn, conf, pool, rpcCallerFactory, false, rpcControllerFactory,
-          writeRpcTimeout, operationTimeout);
+      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, false, rpcControllerFactory);
       this.executor = executor;
       this.maxRetryInQueue = conf.getInt(TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE, 10000);
+      this.pool = pool;
     }
 
     protected LinkedBlockingQueue<PutStatus> getQueue() {
@@ -594,9 +594,14 @@ public class HTableMultiplexer {
         Map<ServerName, MultiAction> actionsByServer =
             Collections.singletonMap(server, actions);
         try {
+          AsyncProcessTask task = AsyncProcessTask.newBuilder()
+                  .setResults(results)
+                  .setPool(pool)
+                  .setRpcTimeout(writeRpcTimeout)
+                  .setOperationTimeout(operationTimeout)
+                  .build();
           AsyncRequestFuture arf =
-              ap.submitMultiActions(null, retainedActions, 0L, null, results, true, null,
-                null, actionsByServer, null);
+              ap.submitMultiActions(task, retainedActions, 0L, null, null, actionsByServer);
           arf.waitUntilDone();
           if (arf.hasError()) {
             // We just log and ignore the exception here since failed Puts will be resubmit again.

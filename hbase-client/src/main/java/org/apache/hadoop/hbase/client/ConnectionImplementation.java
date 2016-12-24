@@ -249,7 +249,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
-    this.asyncProcess = createAsyncProcess(this.conf);
+    this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, false, rpcControllerFactory);
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
       this.metrics = new MetricsConnection(this);
     } else {
@@ -1831,17 +1831,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     // If we're here, it means that can cannot be sure about the location, so we remove it from
     // the cache. Do not send the source because source can be a new server in the same host:port
     metaCache.clearCache(regionInfo);
-  }
-
-  // For tests to override.
-  protected AsyncProcess createAsyncProcess(Configuration conf) {
-    // No default pool available.
-    int rpcTimeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-    int operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-    return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory,
-        rpcTimeout, operationTimeout);
   }
 
   @Override

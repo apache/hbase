@@ -300,11 +300,11 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private final int[] replicaGetIndices;
   private final boolean hasAnyReplicaGets;
   private final long nonceGroup;
-  private CancellableRegionServerCallable currentCallable;
-  private int operationTimeout;
-  private int rpcTimeout;
+  private final CancellableRegionServerCallable currentCallable;
+  private final int operationTimeout;
+  private final int rpcTimeout;
   private final Map<ServerName, List<Long>> heapSizesByServer = new HashMap<>();
-  protected AsyncProcess asyncProcess;
+  private final AsyncProcess asyncProcess;
 
   /**
    * For {@link AsyncRequestFutureImpl#manageError(int, Row, Retry, Throwable, ServerName)}. Only
@@ -339,32 +339,27 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
   }
 
-
-
-  public AsyncRequestFutureImpl(TableName tableName, List<Action> actions, long nonceGroup,
-      ExecutorService pool, boolean needResults, Object[] results, Batch.Callback<CResult> callback,
-      CancellableRegionServerCallable callable, int operationTimeout, int rpcTimeout,
-      AsyncProcess asyncProcess) {
-    this.pool = pool;
-    this.callback = callback;
+  public AsyncRequestFutureImpl(AsyncProcessTask task, List<Action> actions,
+      long nonceGroup, AsyncProcess asyncProcess) {
+    this.pool = task.getPool();
+    this.callback = task.getCallback();
     this.nonceGroup = nonceGroup;
-    this.tableName = tableName;
+    this.tableName = task.getTableName();
     this.actionsInProgress.set(actions.size());
-    if (results != null) {
-      assert needResults;
-      if (results.length != actions.size()) {
+    if (task.getResults() == null) {
+      results = task.getNeedResults() ? new Object[actions.size()] : null;
+    } else {
+      if (task.getResults().length != actions.size()) {
         throw new AssertionError("results.length");
       }
-      this.results = results;
+      this.results = task.getResults();
       for (int i = 0; i != this.results.length; ++i) {
         results[i] = null;
       }
-    } else {
-      this.results = needResults ? new Object[actions.size()] : null;
     }
     List<Integer> replicaGetIndices = null;
     boolean hasAnyReplicaGets = false;
-    if (needResults) {
+    if (results != null) {
       // Check to see if any requests might require replica calls.
       // We expect that many requests will consist of all or no multi-replica gets; in such
       // cases we would just use a boolean (hasAnyReplicaGets). If there's a mix, we will
@@ -414,10 +409,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     this.errorsByServer = createServerErrorTracker();
     this.errors = (asyncProcess.globalErrors != null)
         ? asyncProcess.globalErrors : new BatchErrors();
-    this.operationTimeout = operationTimeout;
-    this.rpcTimeout = rpcTimeout;
-    this.currentCallable = callable;
-    if (callable == null) {
+    this.operationTimeout = task.getOperationTimeout();
+    this.rpcTimeout = task.getRpcTimeout();
+    this.currentCallable = task.getCallable();
+    if (task.getCallable() == null) {
       tracker = new RetryingTimeTracker().start();
     }
   }
@@ -1246,9 +1241,6 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           lastLog = now;
           LOG.info("#" + asyncProcess.id + ", waiting for " + currentInProgress
               + "  actions to finish on table: " + tableName);
-          if (currentInProgress <= asyncProcess.thresholdToLogUndoneTaskDetails) {
-            asyncProcess.logDetailsOfUndoneTasks(currentInProgress);
-          }
         }
       }
       synchronized (actionsInProgress) {

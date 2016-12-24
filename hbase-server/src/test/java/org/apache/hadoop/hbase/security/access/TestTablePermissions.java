@@ -171,22 +171,35 @@ public class TestTablePermissions {
     }
   }
 
+  /**
+   * The AccessControlLists.addUserPermission may throw exception before closing the table.
+   */
+  private void addUserPermission(Configuration conf, UserPermission userPerm, Table t) throws IOException {
+    try {
+      AccessControlLists.addUserPermission(conf, userPerm, t);
+    } finally {
+      t.close();
+    }
+  }
+
   @Test
   public void testBasicWrite() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    try (Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
       // add some permissions
-      AccessControlLists.addUserPermission(conf,
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("george"), TEST_TABLE, null, (byte[])null,
-              UserPermission.Action.READ, UserPermission.Action.WRITE), table);
-      AccessControlLists.addUserPermission(conf,
+              UserPermission.Action.READ, UserPermission.Action.WRITE),
+              connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("hubert"), TEST_TABLE, null, (byte[])null,
-              UserPermission.Action.READ), table);
-      AccessControlLists.addUserPermission(conf,
+              UserPermission.Action.READ),
+          connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("humphrey"),
               TEST_TABLE, TEST_FAMILY, TEST_QUALIFIER,
-              UserPermission.Action.READ), table);
+              UserPermission.Action.READ),
+          connection.getTable(AccessControlLists.ACL_TABLE_NAME));
     }
     // retrieve the same
     ListMultimap<String,TablePermission> perms =
@@ -274,23 +287,22 @@ public class TestTablePermissions {
   @Test
   public void testPersistence() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    try (Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-      AccessControlLists.addUserPermission(conf,
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("albert"), TEST_TABLE, null,
-              (byte[])null, TablePermission.Action.READ), table);
-      AccessControlLists.addUserPermission(conf,
+              (byte[])null, TablePermission.Action.READ), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("betty"), TEST_TABLE, null,
               (byte[])null, TablePermission.Action.READ,
-              TablePermission.Action.WRITE), table);
-      AccessControlLists.addUserPermission(conf,
+              TablePermission.Action.WRITE), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("clark"),
               TEST_TABLE, TEST_FAMILY,
-              TablePermission.Action.READ), table);
-      AccessControlLists.addUserPermission(conf,
+              TablePermission.Action.READ), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("dwight"),
               TEST_TABLE, TEST_FAMILY, TEST_QUALIFIER,
-              TablePermission.Action.WRITE), table);
+              TablePermission.Action.WRITE), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
     }
     // verify permissions survive changes in table metadata
     ListMultimap<String,TablePermission> preperms =
@@ -404,17 +416,17 @@ public class TestTablePermissions {
     Configuration conf = UTIL.getConfiguration();
 
     // add some permissions
-    try (Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-      AccessControlLists.addUserPermission(conf,
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("user1"),
-              Permission.Action.READ, Permission.Action.WRITE), table);
-      AccessControlLists.addUserPermission(conf,
+              Permission.Action.READ, Permission.Action.WRITE), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("user2"),
-              Permission.Action.CREATE), table);
-      AccessControlLists.addUserPermission(conf,
+              Permission.Action.CREATE), connection.getTable(AccessControlLists.ACL_TABLE_NAME));
+      addUserPermission(conf,
           new UserPermission(Bytes.toBytes("user3"),
-              Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.CREATE), table);
+              Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.CREATE),
+          connection.getTable(AccessControlLists.ACL_TABLE_NAME));
     }
     ListMultimap<String,TablePermission> perms = AccessControlLists.getTablePermissions(conf, null);
     List<TablePermission> user1Perms = perms.get("user1");
@@ -448,11 +460,11 @@ public class TestTablePermissions {
     // currently running user is the system user and should have global admin perms
     User currentUser = User.getCurrent();
     assertTrue(authManager.authorize(currentUser, Permission.Action.ADMIN));
-    try (Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
       for (int i=1; i<=50; i++) {
-        AccessControlLists.addUserPermission(conf, new UserPermission(Bytes.toBytes("testauth"+i),
-            Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.WRITE), table);
+        addUserPermission(conf, new UserPermission(Bytes.toBytes("testauth"+i),
+            Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.WRITE),
+            connection.getTable(AccessControlLists.ACL_TABLE_NAME));
         // make sure the system user still shows as authorized
         assertTrue("Failed current user auth check on iter "+i,
             authManager.authorize(currentUser, Permission.Action.ADMIN));

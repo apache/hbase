@@ -19,12 +19,9 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants; // Needed for write rpc timeout
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
@@ -36,6 +33,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
 /**
  * <p>
@@ -67,61 +66,70 @@ public class BufferedMutatorImpl implements BufferedMutator {
       "hbase.client.bufferedmutator.classname";
 
   private static final Log LOG = LogFactory.getLog(BufferedMutatorImpl.class);
-  
+
   private final ExceptionListener listener;
 
-  protected ClusterConnection connection; // non-final so can be overridden in test
   private final TableName tableName;
-  private volatile Configuration conf;
 
-  @VisibleForTesting
-  final ConcurrentLinkedQueue<Mutation> writeAsyncBuffer = new ConcurrentLinkedQueue<Mutation>();
-  @VisibleForTesting
-  AtomicLong currentWriteBufferSize = new AtomicLong(0);
-
+  private final Configuration conf;
+  private final ConcurrentLinkedQueue<Mutation> writeAsyncBuffer = new ConcurrentLinkedQueue<>();
+  private final AtomicLong currentWriteBufferSize = new AtomicLong(0);
   /**
    * Count the size of {@link BufferedMutatorImpl#writeAsyncBuffer}.
    * The {@link ConcurrentLinkedQueue#size()} is NOT a constant-time operation.
    */
-  @VisibleForTesting
-  AtomicInteger undealtMutationCount = new AtomicInteger(0);
-  private long writeBufferSize;
+  private final AtomicInteger undealtMutationCount = new AtomicInteger(0);
+  private volatile long writeBufferSize;
   private final int maxKeyValueSize;
-  private boolean closed = false;
   private final ExecutorService pool;
-  private int writeRpcTimeout; // needed to pass in through AsyncProcess constructor
-  private int operationTimeout;
+  private final AtomicInteger rpcTimeout;
+  private final AtomicInteger operationTimeout;
+  private final boolean cleanupPoolOnClose;
+  private volatile boolean closed = false;
+  private final AsyncProcess ap;
 
   @VisibleForTesting
-  protected AsyncProcess ap; // non-final so can be overridden in test
-
-  BufferedMutatorImpl(ClusterConnection conn, RpcRetryingCallerFactory rpcCallerFactory,
-      RpcControllerFactory rpcFactory, BufferedMutatorParams params) {
+  BufferedMutatorImpl(ClusterConnection conn, BufferedMutatorParams params, AsyncProcess ap) {
     if (conn == null || conn.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
-
     this.tableName = params.getTableName();
-    this.connection = conn;
-    this.conf = connection.getConfiguration();
-    this.pool = params.getPool();
+    this.conf = conn.getConfiguration();
     this.listener = params.getListener();
-
+    if (params.getPool() == null) {
+      this.pool = HTable.getDefaultExecutor(conf);
+      cleanupPoolOnClose = true;
+    } else {
+      this.pool = params.getPool();
+      cleanupPoolOnClose = false;
+    }
     ConnectionConfiguration tableConf = new ConnectionConfiguration(conf);
     this.writeBufferSize = params.getWriteBufferSize() != BufferedMutatorParams.UNSET ?
         params.getWriteBufferSize() : tableConf.getWriteBufferSize();
     this.maxKeyValueSize = params.getMaxKeyValueSize() != BufferedMutatorParams.UNSET ?
         params.getMaxKeyValueSize() : tableConf.getMaxKeyValueSize();
 
-    this.writeRpcTimeout = conn.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
-        conn.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-            HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
-    this.operationTimeout = conn.getConfiguration().getInt(
-        HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-    // puts need to track errors globally due to how the APIs currently work.
-    ap = new AsyncProcess(connection, conf, pool, rpcCallerFactory, true, rpcFactory,
-        writeRpcTimeout, operationTimeout);
+    this.rpcTimeout = new AtomicInteger(params.getRpcTimeout() != BufferedMutatorParams.UNSET ?
+    params.getRpcTimeout() : conn.getConnectionConfiguration().getWriteRpcTimeout());
+    this.operationTimeout = new AtomicInteger(params.getOperationTimeout()!= BufferedMutatorParams.UNSET ?
+    params.getOperationTimeout() : conn.getConnectionConfiguration().getOperationTimeout());
+    this.ap = ap;
+  }
+  BufferedMutatorImpl(ClusterConnection conn, RpcRetryingCallerFactory rpcCallerFactory,
+      RpcControllerFactory rpcFactory, BufferedMutatorParams params) {
+    this(conn, params,
+      // puts need to track errors globally due to how the APIs currently work.
+      new AsyncProcess(conn, conn.getConfiguration(), rpcCallerFactory, true, rpcFactory));
+  }
+
+  @VisibleForTesting
+  ExecutorService getPool() {
+    return pool;
+  }
+
+  @VisibleForTesting
+  AsyncProcess getAsyncProcess() {
+    return ap;
   }
 
   @Override
@@ -193,22 +201,22 @@ public class BufferedMutatorImpl implements BufferedMutator {
       // As we can have an operation in progress even if the buffer is empty, we call
       // backgroundFlushCommits at least one time.
       backgroundFlushCommits(true);
-      this.pool.shutdown();
-      boolean terminated;
-      int loopCnt = 0;
-      do {
-        // wait until the pool has terminated
-        terminated = this.pool.awaitTermination(60, TimeUnit.SECONDS);
-        loopCnt += 1;
-        if (loopCnt >= 10) {
-          LOG.warn("close() failed to terminate pool after 10 minutes. Abandoning pool.");
-          break;
-        }
-      } while (!terminated);
-
+      if (cleanupPoolOnClose) {
+        this.pool.shutdown();
+        boolean terminated;
+        int loopCnt = 0;
+        do {
+          // wait until the pool has terminated
+          terminated = this.pool.awaitTermination(60, TimeUnit.SECONDS);
+          loopCnt += 1;
+          if (loopCnt >= 10) {
+            LOG.warn("close() failed to terminate pool after 10 minutes. Abandoning pool.");
+            break;
+          }
+        } while (!terminated);
+      }
     } catch (InterruptedException e) {
       LOG.warn("waitForTermination interrupted");
-
     } finally {
       this.closed = true;
     }
@@ -239,8 +247,9 @@ public class BufferedMutatorImpl implements BufferedMutator {
 
     if (!synchronous) {
       QueueRowAccess taker = new QueueRowAccess();
+      AsyncProcessTask task = wrapAsyncProcessTask(taker);
       try {
-        ap.submit(tableName, taker, true, null, false);
+        ap.submit(task);
         if (ap.hasError()) {
           LOG.debug(tableName + ": One or more of the operations have failed -"
               + " waiting for all operation in progress to finish (successfully or not)");
@@ -251,17 +260,17 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
     if (synchronous || ap.hasError()) {
       QueueRowAccess taker = new QueueRowAccess();
+      AsyncProcessTask task = wrapAsyncProcessTask(taker);
       try {
         while (!taker.isEmpty()) {
-          ap.submit(tableName, taker, true, null, false);
+          ap.submit(task);
           taker.reset();
         }
       } finally {
         taker.restoreRemainder();
       }
-
       RetriesExhaustedWithDetailsException error =
-          ap.waitForAllPreviousOpsAndReset(null, tableName.getNameAsString());
+          ap.waitForAllPreviousOpsAndReset(null, tableName);
       if (error != null) {
         if (listener == null) {
           throw error;
@@ -273,8 +282,38 @@ public class BufferedMutatorImpl implements BufferedMutator {
   }
 
   /**
+   * Reuse the AsyncProcessTask when calling {@link BufferedMutatorImpl#backgroundFlushCommits(boolean)}.
+   * @param taker access the inner buffer.
+   * @return An AsyncProcessTask which always returns the latest rpc and operation timeout.
+   */
+  private AsyncProcessTask wrapAsyncProcessTask(QueueRowAccess taker) {
+    AsyncProcessTask task = AsyncProcessTask.newBuilder()
+        .setPool(pool)
+        .setTableName(tableName)
+        .setRowAccess(taker)
+        .setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
+        .build();
+    return new AsyncProcessTask(task) {
+      @Override
+      public int getRpcTimeout() {
+        return rpcTimeout.get();
+      }
+
+      @Override
+      public int getOperationTimeout() {
+        return operationTimeout.get();
+      }
+    };
+  }
+  /**
    * This is used for legacy purposes in {@link HTable#setWriteBufferSize(long)} only. This ought
    * not be called for production uses.
+   * If the new buffer size is smaller than the stored data, the {@link BufferedMutatorImpl#flush()}
+   * will be called.
+   * @param writeBufferSize The max size of internal buffer where data is stored.
+   * @throws org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException
+   * if an I/O error occurs and there are too many retries.
+   * @throws java.io.InterruptedIOException if the I/O task is interrupted.
    * @deprecated Going away when we drop public support for {@link HTable}.
    */
   @Deprecated
@@ -295,15 +334,23 @@ public class BufferedMutatorImpl implements BufferedMutator {
   }
 
   @Override
-  public void setRpcTimeout(int timeout) {
-    this.writeRpcTimeout = timeout;
-    ap.setRpcTimeout(timeout);
+  public void setRpcTimeout(int rpcTimeout) {
+    this.rpcTimeout.set(rpcTimeout);
   }
 
   @Override
-  public void setOperationTimeout(int timeout) {
-    this.operationTimeout = timeout;
-    ap.setOperationTimeout(operationTimeout);
+  public void setOperationTimeout(int operationTimeout) {
+    this.operationTimeout.set(operationTimeout);
+  }
+
+  @VisibleForTesting
+  long getCurrentWriteBufferSize() {
+    return currentWriteBufferSize.get();
+  }
+
+  @VisibleForTesting
+  int size() {
+    return undealtMutationCount.get();
   }
 
   private class QueueRowAccess implements RowAccess<Row> {
