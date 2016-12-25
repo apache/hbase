@@ -62,9 +62,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 /**
  * <p>
  * This class provides the administrative interface to HBase cluster
- * replication. In order to use it, the cluster and the client using
- * ReplicationAdmin must be configured with <code>hbase.replication</code>
- * set to true.
+ * replication.
  * </p>
  * <p>
  * Adding a new peer results in creating new outbound connections from every

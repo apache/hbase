@@ -1358,7 +1358,6 @@ Instead of SQL statements, entire WALEdits (consisting of multiple cell inserts 
   Create tables with the same names and column families on both the source and destination clusters, so that the destination cluster knows where to store data it will receive.
 . All hosts in the source and destination clusters should be reachable to each other.
 . If both clusters use the same ZooKeeper cluster, you must use a different `zookeeper.znode.parent`, because they cannot write in the same folder.
-. Check to be sure that replication has not been disabled. `hbase.replication` defaults to `true`.
 . On the source cluster, in HBase Shell, add the destination cluster as a peer, using the `add_peer` command.
 . On the source cluster, in HBase Shell, enable the table replication, using the `enable_table_replication` command.
 . Check the logs to see if replication is taking place. If so, you will see messages like the following, coming from the ReplicationSource.

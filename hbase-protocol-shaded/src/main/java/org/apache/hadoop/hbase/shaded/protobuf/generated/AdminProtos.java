@@ -18964,7 +18964,7 @@ public final class AdminProtos {
    **
    * Replicates the given entries. The guarantee is that the given entries
    * will be durable on the slave cluster if this method returns without
-   * any exception.  hbase.replication has to be set to true for this to work.
+   * any exception.
    * </pre>
    *
    * Protobuf type {@code hbase.pb.ReplicateWALEntryRequest}
@@ -19427,7 +19427,7 @@ public final class AdminProtos {
      **
      * Replicates the given entries. The guarantee is that the given entries
      * will be durable on the slave cluster if this method returns without
-     * any exception.  hbase.replication has to be set to true for this to work.
+     * any exception.
      * </pre>
      *
      * Protobuf type {@code hbase.pb.ReplicateWALEntryRequest}
