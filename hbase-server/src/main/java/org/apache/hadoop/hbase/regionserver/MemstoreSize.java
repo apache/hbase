@@ -25,19 +25,32 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class MemstoreSize {
 
-  static final MemstoreSize EMPTY_SIZE = new MemstoreSize();
-
   private long dataSize;
   private long heapOverhead;
+  final private boolean isEmpty;
+
+  static final MemstoreSize EMPTY_SIZE = new MemstoreSize(true);
 
   public MemstoreSize() {
     dataSize = 0;
     heapOverhead = 0;
+    isEmpty = false;
+  }
+
+  public MemstoreSize(boolean isEmpty) {
+    dataSize = 0;
+    heapOverhead = 0;
+    this.isEmpty = isEmpty;
+  }
+
+  public boolean isEmpty() {
+    return isEmpty;
   }
 
   public MemstoreSize(long dataSize, long heapOverhead) {
     this.dataSize = dataSize;
     this.heapOverhead = heapOverhead;
+    this.isEmpty = false;
   }
 
   public void incMemstoreSize(long dataSize, long heapOverhead) {
@@ -61,11 +74,13 @@ public class MemstoreSize {
   }
 
   public long getDataSize() {
-    return dataSize;
+
+    return isEmpty ? 0 : dataSize;
   }
 
   public long getHeapOverhead() {
-    return heapOverhead;
+
+    return isEmpty ? 0 : heapOverhead;
   }
 
   @Override
@@ -74,7 +89,7 @@ public class MemstoreSize {
       return false;
     }
     MemstoreSize other = (MemstoreSize) obj;
-    return this.dataSize == other.dataSize && this.heapOverhead == other.heapOverhead;
+    return getDataSize() == other.dataSize && getHeapOverhead() == other.heapOverhead;
   }
 
   @Override
