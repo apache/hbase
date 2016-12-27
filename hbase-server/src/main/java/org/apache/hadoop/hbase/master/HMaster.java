@@ -3198,6 +3198,33 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   @Override
+  public ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws ReplicationException,
+      IOException {
+    if (cpHost != null) {
+      cpHost.preGetReplicationPeerConfig(peerId);
+    }
+    final ReplicationPeerConfig peerConfig = this.replicationManager.getPeerConfig(peerId);
+    if (cpHost != null) {
+      cpHost.postGetReplicationPeerConfig(peerId);
+    }
+    return peerConfig;
+  }
+
+  @Override
+  public void updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
+      throws ReplicationException, IOException {
+    if (cpHost != null) {
+      cpHost.preUpdateReplicationPeerConfig(peerId, peerConfig);
+    }
+    LOG.info(getClientIdAuditPrefix() + " update replication peer config, id=" + peerId
+        + ", config=" + peerConfig);
+    this.replicationManager.updatePeerConfig(peerId, peerConfig);
+    if (cpHost != null) {
+      cpHost.postUpdateReplicationPeerConfig(peerId, peerConfig);
+    }
+  }
+
+  @Override
   public void drainRegionServer(final ServerName server) {
     String parentZnode = getZooKeeper().znodePaths.drainingZNode;
     try {

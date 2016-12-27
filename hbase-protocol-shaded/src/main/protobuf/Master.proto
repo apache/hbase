@@ -885,6 +885,14 @@ service MasterService {
   rpc DisableReplicationPeer(DisableReplicationPeerRequest)
     returns(DisableReplicationPeerResponse);
 
+  /** Return peer config for a replication peer */
+  rpc GetReplicationPeerConfig(GetReplicationPeerConfigRequest)
+    returns(GetReplicationPeerConfigResponse);
+
+  /** Update peer config for a replication peer */
+  rpc UpdateReplicationPeerConfig(UpdateReplicationPeerConfigRequest)
+    returns(UpdateReplicationPeerConfigResponse);
+
   /** Returns a list of ServerNames marked as draining. */
   rpc listDrainingRegionServers(ListDrainingRegionServersRequest)
     returns(ListDrainingRegionServersResponse);

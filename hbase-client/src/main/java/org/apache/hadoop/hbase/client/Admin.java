@@ -1860,6 +1860,26 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * Returns the configured ReplicationPeerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
+   * @return ReplicationPeerConfig for the peer
+   * @throws IOException
+   */
+  default ReplicationPeerConfig getReplicationPeerConfig(final String peerId) throws IOException {
+    return new ReplicationPeerConfig();
+  }
+
+  /**
+   * Update the peerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig new config for the peer
+   * @throws IOException
+   */
+  default void updateReplicationPeerConfig(final String peerId,
+      final ReplicationPeerConfig peerConfig) throws IOException {
+  }
+
+  /**
    * Mark a region server as draining to prevent additional regions from getting assigned to it.
    * @param servers List of region servers to drain.
    */

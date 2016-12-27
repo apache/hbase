@@ -207,11 +207,8 @@ public class ReplicationAdmin implements Closeable {
     return ReplicationSerDeHelper.parseTableCFsFromConfig(tableCFsConfig);
   }
 
-  public void updatePeerConfig(String id, ReplicationPeerConfig peerConfig)
-      throws ReplicationException {
-    checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
-      peerConfig.getTableCFsMap());
-    this.replicationPeers.updatePeerConfig(id, peerConfig);
+  public void updatePeerConfig(String id, ReplicationPeerConfig peerConfig) throws IOException {
+    this.admin.updateReplicationPeerConfig(id, peerConfig);
   }
 
   /**
@@ -250,8 +247,8 @@ public class ReplicationAdmin implements Closeable {
     return this.replicationPeers.getAllPeerConfigs();
   }
 
-  public ReplicationPeerConfig getPeerConfig(String id) throws ReplicationException {
-    return this.replicationPeers.getReplicationPeerConfig(id);
+  public ReplicationPeerConfig getPeerConfig(String id) throws IOException {
+    return admin.getReplicationPeerConfig(id);
   }
 
   /**
@@ -261,8 +258,9 @@ public class ReplicationAdmin implements Closeable {
    * use {@link #getPeerConfig(String)} instead.
    * */
   @Deprecated
-  public String getPeerTableCFs(String id) throws ReplicationException {
-    return ReplicationSerDeHelper.convertToString(this.replicationPeers.getPeerTableCFsConfig(id));
+  public String getPeerTableCFs(String id) throws IOException {
+    ReplicationPeerConfig peerConfig = admin.getReplicationPeerConfig(id);
+    return ReplicationSerDeHelper.convertToString(peerConfig.getTableCFsMap());
   }
 
   /**
@@ -270,11 +268,13 @@ public class ReplicationAdmin implements Closeable {
    * @param id a short that identifies the cluster
    * @param tableCfs table-cfs config str
    * @throws ReplicationException
+   * @throws IOException
    * @deprecated as release of 2.0.0, and it will be removed in 3.0.0,
    * use {@link #appendPeerTableCFs(String, Map)} instead.
    */
   @Deprecated
-  public void appendPeerTableCFs(String id, String tableCfs) throws ReplicationException {
+  public void appendPeerTableCFs(String id, String tableCfs) throws ReplicationException,
+      IOException {
     appendPeerTableCFs(id, ReplicationSerDeHelper.parseTableCFsFromConfig(tableCfs));
   }
 
@@ -283,13 +283,15 @@ public class ReplicationAdmin implements Closeable {
    * @param id a short that identifies the cluster
    * @param tableCfs A map from tableName to column family names
    * @throws ReplicationException
+   * @throws IOException
    */
   public void appendPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
-      throws ReplicationException {
+      throws ReplicationException, IOException {
     if (tableCfs == null) {
       throw new ReplicationException("tableCfs is null");
     }
-    Map<TableName, List<String>> preTableCfs = this.replicationPeers.getPeerTableCFsConfig(id);
+    ReplicationPeerConfig peerConfig = admin.getReplicationPeerConfig(id);
+    Map<TableName, List<String>> preTableCfs = peerConfig.getTableCFsMap();
     if (preTableCfs == null) {
       setPeerTableCFs(id, tableCfs);
       return;
@@ -314,7 +316,7 @@ public class ReplicationAdmin implements Closeable {
         }
       }
     }
-    setPeerTableCFs(id, preTableCfs);
+    updatePeerConfig(id, peerConfig);
   }
 
   /**
@@ -322,11 +324,13 @@ public class ReplicationAdmin implements Closeable {
    * @param id a short name that identifies the cluster
    * @param tableCf table-cfs config str
    * @throws ReplicationException
+   * @throws IOException
    * @deprecated as release of 2.0.0, and it will be removed in 3.0.0,
    * use {@link #removePeerTableCFs(String, Map)} instead.
    */
   @Deprecated
-  public void removePeerTableCFs(String id, String tableCf) throws ReplicationException {
+  public void removePeerTableCFs(String id, String tableCf) throws ReplicationException,
+      IOException {
     removePeerTableCFs(id, ReplicationSerDeHelper.parseTableCFsFromConfig(tableCf));
   }
 
@@ -335,13 +339,15 @@ public class ReplicationAdmin implements Closeable {
    * @param id a short name that identifies the cluster
    * @param tableCfs A map from tableName to column family names
    * @throws ReplicationException
+   * @throws IOException
    */
   public void removePeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
-      throws ReplicationException {
+      throws ReplicationException, IOException {
     if (tableCfs == null) {
       throw new ReplicationException("tableCfs is null");
     }
-    Map<TableName, List<String>> preTableCfs = this.replicationPeers.getPeerTableCFsConfig(id);
+    ReplicationPeerConfig peerConfig = admin.getReplicationPeerConfig(id);
+    Map<TableName, List<String>> preTableCfs = peerConfig.getTableCFsMap();
     if (preTableCfs == null) {
       throw new ReplicationException("Table-Cfs for peer" + id + " is null");
     }
@@ -372,7 +378,7 @@ public class ReplicationAdmin implements Closeable {
         throw new ReplicationException("No table: " + table + " in table-cfs config of peer: " + id);
       }
     }
-    setPeerTableCFs(id, preTableCfs);
+    updatePeerConfig(id, peerConfig);
   }
 
   /**
@@ -384,10 +390,10 @@ public class ReplicationAdmin implements Closeable {
    * families
    */
   public void setPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
-      throws ReplicationException {
-    checkNamespacesAndTableCfsConfigConflict(
-      this.replicationPeers.getReplicationPeerConfig(id).getNamespaces(), tableCfs);
-    this.replicationPeers.setPeerTableCFsConfig(id, tableCfs);
+      throws IOException {
+    ReplicationPeerConfig peerConfig = getPeerConfig(id);
+    peerConfig.setTableCFsMap(tableCfs);
+    updatePeerConfig(id, peerConfig);
   }
 
   /**

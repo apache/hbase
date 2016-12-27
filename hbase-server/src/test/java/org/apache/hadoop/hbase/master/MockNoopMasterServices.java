@@ -414,4 +414,15 @@ public class MockNoopMasterServices implements MasterServices, Server {
   public void removeDrainFromRegionServer(ServerName servers) {
     return;
   }
+
+  @Override
+  public ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws ReplicationException,
+      IOException {
+    return null;
+  }
+
+  @Override
+  public void updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
+      throws ReplicationException, IOException {
+  }
 }

@@ -54,3 +54,20 @@ message DisableReplicationPeerRequest {
 
 message DisableReplicationPeerResponse {
 }
+
+message GetReplicationPeerConfigRequest {
+  required string peer_id = 1;
+}
+
+message GetReplicationPeerConfigResponse {
+  required string peer_id = 1;
+  required ReplicationPeer peer_config = 2;
+}
+
+message UpdateReplicationPeerConfigRequest {
+  required string peer_id = 1;
+  required ReplicationPeer peer_config = 2;
+}
+
+message UpdateReplicationPeerConfigResponse {
+}

@@ -293,7 +293,7 @@ module Hbase
       data = args.fetch(DATA, nil)
 
       # Create and populate a ReplicationPeerConfig
-      replication_peer_config = ReplicationPeerConfig.new
+      replication_peer_config = get_peer_config(id)
       unless config.nil?
         replication_peer_config.get_configuration.put_all(config)
       end

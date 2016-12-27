@@ -93,10 +93,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Disab
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
@@ -1689,6 +1694,34 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.disableReplicationPeer(request.getPeerId());
       return DisableReplicationPeerResponse.newBuilder().build();
+    } catch (ReplicationException | IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetReplicationPeerConfigResponse getReplicationPeerConfig(RpcController controller,
+      GetReplicationPeerConfigRequest request) throws ServiceException {
+    GetReplicationPeerConfigResponse.Builder response = GetReplicationPeerConfigResponse
+        .newBuilder();
+    try {
+      String peerId = request.getPeerId();
+      ReplicationPeerConfig peerConfig = master.getReplicationPeerConfig(peerId);
+      response.setPeerId(peerId);
+      response.setPeerConfig(ReplicationSerDeHelper.convert(peerConfig));
+    } catch (ReplicationException | IOException e) {
+      throw new ServiceException(e);
+    }
+    return response.build();
+  }
+
+  @Override
+  public UpdateReplicationPeerConfigResponse updateReplicationPeerConfig(RpcController controller,
+      UpdateReplicationPeerConfigRequest request) throws ServiceException {
+    try {
+      master.updateReplicationPeerConfig(request.getPeerId(),
+        ReplicationSerDeHelper.convert(request.getPeerConfig()));
+      return UpdateReplicationPeerConfigResponse.newBuilder().build();
     } catch (ReplicationException | IOException e) {
       throw new ServiceException(e);
     }

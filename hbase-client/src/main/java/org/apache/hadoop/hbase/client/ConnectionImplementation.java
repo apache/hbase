@@ -100,8 +100,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Disab
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -1693,6 +1697,19 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           RpcController controller, RemoveDrainFromRegionServersRequest request)
           throws ServiceException {
         return stub.removeDrainFromRegionServers(controller, request);
+      }
+
+      @Override
+      public GetReplicationPeerConfigResponse getReplicationPeerConfig(RpcController controller,
+          GetReplicationPeerConfigRequest request) throws ServiceException {
+        return stub.getReplicationPeerConfig(controller, request);
+      }
+
+      @Override
+      public UpdateReplicationPeerConfigResponse updateReplicationPeerConfig(
+          RpcController controller, UpdateReplicationPeerConfigRequest request)
+          throws ServiceException {
+        return stub.updateReplicationPeerConfig(controller, request);
       }
     };
   }

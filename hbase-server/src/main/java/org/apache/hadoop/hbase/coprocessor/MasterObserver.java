@@ -1909,4 +1909,46 @@ public interface MasterObserver extends Coprocessor {
   default void postDisableReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       String peerId) throws IOException {
   }
+
+  /**
+   * Called before get the configured ReplicationPeerConfig for the specified peer
+   * @param ctx
+   * @param peerId a short name that identifies the peer
+   * @throws IOException on failure
+   */
+  default void preGetReplicationPeerConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String peerId) throws IOException {
+  }
+
+  /**
+   * Called after get the configured ReplicationPeerConfig for the specified peer
+   * @param ctx
+   * @param peerId a short name that identifies the peer
+   * @throws IOException on failure
+   */
+  default void postGetReplicationPeerConfig(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, String peerId) throws IOException {
+  }
+
+  /**
+   * Called before update peerConfig for the specified peer
+   * @param ctx
+   * @param peerId a short name that identifies the peer
+   * @throws IOException on failure
+   */
+  default void preUpdateReplicationPeerConfig(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, String peerId,
+      ReplicationPeerConfig peerConfig) throws IOException {
+  }
+
+  /**
+   * Called after update peerConfig for the specified peer
+   * @param ctx
+   * @param peerId a short name that identifies the peer
+   * @throws IOException on failure
+   */
+  default void postUpdateReplicationPeerConfig(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, String peerId,
+      ReplicationPeerConfig peerConfig) throws IOException {
+  }
 }

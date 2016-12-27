@@ -65991,7 +65991,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> 
         getServerNameList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -66004,7 +66004,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getServerNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -66102,7 +66102,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getServerNameOrBuilderList() {
       return serverName_;
     }
@@ -66409,7 +66409,7 @@ public final class MasterProtos {
               serverNameBuilder_ = null;
               serverName_ = other.serverName_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              serverNameBuilder_ =
+              serverNameBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getServerNameFieldBuilder() : null;
             } else {
@@ -66645,7 +66645,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
            getServerNameOrBuilderList() {
         if (serverNameBuilder_ != null) {
           return serverNameBuilder_.getMessageOrBuilderList();
@@ -66671,12 +66671,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder>
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder> 
            getServerNameBuilderList() {
         return getServerNameFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
           getServerNameFieldBuilder() {
         if (serverNameBuilder_ == null) {
           serverNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -66745,7 +66745,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> 
         getServerNameList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -66758,7 +66758,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getServerNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -66856,7 +66856,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getServerNameOrBuilderList() {
       return serverName_;
     }
@@ -67163,7 +67163,7 @@ public final class MasterProtos {
               serverNameBuilder_ = null;
               serverName_ = other.serverName_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              serverNameBuilder_ =
+              serverNameBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getServerNameFieldBuilder() : null;
             } else {
@@ -67399,7 +67399,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
            getServerNameOrBuilderList() {
         if (serverNameBuilder_ != null) {
           return serverNameBuilder_.getMessageOrBuilderList();
@@ -67425,12 +67425,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder>
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder> 
            getServerNameBuilderList() {
         return getServerNameFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
           getServerNameFieldBuilder() {
         if (serverNameBuilder_ == null) {
           serverNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -67872,7 +67872,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> 
         getServerNameList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -67885,7 +67885,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getServerNameOrBuilderList();
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
@@ -67983,7 +67983,7 @@ public final class MasterProtos {
     /**
      * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getServerNameOrBuilderList() {
       return serverName_;
     }
@@ -68290,7 +68290,7 @@ public final class MasterProtos {
               serverNameBuilder_ = null;
               serverName_ = other.serverName_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              serverNameBuilder_ =
+              serverNameBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getServerNameFieldBuilder() : null;
             } else {
@@ -68526,7 +68526,7 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
            getServerNameOrBuilderList() {
         if (serverNameBuilder_ != null) {
           return serverNameBuilder_.getMessageOrBuilderList();
@@ -68552,12 +68552,12 @@ public final class MasterProtos {
       /**
        * <code>repeated .hbase.pb.ServerName server_name = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder>
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder> 
            getServerNameBuilderList() {
         return getServerNameFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
           getServerNameFieldBuilder() {
         if (serverNameBuilder_ == null) {
           serverNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -69775,7 +69775,31 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Returns a list of ServerNames marked as draining.
+       ** Return peer config for a replication peer 
+       * </pre>
+       *
+       * <code>rpc GetReplicationPeerConfig(.hbase.pb.GetReplicationPeerConfigRequest) returns (.hbase.pb.GetReplicationPeerConfigResponse);</code>
+       */
+      public abstract void getReplicationPeerConfig(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse> done);
+
+      /**
+       * <pre>
+       ** Update peer config for a replication peer 
+       * </pre>
+       *
+       * <code>rpc UpdateReplicationPeerConfig(.hbase.pb.UpdateReplicationPeerConfigRequest) returns (.hbase.pb.UpdateReplicationPeerConfigResponse);</code>
+       */
+      public abstract void updateReplicationPeerConfig(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse> done);
+
+      /**
+       * <pre>
+       ** Returns a list of ServerNames marked as draining. 
        * </pre>
        *
        * <code>rpc listDrainingRegionServers(.hbase.pb.ListDrainingRegionServersRequest) returns (.hbase.pb.ListDrainingRegionServersResponse);</code>
@@ -69787,7 +69811,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Mark a list of ServerNames as draining.
+       ** Mark a list of ServerNames as draining. 
        * </pre>
        *
        * <code>rpc drainRegionServers(.hbase.pb.DrainRegionServersRequest) returns (.hbase.pb.DrainRegionServersResponse);</code>
@@ -69799,7 +69823,7 @@ public final class MasterProtos {
 
       /**
        * <pre>
-       ** Unmark a list of ServerNames marked as draining.
+       ** Unmark a list of ServerNames marked as draining. 
        * </pre>
        *
        * <code>rpc removeDrainFromRegionServers(.hbase.pb.RemoveDrainFromRegionServersRequest) returns (.hbase.pb.RemoveDrainFromRegionServersResponse);</code>
@@ -70311,6 +70335,22 @@ public final class MasterProtos {
         }
 
         @java.lang.Override
+        public  void getReplicationPeerConfig(
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse> done) {
+          impl.getReplicationPeerConfig(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void updateReplicationPeerConfig(
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse> done) {
+          impl.updateReplicationPeerConfig(controller, request, done);
+        }
+
+        @java.lang.Override
         public  void listDrainingRegionServers(
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest request,
@@ -70481,10 +70521,14 @@ public final class MasterProtos {
             case 61:
               return impl.disableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest)request);
             case 62:
-              return impl.listDrainingRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest)request);
+              return impl.getReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest)request);
             case 63:
-              return impl.drainRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest)request);
+              return impl.updateReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest)request);
             case 64:
+              return impl.listDrainingRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest)request);
+            case 65:
+              return impl.drainRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest)request);
+            case 66:
               return impl.removeDrainFromRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -70625,10 +70669,14 @@ public final class MasterProtos {
             case 61:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest.getDefaultInstance();
             case 62:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest.getDefaultInstance();
             case 63:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest.getDefaultInstance();
             case 64:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest.getDefaultInstance();
+            case 65:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest.getDefaultInstance();
+            case 66:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -70769,10 +70817,14 @@ public final class MasterProtos {
             case 61:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance();
             case 62:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance();
             case 63:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance();
             case 64:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance();
+            case 65:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance();
+            case 66:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -71557,7 +71609,31 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Returns a list of ServerNames marked as draining.
+     ** Return peer config for a replication peer 
+     * </pre>
+     *
+     * <code>rpc GetReplicationPeerConfig(.hbase.pb.GetReplicationPeerConfigRequest) returns (.hbase.pb.GetReplicationPeerConfigResponse);</code>
+     */
+    public abstract void getReplicationPeerConfig(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest request,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse> done);
+
+    /**
+     * <pre>
+     ** Update peer config for a replication peer 
+     * </pre>
+     *
+     * <code>rpc UpdateReplicationPeerConfig(.hbase.pb.UpdateReplicationPeerConfigRequest) returns (.hbase.pb.UpdateReplicationPeerConfigResponse);</code>
+     */
+    public abstract void updateReplicationPeerConfig(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest request,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse> done);
+
+    /**
+     * <pre>
+     ** Returns a list of ServerNames marked as draining. 
      * </pre>
      *
      * <code>rpc listDrainingRegionServers(.hbase.pb.ListDrainingRegionServersRequest) returns (.hbase.pb.ListDrainingRegionServersResponse);</code>
@@ -71569,7 +71645,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Mark a list of ServerNames as draining.
+     ** Mark a list of ServerNames as draining. 
      * </pre>
      *
      * <code>rpc drainRegionServers(.hbase.pb.DrainRegionServersRequest) returns (.hbase.pb.DrainRegionServersResponse);</code>
@@ -71581,7 +71657,7 @@ public final class MasterProtos {
 
     /**
      * <pre>
-     ** Unmark a list of ServerNames marked as draining.
+     ** Unmark a list of ServerNames marked as draining. 
      * </pre>
      *
      * <code>rpc removeDrainFromRegionServers(.hbase.pb.RemoveDrainFromRegionServersRequest) returns (.hbase.pb.RemoveDrainFromRegionServersResponse);</code>
@@ -71924,16 +72000,26 @@ public final class MasterProtos {
               done));
           return;
         case 62:
+          this.getReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest)request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse>specializeCallback(
+              done));
+          return;
+        case 63:
+          this.updateReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest)request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse>specializeCallback(
+              done));
+          return;
+        case 64:
           this.listDrainingRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse>specializeCallback(
               done));
           return;
-        case 63:
+        case 65:
           this.drainRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse>specializeCallback(
               done));
           return;
-        case 64:
+        case 66:
           this.removeDrainFromRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse>specializeCallback(
               done));
@@ -72077,10 +72163,14 @@ public final class MasterProtos {
         case 61:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest.getDefaultInstance();
         case 62:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest.getDefaultInstance();
         case 63:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest.getDefaultInstance();
         case 64:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest.getDefaultInstance();
+        case 65:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest.getDefaultInstance();
+        case 66:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -72221,10 +72311,14 @@ public final class MasterProtos {
         case 61:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance();
         case 62:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance();
         case 63:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance();
         case 64:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance();
+        case 65:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance();
+        case 66:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -73177,12 +73271,42 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance()));
       }
 
+      public  void getReplicationPeerConfig(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(62),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance(),
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.class,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance()));
+      }
+
+      public  void updateReplicationPeerConfig(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(63),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance(),
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.class,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance()));
+      }
+
       public  void listDrainingRegionServers(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(62),
+          getDescriptor().getMethods().get(64),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance(),
@@ -73197,7 +73321,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(63),
+          getDescriptor().getMethods().get(65),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance(),
@@ -73212,7 +73336,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(64),
+          getDescriptor().getMethods().get(66),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse.getDefaultInstance(),
@@ -73537,6 +73661,16 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse disableReplicationPeer(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse getReplicationPeerConfig(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse updateReplicationPeerConfig(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse listDrainingRegionServers(
@@ -74306,12 +74440,36 @@ public final class MasterProtos {
       }
 
 
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse getReplicationPeerConfig(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(62),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse updateReplicationPeerConfig(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(63),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance());
+      }
+
+
       public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse listDrainingRegionServers(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(62),
+          getDescriptor().getMethods().get(64),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance());
@@ -74323,7 +74481,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(63),
+          getDescriptor().getMethods().get(65),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance());
@@ -74335,7 +74493,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(64),
+          getDescriptor().getMethods().get(66),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse.getDefaultInstance());
@@ -74913,32 +75071,32 @@ public final class MasterProtos {
       internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListDrainingRegionServersRequest_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListDrainingRegionServersRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_ListDrainingRegionServersResponse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListDrainingRegionServersResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DrainRegionServersRequest_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DrainRegionServersRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DrainRegionServersResponse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_DrainRegionServersResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RemoveDrainFromRegionServersRequest_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RemoveDrainFromRegionServersRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RemoveDrainFromRegionServersResponse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RemoveDrainFromRegionServersResponse_fieldAccessorTable;
 
@@ -75161,7 +75319,7 @@ public final class MasterProtos {
       "\022)\n\013server_name\030\001 \003(\0132\024.hbase.pb.ServerN" +
       "ame\"&\n$RemoveDrainFromRegionServersRespo",
       "nse*(\n\020MasterSwitchType\022\t\n\005SPLIT\020\000\022\t\n\005ME" +
-      "RGE\020\0012\251/\n\rMasterService\022e\n\024GetSchemaAlte" +
+      "RGE\020\0012\2301\n\rMasterService\022e\n\024GetSchemaAlte" +
       "rStatus\022%.hbase.pb.GetSchemaAlterStatusR" +
       "equest\032&.hbase.pb.GetSchemaAlterStatusRe" +
       "sponse\022b\n\023GetTableDescriptors\022$.hbase.pb" +
@@ -75304,17 +75462,23 @@ public final class MasterProtos {
       "onPeerResponse\022k\n\026DisableReplicationPeer" +
       "\022\'.hbase.pb.DisableReplicationPeerReques" +
       "t\032(.hbase.pb.DisableReplicationPeerRespo" +
-      "nse\022t\n\031listDrainingRegionServers\022*.hbase" +
-      ".pb.ListDrainingRegionServersRequest\032+.h" +
-      "base.pb.ListDrainingRegionServersRespons" +
-      "e\022_\n\022drainRegionServers\022#.hbase.pb.Drain" +
-      "RegionServersRequest\032$.hbase.pb.DrainReg" +
-      "ionServersResponse\022}\n\034removeDrainFromReg",
-      "ionServers\022-.hbase.pb.RemoveDrainFromReg" +
-      "ionServersRequest\032..hbase.pb.RemoveDrain" +
-      "FromRegionServersResponseBI\n1org.apache." +
-      "hadoop.hbase.shaded.protobuf.generatedB\014" +
-      "MasterProtosH\001\210\001\001\240\001\001"
+      "nse\022q\n\030GetReplicationPeerConfig\022).hbase." +
+      "pb.GetReplicationPeerConfigRequest\032*.hba" +
+      "se.pb.GetReplicationPeerConfigResponse\022z" +
+      "\n\033UpdateReplicationPeerConfig\022,.hbase.pb" +
+      ".UpdateReplicationPeerConfigRequest\032-.hb" +
+      "ase.pb.UpdateReplicationPeerConfigRespon",
+      "se\022t\n\031listDrainingRegionServers\022*.hbase." +
+      "pb.ListDrainingRegionServersRequest\032+.hb" +
+      "ase.pb.ListDrainingRegionServersResponse" +
+      "\022_\n\022drainRegionServers\022#.hbase.pb.DrainR" +
+      "egionServersRequest\032$.hbase.pb.DrainRegi" +
+      "onServersResponse\022}\n\034removeDrainFromRegi" +
+      "onServers\022-.hbase.pb.RemoveDrainFromRegi" +
+      "onServersRequest\032..hbase.pb.RemoveDrainF" +
+      "romRegionServersResponseBI\n1org.apache.h" +
+      "adoop.hbase.shaded.protobuf.generatedB\014M",
+      "asterProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

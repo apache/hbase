@@ -20,14 +20,18 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -39,6 +43,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKConfig;
  * Similar to {@link RegionReplicaUtil} but for the server side
  */
 public class ServerRegionReplicaUtil extends RegionReplicaUtil {
+
+  private static final Log LOG = LogFactory.getLog(ServerRegionReplicaUtil.class);
 
   /**
    * Whether asynchronous WAL replication to the secondary region replicas is enabled or not.
@@ -143,9 +149,18 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
       return;
     }
     ReplicationAdmin repAdmin = new ReplicationAdmin(conf);
+    ReplicationPeerConfig peerConfig = null;
     try {
-      if (repAdmin.getPeerConfig(REGION_REPLICA_REPLICATION_PEER) == null) {
-        ReplicationPeerConfig peerConfig = new ReplicationPeerConfig();
+      peerConfig = repAdmin.getPeerConfig(REGION_REPLICA_REPLICATION_PEER);
+    } catch (ReplicationPeerNotFoundException e) {
+      LOG.warn("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER
+          + " not exist", e);
+    }
+    try {
+      if (peerConfig == null) {
+        LOG.info("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER
+            + " not exist. Creating...");
+        peerConfig = new ReplicationPeerConfig();
         peerConfig.setClusterKey(ZKConfig.getZooKeeperClusterKey(conf));
         peerConfig.setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName());
         repAdmin.addPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig, null);

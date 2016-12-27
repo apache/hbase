@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -171,6 +172,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -3793,6 +3795,32 @@ public class HBaseAdmin implements Admin {
       protected Void rpcCall() throws Exception {
         master.disableReplicationPeer(getRpcController(),
           RequestConverter.buildDisableReplicationPeerRequest(peerId));
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public ReplicationPeerConfig getReplicationPeerConfig(final String peerId) throws IOException {
+    return executeCallable(new MasterCallable<ReplicationPeerConfig>(getConnection(),
+        getRpcControllerFactory()) {
+      @Override
+      protected ReplicationPeerConfig rpcCall() throws Exception {
+        GetReplicationPeerConfigResponse response = master.getReplicationPeerConfig(
+          getRpcController(), RequestConverter.buildGetReplicationPeerConfigRequest(peerId));
+        return ReplicationSerDeHelper.convert(response.getPeerConfig());
+      }
+    });
+  }
+
+  @Override
+  public void updateReplicationPeerConfig(final String peerId,
+      final ReplicationPeerConfig peerConfig) throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        master.updateReplicationPeerConfig(getRpcController(),
+          RequestConverter.buildUpdateReplicationPeerConfigRequest(peerId, peerConfig));
         return null;
       }
     });

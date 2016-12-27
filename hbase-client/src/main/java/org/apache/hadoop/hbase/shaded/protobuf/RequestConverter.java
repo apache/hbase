@@ -115,7 +115,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1593,6 +1595,22 @@ public final class RequestConverter {
       String peerId) {
     DisableReplicationPeerRequest.Builder builder = DisableReplicationPeerRequest.newBuilder();
     builder.setPeerId(peerId);
+    return builder.build();
+  }
+
+  public static GetReplicationPeerConfigRequest buildGetReplicationPeerConfigRequest(
+      String peerId) {
+    GetReplicationPeerConfigRequest.Builder builder = GetReplicationPeerConfigRequest.newBuilder();
+    builder.setPeerId(peerId);
+    return builder.build();
+  }
+
+  public static UpdateReplicationPeerConfigRequest buildUpdateReplicationPeerConfigRequest(
+      String peerId, ReplicationPeerConfig peerConfig) {
+    UpdateReplicationPeerConfigRequest.Builder builder = UpdateReplicationPeerConfigRequest
+        .newBuilder();
+    builder.setPeerId(peerId);
+    builder.setPeerConfig(ReplicationSerDeHelper.convert(peerConfig));
     return builder.build();
   }
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client.replication;
 
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -448,7 +449,7 @@ public class TestReplicationAdmin {
       admin.updatePeerConfig(ID_ONE, rpc);
       fail("Should throw ReplicationException, because table " + tab1 + " conflict with namespace "
           + ns1);
-    } catch (ReplicationException e) {
+    } catch (IOException e) {
       // OK
     }
 
@@ -465,7 +466,7 @@ public class TestReplicationAdmin {
       admin.updatePeerConfig(ID_ONE, rpc);
       fail("Should throw ReplicationException, because namespace " + ns2 + " conflict with table "
           + tab2);
-    } catch (ReplicationException e) {
+    } catch (IOException e) {
       // OK
     }
 

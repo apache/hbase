@@ -446,6 +446,22 @@ public interface MasterServices extends Server {
   void disableReplicationPeer(String peerId) throws ReplicationException, IOException;
 
   /**
+   * Returns the configured ReplicationPeerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
+   * @return ReplicationPeerConfig for the peer
+   */
+  ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws ReplicationException,
+      IOException;
+
+  /**
+   * Update the peerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
+   * @param peerConfig new config for the peer
+   */
+  void updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
+      throws ReplicationException, IOException;
+
+  /**
    * Mark a region server as draining to prevent additional regions from getting assigned to it.
    * @param server Region servers to drain.
    */

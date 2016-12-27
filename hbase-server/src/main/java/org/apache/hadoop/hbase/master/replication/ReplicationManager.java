@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -66,11 +67,13 @@ public class ReplicationManager {
       throws ReplicationException {
     checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
       peerConfig.getTableCFsMap());
-    this.replicationPeers.registerPeer(peerId, peerConfig);
+    replicationPeers.registerPeer(peerId, peerConfig);
+    replicationPeers.peerConnected(peerId);
   }
 
   public void removeReplicationPeer(String peerId) throws ReplicationException {
-    this.replicationPeers.unregisterPeer(peerId);
+    replicationPeers.peerDisconnected(peerId);
+    replicationPeers.unregisterPeer(peerId);
   }
 
   public void enableReplicationPeer(String peerId) throws ReplicationException {
@@ -79,6 +82,22 @@ public class ReplicationManager {
 
   public void disableReplicationPeer(String peerId) throws ReplicationException {
     this.replicationPeers.disablePeer(peerId);
+  }
+
+  public ReplicationPeerConfig getPeerConfig(String peerId) throws ReplicationException,
+      ReplicationPeerNotFoundException {
+    ReplicationPeerConfig peerConfig = replicationPeers.getReplicationPeerConfig(peerId);
+    if (peerConfig == null) {
+      throw new ReplicationPeerNotFoundException(peerId);
+    }
+    return peerConfig;
+  }
+
+  public void updatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
+      throws ReplicationException {
+    checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
+      peerConfig.getTableCFsMap());
+    this.replicationPeers.updatePeerConfig(peerId, peerConfig);
   }
 
   /**

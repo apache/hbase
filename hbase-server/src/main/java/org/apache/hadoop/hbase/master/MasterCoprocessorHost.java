@@ -1727,4 +1727,46 @@ public class MasterCoprocessorHost
       }
     });
   }
+
+  public void preGetReplicationPeerConfig(final String peerId) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preGetReplicationPeerConfig(ctx, peerId);
+      }
+    });
+  }
+
+  public void postGetReplicationPeerConfig(final String peerId) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postGetReplicationPeerConfig(ctx, peerId);
+      }
+    });
+  }
+
+  public void preUpdateReplicationPeerConfig(final String peerId,
+      final ReplicationPeerConfig peerConfig) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preUpdateReplicationPeerConfig(ctx, peerId, peerConfig);
+      }
+    });
+  }
+
+  public void postUpdateReplicationPeerConfig(final String peerId,
+      final ReplicationPeerConfig peerConfig) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postUpdateReplicationPeerConfig(ctx, peerId, peerConfig);
+      }
+    });
+  }
 }
