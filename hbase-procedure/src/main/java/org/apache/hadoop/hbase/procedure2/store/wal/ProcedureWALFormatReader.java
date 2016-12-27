@@ -101,8 +101,18 @@ public class ProcedureWALFormatReader {
   private final WalProcedureMap localProcedureMap = new WalProcedureMap(1024);
   private final WalProcedureMap procedureMap = new WalProcedureMap(1024);
 
-  // private long compactionLogId;
-  private long maxProcId = 0;
+  private final ProcedureWALFormat.Loader loader;
+
+  /**
+   * Global tracker that will be used by the WALProcedureStore after load.
+   * If the last WAL was closed cleanly we already have a full tracker ready to be used.
+   * If the last WAL was truncated (e.g. master killed) the tracker will be empty
+   * and the 'partial' flag will be set. In this case on WAL replay we are going
+   * to rebuild the tracker.
+   */
+  private final ProcedureStoreTracker tracker;
+  // private final boolean hasFastStartSupport;
+
   /**
    * If tracker for a log file is partial (see {@link ProcedureStoreTracker#partial}), we
    * re-build the list of procedures updated in that WAL because we need it for log cleaning
@@ -113,13 +123,9 @@ public class ProcedureWALFormatReader {
    * {@link ProcedureStoreTracker.BitSetNode#subtract(ProcedureStoreTracker.BitSetNode)}).
    */
   private ProcedureStoreTracker localTracker;
-  private final ProcedureWALFormat.Loader loader;
-  /**
-   * Global tracker. If set to partial, it will be updated as procedures are loaded from wals,
-   * otherwise not.
-   */
-  private final ProcedureStoreTracker tracker;
-  // private final boolean hasFastStartSupport;
+
+  // private long compactionLogId;
+  private long maxProcId = 0;
 
   public ProcedureWALFormatReader(final ProcedureStoreTracker tracker,
       ProcedureWALFormat.Loader loader) {

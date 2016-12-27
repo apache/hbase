@@ -156,11 +156,18 @@ public class ProcedureStoreTracker {
       partial = false;
     }
 
-    public BitSetNode(BitSetNode other) {
+    public BitSetNode(final BitSetNode other, final boolean resetDelete) {
       this.start = other.start;
       this.partial = other.partial;
       this.updated = other.updated.clone();
-      this.deleted = other.deleted.clone();
+      if (resetDelete) {
+        this.deleted = new long[other.deleted.length];
+        for (int i = 0; i < this.deleted.length; ++i) {
+          this.deleted[i] = ~(other.updated[i]);
+        }
+      } else {
+        this.deleted = other.deleted.clone();
+      }
     }
 
     public void update(final long procId) {
@@ -171,11 +178,11 @@ public class ProcedureStoreTracker {
       updateState(procId, true);
     }
 
-    public Long getStart() {
+    public long getStart() {
       return start;
     }
 
-    public Long getEnd() {
+    public long getEnd() {
       return start + (updated.length << ADDRESS_BITS_PER_WORD) - 1;
     }
 
@@ -250,33 +257,6 @@ public class ProcedureStoreTracker {
     }
 
     /**
-     * If an active (non-deleted) procedure in current BitSetNode has been updated in {@code other}
-     * BitSetNode, then delete it from current node.
-     * @return true if node changed, i.e. some procedure(s) from {@code other} was subtracted from
-     * current node.
-     */
-    public boolean subtract(BitSetNode other) {
-      // Assert that other node intersects with this node.
-      assert !(other.getEnd() < this.start) && !(this.getEnd() < other.start);
-      int thisOffset = 0, otherOffset = 0;
-      if (this.start < other.start) {
-        thisOffset = (int) (other.start - this.start) / BITS_PER_WORD;
-      } else {
-        otherOffset = (int) (this.start - other.start) / BITS_PER_WORD;
-      }
-      int size = Math.min(this.updated.length - thisOffset, other.updated.length - otherOffset);
-      boolean nonZeroIntersect = false;
-      for (int i = 0; i < size; i++) {
-        long intersect = ~this.deleted[thisOffset + i] & other.updated[otherOffset + i];
-        if (intersect != 0) {
-          this.deleted[thisOffset + i] |= intersect;
-          nonZeroIntersect = true;
-        }
-      }
-      return nonZeroIntersect;
-    }
-
-    /**
      * Convert to
      * org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode
      * protobuf.
@@ -291,7 +271,6 @@ public class ProcedureStoreTracker {
       }
       return builder.build();
     }
-
 
     // ========================================================================
     //  Grow/Merge Helpers
@@ -461,20 +440,22 @@ public class ProcedureStoreTracker {
   /**
    * Resets internal state to same as given {@code tracker}. Does deep copy of the bitmap.
    */
-  public void resetTo(ProcedureStoreTracker tracker) {
+  public void resetTo(final ProcedureStoreTracker tracker) {
+    resetTo(tracker, false);
+  }
+
+  public void resetTo(final ProcedureStoreTracker tracker, final boolean resetDelete) {
     this.partial = tracker.partial;
     this.minUpdatedProcId = tracker.minUpdatedProcId;
     this.maxUpdatedProcId = tracker.maxUpdatedProcId;
     this.keepDeletes = tracker.keepDeletes;
     for (Map.Entry<Long, BitSetNode> entry : tracker.map.entrySet()) {
-      map.put(entry.getKey(), new BitSetNode(entry.getValue()));
+      map.put(entry.getKey(), new BitSetNode(entry.getValue(), resetDelete));
     }
   }
 
   public void insert(long procId) {
-    BitSetNode node = getOrCreateNode(procId);
-    node.update(procId);
-    trackProcIds(procId);
+    insert(null, procId);
   }
 
   public void insert(final long[] procIds) {
@@ -484,44 +465,106 @@ public class ProcedureStoreTracker {
   }
 
   public void insert(final long procId, final long[] subProcIds) {
-    update(procId);
+    BitSetNode node = null;
+    node = update(node, procId);
     for (int i = 0; i < subProcIds.length; ++i) {
-      insert(subProcIds[i]);
+      node = insert(node, subProcIds[i]);
     }
+  }
+
+  private BitSetNode insert(BitSetNode node, final long procId) {
+    if (node == null || !node.contains(procId)) {
+      node = getOrCreateNode(procId);
+    }
+    node.update(procId);
+    trackProcIds(procId);
+    return node;
   }
 
   public void update(long procId) {
-    Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
-    assert entry != null : "expected node to update procId=" + procId;
+    update(null, procId);
+  }
 
-    BitSetNode node = entry.getValue();
-    assert node.contains(procId);
+  private BitSetNode update(BitSetNode node, final long procId) {
+    node = lookupClosestNode(node, procId);
+    assert node != null : "expected node to update procId=" + procId;
+    assert node.contains(procId) : "expected procId=" + procId + " in the node";
     node.update(procId);
     trackProcIds(procId);
+    return node;
   }
 
   public void delete(long procId) {
-    Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
-    assert entry != null : "expected node to delete procId=" + procId;
+    delete(null, procId);
+  }
 
-    BitSetNode node = entry.getValue();
-    assert node.contains(procId) : "expected procId in the node";
+  public void delete(final long[] procIds) {
+    Arrays.sort(procIds);
+    BitSetNode node = null;
+    for (int i = 0; i < procIds.length; ++i) {
+      node = delete(node, procIds[i]);
+    }
+  }
+
+  private BitSetNode delete(BitSetNode node, final long procId) {
+    node = lookupClosestNode(node, procId);
+    assert node != null : "expected node to delete procId=" + procId;
+    assert node.contains(procId) : "expected procId=" + procId + " in the node";
     node.delete(procId);
-
     if (!keepDeletes && node.isEmpty()) {
       // TODO: RESET if (map.size() == 1)
-      map.remove(entry.getKey());
+      map.remove(node.getStart());
     }
 
     trackProcIds(procId);
+    return node;
   }
 
-  public void delete(long[] procIds) {
-    // TODO: optimize
-    Arrays.sort(procIds);
-    for (int i = 0; i < procIds.length; ++i) {
-      delete(procIds[i]);
+  @InterfaceAudience.Private
+  public void setDeleted(final long procId, final boolean isDeleted) {
+    BitSetNode node = getOrCreateNode(procId);
+    assert node.contains(procId) : "expected procId=" + procId + " in the node=" + node;
+    node.updateState(procId, isDeleted);
+    trackProcIds(procId);
+  }
+
+  public void setDeletedIfSet(final long... procId) {
+    BitSetNode node = null;
+    for (int i = 0; i < procId.length; ++i) {
+      node = lookupClosestNode(node, procId[i]);
+      if (node != null && node.isUpdated(procId[i])) {
+        node.delete(procId[i]);
+      }
     }
+  }
+
+  public void setDeletedIfSet(final ProcedureStoreTracker tracker) {
+    BitSetNode trackerNode = null;
+    for (BitSetNode node: map.values()) {
+      final long minProcId = node.getStart();
+      final long maxProcId = node.getEnd();
+      for (long procId = minProcId; procId <= maxProcId; ++procId) {
+        if (!node.isUpdated(procId)) continue;
+
+        trackerNode = tracker.lookupClosestNode(trackerNode, procId);
+        if (trackerNode == null || !trackerNode.contains(procId) || trackerNode.isUpdated(procId)) {
+          // the procedure was removed or updated
+          node.delete(procId);
+        }
+      }
+    }
+  }
+
+  /**
+   * lookup the node containing the specified procId.
+   * @param node cached node to check before doing a lookup
+   * @param procId the procId to lookup
+   * @return the node that may contains the procId or null
+   */
+  private BitSetNode lookupClosestNode(final BitSetNode node, final long procId) {
+    if (node != null && node.contains(procId)) return node;
+    final Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
+    return entry != null ? entry.getValue() : null;
   }
 
   private void trackProcIds(long procId) {
@@ -535,14 +578,6 @@ public class ProcedureStoreTracker {
 
   public long getUpdatedMaxProcId() {
     return maxUpdatedProcId;
-  }
-
-  @InterfaceAudience.Private
-  public void setDeleted(final long procId, final boolean isDeleted) {
-    BitSetNode node = getOrCreateNode(procId);
-    assert node.contains(procId) : "expected procId=" + procId + " in the node=" + node;
-    node.updateState(procId, isDeleted);
-    trackProcIds(procId);
   }
 
   public void reset() {
@@ -630,11 +665,6 @@ public class ProcedureStoreTracker {
       }
     }
     return true;
-  }
-
-  public boolean isTracking(long minId, long maxId) {
-    // TODO: we can make it more precise, instead of looking just at the block
-    return map.floorEntry(minId) != null || map.floorEntry(maxId) != null;
   }
 
   /**
@@ -735,37 +765,6 @@ public class ProcedureStoreTracker {
     for (Map.Entry<Long, BitSetNode> entry : map.entrySet()) {
       entry.getValue().dump();
     }
-  }
-
-  /**
-   * Iterates over
-   * {@link BitSetNode}s in this.map and subtracts with corresponding ones from {@code other}
-   * tracker.
-   * @return true if tracker changed, i.e. some procedure from {@code other} were subtracted from
-   * current tracker.
-   */
-  public boolean subtract(ProcedureStoreTracker other) {
-    // Can not intersect partial bitmap.
-    assert !partial && !other.partial;
-    boolean nonZeroIntersect = false;
-    for (Map.Entry<Long, BitSetNode> currentEntry : map.entrySet()) {
-      BitSetNode currentBitSetNode = currentEntry.getValue();
-      Map.Entry<Long, BitSetNode> otherTrackerEntry = other.map.floorEntry(currentEntry.getKey());
-      if (otherTrackerEntry == null  // No node in other map with key <= currentEntry.getKey().
-          // First entry in other map doesn't intersect with currentEntry.
-          || otherTrackerEntry.getValue().getEnd() < currentEntry.getKey()) {
-        otherTrackerEntry = other.map.ceilingEntry(currentEntry.getKey());
-        if (otherTrackerEntry == null || !currentBitSetNode.contains(otherTrackerEntry.getKey())) {
-          // No node in other map intersects with currentBitSetNode's range.
-          continue;
-        }
-      }
-      do {
-        nonZeroIntersect |= currentEntry.getValue().subtract(otherTrackerEntry.getValue());
-        otherTrackerEntry = other.map.higherEntry(otherTrackerEntry.getKey());
-      } while (otherTrackerEntry != null && currentBitSetNode.contains(otherTrackerEntry.getKey()));
-    }
-    return nonZeroIntersect;
   }
 
   // ========================================================================
