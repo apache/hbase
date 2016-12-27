@@ -246,7 +246,7 @@ class SimpleRequestController implements RequestController {
   }
 
   @Override
-  public long getNumberOfTsksInProgress() {
+  public long getNumberOfTasksInProgress() {
     return tasksInProgress.get();
   }
 

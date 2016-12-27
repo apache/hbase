@@ -95,7 +95,7 @@ public interface RequestController {
   /**
    * @return The number of running task.
    */
-  long getNumberOfTsksInProgress();
+  long getNumberOfTasksInProgress();
 
   /**
    * Waits for the running tasks to complete.
