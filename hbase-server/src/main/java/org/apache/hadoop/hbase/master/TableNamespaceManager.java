@@ -242,7 +242,8 @@ public class TableNamespaceManager {
             masterServices.createNamespaceSync(
               NamespaceDescriptor.DEFAULT_NAMESPACE,
               HConstants.NO_NONCE,
-              HConstants.NO_NONCE);
+              HConstants.NO_NONCE,
+              false);
           }
         }
         if (get(nsTable, NamespaceDescriptor.SYSTEM_NAMESPACE.getName()) == null) {
@@ -257,7 +258,8 @@ public class TableNamespaceManager {
             masterServices.createNamespaceSync(
               NamespaceDescriptor.SYSTEM_NAMESPACE,
               HConstants.NO_NONCE,
-              HConstants.NO_NONCE);
+              HConstants.NO_NONCE,
+              false);
           }
         }
 

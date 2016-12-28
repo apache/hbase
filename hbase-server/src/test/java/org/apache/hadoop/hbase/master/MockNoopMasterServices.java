@@ -170,7 +170,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public void createNamespaceSync(NamespaceDescriptor descriptor, long nonceGroup, long nonce) throws IOException {
+  public void createNamespaceSync(
+      final NamespaceDescriptor descriptor,
+      final long nonceGroup,
+      final long nonce,
+      final boolean executeCoprocessor) throws IOException {
 
   }
 
