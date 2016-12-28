@@ -142,9 +142,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.ReplicationPeers;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -162,7 +159,6 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -2108,7 +2104,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
         LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
 
-        // Execute the operation synchronously - wait for the operation to complete before continuing.
+        // Execute the operation synchronously - wait for the operation to complete before
+        // continuing.
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch(2, 0);
         submitProcedure(new ModifyColumnFamilyProcedure(procedureExecutor.getEnvironment(),
             tableName, descriptor, latch));
@@ -2750,14 +2747,15 @@ public class HMaster extends HRegionServer implements MasterServices {
           throw new BypassCoprocessorException();
         }
         LOG.info(getClientIdAuditPrefix() + " creating " + namespaceDescriptor);
-        // Execute the operation synchronously - wait for the operation to complete before continuing.
+        // Execute the operation synchronously - wait for the operation to complete before
+        // continuing.
         setProcId(getClusterSchema().createNamespace(namespaceDescriptor, getNonceKey()));
         getMaster().getMasterCoprocessorHost().postCreateNamespace(namespaceDescriptor);
       }
 
       @Override
       protected String getDescription() {
-        return "CreateTableProcedure";
+        return "CreateNamespaceProcedure";
       }
     });
   }
@@ -2783,14 +2781,15 @@ public class HMaster extends HRegionServer implements MasterServices {
           throw new BypassCoprocessorException();
         }
         LOG.info(getClientIdAuditPrefix() + " modify " + namespaceDescriptor);
-        // Execute the operation synchronously - wait for the operation to complete before continuing.
+        // Execute the operation synchronously - wait for the operation to complete before
+        // continuing.
         setProcId(getClusterSchema().modifyNamespace(namespaceDescriptor, getNonceKey()));
         getMaster().getMasterCoprocessorHost().postModifyNamespace(namespaceDescriptor);
       }
 
       @Override
       protected String getDescription() {
-        return "CreateTableProcedure";
+        return "ModifyNamespaceProcedure";
       }
     });
   }
@@ -2814,7 +2813,8 @@ public class HMaster extends HRegionServer implements MasterServices {
           throw new BypassCoprocessorException();
         }
         LOG.info(getClientIdAuditPrefix() + " delete " + name);
-        // Execute the operation synchronously - wait for the operation to complete before continuing.
+        // Execute the operation synchronously - wait for the operation to complete before
+        // continuing.
         setProcId(getClusterSchema().deleteNamespace(name, getNonceKey()));
         getMaster().getMasterCoprocessorHost().postDeleteNamespace(name);
       }

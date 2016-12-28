@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -51,8 +50,6 @@ public class TestMergeTableRegionsProcedure {
   private static final Log LOG = LogFactory.getLog(TestMergeTableRegionsProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
 
   private static final int initialRegionCount = 4;
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
@@ -87,9 +84,6 @@ public class TestMergeTableRegionsProcedure {
   @Before
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
     // Turn off balancer so it doesn't cut in and mess up our placements.
     UTIL.getHBaseAdmin().setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.

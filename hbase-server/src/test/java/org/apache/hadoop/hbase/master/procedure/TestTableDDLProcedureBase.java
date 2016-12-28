@@ -35,9 +35,6 @@ public abstract class TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestTableDDLProcedureBase.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  protected static long nonceGroup;
-  protected static long nonce;
-
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
@@ -60,9 +57,6 @@ public abstract class TestTableDDLProcedureBase {
   @Before
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
