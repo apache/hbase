@@ -409,7 +409,8 @@ public class TestCatalogJanitor {
     public void createNamespaceSync(
         final NamespaceDescriptor descriptor,
         final long nonceGroup,
-        final long nonce) throws IOException {
+        final long nonce,
+        final boolean executeCoprocessor) throws IOException {
       //To change body of implemented methods use File | Settings | File Templates.
     }
 

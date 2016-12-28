@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.ProcedureInfo;
@@ -46,9 +45,6 @@ public class TestModifyColumnFamilyProcedure {
   private static final Log LOG = LogFactory.getLog(TestModifyColumnFamilyProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -72,9 +68,6 @@ public class TestModifyColumnFamilyProcedure {
   @Before
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -101,9 +94,7 @@ public class TestModifyColumnFamilyProcedure {
     // Test 1: modify the column family online
     columnDescriptor.setBlocksize(newBlockSize);
     long procId1 = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -114,9 +105,7 @@ public class TestModifyColumnFamilyProcedure {
     UTIL.getHBaseAdmin().disableTable(tableName);
     columnDescriptor.setBlocksize(newBlockSize * 2);
     long procId2 = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup + 1,
-      nonce + 1);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -139,9 +128,7 @@ public class TestModifyColumnFamilyProcedure {
     // Modify the column family that does not exist
     columnDescriptor.setBlocksize(newBlockSize);
     long procId1 = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
@@ -171,9 +158,7 @@ public class TestModifyColumnFamilyProcedure {
     // Start the Modify procedure && kill the executor
     columnDescriptor.setBlocksize(newBlockSize);
     long procId = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyColumnFamilyState.values().length;
@@ -205,9 +190,7 @@ public class TestModifyColumnFamilyProcedure {
     // Start the Modify procedure && kill the executor
     columnDescriptor.setBlocksize(newBlockSize);
     long procId = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyColumnFamilyState.values().length;
@@ -236,9 +219,7 @@ public class TestModifyColumnFamilyProcedure {
     // Start the Modify procedure && kill the executor
     columnDescriptor.setBlocksize(newBlockSize);
     long procId = procExec.submitProcedure(
-      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+      new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
 
     // Failing in the middle of proc
     int numberOfSteps = ModifyColumnFamilyState.values().length - 2;

@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-
 import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
@@ -47,9 +45,6 @@ public class TestModifyNamespaceProcedure {
   private static final Log LOG = LogFactory.getLog(TestModifyNamespaceProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -73,9 +68,6 @@ public class TestModifyNamespaceProcedure {
   @Before
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -112,9 +104,7 @@ public class TestModifyNamespaceProcedure {
     nsd.setConfiguration(nsKey2, nsValue2);
 
     long procId1 = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd),
-      nonceGroup,
-      nonce);
+      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -142,9 +132,7 @@ public class TestModifyNamespaceProcedure {
     final NamespaceDescriptor nsd = NamespaceDescriptor.create(namespaceName).build();
 
     long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd),
-      nonceGroup,
-      nonce);
+      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
@@ -170,9 +158,7 @@ public class TestModifyNamespaceProcedure {
     nsd.setConfiguration(nsKey, nsValue);
 
     long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd),
-      nonceGroup,
-      nonce);
+      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureInfo result = procExec.getResult(procId);
@@ -195,9 +181,7 @@ public class TestModifyNamespaceProcedure {
     nsd.setConfiguration(nsKey, nsValue);
 
     long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd),
-      nonceGroup,
-      nonce);
+      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureInfo result = procExec.getResult(procId);
@@ -223,9 +207,7 @@ public class TestModifyNamespaceProcedure {
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd),
-      nonceGroup,
-      nonce);
+      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyNamespaceState.values().length;
@@ -259,9 +241,7 @@ public class TestModifyNamespaceProcedure {
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd),
-      nonceGroup,
-      nonce);
+      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
 
     // Failing in the middle of proc
     int numberOfSteps = ModifyNamespaceState.values().length - 2;
@@ -285,9 +265,7 @@ public class TestModifyNamespaceProcedure {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsDescriptor),
-      nonceGroup + 1,
-      nonce + 1);
+      new CreateNamespaceProcedure(procExec.getEnvironment(), nsDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);

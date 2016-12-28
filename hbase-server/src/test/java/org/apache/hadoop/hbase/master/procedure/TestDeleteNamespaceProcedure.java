@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
@@ -52,9 +51,6 @@ public class TestDeleteNamespaceProcedure {
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
-
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
@@ -77,9 +73,6 @@ public class TestDeleteNamespaceProcedure {
   @Before
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -99,9 +92,7 @@ public class TestDeleteNamespaceProcedure {
     createNamespaceForTesting(namespaceName);
 
     long procId = procExec.submitProcedure(
-      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
-      nonceGroup,
-      nonce);
+      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -117,9 +108,7 @@ public class TestDeleteNamespaceProcedure {
     validateNamespaceNotExist(namespaceName);
 
     long procId = procExec.submitProcedure(
-      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
-      nonceGroup,
-      nonce);
+      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     // Expect fail with NamespaceNotFoundException
@@ -136,9 +125,7 @@ public class TestDeleteNamespaceProcedure {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     long procId = procExec.submitProcedure(
-      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
-      nonceGroup,
-      nonce);
+      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureInfo result = procExec.getResult(procId);
@@ -158,42 +145,13 @@ public class TestDeleteNamespaceProcedure {
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1");
 
     long procId = procExec.submitProcedure(
-      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
-      nonceGroup,
-      nonce);
+      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureInfo result = procExec.getResult(procId);
     assertTrue(result.isFailed());
     LOG.debug("Delete namespace failed with exception: " + result.getExceptionFullMessage());
     assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
-  }
-
-  @Test(timeout=60000)
-  public void testDeleteSameNamespaceTwiceWithSameNonce() throws Exception {
-    final String namespaceName = "testDeleteSameNamespaceTwiceWithSameNonce";
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    createNamespaceForTesting(namespaceName);
-
-    long procId1 = procExec.submitProcedure(
-      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
-      nonceGroup,
-      nonce);
-    long procId2 = procExec.submitProcedure(
-      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
-      nonceGroup,
-      nonce);
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-
-    validateNamespaceNotExist(namespaceName);
-
-    // Wait the completion and expect not fail - because it is the same proc
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
   }
 
   @Test(timeout = 60000)
@@ -208,10 +166,7 @@ public class TestDeleteNamespaceProcedure {
 
     // Start the DeleteNamespace procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
-      nonceGroup,
-      nonce);
-
+      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
     // Restart the executor and execute the step twice
     int numberOfSteps = DeleteNamespaceState.values().length;
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(
@@ -237,9 +192,7 @@ public class TestDeleteNamespaceProcedure {
 
     // Start the DeleteNamespace procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName),
-      nonceGroup,
-      nonce);
+      new DeleteNamespaceProcedure(procExec.getEnvironment(), namespaceName));
 
     int numberOfSteps = DeleteNamespaceState.values().length - 2; // failing in the middle of proc
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(
@@ -263,9 +216,7 @@ public class TestDeleteNamespaceProcedure {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd),
-      nonceGroup + 1,
-      nonce + 1);
+      new CreateNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);

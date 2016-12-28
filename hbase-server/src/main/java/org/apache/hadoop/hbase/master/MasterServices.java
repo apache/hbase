@@ -311,7 +311,8 @@ public interface MasterServices extends Server {
   public void createNamespaceSync(
       final NamespaceDescriptor descriptor,
       final long nonceGroup,
-      final long nonce) throws IOException;
+      final long nonce,
+      final boolean executeCoprocessor) throws IOException;
 
   /**
    * Modify an existing namespace
