@@ -62,16 +62,19 @@ public class HbaseHandlerMetricsProxy implements InvocationHandler {
   public Object invoke(Object proxy, Method m, Object[] args)
       throws Throwable {
     Object result;
+    long start = now();
     try {
-      long start = now();
       result = m.invoke(handler, args);
-      long processTime = now() - start;
-      metrics.incMethodTime(m.getName(), processTime);
     } catch (InvocationTargetException e) {
+      metrics.exception(e.getCause());
       throw e.getTargetException();
     } catch (Exception e) {
+      metrics.exception(e);
       throw new RuntimeException(
           "unexpected invocation exception: " + e.getMessage());
+    } finally {
+      long processTime = now() - start;
+      metrics.incMethodTime(m.getName(), processTime);
     }
     return result;
   }

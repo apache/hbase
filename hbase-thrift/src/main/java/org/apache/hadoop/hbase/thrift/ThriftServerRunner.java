@@ -758,7 +758,7 @@ public class ThriftServerRunner implements Runnable {
         getAdmin().enableTable(getTableName(tableName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -768,7 +768,7 @@ public class ThriftServerRunner implements Runnable {
         getAdmin().disableTable(getTableName(tableName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -778,7 +778,7 @@ public class ThriftServerRunner implements Runnable {
         return this.connectionCache.getAdmin().isTableEnabled(getTableName(tableName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -791,7 +791,7 @@ public class ThriftServerRunner implements Runnable {
         ((HBaseAdmin) getAdmin()).compact(getBytes(tableNameOrRegionName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -804,7 +804,7 @@ public class ThriftServerRunner implements Runnable {
         ((HBaseAdmin) getAdmin()).majorCompact(getBytes(tableNameOrRegionName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -819,7 +819,7 @@ public class ThriftServerRunner implements Runnable {
         return list;
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -852,7 +852,7 @@ public class ThriftServerRunner implements Runnable {
         return Collections.emptyList();
       } catch (IOException e){
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -897,7 +897,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally {
         closeTable(table);
       }
@@ -943,7 +943,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -990,7 +990,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1051,7 +1051,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1120,7 +1120,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1155,7 +1155,7 @@ public class ThriftServerRunner implements Runnable {
 
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally {
         closeTable(table);
       }
@@ -1180,7 +1180,7 @@ public class ThriftServerRunner implements Runnable {
         table.delete(delete);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally {
         closeTable(table);
       }
@@ -1203,7 +1203,7 @@ public class ThriftServerRunner implements Runnable {
         getAdmin().createTable(desc);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(Throwables.getStackTraceAsString(e));
@@ -1227,7 +1227,7 @@ public class ThriftServerRunner implements Runnable {
         getAdmin().deleteTable(tableName);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -1285,7 +1285,7 @@ public class ThriftServerRunner implements Runnable {
           table.put(put);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(Throwables.getStackTraceAsString(e));
@@ -1358,7 +1358,7 @@ public class ThriftServerRunner implements Runnable {
 
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(Throwables.getStackTraceAsString(e));
@@ -1388,7 +1388,7 @@ public class ThriftServerRunner implements Runnable {
             getBytes(row), family, qualifier, amount);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally {
         closeTable(table);
       }
@@ -1426,7 +1426,7 @@ public class ThriftServerRunner implements Runnable {
         }
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
       return ThriftUtilities.rowResultFromHBase(results, resultScannerWrapper.isColumnSorted());
     }
@@ -1485,7 +1485,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), tScan.sortColumns);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1514,7 +1514,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1544,7 +1544,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1578,7 +1578,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1608,7 +1608,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1640,7 +1640,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1665,7 +1665,7 @@ public class ThriftServerRunner implements Runnable {
         return columns;
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally {
         closeTable(table);
       }
@@ -1680,7 +1680,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -1719,7 +1719,7 @@ public class ThriftServerRunner implements Runnable {
         return region;
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       }
     }
 
@@ -1773,7 +1773,7 @@ public class ThriftServerRunner implements Runnable {
         table.increment(inc);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
         closeTable(table);
       }
@@ -1804,7 +1804,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } finally{
           closeTable(table);
       }
@@ -1838,7 +1838,7 @@ public class ThriftServerRunner implements Runnable {
           value != null ? getBytes(value) : HConstants.EMPTY_BYTE_ARRAY, put);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
+        throw getIOError(e);
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
         throw new IllegalArgument(Throwables.getStackTraceAsString(e));
@@ -1849,6 +1849,11 @@ public class ThriftServerRunner implements Runnable {
   }
 
 
+  private static IOError getIOError(Throwable throwable) {
+    IOError error = new IOErrorWithCause(throwable);
+    error.setMessage(Throwables.getStackTraceAsString(throwable));
+    return error;
+  }
 
   /**
    * Adds all the attributes into the Operation object
@@ -1876,6 +1881,39 @@ public class ThriftServerRunner implements Runnable {
           ParseFilter.registerFilter(filterPart[0], filterPart[1]);
         }
       }
+    }
+  }
+
+  public static class IOErrorWithCause extends IOError {
+    private Throwable cause;
+    public IOErrorWithCause(Throwable cause) {
+      this.cause = cause;
+    }
+
+    @Override
+    public Throwable getCause() {
+      return cause;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (super.equals(other) &&
+          other instanceof IOErrorWithCause) {
+        Throwable otherCause = ((IOErrorWithCause) other).getCause();
+        if (this.getCause() != null) {
+          return otherCause != null && this.getCause().equals(otherCause);
+        } else {
+          return otherCause == null;
+        }
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = super.hashCode();
+      result = 31 * result + (cause != null ? cause.hashCode() : 0);
+      return result;
     }
   }
 }

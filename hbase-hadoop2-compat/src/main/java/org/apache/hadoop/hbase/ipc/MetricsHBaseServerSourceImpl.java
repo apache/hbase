@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.hbase.metrics.ExceptionTrackingSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -28,7 +29,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 
 @InterfaceAudience.Private
-public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
+public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
     implements MetricsHBaseServerSource {
 
 
@@ -40,17 +41,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private final MutableFastCounter authenticationFallbacks;
   private final MutableFastCounter sentBytes;
   private final MutableFastCounter receivedBytes;
-
-  private final MutableFastCounter exceptions;
-  private final MutableFastCounter exceptionsOOO;
-  private final MutableFastCounter exceptionsBusy;
-  private final MutableFastCounter exceptionsUnknown;
-  private final MutableFastCounter exceptionsScannerReset;
-  private final MutableFastCounter exceptionsSanity;
-  private final MutableFastCounter exceptionsNSRE;
-  private final MutableFastCounter exceptionsMoved;
-  private final MutableFastCounter exceptionsMultiTooLarge;
-  private final MutableFastCounter exceptionsCallQueueTooBig;
 
 
   private MetricHistogram queueCallTime;
@@ -71,27 +61,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         AUTHORIZATION_SUCCESSES_DESC, 0L);
     this.authorizationFailures = this.getMetricsRegistry().newCounter(AUTHORIZATION_FAILURES_NAME,
         AUTHORIZATION_FAILURES_DESC, 0L);
-
-    this.exceptions = this.getMetricsRegistry().newCounter(EXCEPTIONS_NAME, EXCEPTIONS_DESC, 0L);
-    this.exceptionsOOO = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_OOO_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsBusy = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_BUSY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsUnknown = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_UNKNOWN_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsScannerReset = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_SCANNER_RESET_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsSanity = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_SANITY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsMoved = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_MOVED_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsNSRE = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_NSRE_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsMultiTooLarge = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_MULTI_TOO_LARGE_NAME, EXCEPTIONS_MULTI_TOO_LARGE_DESC, 0L);
-    this.exceptionsCallQueueTooBig = this.getMetricsRegistry().newCounter(
-      EXCEPTIONS_CALL_QUEUE_TOO_BIG, EXCEPTIONS_CALL_QUEUE_TOO_BIG_DESC, 0L);
-
     this.authenticationSuccesses = this.getMetricsRegistry().newCounter(
         AUTHENTICATION_SUCCESSES_NAME, AUTHENTICATION_SUCCESSES_DESC, 0L);
     this.authenticationFailures = this.getMetricsRegistry().newCounter(AUTHENTICATION_FAILURES_NAME,
@@ -132,56 +101,6 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   @Override
   public void authenticationFallback() {
     authenticationFallbacks.incr();
-  }
-
-  @Override
-  public void exception() {
-    exceptions.incr();
-  }
-
-  @Override
-  public void outOfOrderException() {
-    exceptionsOOO.incr();
-  }
-
-  @Override
-  public void failedSanityException() {
-    exceptionsSanity.incr();
-  }
-
-  @Override
-  public void movedRegionException() {
-    exceptionsMoved.incr();
-  }
-
-  @Override
-  public void notServingRegionException() {
-    exceptionsNSRE.incr();
-  }
-
-  @Override
-  public void unknownScannerException() {
-    exceptionsUnknown.incr();
-  }
-
-  @Override
-  public void scannerResetException() {
-    exceptionsScannerReset.incr();
-  }
-
-  @Override
-  public void tooBusyException() {
-    exceptionsBusy.incr();
-  }
-
-  @Override
-  public void multiActionTooLargeException() {
-    exceptionsMultiTooLarge.incr();
-  }
-
-  @Override
-  public void callQueueTooBigException() {
-    exceptionsCallQueueTooBig.incr();
   }
 
   @Override
