@@ -22,18 +22,11 @@ import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
-import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
-import static org.junit.Assert.*;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -48,7 +41,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -85,7 +77,8 @@ public class TestMetaWithReplicas {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.getConfiguration().setInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
+    TEST_UTIL.startMiniCluster(4);
     // disable the balancer
     LoadBalancerTracker l = new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(),
         new Abortable() {
@@ -429,5 +422,65 @@ public class TestMetaWithReplicas {
     // run hbck again to make sure we don't see any errors
     hbck = doFsck(TEST_UTIL.getConfiguration(), false);
     assertErrors(hbck, new ERROR_CODE[]{});
+  }
+
+  @Test (timeout=180000)
+  public void testMetaTableReplicaAssignment() throws Exception {
+    ClusterConnection c = ConnectionManager.getConnectionInternal(TEST_UTIL.getConfiguration());
+    RegionLocations rl =
+        c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, true);
+
+    ServerName meta0SN = rl.getRegionLocation(0).getServerName();
+    LOG.debug("The hbase:meta default replica region is in server: " + meta0SN);
+    ServerName meta1SN = rl.getRegionLocation(1).getServerName();
+    LOG.debug("The hbase:meta replica 1 region " + rl.getRegionLocation(1).getRegionInfo() +
+      " is in server: " + meta1SN);
+
+    LOG.debug("Killing the region server " + meta1SN +
+      " that hosts hbase:meta replica 1 region " + rl.getRegionLocation(1).getRegionInfo());
+    TEST_UTIL.getHBaseClusterInterface().killRegionServer(meta1SN);
+    TEST_UTIL.getHBaseClusterInterface().waitForRegionServerToStop(meta1SN, 60000);
+
+    ServerName masterSN = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
+    LOG.debug("Killing the master server " + masterSN);
+    TEST_UTIL.getHBaseClusterInterface().stopMaster(masterSN);
+    TEST_UTIL.getHBaseClusterInterface().waitForMasterToStop(masterSN, 60000);
+    LOG.debug("Restarting the master server " + masterSN);
+    TEST_UTIL.getHBaseClusterInterface().startMaster(masterSN.getHostname(), masterSN.getPort());
+    TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster();
+    rl = c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, true);
+
+    // wait for replica 1 to be re-assigned
+    ServerName newMeta1SN;
+    int i = 0;
+    do {
+      Thread.sleep(100);
+      newMeta1SN = rl.getRegionLocation(1).getServerName();
+      i++;
+    } while (meta1SN.equals(newMeta1SN) & i < 600); // wait for 60 seconds
+    LOG.debug("The hbase:meta replica 1 region " + rl.getRegionLocation(1).getRegionInfo() +
+        " is now moved from server " + meta1SN + " to server " + newMeta1SN);
+    assert (!meta1SN.equals(newMeta1SN));
+
+    LOG.debug("Killing the region server " + meta0SN +
+      " that hosts hbase:meta default replica region " + rl.getRegionLocation(0).getRegionInfo());
+    TEST_UTIL.getHBaseClusterInterface().killRegionServer(meta0SN);
+    TEST_UTIL.getHBaseClusterInterface().waitForRegionServerToStop(meta0SN, 60000);
+
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().waitForAssignment(
+      HRegionInfo.FIRST_META_REGIONINFO);
+
+    // wait for default replica to be re-assigned
+    ServerName newMeta0SN;
+    i = 0;
+    do {
+      Thread.sleep(100);
+      rl = c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, true);
+      newMeta0SN = rl.getRegionLocation(0).getServerName();
+      i++;
+    } while (meta0SN.equals(newMeta0SN) && i < 600); // wait for 60 seconds
+    LOG.debug("The hbase:meta default replica region is now moved from server " +
+      meta0SN + " to server " + newMeta0SN);
+    assert (!meta0SN.equals(newMeta0SN));
   }
 }
