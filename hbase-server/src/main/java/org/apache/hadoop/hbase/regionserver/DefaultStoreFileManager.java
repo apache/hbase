@@ -179,8 +179,8 @@ class DefaultStoreFileManager implements StoreFileManager {
   }
 
   @Override
-  public final Collection<StoreFile> getFilesForScanOrGet(boolean isGet,
-      byte[] startRow, byte[] stopRow) {
+  public final Collection<StoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
+      byte[] stopRow, boolean includeStopRow) {
     // We cannot provide any useful input and already have the files sorted by seqNum.
     return getStorefiles();
   }

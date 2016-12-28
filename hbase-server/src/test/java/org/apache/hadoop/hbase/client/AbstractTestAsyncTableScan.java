@@ -120,7 +120,7 @@ public abstract class AbstractTestAsyncTableScan {
   public void testScanNoStopKey() throws Exception {
     int start = 345;
     List<Result> results =
-        doScan(createScan().setStartRow(Bytes.toBytes(String.format("%03d", start))));
+        doScan(createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))));
     assertEquals(COUNT - start, results.size());
     IntStream.range(0, COUNT - start).forEach(i -> assertResultEquals(results.get(i), start + i));
   }
@@ -129,44 +129,66 @@ public abstract class AbstractTestAsyncTableScan {
   public void testReverseScanNoStopKey() throws Exception {
     int start = 765;
     List<Result> results = doScan(
-      createScan().setStartRow(Bytes.toBytes(String.format("%03d", start))).setReversed(true));
+      createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))).setReversed(true));
     assertEquals(start + 1, results.size());
     IntStream.range(0, start + 1).forEach(i -> assertResultEquals(results.get(i), start - i));
   }
 
-  private void testScan(int start, int stop) throws Exception {
-    List<Result> results =
-        doScan(createScan().setStartRow(Bytes.toBytes(String.format("%03d", start)))
-            .setStopRow(Bytes.toBytes(String.format("%03d", stop))));
-    assertEquals(stop - start, results.size());
-    IntStream.range(0, stop - start).forEach(i -> assertResultEquals(results.get(i), start + i));
+  private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive)
+      throws Exception {
+    List<Result> results = doScan(
+      createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
+          .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive));
+    int actualStart = startInclusive ? start : start + 1;
+    int actualStop = stopInclusive ? stop + 1 : stop;
+    assertEquals(actualStop - actualStart, results.size());
+    IntStream.range(0, actualStop - actualStart)
+        .forEach(i -> assertResultEquals(results.get(i), actualStart + i));
   }
 
-  private void testReversedScan(int start, int stop) throws Exception {
-    List<Result> results =
-        doScan(createScan().setStartRow(Bytes.toBytes(String.format("%03d", start)))
-            .setStopRow(Bytes.toBytes(String.format("%03d", stop))).setReversed(true));
-    assertEquals(start - stop, results.size());
-    IntStream.range(0, start - stop).forEach(i -> assertResultEquals(results.get(i), start - i));
+  private void testReversedScan(int start, boolean startInclusive, int stop, boolean stopInclusive)
+      throws Exception {
+    List<Result> results = doScan(createScan()
+        .withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
+        .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive).setReversed(true));
+    int actualStart = startInclusive ? start : start - 1;
+    int actualStop = stopInclusive ? stop - 1 : stop;
+    assertEquals(actualStart - actualStop, results.size());
+    IntStream.range(0, actualStart - actualStop)
+        .forEach(i -> assertResultEquals(results.get(i), actualStart - i));
   }
 
   @Test
   public void testScanWithStartKeyAndStopKey() throws Exception {
-    testScan(345, 567);
+    testScan(1, true, 998, false); // from first region to last region
+    testScan(123, true, 345, true);
+    testScan(234, true, 456, false);
+    testScan(345, false, 567, true);
+    testScan(456, false, 678, false);
   }
 
   @Test
   public void testReversedScanWithStartKeyAndStopKey() throws Exception {
-    testReversedScan(765, 543);
+    testReversedScan(998, true, 1, false); // from first region to first region
+    testReversedScan(543, true, 321, true);
+    testReversedScan(654, true, 432, false);
+    testReversedScan(765, false, 543, true);
+    testReversedScan(876, false, 654, false);
   }
 
   @Test
   public void testScanAtRegionBoundary() throws Exception {
-    testScan(222, 333);
+    testScan(222, true, 333, true);
+    testScan(333, true, 444, false);
+    testScan(444, false, 555, true);
+    testScan(555, false, 666, false);
   }
 
   @Test
   public void testReversedScanAtRegionBoundary() throws Exception {
-    testScan(222, 333);
+    testReversedScan(333, true, 222, true);
+    testReversedScan(444, true, 333, false);
+    testReversedScan(555, false, 444, true);
+    testReversedScan(666, false, 555, false);
   }
 }

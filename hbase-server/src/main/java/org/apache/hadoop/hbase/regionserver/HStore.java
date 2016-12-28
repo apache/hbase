@@ -18,6 +18,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
@@ -89,13 +96,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 /**
  * A Store holds a column family in a Region.  Its a memstore and a set of zero
@@ -1138,20 +1138,19 @@ public class HStore implements Store {
   }
 
   /**
-   * Get all scanners with no filtering based on TTL (that happens further down
-   * the line).
+   * Get all scanners with no filtering based on TTL (that happens further down the line).
    * @return all scanners for this store
    */
   @Override
-  public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet,
-      boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
-      byte[] stopRow, long readPt) throws IOException {
+  public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread,
+      boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
+      byte[] stopRow, boolean includeStopRow, long readPt) throws IOException {
     Collection<StoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
     this.lock.readLock().lock();
     try {
-      storeFilesToScan =
-          this.storeEngine.getStoreFileManager().getFilesForScanOrGet(isGet, startRow, stopRow);
+      storeFilesToScan = this.storeEngine.getStoreFileManager().getFilesForScan(startRow,
+        includeStartRow, stopRow, includeStopRow);
       memStoreScanners = this.memstore.getScanners(readPt);
     } finally {
       this.lock.readLock().unlock();
@@ -1163,9 +1162,8 @@ public class HStore implements Store {
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(storeFilesToScan,
-        cacheBlocks, usePread, isCompaction, false, matcher, readPt, isPrimaryReplicaStore());
-    List<KeyValueScanner> scanners =
-      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
+      cacheBlocks, usePread, isCompaction, false, matcher, readPt, isPrimaryReplicaStore());
+    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(sfScanners.size() + 1);
     scanners.addAll(sfScanners);
     // Then the memstore scanners
     scanners.addAll(memStoreScanners);
@@ -1174,8 +1172,9 @@ public class HStore implements Store {
 
   @Override
   public List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
-      boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
-      byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner) throws IOException {
+      boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
+      boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
+      boolean includeMemstoreScanner) throws IOException {
     List<KeyValueScanner> memStoreScanners = null;
     if (includeMemstoreScanner) {
       this.lock.readLock().lock();
@@ -2234,8 +2233,8 @@ public class HStore implements Store {
         if (LOG.isInfoEnabled()) {
           LOG.info("Region: " + HStore.this.getRegionInfo().getEncodedName() +
             " added " + storeFile + ", entries=" + storeFile.getReader().getEntries() +
-            ", sequenceid=" +  + storeFile.getReader().getSequenceID() +
-            ", filesize=" + StringUtils.humanReadableInt(storeFile.getReader().length()));
+              ", sequenceid=" + +storeFile.getReader().getSequenceID() + ", filesize="
+              + TraditionalBinaryPrefix.long2String(storeFile.getReader().length(), "", 1));
         }
       }
 

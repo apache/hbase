@@ -89,15 +89,15 @@ public class TestStripeStoreFileManager {
     MockStoreFile sf = createFile();
     manager.insertNewFiles(al(sf));
     assertEquals(1, manager.getStorefileCount());
-    Collection<StoreFile> filesForGet = manager.getFilesForScanOrGet(true, KEY_A, KEY_A);
+    Collection<StoreFile> filesForGet = manager.getFilesForScan(KEY_A, true, KEY_A, true);
     assertEquals(1, filesForGet.size());
     assertTrue(filesForGet.contains(sf));
 
     // Add some stripes and make sure we get this file for every stripe.
     manager.addCompactionResults(al(), al(createFile(OPEN_KEY, KEY_B),
         createFile(KEY_B, OPEN_KEY)));
-    assertTrue(manager.getFilesForScanOrGet(true, KEY_A, KEY_A).contains(sf));
-    assertTrue(manager.getFilesForScanOrGet(true, KEY_C, KEY_C).contains(sf));
+    assertTrue(manager.getFilesForScan(KEY_A, true, KEY_A, true).contains(sf));
+    assertTrue(manager.getFilesForScan(KEY_C, true, KEY_C, true).contains(sf));
   }
 
   @Test
@@ -290,10 +290,9 @@ public class TestStripeStoreFileManager {
     verifyGetAndScanScenario(manager, keyAfter(KEY_B), keyAfter(KEY_C), sf0, sfC, sfD);
   }
 
-  private void verifyGetAndScanScenario(StripeStoreFileManager manager,
-      byte[] start, byte[] end, StoreFile... results) throws Exception {
-    verifyGetOrScanScenario(manager, true, start, end, results);
-    verifyGetOrScanScenario(manager, false, start, end, results);
+  private void verifyGetAndScanScenario(StripeStoreFileManager manager, byte[] start, byte[] end,
+      StoreFile... results) throws Exception {
+    verifyGetOrScanScenario(manager, start, end, results);
   }
 
   @Test
@@ -548,16 +547,16 @@ public class TestStripeStoreFileManager {
     verifyAllFiles(manager, allFiles); // must have the same files.
   }
 
-  private void verifyGetOrScanScenario(StripeStoreFileManager manager, boolean isGet,
-      byte[] start, byte[] end, StoreFile... results) throws Exception {
-    verifyGetOrScanScenario(manager, isGet, start, end, Arrays.asList(results));
+  private void verifyGetOrScanScenario(StripeStoreFileManager manager, byte[] start, byte[] end,
+      StoreFile... results) throws Exception {
+    verifyGetOrScanScenario(manager, start, end, Arrays.asList(results));
   }
 
-  private void verifyGetOrScanScenario(StripeStoreFileManager manager, boolean isGet,
-      byte[] start, byte[] end, Collection<StoreFile> results) throws Exception {
+  private void verifyGetOrScanScenario(StripeStoreFileManager manager, byte[] start, byte[] end,
+      Collection<StoreFile> results) throws Exception {
     start = start != null ? start : HConstants.EMPTY_START_ROW;
     end = end != null ? end : HConstants.EMPTY_END_ROW;
-    Collection<StoreFile> sfs = manager.getFilesForScanOrGet(isGet, start, end);
+    Collection<StoreFile> sfs = manager.getFilesForScan(start, true, end, false);
     assertEquals(results.size(), sfs.size());
     for (StoreFile result : results) {
       assertTrue(sfs.contains(result));
@@ -566,7 +565,7 @@ public class TestStripeStoreFileManager {
 
   private void verifyAllFiles(
       StripeStoreFileManager manager, Collection<StoreFile> results) throws Exception {
-    verifyGetOrScanScenario(manager, false, null, null, results);
+    verifyGetOrScanScenario(manager, null, null, results);
   }
 
   // TODO: replace with Mockito?

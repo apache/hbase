@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.getLocateType;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForScan;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,7 +38,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Retry caller for smaller scan.
@@ -57,10 +57,6 @@ class AsyncSmallScanRpcRetryingCaller {
 
   private final long rpcTimeoutNs;
 
-  private final Function<byte[], byte[]> createClosestNextRow;
-
-  private final Runnable firstScan;
-
   private final Function<HRegionInfo, Boolean> nextScan;
 
   private final List<Result> resultList;
@@ -76,12 +72,8 @@ class AsyncSmallScanRpcRetryingCaller {
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
     if (scan.isReversed()) {
-      this.createClosestNextRow = ConnectionUtils::createClosestRowBefore;
-      this.firstScan = this::reversedFirstScan;
       this.nextScan = this::reversedNextScan;
     } else {
-      this.createClosestNextRow = ConnectionUtils::createClosestRowAfter;
-      this.firstScan = this::firstScan;
       this.nextScan = this::nextScan;
     }
     this.resultList = new ArrayList<>();
@@ -141,10 +133,9 @@ class AsyncSmallScanRpcRetryingCaller {
     }
     if (resp.hasMoreResultsInRegion) {
       if (resp.results.length > 0) {
-        scan.setStartRow(
-          createClosestNextRow.apply(resp.results[resp.results.length - 1].getRow()));
+        scan.withStartRow(resp.results[resp.results.length - 1].getRow(), false);
       }
-      scan(RegionLocateType.CURRENT);
+      scan();
       return;
     }
     if (!nextScan.apply(resp.currentRegion)) {
@@ -152,11 +143,11 @@ class AsyncSmallScanRpcRetryingCaller {
     }
   }
 
-  private void scan(RegionLocateType locateType) {
+  private void scan() {
     conn.callerFactory.<SmallScanResponse> single().table(tableName).row(scan.getStartRow())
-        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).locateType(locateType)
-        .action(this::scan).call().whenComplete((resp, error) -> {
+        .locateType(getLocateType(scan)).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+        .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).action(this::scan).call()
+        .whenComplete((resp, error) -> {
           if (error != null) {
             future.completeExceptionally(error);
           } else {
@@ -166,45 +157,27 @@ class AsyncSmallScanRpcRetryingCaller {
   }
 
   public CompletableFuture<List<Result>> call() {
-    firstScan.run();
+    scan();
     return future;
   }
 
-  private void firstScan() {
-    scan(RegionLocateType.CURRENT);
-  }
-
-  private void reversedFirstScan() {
-    scan(isEmptyStartRow(scan.getStartRow()) ? RegionLocateType.BEFORE : RegionLocateType.CURRENT);
-  }
-
-  private boolean nextScan(HRegionInfo region) {
-    if (isEmptyStopRow(scan.getStopRow())) {
-      if (isEmptyStopRow(region.getEndKey())) {
-        return false;
-      }
+  private boolean nextScan(HRegionInfo info) {
+    if (noMoreResultsForScan(scan, info)) {
+      return false;
     } else {
-      if (Bytes.compareTo(region.getEndKey(), scan.getStopRow()) >= 0) {
-        return false;
-      }
+      scan.withStartRow(info.getEndKey());
+      scan();
+      return true;
     }
-    scan.setStartRow(region.getEndKey());
-    scan(RegionLocateType.CURRENT);
-    return true;
   }
 
-  private boolean reversedNextScan(HRegionInfo region) {
-    if (isEmptyStopRow(scan.getStopRow())) {
-      if (isEmptyStartRow(region.getStartKey())) {
-        return false;
-      }
+  private boolean reversedNextScan(HRegionInfo info) {
+    if (noMoreResultsForReverseScan(scan, info)) {
+      return false;
     } else {
-      if (Bytes.compareTo(region.getStartKey(), scan.getStopRow()) <= 0) {
-        return false;
-      }
+      scan.withStartRow(info.getStartKey(), false);
+      scan();
+      return true;
     }
-    scan.setStartRow(region.getStartKey());
-    scan(RegionLocateType.BEFORE);
-    return true;
   }
 }

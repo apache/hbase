@@ -81,35 +81,45 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
       throws IOException;
 
   /**
-   * Get all scanners with no filtering based on TTL (that happens further down
-   * the line).
-   * @param cacheBlocks
-   * @param isGet
-   * @param usePread
-   * @param isCompaction
-   * @param matcher
-   * @param startRow
-   * @param stopRow
-   * @param readPt
+   * Get all scanners with no filtering based on TTL (that happens further down the line).
+   * @param cacheBlocks cache the blocks or not
+   * @param usePread true to use pread, false if not
+   * @param isCompaction true if the scanner is created for compaction
+   * @param matcher the scan query matcher
+   * @param startRow the start row
+   * @param stopRow the stop row
+   * @param readPt the read point of the current scan
    * @return all scanners for this store
    */
-  List<KeyValueScanner> getScanners(
-    boolean cacheBlocks,
-    boolean isGet,
-    boolean usePread,
-    boolean isCompaction,
-    ScanQueryMatcher matcher,
-    byte[] startRow,
-    byte[] stopRow,
-    long readPt
-  ) throws IOException;
+  default List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet, boolean usePread,
+      boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt)
+      throws IOException {
+    return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
+      readPt);
+  }
+
+  /**
+   * Get all scanners with no filtering based on TTL (that happens further down the line).
+   * @param cacheBlocks cache the blocks or not
+   * @param usePread true to use pread, false if not
+   * @param isCompaction true if the scanner is created for compaction
+   * @param matcher the scan query matcher
+   * @param startRow the start row
+   * @param includeStartRow true to include start row, false if not
+   * @param stopRow the stop row
+   * @param includeStopRow true to include stop row, false if not
+   * @param readPt the read point of the current scan
+   * @return all scanners for this store
+   */
+  List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread, boolean isCompaction,
+      ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow, byte[] stopRow,
+      boolean includeStopRow, long readPt) throws IOException;
 
   /**
    * Create scanners on the given files and if needed on the memstore with no filtering based on TTL
    * (that happens further down the line).
    * @param files the list of files on which the scanners has to be created
    * @param cacheBlocks cache the blocks or not
-   * @param isGet true if it is get, false if not
    * @param usePread true to use pread, false if not
    * @param isCompaction true if the scanner is created for compaction
    * @param matcher the scan query matcher
@@ -119,9 +129,34 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @param includeMemstoreScanner true if memstore has to be included
    * @return scanners on the given files and on the memstore if specified
    */
-   List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks, boolean isGet,
-          boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
-          byte[] stopRow, long readPt, boolean includeMemstoreScanner) throws IOException;
+  default List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks,
+      boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
+      byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner)
+      throws IOException {
+    return getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow,
+      false, readPt, includeMemstoreScanner);
+  }
+
+  /**
+   * Create scanners on the given files and if needed on the memstore with no filtering based on TTL
+   * (that happens further down the line).
+   * @param files the list of files on which the scanners has to be created
+   * @param cacheBlocks ache the blocks or not
+   * @param usePread true to use pread, false if not
+   * @param isCompaction true if the scanner is created for compaction
+   * @param matcher the scan query matcher
+   * @param startRow the start row
+   * @param includeStartRow true to include start row, false if not
+   * @param stopRow the stop row
+   * @param includeStopRow true to include stop row, false if not
+   * @param readPt the read point of the current scan
+   * @param includeMemstoreScanner true if memstore has to be included
+   * @return scanners on the given files and on the memstore if specified
+   */
+  List<KeyValueScanner> getScanners(List<StoreFile> files, boolean cacheBlocks, boolean usePread,
+      boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
+      byte[] stopRow, boolean includeStopRow, long readPt, boolean includeMemstoreScanner)
+      throws IOException;
 
   ScanInfo getScanInfo();
 

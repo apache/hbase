@@ -105,14 +105,12 @@ public interface StoreFileManager {
 
   /**
    * Gets the store files to scan for a Scan or Get request.
-   * @param isGet Whether it's a get.
    * @param startRow Start row of the request.
    * @param stopRow Stop row of the request.
    * @return The list of files that are to be read for this request.
    */
-  Collection<StoreFile> getFilesForScanOrGet(
-    boolean isGet, byte[] startRow, byte[] stopRow
-  );
+  Collection<StoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow, byte[] stopRow,
+      boolean includeStopRow);
 
   /**
    * Gets initial, full list of candidate store files to check for row-key-before.

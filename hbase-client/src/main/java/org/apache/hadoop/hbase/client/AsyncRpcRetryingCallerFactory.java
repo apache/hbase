@@ -246,7 +246,7 @@ class AsyncRpcRetryingCallerFactory {
     /**
      * Short cut for {@code build().start()}.
      */
-    public CompletableFuture<RegionLocateType> start() {
+    public CompletableFuture<Boolean> start() {
       return build().start();
     }
   }

@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.function.Function;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -65,14 +64,10 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   // used to filter out cells that already returned when we restart a scan
   private Cell lastCell;
 
-  private Function<byte[], byte[]> createClosestRow;
-
   public AsyncTableResultScanner(RawAsyncTable table, Scan scan, long maxCacheSize) {
     this.rawTable = table;
     this.scan = scan;
     this.maxCacheSize = maxCacheSize;
-    this.createClosestRow = scan.isReversed() ? ConnectionUtils::createClosestRowBefore
-        : ConnectionUtils::createClosestRowAfter;
     table.scan(scan, this);
   }
 
@@ -84,16 +79,17 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   private void stopPrefetch(Result lastResult) {
     prefetchStopped = true;
     if (lastResult.isPartial() || scan.getBatch() > 0) {
-      scan.setStartRow(lastResult.getRow());
+      scan.withStartRow(lastResult.getRow());
       lastCell = lastResult.rawCells()[lastResult.rawCells().length - 1];
     } else {
-      scan.setStartRow(createClosestRow.apply(lastResult.getRow()));
+      scan.withStartRow(lastResult.getRow(), false);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug(System.identityHashCode(this) + " stop prefetching when scanning "
-          + rawTable.getName() + " as the cache size " + cacheSize
-          + " is greater than the maxCacheSize + " + maxCacheSize + ", the next start row is "
-          + Bytes.toStringBinary(scan.getStartRow()) + ", lastCell is " + lastCell);
+      LOG.debug(
+        String.format("0x%x", System.identityHashCode(this)) + " stop prefetching when scanning "
+            + rawTable.getName() + " as the cache size " + cacheSize
+            + " is greater than the maxCacheSize " + maxCacheSize + ", the next start row is "
+            + Bytes.toStringBinary(scan.getStartRow()) + ", lastCell is " + lastCell);
     }
     // Ignore an onComplete call as the scan is stopped by us.
     // Here we can not use a simple boolean flag. A scan operation can cross multiple regions and
@@ -166,7 +162,7 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
 
   private void resumePrefetch() {
     if (LOG.isDebugEnabled()) {
-      LOG.debug(System.identityHashCode(this) + " resume prefetching");
+      LOG.debug(String.format("0x%x", System.identityHashCode(this)) + " resume prefetching");
     }
     prefetchStopped = false;
     rawTable.scan(scan, this);

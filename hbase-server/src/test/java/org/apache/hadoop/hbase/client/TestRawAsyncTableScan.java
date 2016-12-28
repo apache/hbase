@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -92,13 +93,17 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
     }
   }
 
-  @Parameter
+  @Parameter(0)
+  public String scanType;
+
+  @Parameter(1)
   public Supplier<Scan> scanCreater;
 
-  @Parameters
+  @Parameters(name = "{index}: type={0}")
   public static List<Object[]> params() {
-    return Arrays.asList(new Supplier<?>[] { TestRawAsyncTableScan::createNormalScan },
-      new Supplier<?>[] { TestRawAsyncTableScan::createBatchScan });
+    Supplier<Scan> normal = TestRawAsyncTableScan::createNormalScan;
+    Supplier<Scan> batch = TestRawAsyncTableScan::createBatchScan;
+    return Arrays.asList(new Object[] { "normal", normal }, new Object[] { "batch", batch });
   }
 
   private static Scan createNormalScan() {
@@ -117,7 +122,10 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
   @Override
   protected List<Result> doScan(Scan scan) throws Exception {
     SimpleRawScanResultConsumer scanConsumer = new SimpleRawScanResultConsumer();
-    ASYNC_CONN.getRawTable(TABLE_NAME).scan(scan, scanConsumer);
+    RawAsyncTable table = ASYNC_CONN.getRawTable(TABLE_NAME);
+    table.setScanTimeout(1, TimeUnit.HOURS);
+    table.setReadRpcTimeout(1, TimeUnit.HOURS);
+    table.scan(scan, scanConsumer);
     List<Result> results = new ArrayList<>();
     for (Result result; (result = scanConsumer.take()) != null;) {
       results.add(result);

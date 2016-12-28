@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
+import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
+
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -45,7 +46,7 @@ public abstract class CompactionScanQueryMatcher extends ScanQueryMatcher {
 
   protected CompactionScanQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
       long readPointToUse, long oldestUnexpiredTS, long now) {
-    super(HConstants.EMPTY_START_ROW, scanInfo,
+    super(createStartKeyFromRow(EMPTY_START_ROW, scanInfo), scanInfo,
         new ScanWildcardColumnTracker(scanInfo.getMinVersions(), scanInfo.getMaxVersions(),
             oldestUnexpiredTS),
         oldestUnexpiredTS, now);

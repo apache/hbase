@@ -127,10 +127,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
 
   protected boolean stickyNextRow;
 
-  protected ScanQueryMatcher(byte[] startRow, ScanInfo scanInfo, ColumnTracker columns,
+  protected ScanQueryMatcher(Cell startKey, ScanInfo scanInfo, ColumnTracker columns,
       long oldestUnexpiredTS, long now) {
     this.rowComparator = scanInfo.getComparator();
-    this.startKey = CellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
+    this.startKey = startKey;
     this.oldestUnexpiredTS = oldestUnexpiredTS;
     this.now = now;
     this.columns = columns;
@@ -343,6 +343,10 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     if (columns != null) {
       columns.beforeShipped();
     }
+  }
+
+  protected static Cell createStartKeyFromRow(byte[] startRow, ScanInfo scanInfo) {
+    return CellUtil.createFirstDeleteFamilyCellOnRow(startRow, scanInfo.getFamily());
   }
 
   protected static DeleteTracker instantiateDeleteTracker(RegionCoprocessorHost host)
