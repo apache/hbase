@@ -65,6 +65,8 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -178,10 +180,6 @@ public class TestDefaultMemStore {
     // Now assert can count same number even if a snapshot mid-scan.
     s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
-
-//    assertTrue("\n<<< The memstore scanners without snapshot are: \n" + memstorescanners
-//        + "\n",false);
-
     try {
       while (s.next(result)) {
         LOG.info(result);
@@ -209,10 +207,8 @@ public class TestDefaultMemStore {
     s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
     int snapshotIndex = 5;
-
     try {
       while (s.next(result)) {
-
         LOG.info(result);
         // Assert the stuff is coming out in right order.
         assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
@@ -220,7 +216,6 @@ public class TestDefaultMemStore {
         assertEquals("count=" + count + ", result=" + result, rowCount, result.size());
         count++;
         if (count == snapshotIndex) {
-
           MemStoreSnapshot snapshot = this.memstore.snapshot();
           this.memstore.clearSnapshot(snapshot.getId());
           // Added more rows into kvset.  But the scanner wont see these rows.
@@ -232,8 +227,7 @@ public class TestDefaultMemStore {
     } finally {
       s.close();
     }
-    assertEquals("\n<<< The row count is " + rowCount + " and the iteration count is " + count,
-        rowCount, count);
+    assertEquals(rowCount, count);
   }
 
   /**

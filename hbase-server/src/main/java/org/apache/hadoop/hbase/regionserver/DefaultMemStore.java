@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -128,18 +127,28 @@ public class DefaultMemStore extends AbstractMemStore {
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
     List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(2);
     list.add(this.active.getScanner(readPt, 1));
-    list.addAll(this.snapshot.getScanners(readPt, 0));
-    return Collections.<KeyValueScanner> singletonList(new MemStoreScanner(getComparator(), list));
+    list.add(this.snapshot.getScanner(readPt, 0));
+    return Collections.<KeyValueScanner> singletonList(
+      new MemStoreScanner(getComparator(), list));
   }
 
-  // the getSegments() method is used for tests only
-  @VisibleForTesting
   @Override
-  protected List<Segment> getSegments() {
+  protected List<Segment> getSegments() throws IOException {
     List<Segment> list = new ArrayList<Segment>(2);
     list.add(this.active);
-    list.addAll(this.snapshot.getAllSegments());
+    list.add(this.snapshot);
     return list;
+  }
+
+  /**
+   * @param cell Find the row that comes after this one.  If null, we return the
+   * first.
+   * @return Next row or null if none found.
+   */
+  Cell getNextRow(final Cell cell) {
+    return getLowest(
+        getNextRow(cell, this.active.getCellSet()),
+        getNextRow(cell, this.snapshot.getCellSet()));
   }
 
   @Override public void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent) {

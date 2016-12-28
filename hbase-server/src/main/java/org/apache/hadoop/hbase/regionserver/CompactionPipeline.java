@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -75,19 +74,6 @@ public class CompactionPipeline {
         return EMPTY_MEM_STORE_SEGMENT;
       }
       return removeLast();
-    }
-  }
-
-  public List<ImmutableSegment> drain() {
-    int drainSize = pipeline.size();
-    List<ImmutableSegment> result = new ArrayList<ImmutableSegment>(drainSize);
-    synchronized (pipeline){
-      version++;
-      for(int i=0; i<drainSize; i++) {
-        ImmutableSegment segment = this.pipeline.removeFirst();
-        result.add(i,segment);
-      }
-      return result;
     }
   }
 
@@ -207,25 +193,14 @@ public class CompactionPipeline {
 
   public List<Segment> getSegments() {
     synchronized (pipeline){
-      return new LinkedList<Segment>(pipeline);
+      List<Segment> res = new LinkedList<Segment>(pipeline);
+      return res;
     }
   }
 
   public long size() {
     return pipeline.size();
   }
-
-  public List<KeyValueScanner> getScanners(long readPoint, long order) {
-    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(this.pipeline.size());
-    for (Segment segment : this.pipeline) {
-      scanners.add(segment.getScanner(readPoint, order));
-      // The order is the Segment ordinal
-      order--;
-      assert order>=0; // order should never be negative so this is just a sanity check
-    }
-    return scanners;
-  }
-
 
   public long getMinSequenceId() {
     long minSequenceId = Long.MAX_VALUE;
@@ -238,11 +213,6 @@ public class CompactionPipeline {
   public MemstoreSize getTailSize() {
     if (isEmpty()) return MemstoreSize.EMPTY_SIZE;
     return new MemstoreSize(pipeline.peekLast().keySize(), pipeline.peekLast().heapOverhead());
-  }
-
-  public MemstoreSize getPipelineSize() {
-    if (isEmpty()) return MemstoreSize.EMPTY_SIZE;
-    return new MemstoreSize(getSegmentsKeySize(pipeline), getSegmentsHeapOverhead(pipeline));
   }
 
   private void swapSuffix(List<ImmutableSegment> suffix, ImmutableSegment segment,
