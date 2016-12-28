@@ -25,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ProcedureInfo;
@@ -48,9 +47,6 @@ public class TestProcedureAdmin {
   private static final Log LOG = LogFactory.getLog(TestProcedureAdmin.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private long nonceGroup = HConstants.NO_NONCE;
-  private long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -76,10 +72,6 @@ public class TestProcedureAdmin {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     assertTrue("expected executor to be running", procExec.isRunning());
-
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -101,7 +93,7 @@ public class TestProcedureAdmin {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     // Submit an abortable procedure
     long procId = procExec.submitProcedure(
-        new DisableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+        new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
 
     boolean abortResult = procExec.abort(procId, true);
     assertTrue(abortResult);
@@ -127,7 +119,7 @@ public class TestProcedureAdmin {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     // Submit an un-abortable procedure
     long procId = procExec.submitProcedure(
-        new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup, nonce);
+        new DeleteTableProcedure(procExec.getEnvironment(), tableName));
 
     boolean abortResult = procExec.abort(procId, true);
     assertFalse(abortResult);
@@ -152,7 +144,7 @@ public class TestProcedureAdmin {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     // Submit a procedure
     long procId = procExec.submitProcedure(
-        new DisableTableProcedure(procExec.getEnvironment(), tableName, true), nonceGroup, nonce);
+        new DisableTableProcedure(procExec.getEnvironment(), tableName, true));
     // Wait for one step to complete
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
@@ -193,7 +185,7 @@ public class TestProcedureAdmin {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     long procId = procExec.submitProcedure(
-      new DisableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+      new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
 
     List<ProcedureInfo> listProcedures = procExec.listProcedures();
     assertTrue(listProcedures.size() >= 1);

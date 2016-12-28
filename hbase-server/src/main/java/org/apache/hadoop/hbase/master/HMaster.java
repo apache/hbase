@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler.ProcedureEvent;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -1497,30 +1498,34 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
     ensureNamespaceExists(namespace);
 
-    HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, splitKeys);
+    final HRegionInfo[] newRegions =
+        ModifyRegionUtils.createHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     sanityCheckTableDescriptor(hTableDescriptor);
 
-    if (cpHost != null) {
-      cpHost.preCreateTable(hTableDescriptor, newRegions);
-    }
-    LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
+    return MasterProcedureUtil.submitProcedure(
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        getMaster().getMasterCoprocessorHost().preCreateTable(hTableDescriptor, newRegions);
 
-    // TODO: We can handle/merge duplicate requests, and differentiate the case of
-    //       TableExistsException by saying if the schema is the same or not.
-    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
-    long procId = this.procedureExecutor.submitProcedure(
-      new CreateTableProcedure(
-        procedureExecutor.getEnvironment(), hTableDescriptor, newRegions, latch),
-      nonceGroup,
-      nonce);
-    latch.await();
+        LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
 
-    if (cpHost != null) {
-      cpHost.postCreateTable(hTableDescriptor, newRegions);
-    }
+        // TODO: We can handle/merge duplicate requests, and differentiate the case of
+        //       TableExistsException by saying if the schema is the same or not.
+        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
+        submitProcedure(new CreateTableProcedure(
+          procedureExecutor.getEnvironment(), hTableDescriptor, newRegions, latch));
+        latch.await();
 
-    return procId;
+        getMaster().getMasterCoprocessorHost().postCreateTable(hTableDescriptor, newRegions);
+      }
+
+      @Override
+      protected String getDescription() {
+        return "CreateTableProcedure";
+      }
+    });
   }
 
   /**
@@ -1827,24 +1832,29 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       final long nonceGroup,
       final long nonce) throws IOException {
     checkInitialized();
-    if (cpHost != null) {
-      cpHost.preDeleteTable(tableName);
-    }
-    LOG.info(getClientIdAuditPrefix() + " delete " + tableName);
 
-    // TODO: We can handle/merge duplicate request
-    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
-    long procId = this.procedureExecutor.submitProcedure(
-      new DeleteTableProcedure(procedureExecutor.getEnvironment(), tableName, latch),
-      nonceGroup,
-      nonce);
-    latch.await();
+    return MasterProcedureUtil.submitProcedure(
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        getMaster().getMasterCoprocessorHost().preDeleteTable(tableName);
 
-    if (cpHost != null) {
-      cpHost.postDeleteTable(tableName);
-    }
+        LOG.info(getClientIdAuditPrefix() + " delete " + tableName);
 
-    return procId;
+        // TODO: We can handle/merge duplicate request
+        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
+        submitProcedure(new DeleteTableProcedure(procedureExecutor.getEnvironment(),
+            tableName, latch));
+        latch.await();
+
+        getMaster().getMasterCoprocessorHost().postDeleteTable(tableName);
+      }
+
+      @Override
+      protected String getDescription() {
+        return "DeleteTableProcedure";
+      }
+    });
   }
 
   @Override
@@ -1854,20 +1864,27 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       final long nonceGroup,
       final long nonce) throws IOException {
     checkInitialized();
-    if (cpHost != null) {
-      cpHost.preTruncateTable(tableName);
-    }
-    LOG.info(getClientIdAuditPrefix() + " truncate " + tableName);
 
-    long procId = this.procedureExecutor.submitProcedure(
-      new TruncateTableProcedure(procedureExecutor.getEnvironment(), tableName, preserveSplits),
-      nonceGroup,
-      nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    MasterProcedureUtil.submitProcedure(
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        getMaster().getMasterCoprocessorHost().preTruncateTable(tableName);
 
-    if (cpHost != null) {
-      cpHost.postTruncateTable(tableName);
-    }
+        LOG.info(getClientIdAuditPrefix() + " truncate " + tableName);
+
+        long procId = submitProcedure(new TruncateTableProcedure(procedureExecutor.getEnvironment(),
+            tableName, preserveSplits));
+        ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+
+        getMaster().getMasterCoprocessorHost().postTruncateTable(tableName);
+      }
+
+      @Override
+      protected String getDescription() {
+        return "TruncateTableProcedure";
+      }
+    });
   }
 
   @Override
@@ -1880,20 +1897,28 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     checkInitialized();
     checkCompression(columnDescriptor);
     checkEncryption(conf, columnDescriptor);
-    if (cpHost != null) {
-      if (cpHost.preAddColumn(tableName, columnDescriptor)) {
-        return;
+
+    MasterProcedureUtil.submitProcedure(
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        if (getMaster().getMasterCoprocessorHost().preAddColumn(tableName, columnDescriptor)) {
+          return;
+        }
+
+        // Execute the operation synchronously, wait for the operation to complete before continuing
+        long procId = submitProcedure(new AddColumnFamilyProcedure(
+          procedureExecutor.getEnvironment(), tableName, columnDescriptor));
+        ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+
+        getMaster().getMasterCoprocessorHost().postAddColumn(tableName, columnDescriptor);
       }
-    }
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new AddColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
-    if (cpHost != null) {
-      cpHost.postAddColumn(tableName, columnDescriptor);
-    }
+
+      @Override
+      protected String getDescription() {
+        return "AddColumnFamilyProcedure";
+      }
+    });
   }
 
   @Override
@@ -1906,23 +1931,30 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     checkInitialized();
     checkCompression(descriptor);
     checkEncryption(conf, descriptor);
-    if (cpHost != null) {
-      if (cpHost.preModifyColumn(tableName, descriptor)) {
-        return;
+
+    MasterProcedureUtil.submitProcedure(
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        if (getMaster().getMasterCoprocessorHost().preModifyColumn(tableName, descriptor)) {
+          return;
+        }
+
+        LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
+
+        // Execute the operation synchronously - wait for the operation to complete before continuing.
+        long procId = submitProcedure(new ModifyColumnFamilyProcedure(
+          procedureExecutor.getEnvironment(), tableName, descriptor));
+        ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+
+        getMaster().getMasterCoprocessorHost().postModifyColumn(tableName, descriptor);
       }
-    }
-    LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
 
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new ModifyColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, descriptor),
-      nonceGroup,
-      nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
-
-    if (cpHost != null) {
-      cpHost.postModifyColumn(tableName, descriptor);
-    }
+      @Override
+      protected String getDescription() {
+        return "ModifyColumnFamilyProcedure";
+      }
+    });
   }
 
   @Override
@@ -1933,84 +1965,97 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       final long nonce)
       throws IOException {
     checkInitialized();
-    if (cpHost != null) {
-      if (cpHost.preDeleteColumn(tableName, columnName)) {
-        return;
+
+    MasterProcedureUtil.submitProcedure(
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        if (getMaster().getMasterCoprocessorHost().preDeleteColumn(tableName, columnName)) {
+          return;
+        }
+
+        LOG.info(getClientIdAuditPrefix() + " delete " + Bytes.toString(columnName));
+
+        // Execute the operation synchronously - wait for the operation to complete before
+        // continuing.
+        long procId = submitProcedure(new DeleteColumnFamilyProcedure(
+          procedureExecutor.getEnvironment(), tableName, columnName));
+        ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+
+        getMaster().getMasterCoprocessorHost().postDeleteColumn(tableName, columnName);
       }
-    }
-    LOG.info(getClientIdAuditPrefix() + " delete " + Bytes.toString(columnName));
 
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new DeleteColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, columnName),
-      nonceGroup,
-      nonce);
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
-
-    if (cpHost != null) {
-      cpHost.postDeleteColumn(tableName, columnName);
-    }
+      @Override
+      protected String getDescription() {
+        return "DeleteColumnFamilyProcedure";
+      }
+    });
   }
 
   @Override
-  public long enableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long enableTable(final TableName tableName, final long nonceGroup, final long nonce)
+      throws IOException {
     checkInitialized();
-    if (cpHost != null) {
-      cpHost.preEnableTable(tableName);
-    }
-    LOG.info(getClientIdAuditPrefix() + " enable " + tableName);
 
-    // Execute the operation asynchronously - client will check the progress of the operation
-    final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
-    long procId = this.procedureExecutor.submitProcedure(
-      new EnableTableProcedure(procedureExecutor.getEnvironment(), tableName, false, prepareLatch),
-      nonceGroup,
-      nonce);
-    // Before returning to client, we want to make sure that the table is prepared to be
-    // enabled (the table is locked and the table state is set).
-    //
-    // Note: if the procedure throws exception, we will catch it and rethrow.
-    prepareLatch.await();
+    return MasterProcedureUtil.submitProcedure(
+        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        getMaster().getMasterCoprocessorHost().preEnableTable(tableName);
 
-    if (cpHost != null) {
-      cpHost.postEnableTable(tableName);
-    }
+        LOG.info(getClientIdAuditPrefix() + " enable " + tableName);
 
-    return procId;
+        // Execute the operation asynchronously - client will check the progress of the operation
+        // In case the request is from a <1.1 client before returning,
+        // we want to make sure that the table is prepared to be
+        // enabled (the table is locked and the table state is set).
+        // Note: if the procedure throws exception, we will catch it and rethrow.
+        final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
+        submitProcedure(new EnableTableProcedure(procedureExecutor.getEnvironment(),
+            tableName, false, prepareLatch));
+        prepareLatch.await();
+
+        getMaster().getMasterCoprocessorHost().postEnableTable(tableName);
+      }
+
+      @Override
+      protected String getDescription() {
+        return "EnableTableProcedure";
+      }
+    });
   }
 
   @Override
-  public long disableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long disableTable(final TableName tableName, final long nonceGroup, final long nonce)
+      throws IOException {
     checkInitialized();
-    if (cpHost != null) {
-      cpHost.preDisableTable(tableName);
-    }
-    LOG.info(getClientIdAuditPrefix() + " disable " + tableName);
 
-    // Execute the operation asynchronously - client will check the progress of the operation
-    final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
-    // Execute the operation asynchronously - client will check the progress of the operation
-    long procId = this.procedureExecutor.submitProcedure(
-      new DisableTableProcedure(procedureExecutor.getEnvironment(), tableName, false, prepareLatch),
-      nonceGroup,
-      nonce);
-    // Before returning to client, we want to make sure that the table is prepared to be
-    // enabled (the table is locked and the table state is set).
-    //
-    // Note: if the procedure throws exception, we will catch it and rethrow.
-    prepareLatch.await();
+    return MasterProcedureUtil.submitProcedure(
+        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        getMaster().getMasterCoprocessorHost().preDisableTable(tableName);
 
-    if (cpHost != null) {
-      cpHost.postDisableTable(tableName);
-    }
+        LOG.info(getClientIdAuditPrefix() + " disable " + tableName);
 
-    return procId;
+        // Execute the operation asynchronously - client will check the progress of the operation
+        // In case the request is from a <1.1 client before returning,
+        // we want to make sure that the table is prepared to be
+        // enabled (the table is locked and the table state is set).
+        // Note: if the procedure throws exception, we will catch it and rethrow.
+        final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
+        submitProcedure(new DisableTableProcedure(procedureExecutor.getEnvironment(),
+            tableName, false, prepareLatch));
+        prepareLatch.await();
+
+        getMaster().getMasterCoprocessorHost().postDisableTable(tableName);
+      }
+
+      @Override
+      protected String getDescription() {
+        return "DisableTableProcedure";
+      }
+    });
   }
 
   /**
@@ -2058,23 +2103,28 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throws IOException {
     checkInitialized();
     sanityCheckTableDescriptor(descriptor);
-    if (cpHost != null) {
-      cpHost.preModifyTable(tableName, descriptor);
-    }
 
-    LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
+    MasterProcedureUtil.submitProcedure(
+      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        getMaster().getMasterCoprocessorHost().preModifyTable(tableName, descriptor);
 
-    // Execute the operation synchronously - wait for the operation completes before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new ModifyTableProcedure(procedureExecutor.getEnvironment(), descriptor),
-      nonceGroup,
-      nonce);
+        LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
 
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+        // Execute the operation synchronously - wait for the operation completes before continuing.
+        long procId = submitProcedure(new ModifyTableProcedure(
+          procedureExecutor.getEnvironment(), descriptor));
+        ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
 
-    if (cpHost != null) {
-      cpHost.postModifyTable(tableName, descriptor);
-    }
+        getMaster().getMasterCoprocessorHost().postModifyTable(tableName, descriptor);
+      }
+
+      @Override
+      protected String getDescription() {
+        return "ModifyTableProcedure";
+      }
+    });
   }
 
   @Override
