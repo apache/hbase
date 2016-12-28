@@ -136,7 +136,9 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private LinkedTransferQueue<ByteSlot> slotsCache = null;
   private Set<ProcedureWALFile> corruptedLogs = null;
   private FSDataOutputStream stream = null;
+  private int runningProcCount = 1;
   private long flushLogId = 0;
+  private int syncMaxSlot = 1;
   private int slotIndex = 0;
   private Thread syncThread;
   private ByteSlot[] slots;
@@ -198,6 +200,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
     // Init buffer slots
     loading.set(true);
+    runningProcCount = numSlots;
+    syncMaxSlot = numSlots;
     slots = new ByteSlot[numSlots];
     slotsCache = new LinkedTransferQueue();
     while (slotsCache.size() < numSlots) {
@@ -286,6 +290,12 @@ public class WALProcedureStore extends ProcedureStoreBase {
   @Override
   public int getNumThreads() {
     return slots == null ? 0 : slots.length;
+  }
+
+  @Override
+  public void setRunningProcedureCount(final int count) {
+    LOG.debug("set running procedure count=" + count + " slots=" + slots.length);
+    this.runningProcCount = count > 0 ? Math.min(count, slots.length) : slots.length;
   }
 
   public ProcedureStoreTracker getStoreTracker() {
@@ -623,7 +633,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
           throw new RuntimeException("sync aborted", syncException.get());
         } else if (inSync.get()) {
           syncCond.await();
-        } else if (slotIndex == slots.length) {
+        } else if (slotIndex >= syncMaxSlot) {
           slotCond.signal();
           syncCond.await();
         } else {
@@ -642,7 +652,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       }
 
       // Notify that the slots are full
-      if (slotIndex == slots.length) {
+      if (slotIndex == syncMaxSlot) {
         waitCond.signal();
         slotCond.signal();
       }
@@ -725,8 +735,10 @@ public class WALProcedureStore extends ProcedureStoreBase {
             }
           }
           // Wait SYNC_WAIT_MSEC or the signal of "slots full" before flushing
+          syncMaxSlot = runningProcCount;
+          assert syncMaxSlot > 0 : "unexpected syncMaxSlot=" + syncMaxSlot;
           final long syncWaitSt = System.currentTimeMillis();
-          if (slotIndex != slots.length) {
+          if (slotIndex != syncMaxSlot) {
             slotCond.await(syncWaitMsec, TimeUnit.MILLISECONDS);
           }
 
@@ -734,7 +746,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
           final long syncWaitMs = currentTs - syncWaitSt;
           final float rollSec = getMillisFromLastRoll() / 1000.0f;
           final float syncedPerSec = totalSyncedToStore / rollSec;
-          if (LOG.isTraceEnabled() && (syncWaitMs > 10 || slotIndex < slots.length)) {
+          if (LOG.isTraceEnabled() && (syncWaitMs > 10 || slotIndex < syncMaxSlot)) {
             LOG.trace(String.format("Sync wait %s, slotIndex=%s , totalSynced=%s (%s/sec)",
                       StringUtils.humanTimeDiff(syncWaitMs), slotIndex,
                       StringUtils.humanSize(totalSyncedToStore),
@@ -813,27 +825,31 @@ public class WALProcedureStore extends ProcedureStoreBase {
     return totalSynced;
   }
 
-  protected long syncSlots(FSDataOutputStream stream, ByteSlot[] slots, int offset, int count)
-      throws IOException {
+  protected long syncSlots(final FSDataOutputStream stream, final ByteSlot[] slots,
+      final int offset, final int count) throws IOException {
     long totalSynced = 0;
     for (int i = 0; i < count; ++i) {
-      ByteSlot data = slots[offset + i];
+      final ByteSlot data = slots[offset + i];
       data.writeTo(stream);
       totalSynced += data.size();
     }
 
+    syncStream(stream);
+    sendPostSyncSignal();
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Sync slots=" + count + '/' + syncMaxSlot +
+                ", flushed=" + StringUtils.humanSize(totalSynced));
+    }
+    return totalSynced;
+  }
+
+  protected void syncStream(final FSDataOutputStream stream) throws IOException {
     if (useHsync) {
       stream.hsync();
     } else {
       stream.hflush();
     }
-    sendPostSyncSignal();
-
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Sync slots=" + count + '/' + slots.length +
-                ", flushed=" + StringUtils.humanSize(totalSynced));
-    }
-    return totalSynced;
   }
 
   private boolean rollWriterWithRetries() {

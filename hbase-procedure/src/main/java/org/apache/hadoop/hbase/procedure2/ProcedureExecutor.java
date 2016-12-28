@@ -1536,7 +1536,7 @@ public class ProcedureExecutor<TEnvironment> {
         final Procedure procedure = scheduler.poll(keepAliveTime, TimeUnit.MILLISECONDS);
         if (procedure == null) continue;
 
-        activeExecutorCount.incrementAndGet();
+        store.setRunningProcedureCount(activeExecutorCount.incrementAndGet());
         executionStartTime.set(EnvironmentEdgeManager.currentTime());
         try {
           if (isTraceEnabled) {
@@ -1544,7 +1544,7 @@ public class ProcedureExecutor<TEnvironment> {
           }
           executeProcedure(procedure);
         } finally {
-          activeExecutorCount.decrementAndGet();
+          store.setRunningProcedureCount(activeExecutorCount.decrementAndGet());
           lastUpdate = EnvironmentEdgeManager.currentTime();
           executionStartTime.set(Long.MAX_VALUE);
         }

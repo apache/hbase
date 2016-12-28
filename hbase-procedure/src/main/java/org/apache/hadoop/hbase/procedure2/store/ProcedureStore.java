@@ -151,6 +151,12 @@ public interface ProcedureStore {
   int getNumThreads();
 
   /**
+   * Set the number of procedure running.
+   * This can be used, for example, by the store to know how long to wait before a sync.
+   */
+  void setRunningProcedureCount(int count);
+
+  /**
    * Acquire the lease for the procedure store.
    */
   void recoverLease() throws IOException;

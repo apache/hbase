@@ -52,6 +52,11 @@ public class NoopProcedureStore extends ProcedureStoreBase {
   }
 
   @Override
+  public void setRunningProcedureCount(final int count) {
+    // no-op
+  }
+
+  @Override
   public void load(final ProcedureLoader loader) throws IOException {
     loader.setMaxProcId(0);
   }
