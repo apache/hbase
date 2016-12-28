@@ -543,6 +543,49 @@ public class TestMasterProcedureScheduler {
   }
 
   @Test
+  public void testInheritedRegionXLock() {
+    final TableName tableName = TableName.valueOf("testInheritedRegionXLock");
+    final HRegionInfo region = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
+
+    queue.addBack(new TestRegionProcedure(1, tableName,
+        TableProcedureInterface.TableOperationType.SPLIT, region));
+    queue.addBack(new TestRegionProcedure(1, 2, tableName,
+        TableProcedureInterface.TableOperationType.UNASSIGN, region));
+    queue.addBack(new TestRegionProcedure(3, tableName,
+        TableProcedureInterface.TableOperationType.REGION_EDIT, region));
+
+    // fetch the root proc and take the lock on the region
+    Procedure rootProc = queue.poll();
+    assertEquals(1, rootProc.getProcId());
+    assertEquals(false, queue.waitRegion(rootProc, region));
+
+    // fetch the sub-proc and take the lock on the region (inherited lock)
+    Procedure childProc = queue.poll();
+    assertEquals(2, childProc.getProcId());
+    assertEquals(false, queue.waitRegion(childProc, region));
+
+    // proc-3 will be fetched but it can't take the lock
+    Procedure proc = queue.poll();
+    assertEquals(3, proc.getProcId());
+    assertEquals(true, queue.waitRegion(proc, region));
+
+    // release the child lock
+    queue.wakeRegion(childProc, region);
+
+    // nothing in the queue (proc-3 is suspended)
+    assertEquals(null, queue.poll(0));
+
+    // release the root lock
+    queue.wakeRegion(rootProc, region);
+
+    // proc-3 should be now available
+    proc = queue.poll();
+    assertEquals(3, proc.getProcId());
+    assertEquals(false, queue.waitRegion(proc, region));
+    queue.wakeRegion(proc, region);
+  }
+
+  @Test
   public void testSuspendedProcedure() throws Exception {
     final TableName tableName = TableName.valueOf("testSuspendedProcedure");
 

@@ -412,15 +412,27 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       return exclusiveLockProcIdOwner == procId;
     }
 
-    public boolean tryExclusiveLock(final long procIdOwner) {
-      assert procIdOwner != Long.MIN_VALUE;
-      if (hasExclusiveLock() && !isLockOwner(procIdOwner)) return false;
-      exclusiveLockProcIdOwner = procIdOwner;
+    public boolean hasParentLock(final Procedure proc) {
+      return proc.hasParent() &&
+        (isLockOwner(proc.getParentProcId()) || isLockOwner(proc.getRootProcId()));
+    }
+
+    public boolean hasLockAccess(final Procedure proc) {
+      return isLockOwner(proc.getProcId()) || hasParentLock(proc);
+    }
+
+    public boolean tryExclusiveLock(final Procedure proc) {
+      if (hasExclusiveLock()) return hasLockAccess(proc);
+      exclusiveLockProcIdOwner = proc.getProcId();
       return true;
     }
 
-    private void releaseExclusiveLock() {
-      exclusiveLockProcIdOwner = Long.MIN_VALUE;
+    public boolean releaseExclusiveLock(final Procedure proc) {
+      if (isLockOwner(proc.getProcId())) {
+        exclusiveLockProcIdOwner = Long.MIN_VALUE;
+        return true;
+      }
+      return false;
     }
 
     public HRegionInfo getRegionInfo() {
@@ -443,7 +455,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   public static class TableQueue extends QueueImpl<TableName> {
     private final NamespaceQueue namespaceQueue;
 
-    private HashMap<HRegionInfo, RegionEvent> regionEventMap;
+    private HashMap<String, RegionEvent> regionEventMap;
     private TableLock tableLock = null;
 
     public TableQueue(TableName tableName, NamespaceQueue namespaceQueue, int priority) {
@@ -476,18 +488,18 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
     public synchronized RegionEvent getRegionEvent(final HRegionInfo regionInfo) {
       if (regionEventMap == null) {
-        regionEventMap = new HashMap<HRegionInfo, RegionEvent>();
+        regionEventMap = new HashMap<String, RegionEvent>();
       }
-      RegionEvent event = regionEventMap.get(regionInfo);
+      RegionEvent event = regionEventMap.get(regionInfo.getEncodedName());
       if (event == null) {
         event = new RegionEvent(regionInfo);
-        regionEventMap.put(regionInfo, event);
+        regionEventMap.put(regionInfo.getEncodedName(), event);
       }
       return event;
     }
 
     public synchronized void removeRegionEvent(final RegionEvent event) {
-      regionEventMap.remove(event.getRegionInfo());
+      regionEventMap.remove(event.getRegionInfo().getEncodedName());
       if (regionEventMap.isEmpty()) {
         regionEventMap = null;
       }
@@ -675,7 +687,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       hasXLock = queue.tryZkExclusiveLock(lockManager, procedure.toString());
       if (!hasXLock) {
         schedLock();
-        if (!hasParentLock) queue.releaseExclusiveLock();
+        if (!hasParentLock) queue.releaseExclusiveLock(procedure);
         queue.getNamespaceQueue().releaseSharedLock();
         addToRunQueue(tableRunQueue, queue);
         schedUnlock();
@@ -699,7 +711,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
 
     schedLock();
-    if (!hasParentLock) queue.releaseExclusiveLock();
+    if (!hasParentLock) queue.releaseExclusiveLock(procedure);
     queue.getNamespaceQueue().releaseSharedLock();
     addToRunQueue(tableRunQueue, queue);
     schedUnlock();
@@ -846,11 +858,11 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         assert i == 0 || regionInfo[i] != regionInfo[i-1] : "duplicate region: " + regionInfo[i];
 
         event[i] = queue.getRegionEvent(regionInfo[i]);
-        if (!event[i].tryExclusiveLock(procedure.getProcId())) {
+        if (!event[i].tryExclusiveLock(procedure)) {
           suspendProcedure(event[i], procedure);
           hasLock = false;
           while (i-- > 0) {
-            event[i].releaseExclusiveLock();
+            event[i].releaseExclusiveLock(procedure);
           }
           break;
         }
@@ -892,12 +904,13 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         assert i == 0 || regionInfo[i] != regionInfo[i-1] : "duplicate region: " + regionInfo[i];
 
         RegionEvent event = queue.getRegionEvent(regionInfo[i]);
-        event.releaseExclusiveLock();
-        if (event.hasWaitingProcedures()) {
-          // release one procedure at the time since regions has an xlock
-          nextProcs[numProcs++] = event.popWaitingProcedure(true);
-        } else {
-          queue.removeRegionEvent(event);
+        if (event.releaseExclusiveLock(procedure)) {
+          if (event.hasWaitingProcedures()) {
+            // release one procedure at the time since regions has an xlock
+            nextProcs[numProcs++] = event.popWaitingProcedure(true);
+          } else {
+            queue.removeRegionEvent(event);
+          }
         }
       }
     }
@@ -960,7 +973,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final TableQueue tableQueue = getTableQueue(TableName.NAMESPACE_TABLE_NAME);
       final NamespaceQueue queue = getNamespaceQueue(nsName);
 
-      queue.releaseExclusiveLock();
+      queue.releaseExclusiveLock(procedure);
       if (tableQueue.releaseSharedLock()) {
         addToRunQueue(tableRunQueue, tableQueue);
       }
@@ -1005,7 +1018,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     schedLock();
     try {
       ServerQueue queue = getServerQueue(serverName);
-      queue.releaseExclusiveLock();
+      queue.releaseExclusiveLock(procedure);
       addToRunQueue(serverRunQueue, queue);
     } finally {
       schedUnlock();
@@ -1135,8 +1148,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       return true;
     }
 
-    public synchronized void releaseExclusiveLock() {
-      exclusiveLockProcIdOwner = Long.MIN_VALUE;
+    public synchronized boolean releaseExclusiveLock(final Procedure proc) {
+      if (isLockOwner(proc.getProcId())) {
+        exclusiveLockProcIdOwner = Long.MIN_VALUE;
+        return true;
+      }
+      return false;
     }
 
     // This should go away when we have the new AM and its events
