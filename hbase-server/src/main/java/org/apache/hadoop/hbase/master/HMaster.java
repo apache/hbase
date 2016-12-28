@@ -943,10 +943,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     } else {
       // Region already assigned. We didn't assign it. Add to in-memory state.
-      regionStates.updateRegionState(
-        HRegionInfo.FIRST_META_REGIONINFO, State.OPEN, currentMetaServer);
-      this.assignmentManager.regionOnline(
-        HRegionInfo.FIRST_META_REGIONINFO, currentMetaServer);
+      regionStates.updateRegionState(hri, State.OPEN, currentMetaServer);
+      this.assignmentManager.regionOnline(hri, currentMetaServer);
     }
 
     if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableMeta(TableName.META_TABLE_NAME);
