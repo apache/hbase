@@ -112,16 +112,54 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     @Override
     public Object invoke(Object proxy, Method m, Object[] args) throws Throwable {
       Object result;
+      long start = now();
       try {
-        long start = now();
         result = m.invoke(handler, args);
-        int processTime = (int) (now() - start);
-        metrics.incMethodTime(m.getName(), processTime);
       } catch (InvocationTargetException e) {
+        metrics.exception(e.getCause());
         throw e.getTargetException();
       } catch (Exception e) {
+        metrics.exception(e);
         throw new RuntimeException("unexpected invocation exception: " + e.getMessage());
+      } finally {
+        int processTime = (int) (now() - start);
+        metrics.incMethodTime(m.getName(), processTime);
       }
+      return result;
+    }
+  }
+
+  private static class TIOErrorWithCause extends TIOError {
+    private Throwable cause;
+
+    public TIOErrorWithCause(Throwable cause) {
+      super();
+      this.cause = cause;
+    }
+
+    @Override
+    public Throwable getCause() {
+      return cause;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (super.equals(other) &&
+          other instanceof TIOErrorWithCause) {
+        Throwable otherCause = ((TIOErrorWithCause) other).getCause();
+        if (this.getCause() != null) {
+          return otherCause != null && this.getCause().equals(otherCause);
+        } else {
+          return otherCause == null;
+        }
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = super.hashCode();
+      result = 31 * result + (cause != null ? cause.hashCode() : 0);
       return result;
     }
   }
@@ -163,7 +201,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   }
 
   private TIOError getTIOError(IOException e) {
-    TIOError err = new TIOError();
+    TIOError err = new TIOErrorWithCause(e);
     err.setMessage(e.getMessage());
     return err;
   }

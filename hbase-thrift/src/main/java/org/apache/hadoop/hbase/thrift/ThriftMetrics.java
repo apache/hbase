@@ -19,9 +19,21 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import org.apache.hadoop.hbase.CallQueueTooBigException;
+import org.apache.hadoop.hbase.MultiActionResultTooLarge;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
+import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
+import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
+import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.exceptions.ScannerResetException;
+import org.apache.hadoop.hbase.thrift.generated.IOError;
+import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 
 /**
  * This class is for maintaining the various statistics of thrift server
@@ -87,4 +99,53 @@ public class ThriftMetrics  {
     }
   }
 
+  /**
+   * Increment the count for a specific exception type.  This is called for each exception type
+   * that is returned to the thrift handler.
+   * @param rawThrowable type of exception
+   */
+  public void exception(Throwable rawThrowable) {
+    source.exception();
+
+    Throwable throwable = unwrap(rawThrowable);
+    /**
+     * Keep some metrics for commonly seen exceptions
+     *
+     * Try and  put the most common types first.
+     * Place child types before the parent type that they extend.
+     *
+     * If this gets much larger we might have to go to a hashmap
+     */
+    if (throwable != null) {
+      if (throwable instanceof OutOfOrderScannerNextException) {
+        source.outOfOrderException();
+      } else if (throwable instanceof RegionTooBusyException) {
+        source.tooBusyException();
+      } else if (throwable instanceof UnknownScannerException) {
+        source.unknownScannerException();
+      } else if (throwable instanceof ScannerResetException) {
+        source.scannerResetException();
+      } else if (throwable instanceof RegionMovedException) {
+        source.movedRegionException();
+      } else if (throwable instanceof NotServingRegionException) {
+        source.notServingRegionException();
+      } else if (throwable instanceof FailedSanityCheckException) {
+        source.failedSanityException();
+      } else if (throwable instanceof MultiActionResultTooLarge) {
+        source.multiActionTooLargeException();
+      } else if (throwable instanceof CallQueueTooBigException) {
+        source.callQueueTooBigException();
+      }
+    }
+  }
+
+  private static Throwable unwrap(Throwable t) {
+    if (t == null) {
+      return t;
+    }
+    if (t instanceof TIOError || t instanceof IOError) {
+      t = t.getCause();
+    }
+    return ClientExceptionsUtil.findException(t);
+  }
 }

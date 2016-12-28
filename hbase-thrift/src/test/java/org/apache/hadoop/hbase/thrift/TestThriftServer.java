@@ -22,10 +22,13 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,9 +37,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
@@ -98,6 +105,7 @@ public class TestThriftServer {
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().setBoolean(ThriftServerRunner.COALESCE_INC_KEY, true);
     UTIL.getConfiguration().setBoolean("hbase.table.sanity.checks", false);
+    UTIL.getConfiguration().setInt("hbase.client.retries.number", 3);
     UTIL.startMiniCluster();
   }
 
@@ -705,6 +713,75 @@ public class TestThriftServer {
     } finally {
       handler.disableTable(tableAname);
       handler.deleteTable(tableAname);
+    }
+  }
+
+  @Test
+  public void testMetricsWithException() throws Exception {
+    String rowkey = "row1";
+    String family = "f";
+    String col = "c";
+    // create a table which will throw exceptions for requests
+    TableName tableName = TableName.valueOf("testMetricsWithException");
+    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
+    tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
+    tableDesc.addFamily(new HColumnDescriptor(family));
+
+    Table table = UTIL.createTable(tableDesc, null);
+    long now = System.currentTimeMillis();
+    table.put(new Put(Bytes.toBytes(rowkey))
+        .addColumn(Bytes.toBytes(family), Bytes.toBytes(col), now, Bytes.toBytes("val1")));
+
+    Configuration conf = UTIL.getConfiguration();
+    ThriftMetrics metrics = getMetrics(conf);
+    ThriftServerRunner.HBaseHandler hbaseHandler =
+        new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration(),
+            UserProvider.instantiate(UTIL.getConfiguration()));
+    Hbase.Iface handler = HbaseHandlerMetricsProxy.newInstance(hbaseHandler, metrics, conf);
+
+    ByteBuffer tTableName = asByteBuffer(tableName.getNameAsString());
+
+    // check metrics increment with a successful get
+    long preGetCounter = metricsHelper.checkCounterExists("getRow_num_ops", metrics.getSource()) ?
+        metricsHelper.getCounter("getRow_num_ops", metrics.getSource()) :
+        0;
+    List<TRowResult> tRowResult = handler.getRow(tTableName, asByteBuffer(rowkey), null);
+    assertEquals(1, tRowResult.size());
+    TRowResult tResult = tRowResult.get(0);
+
+    TCell expectedColumnValue = new TCell(asByteBuffer("val1"), now);
+
+    assertArrayEquals(Bytes.toBytes(rowkey), tResult.getRow());
+    Collection<TCell> returnedColumnValues = tResult.getColumns().values();
+    assertEquals(1, returnedColumnValues.size());
+    assertEquals(expectedColumnValue, returnedColumnValues.iterator().next());
+
+    metricsHelper.assertCounter("getRow_num_ops", preGetCounter + 1, metrics.getSource());
+
+    // check metrics increment when the get throws each exception type
+    for (ErrorThrowingGetObserver.ErrorType type : ErrorThrowingGetObserver.ErrorType.values()) {
+      testExceptionType(handler, metrics, tTableName, rowkey, type);
+    }
+  }
+
+  private void testExceptionType(Hbase.Iface handler, ThriftMetrics metrics,
+                                 ByteBuffer tTableName, String rowkey,
+                                 ErrorThrowingGetObserver.ErrorType errorType) throws Exception {
+    long preGetCounter = metricsHelper.getCounter("getRow_num_ops", metrics.getSource());
+    String exceptionKey = errorType.getMetricName();
+    long preExceptionCounter = metricsHelper.checkCounterExists(exceptionKey, metrics.getSource()) ?
+        metricsHelper.getCounter(exceptionKey, metrics.getSource()) :
+        0;
+    Map<ByteBuffer, ByteBuffer> attributes = new HashMap<>();
+    attributes.put(asByteBuffer(ErrorThrowingGetObserver.SHOULD_ERROR_ATTRIBUTE),
+        asByteBuffer(errorType.name()));
+    try {
+      List<TRowResult> tRowResult = handler.getRow(tTableName, asByteBuffer(rowkey), attributes);
+      fail("Get with error attribute should have thrown an exception");
+    } catch (IOError e) {
+      LOG.info("Received exception: ", e);
+      metricsHelper.assertCounter("getRow_num_ops", preGetCounter + 1, metrics.getSource());
+      metricsHelper.assertCounter(exceptionKey, preExceptionCounter + 1, metrics.getSource());
     }
   }
 

@@ -19,9 +19,9 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.metrics.BaseSource;
+import org.apache.hadoop.hbase.metrics.ExceptionTrackingSource;
 
-public interface MetricsHBaseServerSource extends BaseSource {
+public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String AUTHORIZATION_SUCCESSES_NAME = "authorizationSuccesses";
   String AUTHORIZATION_SUCCESSES_DESC =
       "Number of authorization successes.";
@@ -88,22 +88,6 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String NUM_LIFO_MODE_SWITCHES_DESC = "Total number of calls in general queue which " +
     "were served from the tail of the queue";
 
-  String EXCEPTIONS_NAME="exceptions";
-  String EXCEPTIONS_DESC="Exceptions caused by requests";
-  String EXCEPTIONS_TYPE_DESC="Number of requests that resulted in the specified type of Exception";
-  String EXCEPTIONS_OOO_NAME="exceptions.OutOfOrderScannerNextException";
-  String EXCEPTIONS_BUSY_NAME="exceptions.RegionTooBusyException";
-  String EXCEPTIONS_UNKNOWN_NAME="exceptions.UnknownScannerException";
-  String EXCEPTIONS_SCANNER_RESET_NAME="exceptions.ScannerResetException";
-  String EXCEPTIONS_SANITY_NAME="exceptions.FailedSanityCheckException";
-  String EXCEPTIONS_MOVED_NAME="exceptions.RegionMovedException";
-  String EXCEPTIONS_NSRE_NAME="exceptions.NotServingRegionException";
-  String EXCEPTIONS_MULTI_TOO_LARGE_NAME = "exceptions.multiResponseTooLarge";
-  String EXCEPTIONS_MULTI_TOO_LARGE_DESC = "A response to a multi request was too large and the " +
-      "rest of the requests will have to be retried.";
-  String EXCEPTIONS_CALL_QUEUE_TOO_BIG = "exceptions.callQueueTooBig";
-  String EXCEPTIONS_CALL_QUEUE_TOO_BIG_DESC = "Call queue is full";
-
   void authorizationSuccess();
 
   void authorizationFailure();
@@ -113,21 +97,6 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void authenticationFailure();
 
   void authenticationFallback();
-
-  void exception();
-
-  /**
-   * Different types of exceptions
-   */
-  void outOfOrderException();
-  void failedSanityException();
-  void movedRegionException();
-  void notServingRegionException();
-  void unknownScannerException();
-  void scannerResetException();
-  void tooBusyException();
-  void multiActionTooLargeException();
-  void callQueueTooBigException();
 
   void sentBytes(long count);
 
@@ -142,6 +111,4 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void processedCall(int processingTime);
 
   void queuedAndProcessedCall(int totalTime);
-
-
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.hbase.metrics.ExceptionTrackingSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
@@ -31,7 +32,7 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
  * Implements BaseSource through BaseSourceImpl, following the pattern
  */
 @InterfaceAudience.Private
-public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
+public class MetricsThriftServerSourceImpl extends ExceptionTrackingSourceImpl implements
     MetricsThriftServerSource {
 
   private MetricHistogram batchGetStat;
@@ -73,7 +74,6 @@ public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
     thriftCallStat = getMetricsRegistry().newTimeHistogram(THRIFT_CALL_KEY);
     thriftSlowCallStat = getMetricsRegistry().newTimeHistogram(SLOW_THRIFT_CALL_KEY);
     callQueueLenGauge = getMetricsRegistry().getGauge(CALL_QUEUE_LEN_KEY, 0);
-
   }
 
   @Override
