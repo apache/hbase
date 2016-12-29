@@ -121,7 +121,7 @@ public class TableCFsUpdater extends ReplicationStateZKBase {
   }
 
   private static void printUsageAndExit() {
-    System.err.printf("Usage: bin/hbase org.apache.hadoop.hbase.replication.master.TableCFsUpdater [options]");
+    System.err.printf("Usage: hbase org.apache.hadoop.hbase.replication.master.TableCFsUpdater [options]");
     System.err.println(" where [options] are:");
     System.err.println("  -h|-help    Show this help and exit.");
     System.err.println("  update      Copy table-cfs to replication peer config");

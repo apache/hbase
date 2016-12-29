@@ -540,7 +540,7 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println();
     System.err.println("Examples:");
     System.err.println(" To verify the data replicated from TestTable for a 1 hour window with peer #5 ");
-    System.err.println(" $ bin/hbase " +
+    System.err.println(" $ hbase " +
         "org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication" +
         " --starttime=1265875194289 --endtime=1265878794289 5 TestTable ");
   }

@@ -84,9 +84,9 @@ public class RESTServer implements Constants {
 
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
-    formatter.printHelp("bin/hbase rest start", "", options,
+    formatter.printHelp("hbase rest start", "", options,
       "\nTo run the REST server as a daemon, execute " +
-      "bin/hbase-daemon.sh start|stop rest [--infoport <port>] [-p <port>] [-ro]\n", true);
+      "hbase-daemon.sh start|stop rest [--infoport <port>] [-p <port>] [-ro]\n", true);
     System.exit(exitCode);
   }
 

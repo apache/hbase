@@ -624,7 +624,7 @@ public class HashTable extends Configured implements Tool {
     System.err.println();
     System.err.println("Examples:");
     System.err.println(" To hash 'TestTable' in 32kB batches for a 1 hour window into 50 files:");
-    System.err.println(" $ bin/hbase " +
+    System.err.println(" $ hbase " +
         "org.apache.hadoop.hbase.mapreduce.HashTable --batchsize=32000 --numhashfiles=50"
         + " --starttime=1265875194289 --endtime=1265878794289 --families=cf2,cf3"
         + " TestTable /hashes/testTable");

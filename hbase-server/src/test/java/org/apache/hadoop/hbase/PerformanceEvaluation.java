@@ -1914,9 +1914,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         + "(and HRegionServers) running. 1 <= value <= 500");
     System.err.println("Examples:");
     System.err.println(" To run a single client doing the default 1M sequentialWrites:");
-    System.err.println(" $ bin/hbase " + className + " sequentialWrite 1");
+    System.err.println(" $ hbase " + className + " sequentialWrite 1");
     System.err.println(" To run 10 clients doing increments over ten rows:");
-    System.err.println(" $ bin/hbase " + className + " --rows=10 --nomapred increment 10");
+    System.err.println(" $ hbase " + className + " --rows=10 --nomapred increment 10");
   }
 
   /**

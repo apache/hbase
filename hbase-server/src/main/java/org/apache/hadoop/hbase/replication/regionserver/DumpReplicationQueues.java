@@ -172,7 +172,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
     if (message != null && message.length() > 0) {
       System.err.println(message);
     }
-    System.err.println("Usage: bin/hbase " + className + " \\");
+    System.err.println("Usage: hbase " + className + " \\");
     System.err.println("  <OPTIONS> [-D<property=value>]*");
     System.err.println();
     System.err.println("General Options:");

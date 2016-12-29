@@ -162,7 +162,7 @@ public abstract class AbstractHBaseTool implements Tool, Configurable {
   }
 
   protected void printUsage() {
-    printUsage("bin/hbase " + getClass().getName() + " <options>", "Options:", "");
+    printUsage("hbase " + getClass().getName() + " <options>", "Options:", "");
   }
 
   protected void printUsage(final String usageStr, final String usageHeader,

@@ -455,7 +455,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   }
 
   private void printUsageAndExit() {
-    System.err.printf("Usage: bin/hbase %s [options]\n", getClass().getName());
+    System.err.printf("Usage: hbase %s [options]\n", getClass().getName());
     System.err.println(" where [options] are:");
     System.err.println("  -h|-help         Show this help and exit.");
     System.err.println("  -threads <N>     Number of threads writing on the WAL.");
@@ -483,7 +483,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     System.err.println("");
     System.err.println(" To run 100 threads on hdfs with log rolling every 10k edits and " +
       "verification afterward do:");
-    System.err.println(" $ ./bin/hbase org.apache.hadoop.hbase.wal." +
+    System.err.println(" $ hbase org.apache.hadoop.hbase.wal." +
       "WALPerformanceEvaluation \\");
     System.err.println("    -conf ./core-site.xml -path hdfs://example.org:7000/tmp " +
       "-threads 100 -roll 10000 -verify");

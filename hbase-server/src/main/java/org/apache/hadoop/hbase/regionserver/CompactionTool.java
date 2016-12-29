@@ -460,10 +460,10 @@ public class CompactionTool extends Configured implements Tool {
     System.err.println();
     System.err.println("Examples:");
     System.err.println(" To compact the full 'TestTable' using MapReduce:");
-    System.err.println(" $ bin/hbase " + this.getClass().getName() + " -mapred hdfs:///hbase/data/default/TestTable");
+    System.err.println(" $ hbase " + this.getClass().getName() + " -mapred hdfs:///hbase/data/default/TestTable");
     System.err.println();
     System.err.println(" To compact column family 'x' of the table 'TestTable' region 'abc':");
-    System.err.println(" $ bin/hbase " + this.getClass().getName() + " hdfs:///hbase/data/default/TestTable/abc/x");
+    System.err.println(" $ hbase " + this.getClass().getName() + " hdfs:///hbase/data/default/TestTable/abc/x");
   }
 
   public static void main(String[] args) throws Exception {

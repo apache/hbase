@@ -78,8 +78,8 @@ public class ThriftServer {
       throws ExitCodeException {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("Thrift", null, options,
-        "To start the Thrift server run 'bin/hbase-daemon.sh start thrift'\n" +
-        "To shutdown the thrift server run 'bin/hbase-daemon.sh stop " +
+        "To start the Thrift server run 'hbase-daemon.sh start thrift'\n" +
+        "To shutdown the thrift server run 'hbase-daemon.sh stop " +
         "thrift' or send a kill signal to the thrift server pid",
         true);
     throw new ExitCodeException(exitCode, "");

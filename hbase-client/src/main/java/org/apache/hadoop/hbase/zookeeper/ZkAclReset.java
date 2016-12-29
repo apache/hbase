@@ -78,7 +78,7 @@ public class ZkAclReset extends Configured implements Tool {
   }
 
   private void printUsageAndExit() {
-    System.err.printf("Usage: bin/hbase %s [options]%n", getClass().getName());
+    System.err.printf("Usage: hbase %s [options]%n", getClass().getName());
     System.err.println(" where [options] are:");
     System.err.println("  -h|-help                Show this help and exit.");
     System.err.println("  -set-acls               Setup the hbase znode ACLs for a secure cluster");

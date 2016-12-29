@@ -1406,7 +1406,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println("               running: 1 <= value <= 500");
     System.err.println("Examples:");
     System.err.println(" To run a single evaluation client:");
-    System.err.println(" $ bin/hbase " + this.getClass().getName()
+    System.err.println(" $ hbase " + this.getClass().getName()
         + " sequentialWrite 1");
   }
 

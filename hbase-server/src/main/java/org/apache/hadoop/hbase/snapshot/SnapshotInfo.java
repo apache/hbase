@@ -541,7 +541,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
 
   @Override
   protected void printUsage() {
-    printUsage("bin/hbase snapshot info [options]", "Options:", "");
+    printUsage("hbase snapshot info [options]", "Options:", "");
     System.err.println("Examples:");
     System.err.println("  hbase snapshot info --snapshot MySnapshot --files");
   }

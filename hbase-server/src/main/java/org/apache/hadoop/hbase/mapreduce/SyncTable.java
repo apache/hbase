@@ -699,7 +699,7 @@ public class SyncTable extends Configured implements Tool {
     System.err.println("Examples:");
     System.err.println(" For a dry run SyncTable of tableA from a remote source cluster");
     System.err.println(" to a local target cluster:");
-    System.err.println(" $ bin/hbase " +
+    System.err.println(" $ hbase " +
         "org.apache.hadoop.hbase.mapreduce.SyncTable --dryrun=true"
         + " --sourcezkcluster=zk1.example.com,zk2.example.com,zk3.example.com:2181:/hbase"
         + " hdfs://nn:9000/hashes/tableA tableA tableA");

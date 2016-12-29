@@ -211,7 +211,7 @@ public class CopyTable extends Configured implements Tool {
     System.err.println();
     System.err.println("Examples:");
     System.err.println(" To copy 'TestTable' to a cluster that uses replication for a 1 hour window:");
-    System.err.println(" $ bin/hbase " +
+    System.err.println(" $ hbase " +
         "org.apache.hadoop.hbase.mapreduce.CopyTable --starttime=1265875194289 --endtime=1265878794289 " +
         "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
     System.err.println("For performance consider the following general option:\n"
