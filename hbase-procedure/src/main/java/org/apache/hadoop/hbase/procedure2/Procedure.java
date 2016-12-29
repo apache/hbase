@@ -87,10 +87,13 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * The main code of the procedure. It must be idempotent since execute()
    * may be called multiple time in case of machine failure in the middle
    * of the execution.
+   * @param env the environment passed to the ProcedureExecutor
    * @return a set of sub-procedures or null if there is nothing else to execute.
+   * @throws ProcedureYieldException the procedure will be added back to the queue and retried later
+   * @throws InterruptedException the procedure will be added back to the queue and retried later
    */
   protected abstract Procedure[] execute(TEnvironment env)
-    throws ProcedureYieldException;
+    throws ProcedureYieldException, InterruptedException;
 
   /**
    * The code to undo what done by the execute() code.
@@ -99,6 +102,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * the execute() call. The implementation must be idempotent since rollback()
    * may be called multiple time in case of machine failure in the middle
    * of the execution.
+   *
+   * @param env the environment passed to the ProcedureExecutor
    * @throws IOException temporary failure, the rollback will retry later
    */
   protected abstract void rollback(TEnvironment env)
@@ -115,6 +120,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * NOTE: abort() is not like Thread.interrupt() it is just a notification
    * that allows the procedure implementor where to abort to avoid leak and
    * have a better control on what was executed and what not.
+   *
+   * @param env the environment passed to the ProcedureExecutor
    */
   protected abstract boolean abort(TEnvironment env);
 
@@ -122,6 +129,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * The user-level code of the procedure may have some state to
    * persist (e.g. input arguments) to be able to resume on failure.
    * @param stream the stream that will contain the user serialized data
+   * @throws IOException failure to stream data
    */
   protected abstract void serializeStateData(final OutputStream stream)
     throws IOException;
@@ -141,6 +149,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    *          create t1 and create t2 can be executed at the same time.
    *          anything else on t1/t2 is queued waiting that specific table create to happen.
    *
+   * @param env the environment passed to the ProcedureExecutor
    * @return true if the lock was acquired and false otherwise
    */
   protected boolean acquireLock(final TEnvironment env) {
@@ -149,6 +158,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
   /**
    * The user should override this method, and release lock if necessary.
+   *
+   * @param env the environment passed to the ProcedureExecutor
    */
   protected void releaseLock(final TEnvironment env) {
     // no-op
@@ -159,6 +170,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * The procedure implementor may use this method to perform some quick
    * operation before replay.
    * e.g. failing the procedure if the state on replay may be unknown.
+   *
+   * @param env the environment passed to the ProcedureExecutor
    */
   protected void beforeReplay(final TEnvironment env) {
     // no-op
@@ -168,6 +181,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * Called when the procedure is marked as completed (success or rollback).
    * The procedure implementor may use this method to cleanup in-memory states.
    * This operation will not be retried on failure.
+   *
+   * @param env the environment passed to the ProcedureExecutor
    */
   protected void completionCleanup(final TEnvironment env) {
     // no-op
@@ -368,6 +383,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return Math.max(0, timeout - (EnvironmentEdgeManager.currentTime() - startTime));
   }
 
+  /**
+   * @param owner the owner passed in
+   */
   @VisibleForTesting
   @InterfaceAudience.Private
   public void setOwner(final String owner) {
@@ -382,6 +400,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return owner != null;
   }
 
+  /**
+   * @param state current procedure state
+   */
   @VisibleForTesting
   @InterfaceAudience.Private
   protected synchronized void setState(final ProcedureState state) {
@@ -394,10 +415,17 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return state;
   }
 
+  /**
+   * @param source exception string
+   * @param cause the cause of failure
+   */
   protected void setFailure(final String source, final Throwable cause) {
     setFailure(new RemoteProcedureException(source, cause));
   }
 
+  /**
+   * @param exception exception thrown
+   */
   protected synchronized void setFailure(final RemoteProcedureException exception) {
     this.exception = exception;
     if (!isFinished()) {
@@ -405,6 +433,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     }
   }
 
+  /**
+   * @param source exception string
+   * @param msg message to pass on
+   */
   protected void setAbortFailure(final String source, final String msg) {
     setFailure(source, new ProcedureAbortedException(msg));
   }
@@ -433,6 +465,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
   /**
    * Called by the ProcedureExecutor to assign the parent to the newly created procedure.
+   *
+   * @param parentProcId parent procedure Id
    */
   @InterfaceAudience.Private
   protected void setParentProcId(final long parentProcId) {
@@ -441,6 +475,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
   /**
    * Called by the ProcedureExecutor to set the value to the newly created procedure.
+   *
+   * @param nonceKey the key to detect duplicate call
    */
   @VisibleForTesting
   @InterfaceAudience.Private
@@ -451,10 +487,14 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Internal method called by the ProcedureExecutor that starts the
    * user-level code execute().
+   * @param env the environment passed to the ProcedureExecutor
+   * @return a set of sub-procedures or null if there is nothing else to execute.
+   * @throws ProcedureYieldException the procedure will be added back to the queue and retried later
+   * @throws InterruptedException
    */
   @InterfaceAudience.Private
   protected Procedure[] doExecute(final TEnvironment env)
-      throws ProcedureYieldException {
+      throws ProcedureYieldException, InterruptedException {
     try {
       updateTimestamp();
       return execute(env);
@@ -466,6 +506,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Internal method called by the ProcedureExecutor that starts the
    * user-level code rollback().
+   * @param env the environment passed to the ProcedureExecutor
    */
   @InterfaceAudience.Private
   protected void doRollback(final TEnvironment env) throws IOException {
@@ -480,6 +521,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Called on store load to initialize the Procedure internals after
    * the creation/deserialization.
+   * @param startTime procedure start time
    */
   @InterfaceAudience.Private
   protected void setStartTime(final long startTime) {
@@ -489,6 +531,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Called on store load to initialize the Procedure internals after
    * the creation/deserialization.
+   * @param lastUpdate last time to update procedure
    */
   private synchronized void setLastUpdate(final long lastUpdate) {
     this.lastUpdate = lastUpdate;
@@ -500,6 +543,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
   /**
    * Called by the ProcedureExecutor on procedure-load to restore the latch state
+   * @param numChildren children count
    */
   @InterfaceAudience.Private
   protected synchronized void setChildrenLatch(final int numChildren) {
@@ -528,6 +572,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Called by the RootProcedureState on procedure execution.
    * Each procedure store its stack-index positions.
+   * @param index the place where procedure is in
    */
   @InterfaceAudience.Private
   protected synchronized void addStackIndex(final int index) {
@@ -554,6 +599,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Called on store load to initialize the Procedure internals after
    * the creation/deserialization.
+   * @param stackIndexes the list of positions of procedures
    */
   @InterfaceAudience.Private
   protected synchronized void setStackIndexes(final List<Integer> stackIndexes) {
@@ -573,6 +619,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return stackIndexes;
   }
 
+  /**
+   * @param other the procedure to compare to
+   */
   @Override
   public int compareTo(final Procedure other) {
     long diff = getProcId() - other.getProcId();
@@ -581,6 +630,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
   /*
    * Helper to lookup the root Procedure ID given a specified procedure.
+   * @param procedures list of procedure
+   * @param the procedure to look for
    */
   @InterfaceAudience.Private
   protected static Long getRootProcedureId(final Map<Long, Procedure> procedures, Procedure proc) {
@@ -591,6 +642,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return proc.getProcId();
   }
 
+  /*
+   * @param className procedure class name
+   * @throws IOException failure
+   */
   protected static Procedure newInstance(final String className) throws IOException {
     try {
       Class<?> clazz = Class.forName(className);
@@ -610,6 +665,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     }
   }
 
+  /*
+   * @param proc procedure
+   * @throws IOException failure
+   */
   protected static void validateClass(final Procedure proc) throws IOException {
     try {
       Class<?> clazz = proc.getClass();
@@ -630,6 +689,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
   /**
    * Helper to create the ProcedureInfo from Procedure.
+   * @param proc procedure
+   * @param nonceKey the key to detect duplicate call
    */
   @InterfaceAudience.Private
   public static ProcedureInfo createProcedureInfo(final Procedure proc, final NonceKey nonceKey) {
@@ -651,6 +712,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * Helper to convert the procedure to protobuf.
    * Used by ProcedureStore implementations.
+   * @param proc procedure
    */
   @InterfaceAudience.Private
   public static ProcedureProtos.Procedure convert(final Procedure proc)
@@ -717,6 +779,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    *                     (e.g. className, procId, parentId, ...).
    *                     We can split in 'data' and 'state', and the store
    *                     may take advantage of it by storing the data only on insert().
+   *
+   * @param proto procedure protobuf
    */
   @InterfaceAudience.Private
   public static Procedure convert(final ProcedureProtos.Procedure proto)

@@ -35,7 +35,8 @@ import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
-
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.util.NonceKey;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -133,11 +134,18 @@ public class ProcedureTestingUtility {
   }
 
   public static <TEnv> long submitAndWait(ProcedureExecutor<TEnv> procExecutor, Procedure proc,
-      final long nonceGroup,
-      final long nonce) {
-    long procId = procExecutor.submitProcedure(proc, nonceGroup, nonce);
+      final long nonceGroup, final long nonce) {
+    long procId = submitProcedure(procExecutor, proc, nonceGroup, nonce);
     waitProcedure(procExecutor, procId);
     return procId;
+  }
+
+  public static <TEnv> long submitProcedure(ProcedureExecutor<TEnv> procExecutor, Procedure proc,
+      final long nonceGroup, final long nonce) {
+    final NonceKey nonceKey = procExecutor.createNonceKey(nonceGroup, nonce);
+    long procId = procExecutor.registerNonce(nonceKey);
+    assertFalse(procId >= 0);
+    return procExecutor.submitProcedure(proc, nonceKey);
   }
 
   public static <TEnv> void waitProcedure(ProcedureExecutor<TEnv> procExecutor, long procId) {
@@ -176,6 +184,12 @@ public class ProcedureTestingUtility {
     ForeignExceptionMessage exception = result.getForeignExceptionMessage();
     String msg = exception != null ? result.getExceptionFullMessage() : "no exception found";
     assertFalse(msg, result.isFailed());
+  }
+
+  public static Throwable assertProcFailed(final ProcedureInfo result) {
+    assertEquals(true, result.isFailed());
+    LOG.info("procId=" + result.getProcId() + " exception: " + result.getException().getMessage());
+    return getExceptionCause(result);
   }
 
   public static void assertIsAbortException(final ProcedureInfo result) {

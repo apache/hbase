@@ -285,41 +285,6 @@ public class TestProcedureRecovery {
     ProcedureTestingUtility.assertIsAbortException(result);
   }
 
-  @Test(timeout=30000)
-  public void testCompletedProcWithSameNonce() throws Exception {
-    final long nonceGroup = 123;
-    final long nonce = 2222;
-    Procedure proc = new TestSingleStepProcedure();
-    // Submit a proc and wait for its completion
-    long procId = ProcedureTestingUtility.submitAndWait(procExecutor, proc, nonceGroup, nonce);
-
-    // Restart
-    restart();
-    Procedure proc2 = new TestSingleStepProcedure();
-    // Submit a procedure with the same nonce and expect the same procedure would return.
-    long procId2 = ProcedureTestingUtility.submitAndWait(procExecutor, proc2, nonceGroup, nonce);
-    assertTrue(procId == procId2);
-
-    ProcedureInfo result = procExecutor.getResult(procId2);
-    ProcedureTestingUtility.assertProcNotFailed(result);
-  }
-
-  @Test(timeout=30000)
-  public void testRunningProcWithSameNonce() throws Exception {
-    final long nonceGroup = 456;
-    final long nonce = 33333;
-    Procedure proc = new TestMultiStepProcedure();
-    long procId = ProcedureTestingUtility.submitAndWait(procExecutor, proc, nonceGroup, nonce);
-
-    // Restart
-    restart();
-    Procedure proc2 = new TestMultiStepProcedure();
-    // Submit a procedure with the same nonce and expect the same procedure would return.
-    long procId2 = ProcedureTestingUtility.submitAndWait(procExecutor, proc2, nonceGroup, nonce);
-    // The original proc is not completed and the new submission should have the same proc Id.
-    assertTrue(procId == procId2);
-  }
-
   public static class TestStateMachineProcedure
       extends StateMachineProcedure<Void, TestStateMachineProcedure.State> {
     enum State { STATE_1, STATE_2, STATE_3, DONE }
