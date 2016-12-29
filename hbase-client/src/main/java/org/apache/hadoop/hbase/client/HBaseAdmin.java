@@ -3033,6 +3033,12 @@ public class HBaseAdmin implements Admin {
     for (ServerName server : this.getClusterStatus().getServers()) {
       updateConfiguration(server);
     }
+
+    updateConfiguration(this.getClusterStatus().getMaster());
+
+    for (ServerName server : this.getClusterStatus().getBackupMasters()) {
+      updateConfiguration(server);
+    }
   }
 
   @Override
