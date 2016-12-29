@@ -32,6 +32,7 @@ cxx_library(
         "configuration.h",
         "hbase_configuration_loader.h",
         "scan.h",
+        "result.h",
     ],
     srcs=[
         "cell.cc",
@@ -43,6 +44,7 @@ cxx_library(
         "configuration.cc",
         "hbase_configuration_loader.cc",
         "scan.cc",
+        "result.cc",
     ],
     deps=[
         "//connection:connection",
@@ -85,6 +87,11 @@ cxx_test(
 cxx_test(
     name="scan-test",
     srcs=["scan-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="result-test",
+    srcs=["result-test.cc",],
     deps=[":core",],
     run_test_separately=True,)
 cxx_binary(
