@@ -35,13 +35,16 @@ LDFLAGS = -lprotobuf -lzookeeper_mt -lsasl2 -lfolly -lwangle
 LINKFLAG = -shared
 
 #define list of source files and object files
-SRC = $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
+ALLSRC = $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))
+EXCLUDE_SRC = $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*-test.cc)) core/simple-client.cc
+SRC = $(filter-out $(EXCLUDE_SRC), $(ALLSRC))
 PROTOSRC = $(patsubst %.proto, $(addprefix build/,%.pb.cc),$(wildcard if/*.proto))
 DEPS =  $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.h))
 PROTODEPS = $(patsubst %.proto, $(addprefix build/,%.pb.h),$(wildcard if/*.proto))
 DEBUG_OBJ = $(patsubst %.cc,$(DEBUG_PATH)/%.o,$(SRC))
 DEBUG_OBJ += $(patsubst %.cc,$(DEBUG_PATH)/%.o,$(PROTOSRC))
 RELEASE_OBJ = $(patsubst %.cc,$(RELEASE_PATH)/%.o,$(SRC))
+RELEASE_OBJ += $(patsubst %.cc,$(RELEASE_PATH)/%.o,$(PROTOSRC))
 INCLUDES = $(addprefix -I,$(INCLUDE_DIR))
 	
 LIB_DIR = /usr/local
@@ -54,6 +57,7 @@ ARC_DEBUG=$(DEBUG_PATH)/libHbaseClient_d.a
 
 vpath %.cc $(SRC_DIR)
 
+build: checkdirs protos $(LIB_DEBUG) $(LIB_RELEASE) $(ARC_DEBUG) $(ARC_RELEASE)
 $(LIB_DEBUG): $(DEBUG_BUILD_DIR)
 define make-goal-dbg
 $1/%.o: %.cc $(DEPS) $(PROTODEPS) $(PROTOSRC)
@@ -68,7 +72,7 @@ endef
 
 .PHONY: all clean install 
 
-build: checkdirs protos $(LIB_DEBUG) $(LIB_RELEASE) $(ARC_DEBUG) $(ARC_RELEASE) 
+
 
 checkdirs: $(DEBUG_BUILD_DIR) $(RELEASE_BUILD_DIR) $(PROTO_SRC_DIR)
 
@@ -130,6 +134,6 @@ help:
 	@echo " install  : will copy the libs to $(LIB_LIBDIR). super user priviliege would be required."
 	@echo " check    : will test everything."
 	@echo " protos   : will build the corresponding sources for protobufs present in if/ directory."
+	@echo " lint	 : will ensure that code conforms to Google coding style."
 
 all: build doc check
-
