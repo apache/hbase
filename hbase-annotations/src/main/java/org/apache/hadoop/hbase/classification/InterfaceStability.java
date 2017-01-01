@@ -47,14 +47,14 @@ public class InterfaceStability {
    */
   @Documented
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface Stable {};
+  public @interface Stable {}
 
   /**
    * Evolving, but can break compatibility at minor release (i.e. m.x)
    */
   @Documented
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface Evolving {};
+  public @interface Evolving {}
 
   /**
    * No guarantee is provided as to reliability or stability across any
@@ -62,5 +62,5 @@ public class InterfaceStability {
    */
   @Documented
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface Unstable {};
+  public @interface Unstable {}
 }
