@@ -938,7 +938,7 @@ See <<master.processes.loadbalancer,master.processes.loadbalancer>> for more inf
 [[disabling.blockcache]]
 ==== Disabling Blockcache
 
-Do not turn off block cache (You'd do it by setting `hbase.block.cache.size` to zero). Currently we do not do well if you do this because the RegionServer will spend all its time loading HFile indices over and over again.
+Do not turn off block cache (You'd do it by setting `hfile.block.cache.size` to zero). Currently we do not do well if you do this because the RegionServer will spend all its time loading HFile indices over and over again.
 If your working set is such that block cache does you no good, at least size the block cache such that HFile indices will stay up in the cache (you can get a rough idea on the size you need by surveying RegionServer UIs; you'll see index block size accounted near the top of the webpage).
 
 [[nagles]]
