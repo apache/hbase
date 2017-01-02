@@ -580,7 +580,7 @@ See <<regions.arch.assignment>> for more information on region assignment.
 ==== CatalogJanitor
 
 Periodically checks and cleans up the `hbase:meta` table.
-See <arch.catalog.meta>> for more information on the meta table.
+See <<arch.catalog.meta>> for more information on the meta table.
 
 [[regionserver.arch]]
 == RegionServer
