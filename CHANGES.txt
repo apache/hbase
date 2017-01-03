@@ -89,6 +89,8 @@ Release Notes - HBase - Version 1.3.0 10/24/2016
     * [HBASE-16485] - Procedure V2 - Add support to addChildProcedure() as last "step" in StateMachineProcedure
     * [HBASE-16522] - Procedure v2 - Cache system user and avoid IOException
     * [HBASE-16970] - Clarify misleading Scan.java comment about caching
+    * [HBASE-17017] - Remove the current per-region latency histogram metrics
+    * [HBASE-17149] - Procedure V2 - Fix nonce submission to avoid unnecessary calling coprocessor multiple times
 
 ** Bug
     * [HBASE-11625] - Reading datablock throws "Invalid HFile block magic" and can not switch to hdfs checksum
@@ -313,13 +315,24 @@ Release Notes - HBase - Version 1.3.0 10/24/2016
     * [HBASE-16810] - HBase Balancer throws ArrayIndexOutOfBoundsException when regionservers are in /hbase/draining znode and unloaded
     * [HBASE-16824] - Writer.flush() can be called on already closed streams in WAL roll
     * [HBASE-16830] - RSRpcServices#openRegion() should handle the case where table descriptor is null
+    * [HBASE-16852] - TestDefaultCompactSelection failed on branch-1.3
     * [HBASE-16853] - Regions are assigned to Region Servers in /hbase/draining after HBase Master failover
     * [HBASE-16889] - Proc-V2: verifyTables in the IntegrationTestDDLMasterFailover test after each table DDL is incorrect
     * [HBASE-16931] - Setting cell's seqId to zero in compaction flow might cause RS down.
     * [HBASE-16960] - RegionServer hang when aborting
     * [HBASE-16964] - Successfully archived files are not cleared from compacted store file list if archiving of any file fails
     * [HBASE-16980] - TestRowProcessorEndpoint failing consistently
+    * [HBASE-17023] - Region left unassigned due to AM and SSH each thinking others would do the assignment work
     * [HBASE-17032] - CallQueueTooBigException and CallDroppedException should not be triggering PFFE
+    * [HBASE-17042] - Remove 'public' keyword from MasterObserver interface
+    * [HBASE-17044] - Fix merge failed before creating merged region leaves meta inconsistent
+    * [HBASE-17058] - Lower epsilon used for jitter verification from HBASE-15324
+    * [HBASE-17074] - PreCommit job always fails because of OOM
+    * [HBASE-17091] - IntegrationTestZKAndFSPermissions failed with 'KeeperException'
+    * [HBASE-17224] - Fix lots of spelling errors in HBase logging and exception messages
+    * [HBASE-17238] - Wrong in-memory hbase:meta location causing SSH failure
+    * [HBASE-17328] - Properly dispose of looped replication peers
+    * [HBASE-17341] - Add a timeout during replication endpoint termination
 
 ** Improvement
     * [HBASE-7972] - Add a configuration for the TCP backlog in the Thrift server
@@ -412,6 +425,7 @@ Release Notes - HBase - Version 1.3.0 10/24/2016
     * [HBASE-16657] - Expose per-region last major compaction timestamp in RegionServer UI
     * [HBASE-16661] - Add last major compaction age to per-region metrics
     * [HBASE-16667] - Building with JDK 8: ignoring option MaxPermSize=256m
+    * [HBASE-16972] - Log more details for Scan#next request when responseTooSlow
     * [HBASE-17006] - Add names to threads for better debugability of thread dumps
     * [HBASE-17004] - Refactor IntegrationTestManyRegions to use @ClassRule for timing out
 
