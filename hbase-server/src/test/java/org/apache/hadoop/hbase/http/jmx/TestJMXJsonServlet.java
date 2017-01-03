@@ -17,9 +17,13 @@
 
 package org.apache.hadoop.hbase.http.jmx;
 
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +43,9 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
   private static URL baseUrl;
 
   @BeforeClass public static void setup() throws Exception {
+    // Eclipse doesn't pick this up correctly from the plugin
+    // configuration in the pom.
+    System.setProperty(HttpServerFunctionalTest.TEST_BUILD_WEBAPPS, "target/test-classes/webapps");
     server = createTestServer();
     server.start();
     baseUrl = getServerURL(server);
@@ -105,5 +112,23 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     assertReFind("\"committed\"\\s*:", result);
     assertReFind("\\}\\);$", result);
 
+  }
+
+  @Test
+  public void testDisallowedJSONPCallback() throws Exception {
+    String callback = "function(){alert('bigproblems!')};foo";
+    URL url = new URL(
+        baseUrl, "/jmx?qry=java.lang:type=Memory&callback="+URLEncoder.encode(callback, "UTF-8"));
+    HttpURLConnection cnxn = (HttpURLConnection) url.openConnection();
+    assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, cnxn.getResponseCode());
+  }
+
+  @Test
+  public void testUnderscoresInJSONPCallback() throws Exception {
+    String callback = "my_function";
+    URL url = new URL(
+        baseUrl, "/jmx?qry=java.lang:type=Memory&callback="+URLEncoder.encode(callback, "UTF-8"));
+    HttpURLConnection cnxn = (HttpURLConnection) url.openConnection();
+    assertEquals(HttpServletResponse.SC_OK, cnxn.getResponseCode());
   }
 }

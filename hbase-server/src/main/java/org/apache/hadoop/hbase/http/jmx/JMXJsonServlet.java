@@ -149,9 +149,7 @@ public class JMXJsonServlet extends HttpServlet {
    *          The servlet response we are creating
    */
   @Override
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="XSS_REQUEST_PARAMETER_TO_SERVLET_WRITER",
-    justification="TODO: See HBASE-15122")
-  public void doGet(HttpServletRequest request, HttpServletResponse response) {
+  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
     try {
       if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(), request, response)) {
         return;
@@ -160,11 +158,11 @@ public class JMXJsonServlet extends HttpServlet {
       PrintWriter writer = null;
       JSONBean.Writer beanWriter = null;
       try {
+        jsonpcb = checkCallbackName(request.getParameter(CALLBACK_PARAM));
         writer = response.getWriter();
         beanWriter = this.jsonBeanWriter.open(writer);
  
         // "callback" parameter implies JSONP outpout
-        jsonpcb = request.getParameter(CALLBACK_PARAM);
         if (jsonpcb != null) {
           response.setContentType("application/javascript; charset=utf8");
           writer.write(jsonpcb + "(");
@@ -214,10 +212,29 @@ public class JMXJsonServlet extends HttpServlet {
       }
     } catch (IOException e) {
       LOG.error("Caught an exception while processing JMX request", e);
-      response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+      response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
     } catch (MalformedObjectNameException e) {
       LOG.error("Caught an exception while processing JMX request", e);
-      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      response.sendError(HttpServletResponse.SC_BAD_REQUEST);
     }
+  }
+
+  /**
+   * Verifies that the callback property, if provided, is purely alphanumeric.
+   * This prevents a malicious callback name (that is javascript code) from being
+   * returned by the UI to an unsuspecting user.
+   *
+   * @param callbackName The callback name, can be null.
+   * @return The callback name
+   * @throws IOException If the name is disallowed.
+   */
+  private String checkCallbackName(String callbackName) throws IOException {
+    if (null == callbackName) {
+      return null;
+    }
+    if (callbackName.matches("[A-Za-z0-9_]+")) {
+      return callbackName;
+    }
+    throw new IOException("'callback' must be alphanumeric");
   }
 }
