@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,18 +46,14 @@ public class CompactionPipeline {
   public final static long FIXED_OVERHEAD = ClassSize
       .align(ClassSize.OBJECT + (2 * ClassSize.REFERENCE) + Bytes.SIZEOF_LONG);
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD + ClassSize.LINKEDLIST;
-  public final static long ENTRY_OVERHEAD = ClassSize.LINKEDLIST_ENTRY;
 
   private final RegionServicesForStores region;
   private LinkedList<ImmutableSegment> pipeline;
   private long version;
 
-  private static final ImmutableSegment EMPTY_MEM_STORE_SEGMENT = SegmentFactory.instance()
-      .createImmutableSegment((CellComparator) null);
-
   public CompactionPipeline(RegionServicesForStores region) {
     this.region = region;
-    this.pipeline = new LinkedList<ImmutableSegment>();
+    this.pipeline = new LinkedList<>();
     this.version = 0;
   }
 
@@ -68,31 +65,33 @@ public class CompactionPipeline {
     }
   }
 
-  public ImmutableSegment pullTail() {
+  public VersionedSegmentsList getVersionedList() {
     synchronized (pipeline){
-      if(pipeline.isEmpty()) {
-        return EMPTY_MEM_STORE_SEGMENT;
-      }
-      return removeLast();
+      List<ImmutableSegment> segmentList = new ArrayList<>(pipeline);
+      return new VersionedSegmentsList(segmentList, version);
     }
   }
 
-  public VersionedSegmentsList getVersionedList() {
+  public VersionedSegmentsList getVersionedTail() {
     synchronized (pipeline){
-      LinkedList<ImmutableSegment> segmentList = new LinkedList<ImmutableSegment>(pipeline);
-      VersionedSegmentsList res = new VersionedSegmentsList(segmentList, version);
-      return res;
+      List<ImmutableSegment> segmentList = new ArrayList<>();
+      if(!pipeline.isEmpty()) {
+        segmentList.add(0, pipeline.getLast());
+      }
+      return new VersionedSegmentsList(segmentList, version);
     }
   }
 
   /**
-   * Swaps the versioned list at the tail of the pipeline with the new compacted segment.
-   * Swapping only if there were no changes to the suffix of the list while it was compacted.
-   * @param versionedList tail of the pipeline that was compacted
-   * @param segment new compacted segment
+   * Swaps the versioned list at the tail of the pipeline with a new segment.
+   * Swapping only if there were no changes to the suffix of the list since the version list was
+   * created.
+   * @param versionedList suffix of the pipeline to be replaced can be tail or all the pipeline
+   * @param segment new segment to replace the suffix. Can be null if the suffix just needs to be
+   *                removed.
    * @param closeSuffix whether to close the suffix (to release memory), as part of swapping it out
    *        During index merge op this will be false and for compaction it will be true.
-   * @return true iff swapped tail with new compacted segment
+   * @return true iff swapped tail with new segment
    */
   public boolean swap(
       VersionedSegmentsList versionedList, ImmutableSegment segment, boolean closeSuffix) {
@@ -106,26 +105,32 @@ public class CompactionPipeline {
       }
       suffix = versionedList.getStoreSegments();
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Swapping pipeline suffix with compacted item. "
+        int count = 0;
+        if(segment != null) {
+          count = segment.getCellsCount();
+        }
+        LOG.debug("Swapping pipeline suffix. "
             + "Just before the swap the number of segments in pipeline is:"
             + versionedList.getStoreSegments().size()
-            + ", and the number of cells in new segment is:" + segment.getCellsCount());
+            + ", and the number of cells in new segment is:" + count);
       }
-      swapSuffix(suffix,segment, closeSuffix);
+      swapSuffix(suffix, segment, closeSuffix);
     }
-    if (region != null) {
+    if (closeSuffix && region != null) {
       // update the global memstore size counter
       long suffixDataSize = getSegmentsKeySize(suffix);
-      long newDataSize = segment.keySize();
+      long newDataSize = 0;
+      if(segment != null) newDataSize = segment.keySize();
       long dataSizeDelta = suffixDataSize - newDataSize;
       long suffixHeapOverhead = getSegmentsHeapOverhead(suffix);
-      long newHeapOverhead = segment.heapOverhead();
+      long newHeapOverhead = 0;
+      if(segment != null) newHeapOverhead = segment.heapOverhead();
       long heapOverheadDelta = suffixHeapOverhead - newHeapOverhead;
       region.addMemstoreSize(new MemstoreSize(-dataSizeDelta, -heapOverheadDelta));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Suffix data size: " + suffixDataSize + " compacted item data size: "
+        LOG.debug("Suffix data size: " + suffixDataSize + " new segment data size: "
             + newDataSize + ". Suffix heap overhead: " + suffixHeapOverhead
-            + " compacted item heap overhead: " + newHeapOverhead);
+            + " new segment heap overhead: " + newHeapOverhead);
       }
     }
     return true;
@@ -193,8 +198,7 @@ public class CompactionPipeline {
 
   public List<Segment> getSegments() {
     synchronized (pipeline){
-      List<Segment> res = new LinkedList<Segment>(pipeline);
-      return res;
+      return new LinkedList<>(pipeline);
     }
   }
 
@@ -230,12 +234,7 @@ public class CompactionPipeline {
       }
     }
     pipeline.removeAll(suffix);
-    pipeline.addLast(segment);
-  }
-
-  private ImmutableSegment removeLast() {
-    version++;
-    return pipeline.removeLast();
+    if(segment != null) pipeline.addLast(segment);
   }
 
   private boolean addFirst(ImmutableSegment segment) {

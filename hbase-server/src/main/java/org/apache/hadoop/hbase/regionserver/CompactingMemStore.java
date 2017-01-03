@@ -213,8 +213,10 @@ public class CompactingMemStore extends AbstractMemStore {
     }
   }
 
+  // the getSegments() method is used for tests only
+  @VisibleForTesting
   @Override
-  public List<Segment> getSegments() {
+  protected List<Segment> getSegments() {
     List<Segment> pipelineList = pipeline.getSegments();
     List<Segment> list = new ArrayList<Segment>(pipelineList.size() + 2);
     list.add(this.active);
@@ -266,6 +268,7 @@ public class CompactingMemStore extends AbstractMemStore {
     long order = pipelineList.size();
     // The list of elements in pipeline + the active element + the snapshot segment
     // TODO : This will change when the snapshot is made of more than one element
+    // The order is the Segment ordinal
     List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(pipelineList.size() + 2);
     list.add(this.active.getScanner(readPt, order + 1));
     for (Segment item : pipelineList) {
@@ -374,10 +377,18 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   private void pushTailToSnapshot() {
-    ImmutableSegment tail = pipeline.pullTail();
-    if (!tail.isEmpty()) {
-      this.snapshot = tail;
+    VersionedSegmentsList segments = pipeline.getVersionedTail();
+    pushToSnapshot(segments.getStoreSegments());
+    pipeline.swap(segments,null,false); // do not close segments as they are in snapshot now
+  }
+
+  private void pushToSnapshot(List<ImmutableSegment> segments) {
+    if(segments.isEmpty()) return;
+    if(segments.size() == 1 && !segments.get(0).isEmpty()) {
+      this.snapshot = segments.get(0);
+      return;
     }
+    // TODO else craete composite snapshot
   }
 
   private RegionServicesForStores getRegionServices() {
