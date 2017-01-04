@@ -871,7 +871,7 @@ public class Scan extends Query {
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<String, Object>();
     List<String> families = new ArrayList<String>();
-    if(this.familyMap.size() == 0) {
+    if(this.familyMap.isEmpty()) {
       map.put("families", "ALL");
       return map;
     } else {

@@ -413,7 +413,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   private boolean has(byte[] family, byte[] qualifier, long ts, byte[] value,
                       boolean ignoreTS, boolean ignoreValue) {
     List<Cell> list = getCellList(family);
-    if (list.size() == 0) {
+    if (list.isEmpty()) {
       return false;
     }
     // Boolean analysis of ignoreTS/ignoreValue.

@@ -70,7 +70,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
   @Override
   public ReturnCode filterKeyValue(Cell kv) {
-    if (sortedPrefixes.size() == 0) {
+    if (sortedPrefixes.isEmpty()) {
       return ReturnCode.INCLUDE;
     } else {
       return filterColumn(kv);

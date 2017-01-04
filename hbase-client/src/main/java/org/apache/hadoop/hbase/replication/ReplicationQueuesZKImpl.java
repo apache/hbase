@@ -204,7 +204,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     String rsPath = ZKUtil.joinZNode(this.queuesZNode, regionserver);
     try {
       List<String> list = ZKUtil.listChildrenNoWatch(this.zookeeper, rsPath);
-      if (list != null && list.size() == 0){
+      if (list != null && list.isEmpty()){
         ZKUtil.deleteNode(this.zookeeper, rsPath);
       }
     } catch (KeeperException e) {
@@ -282,7 +282,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       }
 
       SortedSet<String> logQueue = new TreeSet<>();
-      if (wals == null || wals.size() == 0) {
+      if (wals == null || wals.isEmpty()) {
         listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
       } else {
         // create the new cluster znode

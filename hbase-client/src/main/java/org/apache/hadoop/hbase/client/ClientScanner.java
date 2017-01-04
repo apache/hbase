@@ -350,10 +350,10 @@ public abstract class ClientScanner extends AbstractClientScanner {
 
   protected Result nextWithSyncCache() throws IOException {
     // If the scanner is closed and there's nothing left in the cache, next is a no-op.
-    if (cache.size() == 0 && this.closed) {
+    if (cache.isEmpty() && this.closed) {
       return null;
     }
-    if (cache.size() == 0) {
+    if (cache.isEmpty()) {
       loadCache();
     }
 

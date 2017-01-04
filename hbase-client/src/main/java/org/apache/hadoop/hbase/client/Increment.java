@@ -225,7 +225,7 @@ public class Increment extends Mutation implements Comparable<Row> {
     StringBuilder sb = new StringBuilder();
     sb.append("row=");
     sb.append(Bytes.toStringBinary(this.row));
-    if(this.familyMap.size() == 0) {
+    if(this.familyMap.isEmpty()) {
       sb.append(", no columns set to be incremented");
       return sb.toString();
     }

@@ -61,7 +61,7 @@ public class FirstKeyOnlyFilter extends FilterBase {
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 0,
+    Preconditions.checkArgument(filterArguments.isEmpty(),
                                 "Expected 0 but got: %s", filterArguments.size());
     return new FirstKeyOnlyFilter();
   }

@@ -569,7 +569,7 @@ public class HTableMultiplexer {
         // drain all the queued puts into the tmp list
         processingList.clear();
         queue.drainTo(processingList);
-        if (processingList.size() == 0) {
+        if (processingList.isEmpty()) {
           // Nothing to flush
           return;
         }

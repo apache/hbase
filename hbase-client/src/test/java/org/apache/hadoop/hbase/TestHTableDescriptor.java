@@ -132,7 +132,7 @@ public class TestHTableDescriptor {
     String className1 = "org.apache.hadoop.hbase.coprocessor.BaseRegionObserver";
     String className2 = "org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver";
     // Check that any coprocessor is present.
-    assertTrue(desc.getCoprocessors().size() == 0);
+    assertTrue(desc.getCoprocessors().isEmpty());
 
     // Add the 1 coprocessor and check if present.
     desc.addCoprocessor(className1);
@@ -153,7 +153,7 @@ public class TestHTableDescriptor {
 
     // Remove the last and check
     desc.removeCoprocessor(className2);
-    assertTrue(desc.getCoprocessors().size() == 0);
+    assertTrue(desc.getCoprocessors().isEmpty());
     assertFalse(desc.getCoprocessors().contains(className1));
     assertFalse(desc.getCoprocessors().contains(className2));
   }

@@ -248,7 +248,7 @@ public class MultiRowRangeFilter extends FilterBase {
    * @return the ranges after sort and merge.
    */
   public static List<RowRange> sortAndMerge(List<RowRange> ranges) {
-    if (ranges.size() == 0) {
+    if (ranges.isEmpty()) {
       throw new IllegalArgumentException("No ranges found.");
     }
     List<RowRange> invalidRanges = new ArrayList<RowRange>();
@@ -391,7 +391,7 @@ public class MultiRowRangeFilter extends FilterBase {
       throwExceptionForInvalidRanges(invalidRanges, true);
     }
     // If no valid ranges found, throw the exception
-    if(newRanges.size() == 0) {
+    if(newRanges.isEmpty()) {
       throw new IllegalArgumentException("No valid ranges found.");
     }
     return newRanges;

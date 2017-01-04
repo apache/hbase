@@ -75,7 +75,7 @@ public class KeyOnlyFilter extends FilterBase {
   }
   
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument((filterArguments.size() == 0 || filterArguments.size() == 1),
+    Preconditions.checkArgument((filterArguments.isEmpty() || filterArguments.size() == 1),
                                 "Expected: 0 or 1 but got: %s", filterArguments.size());
     KeyOnlyFilter filter = new KeyOnlyFilter();
     if (filterArguments.size() == 1) {
