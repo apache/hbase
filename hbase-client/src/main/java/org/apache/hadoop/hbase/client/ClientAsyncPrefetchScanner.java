@@ -186,7 +186,7 @@ public class ClientAsyncPrefetchScanner extends ClientScanner {
         capacity = DEFAULT_QUEUE_CAPACITY;
       }
     }
-    return capacity;
+    return Math.max(capacity, 1);
   }
 
   private boolean prefetchCondition() {
@@ -197,11 +197,11 @@ public class ClientAsyncPrefetchScanner extends ClientScanner {
   }
 
   private int getCountThreshold() {
-    return cacheCapacity / 2 ;
+    return Math.max(cacheCapacity / 2, 1);
   }
 
   private long getSizeThreshold() {
-    return maxScannerResultSize / 2 ;
+    return Math.max(maxScannerResultSize / 2, 1);
   }
 
   private long getCacheSizeInBytes() {

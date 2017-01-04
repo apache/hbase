@@ -152,11 +152,21 @@ public class TestServerSideScanMetricsFromClientSide {
   }
 
   @Test
-  public void testRowsSeenMetric() throws Exception {
+  public void testRowsSeenMetricWithSync() throws Exception {
+    testRowsSeenMetric(false);
+  }
+
+  @Test
+  public void testRowsSeenMetricWithAsync() throws Exception {
+    testRowsSeenMetric(true);
+  }
+
+  private void testRowsSeenMetric(boolean async) throws Exception {
     // Base scan configuration
     Scan baseScan;
     baseScan = new Scan();
     baseScan.setScanMetricsEnabled(true);
+    baseScan.setAsyncPrefetch(async);
     testRowsSeenMetric(baseScan);
 
     // Test case that only a single result will be returned per RPC to the serer
