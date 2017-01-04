@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -271,7 +271,7 @@ public class TestPerTableCFReplication {
   @Test
   public void testTableCFsHelperConverter() {
 
-    ZooKeeperProtos.TableCF[] tableCFs = null;
+    ReplicationProtos.TableCF[] tableCFs = null;
     Map<TableName, List<String>> tabCFsMap = null;
 
     // 1. null or empty string, result should be null

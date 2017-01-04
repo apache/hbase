@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -210,8 +210,8 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
    * @throws DeserializationException
    */
   public static boolean isStateEnabled(final byte[] bytes) throws DeserializationException {
-    ZooKeeperProtos.ReplicationState.State state = parseStateFrom(bytes);
-    return ZooKeeperProtos.ReplicationState.State.ENABLED == state;
+    ReplicationProtos.ReplicationState.State state = parseStateFrom(bytes);
+    return ReplicationProtos.ReplicationState.State.ENABLED == state;
   }
 
   /**
@@ -219,13 +219,13 @@ public class ReplicationPeerZKImpl extends ReplicationStateZKBase
    * @return State parsed from the passed bytes.
    * @throws DeserializationException
    */
-  private static ZooKeeperProtos.ReplicationState.State parseStateFrom(final byte[] bytes)
+  private static ReplicationProtos.ReplicationState.State parseStateFrom(final byte[] bytes)
       throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(bytes);
     int pblen = ProtobufUtil.lengthOfPBMagic();
-    ZooKeeperProtos.ReplicationState.Builder builder =
-        ZooKeeperProtos.ReplicationState.newBuilder();
-    ZooKeeperProtos.ReplicationState state;
+    ReplicationProtos.ReplicationState.Builder builder =
+        ReplicationProtos.ReplicationState.newBuilder();
+    ReplicationProtos.ReplicationState state;
     try {
       ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
       state = builder.build();

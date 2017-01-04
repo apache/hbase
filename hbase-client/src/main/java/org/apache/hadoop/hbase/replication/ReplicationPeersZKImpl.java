@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -160,13 +160,13 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
   @Override
   public void enablePeer(String id) throws ReplicationException {
-    changePeerState(id, ZooKeeperProtos.ReplicationState.State.ENABLED);
+    changePeerState(id, ReplicationProtos.ReplicationState.State.ENABLED);
     LOG.info("peer " + id + " is enabled");
   }
 
   @Override
   public void disablePeer(String id) throws ReplicationException {
-    changePeerState(id, ZooKeeperProtos.ReplicationState.State.DISABLED);
+    changePeerState(id, ReplicationProtos.ReplicationState.State.DISABLED);
     LOG.info("peer " + id + " is disabled");
   }
 
@@ -462,7 +462,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
    * @param id
    * @param state
    */
-  private void changePeerState(String id, ZooKeeperProtos.ReplicationState.State state)
+  private void changePeerState(String id, ReplicationProtos.ReplicationState.State state)
       throws ReplicationException {
     try {
       if (!peerExists(id)) {
@@ -471,7 +471,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       }
       String peerStateZNode = getPeerStateNode(id);
       byte[] stateBytes =
-          (state == ZooKeeperProtos.ReplicationState.State.ENABLED) ? ENABLED_ZNODE_BYTES
+          (state == ReplicationProtos.ReplicationState.State.ENABLED) ? ENABLED_ZNODE_BYTES
               : DISABLED_ZNODE_BYTES;
       if (ZKUtil.checkExists(this.zookeeper, peerStateZNode) != -1) {
         ZKUtil.setData(this.zookeeper, peerStateZNode, stateBytes);

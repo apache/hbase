@@ -23,13 +23,13 @@ import java.io.IOException;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
 
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -66,9 +66,9 @@ public abstract class ReplicationStateZKBase {
 
   // Public for testing
   public static final byte[] ENABLED_ZNODE_BYTES =
-      toByteArray(ZooKeeperProtos.ReplicationState.State.ENABLED);
+      toByteArray(ReplicationProtos.ReplicationState.State.ENABLED);
   public static final byte[] DISABLED_ZNODE_BYTES =
-      toByteArray(ZooKeeperProtos.ReplicationState.State.DISABLED);
+      toByteArray(ReplicationProtos.ReplicationState.State.DISABLED);
   public static final String ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_KEY =
       "zookeeper.znode.replication.hfile.refs";
   public static final String ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_DEFAULT = "hfile-refs";
@@ -110,9 +110,9 @@ public abstract class ReplicationStateZKBase {
    *         use as content of a peer-state znode under a peer cluster id as in
    *         /hbase/replication/peers/PEER_ID/peer-state.
    */
-  protected static byte[] toByteArray(final ZooKeeperProtos.ReplicationState.State state) {
-    ZooKeeperProtos.ReplicationState msg =
-        ZooKeeperProtos.ReplicationState.newBuilder().setState(state).build();
+  protected static byte[] toByteArray(final ReplicationProtos.ReplicationState.State state) {
+    ReplicationProtos.ReplicationState msg =
+        ReplicationProtos.ReplicationState.newBuilder().setState(state).build();
     // There is no toByteArray on this pb Message?
     // 32 bytes is default which seems fair enough here.
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {

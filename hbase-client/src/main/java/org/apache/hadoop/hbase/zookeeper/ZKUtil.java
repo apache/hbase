@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
@@ -1860,8 +1860,8 @@ public class ZKUtil {
       }
       // parse the data of the above peer znode.
       try {
-        ZooKeeperProtos.ReplicationPeer.Builder builder =
-          ZooKeeperProtos.ReplicationPeer.newBuilder();
+        ReplicationProtos.ReplicationPeer.Builder builder =
+          ReplicationProtos.ReplicationPeer.newBuilder();
         ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
         String clusterKey = builder.getClusterkey();
         sb.append("\n").append(znodeToProcess).append(": ").append(clusterKey);
@@ -1885,8 +1885,8 @@ public class ZKUtil {
       byte[] peerStateData;
       try {
         peerStateData = ZKUtil.getData(zkw, peerStateZnode);
-        ZooKeeperProtos.ReplicationState.Builder builder =
-            ZooKeeperProtos.ReplicationState.newBuilder();
+        ReplicationProtos.ReplicationState.Builder builder =
+            ReplicationProtos.ReplicationState.newBuilder();
         ProtobufUtil.mergeFrom(builder, peerStateData, pblen, peerStateData.length - pblen);
         sb.append(builder.getState().name());
       } catch (IOException ipbe) {
@@ -2054,7 +2054,7 @@ public class ZKUtil {
    *         for use as content of an wal position in a replication queue.
    */
   public static byte[] positionToByteArray(final long position) {
-    byte[] bytes = ZooKeeperProtos.ReplicationHLogPosition.newBuilder().setPosition(position)
+    byte[] bytes = ReplicationProtos.ReplicationHLogPosition.newBuilder().setPosition(position)
         .build().toByteArray();
     return ProtobufUtil.prependPBMagic(bytes);
   }
@@ -2070,9 +2070,9 @@ public class ZKUtil {
     }
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.ReplicationHLogPosition.Builder builder =
-          ZooKeeperProtos.ReplicationHLogPosition.newBuilder();
-      ZooKeeperProtos.ReplicationHLogPosition position;
+      ReplicationProtos.ReplicationHLogPosition.Builder builder =
+          ReplicationProtos.ReplicationHLogPosition.newBuilder();
+      ReplicationProtos.ReplicationHLogPosition position;
       try {
         ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
         position = builder.build();

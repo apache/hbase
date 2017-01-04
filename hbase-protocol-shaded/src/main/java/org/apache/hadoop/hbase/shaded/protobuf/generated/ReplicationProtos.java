@@ -14,6 +14,3978 @@ public final class ReplicationProtos {
     registerAllExtensions(
         (org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite) registry);
   }
+  public interface TableCFOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.TableCF)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
+     */
+    boolean hasTableName();
+    /**
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName getTableName();
+    /**
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+
+    /**
+     * <code>repeated bytes families = 2;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString> getFamiliesList();
+    /**
+     * <code>repeated bytes families = 2;</code>
+     */
+    int getFamiliesCount();
+    /**
+     * <code>repeated bytes families = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getFamilies(int index);
+  }
+  /**
+   * Protobuf type {@code hbase.pb.TableCF}
+   */
+  public  static final class TableCF extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.TableCF)
+      TableCFOrBuilder {
+    // Use TableCF.newBuilder() to construct.
+    private TableCF(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private TableCF() {
+      families_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private TableCF(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = tableName_.toBuilder();
+              }
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(tableName_);
+                tableName_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                families_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              families_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          families_ = java.util.Collections.unmodifiableList(families_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_TableCF_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_TableCF_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.class, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName tableName_;
+    /**
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
+     */
+    public boolean hasTableName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName getTableName() {
+      return tableName_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance() : tableName_;
+    }
+    /**
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      return tableName_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance() : tableName_;
+    }
+
+    public static final int FAMILIES_FIELD_NUMBER = 2;
+    private java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString> families_;
+    /**
+     * <code>repeated bytes families = 2;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString>
+        getFamiliesList() {
+      return families_;
+    }
+    /**
+     * <code>repeated bytes families = 2;</code>
+     */
+    public int getFamiliesCount() {
+      return families_.size();
+    }
+    /**
+     * <code>repeated bytes families = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getFamilies(int index) {
+      return families_.get(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (hasTableName()) {
+        if (!getTableName().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, getTableName());
+      }
+      for (int i = 0; i < families_.size(); i++) {
+        output.writeBytes(2, families_.get(i));
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getTableName());
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < families_.size(); i++) {
+          dataSize += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(families_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getFamiliesList().size();
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF other = (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF) obj;
+
+      boolean result = true;
+      result = result && (hasTableName() == other.hasTableName());
+      if (hasTableName()) {
+        result = result && getTableName()
+            .equals(other.getTableName());
+      }
+      result = result && getFamiliesList()
+          .equals(other.getFamiliesList());
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasTableName()) {
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getTableName().hashCode();
+      }
+      if (getFamiliesCount() > 0) {
+        hash = (37 * hash) + FAMILIES_FIELD_NUMBER;
+        hash = (53 * hash) + getFamiliesList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.TableCF}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.TableCF)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_TableCF_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_TableCF_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.class, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getTableNameFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (tableNameBuilder_ == null) {
+          tableName_ = null;
+        } else {
+          tableNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        families_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_TableCF_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF result = new org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (tableNameBuilder_ == null) {
+          result.tableName_ = tableName_;
+        } else {
+          result.tableName_ = tableNameBuilder_.build();
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          families_ = java.util.Collections.unmodifiableList(families_);
+          bitField0_ = (bitField0_ & ~0x00000002);
+        }
+        result.families_ = families_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.getDefaultInstance()) return this;
+        if (other.hasTableName()) {
+          mergeTableName(other.getTableName());
+        }
+        if (!other.families_.isEmpty()) {
+          if (families_.isEmpty()) {
+            families_ = other.families_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureFamiliesIsMutable();
+            families_.addAll(other.families_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (hasTableName()) {
+          if (!getTableName().isInitialized()) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName tableName_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      public boolean hasTableName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName getTableName() {
+        if (tableNameBuilder_ == null) {
+          return tableName_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance() : tableName_;
+        } else {
+          return tableNameBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      public Builder setTableName(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName value) {
+        if (tableNameBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          tableName_ = value;
+          onChanged();
+        } else {
+          tableNameBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      public Builder setTableName(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+        if (tableNameBuilder_ == null) {
+          tableName_ = builderForValue.build();
+          onChanged();
+        } else {
+          tableNameBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      public Builder mergeTableName(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName value) {
+        if (tableNameBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              tableName_ != null &&
+              tableName_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+            tableName_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+          } else {
+            tableName_ = value;
+          }
+          onChanged();
+        } else {
+          tableNameBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      public Builder clearTableName() {
+        if (tableNameBuilder_ == null) {
+          tableName_ = null;
+          onChanged();
+        } else {
+          tableNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getTableNameFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+        if (tableNameBuilder_ != null) {
+          return tableNameBuilder_.getMessageOrBuilder();
+        } else {
+          return tableName_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.getDefaultInstance() : tableName_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          getTableNameFieldBuilder() {
+        if (tableNameBuilder_ == null) {
+          tableNameBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+                  getTableName(),
+                  getParentForChildren(),
+                  isClean());
+          tableName_ = null;
+        }
+        return tableNameBuilder_;
+      }
+
+      private java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString> families_ = java.util.Collections.emptyList();
+      private void ensureFamiliesIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          families_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString>(families_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+      /**
+       * <code>repeated bytes families = 2;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString>
+          getFamiliesList() {
+        return java.util.Collections.unmodifiableList(families_);
+      }
+      /**
+       * <code>repeated bytes families = 2;</code>
+       */
+      public int getFamiliesCount() {
+        return families_.size();
+      }
+      /**
+       * <code>repeated bytes families = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getFamilies(int index) {
+        return families_.get(index);
+      }
+      /**
+       * <code>repeated bytes families = 2;</code>
+       */
+      public Builder setFamilies(
+          int index, org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureFamiliesIsMutable();
+        families_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes families = 2;</code>
+       */
+      public Builder addFamilies(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureFamiliesIsMutable();
+        families_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes families = 2;</code>
+       */
+      public Builder addAllFamilies(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString> values) {
+        ensureFamiliesIsMutable();
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, families_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes families = 2;</code>
+       */
+      public Builder clearFamilies() {
+        families_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.TableCF)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.TableCF)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<TableCF>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<TableCF>() {
+      public TableCF parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new TableCF(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<TableCF> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<TableCF> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ReplicationPeerOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.ReplicationPeer)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <pre>
+     * clusterkey is the concatenation of the slave cluster's
+     * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+     * </pre>
+     *
+     * <code>required string clusterkey = 1;</code>
+     */
+    boolean hasClusterkey();
+    /**
+     * <pre>
+     * clusterkey is the concatenation of the slave cluster's
+     * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+     * </pre>
+     *
+     * <code>required string clusterkey = 1;</code>
+     */
+    java.lang.String getClusterkey();
+    /**
+     * <pre>
+     * clusterkey is the concatenation of the slave cluster's
+     * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+     * </pre>
+     *
+     * <code>required string clusterkey = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getClusterkeyBytes();
+
+    /**
+     * <code>optional string replicationEndpointImpl = 2;</code>
+     */
+    boolean hasReplicationEndpointImpl();
+    /**
+     * <code>optional string replicationEndpointImpl = 2;</code>
+     */
+    java.lang.String getReplicationEndpointImpl();
+    /**
+     * <code>optional string replicationEndpointImpl = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getReplicationEndpointImplBytes();
+
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair> 
+        getDataList();
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair getData(int index);
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    int getDataCount();
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
+        getDataOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getDataOrBuilder(
+        int index);
+
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair> 
+        getConfigurationList();
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index);
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    int getConfigurationCount();
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
+        getConfigurationOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
+        int index);
+
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF> 
+        getTableCfsList();
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF getTableCfs(int index);
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    int getTableCfsCount();
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder> 
+        getTableCfsOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder getTableCfsOrBuilder(
+        int index);
+
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString> getNamespacesList();
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    int getNamespacesCount();
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getNamespaces(int index);
+
+    /**
+     * <code>optional int64 bandwidth = 7;</code>
+     */
+    boolean hasBandwidth();
+    /**
+     * <code>optional int64 bandwidth = 7;</code>
+     */
+    long getBandwidth();
+  }
+  /**
+   * <pre>
+   **
+   * Used by replication. Holds a replication peer key.
+   * </pre>
+   *
+   * Protobuf type {@code hbase.pb.ReplicationPeer}
+   */
+  public  static final class ReplicationPeer extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.ReplicationPeer)
+      ReplicationPeerOrBuilder {
+    // Use ReplicationPeer.newBuilder() to construct.
+    private ReplicationPeer(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ReplicationPeer() {
+      clusterkey_ = "";
+      replicationEndpointImpl_ = "";
+      data_ = java.util.Collections.emptyList();
+      configuration_ = java.util.Collections.emptyList();
+      tableCfs_ = java.util.Collections.emptyList();
+      namespaces_ = java.util.Collections.emptyList();
+      bandwidth_ = 0L;
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ReplicationPeer(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              clusterkey_ = bs;
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000002;
+              replicationEndpointImpl_ = bs;
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                data_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              data_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.PARSER, extensionRegistry));
+              break;
+            }
+            case 34: {
+              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+                configuration_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair>();
+                mutable_bitField0_ |= 0x00000008;
+              }
+              configuration_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.PARSER, extensionRegistry));
+              break;
+            }
+            case 42: {
+              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                tableCfs_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF>();
+                mutable_bitField0_ |= 0x00000010;
+              }
+              tableCfs_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.PARSER, extensionRegistry));
+              break;
+            }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                namespaces_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000020;
+              }
+              namespaces_.add(input.readBytes());
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000004;
+              bandwidth_ = input.readInt64();
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          data_ = java.util.Collections.unmodifiableList(data_);
+        }
+        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+          configuration_ = java.util.Collections.unmodifiableList(configuration_);
+        }
+        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+          tableCfs_ = java.util.Collections.unmodifiableList(tableCfs_);
+        }
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+          namespaces_ = java.util.Collections.unmodifiableList(namespaces_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationPeer_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.class, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int CLUSTERKEY_FIELD_NUMBER = 1;
+    private volatile java.lang.Object clusterkey_;
+    /**
+     * <pre>
+     * clusterkey is the concatenation of the slave cluster's
+     * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+     * </pre>
+     *
+     * <code>required string clusterkey = 1;</code>
+     */
+    public boolean hasClusterkey() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <pre>
+     * clusterkey is the concatenation of the slave cluster's
+     * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+     * </pre>
+     *
+     * <code>required string clusterkey = 1;</code>
+     */
+    public java.lang.String getClusterkey() {
+      java.lang.Object ref = clusterkey_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          clusterkey_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * clusterkey is the concatenation of the slave cluster's
+     * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+     * </pre>
+     *
+     * <code>required string clusterkey = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getClusterkeyBytes() {
+      java.lang.Object ref = clusterkey_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        clusterkey_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int REPLICATIONENDPOINTIMPL_FIELD_NUMBER = 2;
+    private volatile java.lang.Object replicationEndpointImpl_;
+    /**
+     * <code>optional string replicationEndpointImpl = 2;</code>
+     */
+    public boolean hasReplicationEndpointImpl() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string replicationEndpointImpl = 2;</code>
+     */
+    public java.lang.String getReplicationEndpointImpl() {
+      java.lang.Object ref = replicationEndpointImpl_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          replicationEndpointImpl_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string replicationEndpointImpl = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getReplicationEndpointImplBytes() {
+      java.lang.Object ref = replicationEndpointImpl_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        replicationEndpointImpl_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int DATA_FIELD_NUMBER = 3;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair> data_;
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair> getDataList() {
+      return data_;
+    }
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
+        getDataOrBuilderList() {
+      return data_;
+    }
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    public int getDataCount() {
+      return data_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair getData(int index) {
+      return data_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getDataOrBuilder(
+        int index) {
+      return data_.get(index);
+    }
+
+    public static final int CONFIGURATION_FIELD_NUMBER = 4;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair> configuration_;
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
+      return configuration_;
+    }
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
+        getConfigurationOrBuilderList() {
+      return configuration_;
+    }
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    public int getConfigurationCount() {
+      return configuration_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
+      return configuration_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
+        int index) {
+      return configuration_.get(index);
+    }
+
+    public static final int TABLE_CFS_FIELD_NUMBER = 5;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF> tableCfs_;
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF> getTableCfsList() {
+      return tableCfs_;
+    }
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder> 
+        getTableCfsOrBuilderList() {
+      return tableCfs_;
+    }
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    public int getTableCfsCount() {
+      return tableCfs_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF getTableCfs(int index) {
+      return tableCfs_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder getTableCfsOrBuilder(
+        int index) {
+      return tableCfs_.get(index);
+    }
+
+    public static final int NAMESPACES_FIELD_NUMBER = 6;
+    private java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString> namespaces_;
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString>
+        getNamespacesList() {
+      return namespaces_;
+    }
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    public int getNamespacesCount() {
+      return namespaces_.size();
+    }
+    /**
+     * <code>repeated bytes namespaces = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getNamespaces(int index) {
+      return namespaces_.get(index);
+    }
+
+    public static final int BANDWIDTH_FIELD_NUMBER = 7;
+    private long bandwidth_;
+    /**
+     * <code>optional int64 bandwidth = 7;</code>
+     */
+    public boolean hasBandwidth() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional int64 bandwidth = 7;</code>
+     */
+    public long getBandwidth() {
+      return bandwidth_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasClusterkey()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      for (int i = 0; i < getDataCount(); i++) {
+        if (!getData(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getConfigurationCount(); i++) {
+        if (!getConfiguration(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getTableCfsCount(); i++) {
+        if (!getTableCfs(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 1, clusterkey_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 2, replicationEndpointImpl_);
+      }
+      for (int i = 0; i < data_.size(); i++) {
+        output.writeMessage(3, data_.get(i));
+      }
+      for (int i = 0; i < configuration_.size(); i++) {
+        output.writeMessage(4, configuration_.get(i));
+      }
+      for (int i = 0; i < tableCfs_.size(); i++) {
+        output.writeMessage(5, tableCfs_.get(i));
+      }
+      for (int i = 0; i < namespaces_.size(); i++) {
+        output.writeBytes(6, namespaces_.get(i));
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(7, bandwidth_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(1, clusterkey_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(2, replicationEndpointImpl_);
+      }
+      for (int i = 0; i < data_.size(); i++) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, data_.get(i));
+      }
+      for (int i = 0; i < configuration_.size(); i++) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, configuration_.get(i));
+      }
+      for (int i = 0; i < tableCfs_.size(); i++) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, tableCfs_.get(i));
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < namespaces_.size(); i++) {
+          dataSize += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(namespaces_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getNamespacesList().size();
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeInt64Size(7, bandwidth_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer other = (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer) obj;
+
+      boolean result = true;
+      result = result && (hasClusterkey() == other.hasClusterkey());
+      if (hasClusterkey()) {
+        result = result && getClusterkey()
+            .equals(other.getClusterkey());
+      }
+      result = result && (hasReplicationEndpointImpl() == other.hasReplicationEndpointImpl());
+      if (hasReplicationEndpointImpl()) {
+        result = result && getReplicationEndpointImpl()
+            .equals(other.getReplicationEndpointImpl());
+      }
+      result = result && getDataList()
+          .equals(other.getDataList());
+      result = result && getConfigurationList()
+          .equals(other.getConfigurationList());
+      result = result && getTableCfsList()
+          .equals(other.getTableCfsList());
+      result = result && getNamespacesList()
+          .equals(other.getNamespacesList());
+      result = result && (hasBandwidth() == other.hasBandwidth());
+      if (hasBandwidth()) {
+        result = result && (getBandwidth()
+            == other.getBandwidth());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasClusterkey()) {
+        hash = (37 * hash) + CLUSTERKEY_FIELD_NUMBER;
+        hash = (53 * hash) + getClusterkey().hashCode();
+      }
+      if (hasReplicationEndpointImpl()) {
+        hash = (37 * hash) + REPLICATIONENDPOINTIMPL_FIELD_NUMBER;
+        hash = (53 * hash) + getReplicationEndpointImpl().hashCode();
+      }
+      if (getDataCount() > 0) {
+        hash = (37 * hash) + DATA_FIELD_NUMBER;
+        hash = (53 * hash) + getDataList().hashCode();
+      }
+      if (getConfigurationCount() > 0) {
+        hash = (37 * hash) + CONFIGURATION_FIELD_NUMBER;
+        hash = (53 * hash) + getConfigurationList().hashCode();
+      }
+      if (getTableCfsCount() > 0) {
+        hash = (37 * hash) + TABLE_CFS_FIELD_NUMBER;
+        hash = (53 * hash) + getTableCfsList().hashCode();
+      }
+      if (getNamespacesCount() > 0) {
+        hash = (37 * hash) + NAMESPACES_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespacesList().hashCode();
+      }
+      if (hasBandwidth()) {
+        hash = (37 * hash) + BANDWIDTH_FIELD_NUMBER;
+        hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
+            getBandwidth());
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     **
+     * Used by replication. Holds a replication peer key.
+     * </pre>
+     *
+     * Protobuf type {@code hbase.pb.ReplicationPeer}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.ReplicationPeer)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationPeer_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.class, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getDataFieldBuilder();
+          getConfigurationFieldBuilder();
+          getTableCfsFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        clusterkey_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        replicationEndpointImpl_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        if (dataBuilder_ == null) {
+          data_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+        } else {
+          dataBuilder_.clear();
+        }
+        if (configurationBuilder_ == null) {
+          configuration_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+        } else {
+          configurationBuilder_.clear();
+        }
+        if (tableCfsBuilder_ == null) {
+          tableCfs_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000010);
+        } else {
+          tableCfsBuilder_.clear();
+        }
+        namespaces_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000020);
+        bandwidth_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationPeer_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer result = new org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.clusterkey_ = clusterkey_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.replicationEndpointImpl_ = replicationEndpointImpl_;
+        if (dataBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+            data_ = java.util.Collections.unmodifiableList(data_);
+            bitField0_ = (bitField0_ & ~0x00000004);
+          }
+          result.data_ = data_;
+        } else {
+          result.data_ = dataBuilder_.build();
+        }
+        if (configurationBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008)) {
+            configuration_ = java.util.Collections.unmodifiableList(configuration_);
+            bitField0_ = (bitField0_ & ~0x00000008);
+          }
+          result.configuration_ = configuration_;
+        } else {
+          result.configuration_ = configurationBuilder_.build();
+        }
+        if (tableCfsBuilder_ == null) {
+          if (((bitField0_ & 0x00000010) == 0x00000010)) {
+            tableCfs_ = java.util.Collections.unmodifiableList(tableCfs_);
+            bitField0_ = (bitField0_ & ~0x00000010);
+          }
+          result.tableCfs_ = tableCfs_;
+        } else {
+          result.tableCfs_ = tableCfsBuilder_.build();
+        }
+        if (((bitField0_ & 0x00000020) == 0x00000020)) {
+          namespaces_ = java.util.Collections.unmodifiableList(namespaces_);
+          bitField0_ = (bitField0_ & ~0x00000020);
+        }
+        result.namespaces_ = namespaces_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.bandwidth_ = bandwidth_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance()) return this;
+        if (other.hasClusterkey()) {
+          bitField0_ |= 0x00000001;
+          clusterkey_ = other.clusterkey_;
+          onChanged();
+        }
+        if (other.hasReplicationEndpointImpl()) {
+          bitField0_ |= 0x00000002;
+          replicationEndpointImpl_ = other.replicationEndpointImpl_;
+          onChanged();
+        }
+        if (dataBuilder_ == null) {
+          if (!other.data_.isEmpty()) {
+            if (data_.isEmpty()) {
+              data_ = other.data_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+            } else {
+              ensureDataIsMutable();
+              data_.addAll(other.data_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.data_.isEmpty()) {
+            if (dataBuilder_.isEmpty()) {
+              dataBuilder_.dispose();
+              dataBuilder_ = null;
+              data_ = other.data_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+              dataBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getDataFieldBuilder() : null;
+            } else {
+              dataBuilder_.addAllMessages(other.data_);
+            }
+          }
+        }
+        if (configurationBuilder_ == null) {
+          if (!other.configuration_.isEmpty()) {
+            if (configuration_.isEmpty()) {
+              configuration_ = other.configuration_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+            } else {
+              ensureConfigurationIsMutable();
+              configuration_.addAll(other.configuration_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.configuration_.isEmpty()) {
+            if (configurationBuilder_.isEmpty()) {
+              configurationBuilder_.dispose();
+              configurationBuilder_ = null;
+              configuration_ = other.configuration_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+              configurationBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getConfigurationFieldBuilder() : null;
+            } else {
+              configurationBuilder_.addAllMessages(other.configuration_);
+            }
+          }
+        }
+        if (tableCfsBuilder_ == null) {
+          if (!other.tableCfs_.isEmpty()) {
+            if (tableCfs_.isEmpty()) {
+              tableCfs_ = other.tableCfs_;
+              bitField0_ = (bitField0_ & ~0x00000010);
+            } else {
+              ensureTableCfsIsMutable();
+              tableCfs_.addAll(other.tableCfs_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.tableCfs_.isEmpty()) {
+            if (tableCfsBuilder_.isEmpty()) {
+              tableCfsBuilder_.dispose();
+              tableCfsBuilder_ = null;
+              tableCfs_ = other.tableCfs_;
+              bitField0_ = (bitField0_ & ~0x00000010);
+              tableCfsBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getTableCfsFieldBuilder() : null;
+            } else {
+              tableCfsBuilder_.addAllMessages(other.tableCfs_);
+            }
+          }
+        }
+        if (!other.namespaces_.isEmpty()) {
+          if (namespaces_.isEmpty()) {
+            namespaces_ = other.namespaces_;
+            bitField0_ = (bitField0_ & ~0x00000020);
+          } else {
+            ensureNamespacesIsMutable();
+            namespaces_.addAll(other.namespaces_);
+          }
+          onChanged();
+        }
+        if (other.hasBandwidth()) {
+          setBandwidth(other.getBandwidth());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasClusterkey()) {
+          return false;
+        }
+        for (int i = 0; i < getDataCount(); i++) {
+          if (!getData(i).isInitialized()) {
+            return false;
+          }
+        }
+        for (int i = 0; i < getConfigurationCount(); i++) {
+          if (!getConfiguration(i).isInitialized()) {
+            return false;
+          }
+        }
+        for (int i = 0; i < getTableCfsCount(); i++) {
+          if (!getTableCfs(i).isInitialized()) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object clusterkey_ = "";
+      /**
+       * <pre>
+       * clusterkey is the concatenation of the slave cluster's
+       * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+       * </pre>
+       *
+       * <code>required string clusterkey = 1;</code>
+       */
+      public boolean hasClusterkey() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <pre>
+       * clusterkey is the concatenation of the slave cluster's
+       * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+       * </pre>
+       *
+       * <code>required string clusterkey = 1;</code>
+       */
+      public java.lang.String getClusterkey() {
+        java.lang.Object ref = clusterkey_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            clusterkey_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * clusterkey is the concatenation of the slave cluster's
+       * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+       * </pre>
+       *
+       * <code>required string clusterkey = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getClusterkeyBytes() {
+        java.lang.Object ref = clusterkey_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          clusterkey_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * clusterkey is the concatenation of the slave cluster's
+       * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+       * </pre>
+       *
+       * <code>required string clusterkey = 1;</code>
+       */
+      public Builder setClusterkey(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        clusterkey_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * clusterkey is the concatenation of the slave cluster's
+       * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+       * </pre>
+       *
+       * <code>required string clusterkey = 1;</code>
+       */
+      public Builder clearClusterkey() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        clusterkey_ = getDefaultInstance().getClusterkey();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * clusterkey is the concatenation of the slave cluster's
+       * hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+       * </pre>
+       *
+       * <code>required string clusterkey = 1;</code>
+       */
+      public Builder setClusterkeyBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        clusterkey_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object replicationEndpointImpl_ = "";
+      /**
+       * <code>optional string replicationEndpointImpl = 2;</code>
+       */
+      public boolean hasReplicationEndpointImpl() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string replicationEndpointImpl = 2;</code>
+       */
+      public java.lang.String getReplicationEndpointImpl() {
+        java.lang.Object ref = replicationEndpointImpl_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            replicationEndpointImpl_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string replicationEndpointImpl = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getReplicationEndpointImplBytes() {
+        java.lang.Object ref = replicationEndpointImpl_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          replicationEndpointImpl_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string replicationEndpointImpl = 2;</code>
+       */
+      public Builder setReplicationEndpointImpl(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        replicationEndpointImpl_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string replicationEndpointImpl = 2;</code>
+       */
+      public Builder clearReplicationEndpointImpl() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        replicationEndpointImpl_ = getDefaultInstance().getReplicationEndpointImpl();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string replicationEndpointImpl = 2;</code>
+       */
+      public Builder setReplicationEndpointImplBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        replicationEndpointImpl_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair> data_ =
+        java.util.Collections.emptyList();
+      private void ensureDataIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          data_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair>(data_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> dataBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair> getDataList() {
+        if (dataBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(data_);
+        } else {
+          return dataBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public int getDataCount() {
+        if (dataBuilder_ == null) {
+          return data_.size();
+        } else {
+          return dataBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair getData(int index) {
+        if (dataBuilder_ == null) {
+          return data_.get(index);
+        } else {
+          return dataBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder setData(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair value) {
+        if (dataBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureDataIsMutable();
+          data_.set(index, value);
+          onChanged();
+        } else {
+          dataBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder setData(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
+        if (dataBuilder_ == null) {
+          ensureDataIsMutable();
+          data_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          dataBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder addData(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair value) {
+        if (dataBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureDataIsMutable();
+          data_.add(value);
+          onChanged();
+        } else {
+          dataBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder addData(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair value) {
+        if (dataBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureDataIsMutable();
+          data_.add(index, value);
+          onChanged();
+        } else {
+          dataBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder addData(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
+        if (dataBuilder_ == null) {
+          ensureDataIsMutable();
+          data_.add(builderForValue.build());
+          onChanged();
+        } else {
+          dataBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder addData(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
+        if (dataBuilder_ == null) {
+          ensureDataIsMutable();
+          data_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          dataBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder addAllData(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair> values) {
+        if (dataBuilder_ == null) {
+          ensureDataIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, data_);
+          onChanged();
+        } else {
+          dataBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder clearData() {
+        if (dataBuilder_ == null) {
+          data_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+          onChanged();
+        } else {
+          dataBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public Builder removeData(int index) {
+        if (dataBuilder_ == null) {
+          ensureDataIsMutable();
+          data_.remove(index);
+          onChanged();
+        } else {
+          dataBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder getDataBuilder(
+          int index) {
+        return getDataFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getDataOrBuilder(
+          int index) {
+        if (dataBuilder_ == null) {
+          return data_.get(index);  } else {
+          return dataBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
+           getDataOrBuilderList() {
+        if (dataBuilder_ != null) {
+          return dataBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(data_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addDataBuilder() {
+        return getDataFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addDataBuilder(
+          int index) {
+        return getDataFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder> 
+           getDataBuilderList() {
+        return getDataFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
+          getDataFieldBuilder() {
+        if (dataBuilder_ == null) {
+          dataBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder>(
+                  data_,
+                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  getParentForChildren(),
+                  isClean());
+          data_ = null;
+        }
+        return dataBuilder_;
+      }
+
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair> configuration_ =
+        java.util.Collections.emptyList();
+      private void ensureConfigurationIsMutable() {
+        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
+          configuration_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair>(configuration_);
+          bitField0_ |= 0x00000008;
+         }
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> configurationBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
+        if (configurationBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(configuration_);
+        } else {
+          return configurationBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public int getConfigurationCount() {
+        if (configurationBuilder_ == null) {
+          return configuration_.size();
+        } else {
+          return configurationBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
+        if (configurationBuilder_ == null) {
+          return configuration_.get(index);
+        } else {
+          return configurationBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder setConfiguration(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair value) {
+        if (configurationBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureConfigurationIsMutable();
+          configuration_.set(index, value);
+          onChanged();
+        } else {
+          configurationBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder setConfiguration(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
+        if (configurationBuilder_ == null) {
+          ensureConfigurationIsMutable();
+          configuration_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          configurationBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder addConfiguration(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair value) {
+        if (configurationBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureConfigurationIsMutable();
+          configuration_.add(value);
+          onChanged();
+        } else {
+          configurationBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder addConfiguration(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair value) {
+        if (configurationBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureConfigurationIsMutable();
+          configuration_.add(index, value);
+          onChanged();
+        } else {
+          configurationBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder addConfiguration(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
+        if (configurationBuilder_ == null) {
+          ensureConfigurationIsMutable();
+          configuration_.add(builderForValue.build());
+          onChanged();
+        } else {
+          configurationBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder addConfiguration(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
+        if (configurationBuilder_ == null) {
+          ensureConfigurationIsMutable();
+          configuration_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          configurationBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder addAllConfiguration(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair> values) {
+        if (configurationBuilder_ == null) {
+          ensureConfigurationIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, configuration_);
+          onChanged();
+        } else {
+          configurationBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder clearConfiguration() {
+        if (configurationBuilder_ == null) {
+          configuration_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+          onChanged();
+        } else {
+          configurationBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public Builder removeConfiguration(int index) {
+        if (configurationBuilder_ == null) {
+          ensureConfigurationIsMutable();
+          configuration_.remove(index);
+          onChanged();
+        } else {
+          configurationBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder getConfigurationBuilder(
+          int index) {
+        return getConfigurationFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
+          int index) {
+        if (configurationBuilder_ == null) {
+          return configuration_.get(index);  } else {
+          return configurationBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
+           getConfigurationOrBuilderList() {
+        if (configurationBuilder_ != null) {
+          return configurationBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(configuration_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder() {
+        return getConfigurationFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder(
+          int index) {
+        return getConfigurationFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder> 
+           getConfigurationBuilderList() {
+        return getConfigurationFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
+          getConfigurationFieldBuilder() {
+        if (configurationBuilder_ == null) {
+          configurationBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPairOrBuilder>(
+                  configuration_,
+                  ((bitField0_ & 0x00000008) == 0x00000008),
+                  getParentForChildren(),
+                  isClean());
+          configuration_ = null;
+        }
+        return configurationBuilder_;
+      }
+
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF> tableCfs_ =
+        java.util.Collections.emptyList();
+      private void ensureTableCfsIsMutable() {
+        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+          tableCfs_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF>(tableCfs_);
+          bitField0_ |= 0x00000010;
+         }
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder> tableCfsBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF> getTableCfsList() {
+        if (tableCfsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(tableCfs_);
+        } else {
+          return tableCfsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public int getTableCfsCount() {
+        if (tableCfsBuilder_ == null) {
+          return tableCfs_.size();
+        } else {
+          return tableCfsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF getTableCfs(int index) {
+        if (tableCfsBuilder_ == null) {
+          return tableCfs_.get(index);
+        } else {
+          return tableCfsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder setTableCfs(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF value) {
+        if (tableCfsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureTableCfsIsMutable();
+          tableCfs_.set(index, value);
+          onChanged();
+        } else {
+          tableCfsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder setTableCfs(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder builderForValue) {
+        if (tableCfsBuilder_ == null) {
+          ensureTableCfsIsMutable();
+          tableCfs_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          tableCfsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder addTableCfs(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF value) {
+        if (tableCfsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureTableCfsIsMutable();
+          tableCfs_.add(value);
+          onChanged();
+        } else {
+          tableCfsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder addTableCfs(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF value) {
+        if (tableCfsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureTableCfsIsMutable();
+          tableCfs_.add(index, value);
+          onChanged();
+        } else {
+          tableCfsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder addTableCfs(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder builderForValue) {
+        if (tableCfsBuilder_ == null) {
+          ensureTableCfsIsMutable();
+          tableCfs_.add(builderForValue.build());
+          onChanged();
+        } else {
+          tableCfsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder addTableCfs(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder builderForValue) {
+        if (tableCfsBuilder_ == null) {
+          ensureTableCfsIsMutable();
+          tableCfs_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          tableCfsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder addAllTableCfs(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF> values) {
+        if (tableCfsBuilder_ == null) {
+          ensureTableCfsIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, tableCfs_);
+          onChanged();
+        } else {
+          tableCfsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder clearTableCfs() {
+        if (tableCfsBuilder_ == null) {
+          tableCfs_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000010);
+          onChanged();
+        } else {
+          tableCfsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public Builder removeTableCfs(int index) {
+        if (tableCfsBuilder_ == null) {
+          ensureTableCfsIsMutable();
+          tableCfs_.remove(index);
+          onChanged();
+        } else {
+          tableCfsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder getTableCfsBuilder(
+          int index) {
+        return getTableCfsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder getTableCfsOrBuilder(
+          int index) {
+        if (tableCfsBuilder_ == null) {
+          return tableCfs_.get(index);  } else {
+          return tableCfsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder> 
+           getTableCfsOrBuilderList() {
+        if (tableCfsBuilder_ != null) {
+          return tableCfsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(tableCfs_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder addTableCfsBuilder() {
+        return getTableCfsFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder addTableCfsBuilder(
+          int index) {
+        return getTableCfsFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.TableCF table_cfs = 5;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder> 
+           getTableCfsBuilderList() {
+        return getTableCfsFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder> 
+          getTableCfsFieldBuilder() {
+        if (tableCfsBuilder_ == null) {
+          tableCfsBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCF.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TableCFOrBuilder>(
+                  tableCfs_,
+                  ((bitField0_ & 0x00000010) == 0x00000010),
+                  getParentForChildren(),
+                  isClean());
+          tableCfs_ = null;
+        }
+        return tableCfsBuilder_;
+      }
+
+      private java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString> namespaces_ = java.util.Collections.emptyList();
+      private void ensureNamespacesIsMutable() {
+        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
+          namespaces_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString>(namespaces_);
+          bitField0_ |= 0x00000020;
+         }
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString>
+          getNamespacesList() {
+        return java.util.Collections.unmodifiableList(namespaces_);
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public int getNamespacesCount() {
+        return namespaces_.size();
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString getNamespaces(int index) {
+        return namespaces_.get(index);
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public Builder setNamespaces(
+          int index, org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureNamespacesIsMutable();
+        namespaces_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public Builder addNamespaces(org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureNamespacesIsMutable();
+        namespaces_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public Builder addAllNamespaces(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString> values) {
+        ensureNamespacesIsMutable();
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, namespaces_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes namespaces = 6;</code>
+       */
+      public Builder clearNamespaces() {
+        namespaces_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000020);
+        onChanged();
+        return this;
+      }
+
+      private long bandwidth_ ;
+      /**
+       * <code>optional int64 bandwidth = 7;</code>
+       */
+      public boolean hasBandwidth() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional int64 bandwidth = 7;</code>
+       */
+      public long getBandwidth() {
+        return bandwidth_;
+      }
+      /**
+       * <code>optional int64 bandwidth = 7;</code>
+       */
+      public Builder setBandwidth(long value) {
+        bitField0_ |= 0x00000040;
+        bandwidth_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 bandwidth = 7;</code>
+       */
+      public Builder clearBandwidth() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        bandwidth_ = 0L;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicationPeer)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReplicationPeer)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationPeer>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<ReplicationPeer>() {
+      public ReplicationPeer parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new ReplicationPeer(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationPeer> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationPeer> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ReplicationStateOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.ReplicationState)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
+     */
+    boolean hasState();
+    /**
+     * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State getState();
+  }
+  /**
+   * <pre>
+   **
+   * Used by replication. Holds whether enabled or disabled
+   * </pre>
+   *
+   * Protobuf type {@code hbase.pb.ReplicationState}
+   */
+  public  static final class ReplicationState extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.ReplicationState)
+      ReplicationStateOrBuilder {
+    // Use ReplicationState.newBuilder() to construct.
+    private ReplicationState(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ReplicationState() {
+      state_ = 0;
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ReplicationState(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State value = org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                state_ = rawValue;
+              }
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationState_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationState_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.class, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.Builder.class);
+    }
+
+    /**
+     * Protobuf enum {@code hbase.pb.ReplicationState.State}
+     */
+    public enum State
+        implements org.apache.hadoop.hbase.shaded.com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>ENABLED = 0;</code>
+       */
+      ENABLED(0),
+      /**
+       * <code>DISABLED = 1;</code>
+       */
+      DISABLED(1),
+      ;
+
+      /**
+       * <code>ENABLED = 0;</code>
+       */
+      public static final int ENABLED_VALUE = 0;
+      /**
+       * <code>DISABLED = 1;</code>
+       */
+      public static final int DISABLED_VALUE = 1;
+
+
+      public final int getNumber() {
+        return value;
+      }
+
+      /**
+       * @deprecated Use {@link #forNumber(int)} instead.
+       */
+      @java.lang.Deprecated
+      public static State valueOf(int value) {
+        return forNumber(value);
+      }
+
+      public static State forNumber(int value) {
+        switch (value) {
+          case 0: return ENABLED;
+          case 1: return DISABLED;
+          default: return null;
+        }
+      }
+
+      public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<State>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<
+          State> internalValueMap =
+            new org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<State>() {
+              public State findValueByNumber(int number) {
+                return State.forNumber(number);
+              }
+            };
+
+      public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(ordinal());
+      }
+      public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final State[] VALUES = values();
+
+      public static State valueOf(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int value;
+
+      private State(int value) {
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:hbase.pb.ReplicationState.State)
+    }
+
+    private int bitField0_;
+    public static final int STATE_FIELD_NUMBER = 1;
+    private int state_;
+    /**
+     * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
+     */
+    public boolean hasState() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State getState() {
+      org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State result = org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State.valueOf(state_);
+      return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State.ENABLED : result;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasState()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, state_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, state_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState other = (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState) obj;
+
+      boolean result = true;
+      result = result && (hasState() == other.hasState());
+      if (hasState()) {
+        result = result && state_ == other.state_;
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasState()) {
+        hash = (37 * hash) + STATE_FIELD_NUMBER;
+        hash = (53 * hash) + state_;
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     **
+     * Used by replication. Holds whether enabled or disabled
+     * </pre>
+     *
+     * Protobuf type {@code hbase.pb.ReplicationState}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.ReplicationState)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationStateOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationState_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationState_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.class, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        state_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationState_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState result = new org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.state_ = state_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.getDefaultInstance()) return this;
+        if (other.hasState()) {
+          setState(other.getState());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasState()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private int state_ = 0;
+      /**
+       * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
+       */
+      public boolean hasState() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State getState() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State result = org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State.valueOf(state_);
+        return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State.ENABLED : result;
+      }
+      /**
+       * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
+       */
+      public Builder setState(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState.State value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        state_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
+       */
+      public Builder clearState() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        state_ = 0;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicationState)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReplicationState)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationState>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<ReplicationState>() {
+      public ReplicationState parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new ReplicationState(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationState> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationState> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ReplicationHLogPositionOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.ReplicationHLogPosition)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required int64 position = 1;</code>
+     */
+    boolean hasPosition();
+    /**
+     * <code>required int64 position = 1;</code>
+     */
+    long getPosition();
+  }
+  /**
+   * <pre>
+   **
+   * Used by replication. Holds the current position in an WAL file.
+   * </pre>
+   *
+   * Protobuf type {@code hbase.pb.ReplicationHLogPosition}
+   */
+  public  static final class ReplicationHLogPosition extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.ReplicationHLogPosition)
+      ReplicationHLogPositionOrBuilder {
+    // Use ReplicationHLogPosition.newBuilder() to construct.
+    private ReplicationHLogPosition(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ReplicationHLogPosition() {
+      position_ = 0L;
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ReplicationHLogPosition(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              position_ = input.readInt64();
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationHLogPosition_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationHLogPosition_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition.class, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int POSITION_FIELD_NUMBER = 1;
+    private long position_;
+    /**
+     * <code>required int64 position = 1;</code>
+     */
+    public boolean hasPosition() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required int64 position = 1;</code>
+     */
+    public long getPosition() {
+      return position_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasPosition()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt64(1, position_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, position_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition other = (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition) obj;
+
+      boolean result = true;
+      result = result && (hasPosition() == other.hasPosition());
+      if (hasPosition()) {
+        result = result && (getPosition()
+            == other.getPosition());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasPosition()) {
+        hash = (37 * hash) + POSITION_FIELD_NUMBER;
+        hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
+            getPosition());
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     **
+     * Used by replication. Holds the current position in an WAL file.
+     * </pre>
+     *
+     * Protobuf type {@code hbase.pb.ReplicationHLogPosition}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.ReplicationHLogPosition)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPositionOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationHLogPosition_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationHLogPosition_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition.class, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        position_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.internal_static_hbase_pb_ReplicationHLogPosition_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition result = new org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.position_ = position_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition.getDefaultInstance()) return this;
+        if (other.hasPosition()) {
+          setPosition(other.getPosition());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasPosition()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private long position_ ;
+      /**
+       * <code>required int64 position = 1;</code>
+       */
+      public boolean hasPosition() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required int64 position = 1;</code>
+       */
+      public long getPosition() {
+        return position_;
+      }
+      /**
+       * <code>required int64 position = 1;</code>
+       */
+      public Builder setPosition(long value) {
+        bitField0_ |= 0x00000001;
+        position_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int64 position = 1;</code>
+       */
+      public Builder clearPosition() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        position_ = 0L;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicationHLogPosition)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReplicationHLogPosition)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationHLogPosition>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<ReplicationHLogPosition>() {
+      public ReplicationHLogPosition parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new ReplicationHLogPosition(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationHLogPosition> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ReplicationHLogPosition> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationHLogPosition getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface AddReplicationPeerRequestOrBuilder extends
       // @@protoc_insertion_point(interface_extends:hbase.pb.AddReplicationPeerRequest)
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
@@ -39,11 +4011,11 @@ public final class ReplicationProtos {
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig();
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.AddReplicationPeerRequest}
@@ -95,11 +4067,11 @@ public final class ReplicationProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder subBuilder = null;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = peerConfig_.toBuilder();
               }
-              peerConfig_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.PARSER, extensionRegistry);
+              peerConfig_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(peerConfig_);
                 peerConfig_ = subBuilder.buildPartial();
@@ -175,7 +4147,7 @@ public final class ReplicationProtos {
     }
 
     public static final int PEER_CONFIG_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer peerConfig_;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer peerConfig_;
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
@@ -185,14 +4157,14 @@ public final class ReplicationProtos {
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig() {
-      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig() {
+      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
     }
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
-      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
+      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -612,9 +4584,9 @@ public final class ReplicationProtos {
         return this;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer peerConfig_ = null;
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer peerConfig_ = null;
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder> peerConfigBuilder_;
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder> peerConfigBuilder_;
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
@@ -624,9 +4596,9 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig() {
         if (peerConfigBuilder_ == null) {
-          return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+          return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
         } else {
           return peerConfigBuilder_.getMessage();
         }
@@ -634,7 +4606,7 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public Builder setPeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer value) {
+      public Builder setPeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer value) {
         if (peerConfigBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -651,7 +4623,7 @@ public final class ReplicationProtos {
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
       public Builder setPeerConfig(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder builderForValue) {
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder builderForValue) {
         if (peerConfigBuilder_ == null) {
           peerConfig_ = builderForValue.build();
           onChanged();
@@ -664,13 +4636,13 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public Builder mergePeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer value) {
+      public Builder mergePeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer value) {
         if (peerConfigBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
               peerConfig_ != null &&
-              peerConfig_ != org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance()) {
+              peerConfig_ != org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance()) {
             peerConfig_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.newBuilder(peerConfig_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.newBuilder(peerConfig_).mergeFrom(value).buildPartial();
           } else {
             peerConfig_ = value;
           }
@@ -697,7 +4669,7 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder getPeerConfigBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder getPeerConfigBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getPeerConfigFieldBuilder().getBuilder();
@@ -705,23 +4677,23 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
         if (peerConfigBuilder_ != null) {
           return peerConfigBuilder_.getMessageOrBuilder();
         } else {
           return peerConfig_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
         }
       }
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder> 
           getPeerConfigFieldBuilder() {
         if (peerConfigBuilder_ == null) {
           peerConfigBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder>(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder>(
                   getPeerConfig(),
                   getParentForChildren(),
                   isClean());
@@ -4499,11 +8471,11 @@ public final class ReplicationProtos {
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig();
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.GetReplicationPeerConfigResponse}
@@ -4555,11 +8527,11 @@ public final class ReplicationProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder subBuilder = null;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = peerConfig_.toBuilder();
               }
-              peerConfig_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.PARSER, extensionRegistry);
+              peerConfig_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(peerConfig_);
                 peerConfig_ = subBuilder.buildPartial();
@@ -4635,7 +8607,7 @@ public final class ReplicationProtos {
     }
 
     public static final int PEER_CONFIG_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer peerConfig_;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer peerConfig_;
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
@@ -4645,14 +8617,14 @@ public final class ReplicationProtos {
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig() {
-      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig() {
+      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
     }
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
-      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
+      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -5072,9 +9044,9 @@ public final class ReplicationProtos {
         return this;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer peerConfig_ = null;
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer peerConfig_ = null;
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder> peerConfigBuilder_;
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder> peerConfigBuilder_;
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
@@ -5084,9 +9056,9 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig() {
         if (peerConfigBuilder_ == null) {
-          return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+          return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
         } else {
           return peerConfigBuilder_.getMessage();
         }
@@ -5094,7 +9066,7 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public Builder setPeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer value) {
+      public Builder setPeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer value) {
         if (peerConfigBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -5111,7 +9083,7 @@ public final class ReplicationProtos {
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
       public Builder setPeerConfig(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder builderForValue) {
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder builderForValue) {
         if (peerConfigBuilder_ == null) {
           peerConfig_ = builderForValue.build();
           onChanged();
@@ -5124,13 +9096,13 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public Builder mergePeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer value) {
+      public Builder mergePeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer value) {
         if (peerConfigBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
               peerConfig_ != null &&
-              peerConfig_ != org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance()) {
+              peerConfig_ != org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance()) {
             peerConfig_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.newBuilder(peerConfig_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.newBuilder(peerConfig_).mergeFrom(value).buildPartial();
           } else {
             peerConfig_ = value;
           }
@@ -5157,7 +9129,7 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder getPeerConfigBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder getPeerConfigBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getPeerConfigFieldBuilder().getBuilder();
@@ -5165,23 +9137,23 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
         if (peerConfigBuilder_ != null) {
           return peerConfigBuilder_.getMessageOrBuilder();
         } else {
           return peerConfig_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
         }
       }
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder> 
           getPeerConfigFieldBuilder() {
         if (peerConfigBuilder_ == null) {
           peerConfigBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder>(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder>(
                   getPeerConfig(),
                   getParentForChildren(),
                   isClean());
@@ -5263,11 +9235,11 @@ public final class ReplicationProtos {
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig();
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.UpdateReplicationPeerConfigRequest}
@@ -5319,11 +9291,11 @@ public final class ReplicationProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder subBuilder = null;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = peerConfig_.toBuilder();
               }
-              peerConfig_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.PARSER, extensionRegistry);
+              peerConfig_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(peerConfig_);
                 peerConfig_ = subBuilder.buildPartial();
@@ -5399,7 +9371,7 @@ public final class ReplicationProtos {
     }
 
     public static final int PEER_CONFIG_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer peerConfig_;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer peerConfig_;
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
@@ -5409,14 +9381,14 @@ public final class ReplicationProtos {
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig() {
-      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig() {
+      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
     }
     /**
      * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
      */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
-      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
+      return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -5836,9 +9808,9 @@ public final class ReplicationProtos {
         return this;
       }
 
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer peerConfig_ = null;
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer peerConfig_ = null;
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder> peerConfigBuilder_;
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder> peerConfigBuilder_;
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
@@ -5848,9 +9820,9 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer getPeerConfig() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer getPeerConfig() {
         if (peerConfigBuilder_ == null) {
-          return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+          return peerConfig_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
         } else {
           return peerConfigBuilder_.getMessage();
         }
@@ -5858,7 +9830,7 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public Builder setPeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer value) {
+      public Builder setPeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer value) {
         if (peerConfigBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -5875,7 +9847,7 @@ public final class ReplicationProtos {
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
       public Builder setPeerConfig(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder builderForValue) {
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder builderForValue) {
         if (peerConfigBuilder_ == null) {
           peerConfig_ = builderForValue.build();
           onChanged();
@@ -5888,13 +9860,13 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public Builder mergePeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer value) {
+      public Builder mergePeerConfig(org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer value) {
         if (peerConfigBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
               peerConfig_ != null &&
-              peerConfig_ != org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance()) {
+              peerConfig_ != org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance()) {
             peerConfig_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.newBuilder(peerConfig_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.newBuilder(peerConfig_).mergeFrom(value).buildPartial();
           } else {
             peerConfig_ = value;
           }
@@ -5921,7 +9893,7 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder getPeerConfigBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder getPeerConfigBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getPeerConfigFieldBuilder().getBuilder();
@@ -5929,23 +9901,23 @@ public final class ReplicationProtos {
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder getPeerConfigOrBuilder() {
         if (peerConfigBuilder_ != null) {
           return peerConfigBuilder_.getMessageOrBuilder();
         } else {
           return peerConfig_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.getDefaultInstance() : peerConfig_;
         }
       }
       /**
        * <code>required .hbase.pb.ReplicationPeer peer_config = 2;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder> 
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder> 
           getPeerConfigFieldBuilder() {
         if (peerConfigBuilder_ == null) {
           peerConfigBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder>(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeer.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerOrBuilder>(
                   getPeerConfig(),
                   getParentForChildren(),
                   isClean());
@@ -6376,6 +10348,26 @@ public final class ReplicationProtos {
   }
 
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_TableCF_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_TableCF_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ReplicationPeer_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ReplicationState_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_ReplicationState_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ReplicationHLogPosition_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_ReplicationHLogPosition_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_AddReplicationPeerRequest_descriptor;
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -6444,26 +10436,38 @@ public final class ReplicationProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\021Replication.proto\022\010hbase.pb\032\017ZooKeeper" +
-      ".proto\"\\\n\031AddReplicationPeerRequest\022\017\n\007p" +
-      "eer_id\030\001 \002(\t\022.\n\013peer_config\030\002 \002(\0132\031.hbas" +
-      "e.pb.ReplicationPeer\"\034\n\032AddReplicationPe" +
-      "erResponse\"/\n\034RemoveReplicationPeerReque" +
-      "st\022\017\n\007peer_id\030\001 \002(\t\"\037\n\035RemoveReplication" +
-      "PeerResponse\"/\n\034EnableReplicationPeerReq" +
-      "uest\022\017\n\007peer_id\030\001 \002(\t\"\037\n\035EnableReplicati" +
-      "onPeerResponse\"0\n\035DisableReplicationPeer" +
-      "Request\022\017\n\007peer_id\030\001 \002(\t\" \n\036DisableRepli",
-      "cationPeerResponse\"2\n\037GetReplicationPeer" +
-      "ConfigRequest\022\017\n\007peer_id\030\001 \002(\t\"c\n GetRep" +
-      "licationPeerConfigResponse\022\017\n\007peer_id\030\001 " +
-      "\002(\t\022.\n\013peer_config\030\002 \002(\0132\031.hbase.pb.Repl" +
-      "icationPeer\"e\n\"UpdateReplicationPeerConf" +
-      "igRequest\022\017\n\007peer_id\030\001 \002(\t\022.\n\013peer_confi" +
-      "g\030\002 \002(\0132\031.hbase.pb.ReplicationPeer\"%\n#Up" +
-      "dateReplicationPeerConfigResponseBN\n1org" +
-      ".apache.hadoop.hbase.shaded.protobuf.gen" +
-      "eratedB\021ReplicationProtosH\001\210\001\001\240\001\001"
+      "\n\021Replication.proto\022\010hbase.pb\032\013HBase.pro" +
+      "to\"D\n\007TableCF\022\'\n\ntable_name\030\001 \001(\0132\023.hbas" +
+      "e.pb.TableName\022\020\n\010families\030\002 \003(\014\"\354\001\n\017Rep" +
+      "licationPeer\022\022\n\nclusterkey\030\001 \002(\t\022\037\n\027repl" +
+      "icationEndpointImpl\030\002 \001(\t\022&\n\004data\030\003 \003(\0132" +
+      "\030.hbase.pb.BytesBytesPair\022/\n\rconfigurati" +
+      "on\030\004 \003(\0132\030.hbase.pb.NameStringPair\022$\n\tta" +
+      "ble_cfs\030\005 \003(\0132\021.hbase.pb.TableCF\022\022\n\nname" +
+      "spaces\030\006 \003(\014\022\021\n\tbandwidth\030\007 \001(\003\"g\n\020Repli" +
+      "cationState\022/\n\005state\030\001 \002(\0162 .hbase.pb.Re",
+      "plicationState.State\"\"\n\005State\022\013\n\007ENABLED" +
+      "\020\000\022\014\n\010DISABLED\020\001\"+\n\027ReplicationHLogPosit" +
+      "ion\022\020\n\010position\030\001 \002(\003\"\\\n\031AddReplicationP" +
+      "eerRequest\022\017\n\007peer_id\030\001 \002(\t\022.\n\013peer_conf" +
+      "ig\030\002 \002(\0132\031.hbase.pb.ReplicationPeer\"\034\n\032A" +
+      "ddReplicationPeerResponse\"/\n\034RemoveRepli" +
+      "cationPeerRequest\022\017\n\007peer_id\030\001 \002(\t\"\037\n\035Re" +
+      "moveReplicationPeerResponse\"/\n\034EnableRep" +
+      "licationPeerRequest\022\017\n\007peer_id\030\001 \002(\t\"\037\n\035" +
+      "EnableReplicationPeerResponse\"0\n\035Disable",
+      "ReplicationPeerRequest\022\017\n\007peer_id\030\001 \002(\t\"" +
+      " \n\036DisableReplicationPeerResponse\"2\n\037Get" +
+      "ReplicationPeerConfigRequest\022\017\n\007peer_id\030" +
+      "\001 \002(\t\"c\n GetReplicationPeerConfigRespons" +
+      "e\022\017\n\007peer_id\030\001 \002(\t\022.\n\013peer_config\030\002 \002(\0132" +
+      "\031.hbase.pb.ReplicationPeer\"e\n\"UpdateRepl" +
+      "icationPeerConfigRequest\022\017\n\007peer_id\030\001 \002(" +
+      "\t\022.\n\013peer_config\030\002 \002(\0132\031.hbase.pb.Replic" +
+      "ationPeer\"%\n#UpdateReplicationPeerConfig" +
+      "ResponseBN\n1org.apache.hadoop.hbase.shad",
+      "ed.protobuf.generatedB\021ReplicationProtos" +
+      "H\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -6476,81 +10480,105 @@ public final class ReplicationProtos {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor[] {
-          org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.getDescriptor(),
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
-    internal_static_hbase_pb_AddReplicationPeerRequest_descriptor =
+    internal_static_hbase_pb_TableCF_descriptor =
       getDescriptor().getMessageTypes().get(0);
+    internal_static_hbase_pb_TableCF_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_TableCF_descriptor,
+        new java.lang.String[] { "TableName", "Families", });
+    internal_static_hbase_pb_ReplicationPeer_descriptor =
+      getDescriptor().getMessageTypes().get(1);
+    internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_ReplicationPeer_descriptor,
+        new java.lang.String[] { "Clusterkey", "ReplicationEndpointImpl", "Data", "Configuration", "TableCfs", "Namespaces", "Bandwidth", });
+    internal_static_hbase_pb_ReplicationState_descriptor =
+      getDescriptor().getMessageTypes().get(2);
+    internal_static_hbase_pb_ReplicationState_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_ReplicationState_descriptor,
+        new java.lang.String[] { "State", });
+    internal_static_hbase_pb_ReplicationHLogPosition_descriptor =
+      getDescriptor().getMessageTypes().get(3);
+    internal_static_hbase_pb_ReplicationHLogPosition_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_ReplicationHLogPosition_descriptor,
+        new java.lang.String[] { "Position", });
+    internal_static_hbase_pb_AddReplicationPeerRequest_descriptor =
+      getDescriptor().getMessageTypes().get(4);
     internal_static_hbase_pb_AddReplicationPeerRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_AddReplicationPeerRequest_descriptor,
         new java.lang.String[] { "PeerId", "PeerConfig", });
     internal_static_hbase_pb_AddReplicationPeerResponse_descriptor =
-      getDescriptor().getMessageTypes().get(1);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_hbase_pb_AddReplicationPeerResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_AddReplicationPeerResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_RemoveReplicationPeerRequest_descriptor =
-      getDescriptor().getMessageTypes().get(2);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_hbase_pb_RemoveReplicationPeerRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_RemoveReplicationPeerRequest_descriptor,
         new java.lang.String[] { "PeerId", });
     internal_static_hbase_pb_RemoveReplicationPeerResponse_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+      getDescriptor().getMessageTypes().get(7);
     internal_static_hbase_pb_RemoveReplicationPeerResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_RemoveReplicationPeerResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_EnableReplicationPeerRequest_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_hbase_pb_EnableReplicationPeerRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_EnableReplicationPeerRequest_descriptor,
         new java.lang.String[] { "PeerId", });
     internal_static_hbase_pb_EnableReplicationPeerResponse_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_hbase_pb_EnableReplicationPeerResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_EnableReplicationPeerResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_DisableReplicationPeerRequest_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_hbase_pb_DisableReplicationPeerRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_DisableReplicationPeerRequest_descriptor,
         new java.lang.String[] { "PeerId", });
     internal_static_hbase_pb_DisableReplicationPeerResponse_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_hbase_pb_DisableReplicationPeerResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_DisableReplicationPeerResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_GetReplicationPeerConfigRequest_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(12);
     internal_static_hbase_pb_GetReplicationPeerConfigRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_GetReplicationPeerConfigRequest_descriptor,
         new java.lang.String[] { "PeerId", });
     internal_static_hbase_pb_GetReplicationPeerConfigResponse_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+      getDescriptor().getMessageTypes().get(13);
     internal_static_hbase_pb_GetReplicationPeerConfigResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_GetReplicationPeerConfigResponse_descriptor,
         new java.lang.String[] { "PeerId", "PeerConfig", });
     internal_static_hbase_pb_UpdateReplicationPeerConfigRequest_descriptor =
-      getDescriptor().getMessageTypes().get(10);
+      getDescriptor().getMessageTypes().get(14);
     internal_static_hbase_pb_UpdateReplicationPeerConfigRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_UpdateReplicationPeerConfigRequest_descriptor,
         new java.lang.String[] { "PeerId", "PeerConfig", });
     internal_static_hbase_pb_UpdateReplicationPeerConfigResponse_descriptor =
-      getDescriptor().getMessageTypes().get(11);
+      getDescriptor().getMessageTypes().get(15);
     internal_static_hbase_pb_UpdateReplicationPeerConfigResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_UpdateReplicationPeerConfigResponse_descriptor,
         new java.lang.String[] { });
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.getDescriptor();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

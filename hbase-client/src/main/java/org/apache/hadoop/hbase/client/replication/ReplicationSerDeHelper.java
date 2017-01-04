@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
@@ -62,13 +62,13 @@ public final class ReplicationSerDeHelper {
   }
 
   /** convert map to TableCFs Object */
-  public static ZooKeeperProtos.TableCF[] convert(
+  public static ReplicationProtos.TableCF[] convert(
       Map<TableName, ? extends Collection<String>> tableCfs) {
     if (tableCfs == null) {
       return null;
     }
-    List<ZooKeeperProtos.TableCF> tableCFList = new ArrayList<>();
-    ZooKeeperProtos.TableCF.Builder tableCFBuilder =  ZooKeeperProtos.TableCF.newBuilder();
+    List<ReplicationProtos.TableCF> tableCFList = new ArrayList<>();
+    ReplicationProtos.TableCF.Builder tableCFBuilder =  ReplicationProtos.TableCF.newBuilder();
     for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
       tableCFBuilder.clear();
       tableCFBuilder.setTableName(ProtobufUtil.toProtoTableName(entry.getKey()));
@@ -80,7 +80,7 @@ public final class ReplicationSerDeHelper {
       }
       tableCFList.add(tableCFBuilder.build());
     }
-    return tableCFList.toArray(new ZooKeeperProtos.TableCF[tableCFList.size()]);
+    return tableCFList.toArray(new ReplicationProtos.TableCF[tableCFList.size()]);
   }
 
   public static String convertToString(Map<TableName, ? extends Collection<String>> tableCfs) {
@@ -95,12 +95,12 @@ public final class ReplicationSerDeHelper {
    *  This is only for read TableCFs information from TableCF node.
    *  Input String Format: ns1.table1:cf1,cf2;ns2.table2:cfA,cfB;ns3.table3.
    * */
-  public static ZooKeeperProtos.TableCF[] convert(String tableCFsConfig) {
+  public static ReplicationProtos.TableCF[] convert(String tableCFsConfig) {
     if (tableCFsConfig == null || tableCFsConfig.trim().length() == 0) {
       return null;
     }
-    List<ZooKeeperProtos.TableCF> tableCFList = new ArrayList<>();
-    ZooKeeperProtos.TableCF.Builder tableCFBuilder = ZooKeeperProtos.TableCF.newBuilder();
+    List<ReplicationProtos.TableCF> tableCFList = new ArrayList<>();
+    ReplicationProtos.TableCF.Builder tableCFBuilder = ReplicationProtos.TableCF.newBuilder();
 
     String[] tables = tableCFsConfig.split(";");
     for (String tab : tables) {
@@ -142,17 +142,17 @@ public final class ReplicationSerDeHelper {
       }
       tableCFList.add(tableCFBuilder.build());
     }
-    return tableCFList.toArray(new ZooKeeperProtos.TableCF[tableCFList.size()]);
+    return tableCFList.toArray(new ReplicationProtos.TableCF[tableCFList.size()]);
   }
 
   /**
    *  Convert TableCFs Object to String.
    *  Output String Format: ns1.table1:cf1,cf2;ns2.table2:cfA,cfB;table3
    * */
-  public static String convert(ZooKeeperProtos.TableCF[] tableCFs) {
+  public static String convert(ReplicationProtos.TableCF[] tableCFs) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0, n = tableCFs.length; i < n; i++) {
-      ZooKeeperProtos.TableCF tableCF = tableCFs[i];
+      ReplicationProtos.TableCF tableCF = tableCFs[i];
       String namespace = tableCF.getTableName().getNamespace().toStringUtf8();
       if (!Strings.isEmpty(namespace)) {
         sb.append(namespace).append(".").
@@ -175,10 +175,10 @@ public final class ReplicationSerDeHelper {
   /**
    *  Get TableCF in TableCFs, if not exist, return null.
    * */
-  public static ZooKeeperProtos.TableCF getTableCF(ZooKeeperProtos.TableCF[] tableCFs,
+  public static ReplicationProtos.TableCF getTableCF(ReplicationProtos.TableCF[] tableCFs,
                                            String table) {
     for (int i = 0, n = tableCFs.length; i < n; i++) {
-      ZooKeeperProtos.TableCF tableCF = tableCFs[i];
+      ReplicationProtos.TableCF tableCF = tableCFs[i];
       if (tableCF.getTableName().getQualifier().toStringUtf8().equals(table)) {
         return tableCF;
       }
@@ -191,7 +191,7 @@ public final class ReplicationSerDeHelper {
    *  It is used for backward compatibility.
    *  Old format bytes have no PB_MAGIC Header
    * */
-  public static ZooKeeperProtos.TableCF[] parseTableCFs(byte[] bytes) throws IOException {
+  public static ReplicationProtos.TableCF[] parseTableCFs(byte[] bytes) throws IOException {
     if (bytes == null) {
       return null;
     }
@@ -202,20 +202,20 @@ public final class ReplicationSerDeHelper {
    *  Convert tableCFs string into Map.
    * */
   public static Map<TableName, List<String>> parseTableCFsFromConfig(String tableCFsConfig) {
-    ZooKeeperProtos.TableCF[] tableCFs = convert(tableCFsConfig);
+    ReplicationProtos.TableCF[] tableCFs = convert(tableCFsConfig);
     return convert2Map(tableCFs);
   }
 
   /**
    *  Convert tableCFs Object to Map.
    * */
-  public static Map<TableName, List<String>> convert2Map(ZooKeeperProtos.TableCF[] tableCFs) {
+  public static Map<TableName, List<String>> convert2Map(ReplicationProtos.TableCF[] tableCFs) {
     if (tableCFs == null || tableCFs.length == 0) {
       return null;
     }
     Map<TableName, List<String>> tableCFsMap = new HashMap<TableName, List<String>>();
     for (int i = 0, n = tableCFs.length; i < n; i++) {
-      ZooKeeperProtos.TableCF tableCF = tableCFs[i];
+      ReplicationProtos.TableCF tableCF = tableCFs[i];
       List<String> families = new ArrayList<>();
       for (int j = 0, m = tableCF.getFamiliesCount(); j < m; j++) {
         families.add(tableCF.getFamilies(j).toStringUtf8());
@@ -239,9 +239,9 @@ public final class ReplicationSerDeHelper {
       throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.ReplicationPeer.Builder builder =
-          ZooKeeperProtos.ReplicationPeer.newBuilder();
-      ZooKeeperProtos.ReplicationPeer peer;
+      ReplicationProtos.ReplicationPeer.Builder builder =
+          ReplicationProtos.ReplicationPeer.newBuilder();
+      ReplicationProtos.ReplicationPeer peer;
       try {
         ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
         peer = builder.build();
@@ -257,7 +257,7 @@ public final class ReplicationSerDeHelper {
     }
   }
 
-  public static ReplicationPeerConfig convert(ZooKeeperProtos.ReplicationPeer peer) {
+  public static ReplicationPeerConfig convert(ReplicationProtos.ReplicationPeer peer) {
     ReplicationPeerConfig peerConfig = new ReplicationPeerConfig();
     if (peer.hasClusterkey()) {
       peerConfig.setClusterKey(peer.getClusterkey());
@@ -275,7 +275,7 @@ public final class ReplicationSerDeHelper {
     }
 
     Map<TableName, ? extends Collection<String>> tableCFsMap = convert2Map(
-      peer.getTableCfsList().toArray(new ZooKeeperProtos.TableCF[peer.getTableCfsCount()]));
+      peer.getTableCfsList().toArray(new ReplicationProtos.TableCF[peer.getTableCfsCount()]));
     if (tableCFsMap != null) {
       peerConfig.setTableCFsMap(tableCFsMap);
     }
@@ -293,8 +293,8 @@ public final class ReplicationSerDeHelper {
     return peerConfig;
   }
 
-  public static ZooKeeperProtos.ReplicationPeer convert(ReplicationPeerConfig  peerConfig) {
-    ZooKeeperProtos.ReplicationPeer.Builder builder = ZooKeeperProtos.ReplicationPeer.newBuilder();
+  public static ReplicationProtos.ReplicationPeer convert(ReplicationPeerConfig  peerConfig) {
+    ReplicationProtos.ReplicationPeer.Builder builder = ReplicationProtos.ReplicationPeer.newBuilder();
     if (peerConfig.getClusterKey() != null) {
       builder.setClusterkey(peerConfig.getClusterKey());
     }
@@ -316,7 +316,7 @@ public final class ReplicationSerDeHelper {
           .build());
     }
 
-    ZooKeeperProtos.TableCF[] tableCFs = convert(peerConfig.getTableCFsMap());
+    ReplicationProtos.TableCF[] tableCFs = convert(peerConfig.getTableCFsMap());
     if (tableCFs != null) {
       for (int i = 0; i < tableCFs.length; i++) {
         builder.addTableCfs(tableCFs[i]);
