@@ -26,6 +26,9 @@ import java.io.InterruptedIOException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -209,12 +212,12 @@ public class RemoteAdmin {
         try {
 
           return (StorageClusterVersionModel) getUnmarsheller().unmarshal(
-              new ByteArrayInputStream(response.getBody()));
+              getInputStream(response));
         } catch (JAXBException jaxbe) {
 
           throw new IOException(
               "Issue parsing StorageClusterVersionModel object in XML form: "
-                  + jaxbe.getLocalizedMessage());
+                  + jaxbe.getLocalizedMessage(), jaxbe);
         }
       case 404:
         throw new IOException("Cluster version not found");
@@ -397,5 +400,24 @@ public class RemoteAdmin {
     }
     throw new IOException("get request to " + path.toString()
         + " request timed out");
+  }
+
+  /**
+   * Convert the REST server's response to an XML reader.
+   *
+   * @param response The REST server's response.
+   * @return A reader over the parsed XML document.
+   * @throws IOException If the document fails to parse
+   */
+  private XMLStreamReader getInputStream(Response response) throws IOException {
+    try {
+      // Prevent the parser from reading XMl with external entities defined
+      XMLInputFactory xif = XMLInputFactory.newFactory();
+      xif.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+      xif.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+      return xif.createXMLStreamReader(new ByteArrayInputStream(response.getBody()));
+    } catch (XMLStreamException e) {
+      throw new IOException("Failed to parse XML", e);
+    }
   }
 }
