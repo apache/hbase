@@ -71,8 +71,7 @@ def getServerNameForRegion(admin, r)
       while not mtl.isLocationAvailable(zkw)
         sleep 0.1
       end
-      # Make a fake servername by appending ','
-      metaServer = (mtl.getMetaRegionLocation(zkw).toString() + ",").to_s
+      metaServer = (mtl.getMetaRegionLocation(zkw).toString()).to_s
       return metaServer
     ensure
       zkw.close()
