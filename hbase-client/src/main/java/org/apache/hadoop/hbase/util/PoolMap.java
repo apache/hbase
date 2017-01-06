@@ -360,7 +360,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
     @Override
     public R get() {
-      if (super.size() <= 0) {
+      if (super.size() < maxSize) {
         return null;
       }
       nextResource %= super.size();
