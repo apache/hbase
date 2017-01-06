@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
@@ -63,6 +64,7 @@ import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.zookeeper.KeeperException;
@@ -264,36 +266,6 @@ public class Replication extends WALActionsListener.Base implements
     scopeWALEdits(htd, logKey, logEdit, this.conf, this.getReplicationManager());
   }
 
-  @Override
-  public void postAppend(long entryLen, long elapsedTimeMillis, final WALKey logKey,
-      final WALEdit edit) throws IOException {
-    NavigableMap<byte[], Integer> scopes = logKey.getScopes();
-    if (this.replicationForBulkLoadData && scopes != null && !scopes.isEmpty()) {
-      TableName tableName = logKey.getTablename();
-      for (Cell c : edit.getCells()) {
-        // Only check for bulk load events
-        if (CellUtil.matchingQualifier(c, WALEdit.BULK_LOAD)) {
-          BulkLoadDescriptor bld = null;
-          try {
-            bld = WALEdit.getBulkLoadDescriptor(c);
-          } catch (IOException e) {
-            LOG.error("Failed to get bulk load events information from the wal file.", e);
-            throw e;
-          }
-
-          for (StoreDescriptor s : bld.getStoresList()) {
-            byte[] fam = s.getFamilyName().toByteArray();
-            // We have already scoped the entries as part
-            // WALActionsListener#visitLogEntryBeforeWrite notification
-            if (scopes.containsKey(fam)) {
-              addHFileRefsToQueue(this.getReplicationManager(), tableName, fam, s);
-            }
-          }
-        }
-      }
-    }
-  }
-
   /**
    * Utility method used to set the correct scopes on each log key. Doesn't set a scope on keys from
    * compaction WAL edits and if the scope is local.
@@ -366,10 +338,10 @@ public class Replication extends WALActionsListener.Base implements
     }
   }
 
-  private static void addHFileRefsToQueue(ReplicationSourceManager replicationManager,
-      TableName tableName, byte[] family, StoreDescriptor s) throws IOException {
+  void addHFileRefsToQueue(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
+      throws IOException {
     try {
-      replicationManager.addHFileRefs(tableName, family, s.getStoreFileList());
+      this.replicationManager.addHFileRefs(tableName, family, pairs);
     } catch (ReplicationException e) {
       LOG.error("Failed to add hfile references in the replication queue.", e);
       throw new IOException(e);
@@ -404,6 +376,22 @@ public class Replication extends WALActionsListener.Base implements
       cleanerClass = ReplicationHFileCleaner.class.getCanonicalName();
       if (!plugins.contains(cleanerClass)) {
         conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, plugins + "," + cleanerClass);
+      }
+    }
+  }
+
+  /**
+   * This method modifies the region server's configuration in order to inject replication-related
+   * features
+   * @param conf region server configurations
+   */
+  public static void decorateRegionServerConfiguration(Configuration conf) {
+    if (isReplicationForBulkLoadDataEnabled(conf)) {
+      String plugins = conf.get(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, "");
+      String rsCoprocessorClass = ReplicationObserver.class.getCanonicalName();
+      if (!plugins.contains(rsCoprocessorClass)) {
+        conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, plugins + ","
+            + rsCoprocessorClass);
       }
     }
   }

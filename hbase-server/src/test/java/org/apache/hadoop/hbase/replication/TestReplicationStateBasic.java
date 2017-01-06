@@ -25,7 +25,9 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Before;
@@ -201,10 +203,10 @@ public abstract class TestReplicationStateBasic {
     rq1.init(server1);
     rqc.init();
 
-    List<String> files1 = new ArrayList<String>(3);
-    files1.add("file_1");
-    files1.add("file_2");
-    files1.add("file_3");
+    List<Pair<Path, Path>> files1 = new ArrayList<>(3);
+    files1.add(new Pair<Path, Path>(null, new Path("file_1")));
+    files1.add(new Pair<Path, Path>(null, new Path("file_2")));
+    files1.add(new Pair<Path, Path>(null, new Path("file_3")));
     assertNull(rqc.getReplicableHFiles(ID_ONE));
     assertEquals(0, rqc.getAllPeersFromHFileRefsQueue().size());
     rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
@@ -212,13 +214,16 @@ public abstract class TestReplicationStateBasic {
     rq1.addHFileRefs(ID_ONE, files1);
     assertEquals(1, rqc.getAllPeersFromHFileRefsQueue().size());
     assertEquals(3, rqc.getReplicableHFiles(ID_ONE).size());
-    List<String> files2 = new ArrayList<>(files1);
-    String removedString = files2.remove(0);
-    rq1.removeHFileRefs(ID_ONE, files2);
+    List<String> hfiles2 = new ArrayList<>();
+    for (Pair<Path, Path> p : files1) {
+      hfiles2.add(p.getSecond().getName());
+    }
+    String removedString = hfiles2.remove(0);
+    rq1.removeHFileRefs(ID_ONE, hfiles2);
     assertEquals(1, rqc.getReplicableHFiles(ID_ONE).size());
-    files2 = new ArrayList<>(1);
-    files2.add(removedString);
-    rq1.removeHFileRefs(ID_ONE, files2);
+    hfiles2 = new ArrayList<>(1);
+    hfiles2.add(removedString);
+    rq1.removeHFileRefs(ID_ONE, hfiles2);
     assertEquals(0, rqc.getReplicableHFiles(ID_ONE).size());
     rp.removePeer(ID_ONE);
   }
@@ -232,10 +237,10 @@ public abstract class TestReplicationStateBasic {
     rp.addPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
     rp.addPeer(ID_TWO, new ReplicationPeerConfig().setClusterKey(KEY_TWO));
 
-    List<String> files1 = new ArrayList<String>(3);
-    files1.add("file_1");
-    files1.add("file_2");
-    files1.add("file_3");
+    List<Pair<Path, Path>> files1 = new ArrayList<>(3);
+    files1.add(new Pair<Path, Path>(null, new Path("file_1")));
+    files1.add(new Pair<Path, Path>(null, new Path("file_2")));
+    files1.add(new Pair<Path, Path>(null, new Path("file_3")));
     rq1.addPeerToHFileRefs(ID_ONE);
     rq1.addHFileRefs(ID_ONE, files1);
     rq1.addPeerToHFileRefs(ID_TWO);
