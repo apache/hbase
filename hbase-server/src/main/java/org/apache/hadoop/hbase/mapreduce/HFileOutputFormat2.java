@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -124,6 +125,9 @@ public class HFileOutputFormat2
   private static final boolean DEFAULT_LOCALITY_SENSITIVE = true;
   private static final String OUTPUT_TABLE_NAME_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.table.name";
+
+  public static final String STORAGE_POLICY_PROPERTY = "hbase.hstore.storagepolicy";
+  public static final String STORAGE_POLICY_PROPERTY_CF_PREFIX = STORAGE_POLICY_PROPERTY + ".";
 
   @Override
   public RecordWriter<ImmutableBytesWritable, Cell> getRecordWriter(
@@ -230,7 +234,9 @@ public class HFileOutputFormat2
 
       // If this is a new column family, verify that the directory exists
       if (wl == null) {
-        fs.mkdirs(new Path(outputDir, Bytes.toString(family)));
+        Path cfPath = new Path(outputDir, Bytes.toString(family));
+        fs.mkdirs(cfPath);
+        configureStoragePolicy(conf, fs, family, cfPath);
       }
 
       // If any of the HFiles for the column families has reached
@@ -378,6 +384,29 @@ public class HFileOutputFormat2
     public void close(TaskAttemptContext c) throws IOException, InterruptedException {
       for (WriterLength wl : this.writers.values()) {
         close(wl.writer);
+      }
+    }
+  }
+
+  /**
+   * Configure block storage policy for CF after the directory is created.
+   */
+  static void configureStoragePolicy(final Configuration conf, final FileSystem fs,
+      byte[] family, Path cfPath) {
+    if (null == conf || null == fs || null == family || null == cfPath) {
+      return;
+    }
+
+    String policy =
+        conf.get(STORAGE_POLICY_PROPERTY_CF_PREFIX + Bytes.toString(family),
+          conf.get(STORAGE_POLICY_PROPERTY));
+    if (null != policy && !policy.trim().isEmpty()) {
+      try {
+        if (fs instanceof DistributedFileSystem) {
+          ((DistributedFileSystem) fs).setStoragePolicy(cfPath, policy.trim());
+        }
+      } catch (Throwable e) {
+        LOG.warn("failed to set block storage policy of [" + cfPath + "] to [" + policy + "]", e);
       }
     }
   }

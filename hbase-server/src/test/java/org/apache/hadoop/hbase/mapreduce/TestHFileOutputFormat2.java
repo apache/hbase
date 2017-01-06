@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -92,6 +93,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -1290,6 +1295,71 @@ public class TestHFileOutputFormat2  {
       throw new RuntimeException(
           "usage: TestHFileOutputFormat2 newtable | incremental");
     }
+  }
+
+  @Test
+  public void testBlockStoragePolicy() throws Exception {
+    util = new HBaseTestingUtility();
+    Configuration conf = util.getConfiguration();
+    conf.set(HFileOutputFormat2.STORAGE_POLICY_PROPERTY, "ALL_SSD");
+    conf.set(HFileOutputFormat2.STORAGE_POLICY_PROPERTY_CF_PREFIX + Bytes.toString(FAMILIES[0]),
+      "ONE_SSD");
+    Path cf1Dir = new Path(util.getDataTestDir(), Bytes.toString(FAMILIES[0]));
+    Path cf2Dir = new Path(util.getDataTestDir(), Bytes.toString(FAMILIES[1]));
+    util.startMiniDFSCluster(3);
+    FileSystem fs = util.getDFSCluster().getFileSystem();
+    try {
+      fs.mkdirs(cf1Dir);
+      fs.mkdirs(cf2Dir);
+
+      // the original block storage policy would be NULL
+      String spA = getStoragePolicyName(fs, cf1Dir);
+      String spB = getStoragePolicyName(fs, cf2Dir);
+      LOG.debug("Storage policy of cf 0: [" + spA + "].");
+      LOG.debug("Storage policy of cf 1: [" + spB + "].");
+      assertNull(spA);
+      assertNull(spB);
+
+      // alter table cf schema to change storage policies
+      HFileOutputFormat2.configureStoragePolicy(conf, fs, FAMILIES[0], cf1Dir);
+      HFileOutputFormat2.configureStoragePolicy(conf, fs, FAMILIES[1], cf2Dir);
+      spA = getStoragePolicyName(fs, cf1Dir);
+      spB = getStoragePolicyName(fs, cf2Dir);
+      LOG.debug("Storage policy of cf 0: [" + spA + "].");
+      LOG.debug("Storage policy of cf 1: [" + spB + "].");
+      assertNotNull(spA);
+      assertEquals("ONE_SSD", spA);
+      assertNotNull(spB);
+      assertEquals("ALL_SSD", spB);
+    } finally {
+      fs.delete(cf1Dir, true);
+      fs.delete(cf2Dir, true);
+      util.shutdownMiniDFSCluster();
+    }
+  }
+
+  private String getStoragePolicyName(FileSystem fs, Path path) {
+    try {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        HdfsFileStatus status = dfs.getClient().getFileInfo(path.toUri().getPath());
+        if (null != status) {
+          byte storagePolicyId = status.getStoragePolicy();
+          if (storagePolicyId != BlockStoragePolicySuite.ID_UNSPECIFIED) {
+            BlockStoragePolicy[] policies = dfs.getStoragePolicies();
+            for (BlockStoragePolicy policy : policies) {
+              if (policy.getId() == storagePolicyId) {
+                return policy.getName();
+              }
+            }
+          }
+        }
+      }
+    } catch (Throwable e) {
+      LOG.warn("failed to get block storage policy of [" + path + "]", e);
+    }
+
+    return null;
   }
 
 }
