@@ -49,30 +49,39 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
- * Holds back the request if the submitted size or number has reached the
- * threshold.
+ * Holds back the requests if they reach any thresholds.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class SimpleRequestController implements RequestController {
   private static final Log LOG = LogFactory.getLog(SimpleRequestController.class);
   /**
-   * The maximum size of single RegionServer.
+   * The maximum heap size for each request.
    */
   public static final String HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE = "hbase.client.max.perrequest.heapsize";
 
   /**
-   * Default value of #HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE
+   * Default value of {@link #HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE}.
    */
   @VisibleForTesting
   static final long DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE = 4194304;
+
+  /**
+   * The maximum number of rows for each request.
+   */
+  public static final String HBASE_CLIENT_MAX_PERREQUEST_ROWS = "hbase.client.max.perrequest.rows";
+  /**
+   * Default value of {@link #HBASE_CLIENT_MAX_PERREQUEST_ROWS}.
+   */
+  @VisibleForTesting
+  static final long DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_ROWS = 2048;
 
   /**
    * The maximum size of submit.
    */
   public static final String HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE = "hbase.client.max.submit.heapsize";
   /**
-   * Default value of #HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE
+   * Default value of {@link #HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE}.
    */
   @VisibleForTesting
   static final long DEFAULT_HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE = DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE;
@@ -89,9 +98,13 @@ class SimpleRequestController implements RequestController {
   private final int maxTotalConcurrentTasks;
 
   /**
-   * The max heap size of all tasks simultaneously executed on a server.
+   * The maximum heap size for each request.
    */
   private final long maxHeapSizePerRequest;
+  /**
+   * The maximum number of rows for each request.
+   */
+  private final long maxRowsPerRequest;
   private final long maxHeapSizeSubmit;
   /**
    * The number of tasks we run in parallel on a single region. With 1 (the
@@ -116,41 +129,46 @@ class SimpleRequestController implements RequestController {
   private static final int DEFAULT_THRESHOLD_TO_LOG_REGION_DETAILS = 2;
   private final int thresholdToLogRegionDetails;
   SimpleRequestController(final Configuration conf) {
-    this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+    this.maxTotalConcurrentTasks = checkAndGet(conf,
+            HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
             HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
-    this.maxConcurrentTasksPerServer = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERSERVER_TASKS,
+    this.maxConcurrentTasksPerServer = checkAndGet(conf,
+            HConstants.HBASE_CLIENT_MAX_PERSERVER_TASKS,
             HConstants.DEFAULT_HBASE_CLIENT_MAX_PERSERVER_TASKS);
-    this.maxConcurrentTasksPerRegion = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
+    this.maxConcurrentTasksPerRegion = checkAndGet(conf,
+            HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
             HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS);
-    this.maxHeapSizePerRequest = conf.getLong(HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE,
+    this.maxHeapSizePerRequest = checkAndGet(conf,
+            HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE,
             DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE);
-    this.maxHeapSizeSubmit = conf.getLong(HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE, DEFAULT_HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE);
-    this.thresholdToLogUndoneTaskDetails =
-        conf.getInt(THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS,
+    this.maxRowsPerRequest = checkAndGet(conf,
+            HBASE_CLIENT_MAX_PERREQUEST_ROWS,
+            DEFAULT_HBASE_CLIENT_MAX_PERREQUEST_ROWS);
+    this.maxHeapSizeSubmit = checkAndGet(conf,
+            HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE,
+            DEFAULT_HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE);
+    this.thresholdToLogUndoneTaskDetails = conf.getInt(
+          THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS,
           DEFAULT_THRESHOLD_TO_LOG_UNDONE_TASK_DETAILS);
-    this.thresholdToLogRegionDetails =
-        conf.getInt(THRESHOLD_TO_LOG_REGION_DETAILS,
+    this.thresholdToLogRegionDetails = conf.getInt(
+          THRESHOLD_TO_LOG_REGION_DETAILS,
           DEFAULT_THRESHOLD_TO_LOG_REGION_DETAILS);
-    if (this.maxTotalConcurrentTasks <= 0) {
-      throw new IllegalArgumentException("maxTotalConcurrentTasks=" + maxTotalConcurrentTasks);
-    }
-    if (this.maxConcurrentTasksPerServer <= 0) {
-      throw new IllegalArgumentException("maxConcurrentTasksPerServer="
-              + maxConcurrentTasksPerServer);
-    }
-    if (this.maxConcurrentTasksPerRegion <= 0) {
-      throw new IllegalArgumentException("maxConcurrentTasksPerRegion="
-              + maxConcurrentTasksPerRegion);
-    }
-    if (this.maxHeapSizePerRequest <= 0) {
-      throw new IllegalArgumentException("maxHeapSizePerServer="
-              + maxHeapSizePerRequest);
-    }
+  }
 
-    if (this.maxHeapSizeSubmit <= 0) {
-      throw new IllegalArgumentException("maxHeapSizeSubmit="
-              + maxHeapSizeSubmit);
+  private static int checkAndGet(Configuration conf, String key, int defaultValue) {
+    int value = conf.getInt(key, defaultValue);
+    if (value <= 0) {
+      throw new IllegalArgumentException(key + "=" + value);
     }
+    return value;
+  }
+
+  private static long checkAndGet(Configuration conf, String key, long defaultValue) {
+    long value = conf.getLong(key, defaultValue);
+    if (value <= 0) {
+      throw new IllegalArgumentException(key + "=" + value);
+    }
+    return value;
   }
 
   @VisibleForTesting
@@ -163,10 +181,10 @@ class SimpleRequestController implements RequestController {
         if (isEnd) {
           return ReturnCode.END;
         }
-        long rowSize = (row instanceof Mutation) ? ((Mutation) row).heapSize() : 0;
+        long heapSizeOfRow = (row instanceof Mutation) ? ((Mutation) row).heapSize() : 0;
         ReturnCode code = ReturnCode.INCLUDE;
         for (RowChecker checker : checkers) {
-          switch (checker.canTakeOperation(loc, rowSize)) {
+          switch (checker.canTakeOperation(loc, heapSizeOfRow)) {
             case END:
               isEnd = true;
               code = ReturnCode.END;
@@ -183,7 +201,7 @@ class SimpleRequestController implements RequestController {
           }
         }
         for (RowChecker checker : checkers) {
-          checker.notifyFinal(code, loc, rowSize);
+          checker.notifyFinal(code, loc, heapSizeOfRow);
         }
         return code;
       }
@@ -208,15 +226,16 @@ class SimpleRequestController implements RequestController {
 
   @Override
   public Checker newChecker() {
-    List<RowChecker> checkers = new ArrayList<>(3);
+    List<RowChecker> checkers = new ArrayList<>(4);
     checkers.add(new TaskCountChecker(maxTotalConcurrentTasks,
             maxConcurrentTasksPerServer,
             maxConcurrentTasksPerRegion,
             tasksInProgress,
             taskCounterPerServer,
             taskCounterPerRegion));
-    checkers.add(new RequestSizeChecker(maxHeapSizePerRequest));
+    checkers.add(new RequestHeapSizeChecker(maxHeapSizePerRequest));
     checkers.add(new SubmittedSizeChecker(maxHeapSizeSubmit));
+    checkers.add(new RequestRowsChecker(maxRowsPerRequest));
     return newChecker(checkers);
   }
 
@@ -323,7 +342,7 @@ class SimpleRequestController implements RequestController {
     }
 
     @Override
-    public ReturnCode canTakeOperation(HRegionLocation loc, long rowSize) {
+    public ReturnCode canTakeOperation(HRegionLocation loc, long heapSizeOfRow) {
       if (heapSize >= maxHeapSizeSubmit) {
         return ReturnCode.END;
       }
@@ -331,9 +350,9 @@ class SimpleRequestController implements RequestController {
     }
 
     @Override
-    public void notifyFinal(ReturnCode code, HRegionLocation loc, long rowSize) {
+    public void notifyFinal(ReturnCode code, HRegionLocation loc, long heapSizeOfRow) {
       if (code == ReturnCode.INCLUDE) {
-        heapSize += rowSize;
+        heapSize += heapSizeOfRow;
       }
     }
 
@@ -413,11 +432,11 @@ class SimpleRequestController implements RequestController {
      * tasks for server.
      *
      * @param loc
-     * @param rowSize
+     * @param heapSizeOfRow
      * @return
      */
     @Override
-    public ReturnCode canTakeOperation(HRegionLocation loc, long rowSize) {
+    public ReturnCode canTakeOperation(HRegionLocation loc, long heapSizeOfRow) {
 
       HRegionInfo regionInfo = loc.getRegionInfo();
       if (regionsIncluded.contains(regionInfo)) {
@@ -444,7 +463,7 @@ class SimpleRequestController implements RequestController {
     }
 
     @Override
-    public void notifyFinal(ReturnCode code, HRegionLocation loc, long rowSize) {
+    public void notifyFinal(ReturnCode code, HRegionLocation loc, long heapSizeOfRow) {
       if (code == ReturnCode.INCLUDE) {
         regionsIncluded.add(loc.getRegionInfo());
         serversIncluded.add(loc.getServerName());
@@ -454,15 +473,54 @@ class SimpleRequestController implements RequestController {
   }
 
   /**
-   * limit the request size for each regionserver.
+   * limit the number of rows for each request.
    */
   @VisibleForTesting
-  static class RequestSizeChecker implements RowChecker {
+  static class RequestRowsChecker implements RowChecker {
+
+    private final long maxRowsPerRequest;
+    private final Map<ServerName, Long> serverRows = new HashMap<>();
+
+    RequestRowsChecker(final long maxRowsPerRequest) {
+      this.maxRowsPerRequest = maxRowsPerRequest;
+    }
+
+    @Override
+    public void reset() {
+      serverRows.clear();
+    }
+
+    @Override
+    public ReturnCode canTakeOperation(HRegionLocation loc, long heapSizeOfRow) {
+      long currentRows = serverRows.containsKey(loc.getServerName())
+              ? serverRows.get(loc.getServerName()) : 0L;
+      // accept at least one row
+      if (currentRows == 0 || currentRows < maxRowsPerRequest) {
+        return ReturnCode.INCLUDE;
+      }
+      return ReturnCode.SKIP;
+    }
+
+    @Override
+    public void notifyFinal(ReturnCode code, HRegionLocation loc, long heapSizeOfRow) {
+      if (code == ReturnCode.INCLUDE) {
+        long currentRows = serverRows.containsKey(loc.getServerName())
+                ? serverRows.get(loc.getServerName()) : 0L;
+        serverRows.put(loc.getServerName(), currentRows + 1);
+      }
+    }
+  }
+
+  /**
+   * limit the heap size for each request.
+   */
+  @VisibleForTesting
+  static class RequestHeapSizeChecker implements RowChecker {
 
     private final long maxHeapSizePerRequest;
     private final Map<ServerName, Long> serverRequestSizes = new HashMap<>();
 
-    RequestSizeChecker(final long maxHeapSizePerRequest) {
+    RequestHeapSizeChecker(final long maxHeapSizePerRequest) {
       this.maxHeapSizePerRequest = maxHeapSizePerRequest;
     }
 
@@ -472,23 +530,23 @@ class SimpleRequestController implements RequestController {
     }
 
     @Override
-    public ReturnCode canTakeOperation(HRegionLocation loc, long rowSize) {
+    public ReturnCode canTakeOperation(HRegionLocation loc, long heapSizeOfRow) {
       // Is it ok for limit of request size?
       long currentRequestSize = serverRequestSizes.containsKey(loc.getServerName())
               ? serverRequestSizes.get(loc.getServerName()) : 0L;
       // accept at least one request
-      if (currentRequestSize == 0 || currentRequestSize + rowSize <= maxHeapSizePerRequest) {
+      if (currentRequestSize == 0 || currentRequestSize + heapSizeOfRow <= maxHeapSizePerRequest) {
         return ReturnCode.INCLUDE;
       }
       return ReturnCode.SKIP;
     }
 
     @Override
-    public void notifyFinal(ReturnCode code, HRegionLocation loc, long rowSize) {
+    public void notifyFinal(ReturnCode code, HRegionLocation loc, long heapSizeOfRow) {
       if (code == ReturnCode.INCLUDE) {
         long currentRequestSize = serverRequestSizes.containsKey(loc.getServerName())
                 ? serverRequestSizes.get(loc.getServerName()) : 0L;
-        serverRequestSizes.put(loc.getServerName(), currentRequestSize + rowSize);
+        serverRequestSizes.put(loc.getServerName(), currentRequestSize + heapSizeOfRow);
       }
     }
   }
@@ -499,7 +557,7 @@ class SimpleRequestController implements RequestController {
   @VisibleForTesting
   interface RowChecker {
 
-    ReturnCode canTakeOperation(HRegionLocation loc, long rowSize);
+    ReturnCode canTakeOperation(HRegionLocation loc, long heapSizeOfRow);
 
     /**
      * Add the final ReturnCode to the checker. The ReturnCode may be reversed,
@@ -507,9 +565,9 @@ class SimpleRequestController implements RequestController {
      *
      * @param code The final decision
      * @param loc the destination of data
-     * @param rowSize the data size
+     * @param heapSizeOfRow the data size
      */
-    void notifyFinal(ReturnCode code, HRegionLocation loc, long rowSize);
+    void notifyFinal(ReturnCode code, HRegionLocation loc, long heapSizeOfRow);
 
     /**
      * Reset the inner state.

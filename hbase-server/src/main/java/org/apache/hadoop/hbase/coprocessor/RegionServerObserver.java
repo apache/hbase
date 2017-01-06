@@ -41,7 +41,7 @@ public interface RegionServerObserver extends Coprocessor {
     throws IOException;
 
   /**
-   * Called before the regions merge. 
+   * Called before the regions merge.
    * Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} to skip the merge.
    * @throws IOException if an error occurred on the coprocessor
    * @param ctx

@@ -56,7 +56,6 @@ public class TestSimpleRequestController {
   private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes();
   private static final ServerName SN = ServerName.valueOf("s1:1,1");
   private static final ServerName SN2 = ServerName.valueOf("s2:2,2");
-  private static final ServerName SN3 = ServerName.valueOf("s3:3,3");
   private static final HRegionInfo HRI1
           = new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
   private static final HRegionInfo HRI2
@@ -68,7 +67,7 @@ public class TestSimpleRequestController {
   private static final HRegionLocation LOC3 = new HRegionLocation(HRI3, SN2);
 
   @Test
-  public void testIllegalRequestSize() {
+  public void testIllegalRequestHeapSize() {
     testIllegalArgument(SimpleRequestController.HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE, -1);
   }
 
@@ -87,9 +86,14 @@ public class TestSimpleRequestController {
     testIllegalArgument(SimpleRequestController.HBASE_CLIENT_MAX_SUBMIT_HEAPSIZE, -1);
   }
 
+  @Test
+  public void testIllegalRequestRows() {
+    testIllegalArgument(SimpleRequestController.HBASE_CLIENT_MAX_PERREQUEST_ROWS, -1);
+  }
+
   private void testIllegalArgument(String key, long value) {
     Configuration conf = HBaseConfiguration.create();
-    conf.setLong(SimpleRequestController.HBASE_CLIENT_MAX_PERREQUEST_HEAPSIZE, -1);
+    conf.setLong(key, value);
     try {
       SimpleRequestController controller = new SimpleRequestController(conf);
       fail("The " + key + " must be bigger than zero");
@@ -121,7 +125,7 @@ public class TestSimpleRequestController {
             tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
     final long maxHeapSizePerRequest = 2 * 1024 * 1024;
     // unlimiited
-    SimpleRequestController.RequestSizeChecker sizeChecker = new SimpleRequestController.RequestSizeChecker(maxHeapSizePerRequest);
+    SimpleRequestController.RequestHeapSizeChecker sizeChecker = new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
     RequestController.Checker checker = SimpleRequestController.newChecker(Arrays.asList(countChecker, sizeChecker));
     ReturnCode loc1Code = checker.canTakeRow(LOC1, createPut(maxHeapSizePerRequest));
     assertEquals(ReturnCode.INCLUDE, loc1Code);
@@ -151,10 +155,10 @@ public class TestSimpleRequestController {
   }
 
   @Test
-  public void testRequestSizeCheckerr() throws IOException {
+  public void testRequestHeapSizeChecker() throws IOException {
     final long maxHeapSizePerRequest = 2 * 1024 * 1024;
-    SimpleRequestController.RequestSizeChecker checker
-            = new SimpleRequestController.RequestSizeChecker(maxHeapSizePerRequest);
+    SimpleRequestController.RequestHeapSizeChecker checker
+            = new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
 
     // inner state is unchanged.
     for (int i = 0; i != 10; ++i) {
@@ -193,6 +197,51 @@ public class TestSimpleRequestController {
   }
 
   @Test
+  public void testRequestRowsChecker() throws IOException {
+    final long maxRowCount = 100;
+    SimpleRequestController.RequestRowsChecker checker
+      = new SimpleRequestController.RequestRowsChecker(maxRowCount);
+
+    final long heapSizeOfRow = 100; //unused
+    // inner state is unchanged.
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(LOC1, heapSizeOfRow);
+      assertEquals(ReturnCode.INCLUDE, code);
+      code = checker.canTakeOperation(LOC2, heapSizeOfRow);
+      assertEquals(ReturnCode.INCLUDE, code);
+    }
+
+    // accept the data located on LOC1 region.
+    for (int i = 0; i != maxRowCount; ++i) {
+      ReturnCode acceptCode = checker.canTakeOperation(LOC1, heapSizeOfRow);
+      assertEquals(ReturnCode.INCLUDE, acceptCode);
+      checker.notifyFinal(acceptCode, LOC1, heapSizeOfRow);
+    }
+
+    // the sn server reachs the limit.
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(LOC1, heapSizeOfRow);
+      assertNotEquals(ReturnCode.INCLUDE, code);
+      code = checker.canTakeOperation(LOC2, heapSizeOfRow);
+      assertNotEquals(ReturnCode.INCLUDE, code);
+    }
+
+    // the request to sn2 server should be accepted.
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(LOC3, heapSizeOfRow);
+      assertEquals(ReturnCode.INCLUDE, code);
+    }
+
+    checker.reset();
+    for (int i = 0; i != 10; ++i) {
+      ReturnCode code = checker.canTakeOperation(LOC1, heapSizeOfRow);
+      assertEquals(ReturnCode.INCLUDE, code);
+      code = checker.canTakeOperation(LOC2, heapSizeOfRow);
+      assertEquals(ReturnCode.INCLUDE, code);
+    }
+  }
+
+  @Test
   public void testSubmittedSizeChecker() {
     final long maxHeapSizeSubmit = 2 * 1024 * 1024;
     SimpleRequestController.SubmittedSizeChecker checker
@@ -224,7 +273,7 @@ public class TestSimpleRequestController {
 
   @Test
   public void testTaskCountChecker() throws InterruptedIOException {
-    long rowSize = 12345;
+    long heapSizeOfRow = 12345;
     int maxTotalConcurrentTasks = 100;
     int maxConcurrentTasksPerServer = 2;
     int maxConcurrentTasksPerRegion = 1;
@@ -239,13 +288,13 @@ public class TestSimpleRequestController {
 
     // inner state is unchanged.
     for (int i = 0; i != 10; ++i) {
-      ReturnCode code = checker.canTakeOperation(LOC1, rowSize);
+      ReturnCode code = checker.canTakeOperation(LOC1, heapSizeOfRow);
       assertEquals(ReturnCode.INCLUDE, code);
     }
     // add LOC1 region.
-    ReturnCode code = checker.canTakeOperation(LOC1, rowSize);
+    ReturnCode code = checker.canTakeOperation(LOC1, heapSizeOfRow);
     assertEquals(ReturnCode.INCLUDE, code);
-    checker.notifyFinal(code, LOC1, rowSize);
+    checker.notifyFinal(code, LOC1, heapSizeOfRow);
 
     // fill the task slots for LOC1.
     taskCounterPerRegion.put(LOC1.getRegionInfo().getRegionName(), new AtomicInteger(100));
@@ -253,9 +302,9 @@ public class TestSimpleRequestController {
 
     // the region was previously accepted, so it must be accpted now.
     for (int i = 0; i != maxConcurrentTasksPerRegion * 5; ++i) {
-      ReturnCode includeCode = checker.canTakeOperation(LOC1, rowSize);
+      ReturnCode includeCode = checker.canTakeOperation(LOC1, heapSizeOfRow);
       assertEquals(ReturnCode.INCLUDE, includeCode);
-      checker.notifyFinal(includeCode, LOC1, rowSize);
+      checker.notifyFinal(includeCode, LOC1, heapSizeOfRow);
     }
 
     // fill the task slots for LOC3.
@@ -264,9 +313,9 @@ public class TestSimpleRequestController {
 
     // no task slots.
     for (int i = 0; i != maxConcurrentTasksPerRegion * 5; ++i) {
-      ReturnCode excludeCode = checker.canTakeOperation(LOC3, rowSize);
+      ReturnCode excludeCode = checker.canTakeOperation(LOC3, heapSizeOfRow);
       assertNotEquals(ReturnCode.INCLUDE, excludeCode);
-      checker.notifyFinal(excludeCode, LOC3, rowSize);
+      checker.notifyFinal(excludeCode, LOC3, heapSizeOfRow);
     }
 
     // release the tasks for LOC3.
@@ -274,15 +323,15 @@ public class TestSimpleRequestController {
     taskCounterPerServer.put(LOC3.getServerName(), new AtomicInteger(0));
 
     // add LOC3 region.
-    ReturnCode code3 = checker.canTakeOperation(LOC3, rowSize);
+    ReturnCode code3 = checker.canTakeOperation(LOC3, heapSizeOfRow);
     assertEquals(ReturnCode.INCLUDE, code3);
-    checker.notifyFinal(code3, LOC3, rowSize);
+    checker.notifyFinal(code3, LOC3, heapSizeOfRow);
 
     // the region was previously accepted, so it must be accpted now.
     for (int i = 0; i != maxConcurrentTasksPerRegion * 5; ++i) {
-      ReturnCode includeCode = checker.canTakeOperation(LOC3, rowSize);
+      ReturnCode includeCode = checker.canTakeOperation(LOC3, heapSizeOfRow);
       assertEquals(ReturnCode.INCLUDE, includeCode);
-      checker.notifyFinal(includeCode, LOC3, rowSize);
+      checker.notifyFinal(includeCode, LOC3, heapSizeOfRow);
     }
 
     checker.reset();
@@ -290,9 +339,9 @@ public class TestSimpleRequestController {
     // but checker have reseted and task slots for LOC1 is full.
     // So it must be rejected now.
     for (int i = 0; i != maxConcurrentTasksPerRegion * 5; ++i) {
-      ReturnCode includeCode = checker.canTakeOperation(LOC1, rowSize);
+      ReturnCode includeCode = checker.canTakeOperation(LOC1, heapSizeOfRow);
       assertNotEquals(ReturnCode.INCLUDE, includeCode);
-      checker.notifyFinal(includeCode, LOC1, rowSize);
+      checker.notifyFinal(includeCode, LOC1, heapSizeOfRow);
     }
   }
 
