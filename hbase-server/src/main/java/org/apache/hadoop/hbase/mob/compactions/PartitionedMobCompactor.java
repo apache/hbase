@@ -24,16 +24,19 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -58,11 +61,15 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.mob.compactions.MobCompactionRequest.CompactionType;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionDelPartition;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionDelPartitionId;
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartition;
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartitionId;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -132,6 +139,7 @@ public class PartitionedMobCompactor extends MobCompactor {
       return null;
     }
     LOG.info("is allFiles: " + allFiles);
+
     // find the files to compact.
     PartitionedMobCompactionRequest request = select(files, allFiles);
     // compact the files.
@@ -148,11 +156,14 @@ public class PartitionedMobCompactor extends MobCompactor {
    */
   protected PartitionedMobCompactionRequest select(List<FileStatus> candidates,
     boolean allFiles) throws IOException {
-    final Collection<FileStatus> allDelFiles = new ArrayList<>();
     final Map<CompactionPartitionId, CompactionPartition> filesToCompact = new HashMap<>();
     final CompactionPartitionId id = new CompactionPartitionId();
+    final NavigableMap<CompactionDelPartitionId, CompactionDelPartition> delFilesToCompact = new TreeMap<>();
+    final CompactionDelPartitionId delId = new CompactionDelPartitionId();
+    final ArrayList<CompactionDelPartition> allDelPartitions = new ArrayList<>();
     int selectedFileCount = 0;
     int irrelevantFileCount = 0;
+    int totalDelFiles = 0;
     MobCompactPartitionPolicy policy = column.getMobCompactPartitionPolicy();
 
     Calendar calendar =  Calendar.getInstance();
@@ -165,6 +176,31 @@ public class PartitionedMobCompactor extends MobCompactor {
       firstDayOfCurrentWeek = MobUtils.getFirstDayOfWeek(calendar, currentDate);
     } else if (policy == MobCompactPartitionPolicy.WEEKLY) {
       firstDayOfCurrentWeek = MobUtils.getFirstDayOfWeek(calendar, currentDate);
+    }
+
+    // We check if there is any del files so the logic can be optimized for the following processing
+    // First step is to check if there is any delete files. If there is any delete files,
+    // For each Partition, it needs to read its startKey and endKey from files.
+    // If there is no delete file, there is no need to read startKey and endKey from files, this
+    // is an optimization.
+    boolean withDelFiles = false;
+    for (FileStatus file : candidates) {
+      if (!file.isFile()) {
+        continue;
+      }
+      // group the del files and small files.
+      FileStatus linkedFile = file;
+      if (HFileLink.isHFileLink(file.getPath())) {
+        HFileLink link = HFileLink.buildFromHFileLinkPattern(conf, file.getPath());
+        linkedFile = getLinkedFileStatus(link);
+        if (linkedFile == null) {
+          continue;
+        }
+      }
+      if (StoreFileInfo.isDelFile(linkedFile.getPath())) {
+        withDelFiles = true;
+        break;
+      }
     }
 
     for (FileStatus file : candidates) {
@@ -183,13 +219,32 @@ public class PartitionedMobCompactor extends MobCompactor {
           continue;
         }
       }
-      if (StoreFileInfo.isDelFile(linkedFile.getPath())) {
-        allDelFiles.add(file);
+      if (withDelFiles && StoreFileInfo.isDelFile(linkedFile.getPath())) {
+        // File in the Del Partition List
+
+        // Get delId from the file
+        Reader reader = HFile.createReader(fs, linkedFile.getPath(), CacheConfig.DISABLED, conf);
+        try {
+          delId.setStartKey(reader.getFirstRowKey());
+          delId.setEndKey(reader.getLastRowKey());
+        } finally {
+          reader.close();
+        }
+        CompactionDelPartition delPartition = delFilesToCompact.get(delId);
+        if (delPartition == null) {
+          CompactionDelPartitionId newDelId =
+              new CompactionDelPartitionId(delId.getStartKey(), delId.getEndKey());
+          delPartition = new CompactionDelPartition(newDelId);
+          delFilesToCompact.put(newDelId, delPartition);
+        }
+        delPartition.addDelFile(file);
+        totalDelFiles ++;
       } else {
         String fileName = linkedFile.getPath().getName();
         String date = MobFileName.getDateFromName(fileName);
-        boolean skipCompaction = MobUtils.fillPartitionId(id, firstDayOfCurrentMonth,
-            firstDayOfCurrentWeek, date, policy, calendar, mergeableSize);
+        boolean skipCompaction = MobUtils
+            .fillPartitionId(id, firstDayOfCurrentMonth, firstDayOfCurrentWeek, date, policy,
+                calendar, mergeableSize);
         if (allFiles || (!skipCompaction && (linkedFile.getLen() < id.getThreshold()))) {
           // add all files if allFiles is true,
           // otherwise add the small files to the merge pool
@@ -209,37 +264,51 @@ public class PartitionedMobCompactor extends MobCompactor {
             compactionPartition.getPartitionId().updateLatestDate(date);
           }
 
+          if (withDelFiles) {
+            // get startKey and endKey from the file and update partition
+            // TODO: is it possible to skip read of most hfiles?
+            Reader reader = HFile.createReader(fs, linkedFile.getPath(), CacheConfig.DISABLED, conf);
+            try {
+              compactionPartition.setStartKey(reader.getFirstRowKey());
+              compactionPartition.setEndKey(reader.getLastRowKey());
+            } finally {
+              reader.close();
+            }
+          }
+
           selectedFileCount++;
         }
       }
     }
 
     /*
-     * If it is not a major mob compaction with del files, and the file number in Partition is 1,
-     * remove the partition from filesToCompact list to avoid re-compacting files which has been
-     * compacted with del files.
+     * Merge del files so there are only non-overlapped del file lists
      */
-    if (!allFiles && (allDelFiles.size() > 0)) {
-      Iterator<Map.Entry<CompactionPartitionId, CompactionPartition>> it =
-          filesToCompact.entrySet().iterator();
+    for(Map.Entry<CompactionDelPartitionId, CompactionDelPartition> entry : delFilesToCompact.entrySet()) {
+      if (allDelPartitions.size() > 0) {
+        // check if the current key range overlaps the previous one
+        CompactionDelPartition prev = allDelPartitions.get(allDelPartitions.size() - 1);
+        if (Bytes.compareTo(prev.getId().getEndKey(), entry.getKey().getStartKey()) >= 0) {
+          // merge them together
+          prev.getId().setEndKey(entry.getValue().getId().getEndKey());
+          prev.addDelFileList(entry.getValue().listDelFiles());
 
-      while(it.hasNext()) {
-        Map.Entry<CompactionPartitionId, CompactionPartition> entry = it.next();
-        if (entry.getValue().getFileCount() == 1) {
-          it.remove();
-          --selectedFileCount;
+        } else {
+          allDelPartitions.add(entry.getValue());
         }
+      } else {
+        allDelPartitions.add(entry.getValue());
       }
     }
 
     PartitionedMobCompactionRequest request = new PartitionedMobCompactionRequest(
-      filesToCompact.values(), allDelFiles);
-    if (candidates.size() == (allDelFiles.size() + selectedFileCount + irrelevantFileCount)) {
+      filesToCompact.values(), allDelPartitions);
+    if (candidates.size() == (totalDelFiles + selectedFileCount + irrelevantFileCount)) {
       // all the files are selected
       request.setCompactionType(CompactionType.ALL_FILES);
     }
     LOG.info("The compaction type is " + request.getCompactionType() + ", the request has "
-      + allDelFiles.size() + " del files, " + selectedFileCount + " selected files, and "
+      + totalDelFiles + " del files, " + selectedFileCount + " selected files, and "
       + irrelevantFileCount + " irrelevant files");
     return request;
   }
@@ -257,51 +326,139 @@ public class PartitionedMobCompactor extends MobCompactor {
    */
   protected List<Path> performCompaction(PartitionedMobCompactionRequest request)
     throws IOException {
-    // merge the del files
-    List<Path> delFilePaths = new ArrayList<>();
-    for (FileStatus delFile : request.delFiles) {
-      delFilePaths.add(delFile.getPath());
+
+    // merge the del files, it is per del partition
+    for (CompactionDelPartition delPartition : request.getDelPartitions()) {
+      if (delPartition.getDelFileCount() <= 1) continue;
+      List<Path> newDelPaths = compactDelFiles(request, delPartition.listDelFiles());
+      delPartition.cleanDelFiles();
+      delPartition.addDelFileList(newDelPaths);
     }
-    List<Path> newDelPaths = compactDelFiles(request, delFilePaths);
-    List<StoreFile> newDelFiles = new ArrayList<>();
+
     List<Path> paths = null;
+    int totalDelFileCount = 0;
     try {
-      for (Path newDelPath : newDelPaths) {
-        StoreFile sf = new StoreFile(fs, newDelPath, conf, compactionCacheConfig, BloomType.NONE);
-        // pre-create reader of a del file to avoid race condition when opening the reader in each
-        // partition.
-        sf.createReader();
-        newDelFiles.add(sf);
+      for (CompactionDelPartition delPartition : request.getDelPartitions()) {
+        for (Path newDelPath : delPartition.listDelFiles()) {
+          StoreFile sf = new StoreFile(fs, newDelPath, conf, compactionCacheConfig, BloomType.NONE);
+          // pre-create reader of a del file to avoid race condition when opening the reader in each
+          // partition.
+          sf.createReader();
+          delPartition.addStoreFile(sf);
+          totalDelFileCount++;
+        }
       }
-      LOG.info("After merging, there are " + newDelFiles.size() + " del files");
+      LOG.info("After merging, there are " + totalDelFileCount + " del files");
       // compact the mob files by partitions.
-      paths = compactMobFiles(request, newDelFiles);
+      paths = compactMobFiles(request);
       LOG.info("After compaction, there are " + paths.size() + " mob files");
     } finally {
-      closeStoreFileReaders(newDelFiles);
+      for (CompactionDelPartition delPartition : request.getDelPartitions()) {
+        closeStoreFileReaders(delPartition.getStoreFiles());
+      }
     }
+
     // archive the del files if all the mob files are selected.
-    if (request.type == CompactionType.ALL_FILES && !newDelPaths.isEmpty()) {
+    if (request.type == CompactionType.ALL_FILES && !request.getDelPartitions().isEmpty()) {
       LOG.info(
-          "After a mob compaction with all files selected, archiving the del files " + newDelPaths);
-      try {
-        MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), newDelFiles);
-      } catch (IOException e) {
-        LOG.error("Failed to archive the del files " + newDelPaths, e);
+          "After a mob compaction with all files selected, archiving the del files ");
+      for (CompactionDelPartition delPartition : request.getDelPartitions()) {
+        LOG.info(delPartition.listDelFiles());
+        try {
+          MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), delPartition.getStoreFiles());
+        } catch (IOException e) {
+          LOG.error("Failed to archive the del files " + delPartition.getStoreFiles(), e);
+        }
       }
     }
     return paths;
   }
 
+  static class DelPartitionComparator implements Comparator<CompactionDelPartition> {
+    private boolean compareStartKey;
+
+    DelPartitionComparator(boolean compareStartKey) {
+      this.compareStartKey = compareStartKey;
+    }
+
+    public boolean getCompareStartKey() {
+      return this.compareStartKey;
+    }
+
+    public void setCompareStartKey(final boolean compareStartKey) {
+      this.compareStartKey = compareStartKey;
+    }
+
+    @Override
+    public int compare(CompactionDelPartition o1, CompactionDelPartition o2) {
+
+      if (compareStartKey) {
+        return Bytes.compareTo(o1.getId().getStartKey(), o2.getId().getStartKey());
+      } else {
+        return Bytes.compareTo(o1.getId().getEndKey(), o2.getId().getEndKey());
+      }
+    }
+  }
+
+  @VisibleForTesting
+  List<StoreFile> getListOfDelFilesForPartition(final CompactionPartition partition,
+      final List<CompactionDelPartition> delPartitions) {
+    // Binary search for startKey and endKey
+
+    List<StoreFile> result = new ArrayList<>();
+
+    DelPartitionComparator comparator = new DelPartitionComparator(false);
+    CompactionDelPartitionId id = new CompactionDelPartitionId(null, partition.getStartKey());
+    CompactionDelPartition target = new CompactionDelPartition(id);
+    int start = Collections.binarySearch(delPartitions, target, comparator);
+
+    // Get the start index for partition
+    if (start < 0) {
+      // Calculate the insert point
+      start = (start + 1) * (-1);
+      if (start == delPartitions.size()) {
+        // no overlap
+        return result;
+      } else {
+        // Check another case which has no overlap
+        if (Bytes.compareTo(partition.getEndKey(), delPartitions.get(start).getId().getStartKey()) < 0) {
+          return result;
+        }
+      }
+    }
+
+    // Search for end index for the partition
+    comparator.setCompareStartKey(true);
+    id.setStartKey(partition.getEndKey());
+    int end = Collections.binarySearch(delPartitions, target, comparator);
+
+    if (end < 0) {
+      end = (end + 1) * (-1);
+      if (end == 0) {
+        return result;
+      } else {
+        --end;
+        if (Bytes.compareTo(partition.getStartKey(), delPartitions.get(end).getId().getEndKey()) > 0) {
+          return result;
+        }
+      }
+    }
+
+    for (int i = start; i <= end; ++i) {
+        result.addAll(delPartitions.get(i).getStoreFiles());
+    }
+
+    return result;
+  }
+
   /**
    * Compacts the selected small mob files and all the del files.
    * @param request The compaction request.
-   * @param delFiles The del files.
    * @return The paths of new mob files after compactions.
    * @throws IOException if IO failure is encountered
    */
-  protected List<Path> compactMobFiles(final PartitionedMobCompactionRequest request,
-    final List<StoreFile> delFiles) throws IOException {
+  protected List<Path> compactMobFiles(final PartitionedMobCompactionRequest request)
+      throws IOException {
     Collection<CompactionPartition> partitions = request.compactionPartitions;
     if (partitions == null || partitions.isEmpty()) {
       LOG.info("No partitions of mob files");
@@ -310,10 +467,19 @@ public class PartitionedMobCompactor extends MobCompactor {
     List<Path> paths = new ArrayList<>();
     final Connection c = ConnectionFactory.createConnection(conf);
     final Table table = c.getTable(tableName);
+
     try {
       Map<CompactionPartitionId, Future<List<Path>>> results = new HashMap<>();
       // compact the mob files by partitions in parallel.
       for (final CompactionPartition partition : partitions) {
+
+        // How to efficiently come up a list of delFiles for one partition?
+        // Search the delPartitions and collect all the delFiles for the partition
+        // One optimization can do is that if there is no del file, we do not need to
+        // come up with startKey/endKey.
+        List<StoreFile> delFiles = getListOfDelFilesForPartition(partition,
+            request.getDelPartitions());
+
         results.put(partition.getPartitionId(), pool.submit(new Callable<List<Path>>() {
           @Override
           public List<Path> call() throws Exception {
