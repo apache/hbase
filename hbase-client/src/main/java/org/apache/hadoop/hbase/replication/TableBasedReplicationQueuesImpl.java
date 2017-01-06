@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
@@ -307,7 +308,8 @@ public class TableBasedReplicationQueuesImpl extends ReplicationTableBase
   }
 
   @Override
-  public void addHFileRefs(String peerId, List<String> files) throws ReplicationException {
+  public void addHFileRefs(String peerId, List<Pair<Path, Path>> pairs)
+      throws ReplicationException {
     // TODO
     throw new NotImplementedException();
   }

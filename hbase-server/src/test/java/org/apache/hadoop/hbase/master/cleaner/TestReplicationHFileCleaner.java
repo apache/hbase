@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -138,8 +139,8 @@ public class TestReplicationHFileCleaner {
         + "for it in the queue.",
       cleaner.isFileDeletable(fs.getFileStatus(file)));
 
-    List<String> files = new ArrayList<String>(1);
-    files.add(file.getName());
+    List<Pair<Path, Path>> files = new ArrayList<>(1);
+    files.add(new Pair<Path, Path>(null, file));
     // 4. Add the file to hfile-refs queue
     rq.addHFileRefs(peerId, files);
     // 5. Assert file should not be deletable
@@ -166,8 +167,8 @@ public class TestReplicationHFileCleaner {
     f.setPath(notDeletablefile);
     files.add(f);
 
-    List<String> hfiles = new ArrayList<>(1);
-    hfiles.add(notDeletablefile.getName());
+    List<Pair<Path, Path>> hfiles = new ArrayList<>(1);
+    hfiles.add(new Pair<Path, Path>(null, notDeletablefile));
     // 2. Add one file to hfile-refs queue
     rq.addHFileRefs(peerId, hfiles);
 
