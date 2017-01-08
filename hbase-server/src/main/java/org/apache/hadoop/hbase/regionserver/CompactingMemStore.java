@@ -217,8 +217,8 @@ public class CompactingMemStore extends AbstractMemStore {
   @VisibleForTesting
   @Override
   protected List<Segment> getSegments() {
-    List<Segment> pipelineList = pipeline.getSegments();
-    List<Segment> list = new ArrayList<Segment>(pipelineList.size() + 2);
+    List<? extends Segment> pipelineList = pipeline.getSegments();
+    List<Segment> list = new ArrayList<>(pipelineList.size() + 2);
     list.add(this.active);
     list.addAll(pipelineList);
     list.add(this.snapshot);
@@ -264,7 +264,7 @@ public class CompactingMemStore extends AbstractMemStore {
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
-    List<Segment> pipelineList = pipeline.getSegments();
+    List<? extends Segment> pipelineList = pipeline.getSegments();
     long order = pipelineList.size();
     // The list of elements in pipeline + the active element + the snapshot segment
     // TODO : This will change when the snapshot is made of more than one element
