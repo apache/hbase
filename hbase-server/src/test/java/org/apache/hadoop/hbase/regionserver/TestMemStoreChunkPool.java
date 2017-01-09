@@ -135,6 +135,8 @@ public class TestMemStoreChunkPool {
     memstore.add(new KeyValue(row, fam, qf4, val), null);
     memstore.add(new KeyValue(row, fam, qf5, val), null);
     assertEquals(2, memstore.getActive().getCellsCount());
+    // close the scanner - this is how the snapshot will be used
+    snapshot.getScanner().close();
     memstore.clearSnapshot(snapshot.getId());
 
     int chunkCount = chunkPool.getPoolSize();
@@ -177,6 +179,8 @@ public class TestMemStoreChunkPool {
     List<KeyValueScanner> scanners = memstore.getScanners(0);
     // Shouldn't putting back the chunks to pool,since some scanners are opening
     // based on their data
+    // close the snapshot scanner
+    snapshot.getScanner().close();
     memstore.clearSnapshot(snapshot.getId());
 
     assertTrue(chunkPool.getPoolSize() == 0);
@@ -203,6 +207,8 @@ public class TestMemStoreChunkPool {
     }
     // Since no opening scanner, the chunks of snapshot should be put back to
     // pool
+    // close the snapshot scanner
+    snapshot.getScanner().close();
     memstore.clearSnapshot(snapshot.getId());
     assertTrue(chunkPool.getPoolSize() > 0);
   }

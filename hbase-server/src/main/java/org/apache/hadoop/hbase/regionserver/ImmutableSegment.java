@@ -27,14 +27,13 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 import java.io.IOException;
 
 /**
  * ImmutableSegment is an abstract class that extends the API supported by a {@link Segment},
  * and is not needed for a {@link MutableSegment}. Specifically, the method
- * {@link ImmutableSegment#getKeyValueScanner()} builds a special scanner for the
+ * {@link ImmutableSegment#getSnapshotScanner()} builds a special scanner for the
  * {@link MemStoreSnapshot} object.
  */
 @InterfaceAudience.Private
@@ -127,8 +126,8 @@ public class ImmutableSegment extends Segment {
    * general segment scanner.
    * @return a special scanner for the MemStoreSnapshot object
    */
-  public KeyValueScanner getKeyValueScanner() {
-    return new CollectionBackedScanner(getCellSet(), getComparator());
+  public KeyValueScanner getSnapshotScanner() {
+    return new SnapshotScanner(this);
   }
 
   @Override

@@ -393,6 +393,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     memstore.add(new KeyValue(row, fam, qf4, val), null);
     memstore.add(new KeyValue(row, fam, qf5, val), null);
     assertEquals(2, memstore.getActive().getCellsCount());
+    // close the scanner
+    snapshot.getScanner().close();
     memstore.clearSnapshot(snapshot.getId());
 
     int chunkCount = chunkPool.getPoolSize();
@@ -433,6 +435,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     List<KeyValueScanner> scanners = memstore.getScanners(0);
     // Shouldn't putting back the chunks to pool,since some scanners are opening
     // based on their data
+    // close the scanner
+    snapshot.getScanner().close();
     memstore.clearSnapshot(snapshot.getId());
 
     assertTrue(chunkPool.getPoolSize() == 0);
@@ -460,6 +464,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     }
     // Since no opening scanner, the chunks of snapshot should be put back to
     // pool
+    // close the scanner
+    snapshot.getScanner().close();
     memstore.clearSnapshot(snapshot.getId());
     assertTrue(chunkPool.getPoolSize() > 0);
   }
@@ -527,6 +533,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     // Creating another snapshot
 
     MemStoreSnapshot snapshot = memstore.snapshot();
+    // close the scanner
+    snapshot.getScanner().close();
     memstore.clearSnapshot(snapshot.getId());
 
     snapshot = memstore.snapshot();
@@ -541,6 +549,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     }
     // Since no opening scanner, the chunks of snapshot should be put back to
     // pool
+    // close the scanner
+    snapshot.getScanner().close();
     memstore.clearSnapshot(snapshot.getId());
     assertTrue(chunkPool.getPoolSize() > 0);
   }

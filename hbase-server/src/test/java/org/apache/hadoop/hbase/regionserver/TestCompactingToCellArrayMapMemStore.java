@@ -387,6 +387,108 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     }
   }
 
+  @Override
+  @Test
+  public void testPuttingBackChunksWithOpeningScanner() throws IOException {
+    byte[] row = Bytes.toBytes("testrow");
+    byte[] fam = Bytes.toBytes("testfamily");
+    byte[] qf1 = Bytes.toBytes("testqualifier1");
+    byte[] qf2 = Bytes.toBytes("testqualifier2");
+    byte[] qf3 = Bytes.toBytes("testqualifier3");
+    byte[] qf4 = Bytes.toBytes("testqualifier4");
+    byte[] qf5 = Bytes.toBytes("testqualifier5");
+    byte[] qf6 = Bytes.toBytes("testqualifier6");
+    byte[] qf7 = Bytes.toBytes("testqualifier7");
+    byte[] val = Bytes.toBytes("testval");
+
+    // Setting up memstore
+    memstore.add(new KeyValue(row, fam, qf1, val), null);
+    memstore.add(new KeyValue(row, fam, qf2, val), null);
+    memstore.add(new KeyValue(row, fam, qf3, val), null);
+
+    // Creating a snapshot
+    MemStoreSnapshot snapshot = memstore.snapshot();
+    assertEquals(3, memstore.getSnapshot().getCellsCount());
+
+    // Adding value to "new" memstore
+    assertEquals(0, memstore.getActive().getCellsCount());
+    memstore.add(new KeyValue(row, fam, qf4, val), null);
+    memstore.add(new KeyValue(row, fam, qf5, val), null);
+    assertEquals(2, memstore.getActive().getCellsCount());
+
+    // opening scanner before clear the snapshot
+    List<KeyValueScanner> scanners = memstore.getScanners(0);
+    // Shouldn't putting back the chunks to pool,since some scanners are opening
+    // based on their data
+    // close the scanner
+    snapshot.getScanner().close();
+    memstore.clearSnapshot(snapshot.getId());
+
+    assertTrue(chunkPool.getPoolSize() == 0);
+
+    // Chunks will be put back to pool after close scanners;
+    for (KeyValueScanner scanner : scanners) {
+      scanner.close();
+    }
+    assertTrue(chunkPool.getPoolSize() > 0);
+
+    // clear chunks
+    chunkPool.clearChunks();
+
+    // Creating another snapshot
+
+    snapshot = memstore.snapshot();
+    // Adding more value
+    memstore.add(new KeyValue(row, fam, qf6, val), null);
+    memstore.add(new KeyValue(row, fam, qf7, val), null);
+    // opening scanners
+    scanners = memstore.getScanners(0);
+    // close scanners before clear the snapshot
+    for (KeyValueScanner scanner : scanners) {
+      scanner.close();
+    }
+    // Since no opening scanner, the chunks of snapshot should be put back to
+    // pool
+    // close the scanner
+    snapshot.getScanner().close();
+    memstore.clearSnapshot(snapshot.getId());
+    assertTrue(chunkPool.getPoolSize() > 0);
+  }
+
+  @Test
+  public void testPuttingBackChunksAfterFlushing() throws IOException {
+    byte[] row = Bytes.toBytes("testrow");
+    byte[] fam = Bytes.toBytes("testfamily");
+    byte[] qf1 = Bytes.toBytes("testqualifier1");
+    byte[] qf2 = Bytes.toBytes("testqualifier2");
+    byte[] qf3 = Bytes.toBytes("testqualifier3");
+    byte[] qf4 = Bytes.toBytes("testqualifier4");
+    byte[] qf5 = Bytes.toBytes("testqualifier5");
+    byte[] val = Bytes.toBytes("testval");
+
+    // Setting up memstore
+    memstore.add(new KeyValue(row, fam, qf1, val), null);
+    memstore.add(new KeyValue(row, fam, qf2, val), null);
+    memstore.add(new KeyValue(row, fam, qf3, val), null);
+
+    // Creating a snapshot
+    MemStoreSnapshot snapshot = memstore.snapshot();
+    assertEquals(3, memstore.getSnapshot().getCellsCount());
+
+    // Adding value to "new" memstore
+    assertEquals(0, memstore.getActive().getCellsCount());
+    memstore.add(new KeyValue(row, fam, qf4, val), null);
+    memstore.add(new KeyValue(row, fam, qf5, val), null);
+    assertEquals(2, memstore.getActive().getCellsCount());
+    // close the scanner
+    snapshot.getScanner().close();
+    memstore.clearSnapshot(snapshot.getId());
+
+    int chunkCount = chunkPool.getPoolSize();
+    assertTrue(chunkCount > 0);
+  }
+
+
   private long addRowsByKeys(final AbstractMemStore hmc, String[] keys) {
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf = Bytes.toBytes("testqualifier");

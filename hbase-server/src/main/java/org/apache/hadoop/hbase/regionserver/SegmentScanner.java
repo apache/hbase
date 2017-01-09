@@ -41,14 +41,14 @@ public class SegmentScanner implements KeyValueScanner {
   private static final long DEFAULT_SCANNER_ORDER = Long.MAX_VALUE;
 
   // the observed structure
-  private final Segment segment;
+  protected final Segment segment;
   // the highest relevant MVCC
   private long readPoint;
   // the current iterator that can be reinitialized by
   // seek(), backwardSeek(), or reseek()
-  private Iterator<Cell> iter;
+  protected Iterator<Cell> iter;
   // the pre-calculated cell to be returned by peek()
-  private Cell current = null;
+  protected Cell current = null;
   // or next()
   // A flag represents whether could stop skipping KeyValues for MVCC
   // if have encountered the next row. Only used for reversed scan
@@ -57,7 +57,7 @@ public class SegmentScanner implements KeyValueScanner {
   private Cell last = null;
 
   // flag to indicate if this scanner is closed
-  private boolean closed = false;
+  protected boolean closed = false;
 
   protected SegmentScanner(Segment segment, long readPoint) {
     this(segment, readPoint, DEFAULT_SCANNER_ORDER);
@@ -74,7 +74,7 @@ public class SegmentScanner implements KeyValueScanner {
     this.segment.incScannerCount();
     iter = segment.iterator();
     // the initialization of the current is required for working with heap of SegmentScanners
-    current = getNext();
+    updateCurrent();
     this.scannerOrder = scannerOrder;
     if (current == null) {
       // nothing to fetch from this scanner
@@ -108,7 +108,7 @@ public class SegmentScanner implements KeyValueScanner {
       return null;
     }
     Cell oldCurrent = current;
-    current = getNext();                  // update the currently observed Cell
+    updateCurrent();                  // update the currently observed Cell
     return oldCurrent;
   }
 
@@ -127,11 +127,15 @@ public class SegmentScanner implements KeyValueScanner {
       return false;
     }
     // restart the iterator from new key
-    iter = segment.tailSet(cell).iterator();
+    iter = getIterator(cell);
     // last is going to be reinitialized in the next getNext() call
     last = null;
-    current = getNext();
+    updateCurrent();
     return (current != null);
+  }
+
+  protected Iterator<Cell> getIterator(Cell cell) {
+    return segment.tailSet(cell).iterator();
   }
 
   /**
@@ -156,8 +160,8 @@ public class SegmentScanner implements KeyValueScanner {
     get it. So we remember the last keys we iterated to and restore
     the reseeked set to at least that point.
     */
-    iter = segment.tailSet(getHighest(cell, last)).iterator();
-    current = getNext();
+    iter = getIterator(getHighest(cell, last));
+    updateCurrent();
     return (current != null);
   }
 
@@ -355,7 +359,7 @@ public class SegmentScanner implements KeyValueScanner {
    * Private internal method for iterating over the segment,
    * skipping the cells with irrelevant MVCC
    */
-  private Cell getNext() {
+  protected void updateCurrent() {
     Cell startKV = current;
     Cell next = null;
 
@@ -363,16 +367,18 @@ public class SegmentScanner implements KeyValueScanner {
       while (iter.hasNext()) {
         next = iter.next();
         if (next.getSequenceId() <= this.readPoint) {
-          return next;                    // skip irrelevant versions
+          current = next;
+          return;// skip irrelevant versions
         }
         if (stopSkippingKVsIfNextRow &&   // for backwardSeek() stay in the
             startKV != null &&        // boundaries of a single row
             segment.compareRows(next, startKV) > 0) {
-          return null;
+          current = null;
+          return;
         }
       } // end of while
 
-      return null; // nothing found
+      current = null; // nothing found
     } finally {
       if (next != null) {
         // in all cases, remember the last KV we iterated to, needed for reseek()
