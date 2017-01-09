@@ -83,8 +83,9 @@ public class FSHDFSUtils extends FSUtils {
         Map<String, Map<String, InetSocketAddress>> addressMap =
                 (Map<String, Map<String, InetSocketAddress>>) getNNAddressesMethod
                         .invoke(null, conf);
-        for (Map.Entry<String, Map<String, InetSocketAddress>> entry : addressMap.entrySet()) {
-          Map<String, InetSocketAddress> nnMap = entry.getValue();
+        String nameService = serviceName.substring(serviceName.indexOf(":") + 1);
+        if (addressMap.containsKey(nameService)) {
+          Map<String, InetSocketAddress> nnMap = addressMap.get(nameService);
           for (Map.Entry<String, InetSocketAddress> e2 : nnMap.entrySet()) {
             InetSocketAddress addr = e2.getValue();
             addresses.add(addr);
