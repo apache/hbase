@@ -28,9 +28,12 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Writables;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Category({SmallTests.class})
 public class TestTimeRangeTracker {
+  private static final int NUM_KEYS = 10000000;
+
   @Test
   public void testExtreme() {
     TimeRange tr = new TimeRange();
@@ -117,6 +120,7 @@ public class TestTimeRangeTracker {
     for (int i = 0; i < threads.length; i++) {
       threads[i].join();
     }
+
     assertTrue(trr.getMax() == calls * threadCount);
     assertTrue(trr.getMin() == 0);
   }
@@ -152,6 +156,93 @@ public class TestTimeRangeTracker {
     assertEquals(1, twoArgRange3.getMin());
     assertEquals(Long.MAX_VALUE, twoArgRange3.getMax());
     assertFalse(twoArgRange3.isAllTime());
+  }
+
+  final static int NUM_OF_THREADS = 20;
+
+  class RandomTestData {
+    private long[] keys = new long[NUM_KEYS];
+    private long min = Long.MAX_VALUE;
+    private long max = 0;
+
+    public RandomTestData() {
+      if (ThreadLocalRandom.current().nextInt(NUM_OF_THREADS) % 2 == 0) {
+        for (int i = 0; i < NUM_KEYS; i++) {
+          keys[i] = i + ThreadLocalRandom.current().nextLong(NUM_OF_THREADS);
+          if (keys[i] < min) min = keys[i];
+          if (keys[i] > max) max = keys[i];
+        }
+      } else {
+        for (int i = NUM_KEYS - 1; i >= 0; i--) {
+          keys[i] = i + ThreadLocalRandom.current().nextLong(NUM_OF_THREADS);
+          if (keys[i] < min) min = keys[i];
+          if (keys[i] > max) max = keys[i];
+        }
+      }
+    }
+
+    public long getMax() {
+      return this.max;
+    }
+
+    public long getMin() {
+      return this.min;
+    }
+  }
+
+  class TrtUpdateRunnable implements Runnable {
+
+    private TimeRangeTracker trt;
+    private RandomTestData data;
+    public TrtUpdateRunnable(final TimeRangeTracker trt, final RandomTestData data) {
+      this.trt = trt;
+      this.data = data;
+    }
+
+    public void run() {
+      for (long key : data.keys) {
+        trt.includeTimestamp(key);
+      }
+    }
+  }
+
+  /**
+   * Run a bunch of threads against a single TimeRangeTracker and ensure we arrive
+   * at right range.  The data chosen is going to ensure that there are lots collisions, i.e,
+   * some other threads may already update the value while one tries to update min/max value.
+   */
+  @Test
+  public void testConcurrentIncludeTimestampCorrectness() {
+    RandomTestData[] testData = new RandomTestData[NUM_OF_THREADS];
+    long min = Long.MAX_VALUE, max = 0;
+    for (int i = 0; i < NUM_OF_THREADS; i ++) {
+      testData[i] = new RandomTestData();
+      if (testData[i].getMin() < min) {
+        min = testData[i].getMin();
+      }
+      if (testData[i].getMax() > max) {
+        max = testData[i].getMax();
+      }
+    }
+
+    TimeRangeTracker trt = new TimeRangeTracker();
+
+    Thread[] t = new Thread[NUM_OF_THREADS];
+    for (int i = 0; i < NUM_OF_THREADS; i++) {
+      t[i] = new Thread(new TrtUpdateRunnable(trt, testData[i]));
+      t[i].start();
+    }
+
+    for (Thread thread : t) {
+      try {
+        thread.join();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
+    assertTrue(min == trt.getMin());
+    assertTrue(max == trt.getMax());
   }
 
   /**
