@@ -503,7 +503,7 @@ public class HRegionServer extends HasThread implements
 
   private volatile ThroughputController flushThroughputController;
 
-  protected final SecureBulkLoadManager secureBulkLoadManager;
+  protected SecureBulkLoadManager secureBulkLoadManager;
 
   /**
    * Starts a HRegionServer at the default location.
@@ -614,9 +614,6 @@ public class HRegionServer extends HasThread implements
       clusterStatusTracker.start();
     }
     this.configurationManager = new ConfigurationManager();
-
-    this.secureBulkLoadManager = new SecureBulkLoadManager(this.conf);
-    this.secureBulkLoadManager.start();
 
     rpcServices.start();
     putUpWebUI();
@@ -784,6 +781,9 @@ public class HRegionServer extends HasThread implements
   private void preRegistrationInitialization(){
     try {
       setupClusterConnection();
+
+      this.secureBulkLoadManager = new SecureBulkLoadManager(this.conf, clusterConnection);
+      this.secureBulkLoadManager.start();
 
       // Health checker thread.
       if (isHealthCheckerConfigured()) {

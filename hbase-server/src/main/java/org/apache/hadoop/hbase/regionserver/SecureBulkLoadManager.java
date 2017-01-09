@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.Region.BulkLoadListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
+import org.apache.hadoop.hbase.security.token.TokenUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -108,9 +110,11 @@ public class SecureBulkLoadManager {
   private Path baseStagingDir;
 
   private UserProvider userProvider;
+  private Connection conn;
 
-  SecureBulkLoadManager(Configuration conf) {
+  SecureBulkLoadManager(Configuration conf, Connection conn) {
     this.conf = conf;
+    this.conn = conn;
   }
 
   public void start() throws IOException {
@@ -187,7 +191,18 @@ public class SecureBulkLoadManager {
     final String bulkToken = request.getBulkToken();
     User user = getActiveUser();
     final UserGroupInformation ugi = user.getUGI();
-    if(userToken != null) {
+    if (userProvider.isHadoopSecurityEnabled()) {
+      try {
+        Token tok = TokenUtil.obtainToken(conn);
+        if (tok != null) {
+          boolean b = ugi.addToken(tok);
+          LOG.debug("token added " + tok + " for user " + ugi + " return=" + b);
+        }
+      } catch (IOException ioe) {
+        LOG.warn("unable to add token", ioe);
+      }
+    }
+    if (userToken != null) {
       ugi.addToken(userToken);
     } else if (userProvider.isHadoopSecurityEnabled()) {
       //we allow this to pass through in "simple" security mode
