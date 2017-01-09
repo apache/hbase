@@ -43,13 +43,18 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import edu.umd.cs.findbugs.annotations.Nullable;
 
 /**
  * An encapsulation for the FileSystem object that hbase uses to access
@@ -139,6 +144,56 @@ public class HFileSystem extends FilterFileSystem {
    */
   public FileSystem getBackingFs() throws IOException {
     return fs;
+  }
+
+  /**
+   * Set the source path (directory/file) to the specified storage policy. <br>
+   * <i>"LAZY_PERSIST"</i>, <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>,
+   * <i>"COLD"</i> <br>
+   * <br>
+   * See {@link org.apache.hadoop.hdfs.protocol.HdfsConstants} for more details.
+   * @param path The source path (directory/file).
+   * @param policyName The name of the storage policy.
+   */
+  public void setStoragePolicy(Path path, String policyName) {
+    try {
+      if (this.fs instanceof DistributedFileSystem) {
+        ((DistributedFileSystem) this.fs).setStoragePolicy(path, policyName);
+      }
+    } catch (Throwable e) {
+      LOG.warn("failed to set block storage policy of [" + path + "] to [" + policyName + "]", e);
+    }
+  }
+
+  /**
+   * Get the storage policy of the source path (directory/file).
+   * @param path The source path (directory/file).
+   * @return Storage policy name, or {@code null} if not using {@link DistributedFileSystem} or
+   *         exception thrown when trying to get policy
+   */
+  @Nullable
+  public String getStoragePolicy(Path path) {
+    try {
+      if (this.fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) this.fs;
+        HdfsFileStatus status = dfs.getClient().getFileInfo(path.toUri().getPath());
+        if (null != status) {
+          byte storagePolicyId = status.getStoragePolicy();
+          if (storagePolicyId != BlockStoragePolicySuite.ID_UNSPECIFIED) {
+            BlockStoragePolicy[] policies = dfs.getStoragePolicies();
+            for (BlockStoragePolicy policy : policies) {
+              if (policy.getId() == storagePolicyId) {
+                return policy.getName();
+              }
+            }
+          }
+        }
+      }
+    } catch (Throwable e) {
+      LOG.warn("failed to get block storage policy of [" + path + "]", e);
+    }
+
+    return null;
   }
 
   /**

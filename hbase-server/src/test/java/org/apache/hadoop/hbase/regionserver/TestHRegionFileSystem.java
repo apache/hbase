@@ -21,11 +21,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,14 +39,20 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.PerformanceEvaluation;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
-
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -51,6 +60,126 @@ import org.junit.experimental.categories.Category;
 public class TestHRegionFileSystem {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestHRegionFileSystem.class);
+  private static final byte[][] FAMILIES = {
+    Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A")),
+    Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B")) };
+  private static final TableName TABLE_NAME = TableName.valueOf("TestTable");
+
+  @Test
+  public void testBlockStoragePolicy() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    TEST_UTIL.startMiniCluster();
+    HTable table = (HTable) TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
+    assertEquals("Should start with empty table", 0, TEST_UTIL.countRows(table));
+    HRegionFileSystem regionFs = getHRegionFS(table, conf);
+    // the original block storage policy would be NULL
+    String spA = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[0]));
+    String spB = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[1]));
+    LOG.debug("Storage policy of cf 0: [" + spA + "].");
+    LOG.debug("Storage policy of cf 1: [" + spB + "].");
+    assertNull(spA);
+    assertNull(spB);
+
+    // Recreate table and make sure storage policy could be set through configuration
+    TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.getConfiguration().set(HStore.BLOCK_STORAGE_POLICY_KEY, "HOT");
+    TEST_UTIL.startMiniCluster();
+    table = (HTable) TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
+    regionFs = getHRegionFS(table, conf);
+
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      spA = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[0]));
+      spB = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[1]));
+      LOG.debug("Storage policy of cf 0: [" + spA + "].");
+      LOG.debug("Storage policy of cf 1: [" + spB + "].");
+      assertEquals("HOT", spA);
+      assertEquals("HOT", spB);
+
+      // alter table cf schema to change storage policies
+      // and make sure it could override settings in conf
+      HColumnDescriptor hcdA = new HColumnDescriptor(Bytes.toString(FAMILIES[0]));
+      // alter through setting HStore#BLOCK_STORAGE_POLICY_KEY in HColumnDescriptor
+      hcdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
+      admin.modifyColumnFamily(TABLE_NAME, hcdA);
+      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+          .isRegionsInTransition()) {
+        Thread.sleep(200);
+        LOG.debug("Waiting on table to finish schema altering");
+      }
+      // alter through HColumnDescriptor#setStoragePolicy
+      HColumnDescriptor hcdB = new HColumnDescriptor(Bytes.toString(FAMILIES[1]));
+      hcdB.setStoragePolicy("ALL_SSD");
+      admin.modifyColumnFamily(TABLE_NAME, hcdB);
+      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+          .isRegionsInTransition()) {
+        Thread.sleep(200);
+        LOG.debug("Waiting on table to finish schema altering");
+      }
+      spA = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[0]));
+      spB = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[1]));
+      LOG.debug("Storage policy of cf 0: [" + spA + "].");
+      LOG.debug("Storage policy of cf 1: [" + spB + "].");
+      assertNotNull(spA);
+      assertEquals("ONE_SSD", spA);
+      assertNotNull(spB);
+      assertEquals("ALL_SSD", spB);
+
+      // flush memstore snapshot into 3 files
+      for (long i = 0; i < 3; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        put.addColumn(FAMILIES[0], Bytes.toBytes(i), Bytes.toBytes(i));
+        table.put(put);
+        admin.flush(TABLE_NAME);
+      }
+      // there should be 3 files in store dir
+      FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
+      Path storePath = regionFs.getStoreDir(Bytes.toString(FAMILIES[0]));
+      FileStatus[] storeFiles = FSUtils.listStatus(fs, storePath);
+      assertNotNull(storeFiles);
+      assertEquals(3, storeFiles.length);
+      // store temp dir still exists but empty
+      Path storeTempDir = new Path(regionFs.getTempDir(), Bytes.toString(FAMILIES[0]));
+      assertTrue(fs.exists(storeTempDir));
+      FileStatus[] tempFiles = FSUtils.listStatus(fs, storeTempDir);
+      assertNull(tempFiles);
+      // storage policy of cf temp dir and 3 store files should be ONE_SSD
+      assertEquals("ONE_SSD",
+        ((HFileSystem) regionFs.getFileSystem()).getStoragePolicy(storeTempDir));
+      for (FileStatus status : storeFiles) {
+        assertEquals("ONE_SSD",
+          ((HFileSystem) regionFs.getFileSystem()).getStoragePolicy(status.getPath()));
+      }
+
+      // change storage policies by calling raw api directly
+      regionFs.setStoragePolicy(Bytes.toString(FAMILIES[0]), "ALL_SSD");
+      regionFs.setStoragePolicy(Bytes.toString(FAMILIES[1]), "ONE_SSD");
+      spA = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[0]));
+      spB = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[1]));
+      LOG.debug("Storage policy of cf 0: [" + spA + "].");
+      LOG.debug("Storage policy of cf 1: [" + spB + "].");
+      assertNotNull(spA);
+      assertEquals("ALL_SSD", spA);
+      assertNotNull(spB);
+      assertEquals("ONE_SSD", spB);
+    } finally {
+      table.close();
+      TEST_UTIL.deleteTable(TABLE_NAME);
+      TEST_UTIL.shutdownMiniCluster();
+    }
+  }
+
+  private HRegionFileSystem getHRegionFS(HTable table, Configuration conf) throws IOException {
+    FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
+    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), table.getName());
+    List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
+    assertEquals(1, regionDirs.size());
+    List<Path> familyDirs = FSUtils.getFamilyDirs(fs, regionDirs.get(0));
+    assertEquals(2, familyDirs.size());
+    HRegionInfo hri = table.getRegionLocator().getAllRegionLocations().get(0).getRegionInfo();
+    HRegionFileSystem regionFs = new HRegionFileSystem(conf, new HFileSystem(fs), tableDir, hri);
+    return regionFs;
+  }
 
   @Test
   public void testOnDiskRegionCreation() throws IOException {

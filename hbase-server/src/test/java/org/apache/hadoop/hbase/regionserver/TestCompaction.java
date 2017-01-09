@@ -187,9 +187,13 @@ public class TestCompaction {
       assertEquals(compactionThreshold, s.getStorefilesCount());
       assertTrue(s.getStorefilesSize() > 15*1000);
       // and no new store files persisted past compactStores()
+      // only one empty dir exists in temp dir
       FileStatus[] ls = r.getFilesystem().listStatus(r.getRegionFileSystem().getTempDir());
+      assertEquals(1, ls.length);
+      Path storeTempDir = new Path(r.getRegionFileSystem().getTempDir(), Bytes.toString(COLUMN_FAMILY));
+      assertTrue(r.getFilesystem().exists(storeTempDir));
+      ls = r.getFilesystem().listStatus(storeTempDir);
       assertEquals(0, ls.length);
-
     } finally {
       // don't mess up future tests
       r.writestate.writesEnabled = true;

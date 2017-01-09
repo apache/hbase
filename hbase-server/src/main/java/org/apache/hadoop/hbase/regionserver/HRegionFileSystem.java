@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 import com.google.common.collect.Lists;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
+
 /**
  * View to an on-disk Region.
  * Provides the set of methods necessary to interact with the on-disk region data.
@@ -175,6 +177,38 @@ public class HRegionFileSystem {
     if(!fs.exists(storeDir) && !createDir(storeDir))
       throw new IOException("Failed creating "+storeDir);
     return storeDir;
+  }
+
+  /**
+   * Set the directory of CF to the specified storage policy. <br>
+   * <i>"LAZY_PERSIST"</i>, <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>,
+   * <i>"COLD"</i> <br>
+   * <br>
+   * See {@link org.apache.hadoop.hdfs.protocol.HdfsConstants} for more details.
+   * @param familyName The name of column family.
+   * @param policyName The name of the storage policy.
+   */
+  public void setStoragePolicy(String familyName, String policyName) {
+    if (this.fs instanceof HFileSystem) {
+      Path storeDir = getStoreDir(familyName);
+      ((HFileSystem) this.fs).setStoragePolicy(storeDir, policyName);
+    }
+  }
+
+  /**
+   * Get the storage policy of the directory of CF.
+   * @param familyName The name of column family.
+   * @return Storage policy name, or {@code null} if not using {@link HFileSystem} or exception
+   *         thrown when trying to get policy
+   */
+  @Nullable
+  public String getStoragePolicy(String familyName) {
+    if (this.fs instanceof HFileSystem) {
+      Path storeDir = getStoreDir(familyName);
+      return ((HFileSystem) this.fs).getStoragePolicy(storeDir);
+    }
+
+    return null;
   }
 
   /**

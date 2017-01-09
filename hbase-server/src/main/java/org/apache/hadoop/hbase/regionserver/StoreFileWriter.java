@@ -29,9 +29,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -466,6 +468,21 @@ public class StoreFileWriter implements CellSink, ShipperListener {
 
       if (!fs.exists(dir)) {
         fs.mkdirs(dir);
+      }
+
+      // set block storage policy for temp path
+      String policyName = this.conf.get(HColumnDescriptor.STORAGE_POLICY);
+      if (null == policyName) {
+        policyName = this.conf.get(HStore.BLOCK_STORAGE_POLICY_KEY);
+      }
+      if (null != policyName && !policyName.trim().isEmpty()) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("set block storage policy of [" + dir + "] to [" + policyName + "]");
+        }
+
+        if (this.fs instanceof HFileSystem) {
+          ((HFileSystem) this.fs).setStoragePolicy(dir, policyName.trim());
+        }
       }
 
       if (filePath == null) {

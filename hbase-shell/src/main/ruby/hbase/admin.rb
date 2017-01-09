@@ -854,6 +854,10 @@ module Hbase
             algorithm))
         end
       end
+      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::STORAGE_POLICY)
+          storage_policy = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::STORAGE_POLICY).upcase
+          family.setStoragePolicy(storage_policy)
+      end
 
       set_user_metadata(family, arg.delete(METADATA)) if arg[METADATA]
       set_descriptor_config(family, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
