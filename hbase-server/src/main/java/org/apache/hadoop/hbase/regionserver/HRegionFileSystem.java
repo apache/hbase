@@ -499,16 +499,18 @@ public class HRegionFileSystem {
       throws IOException {
     // Copy the file if it's on another filesystem
     FileSystem srcFs = srcPath.getFileSystem(conf);
+    srcPath = srcFs.resolvePath(srcPath);
+    FileSystem realSrcFs = srcPath.getFileSystem(conf);
     FileSystem desFs = fs instanceof HFileSystem ? ((HFileSystem)fs).getBackingFs() : fs;
 
     // We can't compare FileSystem instances as equals() includes UGI instance
     // as part of the comparison and won't work when doing SecureBulkLoad
     // TODO deal with viewFS
-    if (!FSHDFSUtils.isSameHdfs(conf, srcFs, desFs)) {
+    if (!FSHDFSUtils.isSameHdfs(conf, realSrcFs, desFs)) {
       LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
           "the destination store. Copying file over to destination filesystem.");
       Path tmpPath = createTempName();
-      FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, conf);
+      FileUtil.copy(realSrcFs, srcPath, fs, tmpPath, false, conf);
       LOG.info("Copied " + srcPath + " to temporary path on destination filesystem: " + tmpPath);
       srcPath = tmpPath;
     }
