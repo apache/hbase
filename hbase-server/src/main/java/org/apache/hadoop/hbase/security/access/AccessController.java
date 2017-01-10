@@ -2733,4 +2733,10 @@ public class AccessController extends BaseMasterAndRegionObserver
       ReplicationPeerConfig peerConfig) throws IOException {
     requirePermission(getActiveUser(ctx), "updateReplicationPeerConfig", Action.ADMIN);
   }
+
+  @Override
+  public void preListReplicationPeers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String regex) throws IOException {
+    requirePermission(getActiveUser(ctx), "listReplicationPeers", Action.ADMIN);
+  }
 }

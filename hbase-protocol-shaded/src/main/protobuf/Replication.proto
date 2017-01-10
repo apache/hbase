@@ -58,6 +58,15 @@ message ReplicationState {
 }
 
 /**
+ * Used by replication. Description of the replication peer.
+ */
+message ReplicationPeerDescription {
+  required string id = 1;
+  required ReplicationState state = 2;
+  required ReplicationPeer config = 3;
+}
+
+/**
  * Used by replication. Holds the current position in an WAL file.
  */
 message ReplicationHLogPosition {
@@ -108,4 +117,12 @@ message UpdateReplicationPeerConfigRequest {
 }
 
 message UpdateReplicationPeerConfigResponse {
+}
+
+message ListReplicationPeersRequest {
+  optional string regex = 1;
+}
+
+message ListReplicationPeersResponse {
+  repeated ReplicationPeerDescription peer_desc = 1;
 }

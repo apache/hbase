@@ -893,6 +893,10 @@ service MasterService {
   rpc UpdateReplicationPeerConfig(UpdateReplicationPeerConfigRequest)
     returns(UpdateReplicationPeerConfigResponse);
 
+  /** Returns a list of replication peers */
+  rpc ListReplicationPeers(ListReplicationPeersRequest)
+    returns(ListReplicationPeersResponse);
+
   /** Returns a list of ServerNames marked as draining. */
   rpc listDrainingRegionServers(ListDrainingRegionServersRequest)
     returns(ListDrainingRegionServersResponse);

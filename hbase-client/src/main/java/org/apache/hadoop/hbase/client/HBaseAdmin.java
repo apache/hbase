@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
@@ -172,6 +173,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
@@ -3828,6 +3830,35 @@ public class HBaseAdmin implements Admin {
         master.updateReplicationPeerConfig(getRpcController(),
           RequestConverter.buildUpdateReplicationPeerConfigRequest(peerId, peerConfig));
         return null;
+      }
+    });
+  }
+
+  @Override
+  public List<ReplicationPeerDescription> listReplicationPeers() throws IOException {
+    return listReplicationPeers((Pattern)null);
+  }
+
+  @Override
+  public List<ReplicationPeerDescription> listReplicationPeers(String regex) throws IOException {
+    return listReplicationPeers(Pattern.compile(regex));
+  }
+
+  @Override
+  public List<ReplicationPeerDescription> listReplicationPeers(Pattern pattern)
+      throws IOException {
+    return executeCallable(new MasterCallable<List<ReplicationPeerDescription>>(getConnection(),
+        getRpcControllerFactory()) {
+      @Override
+      protected List<ReplicationPeerDescription> rpcCall() throws Exception {
+        List<ReplicationProtos.ReplicationPeerDescription> peersList = master.listReplicationPeers(
+          getRpcController(), RequestConverter.buildListReplicationPeersRequest(pattern))
+            .getPeerDescList();
+        List<ReplicationPeerDescription> result = new ArrayList<>(peersList.size());
+        for (ReplicationProtos.ReplicationPeerDescription peer : peersList) {
+          result.add(ReplicationSerDeHelper.toReplicationPeerDescription(peer));
+        }
+        return result;
       }
     });
   }

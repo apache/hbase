@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 
@@ -293,7 +294,7 @@ public final class ReplicationSerDeHelper {
     return peerConfig;
   }
 
-  public static ReplicationProtos.ReplicationPeer convert(ReplicationPeerConfig  peerConfig) {
+  public static ReplicationProtos.ReplicationPeer convert(ReplicationPeerConfig peerConfig) {
     ReplicationProtos.ReplicationPeer.Builder builder = ReplicationProtos.ReplicationPeer.newBuilder();
     if (peerConfig.getClusterKey() != null) {
       builder.setClusterkey(peerConfig.getClusterKey());
@@ -342,5 +343,27 @@ public final class ReplicationSerDeHelper {
   public static byte[] toByteArray(final ReplicationPeerConfig peerConfig) {
     byte[] bytes = convert(peerConfig).toByteArray();
     return ProtobufUtil.prependPBMagic(bytes);
+  }
+
+  public static ReplicationPeerDescription toReplicationPeerDescription(
+      ReplicationProtos.ReplicationPeerDescription desc) {
+    boolean enabled = ReplicationProtos.ReplicationState.State.ENABLED == desc.getState()
+        .getState();
+    ReplicationPeerConfig config = convert(desc.getConfig());
+    return new ReplicationPeerDescription(desc.getId(), enabled, config);
+  }
+
+  public static ReplicationProtos.ReplicationPeerDescription toProtoReplicationPeerDescription(
+      ReplicationPeerDescription desc) {
+    ReplicationProtos.ReplicationPeerDescription.Builder builder = ReplicationProtos.ReplicationPeerDescription
+        .newBuilder();
+    builder.setId(desc.getPeerId());
+    ReplicationProtos.ReplicationState.Builder stateBuilder = ReplicationProtos.ReplicationState
+        .newBuilder();
+    stateBuilder.setState(desc.isEnabled() ? ReplicationProtos.ReplicationState.State.ENABLED
+        : ReplicationProtos.ReplicationState.State.DISABLED);
+    builder.setState(stateBuilder.build());
+    builder.setConfig(convert(desc.getPeerConfig()));
+    return builder.build();
   }
 }

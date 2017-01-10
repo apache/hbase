@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
@@ -1877,6 +1879,35 @@ public interface Admin extends Abortable, Closeable {
    */
   default void updateReplicationPeerConfig(final String peerId,
       final ReplicationPeerConfig peerConfig) throws IOException {
+  }
+
+  /**
+   * Return a list of replication peers.
+   * @return a list of replication peers description
+   * @throws IOException
+   */
+  default List<ReplicationPeerDescription> listReplicationPeers() throws IOException {
+    return new ArrayList<>();
+  }
+
+  /**
+   * Return a list of replication peers.
+   * @param regex The regular expression to match peer id
+   * @return a list of replication peers description
+   * @throws IOException
+   */
+  default List<ReplicationPeerDescription> listReplicationPeers(String regex) throws IOException {
+    return new ArrayList<>();
+  }
+
+  /**
+   * Return a list of replication peers.
+   * @param pattern The compiled regular expression to match peer id
+   * @return a list of replication peers description
+   * @throws IOException
+   */
+  default List<ReplicationPeerDescription> listReplicationPeers(Pattern pattern) throws IOException {
+    return new ArrayList<>();
   }
 
   /**

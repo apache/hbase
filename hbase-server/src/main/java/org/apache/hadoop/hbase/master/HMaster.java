@@ -142,6 +142,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.replication.master.TableCFsUpdater;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -3222,6 +3223,21 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (cpHost != null) {
       cpHost.postUpdateReplicationPeerConfig(peerId, peerConfig);
     }
+  }
+
+  @Override
+  public List<ReplicationPeerDescription> listReplicationPeers(String regex)
+      throws ReplicationException, IOException {
+    if (cpHost != null) {
+      cpHost.preListReplicationPeers(regex);
+    }
+    LOG.info(getClientIdAuditPrefix() + " list replication peers, regex=" + regex);
+    Pattern pattern = regex == null ? null : Pattern.compile(regex);
+    List<ReplicationPeerDescription> peers = this.replicationManager.listReplicationPeers(pattern);
+    if (cpHost != null) {
+      cpHost.postListReplicationPeers(regex);
+    }
+    return peers;
   }
 
   @Override

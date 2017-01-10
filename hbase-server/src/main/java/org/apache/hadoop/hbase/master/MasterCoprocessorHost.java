@@ -1769,4 +1769,24 @@ public class MasterCoprocessorHost
       }
     });
   }
+
+  public void preListReplicationPeers(final String regex) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preListReplicationPeers(ctx, regex);
+      }
+    });
+  }
+
+  public void postListReplicationPeers(final String regex) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postListReplicationPeers(ctx, regex);
+      }
+    });
+  }
 }

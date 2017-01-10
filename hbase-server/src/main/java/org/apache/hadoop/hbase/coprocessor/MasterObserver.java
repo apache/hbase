@@ -1951,4 +1951,24 @@ public interface MasterObserver extends Coprocessor {
       final ObserverContext<MasterCoprocessorEnvironment> ctx, String peerId,
       ReplicationPeerConfig peerConfig) throws IOException {
   }
+
+  /**
+   * Called before list replication peers.
+   * @param ctx
+   * @param regex The regular expression to match peer id
+   * @throws IOException on failure
+   */
+  default void preListReplicationPeers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String regex) throws IOException {
+  }
+
+  /**
+   * Called after list replication peers.
+   * @param ctx
+   * @param regex The regular expression to match peer id
+   * @throws IOException on failure
+   */
+  default void postListReplicationPeers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String regex) throws IOException {
+  }
 }

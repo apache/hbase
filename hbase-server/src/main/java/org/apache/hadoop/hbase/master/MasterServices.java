@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 
 import com.google.protobuf.Service;
 
@@ -460,6 +461,14 @@ public interface MasterServices extends Server {
    */
   void updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
       throws ReplicationException, IOException;
+
+  /**
+   * Return a list of replication peers.
+   * @param regex The regular expression to match peer id
+   * @return a list of replication peers description
+   */
+  List<ReplicationPeerDescription> listReplicationPeers(String regex) throws ReplicationException,
+      IOException;
 
   /**
    * Mark a region server as draining to prevent additional regions from getting assigned to it.

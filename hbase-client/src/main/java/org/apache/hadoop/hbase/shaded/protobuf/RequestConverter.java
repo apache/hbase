@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1611,6 +1612,14 @@ public final class RequestConverter {
         .newBuilder();
     builder.setPeerId(peerId);
     builder.setPeerConfig(ReplicationSerDeHelper.convert(peerConfig));
+    return builder.build();
+  }
+
+  public static ListReplicationPeersRequest buildListReplicationPeersRequest(Pattern pattern) {
+    ListReplicationPeersRequest.Builder builder = ListReplicationPeersRequest.newBuilder();
+    if (pattern != null) {
+      builder.setRegex(pattern.toString());
+    }
     return builder.build();
   }
 }

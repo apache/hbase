@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationPeerZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
@@ -238,13 +241,19 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Get the number of slave clusters the local cluster has.
    * @return number of slave clusters
+   * @throws IOException
    */
-  public int getPeersCount() {
-    return this.replicationPeers.getAllPeerIds().size();
+  public int getPeersCount() throws IOException {
+    return this.admin.listReplicationPeers().size();
   }
 
-  public Map<String, ReplicationPeerConfig> listPeerConfigs() {
-    return this.replicationPeers.getAllPeerConfigs();
+  public Map<String, ReplicationPeerConfig> listPeerConfigs() throws IOException {
+    List<ReplicationPeerDescription> peers = this.admin.listReplicationPeers();
+    Map<String, ReplicationPeerConfig> result = new TreeMap<String, ReplicationPeerConfig>();
+    for (ReplicationPeerDescription peer : peers) {
+      result.put(peer.getPeerId(), peer.getPeerConfig());
+    }
+    return result;
   }
 
   public ReplicationPeerConfig getPeerConfig(String id) throws IOException {
@@ -402,8 +411,12 @@ public class ReplicationAdmin implements Closeable {
    * an IllegalArgumentException is thrown if it doesn't exist
    * @return true if replication is enabled to that peer, false if it isn't
    */
-  public boolean getPeerState(String id) throws ReplicationException {
-    return this.replicationPeers.getStatusOfPeerFromBackingStore(id);
+  public boolean getPeerState(String id) throws ReplicationException, IOException {
+    List<ReplicationPeerDescription> peers = admin.listReplicationPeers(id);
+    if (peers.isEmpty() || !id.equals(peers.get(0).getPeerId())) {
+      throw new ReplicationPeerNotFoundException(id);
+    }
+    return peers.get(0).isEnabled();
   }
 
   @Override
@@ -577,7 +590,7 @@ public class ReplicationAdmin implements Closeable {
   }
 
   @VisibleForTesting
-  List<ReplicationPeer> listReplicationPeers() {
+  List<ReplicationPeer> listReplicationPeers() throws IOException {
     Map<String, ReplicationPeerConfig> peers = listPeerConfigs();
     if (peers == null || peers.size() <= 0) {
       return null;

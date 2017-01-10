@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -207,7 +208,7 @@ public class TestReplicationAdmin {
     assertFalse(admin.getPeerState(ID_ONE));
     try {
       admin.getPeerState(ID_SECOND);
-    } catch (IllegalArgumentException iae) {
+    } catch (ReplicationPeerNotFoundException e) {
       // OK!
     }
     admin.removePeer(ID_ONE);

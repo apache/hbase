@@ -95,6 +95,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
@@ -102,6 +104,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Updat
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
@@ -1725,6 +1728,22 @@ public class MasterRpcServices extends RSRpcServices
     } catch (ReplicationException | IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public ListReplicationPeersResponse listReplicationPeers(RpcController controller,
+      ListReplicationPeersRequest request) throws ServiceException {
+    ListReplicationPeersResponse.Builder response = ListReplicationPeersResponse.newBuilder();
+    try {
+      List<ReplicationPeerDescription> peers = master
+          .listReplicationPeers(request.hasRegex() ? request.getRegex() : null);
+      for (ReplicationPeerDescription peer : peers) {
+        response.addPeerDesc(ReplicationSerDeHelper.toProtoReplicationPeerDescription(peer));
+      }
+    } catch (ReplicationException | IOException e) {
+      throw new ServiceException(e);
+    }
+    return response.build();
   }
 
   @Override

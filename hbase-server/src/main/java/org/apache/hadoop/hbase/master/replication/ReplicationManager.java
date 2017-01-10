@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -30,6 +33,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientArguments;
@@ -98,6 +102,20 @@ public class ReplicationManager {
     checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
       peerConfig.getTableCFsMap());
     this.replicationPeers.updatePeerConfig(peerId, peerConfig);
+  }
+
+  public List<ReplicationPeerDescription> listReplicationPeers(Pattern pattern)
+      throws ReplicationException {
+    List<ReplicationPeerDescription> peers = new ArrayList<>();
+    List<String> peerIds = replicationPeers.getAllPeerIds();
+    for (String peerId : peerIds) {
+      if (pattern == null || (pattern != null && pattern.matcher(peerId).matches())) {
+        peers.add(new ReplicationPeerDescription(peerId, replicationPeers
+            .getStatusOfPeerFromBackingStore(peerId), replicationPeers
+            .getReplicationPeerConfig(peerId)));
+      }
+    }
+    return peers;
   }
 
   /**
