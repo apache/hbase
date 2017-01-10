@@ -1947,6 +1947,7 @@ public class HConnectionManager {
       @Override
       public void stop(String why) {
         stoppable.stop(why);
+        triggerNow();
       }
 
       @Override
