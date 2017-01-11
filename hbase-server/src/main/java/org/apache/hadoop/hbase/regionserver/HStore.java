@@ -117,6 +117,8 @@ public class HStore implements Store {
       "hbase.server.compactchecker.interval.multiplier";
   public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
   public static final String BLOCK_STORAGE_POLICY_KEY = "hbase.hstore.block.storage.policy";
+  // keep in accordance with HDFS default storage policy
+  public static final String DEFAULT_BLOCK_STORAGE_POLICY = "HOT";
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
 
@@ -231,7 +233,7 @@ public class HStore implements Store {
     // set block storage policy for store directory
     String policyName = family.getStoragePolicy();
     if (null == policyName) {
-      policyName = this.conf.get(BLOCK_STORAGE_POLICY_KEY);
+      policyName = this.conf.get(BLOCK_STORAGE_POLICY_KEY, DEFAULT_BLOCK_STORAGE_POLICY);
     }
     if (null != policyName && !policyName.trim().isEmpty()) {
       if (LOG.isTraceEnabled()) {

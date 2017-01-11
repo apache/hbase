@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.util.BloomContext;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.RowBloomContext;
 import org.apache.hadoop.hbase.util.RowColBloomContext;
 import org.apache.hadoop.io.WritableUtils;
@@ -480,8 +481,10 @@ public class StoreFileWriter implements CellSink, ShipperListener {
           LOG.trace("set block storage policy of [" + dir + "] to [" + policyName + "]");
         }
 
-        if (this.fs instanceof HFileSystem) {
-          ((HFileSystem) this.fs).setStoragePolicy(dir, policyName.trim());
+        try {
+          ReflectionUtils.invokeMethod(this.fs, "setStoragePolicy", dir, policyName.trim());
+        } catch (Exception e) {
+          LOG.warn("Failed to set storage policy of [" + dir + "] to [" + policyName + "]", e);
         }
       }
 

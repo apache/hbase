@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -91,6 +92,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -1312,13 +1314,13 @@ public class TestHFileOutputFormat2  {
       fs.mkdirs(cf1Dir);
       fs.mkdirs(cf2Dir);
 
-      // the original block storage policy would be NULL
+      // the original block storage policy would be HOT
       String spA = getStoragePolicyName(fs, cf1Dir);
       String spB = getStoragePolicyName(fs, cf2Dir);
       LOG.debug("Storage policy of cf 0: [" + spA + "].");
       LOG.debug("Storage policy of cf 1: [" + spB + "].");
-      assertNull(spA);
-      assertNull(spB);
+      assertEquals("HOT", spA);
+      assertEquals("HOT", spB);
 
       // alter table cf schema to change storage policies
       HFileOutputFormat2.configureStoragePolicy(conf, fs, FAMILIES[0], cf1Dir);
@@ -1340,12 +1342,27 @@ public class TestHFileOutputFormat2  {
 
   private String getStoragePolicyName(FileSystem fs, Path path) {
     try {
+      Object blockStoragePolicySpi = ReflectionUtils.invokeMethod(fs, "getStoragePolicy", path);
+      return (String) ReflectionUtils.invokeMethod(blockStoragePolicySpi, "getName");
+    } catch (Exception e) {
+      // Maybe fail because of using old HDFS version, try the old way
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Failed to get policy directly", e);
+      }
+      String policy = getStoragePolicyNameForOldHDFSVersion(fs, path);
+      return policy == null ? "HOT" : policy;// HOT by default
+    }
+  }
+
+  private String getStoragePolicyNameForOldHDFSVersion(FileSystem fs, Path path) {
+    try {
       if (fs instanceof DistributedFileSystem) {
         DistributedFileSystem dfs = (DistributedFileSystem) fs;
         HdfsFileStatus status = dfs.getClient().getFileInfo(path.toUri().getPath());
         if (null != status) {
           byte storagePolicyId = status.getStoragePolicy();
-          if (storagePolicyId != BlockStoragePolicySuite.ID_UNSPECIFIED) {
+          Field idUnspecified = BlockStoragePolicySuite.class.getField("ID_UNSPECIFIED");
+          if (storagePolicyId != idUnspecified.getByte(BlockStoragePolicySuite.class)) {
             BlockStoragePolicy[] policies = dfs.getStoragePolicies();
             for (BlockStoragePolicy policy : policies) {
               if (policy.getId() == storagePolicyId) {

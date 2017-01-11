@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 import com.google.common.collect.Lists;
@@ -189,9 +192,11 @@ public class HRegionFileSystem {
    * @param policyName The name of the storage policy.
    */
   public void setStoragePolicy(String familyName, String policyName) {
-    if (this.fs instanceof HFileSystem) {
-      Path storeDir = getStoreDir(familyName);
-      ((HFileSystem) this.fs).setStoragePolicy(storeDir, policyName);
+    Path storeDir = getStoreDir(familyName);
+    try {
+      ReflectionUtils.invokeMethod(this.fs, "setStoragePolicy", storeDir, policyName);
+    } catch (Exception e) {
+      LOG.warn("Failed to set storage policy of [" + storeDir + "] to [" + policyName + "]", e);
     }
   }
 
@@ -202,10 +207,10 @@ public class HRegionFileSystem {
    *         thrown when trying to get policy
    */
   @Nullable
-  public String getStoragePolicy(String familyName) {
+  public String getStoragePolicyName(String familyName) {
     if (this.fs instanceof HFileSystem) {
       Path storeDir = getStoreDir(familyName);
-      return ((HFileSystem) this.fs).getStoragePolicy(storeDir);
+      return ((HFileSystem) this.fs).getStoragePolicyName(storeDir);
     }
 
     return null;

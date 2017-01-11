@@ -73,28 +73,28 @@ public class TestHRegionFileSystem {
     HTable table = (HTable) TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
     assertEquals("Should start with empty table", 0, TEST_UTIL.countRows(table));
     HRegionFileSystem regionFs = getHRegionFS(table, conf);
-    // the original block storage policy would be NULL
-    String spA = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[0]));
-    String spB = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[1]));
+    // the original block storage policy would be HOT
+    String spA = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[0]));
+    String spB = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[1]));
     LOG.debug("Storage policy of cf 0: [" + spA + "].");
     LOG.debug("Storage policy of cf 1: [" + spB + "].");
-    assertNull(spA);
-    assertNull(spB);
+    assertEquals("HOT", spA);
+    assertEquals("HOT", spB);
 
     // Recreate table and make sure storage policy could be set through configuration
     TEST_UTIL.shutdownMiniCluster();
-    TEST_UTIL.getConfiguration().set(HStore.BLOCK_STORAGE_POLICY_KEY, "HOT");
+    TEST_UTIL.getConfiguration().set(HStore.BLOCK_STORAGE_POLICY_KEY, "WARM");
     TEST_UTIL.startMiniCluster();
     table = (HTable) TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
     regionFs = getHRegionFS(table, conf);
 
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
-      spA = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[0]));
-      spB = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[1]));
+      spA = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[0]));
+      spB = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[1]));
       LOG.debug("Storage policy of cf 0: [" + spA + "].");
       LOG.debug("Storage policy of cf 1: [" + spB + "].");
-      assertEquals("HOT", spA);
-      assertEquals("HOT", spB);
+      assertEquals("WARM", spA);
+      assertEquals("WARM", spB);
 
       // alter table cf schema to change storage policies
       // and make sure it could override settings in conf
@@ -116,8 +116,8 @@ public class TestHRegionFileSystem {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }
-      spA = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[0]));
-      spB = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[1]));
+      spA = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[0]));
+      spB = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[1]));
       LOG.debug("Storage policy of cf 0: [" + spA + "].");
       LOG.debug("Storage policy of cf 1: [" + spB + "].");
       assertNotNull(spA);
@@ -145,17 +145,17 @@ public class TestHRegionFileSystem {
       assertNull(tempFiles);
       // storage policy of cf temp dir and 3 store files should be ONE_SSD
       assertEquals("ONE_SSD",
-        ((HFileSystem) regionFs.getFileSystem()).getStoragePolicy(storeTempDir));
+        ((HFileSystem) regionFs.getFileSystem()).getStoragePolicyName(storeTempDir));
       for (FileStatus status : storeFiles) {
         assertEquals("ONE_SSD",
-          ((HFileSystem) regionFs.getFileSystem()).getStoragePolicy(status.getPath()));
+          ((HFileSystem) regionFs.getFileSystem()).getStoragePolicyName(status.getPath()));
       }
 
       // change storage policies by calling raw api directly
       regionFs.setStoragePolicy(Bytes.toString(FAMILIES[0]), "ALL_SSD");
       regionFs.setStoragePolicy(Bytes.toString(FAMILIES[1]), "ONE_SSD");
-      spA = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[0]));
-      spB = regionFs.getStoragePolicy(Bytes.toString(FAMILIES[1]));
+      spA = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[0]));
+      spB = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[1]));
       LOG.debug("Storage policy of cf 0: [" + spA + "].");
       LOG.debug("Storage policy of cf 1: [" + spB + "].");
       assertNotNull(spA);
