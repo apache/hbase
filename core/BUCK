@@ -33,6 +33,8 @@ cxx_library(
         "hbase_configuration_loader.h",
         "scan.h",
         "result.h",
+        "request_converter.h",
+        "response_converter.h",
     ],
     srcs=[
         "cell.cc",
@@ -45,6 +47,8 @@ cxx_library(
         "hbase_configuration_loader.cc",
         "scan.cc",
         "result.cc",
+        "request_converter.cc",
+        "response_converter.cc",
     ],
     deps=[
         "//connection:connection",
@@ -93,6 +97,15 @@ cxx_test(
     name="result-test",
     srcs=["result-test.cc",],
     deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="request_converter-test",
+    srcs=["request_converter-test.cc",],
+    deps=[
+        ":core",
+        "//connection:connection",
+        "//if:if",
+    ],
     run_test_separately=True,)
 cxx_binary(
     name="simple-client",
