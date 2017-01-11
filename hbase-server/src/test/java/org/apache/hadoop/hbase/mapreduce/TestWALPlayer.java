@@ -30,6 +30,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer.WALKeyValueMapper;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
@@ -67,16 +69,28 @@ import org.mockito.stubbing.Answer;
 public class TestWALPlayer {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
+  private static Path rootDir;
+  private static Path walRootDir;
+  private static FileSystem fs;
+  private static FileSystem walFs;
+  private static Configuration conf;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
     TEST_UTIL.setJobWithoutMRCluster();
+    conf= TEST_UTIL.getConfiguration();
+    rootDir = TEST_UTIL.createRootDir();
+    walRootDir = TEST_UTIL.createWALRootDir();
+    fs = FSUtils.getRootDirFileSystem(conf);
+    walFs = FSUtils.getWALFileSystem(conf);
     cluster = TEST_UTIL.startMiniCluster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+    fs.delete(rootDir, true);
+    walFs.delete(walRootDir, true);
   }
 
   /**
@@ -108,7 +122,7 @@ public class TestWALPlayer {
     WAL log = cluster.getRegionServer(0).getWAL(null);
     log.rollWriter();
     String walInputDir = new Path(cluster.getMaster().getMasterFileSystem()
-        .getRootDir(), HConstants.HREGION_LOGDIR_NAME).toString();
+        .getWALRootDir(), HConstants.HREGION_LOGDIR_NAME).toString();
 
     Configuration configuration= TEST_UTIL.getConfiguration();
     WALPlayer player = new WALPlayer(configuration);

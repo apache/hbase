@@ -118,6 +118,7 @@ public class TestWALSplit {
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private Path HBASEDIR;
+  private Path HBASELOGDIR;
   private Path WALDIR;
   private Path OLDLOGDIR;
   private Path CORRUPTDIR;
@@ -180,8 +181,9 @@ public class TestWALSplit {
     LOG.info("Cleaning up cluster for new test.");
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
     HBASEDIR = TEST_UTIL.createRootDir();
-    OLDLOGDIR = new Path(HBASEDIR, HConstants.HREGION_OLDLOGDIR_NAME);
-    CORRUPTDIR = new Path(HBASEDIR, HConstants.CORRUPT_DIR_NAME);
+    HBASELOGDIR = TEST_UTIL.createWALRootDir();
+    OLDLOGDIR = new Path(HBASELOGDIR, HConstants.HREGION_OLDLOGDIR_NAME);
+    CORRUPTDIR = new Path(HBASELOGDIR, HConstants.CORRUPT_DIR_NAME);
     TABLEDIR = FSUtils.getTableDir(HBASEDIR, TABLE_NAME);
     REGIONS.clear();
     Collections.addAll(REGIONS, "bbb", "ccc");
@@ -189,7 +191,7 @@ public class TestWALSplit {
     this.mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     wals = new WALFactory(conf, null, name.getMethodName());
-    WALDIR = new Path(HBASEDIR, DefaultWALProvider.getWALDirectoryName(name.getMethodName()));
+    WALDIR = new Path(HBASELOGDIR, DefaultWALProvider.getWALDirectoryName(name.getMethodName()));
     //fs.mkdirs(WALDIR);
   }
 
@@ -205,6 +207,7 @@ public class TestWALSplit {
     } finally {
       wals = null;
       fs.delete(HBASEDIR, true);
+      fs.delete(HBASELOGDIR, true);
     }
   }
 
@@ -1111,7 +1114,7 @@ public class TestWALSplit {
     useDifferentDFSClient();
     WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
 
-    final Path corruptDir = new Path(FSUtils.getRootDir(conf), HConstants.CORRUPT_DIR_NAME);
+    final Path corruptDir = new Path(FSUtils.getWALRootDir(conf), HConstants.CORRUPT_DIR_NAME);
     assertEquals(1, fs.listStatus(corruptDir).length);
   }
 

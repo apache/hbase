@@ -66,6 +66,8 @@ public class TestDefaultWALProvider {
 
   protected static Configuration conf;
   protected static FileSystem fs;
+  protected static FileSystem walFs;
+  protected static Path walRootDir;
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected MultiVersionConcurrencyControl mvcc;
 
@@ -79,6 +81,7 @@ public class TestDefaultWALProvider {
     for (FileStatus dir : entries) {
       fs.delete(dir.getPath(), true);
     }
+    walFs.delete(walRootDir, true);
   }
 
   @After
@@ -104,13 +107,15 @@ public class TestDefaultWALProvider {
     TEST_UTIL.startMiniDFSCluster(3);
 
     // Set up a working space for our tests.
-    TEST_UTIL.createRootDir();
+    walRootDir = TEST_UTIL.createWALRootDir();
     conf = TEST_UTIL.getConfiguration();
-    fs = TEST_UTIL.getDFSCluster().getFileSystem();
+    fs = FSUtils.getRootDirFileSystem(conf);
+    walFs = FSUtils.getWALFileSystem(conf);
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    walFs.delete(walRootDir, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -121,13 +126,12 @@ public class TestDefaultWALProvider {
   @Test
   public void testGetServerNameFromWALDirectoryName() throws IOException {
     ServerName sn = ServerName.valueOf("hn", 450, 1398);
-    String hl = FSUtils.getRootDir(conf) + "/" +
+    String hl = walRootDir + "/" +
         DefaultWALProvider.getWALDirectoryName(sn.toString());
 
     // Must not throw exception
     assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, null));
-    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
-        FSUtils.getRootDir(conf).toUri().toString()));
+    assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, walRootDir.toUri().toString()));
     assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, ""));
     assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, "                  "));
     assertNull(DefaultWALProvider.getServerNameFromWALDirectoryName(conf, hl));
@@ -136,7 +140,7 @@ public class TestDefaultWALProvider {
 
     final String wals = "/WALs/";
     ServerName parsed = DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
-      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
+      walRootDir.toUri().toString() + wals + sn +
       "/localhost%2C32984%2C1343316388997.1343316390417");
     assertEquals("standard",  sn, parsed);
 
@@ -144,7 +148,7 @@ public class TestDefaultWALProvider {
     assertEquals("subdir", sn, parsed);
 
     parsed = DefaultWALProvider.getServerNameFromWALDirectoryName(conf,
-      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
+      walRootDir.toUri().toString() + wals + sn +
       "-splitting/localhost%3A57020.1340474893931");
     assertEquals("split", sn, parsed);
   }

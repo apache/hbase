@@ -266,7 +266,7 @@ public class SplitLogManager {
       // recover-lease is done. totalSize will be under in most cases and the
       // metrics that it drives will also be under-reported.
       totalSize += lf.getLen();
-      String pathToLog = FSUtils.removeRootPath(lf.getPath(), conf);
+      String pathToLog = FSUtils.removeWALRootPath(lf.getPath(), conf);
       if (!enqueueSplitTask(pathToLog, batch)) {
         throw new IOException("duplicate log split scheduled for " + lf.getPath());
       }
