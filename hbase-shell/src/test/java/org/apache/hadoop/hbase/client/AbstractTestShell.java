@@ -39,6 +39,7 @@ public abstract class AbstractTestShell {
     // Start mini cluster
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.quota.enabled", true);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);

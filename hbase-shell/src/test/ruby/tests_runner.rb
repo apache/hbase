@@ -36,6 +36,7 @@ unless defined?($TEST_CLUSTER)
   $TEST_CLUSTER = HBaseTestingUtility.new
   $TEST_CLUSTER.configuration.setInt("hbase.regionserver.msginterval", 100)
   $TEST_CLUSTER.configuration.setInt("hbase.client.pause", 250)
+  $TEST_CLUSTER.configuration.set("hbase.quota.enabled", "true")
   $TEST_CLUSTER.configuration.setInt(org.apache.hadoop.hbase.HConstants::HBASE_CLIENT_RETRIES_NUMBER, 6)
   $TEST_CLUSTER.startMiniCluster
   @own_cluster = true

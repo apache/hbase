@@ -24,14 +24,22 @@ java_import org.apache.hadoop.hbase.quotas.ThrottleType
 java_import org.apache.hadoop.hbase.quotas.QuotaFilter
 java_import org.apache.hadoop.hbase.quotas.QuotaRetriever
 java_import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory
+java_import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy
 
 module HBaseQuotasConstants
+  # RPC Quota constants
   GLOBAL_BYPASS = 'GLOBAL_BYPASS'
   THROTTLE_TYPE = 'THROTTLE_TYPE'
   THROTTLE = 'THROTTLE'
   REQUEST = 'REQUEST'
   WRITE = 'WRITE'
   READ = 'READ'
+  # Space quota constants
+  SPACE = 'SPACE'
+  NO_INSERTS = 'NO_INSERTS'
+  NO_WRITES = 'NO_WRITES'
+  NO_WRITES_COMPACTIONS = 'NO_WRITES_COMPACTIONS'
+  DISABLE = 'DISABLE'
 end
 
 module Hbase
@@ -107,6 +115,54 @@ module Hbase
       @admin.setQuota(settings)
     end
 
+    def limit_space(args)
+      raise(ArgumentError, 'Argument should be a Hash') unless (not args.nil? and args.kind_of?(Hash))
+      # Let the user provide a raw number
+      if args[LIMIT].is_a?(Numeric)
+        limit = args[LIMIT]
+      else
+        # Parse a string a 1K, 2G, etc.
+        limit = _parse_size(args[LIMIT])
+      end
+      # Extract the policy, failing if something bogus was provided
+      policy = SpaceViolationPolicy.valueOf(args[POLICY])
+      # Create a table or namespace quota
+      if args.key?(TABLE)
+        if args.key?(NAMESPACE)
+          raise(ArgumentError, "Only one of TABLE or NAMESPACE can be specified.")
+        end
+        settings = QuotaSettingsFactory.limitTableSpace(TableName.valueOf(args.delete(TABLE)), limit, policy)
+      elsif args.key?(NAMESPACE)
+        if args.key?(TABLE)
+          raise(ArgumentError, "Only one of TABLE or NAMESPACE can be specified.")
+        end
+        settings = QuotaSettingsFactory.limitNamespaceSpace(args.delete(NAMESPACE), limit, policy)
+      else
+        raise(ArgumentError, 'One of TABLE or NAMESPACE must be specified.')
+      end
+      # Apply the quota
+      @admin.setQuota(settings)
+    end
+
+    def remove_space_limit(args)
+      raise(ArgumentError, 'Argument should be a Hash') unless (not args.nil? and args.kind_of?(Hash))
+      if args.key?(TABLE)
+        if args.key?(NAMESPACE)
+          raise(ArgumentError, "Only one of TABLE or NAMESPACE can be specified.")
+        end
+        table = TableName.valueOf(args.delete(TABLE))
+        settings = QuotaSettingsFactory.removeTableSpaceLimit(table)
+      elsif args.key?(NAMESPACE)
+        if args.key?(TABLE)
+          raise(ArgumentError, "Only one of TABLE or NAMESPACE can be specified.")
+        end
+        settings = QuotaSettingsFactory.removeNamespaceSpaceLimit(args.delete(NAMESPACE))
+      else
+        raise(ArgumentError, 'One of TABLE or NAMESPACE must be specified.')
+      end
+      @admin.setQuota(settings)
+    end
+
     def set_global_bypass(bypass, args)
       raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
 
@@ -171,7 +227,7 @@ module Hbase
           return _size_from_str(match[1].to_i, match[2])
         end
       else
-        raise "Invalid size limit syntax"
+        raise(ArgumentError, "Invalid size limit syntax")
       end
     end
 
@@ -188,7 +244,7 @@ module Hbase
         end
 
         if limit <= 0
-          raise "Invalid throttle limit, must be greater then 0"
+          raise(ArgumentError, "Invalid throttle limit, must be greater then 0")
         end
 
         case match[3]
@@ -200,7 +256,7 @@ module Hbase
 
         return type, limit, time_unit
       else
-        raise "Invalid throttle limit syntax"
+        raise(ArgumentError, "Invalid throttle limit syntax")
       end
     end
 

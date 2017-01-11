@@ -86,6 +86,7 @@ module HBaseConstants
   RESTORE_ACL = 'RESTORE_ACL'
   FORMATTER = 'FORMATTER'
   FORMATTER_CLASS = 'FORMATTER_CLASS'
+  POLICY = 'POLICY'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
