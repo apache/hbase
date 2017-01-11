@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.mapreduce.WALInputFormat.WALKeyRecordReader;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat.WALRecordReader;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -65,6 +65,8 @@ public class TestWALRecordReader {
   private static Configuration conf;
   private static FileSystem fs;
   private static Path hbaseDir;
+  private static FileSystem walFs;
+  private static Path walRootDir;
   // visible for TestHLogRecordReader
   static final TableName tableName = TableName.valueOf(getName());
   private static final byte [] rowName = tableName.getName();
@@ -83,12 +85,9 @@ public class TestWALRecordReader {
 
   @Before
   public void setUp() throws Exception {
+    fs.delete(hbaseDir, true);
+    walFs.delete(walRootDir, true);
     mvcc = new MultiVersionConcurrencyControl();
-    FileStatus[] entries = fs.listStatus(hbaseDir);
-    for (FileStatus dir : entries) {
-      fs.delete(dir.getPath(), true);
-    }
-
   }
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -102,8 +101,10 @@ public class TestWALRecordReader {
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
 
     hbaseDir = TEST_UTIL.createRootDir();
-    
-    logDir = new Path(hbaseDir, HConstants.HREGION_LOGDIR_NAME);
+
+    walRootDir = TEST_UTIL.createWALRootDir();
+    walFs = FSUtils.getWALFileSystem(conf);
+    logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
 
     htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(family));
@@ -111,6 +112,8 @@ public class TestWALRecordReader {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    fs.delete(hbaseDir, true);
+    walFs.delete(walRootDir, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 

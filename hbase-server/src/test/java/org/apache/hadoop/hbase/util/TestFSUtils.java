@@ -39,8 +39,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -391,6 +392,54 @@ public class TestFSUtils {
   @Test
   public void testSetStoragePolicyInvalid() throws Exception {
     verifyFileInDirWithStoragePolicy("1772");
+  }
+
+  @Test
+  public void testSetWALRootDir() throws Exception {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    Configuration conf = htu.getConfiguration();
+    Path p = new Path("file:///hbase/root");
+    FSUtils.setWALRootDir(conf, p);
+    assertEquals(p.toString(), conf.get(HFileSystem.HBASE_WAL_DIR));
+  }
+
+  @Test
+  public void testGetWALRootDir() throws IOException {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    Configuration conf = htu.getConfiguration();
+    Path root = new Path("file:///hbase/root");
+    Path walRoot = new Path("file:///hbase/logroot");
+    FSUtils.setRootDir(conf, root);
+    assertEquals(FSUtils.getRootDir(conf), root);
+    assertEquals(FSUtils.getWALRootDir(conf), root);
+    FSUtils.setWALRootDir(conf, walRoot);
+    assertEquals(FSUtils.getWALRootDir(conf), walRoot);
+  }
+
+  @Test(expected=IllegalStateException.class)
+  public void testGetWALRootDirIllegalWALDir() throws IOException {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    Configuration conf = htu.getConfiguration();
+    Path root = new Path("file:///hbase/root");
+    Path invalidWALDir = new Path("file:///hbase/root/logroot");
+    FSUtils.setRootDir(conf, root);
+    FSUtils.setWALRootDir(conf, invalidWALDir);
+    FSUtils.getWALRootDir(conf);
+  }
+
+  @Test
+  public void testRemoveWALRootPath() throws Exception {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    Configuration conf = htu.getConfiguration();
+    FSUtils.setRootDir(conf, new Path("file:///user/hbase"));
+    Path testFile = new Path(FSUtils.getRootDir(conf), "test/testfile");
+    Path tmpFile = new Path("file:///test/testfile");
+    assertEquals(FSUtils.removeWALRootPath(testFile, conf), "test/testfile");
+    assertEquals(FSUtils.removeWALRootPath(tmpFile, conf), tmpFile.toString());
+    FSUtils.setWALRootDir(conf, new Path("file:///user/hbaseLogDir"));
+    assertEquals(FSUtils.removeWALRootPath(testFile, conf), testFile.toString());
+    Path logFile = new Path(FSUtils.getWALRootDir(conf), "test/testlog");
+    assertEquals(FSUtils.removeWALRootPath(logFile, conf), "test/testlog");
   }
 
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {

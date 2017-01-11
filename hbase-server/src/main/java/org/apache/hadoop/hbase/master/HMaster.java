@@ -1186,7 +1186,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
    this.logCleaner =
       new LogCleaner(cleanerInterval,
-         this, conf, getMasterFileSystem().getFileSystem(),
+         this, conf, getMasterFileSystem().getOldLogDir().getFileSystem(conf),
          getMasterFileSystem().getOldLogDir());
     getChoreService().scheduleChore(logCleaner);
 
@@ -1252,10 +1252,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private void startProcedureExecutor() throws IOException {
     final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
-    final Path logDir = new Path(fileSystemManager.getRootDir(),
+    final Path walDir = new Path(FSUtils.getWALRootDir(this.conf),
         MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR);
 
-    procedureStore = new WALProcedureStore(conf, fileSystemManager.getFileSystem(), logDir,
+    procedureStore = new WALProcedureStore(conf, walDir.getFileSystem(conf), walDir,
         new MasterProcedureEnv.WALStoreLeaseRecovery(this));
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
     procedureExecutor = new ProcedureExecutor(conf, procEnv, procedureStore,

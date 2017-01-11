@@ -584,15 +584,15 @@ public class AssignmentManager extends ZooKeeperListener {
       Set<ServerName> queuedDeadServers = serverManager.getRequeuedDeadServers().keySet();
       if (!queuedDeadServers.isEmpty()) {
         Configuration conf = server.getConfiguration();
-        Path rootdir = FSUtils.getRootDir(conf);
-        FileSystem fs = rootdir.getFileSystem(conf);
+        Path walRootDir = FSUtils.getWALRootDir(conf);
+        FileSystem walFs = FSUtils.getWALFileSystem(conf);
         for (ServerName serverName: queuedDeadServers) {
           // In the case of a clean exit, the shutdown handler would have presplit any WALs and
           // removed empty directories.
-          Path logDir = new Path(rootdir,
+          Path walDir = new Path(walRootDir,
               DefaultWALProvider.getWALDirectoryName(serverName.toString()));
-          Path splitDir = logDir.suffix(DefaultWALProvider.SPLITTING_EXT);
-          if (fs.exists(logDir) || fs.exists(splitDir)) {
+          Path splitDir = walDir.suffix(DefaultWALProvider.SPLITTING_EXT);
+          if (walFs.exists(walDir) || walFs.exists(splitDir)) {
             LOG.debug("Found queued dead server " + serverName);
             failover = true;
             break;

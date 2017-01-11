@@ -1172,6 +1172,13 @@ possible configurations would overwhelm and obscure the important.
     if it does not match.</description>
   </property>
   <property>
+    <name>hbase.wal.dir.perms</name>
+    <value>700</value>
+    <description>FS Permissions for the root WAL directory in a secure(kerberos) setup.
+      When master starts, it creates the WAL dir with this permissions or sets the permissions
+      if it does not match.</description>
+  </property>
+  <property>
     <name>hbase.data.umask.enable</name>
     <value>false</value>
     <description>Enable, if true, that file permissions should be assigned

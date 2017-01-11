@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterators;
+import com.google.common.primitives.Ints;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -83,8 +87,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.collect.Iterators;
-import com.google.common.primitives.Ints;
+import static org.apache.hadoop.hbase.HConstants.HBASE_DIR;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -935,22 +938,22 @@ public abstract class FSUtils {
       return root;
     } catch (URISyntaxException e) {
       IOException io = new IOException("Root directory path is not a valid " +
-        "URI -- check your " + HConstants.HBASE_DIR + " configuration");
+        "URI -- check your " + HBASE_DIR + " configuration");
       io.initCause(e);
       throw io;
     }
   }
 
   /**
-   * Checks for the presence of the root path (using the provided conf object) in the given path. If
+   * Checks for the presence of the WAL log root path (using the provided conf object) in the given path. If
    * it exists, this method removes it and returns the String representation of remaining relative path.
    * @param path
    * @param conf
    * @return String representation of the remaining relative path
    * @throws IOException
    */
-  public static String removeRootPath(Path path, final Configuration conf) throws IOException {
-    Path root = FSUtils.getRootDir(conf);
+  public static String removeWALRootPath(Path path, final Configuration conf) throws IOException {
+    Path root = getWALRootDir(conf);
     String pathStr = path.toString();
     // check that the path is absolute... it has the root path in it.
     if (!pathStr.startsWith(root.toString())) return pathStr;
@@ -997,22 +1000,63 @@ public abstract class FSUtils {
 
   /**
    * @param c configuration
-   * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> from
+   * @return {@link Path} to hbase root directory: i.e. {@value org.apache.hadoop.hbase.HConstants#HBASE_DIR} from
    * configuration as a qualified Path.
    * @throws IOException e
    */
   public static Path getRootDir(final Configuration c) throws IOException {
-    Path p = new Path(c.get(HConstants.HBASE_DIR));
+    Path p = new Path(c.get(HBASE_DIR));
     FileSystem fs = p.getFileSystem(c);
     return p.makeQualified(fs);
   }
 
   public static void setRootDir(final Configuration c, final Path root) throws IOException {
-    c.set(HConstants.HBASE_DIR, root.toString());
+    c.set(HBASE_DIR, root.toString());
   }
 
   public static void setFsDefault(final Configuration c, final Path root) throws IOException {
     c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
+  }
+
+  public static FileSystem getRootDirFileSystem(final Configuration c) throws IOException {
+    Path p = getRootDir(c);
+    return p.getFileSystem(c);
+  }
+
+  /**
+   * @param c configuration
+   * @return {@link Path} to hbase log root directory: i.e. {@value org.apache.hadoop.hbase.fs.HFileSystem#HBASE_WAL_DIR} from
+   * configuration as a qualified Path. Defaults to {@value org.apache.hadoop.hbase.HConstants#HBASE_DIR}
+   * @throws IOException e
+   */
+  public static Path getWALRootDir(final Configuration c) throws IOException {
+    Path p = new Path(c.get(HFileSystem.HBASE_WAL_DIR, c.get(HBASE_DIR)));
+    if (!isValidWALRootDir(p, c)) {
+      return FSUtils.getRootDir(c);
+    }
+    FileSystem fs = p.getFileSystem(c);
+    return p.makeQualified(fs);
+  }
+
+  @VisibleForTesting
+  public static void setWALRootDir(final Configuration c, final Path root) throws IOException {
+    c.set(HFileSystem.HBASE_WAL_DIR, root.toString());
+  }
+
+  public static FileSystem getWALFileSystem(final Configuration c) throws IOException {
+    Path p = getWALRootDir(c);
+    return p.getFileSystem(c);
+  }
+
+  private static boolean isValidWALRootDir(Path walDir, final Configuration c) throws IOException {
+    Path rootDir = FSUtils.getRootDir(c);
+    if (walDir != rootDir) {
+      if (walDir.toString().startsWith(rootDir.toString() + "/")) {
+        throw new IllegalStateException("Illegal WAL directory specified. " +
+            "WAL directories are not permitted to be under the root directory if set.");
+      }
+    }
+    return true;
   }
 
   /**

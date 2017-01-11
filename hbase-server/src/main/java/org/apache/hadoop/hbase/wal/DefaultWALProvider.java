@@ -45,10 +45,10 @@ import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 
 /**
- * A WAL Provider that returns a single thread safe WAL that writes to HDFS.
- * By default, this implementation picks a directory in HDFS based on a combination of
+ * A WAL Provider that returns a single thread safe WAL that writes to Hadoop FS.
+ * By default, this implementation picks a directory in Hadoop FS based on a combination of
  * <ul>
- *   <li>the HBase root directory
+ *   <li>the HBase root WAL directory
  *   <li>HConstants.HREGION_LOGDIR_NAME
  *   <li>the given factory's factoryId (usually identifying the regionserver by host:port)
  * </ul>
@@ -126,7 +126,7 @@ public class DefaultWALProvider implements WALProvider {
       // creating hlog on fs is time consuming
       synchronized (walCreateLock) {
         if (log == null) {
-          log = new FSHLog(FileSystem.get(conf), FSUtils.getRootDir(conf),
+          log = new FSHLog(FSUtils.getWALFileSystem(conf), FSUtils.getWALRootDir(conf),
               getWALDirectoryName(factory.factoryId), HConstants.HREGION_OLDLOGDIR_NAME, conf,
               listeners, true, logPrefix,
               META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
@@ -282,14 +282,10 @@ public class DefaultWALProvider implements WALProvider {
       throw new IllegalArgumentException("parameter conf must be set");
     }
 
-    final String rootDir = conf.get(HConstants.HBASE_DIR);
-    if (rootDir == null || rootDir.isEmpty()) {
-      throw new IllegalArgumentException(HConstants.HBASE_DIR
-          + " key not found in conf.");
-    }
+    final String walDir = FSUtils.getWALRootDir(conf).toString();
 
-    final StringBuilder startPathSB = new StringBuilder(rootDir);
-    if (!rootDir.endsWith("/"))
+    final StringBuilder startPathSB = new StringBuilder(walDir);
+    if (!walDir.endsWith("/"))
       startPathSB.append('/');
     startPathSB.append(HConstants.HREGION_LOGDIR_NAME);
     if (!HConstants.HREGION_LOGDIR_NAME.endsWith("/"))

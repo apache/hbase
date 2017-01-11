@@ -58,8 +58,8 @@ public class ProcedureTestingUtility {
   }
 
   public static WALProcedureStore createWalStore(final Configuration conf, final FileSystem fs,
-      final Path logDir) throws IOException {
-    return new WALProcedureStore(conf, fs, logDir, new WALProcedureStore.LeaseRecovery() {
+      final Path walDir) throws IOException {
+    return new WALProcedureStore(conf, fs, walDir, new WALProcedureStore.LeaseRecovery() {
       @Override
       public void recoverFileLease(FileSystem fs, Path path) throws IOException {
         // no-op

@@ -97,6 +97,7 @@ public class TestWALObserver {
   private FileSystem fs;
   private Path dir;
   private Path hbaseRootDir;
+  private Path hbaseWALRootDir;
   private String logName;
   private Path oldLogDir;
   private Path logDir;
@@ -115,8 +116,11 @@ public class TestWALObserver {
     TEST_UTIL.startMiniCluster(1);
     Path hbaseRootDir = TEST_UTIL.getDFSCluster().getFileSystem()
         .makeQualified(new Path("/hbase"));
+    Path hbaseWALRootDir = TEST_UTIL.getDFSCluster().getFileSystem()
+            .makeQualified(new Path("/hbaseLogRoot"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
     FSUtils.setRootDir(conf, hbaseRootDir);
+    FSUtils.setWALRootDir(conf, hbaseWALRootDir);
   }
 
   @AfterClass
@@ -130,15 +134,19 @@ public class TestWALObserver {
     // this.cluster = TEST_UTIL.getDFSCluster();
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
     this.hbaseRootDir = FSUtils.getRootDir(conf);
+    this.hbaseWALRootDir = FSUtils.getWALRootDir(conf);
     this.dir = new Path(this.hbaseRootDir, TestWALObserver.class.getName());
-    this.oldLogDir = new Path(this.hbaseRootDir,
+    this.oldLogDir = new Path(this.hbaseWALRootDir,
         HConstants.HREGION_OLDLOGDIR_NAME);
-    this.logDir = new Path(this.hbaseRootDir,
+    this.logDir = new Path(this.hbaseWALRootDir,
         DefaultWALProvider.getWALDirectoryName(currentTest.getMethodName()));
     this.logName = HConstants.HREGION_LOGDIR_NAME;
 
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
+    }
+    if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseWALRootDir)) {
+      TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseWALRootDir, true);
     }
     this.wals = new WALFactory(conf, null, currentTest.getMethodName());
   }
@@ -153,6 +161,7 @@ public class TestWALObserver {
       LOG.debug("details of failure to close wal factory.", exception);
     }
     TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
+    TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseWALRootDir, true);
   }
 
   /**

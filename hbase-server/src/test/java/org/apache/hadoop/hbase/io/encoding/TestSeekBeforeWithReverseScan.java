@@ -59,7 +59,7 @@ public class TestSeekBeforeWithReverseScan {
     htd.addFamily(new HColumnDescriptor(cfName).setDataBlockEncoding(DataBlockEncoding.FAST_DIFF));
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
-    region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
+    region = HBaseTestingUtility.createRegionAndWAL(info, path, path, testUtil.getConfiguration(), htd);
   }
 
   @After

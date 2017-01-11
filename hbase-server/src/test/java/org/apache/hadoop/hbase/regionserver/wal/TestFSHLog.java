@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -88,6 +89,8 @@ public class TestFSHLog {
   protected static Configuration conf;
   protected static FileSystem fs;
   protected static Path dir;
+  protected static Path rootDir;
+  protected static Path walRootDir;
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
@@ -99,8 +102,10 @@ public class TestFSHLog {
     for (FileStatus dir : entries) {
       fs.delete(dir.getPath(), true);
     }
-    final Path hbaseDir = TEST_UTIL.createRootDir();
-    dir = new Path(hbaseDir, currentTest.getMethodName());
+    rootDir = TEST_UTIL.createRootDir();
+    walRootDir = TEST_UTIL.createWALRootDir();
+    dir = new Path(walRootDir, currentTest.getMethodName());
+    assertNotEquals(rootDir, walRootDir);
   }
 
   @After
@@ -133,6 +138,8 @@ public class TestFSHLog {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    fs.delete(rootDir, true);
+    fs.delete(walRootDir, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -144,7 +151,7 @@ public class TestFSHLog {
     // test to see whether the coprocessor is loaded or not.
     FSHLog log = null;
     try {
-      log = new FSHLog(fs, FSUtils.getRootDir(conf), dir.toString(),
+      log = new FSHLog(fs, walRootDir, dir.toString(),
           HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null);
       WALCoprocessorHost host = log.getCoprocessorHost();
       Coprocessor c = host.findCoprocessor(SampleRegionWALObserver.class.getName());
@@ -195,7 +202,7 @@ public class TestFSHLog {
     FSHLog wal1 = null;
     FSHLog walMeta = null;
     try {
-      wal1 = new FSHLog(fs, FSUtils.getRootDir(conf), dir.toString(),
+      wal1 = new FSHLog(fs, walRootDir, dir.toString(),
           HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null);
       LOG.debug("Log obtained is: " + wal1);
       Comparator<Path> comp = wal1.LOG_NAME_COMPARATOR;
@@ -205,7 +212,7 @@ public class TestFSHLog {
       assertTrue(comp.compare(p1, p1) == 0);
       // comparing with different filenum.
       assertTrue(comp.compare(p1, p2) < 0);
-      walMeta = new FSHLog(fs, FSUtils.getRootDir(conf), dir.toString(),
+      walMeta = new FSHLog(fs, walRootDir, dir.toString(),
           HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null,
           DefaultWALProvider.META_WAL_PROVIDER_ID);
       Comparator<Path> compMeta = walMeta.LOG_NAME_COMPARATOR;
@@ -253,7 +260,7 @@ public class TestFSHLog {
     LOG.debug("testFindMemStoresEligibleForFlush");
     Configuration conf1 = HBaseConfiguration.create(conf);
     conf1.setInt("hbase.regionserver.maxlogs", 1);
-    FSHLog wal = new FSHLog(fs, FSUtils.getRootDir(conf1), dir.toString(),
+    FSHLog wal = new FSHLog(fs, walRootDir, dir.toString(),
         HConstants.HREGION_OLDLOGDIR_NAME, conf1, null, true, null, null);
     HTableDescriptor t1 =
         new HTableDescriptor(TableName.valueOf("t1")).addFamily(new HColumnDescriptor("row"));
@@ -330,7 +337,7 @@ public class TestFSHLog {
   @Test(expected=IOException.class)
   public void testFailedToCreateWALIfParentRenamed() throws IOException {
     final String name = "testFailedToCreateWALIfParentRenamed";
-    FSHLog log = new FSHLog(fs, FSUtils.getRootDir(conf), name, HConstants.HREGION_OLDLOGDIR_NAME,
+    FSHLog log = new FSHLog(fs, walRootDir, name, HConstants.HREGION_OLDLOGDIR_NAME,
         conf, null, true, null, null);
     long filenum = System.currentTimeMillis();
     Path path = log.computeFilename(filenum);
@@ -359,13 +366,13 @@ public class TestFSHLog {
     final byte[] rowName = tableName.getName();
     final HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("f"));
-    HRegion r = HRegion.createHRegion(hri, TEST_UTIL.getDefaultRootDirPath(),
+    HRegion r = HRegion.createHRegion(hri, rootDir,
       TEST_UTIL.getConfiguration(), htd);
     HRegion.closeHRegion(r);
     final int countPerFamily = 10;
     final MutableBoolean goslow = new MutableBoolean(false);
     // subclass and doctor a method.
-    FSHLog wal = new FSHLog(FileSystem.get(conf), TEST_UTIL.getDefaultRootDirPath(),
+    FSHLog wal = new FSHLog(FileSystem.get(conf), walRootDir,
         testName, conf) {
       @Override
       void atHeadOfRingBufferEventHandlerAppend() {
@@ -377,7 +384,7 @@ public class TestFSHLog {
       }
     };
     HRegion region = HRegion.openHRegion(TEST_UTIL.getConfiguration(),
-      TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(), hri, htd, wal);
+      TEST_UTIL.getTestFileSystem(), rootDir, hri, htd, wal);
     EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
     try {
       List<Put> puts = null;
@@ -430,7 +437,7 @@ public class TestFSHLog {
       SecurityException, IllegalArgumentException, IllegalAccessException {
     final String name = "testSyncRunnerIndexOverflow";
     FSHLog log =
-        new FSHLog(fs, FSUtils.getRootDir(conf), name, HConstants.HREGION_OLDLOGDIR_NAME, conf,
+        new FSHLog(fs, walRootDir, name, HConstants.HREGION_OLDLOGDIR_NAME, conf,
             null, true, null, null);
     try {
       Field ringBufferEventHandlerField = FSHLog.class.getDeclaredField("ringBufferEventHandler");
@@ -468,7 +475,7 @@ public class TestFSHLog {
     final CountDownLatch putFinished = new CountDownLatch(1);
 
     try (FSHLog log =
-        new FSHLog(fs, FSUtils.getRootDir(conf), name, HConstants.HREGION_OLDLOGDIR_NAME, conf,
+        new FSHLog(fs, walRootDir, name, HConstants.HREGION_OLDLOGDIR_NAME, conf,
             null, true, null, null)) {
 
       log.registerWALActionsListener(new WALActionsListener.Base() {

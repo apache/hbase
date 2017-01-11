@@ -31,6 +31,7 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -51,15 +52,18 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_DIR;
+
 /**
  * An encapsulation for the FileSystem object that hbase uses to access
- * data. This class allows the flexibility of using  
+ * data. This class allows the flexibility of using
  * separate filesystem objects for reading and writing hfiles and wals.
- * In future, if we want to make wals be in a different filesystem,
- * this is the place to make it happen.
  */
 public class HFileSystem extends FilterFileSystem {
   public static final Log LOG = LogFactory.getLog(HFileSystem.class);
+
+  /** Parameter name for HBase WAL directory */
+  public static final String HBASE_WAL_DIR = "hbase.wal.dir";
 
   private final FileSystem noChecksumFs;   // read hfile data from storage
   private final boolean useHBaseChecksum;
@@ -79,7 +83,7 @@ public class HFileSystem extends FilterFileSystem {
     // the underlying filesystem that has checksums switched on.
     this.fs = FileSystem.get(conf);
     this.useHBaseChecksum = useHBaseChecksum;
-    
+
     fs.initialize(getDefaultUri(conf), conf);
     
     // disable checksum verification for local fileSystem, see HBASE-11218

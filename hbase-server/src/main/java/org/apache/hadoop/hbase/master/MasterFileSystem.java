@@ -66,7 +66,14 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class MasterFileSystem {
-  private static final Log LOG = LogFactory.getLog(MasterFileSystem.class.getName());
+  private static final Log LOG = LogFactory.getLog(MasterFileSystem.class);
+
+  /** Parameter name for HBase instance root directory permission*/
+  public static final String HBASE_DIR_PERMS = "hbase.rootdir.perms";
+
+  /** Parameter name for HBase WAL directory permission*/
+  public static final String HBASE_WAL_DIR_PERMS = "hbase.wal.dir.perms";
+
   // HBase configuration
   Configuration conf;
   // master status
@@ -77,8 +84,11 @@ public class MasterFileSystem {
   private ClusterId clusterId;
   // Keep around for convenience.
   private final FileSystem fs;
+  private final FileSystem walFs;
+  // root WAL directory
+  private final Path walRootDir;
   // Is the fileystem ok?
-  private volatile boolean fsOk = true;
+  private volatile boolean walFsOk = true;
   // The Path to the old logs dir
   private final Path oldLogDir;
   // root hbase directory on the FS
@@ -119,6 +129,10 @@ public class MasterFileSystem {
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
     this.fs = this.rootdir.getFileSystem(conf);
+    this.walRootDir = FSUtils.getWALRootDir(conf);
+    this.walFs = FSUtils.getWALFileSystem(conf);
+    FSUtils.setFsDefault(conf, new Path(this.walFs.getUri()));
+    walFs.setConf(conf);
     FSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
@@ -148,17 +162,21 @@ public class MasterFileSystem {
    * Idempotent.
    */
   private Path createInitialFileSystemLayout() throws IOException {
-    // check if the root directory exists
-    checkRootDir(this.rootdir, conf, this.fs);
+
+    checkRootDir(this.rootdir, conf, this.fs, HConstants.HBASE_DIR, HBASE_DIR_PERMS);
+    // if the log directory is different from root, check if it exists
+    if (!this.walRootDir.equals(this.rootdir)) {
+      checkRootDir(this.walRootDir, conf, this.walFs, HFileSystem.HBASE_WAL_DIR, HBASE_WAL_DIR_PERMS);
+    }
 
     // check if temp directory exists and clean it
     checkTempDir(this.tempdir, conf, this.fs);
 
-    Path oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path oldLogDir = new Path(this.walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
 
     // Make sure the region servers can archive their old logs
-    if(!this.fs.exists(oldLogDir)) {
-      this.fs.mkdirs(oldLogDir);
+    if(!this.walFs.exists(oldLogDir)) {
+      this.walFs.mkdirs(oldLogDir);
     }
 
     return oldLogDir;
@@ -182,16 +200,24 @@ public class MasterFileSystem {
    * @return false if file system is not available
    */
   public boolean checkFileSystem() {
-    if (this.fsOk) {
+    if (this.walFsOk) {
       try {
-        FSUtils.checkFileSystemAvailable(this.fs);
+        FSUtils.checkFileSystemAvailable(this.walFs);
         FSUtils.checkDfsSafeMode(this.conf);
       } catch (IOException e) {
         master.abort("Shutting down HBase cluster: file system not available", e);
-        this.fsOk = false;
+        this.walFsOk = false;
       }
     }
-    return this.fsOk;
+    return this.walFsOk;
+  }
+
+  protected FileSystem getWALFileSystem() {
+    return this.walFs;
+  }
+
+  public Configuration getConfiguration() {
+    return this.conf;
   }
 
   /**
@@ -200,6 +226,11 @@ public class MasterFileSystem {
   public Path getRootDir() {
     return this.rootdir;
   }
+
+  /**
+   * @return HBase root log dir.
+   */
+  public Path getWALRootDir() { return this.walRootDir; }
 
   /**
    * @return HBase temp dir.
@@ -224,7 +255,7 @@ public class MasterFileSystem {
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 
     Set<ServerName> serverNames = new HashSet<ServerName>();
-    Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
+    Path logsDirPath = new Path(this.walRootDir, HConstants.HREGION_LOGDIR_NAME);
 
     do {
       if (master.isStopped()) {
@@ -232,8 +263,8 @@ public class MasterFileSystem {
         break;
       }
       try {
-        if (!this.fs.exists(logsDirPath)) return serverNames;
-        FileStatus[] logFolders = FSUtils.listStatus(this.fs, logsDirPath, null);
+        if (!this.walFs.exists(logsDirPath)) return serverNames;
+        FileStatus[] logFolders = FSUtils.listStatus(this.walFs, logsDirPath, null);
         // Get online servers after getting log folders to avoid log folder deletion of newly
         // checked in region servers . see HBASE-5916
         Set<ServerName> onlineServers = ((HMaster) master).getServerManager().getOnlineServers()
@@ -244,7 +275,7 @@ public class MasterFileSystem {
           return serverNames;
         }
         for (FileStatus status : logFolders) {
-          FileStatus[] curLogFiles = FSUtils.listStatus(this.fs, status.getPath(), null);
+          FileStatus[] curLogFiles = FSUtils.listStatus(this.walFs, status.getPath(), null);
           if (curLogFiles == null || curLogFiles.length == 0) {
             // Empty log folder. No recovery needed
             continue;
@@ -325,17 +356,17 @@ public class MasterFileSystem {
     }
     try {
       for (ServerName serverName : serverNames) {
-        Path logDir = new Path(this.rootdir,
+        Path logDir = new Path(this.walRootDir,
             DefaultWALProvider.getWALDirectoryName(serverName.toString()));
         Path splitDir = logDir.suffix(DefaultWALProvider.SPLITTING_EXT);
         // Rename the directory so a rogue RS doesn't create more WALs
-        if (fs.exists(logDir)) {
-          if (!this.fs.rename(logDir, splitDir)) {
+        if (walFs.exists(logDir)) {
+          if (!this.walFs.rename(logDir, splitDir)) {
             throw new IOException("Failed fs.rename for log split: " + logDir);
           }
           logDir = splitDir;
           LOG.debug("Renamed region directory: " + splitDir);
-        } else if (!fs.exists(splitDir)) {
+        } else if (!walFs.exists(splitDir)) {
           LOG.info("Log dir for server " + serverName + " does not exist");
           continue;
         }
@@ -422,19 +453,19 @@ public class MasterFileSystem {
    */
   @SuppressWarnings("deprecation")
   private Path checkRootDir(final Path rd, final Configuration c,
-    final FileSystem fs)
+    final FileSystem fs, final String dirConfKey, final String dirPermsConfName)
   throws IOException {
     // If FS is in safe mode wait till out of it.
     FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
 
     boolean isSecurityEnabled = "kerberos".equalsIgnoreCase(c.get("hbase.security.authentication"));
-    FsPermission rootDirPerms = new FsPermission(c.get("hbase.rootdir.perms", "700"));
+    FsPermission dirPerms = new FsPermission(c.get(dirPermsConfName, "700"));
 
-    // Filesystem is good. Go ahead and check for hbase.rootdir.
+    // Filesystem is good. Go ahead and check for rootdir.
     try {
       if (!fs.exists(rd)) {
         if (isSecurityEnabled) {
-          fs.mkdirs(rd, rootDirPerms);
+          fs.mkdirs(rd, dirPerms);
         } else {
           fs.mkdirs(rd);
         }
@@ -452,15 +483,15 @@ public class MasterFileSystem {
         if (!fs.isDirectory(rd)) {
           throw new IllegalArgumentException(rd.toString() + " is not a directory");
         }
-        if (isSecurityEnabled && !rootDirPerms.equals(fs.getFileStatus(rd).getPermission())) {
+        if (isSecurityEnabled && !dirPerms.equals(fs.getFileStatus(rd).getPermission())) {
           // check whether the permission match
-          LOG.warn("Found rootdir permissions NOT matching expected \"hbase.rootdir.perms\" for "
+          LOG.warn("Found rootdir permissions NOT matching expected \"" + dirPermsConfName + "\" for "
               + "rootdir=" + rd.toString() + " permissions=" + fs.getFileStatus(rd).getPermission()
-              + " and  \"hbase.rootdir.perms\" configured as "
-              + c.get("hbase.rootdir.perms", "700") + ". Automatically setting the permissions. You"
-              + " can change the permissions by setting \"hbase.rootdir.perms\" in hbase-site.xml "
+              + " and  \"" + dirPermsConfName + "\" configured as "
+              + c.get(dirPermsConfName, "700") + ". Automatically setting the permissions. You"
+              + " can change the permissions by setting \"" + dirPermsConfName + "\" in hbase-site.xml "
               + "and restarting the master");
-          fs.setPermission(rd, rootDirPerms);
+          fs.setPermission(rd, dirPerms);
         }
         // as above
         FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
@@ -468,38 +499,41 @@ public class MasterFileSystem {
             HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       }
     } catch (DeserializationException de) {
-      LOG.fatal("Please fix invalid configuration for " + HConstants.HBASE_DIR, de);
+      LOG.fatal("Please fix invalid configuration for " + dirConfKey, de);
       IOException ioe = new IOException();
       ioe.initCause(de);
       throw ioe;
     } catch (IllegalArgumentException iae) {
       LOG.fatal("Please fix invalid configuration for "
-        + HConstants.HBASE_DIR + " " + rd.toString(), iae);
+        + dirConfKey + " " + rd.toString(), iae);
       throw iae;
     }
-    // Make sure cluster ID exists
-    if (!FSUtils.checkClusterIdExists(fs, rd, c.getInt(
-        HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000))) {
-      FSUtils.setClusterId(fs, rd, new ClusterId(), c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+
+    if (dirConfKey.equals(HConstants.HBASE_DIR)) {
+      // Make sure cluster ID exists
+      if (!FSUtils.checkClusterIdExists(fs, rd, c.getInt(
+          HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000))) {
+        FSUtils.setClusterId(fs, rd, new ClusterId(), c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+      }
+      clusterId = FSUtils.getClusterId(fs, rd);
+
+      // Make sure the meta region directory exists!
+      if (!FSUtils.metaRegionExists(fs, rd)) {
+        bootstrap(rd, c);
+      } else {
+        // Migrate table descriptor files if necessary
+        org.apache.hadoop.hbase.util.FSTableDescriptorMigrationToSubdir
+            .migrateFSTableDescriptorsIfNecessary(fs, rd);
+      }
+
+      // Create tableinfo-s for hbase:meta if not already there.
+
+      // meta table is a system table, so descriptors are predefined,
+      // we should get them from registry.
+      FSTableDescriptors fsd = new FSTableDescriptors(c, fs, rd);
+      fsd.createTableDescriptor(
+          new HTableDescriptor(fsd.get(TableName.META_TABLE_NAME)));
     }
-    clusterId = FSUtils.getClusterId(fs, rd);
-
-    // Make sure the meta region directory exists!
-    if (!FSUtils.metaRegionExists(fs, rd)) {
-      bootstrap(rd, c);
-    } else {
-      // Migrate table descriptor files if necessary
-      org.apache.hadoop.hbase.util.FSTableDescriptorMigrationToSubdir
-        .migrateFSTableDescriptorsIfNecessary(fs, rd);
-    }
-
-    // Create tableinfo-s for hbase:meta if not already there.
-
-    // meta table is a system table, so descriptors are predefined,
-    // we should get them from registry.
-    FSTableDescriptors fsd = new FSTableDescriptors(c, fs, rd);
-    fsd.createTableDescriptor(
-      new HTableDescriptor(fsd.get(TableName.META_TABLE_NAME)));
 
     return rd;
   }

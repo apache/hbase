@@ -114,7 +114,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private final LeaseRecovery leaseRecovery;
   private final Configuration conf;
   private final FileSystem fs;
-  private final Path logDir;
+  private final Path walDir;
 
   private final AtomicReference<Throwable> syncException = new AtomicReference<Throwable>();
   private final AtomicBoolean loading = new AtomicBoolean(true);
@@ -170,11 +170,11 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
   }
 
-  public WALProcedureStore(final Configuration conf, final FileSystem fs, final Path logDir,
+  public WALProcedureStore(final Configuration conf, final FileSystem fs, final Path walDir,
       final LeaseRecovery leaseRecovery) {
     this.fs = fs;
     this.conf = conf;
-    this.logDir = logDir;
+    this.walDir = walDir;
     this.leaseRecovery = leaseRecovery;
   }
 
@@ -912,8 +912,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
   // ==========================================================================
   //  FileSystem Log Files helpers
   // ==========================================================================
-  public Path getLogDir() {
-    return this.logDir;
+  public Path getWALDir() {
+    return this.walDir;
   }
 
   public FileSystem getFileSystem() {
@@ -921,7 +921,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   protected Path getLogFilePath(final long logId) throws IOException {
-    return new Path(logDir, String.format("state-%020d.log", logId));
+    return new Path(walDir, String.format("state-%020d.log", logId));
   }
 
   private static long getLogIdFromName(final String name) {
@@ -955,7 +955,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   private FileStatus[] getLogFiles() throws IOException {
     try {
-      FileStatus[] files = fs.listStatus(logDir, WALS_PATH_FILTER);
+      FileStatus[] files = fs.listStatus(walDir, WALS_PATH_FILTER);
       Arrays.sort(files, FILE_STATUS_ID_COMPARATOR);
       return files;
     } catch (FileNotFoundException e) {

@@ -849,9 +849,9 @@ public class ReplicationSource extends Thread
             // to look at)
             List<String> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
             LOG.info("NB dead servers : " + deadRegionServers.size());
-            final Path rootDir = FSUtils.getRootDir(conf);
+            final Path walDir = FSUtils.getWALRootDir(conf);
             for (String curDeadServerName : deadRegionServers) {
-              final Path deadRsDirectory = new Path(rootDir,
+              final Path deadRsDirectory = new Path(walDir,
                   DefaultWALProvider.getWALDirectoryName(curDeadServerName));
               Path[] locs = new Path[] {
                   new Path(deadRsDirectory, currentPath.getName()),
@@ -878,7 +878,7 @@ public class ReplicationSource extends Thread
             // In the case of disaster/recovery, HMaster may be shutdown/crashed before flush data
             // from .logs to .oldlogs. Loop into .logs folders and check whether a match exists
             if (stopper instanceof ReplicationSyncUp.DummyServer) {
-              // N.B. the ReplicationSyncUp tool sets the manager.getLogDir to the root of the wal
+              // N.B. the ReplicationSyncUp tool sets the manager.getWALDir to the root of the wal
               //      area rather than to the wal area for a particular region server.
               FileStatus[] rss = fs.listStatus(manager.getLogDir());
               for (FileStatus rs : rss) {

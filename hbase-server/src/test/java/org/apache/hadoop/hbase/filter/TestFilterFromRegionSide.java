@@ -84,7 +84,7 @@ public class TestFilterFromRegionSide {
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     REGION = HBaseTestingUtility
-        .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+        .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
     for(Put put:createPuts(ROWS, FAMILIES, QUALIFIERS, VALUE)){
       REGION.put(put);
     }

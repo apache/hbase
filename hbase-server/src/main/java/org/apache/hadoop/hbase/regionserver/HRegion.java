@@ -6624,7 +6624,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // The WAL subsystem will use the default rootDir rather than the passed in rootDir
       // unless I pass along via the conf.
       Configuration confForWAL = new Configuration(conf);
-      confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
+      FSUtils.setRootDir(confForWAL, rootDir);
       effectiveWAL = (new WALFactory(confForWAL,
           Collections.<WALActionsListener>singletonList(new MetricsWAL()),
           "hregion-" + RandomStringUtils.randomNumeric(8))).

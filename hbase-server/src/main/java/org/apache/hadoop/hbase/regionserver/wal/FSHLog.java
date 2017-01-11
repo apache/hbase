@@ -1580,9 +1580,9 @@ public class FSHLog implements WAL {
     ClassSize.OBJECT + (5 * ClassSize.REFERENCE) +
     ClassSize.ATOMIC_INTEGER + Bytes.SIZEOF_INT + (3 * Bytes.SIZEOF_LONG));
 
-  private static void split(final Configuration conf, final Path p)
-  throws IOException {
-    FileSystem fs = FileSystem.get(conf);
+
+  private static void split(final Configuration conf, final Path p) throws IOException {
+    FileSystem fs = FSUtils.getWALFileSystem(conf);
     if (!fs.exists(p)) {
       throw new FileNotFoundException(p.toString());
     }
@@ -1590,7 +1590,7 @@ public class FSHLog implements WAL {
       throw new IOException(p + " is not a directory");
     }
 
-    final Path baseDir = FSUtils.getRootDir(conf);
+    final Path baseDir = FSUtils.getWALRootDir(conf);
     final Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALFactory.getInstance(conf));
   }

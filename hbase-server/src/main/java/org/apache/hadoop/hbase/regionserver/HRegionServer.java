@@ -298,6 +298,7 @@ public class HRegionServer extends HasThread implements
   // If false, the file system has become unavailable
   protected volatile boolean fsOk;
   protected HFileSystem fs;
+  protected HFileSystem walFs;
 
   // Set when a report to the master comes back with a message asking us to
   // shutdown. Also set by call to stop when debugging or running unit tests
@@ -319,6 +320,7 @@ public class HRegionServer extends HasThread implements
   protected final Configuration conf;
 
   private Path rootDir;
+  private Path walRootDir;
 
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -632,13 +634,16 @@ public class HRegionServer extends HasThread implements
   }
 
   private void initializeFileSystem() throws IOException {
+    // Get fs instance used by this RS.  Do we use checksum verification in the hbase? If hbase
+    // checksum verification enabled, then automatically switch off hdfs checksum verification.
+    boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
+    FSUtils.setFsDefault(this.conf, FSUtils.getWALRootDir(this.conf));
+    this.walFs = new HFileSystem(this.conf, useHBaseChecksum);
+    this.walRootDir = FSUtils.getWALRootDir(this.conf);
     // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else
     // underlying hadoop hdfs accessors will be going against wrong filesystem
     // (unless all is set to defaults).
     FSUtils.setFsDefault(this.conf, FSUtils.getRootDir(this.conf));
-    // Get fs instance used by this RS. Do we use checksum verification in the hbase? If hbase
-    // checksum verification enabled, then automatically switch off hdfs checksum verification.
-    boolean useHBaseChecksum = this.conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
     this.fs = new HFileSystem(this.conf, useHBaseChecksum);
     this.rootDir = FSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(
@@ -1666,19 +1671,19 @@ public class HRegionServer extends HasThread implements
    */
   private WALFactory setupWALAndReplication() throws IOException {
     // TODO Replication make assumptions here based on the default filesystem impl
-    final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    final Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     final String logName = DefaultWALProvider.getWALDirectoryName(this.serverName.toString());
 
-    Path logdir = new Path(rootDir, logName);
-    if (LOG.isDebugEnabled()) LOG.debug("logdir=" + logdir);
-    if (this.fs.exists(logdir)) {
+    Path logDir = new Path(walRootDir, logName);
+    if (LOG.isDebugEnabled()) LOG.debug("logDir=" + logDir);
+    if (this.walFs.exists(logDir)) {
       throw new RegionServerRunningException("Region server has already " +
         "created directory at " + this.serverName.toString());
     }
 
     // Instantiate replication manager if replication enabled.  Pass it the
     // log directories.
-    createNewReplicationInstance(conf, this, this.fs, logdir, oldLogDir);
+    createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir);
 
     // listeners the wal factory will add to wals it creates.
     final List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
@@ -2619,6 +2624,20 @@ public class HRegionServer extends HasThread implements
     return fs;
   }
 
+  /**
+   * @return Return the walRootDir.
+   */
+  protected Path getWALRootDir() {
+    return walRootDir;
+  }
+
+  /**
+   * @return Return the walFs.
+   */
+  protected FileSystem getWALFileSystem() {
+    return walFs;
+  }
+
   @Override
   public String toString() {
     return getServerName().toString();
@@ -2685,7 +2704,7 @@ public class HRegionServer extends HasThread implements
    * Load the replication service objects, if any
    */
   static private void createNewReplicationInstance(Configuration conf,
-    HRegionServer server, FileSystem fs, Path logDir, Path oldLogDir) throws IOException{
+    HRegionServer server, FileSystem walFs, Path walDir, Path oldWALDir) throws IOException{
 
     // If replication is not enabled, then return immediately.
     if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
@@ -2711,21 +2730,21 @@ public class HRegionServer extends HasThread implements
     if (sourceClassname.equals(sinkClassname)) {
       server.replicationSourceHandler = (ReplicationSourceService)
                                          newReplicationInstance(sourceClassname,
-                                         conf, server, fs, logDir, oldLogDir);
+                                         conf, server, walFs, walDir, oldWALDir);
       server.replicationSinkHandler = (ReplicationSinkService)
                                          server.replicationSourceHandler;
     } else {
       server.replicationSourceHandler = (ReplicationSourceService)
                                          newReplicationInstance(sourceClassname,
-                                         conf, server, fs, logDir, oldLogDir);
+                                         conf, server, walFs, walDir, oldWALDir);
       server.replicationSinkHandler = (ReplicationSinkService)
                                          newReplicationInstance(sinkClassname,
-                                         conf, server, fs, logDir, oldLogDir);
+                                         conf, server, walFs, walDir, oldWALDir);
     }
   }
 
   static private ReplicationService newReplicationInstance(String classname,
-    Configuration conf, HRegionServer server, FileSystem fs, Path logDir,
+    Configuration conf, HRegionServer server, FileSystem walFs, Path walDir,
     Path oldLogDir) throws IOException{
 
     Class<?> clazz = null;
@@ -2739,7 +2758,7 @@ public class HRegionServer extends HasThread implements
     // create an instance of the replication object.
     ReplicationService service = (ReplicationService)
                               ReflectionUtils.newInstance(clazz, conf);
-    service.initialize(server, fs, logDir, oldLogDir);
+    service.initialize(server, walFs, walDir, oldLogDir);
     return service;
   }
 

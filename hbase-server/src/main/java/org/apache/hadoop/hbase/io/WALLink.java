@@ -45,17 +45,17 @@ public class WALLink extends FileLink {
    */
   public WALLink(final Configuration conf,
       final String serverName, final String logName) throws IOException {
-    this(FSUtils.getRootDir(conf), serverName, logName);
+    this(FSUtils.getWALRootDir(conf), serverName, logName);
   }
 
   /**
-   * @param rootDir Path to the root directory where hbase files are stored
+   * @param walRootDir Path to the root directory where hbase files are stored
    * @param serverName Region Server owner of the log
    * @param logName WAL file name
    */
-  public WALLink(final Path rootDir, final String serverName, final String logName) {
-    final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    final Path logDir = new Path(new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), serverName);
+  public WALLink(final Path walRootDir, final String serverName, final String logName) {
+    final Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    final Path logDir = new Path(new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME), serverName);
     setLocations(new Path(logDir, logName), new Path(oldLogDir, logName));
   }
 

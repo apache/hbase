@@ -76,7 +76,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
     Replication replication;
     ReplicationSourceManager manager;
     FileSystem fs;
-    Path oldLogDir, logDir, rootDir;
+    Path oldLogDir, logDir, walRootDir;
     ZooKeeperWatcher zkw;
 
     Abortable abortable = new Abortable() {
@@ -94,10 +94,10 @@ public class ReplicationSyncUp extends Configured implements Tool {
         new ZooKeeperWatcher(conf, "syncupReplication" + System.currentTimeMillis(), abortable,
             true);
 
-    rootDir = FSUtils.getRootDir(conf);
-    fs = FileSystem.get(conf);
-    oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    logDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
+    walRootDir = FSUtils.getWALRootDir(conf);
+    fs = FSUtils.getWALFileSystem(conf);
+    oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
 
     System.out.println("Start Replication Server start");
     replication = new Replication(new DummyServer(zkw), fs, logDir, oldLogDir);

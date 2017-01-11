@@ -346,7 +346,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         }
         if (verify) {
           LOG.info("verifying written log entries.");
-          Path dir = new Path(FSUtils.getRootDir(getConf()),
+          Path dir = new Path(FSUtils.getWALRootDir(getConf()),
               DefaultWALProvider.getWALDirectoryName("wals"));
           long editCount = 0;
           FileStatus [] fsss = fs.listStatus(dir);

@@ -89,11 +89,11 @@ public class SplitLogWorker implements Runnable {
     this(server, conf, server, new TaskExecutor() {
       @Override
       public Status exec(String filename, RecoveryMode mode, CancelableProgressable p) {
-        Path rootdir;
+        Path walDir;
         FileSystem fs;
         try {
-          rootdir = FSUtils.getRootDir(conf);
-          fs = rootdir.getFileSystem(conf);
+          walDir = FSUtils.getWALRootDir(conf);
+          fs = walDir.getFileSystem(conf);
         } catch (IOException e) {
           LOG.warn("could not find root dir or fs", e);
           return Status.RESIGNED;
@@ -102,7 +102,7 @@ public class SplitLogWorker implements Runnable {
         // interrupted or has encountered a transient error and when it has
         // encountered a bad non-retry-able persistent error.
         try {
-          if (!WALSplitter.splitLogFile(rootdir, fs.getFileStatus(new Path(rootdir, filename)),
+          if (!WALSplitter.splitLogFile(walDir, fs.getFileStatus(new Path(walDir, filename)),
             fs, conf, p, sequenceIdChecker, server.getCoordinatedStateManager(), mode, factory)) {
             return Status.PREEMPTED;
           }
