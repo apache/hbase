@@ -257,7 +257,7 @@ public class HFileSystem extends FilterFileSystem {
     Class<?> clazz = conf.getClass("fs." + uri.getScheme() + ".impl", null);
     if (clazz != null) {
       // This will be true for Hadoop 1.0, or 0.20.
-      fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
+      fs = (FileSystem) org.apache.hadoop.util.ReflectionUtils.newInstance(clazz, conf);
       fs.initialize(uri, conf);
     } else {
       // For Hadoop 2.0, we have to go through FileSystem for the filesystem
