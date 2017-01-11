@@ -348,6 +348,8 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
 
     private long responseCellSize = 0;
     private long responseBlockSize = 0;
+    // cumulative size of serialized exceptions
+    private long exceptionSize = 0;
     private boolean retryImmediatelySupported;
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
@@ -561,6 +563,15 @@ public class RpcServer implements RpcServerInterface, ConfigurationObserver {
       } else {
         return -1L;
       }
+    }
+
+    @Override
+    public long getResponseExceptionSize() {
+      return exceptionSize;
+    }
+    @Override
+    public void incrementResponseExceptionSize(long exSize) {
+      exceptionSize += exSize;
     }
 
     public long getSize() {
