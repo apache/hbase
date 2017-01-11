@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -488,4 +489,8 @@ public interface MasterServices extends Server {
    */
   void removeDrainFromRegionServer(final ServerName server);
 
+  /**
+   * @return {@link LockManager} to lock namespaces/tables/regions.
+   */
+  LockManager getLockManager();
 }

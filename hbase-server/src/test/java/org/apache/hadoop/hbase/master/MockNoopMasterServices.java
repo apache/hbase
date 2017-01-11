@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -379,7 +380,7 @@ public class MockNoopMasterServices implements MasterServices, Server {
     return null;
   }
 
-   @Override
+  @Override
   public MasterProcedureManagerHost getMasterProcedureManagerHost() {
     return null;
   }
@@ -430,6 +431,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   @Override
   public List<ReplicationPeerDescription> listReplicationPeers(String regex)
       throws ReplicationException, IOException {
+    return null;
+  }
+
+  @Override
+  public LockManager getLockManager() {
     return null;
   }
 }

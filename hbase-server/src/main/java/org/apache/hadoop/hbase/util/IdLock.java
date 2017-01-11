@@ -46,7 +46,7 @@ public class IdLock {
   public static class Entry {
     private final long id;
     private int numWaiters;
-    private boolean isLocked = true;
+    private boolean locked = true;
 
     private Entry(long id) {
       this.id = id;
@@ -54,7 +54,7 @@ public class IdLock {
 
     public String toString() {
       return "id=" + id + ", numWaiter=" + numWaiters + ", isLocked="
-          + isLocked;
+          + locked;
     }
   }
 
@@ -74,9 +74,9 @@ public class IdLock {
     Entry existing;
     while ((existing = map.putIfAbsent(entry.id, entry)) != null) {
       synchronized (existing) {
-        if (existing.isLocked) {
+        if (existing.locked) {
           ++existing.numWaiters;  // Add ourselves to waiters.
-          while (existing.isLocked) {
+          while (existing.locked) {
             try {
               existing.wait();
             } catch (InterruptedException e) {
@@ -87,7 +87,7 @@ public class IdLock {
           }
 
           --existing.numWaiters;  // Remove ourselves from waiters.
-          existing.isLocked = true;
+          existing.locked = true;
           return existing;
         }
         // If the entry is not locked, it might already be deleted from the
@@ -107,7 +107,7 @@ public class IdLock {
    */
   public void releaseLockEntry(Entry entry) {
     synchronized (entry) {
-      entry.isLocked = false;
+      entry.locked = false;
       if (entry.numWaiters > 0) {
         entry.notify();
       } else {

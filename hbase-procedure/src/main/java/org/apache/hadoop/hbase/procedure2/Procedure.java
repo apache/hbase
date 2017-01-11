@@ -243,24 +243,24 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     final StringBuilder sb = new StringBuilder();
     toStringClassDetails(sb);
 
-    sb.append(" id=");
+    sb.append(", procId=");
     sb.append(getProcId());
 
     if (hasParent()) {
-      sb.append(" parent=");
+      sb.append(", parent=");
       sb.append(getParentProcId());
     }
 
     if (hasOwner()) {
-      sb.append(" owner=");
+      sb.append(", owner=");
       sb.append(getOwner());
     }
 
-    sb.append(" state=");
+    sb.append(", state=");
     toStringState(sb);
 
     if (hasException()) {
-      sb.append(" failed=" + getException());
+      sb.append(", failed=" + getException());
     }
 
     return sb;

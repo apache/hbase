@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.common.net.HostAndPort;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -40,12 +38,14 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+
+import com.google.common.net.HostAndPort;
 
 /**
  * Defines coprocessor hooks for interacting with operations on the
@@ -1693,7 +1693,7 @@ public interface MasterObserver extends Coprocessor {
       final String namespace, final Quotas quotas) throws IOException;
 
   /**
-   * Called before dispatching region merge request. 
+   * Called before dispatching region merge request.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx coprocessor environment
    * @param regionA first region to be merged
@@ -1702,7 +1702,7 @@ public interface MasterObserver extends Coprocessor {
    */
   void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo regionA, HRegionInfo regionB) throws IOException;
-  
+
   /**
    * called after dispatching the region merge request.
    * @param c coprocessor environment
@@ -1971,4 +1971,30 @@ public interface MasterObserver extends Coprocessor {
   default void postListReplicationPeers(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       String regex) throws IOException {
   }
+
+  /**
+   * Called before new LockProcedure is queued.
+   */
+  public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
+      TableName tableName, HRegionInfo[] regionInfos, LockProcedure.LockType type,
+      String description) throws IOException;
+
+  /**
+   * Called after new LockProcedure is queued.
+   */
+  public void postRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
+      TableName tableName, HRegionInfo[] regionInfos, LockProcedure.LockType type,
+      String description) throws IOException;
+
+  /**
+   * Called before heartbeat to a lock.
+   */
+  public void preLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      LockProcedure proc, boolean keepAlive) throws IOException;
+
+  /**
+   * Called after heartbeat to a lock.
+   */
+  public void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      LockProcedure proc, boolean keepAlive) throws IOException;
 }

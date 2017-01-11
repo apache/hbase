@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -1786,6 +1787,48 @@ public class MasterCoprocessorHost
       public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         observer.postListReplicationPeers(ctx, regex);
+      }
+    });
+  }
+
+  public void preRequestLock(String namespace, TableName tableName, HRegionInfo[] regionInfos,
+      LockProcedure.LockType type, String description) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preRequestLock(ctx, namespace, tableName, regionInfos, type, description);
+      }
+    });
+  }
+
+  public void postRequestLock(String namespace, TableName tableName, HRegionInfo[] regionInfos,
+      LockProcedure.LockType type, String description) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postRequestLock(ctx, namespace, tableName, regionInfos, type, description);
+      }
+    });
+  }
+
+  public void preLockHeartbeat(LockProcedure proc, boolean keepAlive) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preLockHeartbeat(ctx, proc, keepAlive);
+      }
+    });
+  }
+
+  public void postLockHeartbeat(LockProcedure proc, boolean keepAlive) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postLockHeartbeat(ctx, proc, keepAlive);
       }
     });
   }

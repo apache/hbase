@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -55,15 +56,17 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -177,6 +180,10 @@ public class TestMasterObserver {
     private boolean postDispatchMergeCalled;
     private boolean preMergeRegionsCalled;
     private boolean postMergeRegionsCalled;
+    private boolean preRequestLockCalled;
+    private boolean postRequestLockCalled;
+    private boolean preLockHeartbeatCalled;
+    private boolean postLockHeartbeatCalled;
 
     public void enableBypass(boolean bypass) {
       this.bypass = bypass;
@@ -265,6 +272,10 @@ public class TestMasterObserver {
       postDispatchMergeCalled = false;
       preMergeRegionsCalled = false;
       postMergeRegionsCalled = false;
+      preRequestLockCalled = false;
+      postRequestLockCalled = false;
+      preLockHeartbeatCalled = false;
+      postLockHeartbeatCalled = false;
     }
 
     @Override
@@ -1497,7 +1508,38 @@ public class TestMasterObserver {
 
     @Override
     public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                   String groupName, boolean balancerRan) throws IOException {
+        String groupName, boolean balancerRan) throws IOException {
+    }
+
+    @Override
+    public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
+        TableName tableName, HRegionInfo[] regionInfos, LockProcedure.LockType type,
+        String description) throws IOException {
+      preRequestLockCalled = true;
+    }
+
+    @Override
+    public void postRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
+        TableName tableName, HRegionInfo[] regionInfos, LockProcedure.LockType type,
+        String description) throws IOException {
+      postRequestLockCalled = true;
+    }
+
+    @Override
+    public void preLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        LockProcedure proc, boolean keepAlive) throws IOException {
+      preLockHeartbeatCalled = true;
+    }
+
+    @Override
+    public void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        LockProcedure proc, boolean keepAlive) throws IOException {
+      postLockHeartbeatCalled = true;
+    }
+
+    public boolean preAndPostForQueueLockAndHeartbeatLockCalled() {
+      return preRequestLockCalled && postRequestLockCalled && preLockHeartbeatCalled &&
+          postLockHeartbeatCalled;
     }
 
     @Override
@@ -2120,5 +2162,23 @@ public class TestMasterObserver {
     admin.deleteTable(tableName);
     tableDeletionLatch.await();
     tableDeletionLatch = new CountDownLatch(1);
+  }
+
+  @Test
+  public void testQueueLockAndLockHeartbeatOperations() throws Exception {
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    CPMasterObserver cp = (CPMasterObserver)master.getMasterCoprocessorHost().findCoprocessor(
+        CPMasterObserver.class.getName());
+    cp.resetStates();
+
+    final TableName tableName = TableName.valueOf("testLockedTable");
+    long procId = master.getLockManager().remoteLocks().requestTableLock(tableName,
+          LockProcedure.LockType.EXCLUSIVE, "desc", HConstants.NO_NONCE, HConstants.NO_NONCE);
+    master.getLockManager().remoteLocks().lockHeartbeat(procId, false);
+
+    assertTrue(cp.preAndPostForQueueLockAndHeartbeatLockCalled());
+
+    ProcedureTestingUtility.waitNoProcedureRunning(master.getMasterProcedureExecutor());
+    ProcedureTestingUtility.assertProcNotFailed(master.getMasterProcedureExecutor(), procId);
   }
 }

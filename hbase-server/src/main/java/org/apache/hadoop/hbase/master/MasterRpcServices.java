@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -72,6 +73,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpeci
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.*;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.*;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
@@ -108,7 +110,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -125,7 +126,8 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class MasterRpcServices extends RSRpcServices
-      implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface {
+      implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface,
+        LockService.BlockingInterface {
   private static final Log LOG = LogFactory.getLog(MasterRpcServices.class.getName());
 
   private final HMaster master;
@@ -1795,5 +1797,67 @@ public class MasterRpcServices extends RSRpcServices
     }
 
     return response.build();
+  }
+
+  @Override
+  public LockResponse requestLock(RpcController controller, LockRequest request)
+      throws ServiceException {
+    try {
+      if (request.getDescription().isEmpty()) {
+        throw new IllegalArgumentException("Empty description");
+      }
+      final long procId;
+      LockProcedure.LockType type = LockProcedure.LockType.valueOf(request.getLockType().name());
+      if (request.getRegionInfoCount() > 0) {
+        final HRegionInfo[] regionInfos = new HRegionInfo[request.getRegionInfoCount()];
+        for (int i = 0; i < request.getRegionInfoCount(); ++i) {
+          regionInfos[i] = HRegionInfo.convert(request.getRegionInfo(i));
+        }
+        procId = master.getLockManager().remoteLocks().requestRegionsLock(regionInfos,
+            request.getDescription(), request.getNonceGroup(), request.getNonce());
+        return LockResponse.newBuilder().setProcId(procId).build();
+      } else if (request.hasTableName()) {
+        final TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+        procId = master.getLockManager().remoteLocks().requestTableLock(tableName, type,
+            request.getDescription(), request.getNonceGroup(), request.getNonce());
+        return LockResponse.newBuilder().setProcId(procId).build();
+      } else if (request.hasNamespace()) {
+        procId = master.getLockManager().remoteLocks().requestNamespaceLock(
+            request.getNamespace(), type, request.getDescription(),
+            request.getNonceGroup(), request.getNonce());
+      } else {
+        throw new IllegalArgumentException("one of table/namespace/region should be specified");
+      }
+      return LockResponse.newBuilder().setProcId(procId).build();
+    } catch (IllegalArgumentException e) {
+      LOG.warn("Exception when queuing lock", e);
+      throw new ServiceException(new DoNotRetryIOException(e));
+    } catch (IOException e) {
+      LOG.warn("Exception when queuing lock", e);
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * @return LOCKED, if procedure is found and it has the lock; else UNLOCKED.
+   * @throws ServiceException if given proc id is found but it is not a LockProcedure.
+   */
+  @Override
+  public LockHeartbeatResponse lockHeartbeat(RpcController controller, LockHeartbeatRequest request)
+      throws ServiceException {
+    try {
+      if (master.getLockManager().remoteLocks().lockHeartbeat(request.getProcId(),
+          request.getKeepAlive())) {
+        return LockHeartbeatResponse.newBuilder().setTimeoutMs(
+            master.getConfiguration().getInt(LockProcedure.REMOTE_LOCKS_TIMEOUT_MS_CONF,
+                LockProcedure.DEFAULT_REMOTE_LOCKS_TIMEOUT_MS))
+            .setLockStatus(LockHeartbeatResponse.LockStatus.LOCKED).build();
+      } else {
+        return LockHeartbeatResponse.newBuilder()
+            .setLockStatus(LockHeartbeatResponse.LockStatus.UNLOCKED).build();
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 }

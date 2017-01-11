@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationMetaCleaner;
+import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleanerChore;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
@@ -321,6 +322,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   private final int maxBlancingTime;
   // Maximum percent of regions in transition when balancing
   private final double maxRitPercent;
+
+  private final LockManager lockManager = new LockManager(this);
 
   private LoadBalancer balancer;
   private RegionNormalizer normalizer;
@@ -674,7 +677,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
-
   }
 
   /**
@@ -3288,5 +3290,10 @@ public class HMaster extends HRegionServer implements MasterServices {
       LOG.warn(
         this.zooKeeper.prefix("Unable to remove drain for '" + server.getServerName() + "'."), ke);
     }
+  }
+
+  @Override
+  public LockManager getLockManager() {
+    return lockManager;
   }
 }

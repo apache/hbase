@@ -20,19 +20,11 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Sets;
-import com.google.common.net.HostAndPort;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -54,12 +46,12 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
+import org.apache.hadoop.hbase.master.locking.LockProcedure.LockType;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.AddRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.AddRSGroupResponse;
@@ -80,12 +72,18 @@ import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.MoveTablesR
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RemoveRSGroupResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+
+import com.google.common.collect.Sets;
+import com.google.common.net.HostAndPort;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 @InterfaceAudience.Private
-public class RSGroupAdminEndpoint extends RSGroupAdminService
-    implements CoprocessorService, Coprocessor, MasterObserver {
-
-  private static final Log LOG = LogFactory.getLog(RSGroupAdminEndpoint.class);
+public class RSGroupAdminEndpoint extends RSGroupAdminService implements CoprocessorService, 
+    Coprocessor, MasterObserver {
   private MasterServices master = null;
 
   private static RSGroupInfoManagerImpl groupInfoManager;
@@ -97,7 +95,7 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
     master = menv.getMasterServices();
     setGroupInfoManager(new RSGroupInfoManagerImpl(master));
     groupAdminServer = new RSGroupAdminServer(master, groupInfoManager);
-    Class clazz =
+    Class<?> clazz =
         master.getConfiguration().getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, null);
     if (!RSGroupableBalancer.class.isAssignableFrom(clazz)) {
       throw new IOException("Configured balancer is not a GroupableBalancer");
@@ -1180,5 +1178,29 @@ public class RSGroupAdminEndpoint extends RSGroupAdminService
   public void postRollBackMergeRegionsAction(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final HRegionInfo[] regionsToMerge) throws IOException {
+  }
+
+  @Override
+  public void preLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      LockProcedure proc, boolean keepAlive) throws IOException {
+  }
+
+  @Override
+  public void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      LockProcedure proc, boolean keepAlive) throws IOException {
+  }
+
+  @Override
+  public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace, TableName tableName,
+      HRegionInfo[] regionInfos, LockType type, String description) throws IOException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void postRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace, TableName tableName,
+      HRegionInfo[] regionInfos, LockType type, String description) throws IOException {
+    // TODO Auto-generated method stub
+    
   }
 }

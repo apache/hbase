@@ -386,8 +386,8 @@ public interface AsyncTableBase {
    * @return A list of {@link CompletableFuture}s that represent the existence for each get.
    */
   default List<CompletableFuture<Boolean>> exists(List<Get> gets) {
-    return get(toCheckExistenceOnly(gets)).stream().map(f -> f.thenApply(r -> r.getExists()))
-        .collect(toList());
+    return get(toCheckExistenceOnly(gets)).stream().
+        <CompletableFuture<Boolean>>map(f -> f.thenApply(r -> r.getExists())).collect(toList());
   }
 
   /**

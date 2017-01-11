@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -91,7 +92,7 @@ public class ProcedureExecutor<TEnvironment> {
       final boolean kill = this.killBeforeStoreUpdate;
       if (this.toggleKillBeforeStoreUpdate) {
         this.killBeforeStoreUpdate = !kill;
-        LOG.warn("Toggle Kill before store update to: " + this.killBeforeStoreUpdate);
+        LOG.warn("Toggle KILL before store update to: " + this.killBeforeStoreUpdate);
       }
       return kill;
     }
@@ -172,7 +173,7 @@ public class ProcedureExecutor<TEnvironment> {
 
       final long now = EnvironmentEdgeManager.currentTime();
       final Iterator<Map.Entry<Long, ProcedureInfo>> it = completed.entrySet().iterator();
-      final boolean isDebugEnabled = LOG.isDebugEnabled();
+      final boolean debugEnabled = LOG.isDebugEnabled();
       while (it.hasNext() && store.isRunning()) {
         final Map.Entry<Long, ProcedureInfo> entry = it.next();
         final ProcedureInfo procInfo = entry.getValue();
@@ -180,8 +181,8 @@ public class ProcedureExecutor<TEnvironment> {
         // TODO: Select TTL based on Procedure type
         if ((procInfo.hasClientAckTime() && (now - procInfo.getClientAckTime()) >= evictAckTtl) ||
             (now - procInfo.getLastUpdate()) >= evictTtl) {
-          if (isDebugEnabled) {
-            LOG.debug("Evict completed procedure: " + procInfo);
+          if (debugEnabled) {
+            LOG.debug("Evict completed " + procInfo);
           }
           batchIds[batchCount++] = entry.getKey();
           if (batchCount == batchIds.length) {
@@ -281,7 +282,7 @@ public class ProcedureExecutor<TEnvironment> {
       @Override
       public void setMaxProcId(long maxProcId) {
         assert lastProcId.get() < 0 : "expected only one call to setMaxProcId()";
-        LOG.debug("load procedures maxProcId=" + maxProcId);
+        LOG.debug("Load maxProcId=" + maxProcId);
         lastProcId.set(maxProcId);
       }
 
@@ -295,7 +296,7 @@ public class ProcedureExecutor<TEnvironment> {
         int corruptedCount = 0;
         while (procIter.hasNext()) {
           ProcedureInfo proc = procIter.nextAsProcedureInfo();
-          LOG.error("corrupted procedure: " + proc);
+          LOG.error("Corrupt " + proc);
           corruptedCount++;
         }
         if (abortOnCorruption && corruptedCount > 0) {
@@ -307,7 +308,7 @@ public class ProcedureExecutor<TEnvironment> {
 
   private void loadProcedures(final ProcedureIterator procIter,
       final boolean abortOnCorruption) throws IOException {
-    final boolean isDebugEnabled = LOG.isDebugEnabled();
+    final boolean debugEnabled = LOG.isDebugEnabled();
 
     // 1. Build the rollback stack
     int runnablesCount = 0;
@@ -320,8 +321,8 @@ public class ProcedureExecutor<TEnvironment> {
         nonceKey = proc.getNonceKey();
         procId = proc.getProcId();
         completed.put(proc.getProcId(), proc);
-        if (isDebugEnabled) {
-          LOG.debug("The procedure is completed: " + proc);
+        if (debugEnabled) {
+          LOG.debug("Completed " + proc);
         }
       } else {
         Procedure proc = procIter.nextAsProcedure();
@@ -361,8 +362,8 @@ public class ProcedureExecutor<TEnvironment> {
       Procedure proc = procIter.nextAsProcedure();
       assert !(proc.isFinished() && !proc.hasParent()) : "unexpected completed proc=" + proc;
 
-      if (isDebugEnabled) {
-        LOG.debug(String.format("Loading procedure state=%s isFailed=%s: %s",
+      if (debugEnabled) {
+        LOG.debug(String.format("Loading state=%s isFailed=%s: %s",
                     proc.getState(), proc.hasException(), proc));
       }
 
@@ -425,7 +426,7 @@ public class ProcedureExecutor<TEnvironment> {
       if (procStack.isValid()) continue;
 
       for (Procedure proc: procStack.getSubproceduresStack()) {
-        LOG.error("corrupted procedure: " + proc);
+        LOG.error("Corrupted " + proc);
         procedures.remove(proc.getProcId());
         runnableList.remove(proc);
         if (waitingSet != null) waitingSet.remove(proc);
@@ -485,7 +486,7 @@ public class ProcedureExecutor<TEnvironment> {
     // We have numThreads executor + one timer thread used for timing out
     // procedures and triggering periodic procedures.
     this.corePoolSize = numThreads;
-    LOG.info("Starting procedure executor threads=" + corePoolSize);
+    LOG.info("Starting executor threads=" + corePoolSize);
 
     // Create the Thread Group for the executors
     threadGroup = new ThreadGroup("ProcedureExecutor");
@@ -506,7 +507,7 @@ public class ProcedureExecutor<TEnvironment> {
     st = EnvironmentEdgeManager.currentTime();
     store.recoverLease();
     et = EnvironmentEdgeManager.currentTime();
-    LOG.info(String.format("recover procedure store (%s) lease: %s",
+    LOG.info(String.format("Recover store (%s) lease: %s",
       store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
     // start the procedure scheduler
@@ -520,11 +521,11 @@ public class ProcedureExecutor<TEnvironment> {
     st = EnvironmentEdgeManager.currentTime();
     load(abortOnCorruption);
     et = EnvironmentEdgeManager.currentTime();
-    LOG.info(String.format("load procedure store (%s): %s",
+    LOG.info(String.format("Load store (%s): %s",
       store.getClass().getSimpleName(), StringUtils.humanTimeDiff(et - st)));
 
     // Start the executors. Here we must have the lastProcId set.
-    LOG.debug("start workers " + workerThreads.size());
+    LOG.debug("Start workers " + workerThreads.size());
     timeoutExecutor.start();
     for (WorkerThread worker: workerThreads) {
       worker.start();
@@ -542,7 +543,7 @@ public class ProcedureExecutor<TEnvironment> {
       return;
     }
 
-    LOG.info("Stopping the procedure executor");
+    LOG.info("Stopping");
     scheduler.stop();
     timeoutExecutor.sendStopSignal();
   }
@@ -564,7 +565,7 @@ public class ProcedureExecutor<TEnvironment> {
     try {
       threadGroup.destroy();
     } catch (IllegalThreadStateException e) {
-      LOG.error("thread group " + threadGroup + " contains running threads");
+      LOG.error("Thread group " + threadGroup + " contains running threads");
       threadGroup.list();
     } finally {
       threadGroup = null;
@@ -693,12 +694,12 @@ public class ProcedureExecutor<TEnvironment> {
 
     // we found a registered nonce, but the procedure may not have been submitted yet.
     // since the client expect the procedure to be submitted, spin here until it is.
-    final boolean isTraceEnabled = LOG.isTraceEnabled();
+    final boolean traceEnabled = LOG.isTraceEnabled();
     while (isRunning() &&
            !(procedures.containsKey(oldProcId) || completed.containsKey(oldProcId)) &&
            nonceKeysToProcIdsMap.containsKey(nonceKey)) {
-      if (isTraceEnabled) {
-        LOG.trace("waiting for procId=" + oldProcId.longValue() + " to be submitted");
+      if (traceEnabled) {
+        LOG.trace("Waiting for procId=" + oldProcId.longValue() + " to be submitted");
       }
       Threads.sleep(100);
     }
@@ -787,7 +788,7 @@ public class ProcedureExecutor<TEnvironment> {
     // Commit the transaction
     store.insert(proc, null);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Procedure " + proc + " added to the store.");
+      LOG.debug("Stored " + proc);
     }
 
     // Add the procedure to the executor
@@ -811,7 +812,7 @@ public class ProcedureExecutor<TEnvironment> {
     // Commit the transaction
     store.insert(procs);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Procedures added to the store: " + Arrays.toString(procs));
+      LOG.debug("Stored " + Arrays.toString(procs));
     }
 
     // Add the procedure to the executor
@@ -880,6 +881,14 @@ public class ProcedureExecutor<TEnvironment> {
     return procedures.get(procId);
   }
 
+  public <T extends Procedure> T getProcedure(final Class<T> clazz, final long procId) {
+    final Procedure proc = getProcedure(procId);
+    if (clazz.isInstance(proc)) {
+      return (T)proc;
+    }
+    return null;
+  }
+
   public ProcedureInfo getResult(final long procId) {
     return completed.get(procId);
   }
@@ -917,7 +926,7 @@ public class ProcedureExecutor<TEnvironment> {
     if (result == null) {
       assert !procedures.containsKey(procId) : "procId=" + procId + " is still running";
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Procedure procId=" + procId + " already removed by the cleaner.");
+        LOG.debug("procId=" + procId + " already removed by the cleaner.");
       }
       return;
     }
@@ -999,7 +1008,7 @@ public class ProcedureExecutor<TEnvironment> {
         try {
           listener.procedureLoaded(procId);
         } catch (Throwable e) {
-          LOG.error("The listener " + listener + " had an error: " + e.getMessage(), e);
+          LOG.error("Listener " + listener + " had an error: " + e.getMessage(), e);
         }
       }
     }
@@ -1011,7 +1020,7 @@ public class ProcedureExecutor<TEnvironment> {
         try {
           listener.procedureAdded(procId);
         } catch (Throwable e) {
-          LOG.error("The listener " + listener + " had an error: " + e.getMessage(), e);
+          LOG.error("Listener " + listener + " had an error: " + e.getMessage(), e);
         }
       }
     }
@@ -1023,7 +1032,7 @@ public class ProcedureExecutor<TEnvironment> {
         try {
           listener.procedureFinished(procId);
         } catch (Throwable e) {
-          LOG.error("The listener " + listener + " had an error: " + e.getMessage(), e);
+          LOG.error("Listener " + listener + " had an error: " + e.getMessage(), e);
         }
       }
     }
@@ -1051,6 +1060,11 @@ public class ProcedureExecutor<TEnvironment> {
   @VisibleForTesting
   protected long getLastProcId() {
     return lastProcId.get();
+  }
+
+  @VisibleForTesting
+  public Set<Long> getActiveProcIds() {
+    return procedures.keySet();
   }
 
   private Long getRootProcedureId(Procedure proc) {
@@ -1111,7 +1125,7 @@ public class ProcedureExecutor<TEnvironment> {
 
       if (proc.isSuccess()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Procedure completed in " +
+          LOG.debug("Completed in " +
               StringUtils.humanTimeDiff(proc.elapsedTime()) + ": " + proc);
         }
         // Finalize the procedure state
@@ -1203,7 +1217,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // Finalize the procedure state
-    LOG.info("Rolledback procedure " + rootProc +
+    LOG.info("Rolled back " + rootProc +
              " exec-time=" + StringUtils.humanTimeDiff(rootProc.elapsedTime()) +
              " exception=" + exception.getMessage());
     procedureFinished(rootProc);
@@ -1220,7 +1234,7 @@ public class ProcedureExecutor<TEnvironment> {
       proc.doRollback(getEnvironment());
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("rollback attempt failed for " + proc, e);
+        LOG.debug("Roll back attempt failed for " + proc, e);
       }
       return false;
     } catch (InterruptedException e) {
@@ -1294,7 +1308,7 @@ public class ProcedureExecutor<TEnvironment> {
         isSuspended = true;
       } catch (ProcedureYieldException e) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Yield procedure: " + procedure + ": " + e.getMessage());
+          LOG.trace("Yield " + procedure + ": " + e.getMessage());
         }
         scheduler.yield(procedure);
         return;
@@ -1418,8 +1432,8 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // If this procedure is the last child awake the parent procedure
-    final boolean isTraceEnabled = LOG.isTraceEnabled();
-    if (isTraceEnabled) {
+    final boolean traceEnabled = LOG.isTraceEnabled();
+    if (traceEnabled) {
       LOG.trace(parent + " child is done: " + procedure);
     }
 
@@ -1427,7 +1441,7 @@ public class ProcedureExecutor<TEnvironment> {
       parent.setState(ProcedureState.RUNNABLE);
       store.update(parent);
       scheduler.addFront(parent);
-      if (isTraceEnabled) {
+      if (traceEnabled) {
         LOG.trace(parent + " all the children finished their work, resume.");
       }
       return;
@@ -1438,7 +1452,7 @@ public class ProcedureExecutor<TEnvironment> {
       final Procedure procedure, final Procedure[] subprocs) {
     if (subprocs != null && !procedure.isFailed()) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Store add " + procedure + " children " + Arrays.toString(subprocs));
+        LOG.trace("Stored " + procedure + ", children " + Arrays.toString(subprocs));
       }
       store.insert(procedure, subprocs);
     } else {
@@ -1464,7 +1478,7 @@ public class ProcedureExecutor<TEnvironment> {
 
   private void handleInterruptedException(final Procedure proc, final InterruptedException e) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("got an interrupt during " + proc + ". suspend and retry it later.", e);
+      LOG.trace("Interrupt during " + proc + ". suspend and retry it later.", e);
     }
 
     // NOTE: We don't call Thread.currentThread().interrupt()
@@ -1530,7 +1544,7 @@ public class ProcedureExecutor<TEnvironment> {
 
     @Override
     public void run() {
-      final boolean isTraceEnabled = LOG.isTraceEnabled();
+      final boolean traceEnabled = LOG.isTraceEnabled();
       long lastUpdate = EnvironmentEdgeManager.currentTime();
       while (isRunning() && keepAlive(lastUpdate)) {
         final Procedure procedure = scheduler.poll(keepAliveTime, TimeUnit.MILLISECONDS);
@@ -1539,7 +1553,7 @@ public class ProcedureExecutor<TEnvironment> {
         store.setRunningProcedureCount(activeExecutorCount.incrementAndGet());
         executionStartTime.set(EnvironmentEdgeManager.currentTime());
         try {
-          if (isTraceEnabled) {
+          if (traceEnabled) {
             LOG.trace("Trying to start the execution of " + procedure);
           }
           executeProcedure(procedure);
@@ -1549,7 +1563,7 @@ public class ProcedureExecutor<TEnvironment> {
           executionStartTime.set(Long.MAX_VALUE);
         }
       }
-      LOG.debug("worker thread terminated " + this);
+      LOG.debug("Worker thread terminated " + this);
       workerThreads.remove(this);
     }
 
@@ -1691,7 +1705,7 @@ public class ProcedureExecutor<TEnvironment> {
           sendStopSignal();
           join(250);
           if (i > 0 && (i % 8) == 0) {
-            LOG.warn("waiting termination of thread " + getName() + ", " +
+            LOG.warn("Waiting termination of thread " + getName() + ", " +
               StringUtils.humanTimeDiff(EnvironmentEdgeManager.currentTime() - startTime));
           }
         }
@@ -1767,7 +1781,7 @@ public class ProcedureExecutor<TEnvironment> {
 
         // WARN the worker is stuck
         stuckCount++;
-        LOG.warn("found worker stuck " + worker +
+        LOG.warn("Worker stuck " + worker +
             " run time " + StringUtils.humanTimeDiff(worker.getCurrentRunTime()));
       }
       return stuckCount;
@@ -1785,7 +1799,7 @@ public class ProcedureExecutor<TEnvironment> {
         final WorkerThread worker = new WorkerThread(threadGroup);
         workerThreads.add(worker);
         worker.start();
-        LOG.debug("added a new worker thread " + worker);
+        LOG.debug("Added new worker thread " + worker);
       }
     }
 

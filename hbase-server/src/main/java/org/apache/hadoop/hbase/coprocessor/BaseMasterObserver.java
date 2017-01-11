@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -1147,6 +1148,28 @@ public class BaseMasterObserver implements MasterObserver {
 
   @Override
   public void postBalanceRSGroup(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 String groupName, boolean balancerRan) throws IOException {
+      String groupName, boolean balancerRan) throws IOException {
+  }
+
+  @Override
+  public void preRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
+      TableName tableName, HRegionInfo[] regionInfos, LockProcedure.LockType type,
+      String description) throws IOException {
+  }
+
+  @Override
+  public void postRequestLock(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace,
+      TableName tableName, HRegionInfo[] regionInfos, LockProcedure.LockType type,
+      String description) throws IOException {
+  }
+
+  @Override
+  public void preLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      LockProcedure proc, boolean keepAlive) throws IOException {
+  }
+
+  @Override
+  public void postLockHeartbeat(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      LockProcedure proc, boolean keepAlive) throws IOException {
   }
 }

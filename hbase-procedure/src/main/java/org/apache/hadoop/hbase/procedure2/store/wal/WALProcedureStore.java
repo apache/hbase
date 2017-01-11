@@ -294,7 +294,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
 
   @Override
   public void setRunningProcedureCount(final int count) {
-    LOG.debug("set running procedure count=" + count + " slots=" + slots.length);
+    LOG.debug("Set running procedure count=" + count + ", slots=" + slots.length);
     this.runningProcCount = count > 0 ? Math.min(count, slots.length) : slots.length;
   }
 
@@ -326,7 +326,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         try {
           flushLogId = initOldLogs(oldLogs);
         } catch (FileNotFoundException e) {
-          LOG.warn("someone else is active and deleted logs. retrying.", e);
+          LOG.warn("Someone else is active and deleted logs. retrying.", e);
           oldLogs = getLogFiles();
           continue;
         }
@@ -334,7 +334,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         // Create new state-log
         if (!rollWriter(flushLogId + 1)) {
           // someone else has already created this log
-          LOG.debug("someone else has already created log " + flushLogId);
+          LOG.debug("Someone else has already created log " + flushLogId);
           continue;
         }
 
@@ -428,7 +428,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
     try {
       periodicRoll();
     } catch (IOException e) {
-      LOG.warn("unable to cleanup logs on load: " + e.getMessage(), e);
+      LOG.warn("Unable to cleanup logs on load: " + e.getMessage(), e);
     }
   }
 

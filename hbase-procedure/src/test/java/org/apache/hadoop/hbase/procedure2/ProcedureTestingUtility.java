@@ -206,6 +206,18 @@ public class ProcedureTestingUtility {
     }
   }
 
+  public static <TEnv> void waitProcedures(ProcedureExecutor<TEnv> procExecutor, long... procIds) {
+    for (int i = 0; i < procIds.length; ++i) {
+      waitProcedure(procExecutor, procIds[i]);
+    }
+  }
+
+  public static <TEnv> void waitAllProcedures(ProcedureExecutor<TEnv> procExecutor) {
+    for (long procId : procExecutor.getActiveProcIds()) {
+      waitProcedure(procExecutor, procId);
+    }
+  }
+
   public static <TEnv> void waitNoProcedureRunning(ProcedureExecutor<TEnv> procExecutor) {
     int stableRuns = 0;
     while (stableRuns < 10) {
