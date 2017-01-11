@@ -283,6 +283,8 @@ public abstract class RpcServer implements RpcServerInterface,
 
     private long responseCellSize = 0;
     private long responseBlockSize = 0;
+    // cumulative size of serialized exceptions
+    private long exceptionSize = 0;
     private boolean retryImmediatelySupported;
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
@@ -603,6 +605,15 @@ public abstract class RpcServer implements RpcServerInterface,
     @Override
     public void incrementResponseBlockSize(long blockSize) {
       responseBlockSize += blockSize;
+    }
+
+    @Override
+    public long getResponseExceptionSize() {
+      return exceptionSize;
+    }
+    @Override
+    public void incrementResponseExceptionSize(long exSize) {
+      exceptionSize += exSize;
     }
 
     @Override

@@ -168,6 +168,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -730,7 +731,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         if (context != null
             && context.isRetryImmediatelySupported()
             && (context.getResponseCellSize() > maxQuotaResultSize
-              || context.getResponseBlockSize() > maxQuotaResultSize)) {
+              || context.getResponseBlockSize() + context.getResponseExceptionSize()
+              > maxQuotaResultSize)) {
 
           // We're storing the exception since the exception and reason string won't
           // change after the response size limit is reached.
@@ -753,7 +755,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           //
           // This will create a copy in the builder.
           hasResultOrException = true;
-          resultOrExceptionBuilder.setException(ResponseConverter.buildException(sizeIOE));
+          NameBytesPair pair = ResponseConverter.buildException(sizeIOE);
+          resultOrExceptionBuilder.setException(pair);
+          context.incrementResponseExceptionSize(pair.getSerializedSize());
           resultOrExceptionBuilder.setIndex(action.getIndex());
           builder.addResultOrException(resultOrExceptionBuilder.build());
           if (cellScanner != null) {
@@ -791,7 +795,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     .setValue(UnsafeByteOperations.unsafeWrap(result.toByteArray()))));
           } catch (IOException ioe) {
             rpcServer.getMetrics().exception(ioe);
-            resultOrExceptionBuilder.setException(ResponseConverter.buildException(ioe));
+            NameBytesPair pair = ResponseConverter.buildException(ioe);
+            resultOrExceptionBuilder.setException(pair);
+            context.incrementResponseExceptionSize(pair.getSerializedSize());
           }
         } else if (action.hasMutation()) {
           MutationType type = action.getMutation().getMutateType();
@@ -845,7 +851,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       } catch (IOException ie) {
         rpcServer.getMetrics().exception(ie);
         hasResultOrException = true;
-        resultOrExceptionBuilder.setException(ResponseConverter.buildException(ie));
+        NameBytesPair pair = ResponseConverter.buildException(ie);
+        resultOrExceptionBuilder.setException(pair);
+        context.incrementResponseExceptionSize(pair.getSerializedSize());
       }
       if (hasResultOrException) {
         // Propagate index.

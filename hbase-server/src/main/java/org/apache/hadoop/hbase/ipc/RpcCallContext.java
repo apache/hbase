@@ -98,4 +98,7 @@ public interface RpcCallContext {
   long getResponseBlockSize();
 
   void incrementResponseBlockSize(long blockSize);
+
+  long getResponseExceptionSize();
+  void incrementResponseExceptionSize(long exceptionSize);
 }
