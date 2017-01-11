@@ -316,6 +316,17 @@ public class QuotaSettingsFactory {
   }
 
   /**
+   * Creates a {@link QuotaSettings} object to remove the FileSystem space quota for the given
+   * table.
+   *
+   * @param tableName The name of the table to remove the quota for.
+   * @return A {@link QuotaSettings} object.
+   */
+  public static QuotaSettings removeTableSpaceLimit(TableName tableName) {
+    return new SpaceLimitSettings(tableName, true);
+  }
+
+  /**
    * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given
    * namespace to the given size in bytes. When the space usage is exceeded by all tables in the
    * namespace, the provided {@link SpaceViolationPolicy} is enacted on all tables in the namespace.
@@ -328,5 +339,16 @@ public class QuotaSettingsFactory {
   public static QuotaSettings limitNamespaceSpace(
       final String namespace, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
     return new SpaceLimitSettings(namespace, sizeLimit, violationPolicy);
+  }
+
+  /**
+   * Creates a {@link QuotaSettings} object to remove the FileSystem space quota for the given
+	 * namespace.
+   *
+   * @param namespace The namespace to remove the quota on.
+   * @return A {@link QuotaSettings} object.
+   */
+  public static QuotaSettings removeNamespaceSpaceLimit(String namespace) {
+    return new SpaceLimitSettings(namespace, true);
   }
 }

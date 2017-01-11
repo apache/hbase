@@ -41,7 +41,15 @@ class SpaceLimitSettings extends QuotaSettings {
     if (0L > sizeLimit) {
       throw new IllegalArgumentException("Size limit must be a non-negative value.");
     }
-    proto = buildProtoQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
+    proto = buildProtoAddQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
+  }
+
+  SpaceLimitSettings(TableName tableName, boolean remove) {
+    super(null, Objects.requireNonNull(tableName), null);
+    if (!remove) {
+      throw new IllegalArgumentException("A value of 'false' for removing a quota makes no sense");
+    }
+    proto = buildProtoRemoveQuota();
   }
 
   SpaceLimitSettings(String namespace, long sizeLimit, SpaceViolationPolicy violationPolicy) {
@@ -49,7 +57,15 @@ class SpaceLimitSettings extends QuotaSettings {
     if (0L > sizeLimit) {
       throw new IllegalArgumentException("Size limit must be a non-negative value.");
     }
-    proto = buildProtoQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
+    proto = buildProtoAddQuota(sizeLimit, Objects.requireNonNull(violationPolicy));
+  }
+
+  SpaceLimitSettings(String namespace, boolean remove) {
+    super(null, null, Objects.requireNonNull(namespace));
+    if (!remove) {
+      throw new IllegalArgumentException("A value of 'false' for removing a quota makes no sense");
+    }
+    proto = buildProtoRemoveQuota();
   }
 
   /**
@@ -59,11 +75,25 @@ class SpaceLimitSettings extends QuotaSettings {
    * @param violationPolicy The action to take when the quota is exceeded.
    * @return The protobuf SpaceQuota representation.
    */
-  private SpaceLimitRequest buildProtoQuota(long sizeLimit, SpaceViolationPolicy violationPolicy) {
+  private SpaceLimitRequest buildProtoAddQuota(
+      long sizeLimit, SpaceViolationPolicy violationPolicy) {
     return SpaceLimitRequest.newBuilder().setQuota(
         SpaceQuota.newBuilder()
             .setSoftLimit(sizeLimit)
             .setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(violationPolicy))
+            .build())
+        .build();
+  }
+
+  /**
+   * Builds a {@link SpaceQuota} protobuf object to remove a quota.
+   *
+   * @return The protobuf SpaceQuota representation.
+   */
+  private SpaceLimitRequest buildProtoRemoveQuota() {
+    return SpaceLimitRequest.newBuilder().setQuota(
+        SpaceQuota.newBuilder()
+            .setRemove(true)
             .build())
         .build();
   }
@@ -159,8 +189,12 @@ class SpaceLimitSettings extends QuotaSettings {
     if (null != getNamespace()) {
       sb.append(", NAMESPACE => ").append(getNamespace());
     }
-    sb.append(", LIMIT => ").append(proto.getQuota().getSoftLimit());
-    sb.append(", VIOLATION_POLICY => ").append(proto.getQuota().getViolationPolicy());
+    if (proto.getQuota().getRemove()) {
+      sb.append(", REMOVE => ").append(proto.getQuota().getRemove());
+    } else {
+      sb.append(", LIMIT => ").append(proto.getQuota().getSoftLimit());
+      sb.append(", VIOLATION_POLICY => ").append(proto.getQuota().getViolationPolicy());
+    }
     return sb.toString();
   }
 }

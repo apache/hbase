@@ -47,6 +47,7 @@ import org.junit.experimental.categories.Category;
 import com.google.common.collect.Iterables;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -246,7 +247,7 @@ public class TestQuotaAdmin {
   }
 
   @Test
-  public void testSetAndGetSpaceQuota() throws Exception {
+  public void testSetGetRemoveSpaceQuota() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final TableName tn = TableName.valueOf("table1");
     final long sizeLimit = 1024L * 1024L * 1024L * 1024L * 5L; // 5TB
@@ -274,10 +275,32 @@ public class TestQuotaAdmin {
     } finally {
       scanner.close();
     }
+
+    // Now, remove the quota
+    QuotaSettings removeQuota = QuotaSettingsFactory.removeTableSpaceLimit(tn);
+    admin.setQuota(removeQuota);
+
+    // Verify that the record doesn't exist in the table
+    try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      ResultScanner rs = quotaTable.getScanner(new Scan());
+      try {
+        assertNull("Did not expect to find a quota entry", rs.next());
+      } finally {
+        rs.close();
+      }
+    }
+
+    // Verify that we can also not fetch it via the API
+    scanner = QuotaRetriever.open(admin.getConfiguration());
+    try {
+      assertNull("Did not expect to find a quota entry", scanner.next());
+    } finally {
+      scanner.close();
+    }
   }
 
   @Test
-  public void testSetAndModifyQuota() throws Exception {
+  public void testSetModifyRemoveQuota() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final TableName tn = TableName.valueOf("table1");
     final long originalSizeLimit = 1024L * 1024L * 1024L * 1024L * 5L; // 5TB
@@ -331,6 +354,28 @@ public class TestQuotaAdmin {
     quotaScanner = QuotaRetriever.open(admin.getConfiguration());
     try {
       assertSpaceQuota(newSizeLimit, newViolationPolicy, Iterables.getOnlyElement(quotaScanner));
+    } finally {
+      quotaScanner.close();
+    }
+
+    // Now, remove the quota
+    QuotaSettings removeQuota = QuotaSettingsFactory.removeTableSpaceLimit(tn);
+    admin.setQuota(removeQuota);
+
+    // Verify that the record doesn't exist in the table
+    try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      ResultScanner scanner = quotaTable.getScanner(new Scan());
+      try {
+        assertNull("Did not expect to find a quota entry", scanner.next());
+      } finally {
+        scanner.close();
+      }
+    }
+
+    // Verify that we can also not fetch it via the API
+    quotaScanner = QuotaRetriever.open(admin.getConfiguration());
+    try {
+      assertNull("Did not expect to find a quota entry", quotaScanner.next());
     } finally {
       quotaScanner.close();
     }

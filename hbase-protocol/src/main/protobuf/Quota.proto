@@ -89,6 +89,7 @@ enum SpaceViolationPolicy {
 message SpaceQuota {
   optional uint64 soft_limit = 1; // The limit of bytes for this quota
   optional SpaceViolationPolicy violation_policy = 2; // The action to take when the quota is violated
+  optional bool remove = 3 [default = false]; // When true, remove the quota.
 }
 
 // The Request to limit space usage (to allow for schema evolution not tied to SpaceQuota).

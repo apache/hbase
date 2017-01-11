@@ -422,7 +422,11 @@ public class QuotaTableUtil {
     boolean hasSettings = false;
     hasSettings |= quotas.hasThrottle();
     hasSettings |= quotas.hasBypassGlobals();
-    hasSettings |= quotas.hasSpace();
+    // Only when there is a space quota, make sure there's actually both fields provided
+    // Otherwise, it's a noop.
+    if (quotas.hasSpace()) {
+      hasSettings |= (quotas.getSpace().hasSoftLimit() && quotas.getSpace().hasViolationPolicy());
+    }
     return !hasSettings;
   }
 

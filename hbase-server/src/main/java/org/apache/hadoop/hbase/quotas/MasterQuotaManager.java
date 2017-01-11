@@ -454,7 +454,14 @@ public class MasterQuotaManager implements RegionStateListener {
    */
   void applySpaceLimit(final Quotas.Builder quotas, final SpaceLimitRequest req) {
     if (req.hasQuota()) {
-      applySpaceQuota(quotas, req.getQuota());
+      SpaceQuota spaceQuota = req.getQuota();
+      // If we have the remove flag, unset the space quota.
+      if (spaceQuota.getRemove()) {
+        quotas.setSpace(SpaceQuota.getDefaultInstance());
+      } else {
+        // Otherwise, update the new quota
+        applySpaceQuota(quotas, req.getQuota());
+      }
     }
   }
 

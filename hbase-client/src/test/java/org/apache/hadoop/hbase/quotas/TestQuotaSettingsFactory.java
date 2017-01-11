@@ -144,5 +144,25 @@ public class TestQuotaSettingsFactory {
     SpaceQuota quota = protoRequest.getQuota();
     assertEquals(sizeLimit, quota.getSoftLimit());
     assertEquals(violationPolicy, ProtobufUtil.toViolationPolicy(quota.getViolationPolicy()));
+    assertFalse("The remove attribute should be false", quota.getRemove());
   }
+
+  @Test
+  public void testSpaceLimitSettingsForDeletes() {
+    final String ns = "ns1";
+    final TableName tn = TableName.valueOf("tn1");
+    QuotaSettings nsSettings = QuotaSettingsFactory.removeNamespaceSpaceLimit(ns);
+    assertNotNull("QuotaSettings should not be null", nsSettings);
+    assertTrue("Should be an instance of SpaceLimitSettings", nsSettings instanceof SpaceLimitSettings);
+    SpaceLimitRequest nsProto = ((SpaceLimitSettings) nsSettings).getProto();
+    assertTrue("Request should have a SpaceQuota", nsProto.hasQuota());
+    assertTrue("The remove attribute should be true", nsProto.getQuota().getRemove());
+
+    QuotaSettings tableSettings = QuotaSettingsFactory.removeTableSpaceLimit(tn);
+    assertNotNull("QuotaSettings should not be null", tableSettings);
+    assertTrue("Should be an instance of SpaceLimitSettings", tableSettings instanceof SpaceLimitSettings);
+    SpaceLimitRequest tableProto = ((SpaceLimitSettings) tableSettings).getProto();
+    assertTrue("Request should have a SpaceQuota", tableProto.hasQuota());
+    assertTrue("The remove attribute should be true", tableProto.getQuota().getRemove());
+   }
 }
