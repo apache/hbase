@@ -58,19 +58,19 @@ import static org.junit.Assert.assertEquals;
 public class TestFSHLog extends AbstractTestFSWAL {
 
   @Override
-  protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
+  protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String walDir, String archiveDir,
       Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
       String prefix, String suffix) throws IOException {
-    return new FSHLog(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
+    return new FSHLog(fs, rootDir, walDir, archiveDir, conf, listeners, failIfWALExists, prefix,
         suffix);
   }
 
   @Override
-  protected AbstractFSWAL<?> newSlowWAL(FileSystem fs, Path rootDir, String logDir,
+  protected AbstractFSWAL<?> newSlowWAL(FileSystem fs, Path rootDir, String walDir,
       String archiveDir, Configuration conf, List<WALActionsListener> listeners,
       boolean failIfWALExists, String prefix, String suffix, final Runnable action)
       throws IOException {
-    return new FSHLog(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
+    return new FSHLog(fs, rootDir, walDir, archiveDir, conf, listeners, failIfWALExists, prefix,
         suffix) {
 
       @Override

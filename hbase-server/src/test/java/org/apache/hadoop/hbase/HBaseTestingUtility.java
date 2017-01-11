@@ -868,6 +868,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Start up a minicluster of hbase, dfs, and zookeeper where WAL's walDir is created separately.
+   * @throws Exception
+   * @return Mini hbase cluster instance created.
+   * @see {@link #shutdownMiniDFSCluster()}
+   */
+  public MiniHBaseCluster startMiniCluster(boolean withWALDir) throws Exception {
+    return startMiniCluster(1, 1, 1, null, null, null, false, withWALDir);
+  }
+
+  /**
    * Start up a minicluster of hbase, dfs, and zookeeper.
    * Set the <code>create</code> flag to create root or data directory path or not
    * (will overwrite if dir already exists)
@@ -896,6 +906,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public MiniHBaseCluster startMiniCluster(final int numSlaves)
   throws Exception {
     return startMiniCluster(1, numSlaves, false);
+  }
+
+  public MiniHBaseCluster startMiniCluster(final int numSlaves, boolean create, boolean withWALDir)
+          throws Exception {
+    return startMiniCluster(1, numSlaves, numSlaves, null, null, null, create, withWALDir);
   }
 
   /**
@@ -927,7 +942,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       final int numSlaves, final String[] dataNodeHosts, boolean create)
       throws Exception {
     return startMiniCluster(numMasters, numSlaves, numSlaves, dataNodeHosts,
-        null, null, create);
+        null, null, create, false);
   }
 
   /**
@@ -1010,7 +1025,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
     throws Exception {
     return startMiniCluster(numMasters, numSlaves, numDataNodes, dataNodeHosts,
-        masterClass, regionserverClass, false);
+        masterClass, regionserverClass, false, false);
   }
 
   /**
@@ -1024,7 +1039,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     final int numSlaves, int numDataNodes, final String[] dataNodeHosts,
     Class<? extends HMaster> masterClass,
     Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
-    boolean create)
+    boolean create, boolean withWALDir)
   throws Exception {
     if (dataNodeHosts != null && dataNodeHosts.length != 0) {
       numDataNodes = dataNodeHosts.length;
@@ -1055,12 +1070,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     // Start the MiniHBaseCluster
     return startMiniHBaseCluster(numMasters, numSlaves, masterClass,
-      regionserverClass, create);
+      regionserverClass, create, withWALDir);
   }
 
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves)
       throws IOException, InterruptedException{
-    return startMiniHBaseCluster(numMasters, numSlaves, null, null, false);
+    return startMiniHBaseCluster(numMasters, numSlaves, null, null, false, false);
   }
 
   /**
@@ -1079,11 +1094,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
         final int numSlaves, Class<? extends HMaster> masterClass,
         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
-        boolean create)
+        boolean create, boolean withWALDir)
   throws IOException, InterruptedException {
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
     createRootDir(create);
-
+    if (withWALDir) {
+      createWALRootDir();
+    }
     // Set the hbase.fs.tmp.dir config to make sure that we have some default value. This is
     // for tests that do not read hbase-defaults.xml
     setHBaseFsTmpDir();
@@ -1273,6 +1290,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return createRootDir(false);
   }
 
+  /**
+   * Creates a hbase walDir in the user's home directory.
+   * Normally you won't make use of this method. Root hbaseWALDir
+   * is created for you as part of mini cluster startup. You'd only use this
+   * method if you were doing manual operation.
+   *
+   * @return Fully qualified path to hbase root dir
+   * @throws IOException
+  */
+  public Path createWALRootDir() throws IOException {
+    FileSystem fs = FileSystem.get(this.conf);
+    Path walDir = getNewDataTestDirOnTestFS();
+    FSUtils.setWALRootDir(this.conf, walDir);
+    fs.mkdirs(walDir);
+    return walDir;
+  }
 
   private void setHBaseFsTmpDir() throws IOException {
     String hbaseFsTmpDirInString = this.conf.get("hbase.fs.tmp.dir");

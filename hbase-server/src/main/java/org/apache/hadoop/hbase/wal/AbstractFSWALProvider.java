@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Base class of a WAL Provider that returns a single thread safe WAL that writes to HDFS. By
- * default, this implementation picks a directory in HDFS based on a combination of
+ * Base class of a WAL Provider that returns a single thread safe WAL that writes to Hadoop FS. By
+ * default, this implementation picks a directory in Hadoop FS based on a combination of
  * <ul>
  * <li>the HBase root directory
  * <li>HConstants.HREGION_LOGDIR_NAME

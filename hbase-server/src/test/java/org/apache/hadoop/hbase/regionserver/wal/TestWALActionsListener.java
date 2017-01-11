@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,21 +60,27 @@ public class TestWALActionsListener {
       new HBaseTestingUtility();
 
   private final static byte[] SOME_BYTES =  Bytes.toBytes("t");
-  private static FileSystem fs;
   private static Configuration conf;
+  private static Path rootDir;
+  private static Path walRootDir;
+  private static FileSystem fs;
+  private static FileSystem logFs;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.regionserver.maxlogs", 5);
-    fs = FileSystem.get(conf);
-    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+    rootDir = TEST_UTIL.createRootDir();
+    walRootDir = TEST_UTIL.createWALRootDir();
+    fs = FSUtils.getRootDirFileSystem(conf);
+    logFs = FSUtils.getWALFileSystem(conf);
   }
 
   @Before
   public void setUp() throws Exception {
-    fs.delete(new Path(TEST_UTIL.getDataTestDir(), HConstants.HREGION_LOGDIR_NAME), true);
-    fs.delete(new Path(TEST_UTIL.getDataTestDir(), HConstants.HREGION_OLDLOGDIR_NAME), true);
+    fs.delete(rootDir, true);
+    logFs.delete(new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME), true);
+    logFs.delete(new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME), true);
   }
 
   @After

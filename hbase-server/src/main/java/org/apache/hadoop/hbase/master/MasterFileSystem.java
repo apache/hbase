@@ -55,16 +55,26 @@ import org.apache.hadoop.ipc.RemoteException;
 public class MasterFileSystem {
   private static final Log LOG = LogFactory.getLog(MasterFileSystem.class);
 
+  /** Parameter name for HBase instance root directory permission*/
+  public static final String HBASE_DIR_PERMS = "hbase.rootdir.perms";
+
+  /** Parameter name for HBase WAL directory permission*/
+  public static final String HBASE_WAL_DIR_PERMS = "hbase.wal.dir.perms";
+
   // HBase configuration
   private final Configuration conf;
   // Persisted unique cluster ID
   private ClusterId clusterId;
   // Keep around for convenience.
   private final FileSystem fs;
-  // root hbase directory on the FS
+  // Keep around for convenience.
+  private final FileSystem walFs;
+  // root log directory on the FS
   private final Path rootdir;
   // hbase temp directory used for table construction and deletion
   private final Path tempdir;
+  // root hbase directory on the FS
+  private final Path walRootDir;
 
 
   /*
@@ -99,6 +109,10 @@ public class MasterFileSystem {
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
     this.fs = this.rootdir.getFileSystem(conf);
+    this.walRootDir = FSUtils.getWALRootDir(conf);
+    this.walFs = FSUtils.getWALFileSystem(conf);
+    FSUtils.setFsDefault(conf, new Path(this.walFs.getUri()));
+    walFs.setConf(conf);
     FSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
@@ -123,12 +137,15 @@ public class MasterFileSystem {
     final String[] protectedSubDirs = new String[] {
         HConstants.BASE_NAMESPACE_DIR,
         HConstants.HFILE_ARCHIVE_DIRECTORY,
-        HConstants.HREGION_LOGDIR_NAME,
-        HConstants.HREGION_OLDLOGDIR_NAME,
-        MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR,
-        HConstants.CORRUPT_DIR_NAME,
         HConstants.HBCK_SIDELINEDIR_NAME,
         MobConstants.MOB_DIR_NAME
+    };
+
+    final String[] protectedSubLogDirs = new String[] {
+            HConstants.HREGION_LOGDIR_NAME,
+            HConstants.HREGION_OLDLOGDIR_NAME,
+            HConstants.CORRUPT_DIR_NAME,
+            MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR
     };
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
@@ -136,7 +153,17 @@ public class MasterFileSystem {
     // Check the directories under rootdir.
     checkTempDir(this.tempdir, conf, this.fs);
     for (String subDir : protectedSubDirs) {
-      checkSubDir(new Path(this.rootdir, subDir));
+      checkSubDir(new Path(this.rootdir, subDir), HBASE_DIR_PERMS);
+    }
+
+    final String perms;
+    if (!this.walRootDir.equals(this.rootdir)) {
+      perms = HBASE_WAL_DIR_PERMS;
+    } else {
+      perms = HBASE_DIR_PERMS;
+    }
+    for (String subDir : protectedSubLogDirs) {
+      checkSubDir(new Path(this.walRootDir, subDir), perms);
     }
 
     checkStagingDir();
@@ -165,6 +192,8 @@ public class MasterFileSystem {
     return this.fs;
   }
 
+  protected FileSystem getWALFileSystem() { return this.walFs; }
+
   public Configuration getConfiguration() {
     return this.conf;
   }
@@ -175,6 +204,11 @@ public class MasterFileSystem {
   public Path getRootDir() {
     return this.rootdir;
   }
+
+  /**
+   * @return HBase root log dir.
+   */
+  public Path getWALRootDir() { return this.walRootDir; }
 
   /**
    * @return HBase temp dir.
@@ -296,7 +330,9 @@ public class MasterFileSystem {
    * @param p
    * @throws IOException
    */
-  private void checkSubDir(final Path p) throws IOException {
+  private void checkSubDir(final Path p, final String dirPermsConfName) throws IOException {
+    FileSystem fs = p.getFileSystem(conf);
+    FsPermission dirPerms = new FsPermission(conf.get(dirPermsConfName, "700"));
     if (!fs.exists(p)) {
       if (isSecurityEnabled) {
         if (!fs.mkdirs(p, secureRootSubDirPerms)) {
@@ -309,14 +345,14 @@ public class MasterFileSystem {
       }
     }
     else {
-      if (isSecurityEnabled && !secureRootSubDirPerms.equals(fs.getFileStatus(p).getPermission())) {
+      if (isSecurityEnabled && !dirPerms.equals(fs.getFileStatus(p).getPermission())) {
         // check whether the permission match
         LOG.warn("Found HBase directory permissions NOT matching expected permissions for "
             + p.toString() + " permissions=" + fs.getFileStatus(p).getPermission()
-            + ", expecting " + secureRootSubDirPerms + ". Automatically setting the permissions. "
-            + "You can change the permissions by setting \"hbase.rootdir.perms\" in hbase-site.xml "
+            + ", expecting " + dirPerms + ". Automatically setting the permissions. "
+            + "You can change the permissions by setting \"" + dirPermsConfName + "\" in hbase-site.xml "
             + "and restarting the master");
-        fs.setPermission(p, secureRootSubDirPerms);
+        fs.setPermission(p, dirPerms);
       }
     }
   }

@@ -90,8 +90,8 @@ public class MasterWalManager {
   private volatile boolean fsOk = true;
 
   public MasterWalManager(MasterServices services) throws IOException {
-    this(services.getConfiguration(), services.getMasterFileSystem().getFileSystem(),
-      services.getMasterFileSystem().getRootDir(), services);
+    this(services.getConfiguration(), services.getMasterFileSystem().getWALFileSystem(),
+      services.getMasterFileSystem().getWALRootDir(), services);
   }
 
   public MasterWalManager(Configuration conf, FileSystem fs, Path rootDir, MasterServices services)

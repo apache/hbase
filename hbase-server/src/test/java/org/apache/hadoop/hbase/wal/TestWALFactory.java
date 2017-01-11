@@ -83,6 +83,7 @@ public class TestWALFactory {
   private static MiniDFSCluster cluster;
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static Path hbaseDir;
+  protected static Path hbaseWALDir;
 
   protected FileSystem fs;
   protected Path dir;
@@ -141,6 +142,7 @@ public class TestWALFactory {
     cluster = TEST_UTIL.getDFSCluster();
 
     hbaseDir = TEST_UTIL.createRootDir();
+    hbaseWALDir = TEST_UTIL.createWALRootDir();
   }
 
   @AfterClass
@@ -163,12 +165,12 @@ public class TestWALFactory {
     final TableName tableName = TableName.valueOf(currentTest.getMethodName());
     final byte [] rowName = tableName.getName();
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
-    final Path logdir = new Path(hbaseDir,
+    final Path logdir = new Path(hbaseWALDir,
       AbstractFSWALProvider.getWALDirectoryName(currentTest.getMethodName()));
-    Path oldLogDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    Path oldLogDir = new Path(hbaseWALDir, HConstants.HREGION_OLDLOGDIR_NAME);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
-    Path tabledir = FSUtils.getTableDir(hbaseDir, tableName);
+    Path tabledir = FSUtils.getTableDir(hbaseWALDir, tableName);
     fs.mkdirs(tabledir);
     for(int i = 0; i < howmany; i++) {
       infos[i] = new HRegionInfo(tableName,
@@ -207,7 +209,7 @@ public class TestWALFactory {
       }
     }
     wals.shutdown();
-    List<Path> splits = WALSplitter.split(hbaseDir, logdir, oldLogDir, fs, conf, wals);
+    List<Path> splits = WALSplitter.split(hbaseWALDir, logdir, oldLogDir, fs, conf, wals);
     verifySplits(splits, howmany);
   }
 

@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.favored.FavoredNodesPromoter;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -511,15 +512,15 @@ public class AssignmentManager {
       Set<ServerName> queuedDeadServers = serverManager.getRequeuedDeadServers().keySet();
       if (!queuedDeadServers.isEmpty()) {
         Configuration conf = server.getConfiguration();
-        Path rootdir = FSUtils.getRootDir(conf);
-        FileSystem fs = rootdir.getFileSystem(conf);
+        Path walRootDir = FSUtils.getWALRootDir(conf);
+        FileSystem walFs = FSUtils.getWALFileSystem(conf);
         for (ServerName serverName: queuedDeadServers) {
           // In the case of a clean exit, the shutdown handler would have presplit any WALs and
           // removed empty directories.
-          Path logDir = new Path(rootdir,
+          Path walDir = new Path(walRootDir,
             AbstractFSWALProvider.getWALDirectoryName(serverName.toString()));
-          Path splitDir = logDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
-          if (checkWals(fs, logDir) || checkWals(fs, splitDir)) {
+          Path splitDir = walDir.suffix(AbstractFSWALProvider.SPLITTING_EXT);
+          if (checkWals(walFs, walDir) || checkWals(walFs, splitDir)) {
             LOG.debug("Found queued dead server " + serverName);
             failover = true;
             break;

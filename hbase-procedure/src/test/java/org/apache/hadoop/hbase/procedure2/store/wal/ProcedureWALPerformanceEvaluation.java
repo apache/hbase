@@ -107,10 +107,10 @@ public class ProcedureWALPerformanceEvaluation extends AbstractHBaseTool {
   private void tearDownProcedureStore() {
     store.stop(false);
     try {
-      store.getFileSystem().delete(store.getLogDir(), true);
+      store.getFileSystem().delete(store.getWALDir(), true);
     } catch (IOException e) {
       System.err.println("Error: Couldn't delete log dir. You can delete it manually to free up "
-          + "disk space. Location: " + store.getLogDir().toString());
+          + "disk space. Location: " + store.getWALDir().toString());
       e.printStackTrace();
     }
   }

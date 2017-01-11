@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -432,7 +433,7 @@ public class WALSplitter {
    */
   public static void finishSplitLogFile(String logfile,
       Configuration conf)  throws IOException {
-    Path rootdir = FSUtils.getRootDir(conf);
+    Path rootdir = FSUtils.getWALRootDir(conf);
     Path oldLogDir = new Path(rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path logPath;
     if (FSUtils.isStartingWithPath(rootdir, logfile)) {
@@ -475,7 +476,7 @@ public class WALSplitter {
       final List<Path> corruptedLogs,
       final List<Path> processedLogs, final Path oldLogDir,
       final FileSystem fs, final Configuration conf) throws IOException {
-    final Path corruptDir = new Path(FSUtils.getRootDir(conf), HConstants.CORRUPT_DIR_NAME);
+    final Path corruptDir = new Path(FSUtils.getWALRootDir(conf), HConstants.CORRUPT_DIR_NAME);
     if (conf.get("hbase.regionserver.hlog.splitlog.corrupt.dir") != null) {
       LOG.warn("hbase.regionserver.hlog.splitlog.corrupt.dir is deprecated. Default to "
           + corruptDir);
