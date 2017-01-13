@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 
@@ -127,7 +128,7 @@ public final class SnapshotManifestV2 {
 
   static List<SnapshotRegionManifest> loadRegionManifests(final Configuration conf,
       final Executor executor,final FileSystem fs, final Path snapshotDir,
-      final SnapshotDescription desc) throws IOException {
+      final SnapshotDescription desc, final int manifestSizeLimit) throws IOException {
     FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
       @Override
       public boolean accept(Path path) {
@@ -144,8 +145,11 @@ public final class SnapshotManifestV2 {
         @Override
         public SnapshotRegionManifest call() throws IOException {
           FSDataInputStream stream = fs.open(st.getPath());
+          CodedInputStream cin = CodedInputStream.newInstance(stream);
+          cin.setSizeLimit(manifestSizeLimit);
+
           try {
-            return SnapshotRegionManifest.parseFrom(stream);
+            return SnapshotRegionManifest.parseFrom(cin);
           } finally {
             stream.close();
           }

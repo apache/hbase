@@ -365,7 +365,8 @@ public final class SnapshotManifest {
           ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
           try {
             v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
-            v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc);
+            v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc,
+                manifestSizeLimit);
           } catch (InvalidProtocolBufferException e) {
             throw new CorruptedSnapshotException("unable to parse region manifest " +
                 e.getMessage(), e);
@@ -458,7 +459,8 @@ public final class SnapshotManifest {
     ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
     try {
       v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, fs, workingDir, desc);
-      v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc);
+      v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, fs, workingDir, desc,
+          manifestSizeLimit);
     } finally {
       tpool.shutdown();
     }
