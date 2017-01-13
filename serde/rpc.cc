@@ -110,6 +110,7 @@ unique_ptr<IOBuf> RpcSerde::Header(const string &user) {
   // That may or may not be the correct thing to do.
   // It worked for a while with the java client; until it
   // didn't.
+  // TODO: send the service name and user from the RpcClient
   h.set_service_name(INTERFACE);
   return PrependLength(SerializeMessage(h));
 }

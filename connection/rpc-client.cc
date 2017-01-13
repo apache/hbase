@@ -43,13 +43,15 @@ class RpcChannelImplementation : public AbstractRpcChannel {
 }  // namespace hbase
 
 RpcClient::RpcClient() {
-  auto io_executor = std::make_shared<wangle::IOThreadPoolExecutor>(
+  io_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(
       sysconf(_SC_NPROCESSORS_ONLN));
 
-  cp_ = std::make_shared<ConnectionPool>(io_executor);
+  cp_ = std::make_shared<ConnectionPool>(io_executor_);
 }
 
-void RpcClient::Close() {}
+void RpcClient::Close() {
+  io_executor_->stop();
+}
 
 std::shared_ptr<Response> RpcClient::SyncCall(const std::string& host,
                                               uint16_t port,
@@ -114,6 +116,8 @@ void RpcClient::CallMethod(const MethodDescriptor* method,
   std::unique_ptr<Request> req =
       std::make_unique<Request>(shared_req, shared_resp, method->name());
 
-  AsyncCall(host, port, std::move(req), ticket)
-      .then([done, this](Response resp) { done->Run(); });
+  AsyncCall(host, port, std::move(req), ticket, method->service()->name())
+      .then([done, this](Response resp) {
+	  done->Run();
+  });
 }

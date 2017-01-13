@@ -91,6 +91,7 @@ class RpcClient : public std::enable_shared_from_this<RpcClient> {
 
  private:
   std::shared_ptr<ConnectionPool> cp_;
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
 };
 
 class AbstractRpcChannel : public RpcChannel {

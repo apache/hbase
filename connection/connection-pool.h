@@ -75,6 +75,11 @@ class ConnectionPool {
    */
   void Close(std::shared_ptr<ConnectionId> remote_id);
 
+  /**
+   * Close the Connection Pool
+   */
+  void Close();
+
  private:
   std::shared_ptr<RpcConnection> GetCachedConnection(
       std::shared_ptr<ConnectionId> remote_id);
