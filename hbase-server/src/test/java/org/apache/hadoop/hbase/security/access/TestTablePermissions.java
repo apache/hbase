@@ -83,6 +83,8 @@ public class TestTablePermissions {
     }
   };
 
+  private static String TEST_NAMESPACE = "perms_test_ns";
+  private static String TEST_NAMESPACE2 = "perms_test_ns2";
   private static TableName TEST_TABLE =
       TableName.valueOf("perms_test");
   private static TableName TEST_TABLE2 =
@@ -407,6 +409,15 @@ public class TestTablePermissions {
     assertFalse(p2.equals(p1));
 
     p2 = new TablePermission(TEST_TABLE, null);
+    assertFalse(p1.equals(p2));
+    assertFalse(p2.equals(p1));
+
+    p1 = new TablePermission(TEST_NAMESPACE, TablePermission.Action.READ);
+    p2 = new TablePermission(TEST_NAMESPACE, TablePermission.Action.READ);
+    assertEquals(p1, p2);
+
+    p1 = new TablePermission(TEST_NAMESPACE, TablePermission.Action.READ);
+    p2 = new TablePermission(TEST_NAMESPACE2, TablePermission.Action.READ);
     assertFalse(p1.equals(p2));
     assertFalse(p2.equals(p1));
   }
