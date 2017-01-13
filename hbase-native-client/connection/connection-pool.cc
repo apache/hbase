@@ -117,3 +117,6 @@ void ConnectionPool::Close(std::shared_ptr<ConnectionId> remote_id) {
   found->second->Close();
   connections_.erase(found);
 }
+
+void ConnectionPool::Close() {
+}
