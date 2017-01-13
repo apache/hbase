@@ -320,7 +320,8 @@ public class TablePermission extends Permission {
     }
     TablePermission other = (TablePermission)obj;
 
-    if (!(table.equals(other.getTableName()) &&
+    if (!(((table == null && other.getTableName() == null) ||
+           (table != null && table.equals(other.getTableName()))) &&
         ((family == null && other.getFamily() == null) ||
          Bytes.equals(family, other.getFamily())) &&
         ((qualifier == null && other.getQualifier() == null) ||
