@@ -34,9 +34,9 @@ namespace hbase {
  * We need to have a reverse ordered map, when storing TS -> value, so that the
  * most recent value is stored first
  */
-using ResultMap = std::map<
-    std::string, std::map<std::string, std::map<int64_t, std::string,
-                                                std::greater<int64_t> > > >;
+using ResultMap =
+    std::map<std::string,
+             std::map<std::string, std::map<int64_t, std::string, std::greater<int64_t> > > >;
 
 /**
  * @brief Map of qualifiers to values.
@@ -48,8 +48,7 @@ class Result {
   /**
    * Constructors
    */
-  Result(const std::vector<std::shared_ptr<Cell> > &cells, bool exists,
-         bool stale, bool partial);
+  Result(const std::vector<std::shared_ptr<Cell> > &cells, bool exists, bool stale, bool partial);
   Result(const Result &result);
   ~Result();
 
@@ -67,8 +66,8 @@ class Result {
    * @param family - column family
    * @param qualifier - column qualifier
    */
-  std::vector<std::shared_ptr<Cell> > ColumnCells(
-      const std::string &family, const std::string &qualifier) const;
+  std::vector<std::shared_ptr<Cell> > ColumnCells(const std::string &family,
+                                                  const std::string &qualifier) const;
 
   /**
    * @brief Returns the Cell for the most recent timestamp for a given family
@@ -77,16 +76,15 @@ class Result {
    * @param family - column family.
    * @param qualifier - column qualifier
    */
-  const std::shared_ptr<Cell> ColumnLatestCell(
-      const std::string &family, const std::string &qualifier) const;
+  const std::shared_ptr<Cell> ColumnLatestCell(const std::string &family,
+                                               const std::string &qualifier) const;
 
   /**
    * @brief Get the latest version of the specified family and qualifier.
    * @param family - column family
    * @param qualifier - column qualifier
    */
-  std::shared_ptr<std::string> Value(const std::string &family,
-                                     const std::string &qualifier) const;
+  std::shared_ptr<std::string> Value(const std::string &family, const std::string &qualifier) const;
 
   /**
    * @brief Returns if the underlying Cell vector is empty or not

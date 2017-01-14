@@ -32,8 +32,7 @@ TEST(CellTest, CellFailureTest) {
   std::string value = "value";
   int64_t timestamp = std::numeric_limits<int64_t>::max();
   std::string tags = "";
-  std::unique_ptr<Cell> cell(
-      new Cell(row, family, column, timestamp, value, cell_type));
+  std::unique_ptr<Cell> cell(new Cell(row, family, column, timestamp, value, cell_type));
   if (cell.get()) {
     EXPECT_NE("row-value", cell.get()->Row());
     EXPECT_NE("family-value", cell.get()->Family());
@@ -51,8 +50,7 @@ TEST(CellTest, CellSuceessTest) {
   std::string value = "value-value";
   int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
-  const std::unique_ptr<Cell> cell(
-      new Cell(row, family, column, timestamp, value, cell_type));
+  const std::unique_ptr<Cell> cell(new Cell(row, family, column, timestamp, value, cell_type));
   if (cell.get()) {
     EXPECT_EQ(row, cell.get()->Row());
     EXPECT_EQ(family, cell.get()->Family());
@@ -74,8 +72,7 @@ TEST(CellTest, MultipleCellsTest) {
     row += std::to_string(i);
     value += std::to_string(i);
     CellType cell_type = CellType::PUT;
-    const Cell *cell =
-        new Cell(row, family, column, timestamp, value, cell_type);
+    const Cell *cell = new Cell(row, family, column, timestamp, value, cell_type);
     cells.push_back(cell);
   }
   int i = 0;
@@ -105,8 +102,7 @@ TEST(CellTest, CellRowTest) {
   std::string value = "";
   int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
-  std::unique_ptr<Cell> cell(
-      new Cell(row, family, column, timestamp, value, cell_type));
+  std::unique_ptr<Cell> cell(new Cell(row, family, column, timestamp, value, cell_type));
   if (cell.get()) {
     EXPECT_EQ(row, cell.get()->Row());
     EXPECT_EQ(family, cell.get()->Family());
@@ -124,8 +120,7 @@ TEST(CellTest, CellRowFamilyTest) {
   std::string value = "";
   int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
-  const std::unique_ptr<Cell> cell(
-      new Cell(row, family, column, timestamp, value, cell_type));
+  const std::unique_ptr<Cell> cell(new Cell(row, family, column, timestamp, value, cell_type));
   if (cell.get()) {
     EXPECT_EQ(row, cell.get()->Row());
     EXPECT_EQ(family, cell.get()->Family());
@@ -143,8 +138,7 @@ TEST(CellTest, CellRowFamilyValueTest) {
   std::string value = "only-value";
   int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
-  const std::unique_ptr<Cell> cell(
-      new Cell(row, family, column, timestamp, value, cell_type));
+  const std::unique_ptr<Cell> cell(new Cell(row, family, column, timestamp, value, cell_type));
   if (cell.get()) {
     EXPECT_EQ(row, cell.get()->Row());
     EXPECT_EQ(family, cell.get()->Family());
@@ -162,8 +156,7 @@ TEST(CellTest, CellRowFamilyColumnValueTest) {
   std::string value = "only-value";
   int64_t timestamp = std::numeric_limits<int64_t>::max();
   CellType cell_type = CellType::PUT;
-  std::unique_ptr<Cell> cell(
-      new Cell(row, family, column, timestamp, value, cell_type));
+  std::unique_ptr<Cell> cell(new Cell(row, family, column, timestamp, value, cell_type));
   if (cell.get()) {
     EXPECT_EQ(row, cell.get()->Row());
     EXPECT_EQ(family, cell.get()->Family());

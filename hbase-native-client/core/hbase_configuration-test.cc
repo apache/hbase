@@ -28,10 +28,8 @@
 
 using namespace hbase;
 
-const std::string kDefHBaseConfPath(
-    "./build/test-data/hbase-configuration-test/conf/");
-const std::string kHBaseConfPath(
-    "./build/test-data/hbase-configuration-test/custom-conf/");
+const std::string kDefHBaseConfPath("./build/test-data/hbase-configuration-test/conf/");
+const std::string kHBaseConfPath("./build/test-data/hbase-configuration-test/custom-conf/");
 
 const std::string kHBaseDefaultXml("hbase-default.xml");
 const std::string kHBaseSiteXml("hbase-site.xml");
@@ -121,8 +119,7 @@ void WriteDataToFile(const std::string &file, const std::string &xml_data) {
   hbase_conf.close();
 }
 
-void CreateHBaseConf(const std::string &dir, const std::string &file,
-                     const std::string xml_data) {
+void CreateHBaseConf(const std::string &dir, const std::string &file, const std::string xml_data) {
   // Directory will be created if not present
   if (!boost::filesystem::exists(dir)) {
     boost::filesystem::create_directories(dir);
@@ -153,10 +150,8 @@ TEST(Configuration, LoadConfFromDefaultLocation) {
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
   ASSERT_TRUE(conf) << "No configuration object present.";
-  EXPECT_STREQ((*conf).Get("custom-prop", "Set this value").c_str(),
-               "custom-value");
-  EXPECT_STREQ((*conf).Get("default-prop", "Set this value").c_str(),
-               "default-value");
+  EXPECT_STREQ((*conf).Get("custom-prop", "Set this value").c_str(), "custom-value");
+  EXPECT_STREQ((*conf).Get("default-prop", "Set this value").c_str(), "default-value");
 }
 
 /*
@@ -170,8 +165,7 @@ TEST(Configuration, LoadConfFromCustomLocation) {
 
   HBaseConfigurationLoader loader;
   std::vector<std::string> resources{kHBaseSiteXml};
-  hbase::optional<Configuration> conf =
-      loader.LoadResources(kHBaseConfPath, resources);
+  hbase::optional<Configuration> conf = loader.LoadResources(kHBaseConfPath, resources);
   ASSERT_TRUE(conf) << "No configuration object present.";
   EXPECT_STREQ((*conf).Get("custom-prop", "").c_str(), "custom-value");
   EXPECT_STRNE((*conf).Get("custom-prop", "").c_str(), "some-value");
@@ -192,11 +186,9 @@ TEST(Configuration, LoadConfFromMultipleLocatons) {
   HBaseConfigurationLoader loader;
   std::string conf_paths = kDefHBaseConfPath + ":" + kHBaseConfPath;
   std::vector<std::string> resources{kHBaseDefaultXml, kHBaseSiteXml};
-  hbase::optional<Configuration> conf =
-      loader.LoadResources(conf_paths, resources);
+  hbase::optional<Configuration> conf = loader.LoadResources(conf_paths, resources);
   ASSERT_TRUE(conf) << "No configuration object present.";
-  EXPECT_STREQ((*conf).Get("default-prop", "From hbase-default.xml").c_str(),
-               "default-value");
+  EXPECT_STREQ((*conf).Get("default-prop", "From hbase-default.xml").c_str(), "default-value");
   EXPECT_STREQ((*conf).Get("custom-prop", "").c_str(), "custom-value");
   EXPECT_STRNE((*conf).Get("custom-prop", "").c_str(), "some-value");
 }
@@ -215,10 +207,8 @@ TEST(Configuration, DefaultValues) {
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
   ASSERT_TRUE(conf) << "No configuration object present.";
-  EXPECT_STREQ((*conf).Get("default-prop", "Set this value.").c_str(),
-               "default-value");
-  EXPECT_STREQ((*conf).Get("custom-prop", "Set this value.").c_str(),
-               "custom-value");
+  EXPECT_STREQ((*conf).Get("default-prop", "Set this value.").c_str(), "default-value");
+  EXPECT_STREQ((*conf).Get("custom-prop", "Set this value.").c_str(), "custom-value");
 }
 
 TEST(Configuration, FinalValues) {
@@ -229,12 +219,10 @@ TEST(Configuration, FinalValues) {
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
   ASSERT_TRUE(conf) << "No configuration object present.";
-  EXPECT_STREQ((*conf).Get("hbase.rootdir", "").c_str(),
-               "/root/hbase-docker/apps/hbase/data");
+  EXPECT_STREQ((*conf).Get("hbase.rootdir", "").c_str(), "/root/hbase-docker/apps/hbase/data");
   EXPECT_STREQ((*conf).Get("hbase.zookeeper.property.datadir", "").c_str(),
                "/root/hbase-docker/zookeeper");
-  EXPECT_STRNE((*conf).Get("hbase.rootdir", "").c_str(),
-               "This value will not be be overwritten");
+  EXPECT_STRNE((*conf).Get("hbase.rootdir", "").c_str(), "This value will not be be overwritten");
   EXPECT_STRNE((*conf).Get("hbase.zookeeper.property.datadir", "").c_str(),
                "This value will be overwritten");
 }
@@ -253,10 +241,8 @@ TEST(Configuration, EnvVars) {
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
   ASSERT_TRUE(conf) << "No configuration object present.";
-  EXPECT_STREQ((*conf).Get("hbase-client.user.name", "").c_str(),
-               "${user.name}");
-  EXPECT_STRNE((*conf).Get("hbase-client.user.name", "root").c_str(),
-               "test-user");
+  EXPECT_STREQ((*conf).Get("hbase-client.user.name", "").c_str(), "${user.name}");
+  EXPECT_STRNE((*conf).Get("hbase-client.user.name", "root").c_str(), "test-user");
 }
 
 TEST(Configuration, SelfRef) {
@@ -292,8 +278,7 @@ TEST(Configuration, VarExpansionException) {
   HBaseConfigurationLoader loader;
   hbase::optional<Configuration> conf = loader.LoadDefaultResources();
   ASSERT_TRUE(conf) << "No configuration object present.";
-  ASSERT_THROW((*conf).Get("foo.substs.exception", "foo-value").c_str(),
-               std::runtime_error);
+  ASSERT_THROW((*conf).Get("foo.substs.exception", "foo-value").c_str(), std::runtime_error);
 }
 
 TEST(Configuration, GetInt) {

@@ -50,8 +50,7 @@ TEST(TestRpcSerde, TestGoodGetRequestFullRoundTrip) {
   // fill up the GetRequest.
   in.mutable_region()->set_value("test_region_id");
   in.mutable_region()->set_type(
-      RegionSpecifier_RegionSpecifierType::
-          RegionSpecifier_RegionSpecifierType_ENCODED_REGION_NAME);
+      RegionSpecifier_RegionSpecifierType::RegionSpecifier_RegionSpecifierType_ENCODED_REGION_NAME);
   in.mutable_get()->set_row("test_row");
 
   // Create the buffer

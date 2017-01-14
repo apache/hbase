@@ -40,16 +40,14 @@ class ConnectionFactory {
    * Constructor.
    * There should only be one ConnectionFactory per client.
    */
-  explicit ConnectionFactory(
-      std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool);
+  explicit ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool);
   /** Default Desctructor */
   virtual ~ConnectionFactory() = default;
 
   /**
    * Create a BootStrap from which a connection can be made.
    */
-  virtual std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>
-  MakeBootstrap();
+  virtual std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> MakeBootstrap();
 
   /**
    * Connect a ClientBootstrap to a server and return the pipeline.

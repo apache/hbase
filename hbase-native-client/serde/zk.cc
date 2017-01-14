@@ -46,8 +46,7 @@ bool ZkDeserializer::Parse(IOBuf *buf, Message *out) {
   // There should be a magic number for recoverable zk
   uint8_t magic_num = c.read<uint8_t>();
   if (magic_num != 255) {
-    LOG(ERROR) << "Magic number not in ZK znode data expected 255 got ="
-               << unsigned(magic_num);
+    LOG(ERROR) << "Magic number not in ZK znode data expected 255 got =" << unsigned(magic_num);
     throw runtime_error("Magic number not in znode data");
   }
   // How long is the id?

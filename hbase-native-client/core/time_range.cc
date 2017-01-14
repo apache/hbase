@@ -25,9 +25,7 @@
 namespace hbase {
 
 TimeRange::TimeRange()
-    : min_timestamp_(0L),
-      max_timestamp_(std::numeric_limits<int64_t>::max()),
-      all_time_(true) {}
+    : min_timestamp_(0L), max_timestamp_(std::numeric_limits<int64_t>::max()), all_time_(true) {}
 
 TimeRange::TimeRange(const TimeRange &tr) {
   this->all_time_ = tr.all_time_;
@@ -53,8 +51,7 @@ TimeRange::TimeRange(int64_t min_timestamp) {
 TimeRange::TimeRange(int64_t min_timestamp, int64_t max_timestamp) {
   if (min_timestamp < 0 || max_timestamp < 0) {
     throw std::runtime_error("Timestamp cannot be negative. min_timestamp: " +
-                             std::to_string(min_timestamp) +
-                             ", max_timestamp:" +
+                             std::to_string(min_timestamp) + ", max_timestamp:" +
                              std::to_string(max_timestamp));
   }
   if (max_timestamp < min_timestamp) {

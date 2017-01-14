@@ -28,13 +28,11 @@
 
 namespace hbase {
 
-Configuration::Configuration(ConfigMap &config_map)
-    : hb_property_(std::move(config_map)) {}
+Configuration::Configuration(ConfigMap &config_map) : hb_property_(std::move(config_map)) {}
 
 Configuration::~Configuration() {}
 
-size_t Configuration::IsSubVariable(const std::string &expr,
-                                    std::string &sub_variable) const {
+size_t Configuration::IsSubVariable(const std::string &expr, std::string &sub_variable) const {
   size_t start_pos = expr.find("${");
   if (std::string::npos != start_pos) {
     size_t pos_next = expr.find("}", start_pos + 1);
@@ -57,8 +55,7 @@ std::string Configuration::SubstituteVars(const std::string &expr) const {
     if (start_pos != std::string::npos) {
       // We are blindly checking for environment property at first.
       // If we don't get any value from GetEnv, check in hbase-site.xml.
-      value_to_be_replaced =
-          GetEnv(var).value_or(GetProperty(var).value_or(""));
+      value_to_be_replaced = GetEnv(var).value_or(GetProperty(var).value_or(""));
 
       // we haven't found any value yet so we are returning eval
       if (0 == value_to_be_replaced.size()) {
@@ -148,8 +145,7 @@ optional<std::string> Configuration::Get(const std::string &key) const {
   }
 }
 
-std::string Configuration::Get(const std::string &key,
-                               const std::string &default_value) const {
+std::string Configuration::Get(const std::string &key, const std::string &default_value) const {
   return Get(key).value_or(default_value);
 }
 
@@ -157,8 +153,7 @@ optional<int32_t> Configuration::GetInt(const std::string &key) const {
   optional<std::string> raw = Get(key);
   if (raw) {
     try {
-      return std::experimental::make_optional(
-          boost::lexical_cast<int32_t>(*raw));
+      return std::experimental::make_optional(boost::lexical_cast<int32_t>(*raw));
     } catch (const boost::bad_lexical_cast &blex) {
       throw std::runtime_error(blex.what());
     }
@@ -166,8 +161,7 @@ optional<int32_t> Configuration::GetInt(const std::string &key) const {
   return optional<int32_t>();
 }
 
-int32_t Configuration::GetInt(const std::string &key,
-                              int32_t default_value) const {
+int32_t Configuration::GetInt(const std::string &key, int32_t default_value) const {
   return GetInt(key).value_or(default_value);
 }
 
@@ -175,8 +169,7 @@ optional<int64_t> Configuration::GetLong(const std::string &key) const {
   optional<std::string> raw = Get(key);
   if (raw) {
     try {
-      return std::experimental::make_optional(
-          boost::lexical_cast<int64_t>(*raw));
+      return std::experimental::make_optional(boost::lexical_cast<int64_t>(*raw));
     } catch (const boost::bad_lexical_cast &blex) {
       throw std::runtime_error(blex.what());
     }
@@ -184,8 +177,7 @@ optional<int64_t> Configuration::GetLong(const std::string &key) const {
   return optional<int64_t>();
 }
 
-int64_t Configuration::GetLong(const std::string &key,
-                               int64_t default_value) const {
+int64_t Configuration::GetLong(const std::string &key, int64_t default_value) const {
   return GetLong(key).value_or(default_value);
 }
 
@@ -193,8 +185,7 @@ optional<double> Configuration::GetDouble(const std::string &key) const {
   optional<std::string> raw = Get(key);
   if (raw) {
     try {
-      return std::experimental::make_optional(
-          boost::lexical_cast<double>(*raw));
+      return std::experimental::make_optional(boost::lexical_cast<double>(*raw));
     } catch (const boost::bad_lexical_cast &blex) {
       throw std::runtime_error(blex.what());
     }
@@ -202,8 +193,7 @@ optional<double> Configuration::GetDouble(const std::string &key) const {
   return optional<double>();
 }
 
-double Configuration::GetDouble(const std::string &key,
-                                double default_value) const {
+double Configuration::GetDouble(const std::string &key, double default_value) const {
   return GetDouble(key).value_or(default_value);
 }
 
@@ -215,8 +205,7 @@ optional<bool> Configuration::GetBool(const std::string &key) const {
     } else if (!strcasecmp((*raw).c_str(), "false")) {
       return std::experimental::make_optional(false);
     } else {
-      throw std::runtime_error(
-          "Unexpected value found while conversion to bool.");
+      throw std::runtime_error("Unexpected value found while conversion to bool.");
     }
   }
   return optional<bool>();

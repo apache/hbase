@@ -17,9 +17,9 @@
  *
  */
 
-#include "connection/connection-id.h"
 #include "connection/connection-pool.h"
 #include "connection/connection-factory.h"
+#include "connection/connection-id.h"
 
 #include "if/HBase.pb.h"
 #include "serde/server-name.h"
@@ -37,12 +37,10 @@ using hbase::ConnectionId;
 class MockConnectionFactory : public ConnectionFactory {
  public:
   MockConnectionFactory() : ConnectionFactory(nullptr) {}
-  MOCK_METHOD0(MakeBootstrap,
-               std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>());
-  MOCK_METHOD3(Connect,
-               std::shared_ptr<HBaseService>(
-                   std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>,
-                   const std::string &hostname, int port));
+  MOCK_METHOD0(MakeBootstrap, std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>());
+  MOCK_METHOD3(Connect, std::shared_ptr<HBaseService>(
+                            std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>,
+                            const std::string &hostname, int port));
 };
 
 class MockBootstrap : public wangle::ClientBootstrap<SerializePipeline> {};
@@ -69,12 +67,8 @@ TEST(TestConnectionPool, TestOnlyCreateOnce) {
   auto mock_cf = std::make_shared<MockConnectionFactory>();
   uint32_t port{999};
 
-  EXPECT_CALL((*mock_cf), Connect(_, _, _))
-      .Times(1)
-      .WillRepeatedly(Return(mock_service));
-  EXPECT_CALL((*mock_cf), MakeBootstrap())
-      .Times(1)
-      .WillRepeatedly(Return(mock_boot));
+  EXPECT_CALL((*mock_cf), Connect(_, _, _)).Times(1).WillRepeatedly(Return(mock_service));
+  EXPECT_CALL((*mock_cf), MakeBootstrap()).Times(1).WillRepeatedly(Return(mock_boot));
   ConnectionPool cp{mock_cf};
 
   auto remote_id = std::make_shared<ConnectionId>(hostname, port);
@@ -92,12 +86,8 @@ TEST(TestConnectionPool, TestOnlyCreateMultipleDispose) {
   auto mock_service = std::make_shared<MockService>();
   auto mock_cf = std::make_shared<MockConnectionFactory>();
 
-  EXPECT_CALL((*mock_cf), Connect(_, _, _))
-      .Times(2)
-      .WillRepeatedly(Return(mock_service));
-  EXPECT_CALL((*mock_cf), MakeBootstrap())
-      .Times(2)
-      .WillRepeatedly(Return(mock_boot));
+  EXPECT_CALL((*mock_cf), Connect(_, _, _)).Times(2).WillRepeatedly(Return(mock_service));
+  EXPECT_CALL((*mock_cf), MakeBootstrap()).Times(2).WillRepeatedly(Return(mock_boot));
   ConnectionPool cp{mock_cf};
 
   {

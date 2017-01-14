@@ -19,11 +19,11 @@
 
 #include "core/result.h"
 
+#include <gtest/gtest.h>
 #include <limits>
 #include <memory>
-#include <vector>
 #include <string>
-#include <gtest/gtest.h>
+#include <vector>
 
 #include "core/cell.h"
 using namespace hbase;
@@ -41,36 +41,35 @@ void PopulateCells(std::vector<std::shared_ptr<Cell> > &cells) {
 
     switch (i) {
       case 5: {
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482113040506, "value-5", CellType::PUT));
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482111803856, "value-X", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482113040506, "value-5", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482111803856, "value-X", CellType::PUT));
         break;
       }
       case 8: {
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482113040506, "value-8", CellType::PUT));
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482111803856, "value-X", CellType::PUT));
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482110969958, "value-Y", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482113040506, "value-8", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482111803856, "value-X", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482110969958, "value-Y", CellType::PUT));
         break;
       }
       case 9: {
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482113040506, "value-9", CellType::PUT));
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482111803856, "value-X", CellType::PUT));
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482110969958, "value-Y", CellType::PUT));
-        cells.push_back(std::make_shared<Cell>(
-            row, family, column, 1482110876075, "value-Z", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482113040506, "value-9", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482111803856, "value-X", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482110969958, "value-Y", CellType::PUT));
+        cells.push_back(
+            std::make_shared<Cell>(row, family, column, 1482110876075, "value-Z", CellType::PUT));
         break;
       }
       default: {
-        cells.push_back(std::make_shared<Cell>(row, family, column,
-                                               std::numeric_limits<long>::max(),
-                                               value, CellType::PUT));
+        cells.push_back(std::make_shared<Cell>(
+            row, family, column, std::numeric_limits<long>::max(), value, CellType::PUT));
       }
     }
   }
@@ -111,12 +110,9 @@ TEST(Result, FilledResult) {
   // Value will be present as family and qualifier is present
   ASSERT_TRUE(result.Value("family-4", "column-4"));
   // Value should be present and match.
-  EXPECT_EQ(latest_cell->Value(),
-            (*result.ColumnLatestCell("family-4", "column-4")).Value());
-  EXPECT_EQ("value-5",
-            (*result.ColumnLatestCell("family-5", "column-5")).Value());
-  EXPECT_EQ("value-8",
-            (*result.ColumnLatestCell("family-8", "column-8")).Value());
+  EXPECT_EQ(latest_cell->Value(), (*result.ColumnLatestCell("family-4", "column-4")).Value());
+  EXPECT_EQ("value-5", (*result.ColumnLatestCell("family-5", "column-5")).Value());
+  EXPECT_EQ("value-8", (*result.ColumnLatestCell("family-8", "column-8")).Value());
   EXPECT_EQ("value-7", *result.Value("family-7", "column-7"));
 
   // Get cells for the given family and qualifier

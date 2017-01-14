@@ -55,9 +55,7 @@ class Response {
    * The caller is reponsible for knowing the type. In practice the call id is
    * used to figure out the type.
    */
-  std::shared_ptr<google::protobuf::Message> resp_msg() const {
-    return resp_msg_;
-  }
+  std::shared_ptr<google::protobuf::Message> resp_msg() const { return resp_msg_; }
 
   /** Set the response message. */
   void set_resp_msg(std::shared_ptr<google::protobuf::Message> response) {

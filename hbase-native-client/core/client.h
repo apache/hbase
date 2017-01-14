@@ -27,13 +27,13 @@
 #include <memory>
 #include <string>
 
+#include "connection/rpc-client.h"
 #include "core/configuration.h"
 #include "core/hbase_configuration_loader.h"
 #include "core/location-cache.h"
-#include "connection/rpc-client.h"
 #include "core/table.h"
-#include "serde/table-name.h"
 #include "if/Cell.pb.h"
+#include "serde/table-name.h"
 
 using hbase::pb::TableName;
 

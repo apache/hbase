@@ -41,8 +41,8 @@ ClientHandler::ClientHandler(std::string user_name)
       serde_(),
       once_flag_(std::make_unique<std::once_flag>()),
       resp_msgs_(
-          make_unique<folly::AtomicHashMap<
-              uint32_t, std::shared_ptr<google::protobuf::Message>>>(5000)) {}
+          make_unique<folly::AtomicHashMap<uint32_t, std::shared_ptr<google::protobuf::Message>>>(
+              5000)) {}
 
 void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
   if (LIKELY(buf != nullptr)) {
@@ -51,8 +51,7 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
     ResponseHeader header;
 
     int used_bytes = serde_.ParseDelimited(buf.get(), &header);
-    LOG(INFO) << "Read ResponseHeader size=" << used_bytes
-              << " call_id=" << header.call_id()
+    LOG(INFO) << "Read ResponseHeader size=" << used_bytes << " call_id=" << header.call_id()
               << " has_exception=" << header.has_exception();
 
     // Get the response protobuf from the map
@@ -96,6 +95,5 @@ Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
   // Now store the call id to response.
   resp_msgs_->insert(r->call_id(), r->resp_msg());
   // Send the data down the pipeline.
-  return ctx->fireWrite(
-      serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
+  return ctx->fireWrite(serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
 }

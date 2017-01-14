@@ -17,8 +17,8 @@
  *
  */
 
-#include <gtest/gtest.h>
 #include "core/client.h"
+#include <gtest/gtest.h>
 #include "core/configuration.h"
 #include "core/get.h"
 #include "core/hbase_configuration_loader.h"
@@ -84,9 +84,7 @@ const std::string ClientTest::kHBaseXmlData(
     "the License.\n "
     "*/\n-->\n<configuration>\n\n</configuration>");
 
-TEST(Client, EmptyConfigurationPassedToClient) {
-  ASSERT_ANY_THROW(hbase::Client client);
-}
+TEST(Client, EmptyConfigurationPassedToClient) { ASSERT_ANY_THROW(hbase::Client client); }
 
 TEST(Client, ConfigurationPassedToClient) {
   // Remove already configured env if present.

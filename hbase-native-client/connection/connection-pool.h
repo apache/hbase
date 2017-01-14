@@ -30,7 +30,6 @@
 #include "connection/service.h"
 #include "if/HBase.pb.h"
 
-
 using hbase::ConnectionId;
 using hbase::ConnectionIdEquals;
 using hbase::ConnectionIdHash;
@@ -47,8 +46,7 @@ namespace hbase {
 class ConnectionPool {
  public:
   /** Create connection pool wit default connection factory */
-  explicit ConnectionPool(
-      std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
+  explicit ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
 
   /**
    * Desctructor.
@@ -67,8 +65,7 @@ class ConnectionPool {
    * Get a connection to the server name. Start time is ignored.
    * This can be a blocking operation for a short time.
    */
-  std::shared_ptr<RpcConnection> GetConnection(
-      std::shared_ptr<ConnectionId> remote_id);
+  std::shared_ptr<RpcConnection> GetConnection(std::shared_ptr<ConnectionId> remote_id);
 
   /**
    * Close/remove a connection.
@@ -81,18 +78,14 @@ class ConnectionPool {
   void Close();
 
  private:
-  std::shared_ptr<RpcConnection> GetCachedConnection(
-      std::shared_ptr<ConnectionId> remote_id);
-  std::shared_ptr<RpcConnection> GetNewConnection(
-      std::shared_ptr<ConnectionId> remote_id);
-  std::unordered_map<std::shared_ptr<ConnectionId>,
-                     std::shared_ptr<RpcConnection>, ConnectionIdHash,
-                     ConnectionIdEquals>
+  std::shared_ptr<RpcConnection> GetCachedConnection(std::shared_ptr<ConnectionId> remote_id);
+  std::shared_ptr<RpcConnection> GetNewConnection(std::shared_ptr<ConnectionId> remote_id);
+  std::unordered_map<std::shared_ptr<ConnectionId>, std::shared_ptr<RpcConnection>,
+                     ConnectionIdHash, ConnectionIdEquals>
       connections_;
-  std::unordered_map<
-      std::shared_ptr<ConnectionId>,
-      std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>,
-      ConnectionIdHash, ConnectionIdEquals>
+  std::unordered_map<std::shared_ptr<ConnectionId>,
+                     std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>, ConnectionIdHash,
+                     ConnectionIdEquals>
       clients_;
   folly::SharedMutexWritePriority map_mutex_;
   std::shared_ptr<ConnectionFactory> cf_;

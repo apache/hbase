@@ -23,15 +23,14 @@ namespace hbase {
 
 Result::~Result() {}
 
-Result::Result(const std::vector<std::shared_ptr<Cell> > &cells, bool exists,
-               bool stale, bool partial)
+Result::Result(const std::vector<std::shared_ptr<Cell> > &cells, bool exists, bool stale,
+               bool partial)
     : exists_(exists), stale_(stale), partial_(partial) {
   for (const auto &cell : cells) {
     cells_.push_back(cell);
     // We create the map when cells are added. unlike java where map is created
     // when result.getMap() is called
-    result_map_[cell->Family()][cell->Qualifier()][cell->Timestamp()] =
-        cell->Value();
+    result_map_[cell->Family()][cell->Qualifier()][cell->Timestamp()] = cell->Value();
   }
   row_ = (cells_.size() == 0 ? "" : cells_[0]->Row());
 }
@@ -44,17 +43,14 @@ Result::Result(const Result &result) {
   if (!result.cells_.empty()) {
     for (const auto &cell : result.cells_) {
       cells_.push_back(cell);
-      result_map_[cell->Family()][cell->Qualifier()][cell->Timestamp()] =
-          cell->Value();
+      result_map_[cell->Family()][cell->Qualifier()][cell->Timestamp()] = cell->Value();
     }
   }
 }
-const std::vector<std::shared_ptr<Cell> > &Result::Cells() const {
-  return cells_;
-}
+const std::vector<std::shared_ptr<Cell> > &Result::Cells() const { return cells_; }
 
-std::vector<std::shared_ptr<Cell> > Result::ColumnCells(
-    const std::string &family, const std::string &qualifier) const {
+std::vector<std::shared_ptr<Cell> > Result::ColumnCells(const std::string &family,
+                                                        const std::string &qualifier) const {
   std::vector<std::shared_ptr<Cell> > column_cells;
   // TODO implement a BinarySearch here ?
   for (const auto &cell : cells_) {
@@ -65,8 +61,8 @@ std::vector<std::shared_ptr<Cell> > Result::ColumnCells(
   return column_cells;
 }
 
-const std::shared_ptr<Cell> Result::ColumnLatestCell(
-    const std::string &family, const std::string &qualifier) const {
+const std::shared_ptr<Cell> Result::ColumnLatestCell(const std::string &family,
+                                                     const std::string &qualifier) const {
   // TODO implement a BinarySearch here ?
   for (const auto &cell : cells_) {
     // We find the latest(first) occurrence of the Cell for a given column and
@@ -100,10 +96,8 @@ const ResultFamilyMap Result::FamilyMap(const std::string &family) const {
   if (!IsEmpty()) {
     for (auto itr = result_map_.begin(); itr != result_map_.end(); ++itr) {
       if (family == itr->first) {
-        for (auto qitr = itr->second.begin(); qitr != itr->second.end();
-             ++qitr) {
-          for (auto vitr = qitr->second.begin(); vitr != qitr->second.end();
-               ++vitr) {
+        for (auto qitr = itr->second.begin(); qitr != itr->second.end(); ++qitr) {
+          for (auto vitr = qitr->second.begin(); vitr != qitr->second.end(); ++vitr) {
             // We break after inserting the first value. Result.java takes only
             // the first value
             family_map[qitr->first] = vitr->second;

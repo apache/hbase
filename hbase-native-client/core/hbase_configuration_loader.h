@@ -58,9 +58,8 @@ class HBaseConfigurationLoader {
    * @param search_path - ':' search paths to load resources.
    * @param resources - list of resources used to load configuration properties.
    */
-  optional<Configuration> LoadResources(
-      const std::string &search_path,
-      const std::vector<std::string> &resources);
+  optional<Configuration> LoadResources(const std::string &search_path,
+                                        const std::vector<std::string> &resources);
 
  private:
   using ConfigMap = Configuration::ConfigMap;
@@ -137,8 +136,7 @@ class HBaseConfigurationLoader {
    * @param value value of value node.
    * @param final_text value of final node true or false if present
    */
-  bool UpdateMapWithValue(ConfigMap &map, const std::string &key,
-                          const std::string &value,
+  bool UpdateMapWithValue(ConfigMap &map, const std::string &key, const std::string &value,
                           boost::optional<std::string> final_text);
 };
 

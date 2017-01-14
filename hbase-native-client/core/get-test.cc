@@ -121,8 +121,7 @@ void GetMethods(Get &get, const std::string &row) {
 
   // Test initial values
   EXPECT_EQ(0, get.Timerange().MinTimeStamp());
-  EXPECT_EQ(std::numeric_limits<int64_t>::max(),
-            get.Timerange().MaxTimeStamp());
+  EXPECT_EQ(std::numeric_limits<int64_t>::max(), get.Timerange().MaxTimeStamp());
 
   // Set & Test new values using TimeRange and TimeStamp
   get.SetTimeRange(1000, 2000);
@@ -136,13 +135,11 @@ void GetMethods(Get &get, const std::string &row) {
   ASSERT_THROW(get.SetTimeRange(-1000, 2000), std::runtime_error);
   ASSERT_THROW(get.SetTimeRange(1000, -2000), std::runtime_error);
   ASSERT_THROW(get.SetTimeRange(1000, 200), std::runtime_error);
-  ASSERT_THROW(get.SetTimeStamp(std::numeric_limits<int64_t>::max()),
-               std::runtime_error);
+  ASSERT_THROW(get.SetTimeStamp(std::numeric_limits<int64_t>::max()), std::runtime_error);
 
   // Test some exceptions
   ASSERT_THROW(get.SetMaxVersions(0), std::runtime_error);
-  ASSERT_THROW(get.SetMaxVersions(std::numeric_limits<uint32_t>::max() + 1),
-               std::runtime_error);
+  ASSERT_THROW(get.SetMaxVersions(std::numeric_limits<uint32_t>::max() + 1), std::runtime_error);
 }
 
 TEST(Get, SingleGet) {

@@ -70,15 +70,13 @@ int RpcSerde::ParseDelimited(const IOBuf *buf, Message *msg) {
   coded_stream.PushLimit(msg_size);
   // Parse the message.
   if (msg->MergeFromCodedStream(&coded_stream) == false) {
-    FB_LOG_EVERY_MS(ERROR, 1000)
-        << "Unable to read a protobuf message from data.";
+    FB_LOG_EVERY_MS(ERROR, 1000) << "Unable to read a protobuf message from data.";
     return -4;
   }
 
   // Make sure all the data was consumed.
   if (coded_stream.ConsumedEntireMessage() == false) {
-    FB_LOG_EVERY_MS(ERROR, 1000)
-        << "Orphaned data left after reading protobuf message";
+    FB_LOG_EVERY_MS(ERROR, 1000) << "Orphaned data left after reading protobuf message";
     return -5;
   }
 
@@ -115,8 +113,8 @@ unique_ptr<IOBuf> RpcSerde::Header(const string &user) {
   return PrependLength(SerializeMessage(h));
 }
 
-unique_ptr<IOBuf> RpcSerde::Request(const uint32_t call_id,
-                                    const string &method, const Message *msg) {
+unique_ptr<IOBuf> RpcSerde::Request(const uint32_t call_id, const string &method,
+                                    const Message *msg) {
   pb::RequestHeader rq;
   rq.set_method_name(method);
   rq.set_call_id(call_id);
@@ -169,8 +167,7 @@ unique_ptr<IOBuf> RpcSerde::SerializeDelimited(const Message &msg) {
   // Now write the rest out.
   // We're using the protobuf output streams here to keep track
   // of where in the output array we are rather than IOBuf.
-  msg.SerializeWithCachedSizesToArray(
-      cos.GetDirectBufferForNBytesAndAdvance(msg_size));
+  msg.SerializeWithCachedSizesToArray(cos.GetDirectBufferForNBytesAndAdvance(msg_size));
 
   // Return the buffer.
   return buf;

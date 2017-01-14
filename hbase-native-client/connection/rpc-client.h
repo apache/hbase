@@ -53,41 +53,35 @@ class RpcClient : public std::enable_shared_from_this<RpcClient> {
 
   virtual ~RpcClient() { Close(); }
 
-  virtual std::shared_ptr<Response> SyncCall(const std::string &host,
-                                             uint16_t port,
+  virtual std::shared_ptr<Response> SyncCall(const std::string &host, uint16_t port,
                                              std::unique_ptr<Request> req,
                                              std::shared_ptr<User> ticket);
 
-  virtual std::shared_ptr<Response> SyncCall(const std::string &host,
-                                             uint16_t port,
+  virtual std::shared_ptr<Response> SyncCall(const std::string &host, uint16_t port,
                                              std::unique_ptr<Request> req,
                                              std::shared_ptr<User> ticket,
                                              const std::string &service_name);
 
-  virtual folly::Future<Response> AsyncCall(const std::string &host,
-                                            uint16_t port,
+  virtual folly::Future<Response> AsyncCall(const std::string &host, uint16_t port,
                                             std::unique_ptr<Request> req,
                                             std::shared_ptr<User> ticket);
 
-  virtual folly::Future<Response> AsyncCall(const std::string &host,
-                                            uint16_t port,
+  virtual folly::Future<Response> AsyncCall(const std::string &host, uint16_t port,
                                             std::unique_ptr<Request> req,
                                             std::shared_ptr<User> ticket,
                                             const std::string &service_name);
 
   virtual void Close();
 
-  virtual std::shared_ptr<RpcChannel> CreateRpcChannel(
-      const std::string &host, uint16_t port, std::shared_ptr<User> ticket,
-      int rpc_timeout);
+  virtual std::shared_ptr<RpcChannel> CreateRpcChannel(const std::string &host, uint16_t port,
+                                                       std::shared_ptr<User> ticket,
+                                                       int rpc_timeout);
 
  private:
-  void CallMethod(const MethodDescriptor *method, RpcController *controller,
-                  const Message *req_msg, Message *resp_msg, Closure *done,
-                  const std::string &host, uint16_t port,
+  void CallMethod(const MethodDescriptor *method, RpcController *controller, const Message *req_msg,
+                  Message *resp_msg, Closure *done, const std::string &host, uint16_t port,
                   std::shared_ptr<User> ticket);
-  std::shared_ptr<RpcConnection> GetConnection(
-      std::shared_ptr<ConnectionId> remote_id);
+  std::shared_ptr<RpcConnection> GetConnection(std::shared_ptr<ConnectionId> remote_id);
 
  private:
   std::shared_ptr<ConnectionPool> cp_;
@@ -96,8 +90,7 @@ class RpcClient : public std::enable_shared_from_this<RpcClient> {
 
 class AbstractRpcChannel : public RpcChannel {
  public:
-  AbstractRpcChannel(std::shared_ptr<RpcClient> rpc_client,
-                     const std::string &host, uint16_t port,
+  AbstractRpcChannel(std::shared_ptr<RpcClient> rpc_client, const std::string &host, uint16_t port,
                      std::shared_ptr<User> ticket, int rpc_timeout)
       : rpc_client_(rpc_client),
         host_(host),

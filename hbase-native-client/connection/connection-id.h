@@ -21,9 +21,9 @@
 #include "if/HBase.pb.h"
 #include "security/user.h"
 
+#include <boost/functional/hash.hpp>
 #include <memory>
 #include <utility>
-#include <boost/functional/hash.hpp>
 
 using hbase::pb::ServerName;
 using hbase::security::User;
@@ -34,12 +34,11 @@ class ConnectionId {
   ConnectionId(const std::string &host, uint16_t port)
       : ConnectionId(host, port, User::defaultUser(), "") {}
 
-  ConnectionId(const std::string &host, uint16_t port,
-               std::shared_ptr<User> user)
+  ConnectionId(const std::string &host, uint16_t port, std::shared_ptr<User> user)
       : ConnectionId(host, port, user, "") {}
 
-  ConnectionId(const std::string &host, uint16_t port,
-               std::shared_ptr<User> user, const std::string &service_name)
+  ConnectionId(const std::string &host, uint16_t port, std::shared_ptr<User> user,
+               const std::string &service_name)
       : user_(user), service_name_(service_name), host_(host), port_(port) {}
 
   virtual ~ConnectionId() = default;
@@ -66,11 +65,9 @@ struct ConnectionIdEquals {
   }
 
  private:
-  bool userEquals(const std::shared_ptr<User> &lhs,
-                  const std::shared_ptr<User> &rhs) const {
+  bool userEquals(const std::shared_ptr<User> &lhs, const std::shared_ptr<User> &rhs) const {
     return lhs == nullptr ? rhs == nullptr
-                          : (rhs == nullptr ? false : lhs->user_name() ==
-                                                          rhs->user_name());
+                          : (rhs == nullptr ? false : lhs->user_name() == rhs->user_name());
   }
 };
 

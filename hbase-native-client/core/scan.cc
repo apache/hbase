@@ -30,9 +30,7 @@ Scan::Scan() {}
 
 Scan::~Scan() {}
 
-Scan::Scan(const std::string &start_row) : start_row_(start_row) {
-  CheckRow(start_row_);
-}
+Scan::Scan(const std::string &start_row) : start_row_(start_row) { CheckRow(start_row_); }
 
 Scan::Scan(const std::string &start_row, const std::string &stop_row)
     : start_row_(start_row), stop_row_(stop_row) {
@@ -76,8 +74,7 @@ Scan &Scan::operator=(const Scan &scan) {
 Scan::Scan(const Get &get) {
   cache_blocks_ = get.CacheBlocks();
   max_versions_ = get.MaxVersions();
-  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(),
-                          get.Timerange().MaxTimeStamp()));
+  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(), get.Timerange().MaxTimeStamp()));
   family_map_.insert(get.Family().begin(), get.Family().end());
 }
 
@@ -97,8 +94,7 @@ Scan &Scan::AddFamily(const std::string &family) {
 }
 
 Scan &Scan::AddColumn(const std::string &family, const std::string &qualifier) {
-  const auto &it = std::find(family_map_[family].begin(),
-                             family_map_[family].end(), qualifier);
+  const auto &it = std::find(family_map_[family].begin(), family_map_[family].end(), qualifier);
   /**
    * Check if any qualifiers are already present or not.
    * Add only if qualifiers for a given family are not present
@@ -156,9 +152,7 @@ void Scan::SetLoadColumnFamiliesOnDemand(bool load_column_families_on_demand) {
   load_column_families_on_demand_ = load_column_families_on_demand;
 }
 
-bool Scan::LoadColumnFamiliesOnDemand() const {
-  return load_column_families_on_demand_;
-}
+bool Scan::LoadColumnFamiliesOnDemand() const { return load_column_families_on_demand_; }
 
 Scan &Scan::SetMaxVersions(uint32_t max_versions) {
   max_versions_ = max_versions;
@@ -167,9 +161,7 @@ Scan &Scan::SetMaxVersions(uint32_t max_versions) {
 
 int Scan::MaxVersions() const { return max_versions_; }
 
-void Scan::SetMaxResultSize(int64_t max_result_size) {
-  max_result_size_ = max_result_size;
-}
+void Scan::SetMaxResultSize(int64_t max_result_size) { max_result_size_ = max_result_size; }
 
 int64_t Scan::MaxResultSize() const { return max_result_size_; }
 
@@ -192,8 +184,7 @@ void Scan::CheckRow(const std::string &row) {
     throw std::runtime_error("Row length can't be 0");
   }
   if (row_length > kMaxRowLength) {
-    throw std::runtime_error("Length of " + row +
-                             " is greater than max row size: " +
+    throw std::runtime_error("Length of " + row + " is greater than max row size: " +
                              std::to_string(kMaxRowLength));
   }
 }

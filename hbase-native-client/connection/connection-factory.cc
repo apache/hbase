@@ -26,13 +26,10 @@
 using namespace folly;
 using namespace hbase;
 
-ConnectionFactory::ConnectionFactory(
-    std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool)
-    : io_pool_(io_pool),
-      pipeline_factory_(std::make_shared<RpcPipelineFactory>()) {}
+ConnectionFactory::ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool)
+    : io_pool_(io_pool), pipeline_factory_(std::make_shared<RpcPipelineFactory>()) {}
 
-std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>
-ConnectionFactory::MakeBootstrap() {
+std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> ConnectionFactory::MakeBootstrap() {
   auto client = std::make_shared<wangle::ClientBootstrap<SerializePipeline>>();
   client->group(io_pool_);
   client->pipelineFactory(pipeline_factory_);
@@ -40,8 +37,8 @@ ConnectionFactory::MakeBootstrap() {
   return client;
 }
 std::shared_ptr<HBaseService> ConnectionFactory::Connect(
-    std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client,
-    const std::string &hostname, int port) {
+    std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> client, const std::string &hostname,
+    int port) {
   // Yes this will block however it makes dealing with connection pool soooooo
   // much nicer.
   // TODO see about using shared promise for this.

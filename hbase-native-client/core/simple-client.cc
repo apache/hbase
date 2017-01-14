@@ -65,12 +65,11 @@ std::unique_ptr<Request> MakeRequest(uint64_t col, std::string region_name) {
   auto suf = folly::to<std::string>(col);
 
   region->set_value(region_name);
-  region->set_type(RegionSpecifier_RegionSpecifierType::
-                       RegionSpecifier_RegionSpecifierType_REGION_NAME);
+  region->set_type(
+      RegionSpecifier_RegionSpecifierType::RegionSpecifier_RegionSpecifierType_REGION_NAME);
   auto mutation = msg->mutable_mutation();
   mutation->set_row(FLAGS_row + suf);
-  mutation->set_mutate_type(
-      MutationProto_MutationType::MutationProto_MutationType_PUT);
+  mutation->set_mutate_type(MutationProto_MutationType::MutationProto_MutationType_PUT);
   auto column = mutation->add_column_value();
   column->set_family("d");
   auto qual = column->add_qualifier_value();
@@ -81,14 +80,12 @@ std::unique_ptr<Request> MakeRequest(uint64_t col, std::string region_name) {
 }
 
 int main(int argc, char *argv[]) {
-  google::SetUsageMessage(
-      "Simple client to get a single row from HBase on the comamnd line");
+  google::SetUsageMessage("Simple client to get a single row from HBase on the comamnd line");
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 
   // Set up thread pools.
-  auto cpu_pool =
-      std::make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_threads);
+  auto cpu_pool = std::make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_threads);
   auto io_pool = std::make_shared<wangle::IOThreadPoolExecutor>(5);
 
   // Create the cache.
@@ -105,14 +102,13 @@ int main(int argc, char *argv[]) {
   auto results = std::vector<Future<Response>>{};
   auto col = uint64_t{0};
   for (; col < num_puts; col++) {
-    results.push_back(folly::makeFuture(col)
-                          .via(cpu_pool.get())
-                          .then([loc](uint64_t col) {
-                            return MakeRequest(col, loc->region_name());
-                          })
-                          .then([connection](std::unique_ptr<Request> req) {
-                            return (*connection)(std::move(req));
-                          }));
+    results.push_back(
+        folly::makeFuture(col)
+            .via(cpu_pool.get())
+            .then([loc](uint64_t col) { return MakeRequest(col, loc->region_name()); })
+            .then([connection](std::unique_ptr<Request> req) {
+              return (*connection)(std::move(req));
+            }));
   }
   auto allf = folly::collect(results).get();
 

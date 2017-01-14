@@ -30,8 +30,7 @@
 namespace hbase {
 
 /** Pipeline to turn IOBuf into requests */
-using SerializePipeline =
-    wangle::Pipeline<folly::IOBufQueue &, std::unique_ptr<Request>>;
+using SerializePipeline = wangle::Pipeline<folly::IOBufQueue &, std::unique_ptr<Request>>;
 
 /**
  * Factory to create new pipelines for HBase RPC's.
@@ -52,8 +51,7 @@ class RpcPipelineFactory : public wangle::PipelineFactory<SerializePipeline> {
    * - Length Field Based Frame Decoder
    * - Client Handler
    */
-  SerializePipeline::Ptr newPipeline(
-      std::shared_ptr<folly::AsyncTransportWrapper> sock) override;
+  SerializePipeline::Ptr newPipeline(std::shared_ptr<folly::AsyncTransportWrapper> sock) override;
 
  private:
   UserUtil user_util_;

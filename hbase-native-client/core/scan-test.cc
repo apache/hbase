@@ -154,8 +154,7 @@ void ScanMethods(Scan &scan) {
 
   // Test initial values
   EXPECT_EQ(0, scan.Timerange().MinTimeStamp());
-  EXPECT_EQ(std::numeric_limits<int64_t>::max(),
-            scan.Timerange().MaxTimeStamp());
+  EXPECT_EQ(std::numeric_limits<int64_t>::max(), scan.Timerange().MaxTimeStamp());
 
   // Set & Test new values using TimeRange and TimeStamp
   scan.SetTimeRange(1000, 2000);
@@ -169,8 +168,7 @@ void ScanMethods(Scan &scan) {
   ASSERT_THROW(scan.SetTimeRange(-1000, 2000), std::runtime_error);
   ASSERT_THROW(scan.SetTimeRange(1000, -2000), std::runtime_error);
   ASSERT_THROW(scan.SetTimeRange(1000, 200), std::runtime_error);
-  ASSERT_THROW(scan.SetTimeStamp(std::numeric_limits<int64_t>::max()),
-               std::runtime_error);
+  ASSERT_THROW(scan.SetTimeStamp(std::numeric_limits<int64_t>::max()), std::runtime_error);
 }
 
 TEST(Scan, Object) {

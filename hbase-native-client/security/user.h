@@ -23,16 +23,15 @@
 namespace hbase {
 namespace security {
 class User {
-public:
+ public:
   explicit User(const std::string& user_name) : user_name_(user_name) {}
-  virtual ~User()  = default;
+  virtual ~User() = default;
 
-  std::string user_name() {return user_name_;}
+  std::string user_name() { return user_name_; }
 
-  static std::shared_ptr<User> defaultUser() {
-    return std::make_shared<User>("__drwho");
-  }
-private:
+  static std::shared_ptr<User> defaultUser() { return std::make_shared<User>("__drwho"); }
+
+ private:
   std::string user_name_;
 };
 }

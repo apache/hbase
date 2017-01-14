@@ -50,9 +50,9 @@ namespace hbase {
  * This class deals with sending the connection header and preamble
  * on first request.
  */
-class ClientHandler : public wangle::Handler<std::unique_ptr<folly::IOBuf>,
-                                             Response, std::unique_ptr<Request>,
-                                             std::unique_ptr<folly::IOBuf>> {
+class ClientHandler
+    : public wangle::Handler<std::unique_ptr<folly::IOBuf>, Response, std::unique_ptr<Request>,
+                             std::unique_ptr<folly::IOBuf>> {
  public:
   /**
    * Create the handler
@@ -70,8 +70,7 @@ class ClientHandler : public wangle::Handler<std::unique_ptr<folly::IOBuf>,
   /**
    * Write the data down the wire.
    */
-  folly::Future<folly::Unit> write(Context *ctx,
-                                   std::unique_ptr<Request> r) override;
+  folly::Future<folly::Unit> write(Context *ctx, std::unique_ptr<Request> r) override;
 
  private:
   std::unique_ptr<std::once_flag> once_flag_;
@@ -79,8 +78,7 @@ class ClientHandler : public wangle::Handler<std::unique_ptr<folly::IOBuf>,
   RpcSerde serde_;
 
   // in flight requests
-  std::unique_ptr<folly::AtomicHashMap<
-      uint32_t, std::shared_ptr<google::protobuf::Message>>>
+  std::unique_ptr<folly::AtomicHashMap<uint32_t, std::shared_ptr<google::protobuf::Message>>>
       resp_msgs_;
 };
 }  // namespace hbase
