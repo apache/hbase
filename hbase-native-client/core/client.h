@@ -27,11 +27,18 @@
 #include <memory>
 #include <string>
 
+#include "core/configuration.h"
+#include "core/hbase_configuration_loader.h"
 #include "core/location-cache.h"
+#include "connection/rpc-client.h"
+#include "core/table.h"
+#include "serde/table-name.h"
 #include "if/Cell.pb.h"
 
-namespace hbase {
+using hbase::pb::TableName;
 
+namespace hbase {
+class Table;
 /**
  * Client.
  *
@@ -42,16 +49,34 @@ namespace hbase {
 class Client {
  public:
   /**
-   * Create a new client.
+   * @brief Create a new client.
    * @param quorum_spec Where to connect to get Zookeeper bootstrap information.
    */
-  explicit Client(std::string quorum_spec);
+  Client();
+  explicit Client(const hbase::Configuration &conf);
   ~Client();
+  /**
+   * @brief Retrieve a Table implementation for accessing a table.
+   * @param - table_name
+   */
+  std::unique_ptr<hbase::Table> Table(const TableName &table_name);
+
+  /**
+   * @brief Close the Client connection.
+   */
+  void Close();
 
  private:
-  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
-  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
-  LocationCache location_cache_;
+  const std::string kHBaseZookeeperQuorum_ = "hbase.zookeeper.quorum";
+  const std::string kDefHBaseZookeeperQuorum_ = "localhost:2181";
+  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_ =
+      std::make_shared<wangle::CPUThreadPoolExecutor>(4);
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_ =
+      std::make_shared<wangle::IOThreadPoolExecutor>(sysconf(_SC_NPROCESSORS_ONLN));
+  std::shared_ptr<hbase::LocationCache> location_cache_;
+  std::shared_ptr<hbase::RpcClient> rpc_client_ = std::make_shared<hbase::RpcClient>();
+  std::shared_ptr<hbase::Configuration> conf_;
+  bool is_closed_ = false;
 };
 
 }  // namespace hbase

@@ -35,6 +35,7 @@ cxx_library(
         "result.h",
         "request_converter.h",
         "response_converter.h",
+        "table.h",
     ],
     srcs=[
         "cell.cc",
@@ -49,6 +50,7 @@ cxx_library(
         "result.cc",
         "request_converter.cc",
         "response_converter.cc",
+        "table.cc",
     ],
     deps=[
         "//connection:connection",
@@ -105,6 +107,16 @@ cxx_test(
         ":core",
         "//connection:connection",
         "//if:if",
+    ],
+    run_test_separately=True,)
+cxx_test(
+    name="client-test",
+    srcs=["client-test.cc",],
+    deps=[
+        ":core",
+        "//if:if",
+        "//serde:serde",
+        "//test-util:test-util",
     ],
     run_test_separately=True,)
 cxx_binary(
