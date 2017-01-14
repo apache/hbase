@@ -535,13 +535,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     //the working directory, and create a unique sub dir there
     FileSystem fs = getTestFileSystem();
     Path newDataTestDir = null;
+    String randomStr = UUID.randomUUID().toString();
     if (fs.getUri().getScheme().equals(FileSystem.getLocal(conf).getUri().getScheme())) {
-      File dataTestDir = new File(getDataTestDir().toString());
+      newDataTestDir = new Path(getDataTestDir(), randomStr);
+      File dataTestDir = new File(newDataTestDir.toString());
       if (deleteOnExit()) dataTestDir.deleteOnExit();
-      newDataTestDir = new Path(dataTestDir.getAbsolutePath());
     } else {
       Path base = getBaseTestDirOnTestFS();
-      String randomStr = UUID.randomUUID().toString();
       newDataTestDir = new Path(base, randomStr);
       if (deleteOnExit()) fs.deleteOnExit(newDataTestDir);
     }
