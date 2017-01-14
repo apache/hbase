@@ -57,6 +57,4 @@ Future<Response> ClientDispatcher::operator()(std::unique_ptr<Request> arg) {
 
 Future<Unit> ClientDispatcher::close() { return ClientDispatcherBase::close(); }
 
-Future<Unit> ClientDispatcher::close(Context *ctx) {
-  return ClientDispatcherBase::close(ctx);
-}
+Future<Unit> ClientDispatcher::close(Context *ctx) { return ClientDispatcherBase::close(ctx); }

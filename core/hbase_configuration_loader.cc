@@ -94,8 +94,7 @@ void HBaseConfigurationLoader::AddToSearchPath(const std::string &search_path) {
   if (search_path.back() != kFileSeparator) {
     path_to_add += kFileSeparator;
   }
-  if (std::find(search_paths_.begin(), search_paths_.end(), path_to_add) ==
-      search_paths_.end())
+  if (std::find(search_paths_.begin(), search_paths_.end(), path_to_add) == search_paths_.end())
     search_paths_.push_back(path_to_add);
 }
 
@@ -105,8 +104,7 @@ void HBaseConfigurationLoader::AddDefaultResources() {
 }
 
 void HBaseConfigurationLoader::AddResources(const std::string &filename) {
-  if (std::find(resources_.begin(), resources_.end(), filename) ==
-      resources_.end())
+  if (std::find(resources_.begin(), resources_.end(), filename) == resources_.end())
     resources_.push_back(filename);
 }
 
@@ -127,8 +125,7 @@ optional<Configuration> HBaseConfigurationLoader::LoadDefaultResources() {
     }
   }
   if (success) {
-    return std::experimental::make_optional<Configuration>(
-    		Configuration(conf_property));
+    return std::experimental::make_optional<Configuration>(Configuration(conf_property));
   } else {
     return optional<Configuration>();
   }
@@ -152,15 +149,13 @@ optional<Configuration> HBaseConfigurationLoader::LoadResources(
     }
   }
   if (success) {
-    return std::experimental::make_optional<Configuration>(
-    		Configuration(conf_property));
+    return std::experimental::make_optional<Configuration>(Configuration(conf_property));
   } else {
     return optional<Configuration>();
   }
 }
 
-bool HBaseConfigurationLoader::LoadProperties(const std::string &file,
-                                              ConfigMap &property_map) {
+bool HBaseConfigurationLoader::LoadProperties(const std::string &file, ConfigMap &property_map) {
   // Create empty property tree object
   using boost::property_tree::ptree;
   ptree pt;
@@ -179,23 +174,21 @@ bool HBaseConfigurationLoader::LoadProperties(const std::string &file,
         std::string name_node = v.second.get<std::string>("name");
         std::string value_node = v.second.get<std::string>("value");
         if ((name_node.size() > 0) && (value_node.size() > 0)) {
-          boost::optional<std::string> final_node =
-              v.second.get_optional<std::string>("final");
+          boost::optional<std::string> final_node = v.second.get_optional<std::string>("final");
           UpdateMapWithValue(property_map, name_node, value_node, final_node);
         }
       }
     }
   } catch (std::exception &ex) {
-    DLOG(WARNING) << "Exception in parsing file [" << file << "]:[" << ex.what()
-                  << "]";
+    DLOG(WARNING) << "Exception in parsing file [" << file << "]:[" << ex.what() << "]";
     return false;
   }
   return true;
 }
 
-bool HBaseConfigurationLoader::UpdateMapWithValue(
-    ConfigMap &map, const std::string &key, const std::string &value,
-    boost::optional<std::string> final_text) {
+bool HBaseConfigurationLoader::UpdateMapWithValue(ConfigMap &map, const std::string &key,
+                                                  const std::string &value,
+                                                  boost::optional<std::string> final_text) {
   auto map_value = map.find(key);
   if (map_value != map.end() && map_value->second.final) {
     return false;

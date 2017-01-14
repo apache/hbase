@@ -20,8 +20,8 @@
 #pragma once
 
 #include <memory>
-#include "core/result.h"
 #include "connection/response.h"
+#include "core/result.h"
 
 namespace hbase {
 

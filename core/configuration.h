@@ -41,8 +41,7 @@ class Configuration {
    * @param key Property whose value is to be fetched. SubstituteVars will be
    * called for any variable expansion.
    */
-  std::string Get(const std::string &key,
-                  const std::string &default_value) const;
+  std::string Get(const std::string &key, const std::string &default_value) const;
 
   /**
    * @brief Returns int32_t identified by key in ConfigMap else default value if
@@ -89,8 +88,7 @@ class Configuration {
     std::string value;
     bool final;
     ConfigData() : final(false) {}
-    explicit ConfigData(const std::string &value)
-        : value(value), final(false) {}
+    explicit ConfigData(const std::string &value) : value(value), final(false) {}
     void operator=(const std::string &new_value) {
       value = new_value;
       final = false;
@@ -174,8 +172,7 @@ class Configuration {
    * @param sub_variable Extracted variable from expr which will be checked
    * against environment value or ConfigMap values.
    */
-  size_t IsSubVariable(const std::string &expr,
-                       std::string &sub_variable) const;
+  size_t IsSubVariable(const std::string &expr, std::string &sub_variable) const;
 
   /**
    * @brief This method will fetch value for key from environment if present.

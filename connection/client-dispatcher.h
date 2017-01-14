@@ -36,8 +36,7 @@ namespace hbase {
  * future.
  */
 class ClientDispatcher
-    : public wangle::ClientDispatcherBase<SerializePipeline,
-                                          std::unique_ptr<Request>, Response> {
+    : public wangle::ClientDispatcherBase<SerializePipeline, std::unique_ptr<Request>, Response> {
  public:
   /** Create a new ClientDispatcher */
   ClientDispatcher();

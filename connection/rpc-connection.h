@@ -37,13 +37,9 @@ class RpcConnection {
 
   virtual ~RpcConnection() { Close(); }
 
-  virtual std::shared_ptr<ConnectionId> remote_id() const {
-    return connection_id_;
-  }
+  virtual std::shared_ptr<ConnectionId> remote_id() const { return connection_id_; }
 
-  virtual std::shared_ptr<HBaseService> get_service() const {
-    return hbase_service_;
-  }
+  virtual std::shared_ptr<HBaseService> get_service() const { return hbase_service_; }
 
   virtual folly::Future<Response> SendRequest(std::unique_ptr<Request> req) {
     return (*hbase_service_)(std::move(req));

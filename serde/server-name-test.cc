@@ -37,9 +37,7 @@ TEST(TestServerName, TestIps) {
   ASSERT_EQ(999, sn.port());
 }
 
-TEST(TestServerName, TestThrow) {
-  ASSERT_ANY_THROW(folly::to<ServerName>("Ther's no colon here"));
-}
+TEST(TestServerName, TestThrow) { ASSERT_ANY_THROW(folly::to<ServerName>("Ther's no colon here")); }
 
 TEST(TestServerName, TestIPV6) {
   auto sn = folly::to<ServerName>("[::::1]:123");

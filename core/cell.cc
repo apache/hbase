@@ -22,9 +22,8 @@
 
 namespace hbase {
 
-Cell::Cell(const std::string &row, const std::string &family,
-           const std::string &qualifier, const int64_t timestamp,
-           const std::string &value, const hbase::CellType &cell_type)
+Cell::Cell(const std::string &row, const std::string &family, const std::string &qualifier,
+           const int64_t timestamp, const std::string &value, const hbase::CellType &cell_type)
     : row_(row),
       family_(family),
       qualifier_(qualifier),
@@ -32,14 +31,11 @@ Cell::Cell(const std::string &row, const std::string &family,
       cell_type_(cell_type),
       value_(value),
       sequence_id_(0) {
-  if (0 == row.size())
-    throw std::runtime_error("Row size should be greater than 0");
+  if (0 == row.size()) throw std::runtime_error("Row size should be greater than 0");
 
-  if (0 == family.size())
-    throw std::runtime_error("Column family size should be greater than 0");
+  if (0 == family.size()) throw std::runtime_error("Column family size should be greater than 0");
 
-  if (0 >= timestamp)
-    throw std::runtime_error("Timestamp should be greater than 0");
+  if (0 >= timestamp) throw std::runtime_error("Timestamp should be greater than 0");
 }
 
 Cell::~Cell() {}

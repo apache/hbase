@@ -53,10 +53,9 @@ using hbase::pb::RegionInfo;
 // TODO(eclark): make this configurable on client creation
 static const char META_ZNODE_NAME[] = "/hbase/meta-region-server";
 
-LocationCache::LocationCache(
-    std::string quorum_spec,
-    std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
-    std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
+LocationCache::LocationCache(std::string quorum_spec,
+                             std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
+                             std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
     : quorum_spec_(quorum_spec),
       cpu_executor_(cpu_executor),
       meta_promise_(nullptr),
@@ -91,9 +90,7 @@ void LocationCache::InvalidateMeta() {
 /// MUST hold the meta_lock_
 void LocationCache::RefreshMetaLocation() {
   meta_promise_ = make_unique<SharedPromise<ServerName>>();
-  cpu_executor_->add([&] {
-    meta_promise_->setWith([&] { return this->ReadMetaLocation(); });
-  });
+  cpu_executor_->add([&] { meta_promise_->setWith([&] { return this->ReadMetaLocation(); }); });
 }
 
 ServerName LocationCache::ReadMetaLocation() {
@@ -103,9 +100,8 @@ ServerName LocationCache::ReadMetaLocation() {
   // This needs to be int rather than size_t as that's what ZK expects.
   int len = buf->capacity();
   // TODO(elliott): handle disconnects/reconntion as needed.
-  int zk_result =
-      zoo_get(this->zk_, META_ZNODE_NAME, 0,
-              reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
+  int zk_result = zoo_get(this->zk_, META_ZNODE_NAME, 0,
+                          reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
     throw runtime_error("Error getting meta location");
@@ -119,18 +115,16 @@ ServerName LocationCache::ReadMetaLocation() {
   return mrs.server();
 }
 
-Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
-    const TableName &tn, const string &row) {
+Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(const TableName &tn,
+                                                                      const string &row) {
   return this->LocateMeta()
       .via(cpu_executor_.get())
       .then([this](ServerName sn) {
-        auto remote_id =
-            std::make_shared<ConnectionId>(sn.host_name(), sn.port());
+        auto remote_id = std::make_shared<ConnectionId>(sn.host_name(), sn.port());
         return this->cp_.GetConnection(remote_id);
       })
       .then([tn, row, this](std::shared_ptr<RpcConnection> rpc_connection) {
-        return (*rpc_connection->get_service())(
-            std::move(meta_util_.MetaRequest(tn, row)));
+        return (*rpc_connection->get_service())(std::move(meta_util_.MetaRequest(tn, row)));
       })
       .then([this](Response resp) {
         // take the protobuf response and make it into
@@ -146,16 +140,15 @@ Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(
         return rl;
       })
       .then([this](std::shared_ptr<RegionLocation> rl) {
-        auto remote_id = std::make_shared<ConnectionId>(
-            rl->server_name().host_name(), rl->server_name().port());
+        auto remote_id =
+            std::make_shared<ConnectionId>(rl->server_name().host_name(), rl->server_name().port());
         // Now fill out the connection.
         rl->set_service(cp_.GetConnection(remote_id)->get_service());
         return rl;
       });
 }
 
-std::shared_ptr<RegionLocation> LocationCache::CreateLocation(
-    const Response &resp) {
+std::shared_ptr<RegionLocation> LocationCache::CreateLocation(const Response &resp) {
   auto resp_msg = static_pointer_cast<ScanResponse>(resp.resp_msg());
   auto &results = resp_msg->results().Get(0);
   auto &cells = results.cell();
@@ -168,6 +161,5 @@ std::shared_ptr<RegionLocation> LocationCache::CreateLocation(
 
   auto region_info = folly::to<RegionInfo>(cell_zero);
   auto server_name = folly::to<ServerName>(cell_one);
-  return std::make_shared<RegionLocation>(row, std::move(region_info),
-                                          server_name, nullptr);
+  return std::make_shared<RegionLocation>(row, std::move(region_info), server_name, nullptr);
 }

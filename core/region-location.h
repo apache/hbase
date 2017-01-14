@@ -42,8 +42,7 @@ class RegionLocation {
    * this region.
    * @param service the connected service to the regionserver.
    */
-  RegionLocation(std::string region_name, hbase::pb::RegionInfo ri,
-                 hbase::pb::ServerName sn,
+  RegionLocation(std::string region_name, hbase::pb::RegionInfo ri, hbase::pb::ServerName sn,
                  std::shared_ptr<HBaseService> service)
       : region_name_(region_name), ri_(ri), sn_(sn), service_(service) {}
 

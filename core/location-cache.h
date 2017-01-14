@@ -79,8 +79,8 @@ class LocationCache {
    * @param row of the table to look up. This object must live until after the
    * future is returned
    */
-  folly::Future<std::shared_ptr<RegionLocation>> LocateFromMeta(
-      const hbase::pb::TableName &tn, const std::string &row);
+  folly::Future<std::shared_ptr<RegionLocation>> LocateFromMeta(const hbase::pb::TableName &tn,
+                                                                const std::string &row);
 
   /**
    * Remove the cached location of meta.

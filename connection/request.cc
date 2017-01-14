@@ -24,22 +24,18 @@
 using namespace hbase;
 
 Request::Request(std::shared_ptr<google::protobuf::Message> req,
-                 std::shared_ptr<google::protobuf::Message> resp,
-                 std::string method)
+                 std::shared_ptr<google::protobuf::Message> resp, std::string method)
     : req_msg_(req), resp_msg_(resp), method_(method), call_id_(0) {}
 
 std::unique_ptr<Request> Request::get() {
   return std::make_unique<Request>(std::make_shared<hbase::pb::GetRequest>(),
-                                   std::make_shared<hbase::pb::GetResponse>(),
-                                   "Get");
+                                   std::make_shared<hbase::pb::GetResponse>(), "Get");
 }
 std::unique_ptr<Request> Request::mutate() {
-  return std::make_unique<Request>(
-      std::make_shared<hbase::pb::MutateRequest>(),
-      std::make_shared<hbase::pb::MutateResponse>(), "Mutate");
+  return std::make_unique<Request>(std::make_shared<hbase::pb::MutateRequest>(),
+                                   std::make_shared<hbase::pb::MutateResponse>(), "Mutate");
 }
 std::unique_ptr<Request> Request::scan() {
   return std::make_unique<Request>(std::make_shared<hbase::pb::ScanRequest>(),
-                                   std::make_shared<hbase::pb::ScanResponse>(),
-                                   "Scan");
+                                   std::make_shared<hbase::pb::ScanResponse>(), "Scan");
 }

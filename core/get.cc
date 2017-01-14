@@ -34,8 +34,7 @@ Get::Get(const Get &get) {
   cache_blocks_ = get.cache_blocks_;
   check_existence_only_ = get.check_existence_only_;
   consistency_ = get.consistency_;
-  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(),
-                          get.Timerange().MaxTimeStamp()));
+  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(), get.Timerange().MaxTimeStamp()));
   family_map_.insert(get.family_map_.begin(), get.family_map_.end());
 }
 
@@ -45,8 +44,7 @@ Get &Get::operator=(const Get &get) {
   cache_blocks_ = get.cache_blocks_;
   check_existence_only_ = get.check_existence_only_;
   consistency_ = get.consistency_;
-  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(),
-                          get.Timerange().MaxTimeStamp()));
+  tr_.reset(new TimeRange(get.Timerange().MinTimeStamp(), get.Timerange().MaxTimeStamp()));
   family_map_.insert(get.family_map_.begin(), get.family_map_.end());
   return *this;
 }
@@ -68,8 +66,7 @@ Get &Get::AddFamily(const std::string &family) {
 }
 
 Get &Get::AddColumn(const std::string &family, const std::string &qualifier) {
-  const auto &it = std::find(family_map_[family].begin(),
-                             family_map_[family].end(), qualifier);
+  const auto &it = std::find(family_map_[family].begin(), family_map_[family].end(), qualifier);
 
   /**
    * Check if any qualifiers are already present or not.
@@ -97,8 +94,7 @@ const FamilyMap &Get::Family() const { return family_map_; }
 int Get::MaxVersions() const { return max_versions_; }
 
 Get &Get::SetMaxVersions(int32_t max_versions) {
-  if (0 == max_versions)
-    throw std::runtime_error("max_versions must be positive");
+  if (0 == max_versions) throw std::runtime_error("max_versions must be positive");
 
   max_versions_ = max_versions;
   return *this;
@@ -130,8 +126,7 @@ void Get::CheckRow(const std::string &row) {
     throw std::runtime_error("Row length can't be 0");
   }
   if (row_length > kMaxRowLength) {
-    throw std::runtime_error("Length of " + row +
-                             " is greater than max row size: " +
+    throw std::runtime_error("Length of " + row + " is greater than max row size: " +
                              std::to_string(kMaxRowLength));
   }
 }
