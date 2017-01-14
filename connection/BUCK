@@ -30,6 +30,7 @@ cxx_library(
         "rpc-connection.h",
         "response.h",
         "service.h",
+        "rpc-client.h",
     ],
     srcs=[
         "client-dispatcher.cc",
@@ -38,6 +39,7 @@ cxx_library(
         "connection-pool.cc",
         "pipeline.cc",
         "request.cc",
+        "rpc-client.cc",
     ],
     deps=[
         "//if:if",
