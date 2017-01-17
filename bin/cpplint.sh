@@ -26,4 +26,4 @@ wget -nc $CPPLINT_LOC -O $OUTPUT
 # Execute the script
 # Exclude the following rules: build/header_guard (We use #pragma once instead)
 #                              readability/todo (TODOs are generic)
-find core connection serde utils test-util -name "*.h" -or -name "*.cc"| xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo
+find core connection serde utils test-util security -name "*.h" -or -name "*.cc" | xargs -P8 python $OUTPUT --filter=-build/header_guard,-readability/todo --linelength=100
