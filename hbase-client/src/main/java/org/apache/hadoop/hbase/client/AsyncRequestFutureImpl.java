@@ -42,6 +42,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -567,8 +568,11 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       }
 
       // run all the runnables
+      // HBASE-17475: Do not reuse the thread after stack reach a certain depth to prevent stack overflow
+      // for now, we use HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER to control the depth
       for (Runnable runnable : runnables) {
-        if ((--actionsRemaining == 0) && reuseThread) {
+        if ((--actionsRemaining == 0) && reuseThread
+            && numAttempt % HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER != 0) {
           runnable.run();
         } else {
           try {
