@@ -501,52 +501,6 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public DispatchMergingRegionsResponse dispatchMergingRegions(RpcController c,
-      DispatchMergingRegionsRequest request) throws ServiceException {
-    try {
-      master.checkInitialized();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
-
-    final byte[] encodedNameOfRegionA = request.getRegionA().getValue()
-      .toByteArray();
-    final byte[] encodedNameOfRegionB = request.getRegionB().getValue()
-      .toByteArray();
-    if (request.getRegionA().getType() != RegionSpecifierType.ENCODED_REGION_NAME
-        || request.getRegionB().getType() != RegionSpecifierType.ENCODED_REGION_NAME) {
-      LOG.warn("mergeRegions specifier type: expected: "
-        + RegionSpecifierType.ENCODED_REGION_NAME + " actual: region_a="
-        + request.getRegionA().getType() + ", region_b="
-        + request.getRegionB().getType());
-    }
-
-    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-    RegionState regionStateA = regionStates.getRegionState(Bytes.toString(encodedNameOfRegionA));
-    RegionState regionStateB = regionStates.getRegionState(Bytes.toString(encodedNameOfRegionB));
-    if (regionStateA == null || regionStateB == null) {
-      throw new ServiceException(new UnknownRegionException(
-          Bytes.toStringBinary(regionStateA == null ? encodedNameOfRegionA
-              : encodedNameOfRegionB)));
-    }
-
-    final HRegionInfo regionInfoA = regionStateA.getRegion();
-    final HRegionInfo regionInfoB = regionStateB.getRegion();
-
-    try {
-      long procId = master.dispatchMergingRegions(
-        regionInfoA,
-        regionInfoB,
-        request.getForcible(),
-        request.getNonceGroup(),
-        request.getNonce());
-      return DispatchMergingRegionsResponse.newBuilder().setProcId(procId).build();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
-  }
-
-  @Override
   public EnableCatalogJanitorResponse enableCatalogJanitor(RpcController c,
       EnableCatalogJanitorRequest req) throws ServiceException {
     try {

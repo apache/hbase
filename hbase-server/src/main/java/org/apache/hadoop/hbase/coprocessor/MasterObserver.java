@@ -1699,7 +1699,11 @@ public interface MasterObserver extends Coprocessor {
    * @param regionA first region to be merged
    * @param regionB second region to be merged
    * @throws IOException if an error occurred on the coprocessor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *   (<a href="https://issues.apache.org/jira/browse/HBASE-">HBASE-</a>).
+   *   Use {@link #preMergeRegions(ObserverContext, HRegionInfo[])}
    */
+  @Deprecated
   void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo regionA, HRegionInfo regionB) throws IOException;
 
@@ -1709,7 +1713,11 @@ public interface MasterObserver extends Coprocessor {
    * @param regionA first region to be merged
    * @param regionB second region to be merged
    * @throws IOException if an error occurred on the coprocessor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *   (<a href="https://issues.apache.org/jira/browse/HBASE-">HBASE-</a>).
+   *   Use {@link #postMergeRegions(ObserverContext, HRegionInfo[])}
    */
+  @Deprecated
   void postDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> c,
       final HRegionInfo regionA, final HRegionInfo regionB) throws IOException;
 

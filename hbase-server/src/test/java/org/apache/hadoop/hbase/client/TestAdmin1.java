@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -1189,15 +1189,17 @@ public class TestAdmin1 {
     assertTrue(gotException);
     // Try going to the master directly (that will skip the check in admin)
     try {
-      DispatchMergingRegionsRequest request = RequestConverter
-          .buildDispatchMergingRegionsRequest(
-            regions.get(1).getFirst().getEncodedNameAsBytes(),
-            regions.get(2).getFirst().getEncodedNameAsBytes(),
+      byte[][] nameofRegionsToMerge = new byte[2][];
+      nameofRegionsToMerge[0] =  regions.get(1).getFirst().getEncodedNameAsBytes();
+      nameofRegionsToMerge[1] = regions.get(2).getFirst().getEncodedNameAsBytes();
+      MergeTableRegionsRequest request = RequestConverter
+          .buildMergeTableRegionsRequest(
+            nameofRegionsToMerge,
             true,
             HConstants.NO_NONCE,
-            HConstants.NO_NONCE);
+            HConstants.NO_NONCE);   
       ((ClusterConnection) TEST_UTIL.getAdmin().getConnection()).getMaster()
-        .dispatchMergingRegions(null, request);
+        .mergeTableRegions(null, request);
     } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException m) {
       Throwable t = m.getCause();
       do {
@@ -1209,40 +1211,6 @@ public class TestAdmin1 {
       } while (t != null);
     }
     assertTrue(gotException);
-    gotException = false;
-    // Try going to the regionservers directly
-    // first move the region to the same regionserver
-    if (!regions.get(2).getSecond().equals(regions.get(1).getSecond())) {
-      moveRegionAndWait(regions.get(2).getFirst(), regions.get(1).getSecond());
-    }
-    try {
-      AdminService.BlockingInterface admin = ((ClusterConnection) TEST_UTIL.getAdmin()
-        .getConnection()).getAdmin(regions.get(1).getSecond());
-      ProtobufUtil.mergeRegions(null, admin, regions.get(1).getFirst(), regions.get(2).getFirst(),
-        true, null);
-    } catch (MergeRegionException mm) {
-      gotException = true;
-    }
-    assertTrue(gotException);
-  }
-
-  private void moveRegionAndWait(HRegionInfo destRegion, ServerName destServer)
-      throws InterruptedException, MasterNotRunningException,
-      ZooKeeperConnectionException, IOException {
-    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    TEST_UTIL.getAdmin().move(
-        destRegion.getEncodedNameAsBytes(),
-        Bytes.toBytes(destServer.getServerName()));
-    while (true) {
-      ServerName serverName = master.getAssignmentManager()
-          .getRegionStates().getRegionServerOfRegion(destRegion);
-      if (serverName != null && serverName.equals(destServer)) {
-        TEST_UTIL.assertRegionOnServer(
-            destRegion, serverName, 200);
-        break;
-      }
-      Thread.sleep(10);
-    }
   }
 
   @Test (expected=IllegalArgumentException.class, timeout=300000)

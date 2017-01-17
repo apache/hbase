@@ -326,23 +326,6 @@ public interface MasterServices extends Server {
   boolean registerService(Service instance);
 
   /**
-   * Merge two regions. The real implementation is on the regionserver, master
-   * just move the regions together and send MERGE RPC to regionserver
-   * @param region_a region to merge
-   * @param region_b region to merge
-   * @param forcible true if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @return procedure Id
-   * @throws IOException
-   */
-  long dispatchMergingRegions(
-    final HRegionInfo region_a,
-    final HRegionInfo region_b,
-    final boolean forcible,
-    final long nonceGroup,
-    final long nonce) throws IOException;
-
-  /**
    * @return true if master is the active one
    */
   boolean isActiveMaster();

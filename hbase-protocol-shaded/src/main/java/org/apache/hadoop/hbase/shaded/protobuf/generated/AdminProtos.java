@@ -16538,1406 +16538,6 @@ public final class AdminProtos {
 
   }
 
-  public interface MergeRegionsRequestOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:hbase.pb.MergeRegionsRequest)
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
-
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-     */
-    boolean hasRegionA();
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-     */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier getRegionA();
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-     */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionAOrBuilder();
-
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-     */
-    boolean hasRegionB();
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-     */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier getRegionB();
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-     */
-    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionBOrBuilder();
-
-    /**
-     * <code>optional bool forcible = 3 [default = false];</code>
-     */
-    boolean hasForcible();
-    /**
-     * <code>optional bool forcible = 3 [default = false];</code>
-     */
-    boolean getForcible();
-
-    /**
-     * <pre>
-     * wall clock time from master
-     * </pre>
-     *
-     * <code>optional uint64 master_system_time = 4;</code>
-     */
-    boolean hasMasterSystemTime();
-    /**
-     * <pre>
-     * wall clock time from master
-     * </pre>
-     *
-     * <code>optional uint64 master_system_time = 4;</code>
-     */
-    long getMasterSystemTime();
-  }
-  /**
-   * <pre>
-   **
-   * Merges the specified regions.
-   * &lt;p&gt;
-   * This method currently closes the regions and then merges them
-   * </pre>
-   *
-   * Protobuf type {@code hbase.pb.MergeRegionsRequest}
-   */
-  public  static final class MergeRegionsRequest extends
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:hbase.pb.MergeRegionsRequest)
-      MergeRegionsRequestOrBuilder {
-    // Use MergeRegionsRequest.newBuilder() to construct.
-    private MergeRegionsRequest(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
-      super(builder);
-    }
-    private MergeRegionsRequest() {
-      forcible_ = false;
-      masterSystemTime_ = 0L;
-    }
-
-    @java.lang.Override
-    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
-      return this.unknownFields;
-    }
-    private MergeRegionsRequest(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      int mutable_bitField0_ = 0;
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = regionA_.toBuilder();
-              }
-              regionA_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(regionA_);
-                regionA_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000001;
-              break;
-            }
-            case 18: {
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000002) == 0x00000002)) {
-                subBuilder = regionB_.toBuilder();
-              }
-              regionB_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(regionB_);
-                regionB_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000002;
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              forcible_ = input.readBool();
-              break;
-            }
-            case 32: {
-              bitField0_ |= 0x00000008;
-              masterSystemTime_ = input.readUInt64();
-              break;
-            }
-          }
-        }
-      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsRequest_descriptor;
-    }
-
-    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsRequest_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.class, org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.Builder.class);
-    }
-
-    private int bitField0_;
-    public static final int REGION_A_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier regionA_;
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-     */
-    public boolean hasRegionA() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-     */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier getRegionA() {
-      return regionA_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance() : regionA_;
-    }
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-     */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionAOrBuilder() {
-      return regionA_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance() : regionA_;
-    }
-
-    public static final int REGION_B_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier regionB_;
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-     */
-    public boolean hasRegionB() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-     */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier getRegionB() {
-      return regionB_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance() : regionB_;
-    }
-    /**
-     * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-     */
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionBOrBuilder() {
-      return regionB_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance() : regionB_;
-    }
-
-    public static final int FORCIBLE_FIELD_NUMBER = 3;
-    private boolean forcible_;
-    /**
-     * <code>optional bool forcible = 3 [default = false];</code>
-     */
-    public boolean hasForcible() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    /**
-     * <code>optional bool forcible = 3 [default = false];</code>
-     */
-    public boolean getForcible() {
-      return forcible_;
-    }
-
-    public static final int MASTER_SYSTEM_TIME_FIELD_NUMBER = 4;
-    private long masterSystemTime_;
-    /**
-     * <pre>
-     * wall clock time from master
-     * </pre>
-     *
-     * <code>optional uint64 master_system_time = 4;</code>
-     */
-    public boolean hasMasterSystemTime() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    /**
-     * <pre>
-     * wall clock time from master
-     * </pre>
-     *
-     * <code>optional uint64 master_system_time = 4;</code>
-     */
-    public long getMasterSystemTime() {
-      return masterSystemTime_;
-    }
-
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      if (!hasRegionA()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasRegionB()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!getRegionA().isInitialized()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!getRegionB().isInitialized()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, getRegionA());
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeMessage(2, getRegionB());
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBool(3, forcible_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeUInt64(4, masterSystemTime_);
-      }
-      unknownFields.writeTo(output);
-    }
-
-    public int getSerializedSize() {
-      int size = memoizedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, getRegionA());
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, getRegionB());
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeBoolSize(3, forcible_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(4, masterSystemTime_);
-      }
-      size += unknownFields.getSerializedSize();
-      memoizedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest other = (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest) obj;
-
-      boolean result = true;
-      result = result && (hasRegionA() == other.hasRegionA());
-      if (hasRegionA()) {
-        result = result && getRegionA()
-            .equals(other.getRegionA());
-      }
-      result = result && (hasRegionB() == other.hasRegionB());
-      if (hasRegionB()) {
-        result = result && getRegionB()
-            .equals(other.getRegionB());
-      }
-      result = result && (hasForcible() == other.hasForcible());
-      if (hasForcible()) {
-        result = result && (getForcible()
-            == other.getForcible());
-      }
-      result = result && (hasMasterSystemTime() == other.hasMasterSystemTime());
-      if (hasMasterSystemTime()) {
-        result = result && (getMasterSystemTime()
-            == other.getMasterSystemTime());
-      }
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
-    }
-
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasRegionA()) {
-        hash = (37 * hash) + REGION_A_FIELD_NUMBER;
-        hash = (53 * hash) + getRegionA().hashCode();
-      }
-      if (hasRegionB()) {
-        hash = (37 * hash) + REGION_B_FIELD_NUMBER;
-        hash = (53 * hash) + getRegionB().hashCode();
-      }
-      if (hasForcible()) {
-        hash = (37 * hash) + FORCIBLE_FIELD_NUMBER;
-        hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashBoolean(
-            getForcible());
-      }
-      if (hasMasterSystemTime()) {
-        hash = (37 * hash) + MASTER_SYSTEM_TIME_FIELD_NUMBER;
-        hash = (53 * hash) + org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.hashLong(
-            getMasterSystemTime());
-      }
-      hash = (29 * hash) + unknownFields.hashCode();
-      memoizedHashCode = hash;
-      return hash;
-    }
-
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseFrom(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseFrom(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseFrom(byte[] data)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseFrom(
-        byte[] data,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseFrom(
-        java.io.InputStream input,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseDelimitedFrom(
-        java.io.InputStream input,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseFrom(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parseFrom(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
-    }
-
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder() {
-      return DEFAULT_INSTANCE.toBuilder();
-    }
-    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest prototype) {
-      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() {
-      return this == DEFAULT_INSTANCE
-          ? new Builder() : new Builder().mergeFrom(this);
-    }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * <pre>
-     **
-     * Merges the specified regions.
-     * &lt;p&gt;
-     * This method currently closes the regions and then merges them
-     * </pre>
-     *
-     * Protobuf type {@code hbase.pb.MergeRegionsRequest}
-     */
-    public static final class Builder extends
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:hbase.pb.MergeRegionsRequest)
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequestOrBuilder {
-      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsRequest_descriptor;
-      }
-
-      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsRequest_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.class, org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.Builder.class);
-      }
-
-      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-          getRegionAFieldBuilder();
-          getRegionBFieldBuilder();
-        }
-      }
-      public Builder clear() {
-        super.clear();
-        if (regionABuilder_ == null) {
-          regionA_ = null;
-        } else {
-          regionABuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        if (regionBBuilder_ == null) {
-          regionB_ = null;
-        } else {
-          regionBBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000002);
-        forcible_ = false;
-        bitField0_ = (bitField0_ & ~0x00000004);
-        masterSystemTime_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000008);
-        return this;
-      }
-
-      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsRequest_descriptor;
-      }
-
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.getDefaultInstance();
-      }
-
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest build() {
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest buildPartial() {
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest result = new org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        if (regionABuilder_ == null) {
-          result.regionA_ = regionA_;
-        } else {
-          result.regionA_ = regionABuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        if (regionBBuilder_ == null) {
-          result.regionB_ = regionB_;
-        } else {
-          result.regionB_ = regionBBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.forcible_ = forcible_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        result.masterSystemTime_ = masterSystemTime_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder clone() {
-        return (Builder) super.clone();
-      }
-      public Builder setField(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
-      }
-      public Builder clearField(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
-      }
-      public Builder clearOneof(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
-      }
-      public Builder setRepeatedField(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
-      }
-      public Builder addRepeatedField(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
-      }
-      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest) {
-          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest other) {
-        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.getDefaultInstance()) return this;
-        if (other.hasRegionA()) {
-          mergeRegionA(other.getRegionA());
-        }
-        if (other.hasRegionB()) {
-          mergeRegionB(other.getRegionB());
-        }
-        if (other.hasForcible()) {
-          setForcible(other.getForcible());
-        }
-        if (other.hasMasterSystemTime()) {
-          setMasterSystemTime(other.getMasterSystemTime());
-        }
-        this.mergeUnknownFields(other.unknownFields);
-        onChanged();
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        if (!hasRegionA()) {
-          return false;
-        }
-        if (!hasRegionB()) {
-          return false;
-        }
-        if (!getRegionA().isInitialized()) {
-          return false;
-        }
-        if (!getRegionB().isInitialized()) {
-          return false;
-        }
-        return true;
-      }
-
-      public Builder mergeFrom(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest) e.getUnfinishedMessage();
-          throw e.unwrapIOException();
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier regionA_ = null;
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionABuilder_;
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      public boolean hasRegionA() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier getRegionA() {
-        if (regionABuilder_ == null) {
-          return regionA_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance() : regionA_;
-        } else {
-          return regionABuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      public Builder setRegionA(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier value) {
-        if (regionABuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          regionA_ = value;
-          onChanged();
-        } else {
-          regionABuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      public Builder setRegionA(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder builderForValue) {
-        if (regionABuilder_ == null) {
-          regionA_ = builderForValue.build();
-          onChanged();
-        } else {
-          regionABuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      public Builder mergeRegionA(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier value) {
-        if (regionABuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              regionA_ != null &&
-              regionA_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance()) {
-            regionA_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder(regionA_).mergeFrom(value).buildPartial();
-          } else {
-            regionA_ = value;
-          }
-          onChanged();
-        } else {
-          regionABuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      public Builder clearRegionA() {
-        if (regionABuilder_ == null) {
-          regionA_ = null;
-          onChanged();
-        } else {
-          regionABuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder getRegionABuilder() {
-        bitField0_ |= 0x00000001;
-        onChanged();
-        return getRegionAFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionAOrBuilder() {
-        if (regionABuilder_ != null) {
-          return regionABuilder_.getMessageOrBuilder();
-        } else {
-          return regionA_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance() : regionA_;
-        }
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_a = 1;</code>
-       */
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
-          getRegionAFieldBuilder() {
-        if (regionABuilder_ == null) {
-          regionABuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>(
-                  getRegionA(),
-                  getParentForChildren(),
-                  isClean());
-          regionA_ = null;
-        }
-        return regionABuilder_;
-      }
-
-      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier regionB_ = null;
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionBBuilder_;
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      public boolean hasRegionB() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier getRegionB() {
-        if (regionBBuilder_ == null) {
-          return regionB_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance() : regionB_;
-        } else {
-          return regionBBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      public Builder setRegionB(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier value) {
-        if (regionBBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          regionB_ = value;
-          onChanged();
-        } else {
-          regionBBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      public Builder setRegionB(
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder builderForValue) {
-        if (regionBBuilder_ == null) {
-          regionB_ = builderForValue.build();
-          onChanged();
-        } else {
-          regionBBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      public Builder mergeRegionB(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier value) {
-        if (regionBBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              regionB_ != null &&
-              regionB_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance()) {
-            regionB_ =
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder(regionB_).mergeFrom(value).buildPartial();
-          } else {
-            regionB_ = value;
-          }
-          onChanged();
-        } else {
-          regionBBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      public Builder clearRegionB() {
-        if (regionBBuilder_ == null) {
-          regionB_ = null;
-          onChanged();
-        } else {
-          regionBBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000002);
-        return this;
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder getRegionBBuilder() {
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return getRegionBFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionBOrBuilder() {
-        if (regionBBuilder_ != null) {
-          return regionBBuilder_.getMessageOrBuilder();
-        } else {
-          return regionB_ == null ?
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance() : regionB_;
-        }
-      }
-      /**
-       * <code>required .hbase.pb.RegionSpecifier region_b = 2;</code>
-       */
-      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
-          getRegionBFieldBuilder() {
-        if (regionBBuilder_ == null) {
-          regionBBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder>(
-                  getRegionB(),
-                  getParentForChildren(),
-                  isClean());
-          regionB_ = null;
-        }
-        return regionBBuilder_;
-      }
-
-      private boolean forcible_ ;
-      /**
-       * <code>optional bool forcible = 3 [default = false];</code>
-       */
-      public boolean hasForcible() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
-      }
-      /**
-       * <code>optional bool forcible = 3 [default = false];</code>
-       */
-      public boolean getForcible() {
-        return forcible_;
-      }
-      /**
-       * <code>optional bool forcible = 3 [default = false];</code>
-       */
-      public Builder setForcible(boolean value) {
-        bitField0_ |= 0x00000004;
-        forcible_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional bool forcible = 3 [default = false];</code>
-       */
-      public Builder clearForcible() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        forcible_ = false;
-        onChanged();
-        return this;
-      }
-
-      private long masterSystemTime_ ;
-      /**
-       * <pre>
-       * wall clock time from master
-       * </pre>
-       *
-       * <code>optional uint64 master_system_time = 4;</code>
-       */
-      public boolean hasMasterSystemTime() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
-      }
-      /**
-       * <pre>
-       * wall clock time from master
-       * </pre>
-       *
-       * <code>optional uint64 master_system_time = 4;</code>
-       */
-      public long getMasterSystemTime() {
-        return masterSystemTime_;
-      }
-      /**
-       * <pre>
-       * wall clock time from master
-       * </pre>
-       *
-       * <code>optional uint64 master_system_time = 4;</code>
-       */
-      public Builder setMasterSystemTime(long value) {
-        bitField0_ |= 0x00000008;
-        masterSystemTime_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * wall clock time from master
-       * </pre>
-       *
-       * <code>optional uint64 master_system_time = 4;</code>
-       */
-      public Builder clearMasterSystemTime() {
-        bitField0_ = (bitField0_ & ~0x00000008);
-        masterSystemTime_ = 0L;
-        onChanged();
-        return this;
-      }
-      public final Builder setUnknownFields(
-          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.setUnknownFields(unknownFields);
-      }
-
-      public final Builder mergeUnknownFields(
-          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.mergeUnknownFields(unknownFields);
-      }
-
-
-      // @@protoc_insertion_point(builder_scope:hbase.pb.MergeRegionsRequest)
-    }
-
-    // @@protoc_insertion_point(class_scope:hbase.pb.MergeRegionsRequest)
-    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest DEFAULT_INSTANCE;
-    static {
-      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest();
-    }
-
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest getDefaultInstance() {
-      return DEFAULT_INSTANCE;
-    }
-
-    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<MergeRegionsRequest>
-        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<MergeRegionsRequest>() {
-      public MergeRegionsRequest parsePartialFrom(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-          return new MergeRegionsRequest(input, extensionRegistry);
-      }
-    };
-
-    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<MergeRegionsRequest> parser() {
-      return PARSER;
-    }
-
-    @java.lang.Override
-    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<MergeRegionsRequest> getParserForType() {
-      return PARSER;
-    }
-
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest getDefaultInstanceForType() {
-      return DEFAULT_INSTANCE;
-    }
-
-  }
-
-  public interface MergeRegionsResponseOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:hbase.pb.MergeRegionsResponse)
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
-  }
-  /**
-   * Protobuf type {@code hbase.pb.MergeRegionsResponse}
-   */
-  public  static final class MergeRegionsResponse extends
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:hbase.pb.MergeRegionsResponse)
-      MergeRegionsResponseOrBuilder {
-    // Use MergeRegionsResponse.newBuilder() to construct.
-    private MergeRegionsResponse(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
-      super(builder);
-    }
-    private MergeRegionsResponse() {
-    }
-
-    @java.lang.Override
-    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
-      return this.unknownFields;
-    }
-    private MergeRegionsResponse(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      this();
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-          }
-        }
-      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
-            e).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsResponse_descriptor;
-    }
-
-    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsResponse_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.class, org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.Builder.class);
-    }
-
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
-
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      unknownFields.writeTo(output);
-    }
-
-    public int getSerializedSize() {
-      int size = memoizedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      size += unknownFields.getSerializedSize();
-      memoizedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse other = (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse) obj;
-
-      boolean result = true;
-      result = result && unknownFields.equals(other.unknownFields);
-      return result;
-    }
-
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      hash = (29 * hash) + unknownFields.hashCode();
-      memoizedHashCode = hash;
-      return hash;
-    }
-
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseFrom(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseFrom(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseFrom(byte[] data)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseFrom(
-        byte[] data,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseFrom(
-        java.io.InputStream input,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseDelimitedFrom(
-        java.io.InputStream input,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseFrom(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input);
-    }
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parseFrom(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-          .parseWithIOException(PARSER, input, extensionRegistry);
-    }
-
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder() {
-      return DEFAULT_INSTANCE.toBuilder();
-    }
-    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse prototype) {
-      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() {
-      return this == DEFAULT_INSTANCE
-          ? new Builder() : new Builder().mergeFrom(this);
-    }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * Protobuf type {@code hbase.pb.MergeRegionsResponse}
-     */
-    public static final class Builder extends
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:hbase.pb.MergeRegionsResponse)
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponseOrBuilder {
-      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsResponse_descriptor;
-      }
-
-      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsResponse_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.class, org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.Builder.class);
-      }
-
-      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
-        }
-      }
-      public Builder clear() {
-        super.clear();
-        return this;
-      }
-
-      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.internal_static_hbase_pb_MergeRegionsResponse_descriptor;
-      }
-
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.getDefaultInstance();
-      }
-
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse build() {
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse buildPartial() {
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse result = new org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse(this);
-        onBuilt();
-        return result;
-      }
-
-      public Builder clone() {
-        return (Builder) super.clone();
-      }
-      public Builder setField(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.setField(field, value);
-      }
-      public Builder clearField(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
-        return (Builder) super.clearField(field);
-      }
-      public Builder clearOneof(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-        return (Builder) super.clearOneof(oneof);
-      }
-      public Builder setRepeatedField(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
-        return (Builder) super.setRepeatedField(field, index, value);
-      }
-      public Builder addRepeatedField(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
-        return (Builder) super.addRepeatedField(field, value);
-      }
-      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse) {
-          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse other) {
-        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.getDefaultInstance()) return this;
-        this.mergeUnknownFields(other.unknownFields);
-        onChanged();
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        return true;
-      }
-
-      public Builder mergeFrom(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse) e.getUnfinishedMessage();
-          throw e.unwrapIOException();
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      public final Builder setUnknownFields(
-          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.setUnknownFields(unknownFields);
-      }
-
-      public final Builder mergeUnknownFields(
-          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
-        return super.mergeUnknownFields(unknownFields);
-      }
-
-
-      // @@protoc_insertion_point(builder_scope:hbase.pb.MergeRegionsResponse)
-    }
-
-    // @@protoc_insertion_point(class_scope:hbase.pb.MergeRegionsResponse)
-    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse DEFAULT_INSTANCE;
-    static {
-      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse();
-    }
-
-    public static org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse getDefaultInstance() {
-      return DEFAULT_INSTANCE;
-    }
-
-    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<MergeRegionsResponse>
-        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<MergeRegionsResponse>() {
-      public MergeRegionsResponse parsePartialFrom(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
-          return new MergeRegionsResponse(input, extensionRegistry);
-      }
-    };
-
-    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<MergeRegionsResponse> parser() {
-      return PARSER;
-    }
-
-    @java.lang.Override
-    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<MergeRegionsResponse> getParserForType() {
-      return PARSER;
-    }
-
-    public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse getDefaultInstanceForType() {
-      return DEFAULT_INSTANCE;
-    }
-
-  }
-
   public interface WALEntryOrBuilder extends
       // @@protoc_insertion_point(interface_extends:hbase.pb.WALEntry)
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
@@ -26239,14 +24839,6 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse> done);
 
       /**
-       * <code>rpc MergeRegions(.hbase.pb.MergeRegionsRequest) returns (.hbase.pb.MergeRegionsResponse);</code>
-       */
-      public abstract void mergeRegions(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest request,
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse> done);
-
-      /**
        * <code>rpc ReplicateWALEntry(.hbase.pb.ReplicateWALEntryRequest) returns (.hbase.pb.ReplicateWALEntryResponse);</code>
        */
       public abstract void replicateWALEntry(
@@ -26396,14 +24988,6 @@ public final class AdminProtos {
         }
 
         @java.lang.Override
-        public  void mergeRegions(
-            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest request,
-            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse> done) {
-          impl.mergeRegions(controller, request, done);
-        }
-
-        @java.lang.Override
         public  void replicateWALEntry(
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
@@ -26510,22 +25094,20 @@ public final class AdminProtos {
             case 9:
               return impl.compactRegion(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest)request);
             case 10:
-              return impl.mergeRegions(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest)request);
-            case 11:
               return impl.replicateWALEntry(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest)request);
-            case 12:
+            case 11:
               return impl.replay(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest)request);
-            case 13:
+            case 12:
               return impl.rollWALWriter(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest)request);
-            case 14:
+            case 13:
               return impl.getServerInfo(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest)request);
-            case 15:
+            case 14:
               return impl.stopServer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest)request);
-            case 16:
+            case 15:
               return impl.updateFavoredNodes(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest)request);
-            case 17:
+            case 16:
               return impl.updateConfiguration(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest)request);
-            case 18:
+            case 17:
               return impl.getRegionLoad(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -26562,22 +25144,20 @@ public final class AdminProtos {
             case 9:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest.getDefaultInstance();
             case 10:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
             case 11:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
             case 12:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
-            case 13:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest.getDefaultInstance();
-            case 14:
+            case 13:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest.getDefaultInstance();
-            case 15:
+            case 14:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest.getDefaultInstance();
-            case 16:
+            case 15:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.getDefaultInstance();
-            case 17:
+            case 16:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest.getDefaultInstance();
-            case 18:
+            case 17:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -26614,22 +25194,20 @@ public final class AdminProtos {
             case 9:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse.getDefaultInstance();
             case 10:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
             case 11:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
             case 12:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
-            case 13:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance();
-            case 14:
+            case 13:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance();
-            case 15:
+            case 14:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse.getDefaultInstance();
-            case 16:
+            case 15:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse.getDefaultInstance();
-            case 17:
+            case 16:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance();
-            case 18:
+            case 17:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -26718,14 +25296,6 @@ public final class AdminProtos {
         org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest request,
         org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse> done);
-
-    /**
-     * <code>rpc MergeRegions(.hbase.pb.MergeRegionsRequest) returns (.hbase.pb.MergeRegionsResponse);</code>
-     */
-    public abstract void mergeRegions(
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest request,
-        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse> done);
 
     /**
      * <code>rpc ReplicateWALEntry(.hbase.pb.ReplicateWALEntryRequest) returns (.hbase.pb.ReplicateWALEntryResponse);</code>
@@ -26864,46 +25434,41 @@ public final class AdminProtos {
               done));
           return;
         case 10:
-          this.mergeRegions(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest)request,
-            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse>specializeCallback(
-              done));
-          return;
-        case 11:
           this.replicateWALEntry(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse>specializeCallback(
               done));
           return;
-        case 12:
+        case 11:
           this.replay(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse>specializeCallback(
               done));
           return;
-        case 13:
+        case 12:
           this.rollWALWriter(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse>specializeCallback(
               done));
           return;
-        case 14:
+        case 13:
           this.getServerInfo(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse>specializeCallback(
               done));
           return;
-        case 15:
+        case 14:
           this.stopServer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse>specializeCallback(
               done));
           return;
-        case 16:
+        case 15:
           this.updateFavoredNodes(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse>specializeCallback(
               done));
           return;
-        case 17:
+        case 16:
           this.updateConfiguration(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse>specializeCallback(
               done));
           return;
-        case 18:
+        case 17:
           this.getRegionLoad(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse>specializeCallback(
               done));
@@ -26943,22 +25508,20 @@ public final class AdminProtos {
         case 9:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest.getDefaultInstance();
         case 10:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
         case 11:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
         case 12:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
-        case 13:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest.getDefaultInstance();
-        case 14:
+        case 13:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest.getDefaultInstance();
-        case 15:
+        case 14:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest.getDefaultInstance();
-        case 16:
+        case 15:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.getDefaultInstance();
-        case 17:
+        case 16:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest.getDefaultInstance();
-        case 18:
+        case 17:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -26995,22 +25558,20 @@ public final class AdminProtos {
         case 9:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse.getDefaultInstance();
         case 10:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
         case 11:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
         case 12:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
-        case 13:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance();
-        case 14:
+        case 13:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance();
-        case 15:
+        case 14:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse.getDefaultInstance();
-        case 16:
+        case 15:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse.getDefaultInstance();
-        case 17:
+        case 16:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance();
-        case 18:
+        case 17:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -27183,27 +25744,12 @@ public final class AdminProtos {
             org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse.getDefaultInstance()));
       }
 
-      public  void mergeRegions(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest request,
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse> done) {
-        channel.callMethod(
-          getDescriptor().getMethods().get(10),
-          controller,
-          request,
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.getDefaultInstance(),
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.generalizeCallback(
-            done,
-            org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.class,
-            org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.getDefaultInstance()));
-      }
-
       public  void replicateWALEntry(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(11),
+          getDescriptor().getMethods().get(10),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance(),
@@ -27218,7 +25764,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(12),
+          getDescriptor().getMethods().get(11),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance(),
@@ -27233,7 +25779,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(13),
+          getDescriptor().getMethods().get(12),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance(),
@@ -27248,7 +25794,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(14),
+          getDescriptor().getMethods().get(13),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance(),
@@ -27263,7 +25809,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(15),
+          getDescriptor().getMethods().get(14),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse.getDefaultInstance(),
@@ -27278,7 +25824,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(16),
+          getDescriptor().getMethods().get(15),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse.getDefaultInstance(),
@@ -27293,7 +25839,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(17),
+          getDescriptor().getMethods().get(16),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance(),
@@ -27308,7 +25854,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(18),
+          getDescriptor().getMethods().get(17),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse.getDefaultInstance(),
@@ -27373,11 +25919,6 @@ public final class AdminProtos {
       public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse compactRegion(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest request)
-          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse mergeRegions(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse replicateWALEntry(
@@ -27548,24 +26089,12 @@ public final class AdminProtos {
       }
 
 
-      public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse mergeRegions(
-          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest request)
-          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(10),
-          controller,
-          request,
-          org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse.getDefaultInstance());
-      }
-
-
       public org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse replicateWALEntry(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(11),
+          getDescriptor().getMethods().get(10),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance());
@@ -27577,7 +26106,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(12),
+          getDescriptor().getMethods().get(11),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance());
@@ -27589,7 +26118,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(13),
+          getDescriptor().getMethods().get(12),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance());
@@ -27601,7 +26130,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(14),
+          getDescriptor().getMethods().get(13),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance());
@@ -27613,7 +26142,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(15),
+          getDescriptor().getMethods().get(14),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse.getDefaultInstance());
@@ -27625,7 +26154,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(16),
+          getDescriptor().getMethods().get(15),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse.getDefaultInstance());
@@ -27637,7 +26166,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(17),
+          getDescriptor().getMethods().get(16),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance());
@@ -27649,7 +26178,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(18),
+          getDescriptor().getMethods().get(17),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionLoadResponse.getDefaultInstance());
@@ -27780,16 +26309,6 @@ public final class AdminProtos {
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_UpdateFavoredNodesResponse_fieldAccessorTable;
-  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_MergeRegionsRequest_descriptor;
-  private static final 
-    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_hbase_pb_MergeRegionsRequest_fieldAccessorTable;
-  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
-    internal_static_hbase_pb_MergeRegionsResponse_descriptor;
-  private static final 
-    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_hbase_pb_MergeRegionsResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_WALEntry_descriptor;
   private static final 
@@ -27925,74 +26444,68 @@ public final class AdminProtos {
       "eInfo\032e\n\020RegionUpdateInfo\022$\n\006region\030\001 \002(" +
       "\0132\024.hbase.pb.RegionInfo\022+\n\rfavored_nodes" +
       "\030\002 \003(\0132\024.hbase.pb.ServerName\".\n\032UpdateFa" +
-      "voredNodesResponse\022\020\n\010response\030\001 \001(\r\"\244\001\n" +
-      "\023MergeRegionsRequest\022+\n\010region_a\030\001 \002(\0132\031" +
-      ".hbase.pb.RegionSpecifier\022+\n\010region_b\030\002 " +
-      "\002(\0132\031.hbase.pb.RegionSpecifier\022\027\n\010forcib",
-      "le\030\003 \001(\010:\005false\022\032\n\022master_system_time\030\004 " +
-      "\001(\004\"\026\n\024MergeRegionsResponse\"a\n\010WALEntry\022" +
-      "\035\n\003key\030\001 \002(\0132\020.hbase.pb.WALKey\022\027\n\017key_va" +
-      "lue_bytes\030\002 \003(\014\022\035\n\025associated_cell_count" +
-      "\030\003 \001(\005\"\242\001\n\030ReplicateWALEntryRequest\022!\n\005e" +
-      "ntry\030\001 \003(\0132\022.hbase.pb.WALEntry\022\034\n\024replic" +
-      "ationClusterId\030\002 \001(\t\022\"\n\032sourceBaseNamesp" +
-      "aceDirPath\030\003 \001(\t\022!\n\031sourceHFileArchiveDi" +
-      "rPath\030\004 \001(\t\"\033\n\031ReplicateWALEntryResponse" +
-      "\"\026\n\024RollWALWriterRequest\"0\n\025RollWALWrite",
-      "rResponse\022\027\n\017region_to_flush\030\001 \003(\014\"#\n\021St" +
-      "opServerRequest\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopS" +
-      "erverResponse\"\026\n\024GetServerInfoRequest\"K\n" +
-      "\nServerInfo\022)\n\013server_name\030\001 \002(\0132\024.hbase" +
-      ".pb.ServerName\022\022\n\nwebui_port\030\002 \001(\r\"B\n\025Ge" +
-      "tServerInfoResponse\022)\n\013server_info\030\001 \002(\013" +
-      "2\024.hbase.pb.ServerInfo\"\034\n\032UpdateConfigur" +
-      "ationRequest\"\035\n\033UpdateConfigurationRespo" +
-      "nse\"?\n\024GetRegionLoadRequest\022\'\n\ntable_nam" +
-      "e\030\001 \001(\0132\023.hbase.pb.TableName\"C\n\025GetRegio",
-      "nLoadResponse\022*\n\014region_loads\030\001 \003(\0132\024.hb" +
-      "ase.pb.RegionLoad2\322\014\n\014AdminService\022P\n\rGe" +
-      "tRegionInfo\022\036.hbase.pb.GetRegionInfoRequ" +
-      "est\032\037.hbase.pb.GetRegionInfoResponse\022M\n\014" +
-      "GetStoreFile\022\035.hbase.pb.GetStoreFileRequ" +
-      "est\032\036.hbase.pb.GetStoreFileResponse\022V\n\017G" +
-      "etOnlineRegion\022 .hbase.pb.GetOnlineRegio" +
-      "nRequest\032!.hbase.pb.GetOnlineRegionRespo" +
-      "nse\022G\n\nOpenRegion\022\033.hbase.pb.OpenRegionR" +
-      "equest\032\034.hbase.pb.OpenRegionResponse\022M\n\014",
-      "WarmupRegion\022\035.hbase.pb.WarmupRegionRequ" +
-      "est\032\036.hbase.pb.WarmupRegionResponse\022J\n\013C" +
-      "loseRegion\022\034.hbase.pb.CloseRegionRequest" +
-      "\032\035.hbase.pb.CloseRegionResponse\022w\n\032Close" +
-      "RegionForSplitOrMerge\022+.hbase.pb.CloseRe" +
-      "gionForSplitOrMergeRequest\032,.hbase.pb.Cl" +
-      "oseRegionForSplitOrMergeResponse\022J\n\013Flus" +
-      "hRegion\022\034.hbase.pb.FlushRegionRequest\032\035." +
-      "hbase.pb.FlushRegionResponse\022J\n\013SplitReg" +
-      "ion\022\034.hbase.pb.SplitRegionRequest\032\035.hbas",
-      "e.pb.SplitRegionResponse\022P\n\rCompactRegio" +
-      "n\022\036.hbase.pb.CompactRegionRequest\032\037.hbas" +
-      "e.pb.CompactRegionResponse\022M\n\014MergeRegio" +
-      "ns\022\035.hbase.pb.MergeRegionsRequest\032\036.hbas" +
-      "e.pb.MergeRegionsResponse\022\\\n\021ReplicateWA" +
-      "LEntry\022\".hbase.pb.ReplicateWALEntryReque" +
-      "st\032#.hbase.pb.ReplicateWALEntryResponse\022" +
-      "Q\n\006Replay\022\".hbase.pb.ReplicateWALEntryRe" +
-      "quest\032#.hbase.pb.ReplicateWALEntryRespon" +
-      "se\022P\n\rRollWALWriter\022\036.hbase.pb.RollWALWr",
-      "iterRequest\032\037.hbase.pb.RollWALWriterResp" +
-      "onse\022P\n\rGetServerInfo\022\036.hbase.pb.GetServ" +
-      "erInfoRequest\032\037.hbase.pb.GetServerInfoRe" +
-      "sponse\022G\n\nStopServer\022\033.hbase.pb.StopServ" +
-      "erRequest\032\034.hbase.pb.StopServerResponse\022" +
-      "_\n\022UpdateFavoredNodes\022#.hbase.pb.UpdateF" +
-      "avoredNodesRequest\032$.hbase.pb.UpdateFavo" +
-      "redNodesResponse\022b\n\023UpdateConfiguration\022" +
-      "$.hbase.pb.UpdateConfigurationRequest\032%." +
-      "hbase.pb.UpdateConfigurationResponse\022P\n\r",
-      "GetRegionLoad\022\036.hbase.pb.GetRegionLoadRe" +
-      "quest\032\037.hbase.pb.GetRegionLoadResponseBH" +
-      "\n1org.apache.hadoop.hbase.shaded.protobu" +
-      "f.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "voredNodesResponse\022\020\n\010response\030\001 \001(\r\"a\n\010" +
+      "WALEntry\022\035\n\003key\030\001 \002(\0132\020.hbase.pb.WALKey\022" +
+      "\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025associated_c" +
+      "ell_count\030\003 \001(\005\"\242\001\n\030ReplicateWALEntryReq",
+      "uest\022!\n\005entry\030\001 \003(\0132\022.hbase.pb.WALEntry\022" +
+      "\034\n\024replicationClusterId\030\002 \001(\t\022\"\n\032sourceB" +
+      "aseNamespaceDirPath\030\003 \001(\t\022!\n\031sourceHFile" +
+      "ArchiveDirPath\030\004 \001(\t\"\033\n\031ReplicateWALEntr" +
+      "yResponse\"\026\n\024RollWALWriterRequest\"0\n\025Rol" +
+      "lWALWriterResponse\022\027\n\017region_to_flush\030\001 " +
+      "\003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 \002(\t" +
+      "\"\024\n\022StopServerResponse\"\026\n\024GetServerInfoR" +
+      "equest\"K\n\nServerInfo\022)\n\013server_name\030\001 \002(" +
+      "\0132\024.hbase.pb.ServerName\022\022\n\nwebui_port\030\002 ",
+      "\001(\r\"B\n\025GetServerInfoResponse\022)\n\013server_i" +
+      "nfo\030\001 \002(\0132\024.hbase.pb.ServerInfo\"\034\n\032Updat" +
+      "eConfigurationRequest\"\035\n\033UpdateConfigura" +
+      "tionResponse\"?\n\024GetRegionLoadRequest\022\'\n\n" +
+      "table_name\030\001 \001(\0132\023.hbase.pb.TableName\"C\n" +
+      "\025GetRegionLoadResponse\022*\n\014region_loads\030\001" +
+      " \003(\0132\024.hbase.pb.RegionLoad2\203\014\n\014AdminServ" +
+      "ice\022P\n\rGetRegionInfo\022\036.hbase.pb.GetRegio" +
+      "nInfoRequest\032\037.hbase.pb.GetRegionInfoRes" +
+      "ponse\022M\n\014GetStoreFile\022\035.hbase.pb.GetStor",
+      "eFileRequest\032\036.hbase.pb.GetStoreFileResp" +
+      "onse\022V\n\017GetOnlineRegion\022 .hbase.pb.GetOn" +
+      "lineRegionRequest\032!.hbase.pb.GetOnlineRe" +
+      "gionResponse\022G\n\nOpenRegion\022\033.hbase.pb.Op" +
+      "enRegionRequest\032\034.hbase.pb.OpenRegionRes" +
+      "ponse\022M\n\014WarmupRegion\022\035.hbase.pb.WarmupR" +
+      "egionRequest\032\036.hbase.pb.WarmupRegionResp" +
+      "onse\022J\n\013CloseRegion\022\034.hbase.pb.CloseRegi" +
+      "onRequest\032\035.hbase.pb.CloseRegionResponse" +
+      "\022w\n\032CloseRegionForSplitOrMerge\022+.hbase.p",
+      "b.CloseRegionForSplitOrMergeRequest\032,.hb" +
+      "ase.pb.CloseRegionForSplitOrMergeRespons" +
+      "e\022J\n\013FlushRegion\022\034.hbase.pb.FlushRegionR" +
+      "equest\032\035.hbase.pb.FlushRegionResponse\022J\n" +
+      "\013SplitRegion\022\034.hbase.pb.SplitRegionReque" +
+      "st\032\035.hbase.pb.SplitRegionResponse\022P\n\rCom" +
+      "pactRegion\022\036.hbase.pb.CompactRegionReque" +
+      "st\032\037.hbase.pb.CompactRegionResponse\022\\\n\021R" +
+      "eplicateWALEntry\022\".hbase.pb.ReplicateWAL" +
+      "EntryRequest\032#.hbase.pb.ReplicateWALEntr",
+      "yResponse\022Q\n\006Replay\022\".hbase.pb.Replicate" +
+      "WALEntryRequest\032#.hbase.pb.ReplicateWALE" +
+      "ntryResponse\022P\n\rRollWALWriter\022\036.hbase.pb" +
+      ".RollWALWriterRequest\032\037.hbase.pb.RollWAL" +
+      "WriterResponse\022P\n\rGetServerInfo\022\036.hbase." +
+      "pb.GetServerInfoRequest\032\037.hbase.pb.GetSe" +
+      "rverInfoResponse\022G\n\nStopServer\022\033.hbase.p" +
+      "b.StopServerRequest\032\034.hbase.pb.StopServe" +
+      "rResponse\022_\n\022UpdateFavoredNodes\022#.hbase." +
+      "pb.UpdateFavoredNodesRequest\032$.hbase.pb.",
+      "UpdateFavoredNodesResponse\022b\n\023UpdateConf" +
+      "iguration\022$.hbase.pb.UpdateConfiguration" +
+      "Request\032%.hbase.pb.UpdateConfigurationRe" +
+      "sponse\022P\n\rGetRegionLoad\022\036.hbase.pb.GetRe" +
+      "gionLoadRequest\032\037.hbase.pb.GetRegionLoad" +
+      "ResponseBH\n1org.apache.hadoop.hbase.shad" +
+      "ed.protobuf.generatedB\013AdminProtosH\001\210\001\001\240" +
+      "\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -28153,98 +26666,86 @@ public final class AdminProtos {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_UpdateFavoredNodesResponse_descriptor,
         new java.lang.String[] { "Response", });
-    internal_static_hbase_pb_MergeRegionsRequest_descriptor =
-      getDescriptor().getMessageTypes().get(22);
-    internal_static_hbase_pb_MergeRegionsRequest_fieldAccessorTable = new
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_hbase_pb_MergeRegionsRequest_descriptor,
-        new java.lang.String[] { "RegionA", "RegionB", "Forcible", "MasterSystemTime", });
-    internal_static_hbase_pb_MergeRegionsResponse_descriptor =
-      getDescriptor().getMessageTypes().get(23);
-    internal_static_hbase_pb_MergeRegionsResponse_fieldAccessorTable = new
-      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_hbase_pb_MergeRegionsResponse_descriptor,
-        new java.lang.String[] { });
     internal_static_hbase_pb_WALEntry_descriptor =
-      getDescriptor().getMessageTypes().get(24);
+      getDescriptor().getMessageTypes().get(22);
     internal_static_hbase_pb_WALEntry_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_WALEntry_descriptor,
         new java.lang.String[] { "Key", "KeyValueBytes", "AssociatedCellCount", });
     internal_static_hbase_pb_ReplicateWALEntryRequest_descriptor =
-      getDescriptor().getMessageTypes().get(25);
+      getDescriptor().getMessageTypes().get(23);
     internal_static_hbase_pb_ReplicateWALEntryRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ReplicateWALEntryRequest_descriptor,
         new java.lang.String[] { "Entry", "ReplicationClusterId", "SourceBaseNamespaceDirPath", "SourceHFileArchiveDirPath", });
     internal_static_hbase_pb_ReplicateWALEntryResponse_descriptor =
-      getDescriptor().getMessageTypes().get(26);
+      getDescriptor().getMessageTypes().get(24);
     internal_static_hbase_pb_ReplicateWALEntryResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ReplicateWALEntryResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_RollWALWriterRequest_descriptor =
-      getDescriptor().getMessageTypes().get(27);
+      getDescriptor().getMessageTypes().get(25);
     internal_static_hbase_pb_RollWALWriterRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_RollWALWriterRequest_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_RollWALWriterResponse_descriptor =
-      getDescriptor().getMessageTypes().get(28);
+      getDescriptor().getMessageTypes().get(26);
     internal_static_hbase_pb_RollWALWriterResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_RollWALWriterResponse_descriptor,
         new java.lang.String[] { "RegionToFlush", });
     internal_static_hbase_pb_StopServerRequest_descriptor =
-      getDescriptor().getMessageTypes().get(29);
+      getDescriptor().getMessageTypes().get(27);
     internal_static_hbase_pb_StopServerRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_StopServerRequest_descriptor,
         new java.lang.String[] { "Reason", });
     internal_static_hbase_pb_StopServerResponse_descriptor =
-      getDescriptor().getMessageTypes().get(30);
+      getDescriptor().getMessageTypes().get(28);
     internal_static_hbase_pb_StopServerResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_StopServerResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_GetServerInfoRequest_descriptor =
-      getDescriptor().getMessageTypes().get(31);
+      getDescriptor().getMessageTypes().get(29);
     internal_static_hbase_pb_GetServerInfoRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_GetServerInfoRequest_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_ServerInfo_descriptor =
-      getDescriptor().getMessageTypes().get(32);
+      getDescriptor().getMessageTypes().get(30);
     internal_static_hbase_pb_ServerInfo_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ServerInfo_descriptor,
         new java.lang.String[] { "ServerName", "WebuiPort", });
     internal_static_hbase_pb_GetServerInfoResponse_descriptor =
-      getDescriptor().getMessageTypes().get(33);
+      getDescriptor().getMessageTypes().get(31);
     internal_static_hbase_pb_GetServerInfoResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_GetServerInfoResponse_descriptor,
         new java.lang.String[] { "ServerInfo", });
     internal_static_hbase_pb_UpdateConfigurationRequest_descriptor =
-      getDescriptor().getMessageTypes().get(34);
+      getDescriptor().getMessageTypes().get(32);
     internal_static_hbase_pb_UpdateConfigurationRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_UpdateConfigurationRequest_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_UpdateConfigurationResponse_descriptor =
-      getDescriptor().getMessageTypes().get(35);
+      getDescriptor().getMessageTypes().get(33);
     internal_static_hbase_pb_UpdateConfigurationResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_UpdateConfigurationResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_GetRegionLoadRequest_descriptor =
-      getDescriptor().getMessageTypes().get(36);
+      getDescriptor().getMessageTypes().get(34);
     internal_static_hbase_pb_GetRegionLoadRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_GetRegionLoadRequest_descriptor,
         new java.lang.String[] { "TableName", });
     internal_static_hbase_pb_GetRegionLoadResponse_descriptor =
-      getDescriptor().getMessageTypes().get(37);
+      getDescriptor().getMessageTypes().get(35);
     internal_static_hbase_pb_GetRegionLoadResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_GetRegionLoadResponse_descriptor,

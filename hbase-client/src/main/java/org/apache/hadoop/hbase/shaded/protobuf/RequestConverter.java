@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
@@ -1086,23 +1085,6 @@ public final class RequestConverter {
       builder.setDestServerName(
         ProtobufUtil.toServerName(ServerName.valueOf(Bytes.toString(destServerName))));
     }
-    return builder.build();
-  }
-
-  public static DispatchMergingRegionsRequest buildDispatchMergingRegionsRequest(
-      final byte[] encodedNameOfRegionA,
-      final byte[] encodedNameOfRegionB,
-      final boolean forcible,
-      final long nonceGroup,
-      final long nonce) throws DeserializationException {
-    DispatchMergingRegionsRequest.Builder builder = DispatchMergingRegionsRequest.newBuilder();
-    builder.setRegionA(buildRegionSpecifier(
-        RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionA));
-    builder.setRegionB(buildRegionSpecifier(
-        RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfRegionB));
-    builder.setForcible(forcible);
-    builder.setNonceGroup(nonceGroup);
-    builder.setNonce(nonce);
     return builder.build();
   }
 

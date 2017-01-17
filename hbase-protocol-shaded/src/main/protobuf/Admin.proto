@@ -189,22 +189,6 @@ message UpdateFavoredNodesResponse {
   optional uint32 response = 1;
 }
 
-/**
- * Merges the specified regions.
- * <p>
- * This method currently closes the regions and then merges them
- */
-message MergeRegionsRequest {
-  required RegionSpecifier region_a = 1;
-  required RegionSpecifier region_b = 2;
-  optional bool forcible = 3 [default = false];
-  // wall clock time from master
-  optional uint64 master_system_time = 4;
-}
-
-message MergeRegionsResponse {
-}
-
 // Protocol buffer version of WAL for replication
 message WALEntry {
   required WALKey key = 1;
@@ -306,9 +290,6 @@ service AdminService {
 
   rpc CompactRegion(CompactRegionRequest)
     returns(CompactRegionResponse);
-
-  rpc MergeRegions(MergeRegionsRequest)
-    returns(MergeRegionsResponse);
 
   rpc ReplicateWALEntry(ReplicateWALEntryRequest)
     returns(ReplicateWALEntryResponse);

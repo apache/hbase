@@ -2646,55 +2646,6 @@ public class TestHRegion {
     }
   }
 
-  // ////////////////////////////////////////////////////////////////////////////
-  // Merge test
-  // ////////////////////////////////////////////////////////////////////////////
-  @Test
-  public void testMerge() throws IOException {
-    byte[][] families = { fam1, fam2, fam3 };
-    Configuration hc = initSplit();
-    // Setting up region
-    this.region = initHRegion(tableName, method, hc, families);
-    try {
-      LOG.info("" + HBaseTestCase.addContent(region, fam3));
-      region.flush(true);
-      region.compactStores();
-      byte[] splitRow = region.checkSplit();
-      assertNotNull(splitRow);
-      LOG.info("SplitRow: " + Bytes.toString(splitRow));
-      HRegion[] subregions = splitRegion(region, splitRow);
-      try {
-        // Need to open the regions.
-        for (int i = 0; i < subregions.length; i++) {
-          HRegion.openHRegion(subregions[i], null);
-          subregions[i].compactStores();
-        }
-        Path oldRegionPath = region.getRegionFileSystem().getRegionDir();
-        Path oldRegion1 = subregions[0].getRegionFileSystem().getRegionDir();
-        Path oldRegion2 = subregions[1].getRegionFileSystem().getRegionDir();
-        long startTime = System.currentTimeMillis();
-        region = HRegion.mergeAdjacent(subregions[0], subregions[1]);
-        LOG.info("Merge regions elapsed time: "
-            + ((System.currentTimeMillis() - startTime) / 1000.0));
-        FILESYSTEM.delete(oldRegion1, true);
-        FILESYSTEM.delete(oldRegion2, true);
-        FILESYSTEM.delete(oldRegionPath, true);
-        LOG.info("splitAndMerge completed.");
-      } finally {
-        for (int i = 0; i < subregions.length; i++) {
-          try {
-            HBaseTestingUtility.closeRegionAndWAL(subregions[i]);
-          } catch (IOException e) {
-            // Ignore.
-          }
-        }
-      }
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
-  }
-
   /**
    * @param parent
    *          Region to split.

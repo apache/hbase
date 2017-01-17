@@ -68,8 +68,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerIn
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetStoreFileResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.MergeRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
@@ -527,13 +525,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public SplitRegionResponse splitRegion(RpcController controller,
       SplitRegionRequest request) throws ServiceException {
-    return null;
-  }
-
-  @Override
-  public MergeRegionsResponse mergeRegions(RpcController controller,
-      MergeRegionsRequest request) throws ServiceException {
-    // TODO Auto-generated method stub
     return null;
   }
 

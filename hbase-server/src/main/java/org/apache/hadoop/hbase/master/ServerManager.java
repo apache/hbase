@@ -896,37 +896,6 @@ public class ServerManager {
   }
 
   /**
-   * Sends an MERGE REGIONS RPC to the specified server to merge the specified
-   * regions.
-   * <p>
-   * A region server could reject the close request because it either does not
-   * have the specified region.
-   * @param server server to merge regions
-   * @param region_a region to merge
-   * @param region_b region to merge
-   * @param forcible true if do a compulsory merge, otherwise we will only merge
-   *          two adjacent regions
-   * @throws IOException
-   */
-  public void sendRegionsMerge(ServerName server, HRegionInfo region_a,
-      HRegionInfo region_b, boolean forcible, final User user) throws IOException {
-    if (server == null)
-      throw new NullPointerException("Passed server is null");
-    if (region_a == null || region_b == null)
-      throw new NullPointerException("Passed region is null");
-    AdminService.BlockingInterface admin = getRsAdmin(server);
-    if (admin == null) {
-      throw new IOException("Attempting to send MERGE REGIONS RPC to server "
-          + server.toString() + " for region "
-          + region_a.getRegionNameAsString() + ","
-          + region_b.getRegionNameAsString()
-          + " failed because no RPC connection found to this server");
-    }
-    HBaseRpcController controller = newRpcController();
-    ProtobufUtil.mergeRegions(controller, admin, region_a, region_b, forcible, user);
-  }
-
-  /**
    * Check if a region server is reachable and has the expected start code
    */
   public boolean isServerReachable(ServerName server) {

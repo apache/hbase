@@ -773,28 +773,6 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void preDispatchMerge(final HRegionInfo regionInfoA, final HRegionInfo regionInfoB)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
-      @Override
-      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.preDispatchMerge(ctx, regionInfoA, regionInfoB);
-      }
-    });
-  }
-
-  public void postDispatchMerge(final HRegionInfo regionInfoA, final HRegionInfo regionInfoB)
-      throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
-      @Override
-      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.postDispatchMerge(ctx, regionInfoA, regionInfoB);
-      }
-    });
-  }
-
   public void preMergeRegions(final HRegionInfo[] regionsToMerge)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {

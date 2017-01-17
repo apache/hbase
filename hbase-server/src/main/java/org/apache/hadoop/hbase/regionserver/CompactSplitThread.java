@@ -217,20 +217,6 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     return queueLists.toString();
   }
 
-  public synchronized void requestRegionsMerge(final Region a,
-      final Region b, final boolean forcible, long masterSystemTime, User user) {
-    try {
-      mergePool.execute(new RegionMergeRequest(a, b, this.server, forcible, masterSystemTime,user));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Region merge requested for " + a + "," + b + ", forcible="
-            + forcible + ".  " + this);
-      }
-    } catch (RejectedExecutionException ree) {
-      LOG.warn("Could not execute merge for " + a + "," + b + ", forcible="
-          + forcible, ree);
-    }
-  }
-
   public synchronized boolean requestSplit(final Region r) {
     // don't split regions that are blocking
     if (shouldSplitRegion() && ((HRegion)r).getCompactPriority() >= Store.PRIORITY_USER) {
