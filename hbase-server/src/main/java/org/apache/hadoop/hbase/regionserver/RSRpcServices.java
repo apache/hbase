@@ -644,8 +644,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RpcCallContext context = RpcServer.getCurrentCall();
     IOException sizeIOE = null;
     Object lastBlock = null;
+    ClientProtos.ResultOrException.Builder resultOrExceptionBuilder = ResultOrException.newBuilder();
+    boolean hasResultOrException = false;
     for (ClientProtos.Action action : actions.getActionList()) {
-      ClientProtos.ResultOrException.Builder resultOrExceptionBuilder = null;
+      hasResultOrException = false;
+      resultOrExceptionBuilder.clear();
       try {
         Result r = null;
 
@@ -674,8 +677,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // use it for the response.
           //
           // This will create a copy in the builder.
-          resultOrExceptionBuilder = ResultOrException.newBuilder().
-              setException(ResponseConverter.buildException(sizeIOE));
+          hasResultOrException = true;
+          resultOrExceptionBuilder.setException(ResponseConverter.buildException(sizeIOE));
           resultOrExceptionBuilder.setIndex(action.getIndex());
           builder.addResultOrException(resultOrExceptionBuilder.build());
           if (cellScanner != null) {
@@ -695,7 +698,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             }
           }
         } else if (action.hasServiceCall()) {
-          resultOrExceptionBuilder = ResultOrException.newBuilder();
+          hasResultOrException = true;
           try {
             Message result = execServiceOnRegion(region, action.getServiceCall());
             ClientProtos.CoprocessorServiceResult.Builder serviceResultBuilder =
@@ -751,8 +754,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             pbResult = ProtobufUtil.toResult(r);
           }
           lastBlock = addSize(context, r, lastBlock);
-          resultOrExceptionBuilder =
-            ClientProtos.ResultOrException.newBuilder().setResult(pbResult);
+          hasResultOrException = true;
+          resultOrExceptionBuilder.setResult(pbResult);
         }
         // Could get to here and there was no result and no exception.  Presumes we added
         // a Put or Delete to the collecting Mutations List for adding later.  In this
@@ -760,10 +763,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // down in the doBatchOp method call rather than up here.
       } catch (IOException ie) {
         rpcServer.getMetrics().exception(ie);
-        resultOrExceptionBuilder = ResultOrException.newBuilder().
-          setException(ResponseConverter.buildException(ie));
+        hasResultOrException = true;
+        resultOrExceptionBuilder.setException(ResponseConverter.buildException(ie));
       }
-      if (resultOrExceptionBuilder != null) {
+      if (hasResultOrException) {
         // Propagate index.
         resultOrExceptionBuilder.setIndex(action.getIndex());
         builder.addResultOrException(resultOrExceptionBuilder.build());
