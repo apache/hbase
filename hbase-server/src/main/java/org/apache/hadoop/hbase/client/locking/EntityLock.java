@@ -164,6 +164,8 @@ public class EntityLock {
   /**
    * Sends rpc to the master to request lock.
    * The lock request is queued with other lock requests.
+   * Call {@link #await()} to wait on lock.
+   * Always call {@link #unlock()} after calling the below, even after error.
    */
   public void requestLock() throws IOException {
     if (procId == null) {
@@ -200,9 +202,7 @@ public class EntityLock {
   }
 
   public void unlock() throws IOException {
-    locked.set(false);
-    worker.interrupt();
-    Threads.shutdown(worker);
+    Threads.shutdown(worker.shutdown());
     try {
       stub.lockHeartbeat(null,
         LockHeartbeatRequest.newBuilder().setProcId(procId).setKeepAlive(false).build());
@@ -212,8 +212,21 @@ public class EntityLock {
   }
 
   protected class LockHeartbeatWorker extends Thread {
+    private volatile boolean shutdown = false;
+
     public LockHeartbeatWorker(final String desc) {
       super("LockHeartbeatWorker(" + desc + ")");
+      setDaemon(true);
+    }
+
+    /**
+     * Shutdown the thread cleanly, quietly. We done.
+     * @return
+     */
+    Thread shutdown() {
+      shutdown = true;
+      interrupt();
+      return this;
     }
 
     public void run() {
@@ -256,8 +269,10 @@ public class EntityLock {
         } catch (InterruptedException e) {
           // Since there won't be any more heartbeats, assume lock will be lost.
           locked.set(false);
-          LOG.error("Interrupted, releasing " + EntityLock.this, e);
-          abort.abort("Worker thread interrupted", e);
+          if (!this.shutdown) {
+            LOG.error("Interrupted, releasing " + this, e);
+            abort.abort("Worker thread interrupted", e);
+          }
           return;
         }
       }

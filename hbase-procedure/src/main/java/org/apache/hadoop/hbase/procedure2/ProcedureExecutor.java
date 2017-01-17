@@ -776,7 +776,7 @@ public class ProcedureExecutor<TEnvironment> {
     if (nonceKey != null) {
       currentProcId = nonceKeysToProcIdsMap.get(nonceKey);
       Preconditions.checkArgument(currentProcId != null,
-        "expected nonceKey=" + nonceKey + " to be reserved, use registerNonce()");
+        "Expected nonceKey=" + nonceKey + " to be reserved, use registerNonce(); proc=" + proc);
     } else {
       currentProcId = nextProcId();
     }

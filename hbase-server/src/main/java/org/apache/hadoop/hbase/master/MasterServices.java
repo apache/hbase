@@ -93,11 +93,6 @@ public interface MasterServices extends Server {
   ExecutorService getExecutorService();
 
   /**
-   * @return Master's instance of {@link TableLockManager}
-   */
-  TableLockManager getTableLockManager();
-
-  /**
    * @return Master's instance of {@link TableStateManager}
    */
   TableStateManager getTableStateManager();

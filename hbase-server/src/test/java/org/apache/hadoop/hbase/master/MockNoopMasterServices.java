@@ -310,11 +310,6 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
-  public TableLockManager getTableLockManager() {
-    return null;
-  }
-
-  @Override
   public TableStateManager getTableStateManager() {
     return null;
   }

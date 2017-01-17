@@ -63,9 +63,8 @@ public final class LockManager {
     return new MasterLock(regionInfos, description);
   }
 
-  private void submitProcedure(final LockProcedure proc, final long nonceGroup, final long nonce) {
+  private void submitProcedure(final LockProcedure proc, final NonceKey nonceKey) {
     proc.setOwner(master.getMasterProcedureExecutor().getEnvironment().getRequestUser());
-    final NonceKey nonceKey = master.getMasterProcedureExecutor().createNonceKey(nonceGroup, nonce);
     master.getMasterProcedureExecutor().submitProcedure(proc, nonceKey);
   }
 
@@ -205,27 +204,23 @@ public final class LockManager {
    */
   public class RemoteLocks {
     public long requestNamespaceLock(final String namespace, final LockProcedure.LockType type,
-        final String description, final long nonceGroup, final long nonce)
+        final String description, final NonceKey nonceKey)
         throws IllegalArgumentException, IOException {
       master.getMasterCoprocessorHost().preRequestLock(namespace, null, null, type, description);
-
       final LockProcedure proc = new LockProcedure(master.getConfiguration(), namespace,
           type, description, null);
-      submitProcedure(proc, nonceGroup, nonce);
-
+      submitProcedure(proc, nonceKey);
       master.getMasterCoprocessorHost().postRequestLock(namespace, null, null, type, description);
       return proc.getProcId();
     }
 
     public long requestTableLock(final TableName tableName, final LockProcedure.LockType type,
-        final String description, final long nonceGroup, final long nonce)
+        final String description, final NonceKey nonceKey)
         throws IllegalArgumentException, IOException {
       master.getMasterCoprocessorHost().preRequestLock(null, tableName, null, type, description);
-
       final LockProcedure proc = new LockProcedure(master.getConfiguration(), tableName,
           type, description, null);
-      submitProcedure(proc, nonceGroup, nonce);
-
+      submitProcedure(proc, nonceKey);
       master.getMasterCoprocessorHost().postRequestLock(null, tableName, null, type, description);
       return proc.getProcId();
     }
@@ -234,14 +229,13 @@ public final class LockManager {
      * @throws IllegalArgumentException if all regions are not from same table.
      */
     public long requestRegionsLock(final HRegionInfo[] regionInfos, final String description,
-        final long nonceGroup, final long nonce) throws IllegalArgumentException, IOException {
+        final NonceKey nonceKey)
+    throws IllegalArgumentException, IOException {
       master.getMasterCoprocessorHost().preRequestLock(null, null, regionInfos,
             LockProcedure.LockType.EXCLUSIVE, description);
-
       final LockProcedure proc = new LockProcedure(master.getConfiguration(), regionInfos,
           LockProcedure.LockType.EXCLUSIVE, description, null);
-      submitProcedure(proc, nonceGroup, nonce);
-
+      submitProcedure(proc, nonceKey);
       master.getMasterCoprocessorHost().postRequestLock(null, null, regionInfos,
             LockProcedure.LockType.EXCLUSIVE, description);
       return proc.getProcId();

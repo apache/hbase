@@ -112,8 +112,6 @@ public class AssignmentManager {
 
   private final MetricsAssignmentManager metricsAssignmentManager;
 
-  private final TableLockManager tableLockManager;
-
   private AtomicInteger numRegionsOpened = new AtomicInteger(0);
 
   final private KeyLocker<String> locker = new KeyLocker<String>();
@@ -212,13 +210,10 @@ public class AssignmentManager {
    * @param balancer implementation of {@link LoadBalancer}
    * @param service Executor service
    * @param metricsMaster metrics manager
-   * @param tableLockManager TableLock manager
    * @throws IOException
    */
   public AssignmentManager(MasterServices server, ServerManager serverManager,
-      final LoadBalancer balancer,
-      final ExecutorService service, MetricsMaster metricsMaster,
-      final TableLockManager tableLockManager,
+      final LoadBalancer balancer, final ExecutorService service, MetricsMaster metricsMaster,
       final TableStateManager tableStateManager)
           throws IOException {
     this.server = server;
@@ -258,7 +253,6 @@ public class AssignmentManager {
       conf.getInt("hbase.bulk.assignment.perregion.open.time", 10000);
 
     this.metricsAssignmentManager = new MetricsAssignmentManager();
-    this.tableLockManager = tableLockManager;
 
     // Configurations for retrying opening a region on receiving a FAILED_OPEN
     this.retryConfig = new RetryCounter.RetryConfig();

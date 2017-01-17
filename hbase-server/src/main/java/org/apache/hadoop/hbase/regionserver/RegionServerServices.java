@@ -25,14 +25,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -75,11 +76,6 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    * @return the RegionServerAccounting for this Region Server
    */
   RegionServerAccounting getRegionServerAccounting();
-
-  /**
-   * @return RegionServer's instance of {@link TableLockManager}
-   */
-  TableLockManager getTableLockManager();
 
   /**
    * @return RegionServer's instance of {@link RegionServerQuotaManager}
@@ -271,4 +267,10 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    * @return the metrics tracker for the region server
    */
   MetricsRegionServer getMetrics();
+
+  /**
+   * Master based locks on namespaces/tables/regions.
+   */
+  EntityLock regionLock(List<HRegionInfo> regionInfos, String description,
+      Abortable abort) throws IOException;
 }

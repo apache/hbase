@@ -32,11 +32,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
@@ -187,11 +186,6 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public RegionServerAccounting getRegionServerAccounting() {
     return null;
-  }
-
-  @Override
-  public TableLockManager getTableLockManager() {
-    return new NullTableLockManager();
   }
 
   @Override
@@ -349,6 +343,12 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public MetricsRegionServer getMetrics() {
+    return null;
+  }
+
+  @Override
+  public EntityLock regionLock(List<HRegionInfo> regionInfos, String description, Abortable abort)
+      throws IOException {
     return null;
   }
 

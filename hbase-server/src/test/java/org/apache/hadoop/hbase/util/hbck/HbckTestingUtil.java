@@ -61,7 +61,6 @@ public class HbckTestingUtil {
       fsck.setFixVersionFile(fixVersionFile);
       fsck.setFixReferenceFiles(fixReferenceFiles);
       fsck.setFixEmptyMetaCells(fixEmptyMetaRegionInfo);
-      fsck.setFixTableLocks(fixTableLocks);
       fsck.setFixReplication(fixReplication);
       if (table != null) {
         fsck.includeTable(table);

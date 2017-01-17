@@ -1273,7 +1273,9 @@ public class SimpleRpcServer extends RpcServer {
       String serviceName = connectionHeader.getServiceName();
       if (serviceName == null) throw new EmptyServiceNameException();
       this.service = getService(services, serviceName);
-      if (this.service == null) throw new UnknownServiceException(serviceName);
+      if (this.service == null) {
+        throw new UnknownServiceException(serviceName);
+      }
       setupCellBlockCodecs(this.connectionHeader);
       RPCProtos.ConnectionHeaderResponse.Builder chrBuilder =
           RPCProtos.ConnectionHeaderResponse.newBuilder();

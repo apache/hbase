@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -96,10 +97,11 @@ public class TestRegionServerMetrics {
     admin = TEST_UTIL.getHBaseAdmin();
     connection = TEST_UTIL.getConnection();
 
-    while (cluster.getLiveRegionServerThreads().size() < 1) {
+    while (cluster.getLiveRegionServerThreads().isEmpty() &&
+        cluster.getRegionServer(0) == null &&
+        rs.getRegionServerMetrics() == null) {
       Threads.sleep(100);
     }
-
     rs = cluster.getRegionServer(0);
     metricsRegionServer = rs.getRegionServerMetrics();
     serverSource = metricsRegionServer.getMetricsSource();
@@ -420,7 +422,6 @@ public class TestRegionServerMetrics {
       }
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       assertCounter("mobFlushCount", numHfiles);
-
       Scan scan = new Scan(Bytes.toBytes(0), Bytes.toBytes(numHfiles));
       ResultScanner scanner = table.getScanner(scan);
       scanner.next(100);

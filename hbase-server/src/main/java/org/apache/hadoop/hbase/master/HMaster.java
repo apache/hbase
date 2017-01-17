@@ -645,8 +645,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.splitOrMergeTracker.start();
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
-      this.balancer, this.service, this.metricsMaster,
-      this.tableLockManager, tableStateManager);
+      this.balancer, this.service, this.metricsMaster, tableStateManager);
 
     this.replicationManager = new ReplicationManager(conf, zooKeeper, this);
 
@@ -732,8 +731,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.serverManager = createServerManager(this);
 
-    // Invalidate all write locks held previously
-    this.tableLockManager.reapWriteLocks();
     this.tableStateManager = new TableStateManager(this);
 
     status.setStatus("Initializing ZK system trackers");
@@ -3030,8 +3027,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public void requestMobCompaction(TableName tableName,
     List<HColumnDescriptor> columns, boolean allFiles) throws IOException {
-    mobCompactThread.requestMobCompaction(conf, fs, tableName, columns,
-      tableLockManager, allFiles);
+    mobCompactThread.requestMobCompaction(conf, fs, tableName, columns, allFiles);
   }
 
   /**

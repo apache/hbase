@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -28,17 +27,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,7 +53,7 @@ public class TestMasterProcedureScheduler {
   @Before
   public void setUp() throws IOException {
     conf = HBaseConfiguration.create();
-    queue = new MasterProcedureScheduler(conf, new TableLockManager.NullTableLockManager());
+    queue = new MasterProcedureScheduler(conf);
     queue.start();
   }
 
@@ -334,35 +329,20 @@ public class TestMasterProcedureScheduler {
   }
 
   @Test
-  public void testSharedZkLock() throws Exception {
+  public void testSharedLock() throws Exception {
     final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-    final String dir = TEST_UTIL.getDataTestDir("TestSharedZkLock").toString();
-    MiniZooKeeperCluster zkCluster = new MiniZooKeeperCluster(conf);
-    int zkPort = zkCluster.startup(new File(dir));
 
-    try {
-      conf.set("hbase.zookeeper.quorum", "localhost:" + zkPort);
+    final TableName tableName = TableName.valueOf("testtb");
+    TestTableProcedure procA =
+        new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.READ);
+    TestTableProcedure procB =
+        new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.READ);
 
-      ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testSchedWithZkLock", null, false);
-      ServerName mockName = ServerName.valueOf("localhost", 60000, 1);
-      MasterProcedureScheduler procQueue = new MasterProcedureScheduler(
-        conf,
-        TableLockManager.createTableLockManager(conf, zkw, mockName));
+    assertTrue(queue.tryAcquireTableSharedLock(procA, tableName));
+    assertTrue(queue.tryAcquireTableSharedLock(procB, tableName));
 
-      final TableName tableName = TableName.valueOf("testtb");
-      TestTableProcedure procA =
-          new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.READ);
-      TestTableProcedure procB =
-          new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.READ);
-
-      assertTrue(procQueue.tryAcquireTableSharedLock(procA, tableName));
-      assertTrue(procQueue.tryAcquireTableSharedLock(procB, tableName));
-
-      procQueue.releaseTableSharedLock(procA, tableName);
-      procQueue.releaseTableSharedLock(procB, tableName);
-    } finally {
-      zkCluster.shutdown();
-    }
+    queue.releaseTableSharedLock(procA, tableName);
+    queue.releaseTableSharedLock(procB, tableName);
   }
 
   @Test

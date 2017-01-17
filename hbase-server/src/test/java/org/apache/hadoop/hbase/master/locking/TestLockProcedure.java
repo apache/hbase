@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
-import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -97,7 +96,6 @@ public class TestLockProcedure {
     conf.setBoolean("hbase.procedure.check.owner.set", false);  // since rpc user will be null
     conf.setInt(LockProcedure.REMOTE_LOCKS_TIMEOUT_MS_CONF, HEARTBEAT_TIMEOUT);
     conf.setInt(LockProcedure.LOCAL_MASTER_LOCKS_TIMEOUT_MS_CONF, LOCAL_LOCKS_TIMEOUT);
-    conf.setInt(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT, ZK_EXPIRATION);
   }
 
   @BeforeClass
@@ -386,12 +384,6 @@ public class TestLockProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    // Remove zk lock node otherwise recovered lock will keep waiting on it. Remove
-    // both exclusive and non-exclusive (the table shared lock that the region takes).
-    // Have to pause to let the locks 'expire' up in zk. See above configs where we
-    // set explict zk timeout on locks.
-    Thread.sleep(ZK_EXPIRATION + HEARTBEAT_TIMEOUT);
-    UTIL.getMiniHBaseCluster().getMaster().getTableLockManager().reapAllExpiredLocks();
     ProcedureTestingUtility.restart(procExec);
     while (!procExec.isStarted(procId)) {
       Thread.sleep(250);
@@ -442,7 +434,6 @@ public class TestLockProcedure {
     assertEquals(false, procExec.isRunning());
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     // remove zk lock node otherwise recovered lock will keep waiting on it.
-    UTIL.getMiniHBaseCluster().getMaster().getTableLockManager().reapWriteLocks();
     ProcedureTestingUtility.restart(procExec);
     while (!procExec.isStarted(lockProc.getProcId())) {
       Thread.sleep(250);

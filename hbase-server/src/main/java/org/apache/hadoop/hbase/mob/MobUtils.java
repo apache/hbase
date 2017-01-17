@@ -61,8 +61,8 @@ import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.mob.compactions.MobCompactor;
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -699,12 +699,11 @@ public final class MobUtils {
    * @param tableName the table the compact
    * @param hcd the column descriptor
    * @param pool the thread pool
-   * @param tableLockManager the tableLock manager
    * @param allFiles Whether add all mob files into the compaction.
    */
   public static void doMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
-    HColumnDescriptor hcd, ExecutorService pool, TableLockManager tableLockManager,
-    boolean allFiles) throws IOException {
+    HColumnDescriptor hcd, ExecutorService pool, boolean allFiles, LockManager.MasterLock lock)
+      throws IOException {
     String className = conf.get(MobConstants.MOB_COMPACTOR_CLASS_KEY,
       PartitionedMobCompactor.class.getName());
     // instantiate the mob compactor.
@@ -719,29 +718,14 @@ public final class MobUtils {
     // compact only for mob-enabled column.
     // obtain a write table lock before performing compaction to avoid race condition
     // with major compaction in mob-enabled column.
-    boolean tableLocked = false;
-    TableLock lock = null;
     try {
-      // the tableLockManager might be null in testing. In that case, it is lock-free.
-      if (tableLockManager != null) {
-        lock = tableLockManager.writeLock(MobUtils.getTableLockName(tableName),
-          "Run MobCompactor");
-        lock.acquire();
-      }
-      tableLocked = true;
+      lock.acquire();
       compactor.compact(allFiles);
     } catch (Exception e) {
       LOG.error("Failed to compact the mob files for the column " + hcd.getNameAsString()
-        + " in the table " + tableName.getNameAsString(), e);
+          + " in the table " + tableName.getNameAsString(), e);
     } finally {
-      if (lock != null && tableLocked) {
-        try {
-          lock.release();
-        } catch (IOException e) {
-          LOG.error(
-            "Failed to release the write lock for the table " + tableName.getNameAsString(), e);
-        }
-      }
+      lock.release();
     }
   }
 

@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ChoreService;
@@ -47,7 +48,6 @@ import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
-import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -331,11 +331,6 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public RegionServerAccounting getRegionServerAccounting() {
     // TODO Auto-generated method stub
     return null;
-  }
-
-  @Override
-  public TableLockManager getTableLockManager() {
-    return new NullTableLockManager();
   }
 
   @Override
@@ -699,6 +694,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public MetricsRegionServer getMetrics() {
+    return null;
+  }
+
+  @Override
+  public EntityLock regionLock(List<HRegionInfo> regionInfos, String description, Abortable abort)
+      throws IOException {
     return null;
   }
 

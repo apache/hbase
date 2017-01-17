@@ -28,7 +28,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
@@ -243,8 +242,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
 
   @Override
   protected int doWork() throws Exception {
-    procedureScheduler = new MasterProcedureScheduler(
-        UTIL.getConfiguration(), new TableLockManager.NullTableLockManager());
+    procedureScheduler = new MasterProcedureScheduler(UTIL.getConfiguration());
     procedureScheduler.start();
     setupOperations();
 

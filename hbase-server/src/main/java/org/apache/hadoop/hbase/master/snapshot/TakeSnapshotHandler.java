@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
-import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.master.locking.LockManager;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -83,8 +83,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   protected final Path workingDir;
   private final MasterSnapshotVerifier verifier;
   protected final ForeignExceptionDispatcher monitor;
-  protected final TableLockManager tableLockManager;
-  protected final TableLock tableLock;
+  protected final LockManager.MasterLock tableLock;
   protected final MonitoredTask status;
   protected final TableName snapshotTable;
   protected final SnapshotManifest snapshotManifest;
@@ -114,10 +113,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.monitor = new ForeignExceptionDispatcher(snapshot.getName());
     this.snapshotManifest = SnapshotManifest.create(conf, fs, workingDir, snapshot, monitor);
 
-    this.tableLockManager = master.getTableLockManager();
-    this.tableLock = this.tableLockManager.writeLock(
-        snapshotTable,
-        EventType.C_M_SNAPSHOT_TABLE.toString());
+    this.tableLock = master.getLockManager().createMasterLock(
+        snapshotTable, LockProcedure.LockType.EXCLUSIVE,
+        this.getClass().getName() + ": take snapshot " + snapshot.getName());
 
     // prepare the verify
     this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, rootDir);
@@ -138,18 +136,14 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
   public TakeSnapshotHandler prepare() throws Exception {
     super.prepare();
-    this.tableLock.acquire(); // after this, you should ensure to release this lock in
-                              // case of exceptions
-    boolean success = false;
+    // after this, you should ensure to release this lock in case of exceptions
+    this.tableLock.acquire();
     try {
       this.htd = loadTableDescriptor(); // check that .tableinfo is present
-      success = true;
-    } finally {
-      if (!success) {
-        releaseTableLock();
-      }
+    } catch (Exception e) {
+      this.tableLock.release();
+      throw e;
     }
-
     return this;
   }
 
@@ -234,17 +228,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
         LOG.error("Couldn't delete snapshot working directory:" + workingDir);
       }
       lock.unlock();
-      releaseTableLock();
-    }
-  }
-
-  protected void releaseTableLock() {
-    if (this.tableLock != null) {
-      try {
-        this.tableLock.release();
-      } catch (IOException ex) {
-        LOG.warn("Could not release the table lock", ex);
-      }
+      tableLock.release();
     }
   }
 

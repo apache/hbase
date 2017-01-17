@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
@@ -45,6 +48,7 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -52,8 +56,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFile;
@@ -100,8 +102,6 @@ public class HMobStore extends HStore {
   private volatile long mobScanCellsCount = 0;
   private volatile long mobScanCellsSize = 0;
   private HColumnDescriptor family;
-  private TableLockManager tableLockManager;
-  private TableName tableLockName;
   private Map<String, List<Path>> map = new ConcurrentHashMap<String, List<Path>>();
   private final IdLock keyLock = new IdLock();
   // When we add a MOB reference cell to the HFile, we will add 2 tags along with it
@@ -126,10 +126,6 @@ public class HMobStore extends HStore {
     locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
         .getEncodedName(), family.getNameAsString()));
     map.put(Bytes.toString(tn.getName()), locations);
-    if (region.getRegionServerServices() != null) {
-      tableLockManager = region.getRegionServerServices().getTableLockManager();
-      tableLockName = MobUtils.getTableLockName(getTableName());
-    }
     List<Tag> tags = new ArrayList<>(2);
     tags.add(MobConstants.MOB_REF_TAG);
     Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
@@ -482,39 +478,39 @@ public class HMobStore extends HStore {
       // Acquire a table lock to coordinate.
       // 1. If no, mark the major compaction as retainDeleteMarkers and continue the compaction.
       // 2. If the lock is obtained, run the compaction directly.
-      TableLock lock = null;
-      if (tableLockManager != null) {
-        lock = tableLockManager.readLock(tableLockName, "Major compaction in HMobStore");
-      }
-      boolean tableLocked = false;
-      String tableName = getTableName().getNameAsString();
-      if (lock != null) {
-        try {
-          LOG.info("Start to acquire a read lock for the table[" + tableName
-              + "], ready to perform the major compaction");
-          lock.acquire();
-          tableLocked = true;
-        } catch (Exception e) {
-          LOG.error("Fail to lock the table " + tableName, e);
-        }
-      } else {
-        // If the tableLockManager is null, mark the tableLocked as true.
-        tableLocked = true;
-      }
+      EntityLock lock = null;
       try {
-        if (!tableLocked) {
-          LOG.warn("Cannot obtain the table lock, maybe a sweep tool is running on this table["
-              + tableName + "], forcing the delete markers to be retained");
-          compaction.getRequest().forceRetainDeleteMarkers();
+        if (region.getRegionServerServices() != null) {
+          List<HRegionInfo> regionInfos = Collections.singletonList(region.getRegionInfo());
+          // regionLock takes shared lock on table too.
+          lock = region.getRegionServerServices().regionLock(regionInfos, "MOB compaction", null);
+          int awaitTime = conf.getInt(HRegionServer.REGION_LOCK_AWAIT_TIME_SEC,
+              HRegionServer.DEFAULT_REGION_LOCK_AWAIT_TIME_SEC);
+          try {
+            LOG.info("Acquiring MOB major compaction lock " + lock);
+            lock.requestLock();
+            lock.await(awaitTime, TimeUnit.SECONDS);
+          } catch (InterruptedException e) {
+            LOG.error("Interrupted exception when waiting for lock: " + lock, e);
+          }
+          if (!lock.isLocked()) {
+            // Remove lock from queue on the master so that if it's granted in future, we don't
+            // keep holding it until compaction finishes
+            lock.unlock();
+            lock = null;
+            LOG.warn("Cannot obtain table lock, maybe a sweep tool is running on this " + "table["
+                + getTableName() + "], forcing the delete markers to be retained");
+          }
+        } else {
+          LOG.warn("Cannot obtain lock because RegionServices not available. Are we running as "
+              + "compaction tool?");
         }
+        // If no lock, retain delete markers to be safe.
+        if (lock == null) compaction.getRequest().forceRetainDeleteMarkers();
         return super.compact(compaction, throughputController, user);
       } finally {
-        if (tableLocked && lock != null) {
-          try {
-            lock.release();
-          } catch (IOException e) {
-            LOG.error("Fail to release the table lock " + tableName, e);
-          }
+        if (lock != null && lock.isLocked()) {
+          lock.unlock();
         }
       }
     } else {

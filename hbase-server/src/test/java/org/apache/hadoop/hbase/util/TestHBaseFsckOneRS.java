@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
-import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.SplitTableRegionProcedure;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -1476,85 +1475,6 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
           HBaseFsck.PrintingErrorReporter.class.getName());
       MockErrorReporter.calledCount = 0;
     }
-  }
-
-  @Test(timeout=180000)
-  public void testCheckTableLocks() throws Exception {
-    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge(0);
-    EnvironmentEdgeManager.injectEdge(edge);
-    // check no errors
-    HBaseFsck hbck = doFsck(conf, false);
-    assertNoErrors(hbck);
-
-    ServerName mockName = ServerName.valueOf("localhost", 60000, 1);
-    final TableName tableName = TableName.valueOf("foo");
-
-    // obtain one lock
-    final TableLockManager tableLockManager =
-        TableLockManager.createTableLockManager(conf, TEST_UTIL.getZooKeeperWatcher(), mockName);
-    TableLockManager.TableLock
-        writeLock = tableLockManager.writeLock(tableName, "testCheckTableLocks");
-    writeLock.acquire();
-    hbck = doFsck(conf, false);
-    assertNoErrors(hbck); // should not have expired, no problems
-
-    edge.incrementTime(conf.getLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT,
-        TableLockManager.DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS)); // let table lock expire
-
-    hbck = doFsck(conf, false);
-    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
-        HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK});
-
-    final CountDownLatch latch = new CountDownLatch(1);
-    new Thread() {
-      @Override
-      public void run() {
-        TableLockManager.TableLock
-            readLock = tableLockManager.writeLock(tableName, "testCheckTableLocks");
-        try {
-          latch.countDown();
-          readLock.acquire();
-        } catch (IOException ex) {
-          fail();
-        } catch (IllegalStateException ex) {
-          return; // expected, since this will be reaped under us.
-        }
-        fail("should not have come here");
-      };
-    }.start();
-
-    latch.await(); // wait until thread starts
-    Threads.sleep(300); // wait some more to ensure writeLock.acquire() is called
-
-    hbck = doFsck(conf, false);
-    // still one expired, one not-expired
-    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
-        HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK});
-
-    edge.incrementTime(conf.getLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT,
-        TableLockManager.DEFAULT_TABLE_LOCK_EXPIRE_TIMEOUT_MS)); // let table lock expire
-
-    hbck = doFsck(conf, false);
-    assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
-        HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK,
-        HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK}); // both are expired
-
-    Configuration localConf = new Configuration(conf);
-    // reaping from ZKInterProcessWriteLock uses znode cTime,
-    // which is not injectable through EnvironmentEdge
-    localConf.setLong(TableLockManager.TABLE_LOCK_EXPIRE_TIMEOUT, 1);
-
-    Threads.sleep(10);
-    hbck = doFsck(localConf, true); // now fix both cases
-
-    hbck = doFsck(localConf, false);
-    assertNoErrors(hbck);
-
-    // ensure that locks are deleted
-    writeLock = tableLockManager.writeLock(tableName, "should acquire without blocking");
-    writeLock.acquire(); // this should not block.
-    writeLock.release(); // release for clean state
-    tableLockManager.tableDeleted(tableName);
   }
 
   @Test(timeout=180000)

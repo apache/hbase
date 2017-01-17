@@ -165,7 +165,6 @@ public class TestTokenAuthentication {
 
         @Override
         public ServiceDescriptor getDescriptorForType() {
-          // TODO Auto-generated method stub
           return null;
         }
 

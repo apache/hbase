@@ -48,7 +48,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.MalformedObjectNameException;
@@ -62,6 +61,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -87,6 +87,8 @@ import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.NonceGenerator;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.client.locking.EntityLock;
+import org.apache.hadoop.hbase.client.locking.LockServiceClient;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -111,7 +113,6 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
@@ -147,6 +148,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -214,6 +216,9 @@ import sun.misc.SignalHandler;
 public class HRegionServer extends HasThread implements
     RegionServerServices, LastSequenceId, ConfigurationObserver {
 
+  public static final String REGION_LOCK_AWAIT_TIME_SEC =
+      "hbase.regionserver.region.lock.await.time.sec";
+  public static final int DEFAULT_REGION_LOCK_AWAIT_TIME_SEC = 300;  // 5 min
   private static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   /**
@@ -338,6 +343,7 @@ public class HRegionServer extends HasThread implements
 
   // Stub to do region server status calls against the master.
   private volatile RegionServerStatusService.BlockingInterface rssStub;
+  private volatile LockService.BlockingInterface lockStub;
   // RPC client. Used to make the stub above that does region server status checking.
   RpcClient rpcClient;
 
@@ -463,9 +469,6 @@ public class HRegionServer extends HasThread implements
   private RegionServerProcedureManagerHost rspmHost;
 
   private RegionServerQuotaManager rsQuotaManager;
-
-  // Table level lock manager for locking for region operations
-  protected TableLockManager tableLockManager;
 
   /**
    * Nonce manager. Nonces are used to make operations like increment and append idempotent
@@ -603,9 +606,6 @@ public class HRegionServer extends HasThread implements
       this.csm = (BaseCoordinatedStateManager) csm;
       this.csm.initialize(this);
       this.csm.start();
-
-      tableLockManager = TableLockManager.createTableLockManager(
-        conf, zooKeeper, serverName);
 
       masterAddressTracker = new MasterAddressTracker(getZooKeeper(), this);
       masterAddressTracker.start();
@@ -1134,6 +1134,9 @@ public class HRegionServer extends HasThread implements
     if (this.rssStub != null) {
       this.rssStub = null;
     }
+    if (this.lockStub != null) {
+      this.lockStub = null;
+    }
     if (this.rpcClient != null) {
       this.rpcClient.close();
     }
@@ -1527,11 +1530,6 @@ public class HRegionServer extends HasThread implements
   @Override
   public RegionServerAccounting getRegionServerAccounting() {
     return regionServerAccounting;
-  }
-
-  @Override
-  public TableLockManager getTableLockManager() {
-    return tableLockManager;
   }
 
   /*
@@ -2385,7 +2383,8 @@ public class HRegionServer extends HasThread implements
     }
     ServerName sn = null;
     long previousLogTime = 0;
-    RegionServerStatusService.BlockingInterface intf = null;
+    RegionServerStatusService.BlockingInterface intRssStub = null;
+    LockService.BlockingInterface intLockStub = null;
     boolean interrupted = false;
     try {
       while (keepLooping()) {
@@ -2409,14 +2408,16 @@ public class HRegionServer extends HasThread implements
 
         // If we are on the active master, use the shortcut
         if (this instanceof HMaster && sn.equals(getServerName())) {
-          intf = ((HMaster)this).getMasterRpcServices();
+          intRssStub = ((HMaster)this).getMasterRpcServices();
+          intLockStub = ((HMaster)this).getMasterRpcServices();
           break;
         }
         try {
           BlockingRpcChannel channel =
             this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(),
               shortOperationTimeout);
-          intf = RegionServerStatusService.newBlockingStub(channel);
+          intRssStub = RegionServerStatusService.newBlockingStub(channel);
+          intLockStub = LockService.newBlockingStub(channel);
           break;
         } catch (IOException e) {
           if (System.currentTimeMillis() > (previousLogTime + 1000)) {
@@ -2439,7 +2440,8 @@ public class HRegionServer extends HasThread implements
         Thread.currentThread().interrupt();
       }
     }
-    rssStub = intf;
+    this.rssStub = intRssStub;
+    this.lockStub = intLockStub;
     return sn;
   }
 
@@ -3615,5 +3617,12 @@ public class HRegionServer extends HasThread implements
   @Override
   public SecureBulkLoadManager getSecureBulkLoadManager() {
     return this.secureBulkLoadManager;
+  }
+
+  @Override
+  public EntityLock regionLock(List<HRegionInfo> regionInfos, String description,
+      Abortable abort) throws IOException {
+    return new LockServiceClient(conf, lockStub, clusterConnection.getNonceGenerator())
+      .regionLock(regionInfos, description, abort);
   }
 }

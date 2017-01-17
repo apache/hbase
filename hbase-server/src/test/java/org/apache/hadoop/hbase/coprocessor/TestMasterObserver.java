@@ -37,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -2173,7 +2172,7 @@ public class TestMasterObserver {
 
     final TableName tableName = TableName.valueOf("testLockedTable");
     long procId = master.getLockManager().remoteLocks().requestTableLock(tableName,
-          LockProcedure.LockType.EXCLUSIVE, "desc", HConstants.NO_NONCE, HConstants.NO_NONCE);
+          LockProcedure.LockType.EXCLUSIVE, "desc", null);
     master.getLockManager().remoteLocks().lockHeartbeat(procId, false);
 
     assertTrue(cp.preAndPostForQueueLockAndHeartbeatLockCalled());

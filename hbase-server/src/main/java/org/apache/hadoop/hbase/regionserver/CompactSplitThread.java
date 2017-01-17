@@ -80,7 +80,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   public static final String REGION_SERVER_REGION_SPLIT_LIMIT =
       "hbase.regionserver.regionSplitLimit";
   public static final int DEFAULT_REGION_SERVER_REGION_SPLIT_LIMIT= 1000;
-  
+
   private final HRegionServer server;
   private final Configuration conf;
 

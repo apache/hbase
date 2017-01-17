@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.ServiceDescriptor;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 @InterfaceAudience.Private
@@ -48,11 +49,17 @@ public class RpcServerFactory {
       RpcScheduler scheduler) throws IOException {
     String rpcServerClass = conf.get(CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
         SimpleRpcServer.class.getName());
-    LOG.info("Use " + rpcServerClass + " rpc server");
+    StringBuffer servicesList = new StringBuffer();
+    for (BlockingServiceAndInterface s: services) {
+      ServiceDescriptor sd = s.getBlockingService().getDescriptorForType();
+      if (sd == null) continue; // Can be null for certain tests like TestTokenAuthentication
+      if (servicesList.length() > 0) servicesList.append(", ");
+      servicesList.append(sd.getFullName());
+    }
+    LOG.info("Creating " + rpcServerClass + " hosting " + servicesList);
     return ReflectionUtils.instantiateWithCustomCtor(rpcServerClass,
         new Class[] { Server.class, String.class, List.class,
             InetSocketAddress.class, Configuration.class, RpcScheduler.class },
         new Object[] { server, name, services, bindAddress, conf, scheduler });
   }
-
 }

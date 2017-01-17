@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.master.locking.LockManager;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -74,15 +76,13 @@ public class MasterMobCompactionThread {
    * @param fs The file system
    * @param tableName The table the compact
    * @param columns The column descriptors
-   * @param tableLockManager The tableLock manager
    * @param allFiles Whether add all mob files into the compaction.
    */
   public void requestMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
-    List<HColumnDescriptor> columns, TableLockManager tableLockManager, boolean allFiles)
-    throws IOException {
+      List<HColumnDescriptor> columns, boolean allFiles) throws IOException {
     master.reportMobCompactionStart(tableName);
     try {
-      masterMobPool.execute(new CompactionRunner(fs, tableName, columns, tableLockManager,
+      masterMobPool.execute(new CompactionRunner(fs, tableName, columns,
         allFiles, mobCompactorPool));
     } catch (RejectedExecutionException e) {
       // in case the request is rejected by the pool
@@ -103,27 +103,28 @@ public class MasterMobCompactionThread {
     private FileSystem fs;
     private TableName tableName;
     private List<HColumnDescriptor> hcds;
-    private TableLockManager tableLockManager;
     private boolean allFiles;
     private ExecutorService pool;
 
     public CompactionRunner(FileSystem fs, TableName tableName, List<HColumnDescriptor> hcds,
-      TableLockManager tableLockManager, boolean allFiles, ExecutorService pool) {
+      boolean allFiles, ExecutorService pool) {
       super();
       this.fs = fs;
       this.tableName = tableName;
       this.hcds = hcds;
-      this.tableLockManager = tableLockManager;
       this.allFiles = allFiles;
       this.pool = pool;
     }
 
     @Override
     public void run() {
+      // These locks are on dummy table names, and only used for compaction/mob file cleaning.
+      final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
+          MobUtils.getTableLockName(tableName), LockProcedure.LockType.EXCLUSIVE,
+          this.getClass().getName() + ": mob compaction");
       try {
         for (HColumnDescriptor hcd : hcds) {
-          MobUtils.doMobCompaction(conf, fs, tableName, hcd, pool, tableLockManager,
-            allFiles);
+          MobUtils.doMobCompaction(conf, fs, tableName, hcd, pool, allFiles, lock);
         }
       } catch (IOException e) {
         LOG.error("Failed to perform the mob compaction", e);

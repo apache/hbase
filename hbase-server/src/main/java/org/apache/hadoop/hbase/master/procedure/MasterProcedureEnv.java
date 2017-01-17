@@ -98,8 +98,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
 
   public MasterProcedureEnv(final MasterServices master) {
     this.master = master;
-    this.procSched = new MasterProcedureScheduler(master.getConfiguration(),
-      master.getTableLockManager());
+    this.procSched = new MasterProcedureScheduler(master.getConfiguration());
   }
 
   public User getRequestUser() {

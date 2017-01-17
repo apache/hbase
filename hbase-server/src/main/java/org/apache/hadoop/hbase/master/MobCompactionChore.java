@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.locking.LockManager;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 
 /**
@@ -40,14 +42,12 @@ public class MobCompactionChore extends ScheduledChore {
 
   private static final Log LOG = LogFactory.getLog(MobCompactionChore.class);
   private HMaster master;
-  private TableLockManager tableLockManager;
   private ExecutorService pool;
 
   public MobCompactionChore(HMaster master, int period) {
     // use the period as initial delay.
     super(master.getServerName() + "-MobCompactionChore", master, period, period, TimeUnit.SECONDS);
     this.master = master;
-    this.tableLockManager = master.getTableLockManager();
     this.pool = MobUtils.createMobCompactorThreadPool(master.getConfiguration());
   }
 
@@ -63,6 +63,9 @@ public class MobCompactionChore extends ScheduledChore {
         }
         boolean reported = false;
         try {
+          final LockManager.MasterLock lock = master.getLockManager().createMasterLock(
+              MobUtils.getTableLockName(htd.getTableName()), LockProcedure.LockType.EXCLUSIVE,
+              this.getClass().getName() + ": mob compaction");
           for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
             if (!hcd.isMobEnabled()) {
               continue;
@@ -72,7 +75,7 @@ public class MobCompactionChore extends ScheduledChore {
               reported = true;
             }
             MobUtils.doMobCompaction(master.getConfiguration(), master.getFileSystem(),
-              htd.getTableName(), hcd, pool, tableLockManager, false);
+                htd.getTableName(), hcd, pool, false, lock);
           }
         } finally {
           if (reported) {

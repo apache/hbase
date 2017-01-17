@@ -129,7 +129,6 @@ import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.ReplicationChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
-import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
@@ -249,7 +248,6 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean fixSplitParents = false; // fix lingering split parents
   private boolean fixReferenceFiles = false; // fix lingering reference store file
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
-  private boolean fixTableLocks = false; // fix table locks which are expired
   private boolean fixReplication = false; // fix undeleted replication queues for removed peer
   private boolean fixAny = false; // Set to true if any of the fix is required.
 
@@ -767,8 +765,6 @@ public class HBaseFsck extends Configured implements Closeable {
     if (checkRegionBoundaries) {
       checkRegionBoundaries();
     }
-
-    checkAndFixTableLocks();
 
     checkAndFixReplication();
 
@@ -1537,7 +1533,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
   /**
    * Removes the empty Meta recovery WAL directory.
-   * @param walFactoryID A unique identifier for WAL factory which was used by Filesystem to make a
+   * @param walFactoryId A unique identifier for WAL factory which was used by Filesystem to make a
    *          Meta recovery WAL directory inside WAL directory path.
    */
   private void removeHBCKMetaRecoveryWALDir(String walFactoryId) throws IOException {
@@ -3342,15 +3338,6 @@ public class HBaseFsck extends Configured implements Closeable {
     return hbi;
   }
 
-  private void checkAndFixTableLocks() throws IOException {
-    TableLockChecker checker = new TableLockChecker(zkw, errors);
-    checker.checkTableLocks();
-
-    if (this.fixTableLocks) {
-      checker.fixExpiredTableLocks();
-    }
-  }
-
   private void checkAndFixReplication() throws IOException {
     ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
     checker.checkUnDeletedQueues();
@@ -4316,15 +4303,6 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Set table locks fix mode.
-   * Delete table locks held for a long time
-   */
-  public void setFixTableLocks(boolean shouldFix) {
-    fixTableLocks = shouldFix;
-    fixAny |= shouldFix;
-  }
-
-  /**
    * Set replication fix mode.
    */
   public void setFixReplication(boolean shouldFix) {
@@ -4583,12 +4561,8 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("");
     out.println("  Metadata Repair shortcuts");
     out.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
-        "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps -fixReferenceFiles -fixTableLocks");
+        "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps -fixReferenceFiles");
     out.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
-
-    out.println("");
-    out.println("  Table lock options");
-    out.println("   -fixTableLocks    Deletes table locks held for a long time (hbase.table.lock.expire.ms, 10min by default)");
 
     out.println("");
     out.println(" Replication options");
@@ -4728,7 +4702,6 @@ public class HBaseFsck extends Configured implements Closeable {
         setFixSplitParents(false);
         setCheckHdfs(true);
         setFixReferenceFiles(true);
-        setFixTableLocks(true);
       } else if (cmd.equals("-repairHoles")) {
         // this will make all missing hdfs regions available but may lose data
         setFixHdfsHoles(true);
@@ -4775,8 +4748,6 @@ public class HBaseFsck extends Configured implements Closeable {
         setCheckMetaOnly();
       } else if (cmd.equals("-boundaries")) {
         setRegionBoundariesCheck();
-      } else if (cmd.equals("-fixTableLocks")) {
-        setFixTableLocks(true);
       } else if (cmd.equals("-fixReplication")) {
         setFixReplication(true);
       } else if (cmd.startsWith("-")) {

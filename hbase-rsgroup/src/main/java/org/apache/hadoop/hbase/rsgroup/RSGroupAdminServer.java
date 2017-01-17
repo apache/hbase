@@ -53,7 +53,8 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.master.locking.LockManager;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 
 /**
  * Service to support Region Server Grouping (HBase-6721)
@@ -273,10 +274,15 @@ public class RSGroupAdminServer extends RSGroupAdmin {
         master.getMasterCoprocessorHost().postMoveTables(tables, targetGroup);
       }
     }
-    for(TableName table: tables) {
-      TableLock lock = master.getTableLockManager().writeLock(table, "Group: table move");
+    for (TableName table: tables) {
+      LockManager.MasterLock lock = master.getLockManager().createMasterLock(table,
+          LockProcedure.LockType.EXCLUSIVE, this.getClass().getName() + ": Group: table move");
       try {
-        lock.acquire();
+        try {
+          lock.acquire();
+        } catch (InterruptedException e) {
+          throw new IOException("Interrupted when waiting for table lock", e);
+        }
         for (HRegionInfo region :
             master.getAssignmentManager().getRegionStates().getRegionsOfTable(table)) {
           master.getAssignmentManager().unassign(region);

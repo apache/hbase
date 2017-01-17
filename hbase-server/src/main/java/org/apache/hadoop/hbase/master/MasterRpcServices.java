@@ -52,16 +52,28 @@ import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
@@ -71,9 +83,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.*;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.*;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
@@ -103,16 +119,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Remov
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices;
-import org.apache.hadoop.hbase.replication.ReplicationException;
-import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.AccessController;
-import org.apache.hadoop.hbase.security.visibility.VisibilityController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -228,13 +234,15 @@ public class MasterRpcServices extends RSRpcServices
    * @return list of blocking services and their security info classes that this server supports
    */
   protected List<BlockingServiceAndInterface> getServices() {
-    List<BlockingServiceAndInterface> bssi = new ArrayList<BlockingServiceAndInterface>(4);
+    List<BlockingServiceAndInterface> bssi = new ArrayList<BlockingServiceAndInterface>(5);
     bssi.add(new BlockingServiceAndInterface(
       MasterService.newReflectiveBlockingService(this),
       MasterService.BlockingInterface.class));
     bssi.add(new BlockingServiceAndInterface(
       RegionServerStatusService.newReflectiveBlockingService(this),
       RegionServerStatusService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(LockService.newReflectiveBlockingService(this),
+        LockService.BlockingInterface.class));
     bssi.addAll(super.getServices());
     return bssi;
   }
@@ -1754,34 +1762,62 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public LockResponse requestLock(RpcController controller, LockRequest request)
+  public LockResponse requestLock(RpcController controller, final LockRequest request)
       throws ServiceException {
     try {
       if (request.getDescription().isEmpty()) {
         throw new IllegalArgumentException("Empty description");
       }
-      final long procId;
+      NonceProcedureRunnable npr;
       LockProcedure.LockType type = LockProcedure.LockType.valueOf(request.getLockType().name());
       if (request.getRegionInfoCount() > 0) {
         final HRegionInfo[] regionInfos = new HRegionInfo[request.getRegionInfoCount()];
         for (int i = 0; i < request.getRegionInfoCount(); ++i) {
           regionInfos[i] = HRegionInfo.convert(request.getRegionInfo(i));
         }
-        procId = master.getLockManager().remoteLocks().requestRegionsLock(regionInfos,
-            request.getDescription(), request.getNonceGroup(), request.getNonce());
-        return LockResponse.newBuilder().setProcId(procId).build();
+        npr = new NonceProcedureRunnable(master, request.getNonceGroup(), request.getNonce()) {
+          @Override
+          protected void run() throws IOException {
+            setProcId(master.getLockManager().remoteLocks().requestRegionsLock(regionInfos,
+                request.getDescription(), getNonceKey()));
+          }
+
+          @Override
+          protected String getDescription() {
+            return "RequestLock";
+          }
+        };
       } else if (request.hasTableName()) {
         final TableName tableName = ProtobufUtil.toTableName(request.getTableName());
-        procId = master.getLockManager().remoteLocks().requestTableLock(tableName, type,
-            request.getDescription(), request.getNonceGroup(), request.getNonce());
-        return LockResponse.newBuilder().setProcId(procId).build();
+        npr = new NonceProcedureRunnable(master, request.getNonceGroup(), request.getNonce()) {
+          @Override
+          protected void run() throws IOException {
+            setProcId(master.getLockManager().remoteLocks().requestTableLock(tableName, type,
+                request.getDescription(), getNonceKey()));
+          }
+
+          @Override
+          protected String getDescription() {
+            return "RequestLock";
+          }
+        };
       } else if (request.hasNamespace()) {
-        procId = master.getLockManager().remoteLocks().requestNamespaceLock(
-            request.getNamespace(), type, request.getDescription(),
-            request.getNonceGroup(), request.getNonce());
+        npr = new NonceProcedureRunnable(master, request.getNonceGroup(), request.getNonce()) {
+          @Override
+          protected void run() throws IOException {
+            setProcId(master.getLockManager().remoteLocks().requestNamespaceLock(
+                request.getNamespace(), type, request.getDescription(), getNonceKey()));
+          }
+
+          @Override
+          protected String getDescription() {
+            return "RequestLock";
+          }
+        };
       } else {
         throw new IllegalArgumentException("one of table/namespace/region should be specified");
       }
+      long procId = MasterProcedureUtil.submitProcedure(npr);
       return LockResponse.newBuilder().setProcId(procId).build();
     } catch (IllegalArgumentException e) {
       LOG.warn("Exception when queuing lock", e);
