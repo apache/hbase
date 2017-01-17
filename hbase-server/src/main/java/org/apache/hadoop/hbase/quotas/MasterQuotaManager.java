@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -58,6 +59,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 @InterfaceStability.Evolving
 public class MasterQuotaManager implements RegionStateListener {
   private static final Log LOG = LogFactory.getLog(MasterQuotaManager.class);
+  private static final Map<HRegionInfo, Long> EMPTY_MAP = Collections.unmodifiableMap(
+      new HashMap<>());
 
   private final MasterServices masterServices;
   private NamedLock<String> namespaceLocks;
@@ -529,13 +532,19 @@ public class MasterQuotaManager implements RegionStateListener {
   }
 
   public void addRegionSize(HRegionInfo hri, long size) {
-    // TODO Make proper API
+    if (null == regionSizes) {
+      return;
+    }
+    // TODO Make proper API?
     // TODO Prevent from growing indefinitely
     regionSizes.put(hri, size);
   }
 
   public Map<HRegionInfo, Long> snapshotRegionSizes() {
-    // TODO Make proper API
+    if (null == regionSizes) {
+      return EMPTY_MAP;
+    }
+    // TODO Make proper API?
     return new HashMap<>(regionSizes);
   }
 }

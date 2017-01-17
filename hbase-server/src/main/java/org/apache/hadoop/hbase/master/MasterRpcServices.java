@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -1911,6 +1912,9 @@ public class MasterRpcServices extends RSRpcServices
       RegionSpaceUseReportRequest request) throws ServiceException {
     try {
       master.checkInitialized();
+      if (!QuotaUtil.isQuotaEnabled(master.getConfiguration())) {
+        return RegionSpaceUseReportResponse.newBuilder().build();
+      }
       MasterQuotaManager quotaManager = this.master.getMasterQuotaManager();
       for (RegionSpaceUse report : request.getSpaceUseList()) {
         quotaManager.addRegionSize(HRegionInfo.convert(report.getRegion()), report.getSize());
