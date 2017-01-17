@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -196,7 +197,9 @@ public class HRegionFileSystem {
     try {
       ReflectionUtils.invokeMethod(this.fs, "setStoragePolicy", storeDir, policyName);
     } catch (Exception e) {
-      LOG.warn("Failed to set storage policy of [" + storeDir + "] to [" + policyName + "]", e);
+      if (!(this.fs instanceof LocalFileSystem)) {
+        LOG.warn("Failed to set storage policy of [" + storeDir + "] to [" + policyName + "]", e);
+      }
     }
   }
 
