@@ -74,6 +74,9 @@ public interface RpcCallContext {
    */
   long getResponseCellSize();
 
+  long getResponseExceptionSize();
+  void incrementResponseExceptionSize(long exceptionSize);
+
   /**
    * Add on the given amount to the retained cell size.
    *
