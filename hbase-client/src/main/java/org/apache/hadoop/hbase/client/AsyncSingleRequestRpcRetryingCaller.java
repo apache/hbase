@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 
 import io.netty.util.HashedWheelTimer;
@@ -90,7 +89,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
 
   public AsyncSingleRequestRpcRetryingCaller(HashedWheelTimer retryTimer, AsyncConnectionImpl conn,
       TableName tableName, byte[] row, RegionLocateType locateType, Callable<T> callable,
-      long pauseNs, int maxRetries, long operationTimeoutNs, long rpcTimeoutNs,
+      long pauseNs, int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs,
       int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
@@ -99,7 +98,7 @@ class AsyncSingleRequestRpcRetryingCaller<T> {
     this.locateType = locateType;
     this.callable = callable;
     this.pauseNs = pauseNs;
-    this.maxAttempts = retries2Attempts(maxRetries);
+    this.maxAttempts = maxAttempts;
     this.operationTimeoutNs = operationTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
     this.startLogErrorsCnt = startLogErrorsCnt;

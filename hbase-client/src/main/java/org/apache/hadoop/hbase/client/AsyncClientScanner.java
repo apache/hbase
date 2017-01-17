@@ -55,14 +55,21 @@ class AsyncClientScanner {
 
   private final AsyncConnectionImpl conn;
 
+  private final long pauseNs;
+
+  private final int maxAttempts;
+
   private final long scanTimeoutNs;
 
   private final long rpcTimeoutNs;
 
+  private final int startLogErrorsCnt;
+
   private final ScanResultCache resultCache;
 
   public AsyncClientScanner(Scan scan, RawScanResultConsumer consumer, TableName tableName,
-      AsyncConnectionImpl conn, long scanTimeoutNs, long rpcTimeoutNs) {
+      AsyncConnectionImpl conn, long pauseNs, int maxAttempts, long scanTimeoutNs,
+      long rpcTimeoutNs, int startLogErrorsCnt) {
     if (scan.getStartRow() == null) {
       scan.withStartRow(EMPTY_START_ROW, scan.includeStartRow());
     }
@@ -73,8 +80,11 @@ class AsyncClientScanner {
     this.consumer = consumer;
     this.tableName = tableName;
     this.conn = conn;
+    this.pauseNs = pauseNs;
+    this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
+    this.startLogErrorsCnt = startLogErrorsCnt;
     this.resultCache = scan.getAllowPartialResults() || scan.getBatch() > 0
         ? new AllowPartialScanResultCache() : new CompleteScanResultCache();
   }
@@ -117,7 +127,9 @@ class AsyncClientScanner {
     conn.callerFactory.scanSingleRegion().id(resp.scannerId).location(resp.loc).stub(resp.stub)
         .setScan(scan).consumer(consumer).resultCache(resultCache)
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).start().whenComplete((hasMore, error) -> {
+        .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).start()
+        .whenComplete((hasMore, error) -> {
           if (error != null) {
             consumer.onError(error);
             return;
@@ -133,8 +145,9 @@ class AsyncClientScanner {
   private void openScanner() {
     conn.callerFactory.<OpenScannerResponse> single().table(tableName).row(scan.getStartRow())
         .locateType(getLocateType(scan)).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).action(this::callOpenScanner).call()
-        .whenComplete((resp, error) -> {
+        .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner)
+        .call().whenComplete((resp, error) -> {
           if (error != null) {
             consumer.onError(error);
             return;

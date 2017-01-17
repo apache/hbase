@@ -71,7 +71,7 @@ class AsyncRegionLocator {
       future.completeExceptionally(new TimeoutIOException(timeoutMsg.get()));
     }, timeoutNs, TimeUnit.NANOSECONDS);
     return future.whenComplete((loc, error) -> {
-      if (error.getClass() != TimeoutIOException.class) {
+      if (error != null && error.getClass() != TimeoutIOException.class) {
         // cancel timeout task if we are not completed by it.
         timeoutTask.cancel();
       }

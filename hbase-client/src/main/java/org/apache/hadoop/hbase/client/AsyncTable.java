@@ -23,9 +23,11 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 /**
  * The asynchronous table for normal users.
  * <p>
+ * The implementation is required to be thread safe.
+ * <p>
  * The implementation should make sure that user can do everything they want to the returned
- * {@code CompletableFuture} without break anything. Usually the implementation will require user to
- * provide a {@code ExecutorService}.
+ * {@code CompletableFuture} without breaking anything. Usually the implementation will require user
+ * to provide a {@code ExecutorService}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable

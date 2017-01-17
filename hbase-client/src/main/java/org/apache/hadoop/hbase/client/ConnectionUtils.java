@@ -342,16 +342,6 @@ public final class ConnectionUtils {
     return gets.stream().map(ConnectionUtils::toCheckExistenceOnly).collect(toList());
   }
 
-  static List<CompletableFuture<Void>> voidBatch(AsyncTableBase table,
-      List<? extends Row> actions) {
-    return table.<Object> batch(actions).stream().map(f -> f.<Void> thenApply(r -> null))
-        .collect(toList());
-  }
-
-  static CompletableFuture<Void> voidBatchAll(AsyncTableBase table, List<? extends Row> actions) {
-    return table.<Object> batchAll(actions).thenApply(r -> null);
-  }
-
   static RegionLocateType getLocateType(Scan scan) {
     if (scan.isReversed()) {
       if (isEmptyStartRow(scan.getStartRow())) {
@@ -388,5 +378,10 @@ public final class ConnectionUtils {
     // no need to test the inclusive of the stop row as the start key of a region is included in
     // the region.
     return Bytes.compareTo(info.getStartKey(), scan.getStopRow()) <= 0;
+  }
+
+  static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
   }
 }

@@ -30,16 +30,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -60,7 +58,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
 
   private static byte[] VALUE = Bytes.toBytes("value");
 
-  private AsyncConnectionImpl asyncConn;
+  private static AsyncConnectionImpl CONN;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -68,38 +66,24 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     TEST_UTIL.getAdmin().setBalancerRunning(false, true);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
+    CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), User.getCurrent());
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    IOUtils.closeQuietly(CONN);
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @After
-  public void tearDown() {
-    if (asyncConn != null) {
-      asyncConn.close();
-      asyncConn = null;
-    }
-  }
-
-  private void initConn(int startLogErrorsCnt, long pauseMs, int maxRetires) throws IOException {
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.setInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY, startLogErrorsCnt);
-    conf.setLong(HConstants.HBASE_CLIENT_PAUSE, pauseMs);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, maxRetires);
-    asyncConn = new AsyncConnectionImpl(conf, User.getCurrent());
   }
 
   @Test
   public void testRegionMove() throws InterruptedException, ExecutionException, IOException {
-    initConn(0, 100, 30);
     // This will leave a cached entry in location cache
-    HRegionLocation loc = asyncConn.getRegionLocator(TABLE_NAME).getRegionLocation(ROW).get();
+    HRegionLocation loc = CONN.getRegionLocator(TABLE_NAME).getRegionLocation(ROW).get();
     int index = TEST_UTIL.getHBaseCluster().getServerWith(loc.getRegionInfo().getRegionName());
     TEST_UTIL.getAdmin().move(loc.getRegionInfo().getEncodedNameAsBytes(), Bytes.toBytes(
       TEST_UTIL.getHBaseCluster().getRegionServer(1 - index).getServerName().getServerName()));
-    RawAsyncTable table = asyncConn.getRawTable(TABLE_NAME);
+    RawAsyncTable table = CONN.getRawTableBuilder(TABLE_NAME).setRetryPause(100, TimeUnit.MILLISECONDS)
+        .setMaxRetries(30).build();
     table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
 
     // move back
@@ -117,9 +101,9 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
 
   @Test
   public void testMaxRetries() throws IOException, InterruptedException {
-    initConn(0, 10, 2);
     try {
-      asyncConn.callerFactory.single().table(TABLE_NAME).row(ROW).operationTimeout(1, TimeUnit.DAYS)
+      CONN.callerFactory.single().table(TABLE_NAME).row(ROW).operationTimeout(1, TimeUnit.DAYS)
+          .maxAttempts(3).pause(10, TimeUnit.MILLISECONDS)
           .action((controller, loc, stub) -> failedFuture()).call().get();
       fail();
     } catch (ExecutionException e) {
@@ -129,14 +113,14 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
 
   @Test
   public void testOperationTimeout() throws IOException, InterruptedException {
-    initConn(0, 100, Integer.MAX_VALUE);
     long startNs = System.nanoTime();
     try {
-      asyncConn.callerFactory.single().table(TABLE_NAME).row(ROW)
-          .operationTimeout(1, TimeUnit.SECONDS).action((controller, loc, stub) -> failedFuture())
-          .call().get();
+      CONN.callerFactory.single().table(TABLE_NAME).row(ROW).operationTimeout(1, TimeUnit.SECONDS)
+          .pause(100, TimeUnit.MILLISECONDS).maxAttempts(Integer.MAX_VALUE)
+          .action((controller, loc, stub) -> failedFuture()).call().get();
       fail();
     } catch (ExecutionException e) {
+      e.printStackTrace();
       assertThat(e.getCause(), instanceOf(RetriesExhaustedException.class));
     }
     long costNs = System.nanoTime() - startNs;
@@ -146,12 +130,11 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
 
   @Test
   public void testLocateError() throws IOException, InterruptedException, ExecutionException {
-    initConn(0, 100, 5);
     AtomicBoolean errorTriggered = new AtomicBoolean(false);
     AtomicInteger count = new AtomicInteger(0);
-    HRegionLocation loc = asyncConn.getRegionLocator(TABLE_NAME).getRegionLocation(ROW).get();
+    HRegionLocation loc = CONN.getRegionLocator(TABLE_NAME).getRegionLocation(ROW).get();
     AsyncRegionLocator mockedLocator =
-        new AsyncRegionLocator(asyncConn, AsyncConnectionImpl.RETRY_TIMER) {
+        new AsyncRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER) {
           @Override
           CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
               RegionLocateType locateType, long timeoutNs) {
@@ -174,14 +157,15 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
           }
         };
     try (AsyncConnectionImpl mockedConn =
-        new AsyncConnectionImpl(asyncConn.getConfiguration(), User.getCurrent()) {
+        new AsyncConnectionImpl(CONN.getConfiguration(), User.getCurrent()) {
 
           @Override
           AsyncRegionLocator getLocator() {
             return mockedLocator;
           }
         }) {
-      RawAsyncTable table = new RawAsyncTableImpl(mockedConn, TABLE_NAME);
+      RawAsyncTable table = mockedConn.getRawTableBuilder(TABLE_NAME)
+          .setRetryPause(100, TimeUnit.MILLISECONDS).setMaxRetries(5).build();
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
       assertTrue(errorTriggered.get());
       errorTriggered.set(false);

@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import static java.util.stream.Collectors.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -42,8 +42,8 @@ class AsyncTableImpl implements AsyncTable {
 
   private final long defaultScannerMaxResultSize;
 
-  public AsyncTableImpl(AsyncConnectionImpl conn, TableName tableName, ExecutorService pool) {
-    this.rawTable = conn.getRawTable(tableName);
+  AsyncTableImpl(AsyncConnectionImpl conn, RawAsyncTable rawTable, ExecutorService pool) {
+    this.rawTable = rawTable;
     this.pool = pool;
     this.defaultScannerMaxResultSize = conn.connConf.getScannerMaxResultSize();
   }
@@ -59,8 +59,8 @@ class AsyncTableImpl implements AsyncTable {
   }
 
   @Override
-  public void setReadRpcTimeout(long timeout, TimeUnit unit) {
-    rawTable.setReadRpcTimeout(timeout, unit);
+  public long getRpcTimeout(TimeUnit unit) {
+    return rawTable.getRpcTimeout(unit);
   }
 
   @Override
@@ -69,28 +69,13 @@ class AsyncTableImpl implements AsyncTable {
   }
 
   @Override
-  public void setWriteRpcTimeout(long timeout, TimeUnit unit) {
-    rawTable.setWriteRpcTimeout(timeout, unit);
-  }
-
-  @Override
   public long getWriteRpcTimeout(TimeUnit unit) {
     return rawTable.getWriteRpcTimeout(unit);
   }
 
   @Override
-  public void setOperationTimeout(long timeout, TimeUnit unit) {
-    rawTable.setOperationTimeout(timeout, unit);
-  }
-
-  @Override
   public long getOperationTimeout(TimeUnit unit) {
     return rawTable.getOperationTimeout(unit);
-  }
-
-  @Override
-  public void setScanTimeout(long timeout, TimeUnit unit) {
-    rawTable.setScanTimeout(timeout, unit);
   }
 
   @Override
@@ -194,7 +179,22 @@ class AsyncTableImpl implements AsyncTable {
   }
 
   @Override
+  public List<CompletableFuture<Result>> get(List<Get> gets) {
+    return rawTable.get(gets).stream().map(this::wrap).collect(toList());
+  }
+
+  @Override
+  public List<CompletableFuture<Void>> put(List<Put> puts) {
+    return rawTable.put(puts).stream().map(this::wrap).collect(toList());
+  }
+
+  @Override
+  public List<CompletableFuture<Void>> delete(List<Delete> deletes) {
+    return rawTable.delete(deletes).stream().map(this::wrap).collect(toList());
+  }
+
+  @Override
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
-    return rawTable.<T> batch(actions).stream().map(this::wrap).collect(Collectors.toList());
+    return rawTable.<T> batch(actions).stream().map(this::wrap).collect(toList());
   }
 }

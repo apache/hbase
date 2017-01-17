@@ -18,9 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.allOf;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.voidBatch;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.voidBatchAll;
 
 import com.google.common.base.Preconditions;
 
@@ -39,10 +38,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  * The base interface for asynchronous version of Table. Obtain an instance from a
  * {@link AsyncConnection}.
  * <p>
- * The implementation is NOT required to be thread safe. Do NOT access it from multiple threads
- * concurrently.
+ * The implementation is required to be thread safe.
  * <p>
- * Usually the implementations will not throw any exception directly, you need to get the exception
+ * Usually the implementation will not throw any exception directly. You need to get the exception
  * from the returned {@link CompletableFuture}.
  */
 @InterfaceAudience.Public
@@ -62,12 +60,12 @@ public interface AsyncTableBase {
   Configuration getConfiguration();
 
   /**
-   * Set timeout of each rpc read request in operations of this Table instance, will override the
-   * value of {@code hbase.rpc.read.timeout} in configuration. If a rpc read request waiting too
-   * long, it will stop waiting and send a new request to retry until retries exhausted or operation
-   * timeout reached.
+   * Get timeout of each rpc request in this Table instance. It will be overridden by a more
+   * specific rpc timeout config such as readRpcTimeout or writeRpcTimeout.
+   * @see #getReadRpcTimeout(TimeUnit)
+   * @see #getWriteRpcTimeout(TimeUnit)
    */
-  void setReadRpcTimeout(long timeout, TimeUnit unit);
+  long getRpcTimeout(TimeUnit unit);
 
   /**
    * Get timeout of each rpc read request in this Table instance.
@@ -75,29 +73,9 @@ public interface AsyncTableBase {
   long getReadRpcTimeout(TimeUnit unit);
 
   /**
-   * Set timeout of each rpc write request in operations of this Table instance, will override the
-   * value of {@code hbase.rpc.write.timeout} in configuration. If a rpc write request waiting too
-   * long, it will stop waiting and send a new request to retry until retries exhausted or operation
-   * timeout reached.
-   */
-  void setWriteRpcTimeout(long timeout, TimeUnit unit);
-
-  /**
    * Get timeout of each rpc write request in this Table instance.
    */
   long getWriteRpcTimeout(TimeUnit unit);
-
-  /**
-   * Set timeout of each operation in this Table instance, will override the value of
-   * {@code hbase.client.operation.timeout} in configuration.
-   * <p>
-   * Operation timeout is a top-level restriction that makes sure an operation will not be blocked
-   * more than this. In each operation, if rpc request fails because of timeout or other reason, it
-   * will retry until success or throw a RetriesExhaustedException. But if the total time elapsed
-   * reach the operation timeout before retries exhausted, it will break early and throw
-   * SocketTimeoutException.
-   */
-  void setOperationTimeout(long timeout, TimeUnit unit);
 
   /**
    * Get timeout of each operation in Table instance.
@@ -105,17 +83,8 @@ public interface AsyncTableBase {
   long getOperationTimeout(TimeUnit unit);
 
   /**
-   * Set timeout of a single operation in a scan, such as openScanner and next. Will override the
-   * value {@code hbase.client.scanner.timeout.period} in configuration.
-   * <p>
-   * Generally a scan will never timeout after we add heartbeat support unless the region is
-   * crashed. The {@code scanTimeout} works like the {@code operationTimeout} for each single
-   * operation in a scan.
-   */
-  void setScanTimeout(long timeout, TimeUnit unit);
-
-  /**
-   * Get the timeout of a single operation in a scan.
+   * Get the timeout of a single operation in a scan. It works like operation timeout for other
+   * operations.
    */
   long getScanTimeout(TimeUnit unit);
 
@@ -353,29 +322,6 @@ public interface AsyncTableBase {
   CompletableFuture<List<Result>> smallScan(Scan scan, int limit);
 
   /**
-   * Extracts certain cells from the given rows, in batch.
-   * <p>
-   * Notice that you may not get all the results with this function, which means some of the
-   * returned {@link CompletableFuture}s may succeed while some of the other returned
-   * {@link CompletableFuture}s may fail.
-   * @param gets The objects that specify what data to fetch and from which rows.
-   * @return A list of {@link CompletableFuture}s that represent the result for each get.
-   */
-  default List<CompletableFuture<Result>> get(List<Get> gets) {
-    return batch(gets);
-  }
-
-  /**
-   * A simple version for batch get. It will fail if there are any failures and you will get the
-   * whole result list at once if the operation is succeeded.
-   * @param gets The objects that specify what data to fetch and from which rows.
-   * @return A {@link CompletableFuture} that wrapper the result list.
-   */
-  default CompletableFuture<List<Result>> getAll(List<Get> gets) {
-    return batchAll(gets);
-  }
-
-  /**
    * Test for the existence of columns in the table, as specified by the Gets.
    * <p>
    * This will return a list of booleans. Each value will be true if the related Get matches one or
@@ -386,8 +332,8 @@ public interface AsyncTableBase {
    * @return A list of {@link CompletableFuture}s that represent the existence for each get.
    */
   default List<CompletableFuture<Boolean>> exists(List<Get> gets) {
-    return get(toCheckExistenceOnly(gets)).stream().
-        <CompletableFuture<Boolean>>map(f -> f.thenApply(r -> r.getExists())).collect(toList());
+    return get(toCheckExistenceOnly(gets)).stream()
+        .<CompletableFuture<Boolean>> map(f -> f.thenApply(r -> r.getExists())).collect(toList());
   }
 
   /**
@@ -397,8 +343,28 @@ public interface AsyncTableBase {
    * @return A {@link CompletableFuture} that wrapper the result boolean list.
    */
   default CompletableFuture<List<Boolean>> existsAll(List<Get> gets) {
-    return getAll(toCheckExistenceOnly(gets))
-        .thenApply(l -> l.stream().map(r -> r.getExists()).collect(toList()));
+    return allOf(exists(gets));
+  }
+
+  /**
+   * Extracts certain cells from the given rows, in batch.
+   * <p>
+   * Notice that you may not get all the results with this function, which means some of the
+   * returned {@link CompletableFuture}s may succeed while some of the other returned
+   * {@link CompletableFuture}s may fail.
+   * @param gets The objects that specify what data to fetch and from which rows.
+   * @return A list of {@link CompletableFuture}s that represent the result for each get.
+   */
+  List<CompletableFuture<Result>> get(List<Get> gets);
+
+  /**
+   * A simple version for batch get. It will fail if there are any failures and you will get the
+   * whole result list at once if the operation is succeeded.
+   * @param gets The objects that specify what data to fetch and from which rows.
+   * @return A {@link CompletableFuture} that wrapper the result list.
+   */
+  default CompletableFuture<List<Result>> getAll(List<Get> gets) {
+    return allOf(get(gets));
   }
 
   /**
@@ -406,9 +372,7 @@ public interface AsyncTableBase {
    * @param puts The list of mutations to apply.
    * @return A list of {@link CompletableFuture}s that represent the result for each put.
    */
-  default List<CompletableFuture<Void>> put(List<Put> puts) {
-    return voidBatch(this, puts);
-  }
+  List<CompletableFuture<Void>> put(List<Put> puts);
 
   /**
    * A simple version of batch put. It will fail if there are any failures.
@@ -416,7 +380,7 @@ public interface AsyncTableBase {
    * @return A {@link CompletableFuture} that always returns null when complete normally.
    */
   default CompletableFuture<Void> putAll(List<Put> puts) {
-    return voidBatchAll(this, puts);
+    return allOf(put(puts)).thenApply(r -> null);
   }
 
   /**
@@ -424,9 +388,7 @@ public interface AsyncTableBase {
    * @param deletes list of things to delete.
    * @return A list of {@link CompletableFuture}s that represent the result for each delete.
    */
-  default List<CompletableFuture<Void>> delete(List<Delete> deletes) {
-    return voidBatch(this, deletes);
-  }
+  List<CompletableFuture<Void>> delete(List<Delete> deletes);
 
   /**
    * A simple version of batch delete. It will fail if there are any failures.
@@ -434,7 +396,7 @@ public interface AsyncTableBase {
    * @return A {@link CompletableFuture} that always returns null when complete normally.
    */
   default CompletableFuture<Void> deleteAll(List<Delete> deletes) {
-    return voidBatchAll(this, deletes);
+    return allOf(delete(deletes)).thenApply(r -> null);
   }
 
   /**
@@ -454,8 +416,6 @@ public interface AsyncTableBase {
    * @return A list of the result for the actions. Wrapped by a {@link CompletableFuture}.
    */
   default <T> CompletableFuture<List<T>> batchAll(List<? extends Row> actions) {
-    List<CompletableFuture<T>> futures = batch(actions);
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-        .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
+    return allOf(batch(actions));
   }
 }

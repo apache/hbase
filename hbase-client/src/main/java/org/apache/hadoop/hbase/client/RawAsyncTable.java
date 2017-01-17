@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 /**
  * A low level asynchronous table.
  * <p>
+ * The implementation is required to be thread safe.
+ * <p>
  * The returned {@code CompletableFuture} will be finished directly in the rpc framework's callback
  * thread, so typically you should not do any time consuming work inside these methods, otherwise
  * you will be likely to block at least one connection to RS(even more if the rpc framework uses

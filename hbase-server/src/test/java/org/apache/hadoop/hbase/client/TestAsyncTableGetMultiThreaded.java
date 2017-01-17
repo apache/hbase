@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_RETRIES_NUMBER;
-import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_READ_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.TABLES_ON_MASTER;
 import static org.junit.Assert.assertEquals;
 
@@ -33,6 +31,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -72,6 +71,8 @@ public class TestAsyncTableGetMultiThreaded {
 
   private static AsyncConnection CONN;
 
+  private static RawAsyncTable TABLE;
+
   private static byte[][] SPLIT_KEYS;
 
   @BeforeClass
@@ -79,14 +80,13 @@ public class TestAsyncTableGetMultiThreaded {
     setUp(HColumnDescriptor.MemoryCompaction.NONE);
   }
 
-  protected static void setUp(HColumnDescriptor.MemoryCompaction memoryCompaction) throws Exception {
+  protected static void setUp(HColumnDescriptor.MemoryCompaction memoryCompaction)
+      throws Exception {
     TEST_UTIL.getConfiguration().set(TABLES_ON_MASTER, "none");
     TEST_UTIL.getConfiguration().setLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, 60000L);
-    TEST_UTIL.getConfiguration().setLong(HBASE_RPC_READ_TIMEOUT_KEY, 1000L);
-    TEST_UTIL.getConfiguration().setInt(HBASE_CLIENT_RETRIES_NUMBER, 1000);
     TEST_UTIL.getConfiguration().setInt(ByteBufferPool.MAX_POOL_SIZE_KEY, 100);
     TEST_UTIL.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(memoryCompaction));
+      String.valueOf(memoryCompaction));
 
     TEST_UTIL.startMiniCluster(5);
     SPLIT_KEYS = new byte[8][];
@@ -96,10 +96,11 @@ public class TestAsyncTableGetMultiThreaded {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
-    CONN.getRawTable(TABLE_NAME)
-        .putAll(
-          IntStream.range(0, COUNT).mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
-              .addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))).collect(Collectors.toList()))
+    TABLE = CONN.getRawTableBuilder(TABLE_NAME).setReadRpcTimeout(1, TimeUnit.SECONDS)
+        .setMaxRetries(1000).build();
+    TABLE.putAll(
+      IntStream.range(0, COUNT).mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
+          .addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))).collect(Collectors.toList()))
         .get();
   }
 
@@ -112,11 +113,8 @@ public class TestAsyncTableGetMultiThreaded {
   private void run(AtomicBoolean stop) throws InterruptedException, ExecutionException {
     while (!stop.get()) {
       for (int i = 0; i < COUNT; i++) {
-        assertEquals(i,
-            Bytes.toInt(
-                CONN.getRawTable(TABLE_NAME).get(new Get(Bytes.toBytes(String.format("%03d", i))))
-                    .get()
-                    .getValue(FAMILY, QUALIFIER)));
+        assertEquals(i, Bytes.toInt(TABLE.get(new Get(Bytes.toBytes(String.format("%03d", i))))
+            .get().getValue(FAMILY, QUALIFIER)));
       }
     }
   }

@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.CLUSTER_ID_DEFAULT;
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
-import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.NO_NONCE_GENERATOR;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.getStubKey;
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
@@ -90,7 +88,6 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
 
-  @SuppressWarnings("deprecation")
   public AsyncConnectionImpl(Configuration conf, User user) {
     this.conf = conf;
     this.user = user;
@@ -105,7 +102,8 @@ class AsyncConnectionImpl implements AsyncConnection {
     this.rpcClient = RpcClientFactory.createClient(conf, clusterId);
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
-    this.rpcTimeout = conf.getInt(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT);
+    this.rpcTimeout = (int) Math.min(Integer.MAX_VALUE,
+      TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
     this.locator = new AsyncRegionLocator(this, RETRY_TIMER);
     this.callerFactory = new AsyncRpcRetryingCallerFactory(this, RETRY_TIMER);
     if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
@@ -152,12 +150,25 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
-  public RawAsyncTable getRawTable(TableName tableName) {
-    return new RawAsyncTableImpl(this, tableName);
+  public AsyncTableBuilder<RawAsyncTable> getRawTableBuilder(TableName tableName) {
+    return new AsyncTableBuilderBase<RawAsyncTable>(tableName, connConf) {
+
+      @Override
+      public RawAsyncTable build() {
+        return new RawAsyncTableImpl(AsyncConnectionImpl.this, this);
+      }
+    };
   }
 
   @Override
-  public AsyncTable getTable(TableName tableName, ExecutorService pool) {
-    return new AsyncTableImpl(this, tableName, pool);
+  public AsyncTableBuilder<AsyncTable> getTableBuilder(TableName tableName, ExecutorService pool) {
+    return new AsyncTableBuilderBase<AsyncTable>(tableName, connConf) {
+
+      @Override
+      public AsyncTable build() {
+        RawAsyncTableImpl rawTable = new RawAsyncTableImpl(AsyncConnectionImpl.this, this);
+        return new AsyncTableImpl(AsyncConnectionImpl.this, rawTable, pool);
+      }
+    };
   }
 }

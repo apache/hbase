@@ -57,6 +57,12 @@ class AsyncSmallScanRpcRetryingCaller {
 
   private final long rpcTimeoutNs;
 
+  private final long pauseNs;
+
+  private final int maxAttempts;
+
+  private final int startLogErrosCnt;
+
   private final Function<HRegionInfo, Boolean> nextScan;
 
   private final List<Result> resultList;
@@ -64,13 +70,17 @@ class AsyncSmallScanRpcRetryingCaller {
   private final CompletableFuture<List<Result>> future;
 
   public AsyncSmallScanRpcRetryingCaller(AsyncConnectionImpl conn, TableName tableName, Scan scan,
-      int limit, long scanTimeoutNs, long rpcTimeoutNs) {
+      int limit, long pauseNs, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
+      int startLogErrosCnt) {
     this.conn = conn;
     this.tableName = tableName;
     this.scan = scan;
     this.limit = limit;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
+    this.pauseNs = pauseNs;
+    this.maxAttempts = maxAttempts;
+    this.startLogErrosCnt = startLogErrosCnt;
     if (scan.isReversed()) {
       this.nextScan = this::reversedNextScan;
     } else {
@@ -146,7 +156,8 @@ class AsyncSmallScanRpcRetryingCaller {
   private void scan() {
     conn.callerFactory.<SmallScanResponse> single().table(tableName).row(scan.getStartRow())
         .locateType(getLocateType(scan)).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).action(this::scan).call()
+        .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrosCnt).action(this::scan).call()
         .whenComplete((resp, error) -> {
           if (error != null) {
             future.completeExceptionally(error);

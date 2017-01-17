@@ -56,6 +56,10 @@ class AsyncConnectionConfiguration {
   // by this value, see scanTimeoutNs.
   private final long operationTimeoutNs;
 
+  // timeout for each rpc request. Can be overridden by a more specific config, such as
+  // readRpcTimeout or writeRpcTimeout.
+  private final long rpcTimeoutNs;
+
   // timeout for each read rpc request
   private final long readRpcTimeoutNs;
 
@@ -85,10 +89,12 @@ class AsyncConnectionConfiguration {
       conf.getLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT));
     this.operationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
       conf.getLong(HBASE_CLIENT_OPERATION_TIMEOUT, DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT));
-    this.readRpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY,
-      conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT)));
-    this.writeRpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY,
-      conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT)));
+    this.rpcTimeoutNs = TimeUnit.MILLISECONDS
+        .toNanos(conf.getLong(HBASE_RPC_TIMEOUT_KEY, DEFAULT_HBASE_RPC_TIMEOUT));
+    this.readRpcTimeoutNs =
+        TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, rpcTimeoutNs));
+    this.writeRpcTimeoutNs =
+        TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY, rpcTimeoutNs));
     this.pauseNs =
         TimeUnit.MILLISECONDS.toNanos(conf.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE));
     this.maxRetries = conf.getInt(HBASE_CLIENT_RETRIES_NUMBER, DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
@@ -109,6 +115,10 @@ class AsyncConnectionConfiguration {
 
   long getOperationTimeoutNs() {
     return operationTimeoutNs;
+  }
+
+  long getRpcTimeoutNs() {
+    return rpcTimeoutNs;
   }
 
   long getReadRpcTimeoutNs() {

@@ -50,21 +50,32 @@ public interface AsyncConnection extends Closeable {
   AsyncTableRegionLocator getRegionLocator(TableName tableName);
 
   /**
-   * Retrieve an RawAsyncTable implementation for accessing a table. The returned Table is not
-   * thread safe, a new instance should be created for each using thread. This is a lightweight
-   * operation, pooling or caching of the returned AsyncTable is neither required nor desired.
+   * Retrieve an {@link RawAsyncTable} implementation for accessing a table.
+   * <p>
+   * The returned instance will use default configs. Use {@link #getRawTableBuilder(TableName)} if you
+   * want to customize some configs.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
    * @param tableName the name of the table
    * @return an RawAsyncTable to use for interactions with this table
+   * @see #getRawTableBuilder(TableName)
    */
-  RawAsyncTable getRawTable(TableName tableName);
+  default RawAsyncTable getRawTable(TableName tableName) {
+    return getRawTableBuilder(tableName).build();
+  }
 
   /**
-   * Retrieve an AsyncTable implementation for accessing a table. The returned Table is not thread
-   * safe, a new instance should be created for each using thread. This is a lightweight operation,
-   * pooling or caching of the returned AsyncTable is neither required nor desired.
+   * Returns an {@link AsyncTableBuilder} for creating {@link RawAsyncTable}.
+   * <p>
+   * This method no longer checks table existence. An exception will be thrown if the table does not
+   * exist only when the first operation is attempted.
+   * @param tableName the name of the table
+   */
+  AsyncTableBuilder<RawAsyncTable> getRawTableBuilder(TableName tableName);
+
+  /**
+   * Retrieve an AsyncTable implementation for accessing a table.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
@@ -72,5 +83,17 @@ public interface AsyncConnection extends Closeable {
    * @param pool the thread pool to use for executing callback
    * @return an AsyncTable to use for interactions with this table
    */
-  AsyncTable getTable(TableName tableName, ExecutorService pool);
+  default AsyncTable getTable(TableName tableName, ExecutorService pool) {
+    return getTableBuilder(tableName, pool).build();
+  }
+
+  /**
+   * Returns an {@link AsyncTableBuilder} for creating {@link AsyncTable}.
+   * <p>
+   * This method no longer checks table existence. An exception will be thrown if the table does not
+   * exist only when the first operation is attempted.
+   * @param tableName the name of the table
+   * @param pool the thread pool to use for executing callback
+   */
+  AsyncTableBuilder<AsyncTable> getTableBuilder(TableName tableName, ExecutorService pool);
 }

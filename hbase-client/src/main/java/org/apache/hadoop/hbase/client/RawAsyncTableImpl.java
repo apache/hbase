@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 
 import java.io.IOException;
@@ -67,24 +68,35 @@ class RawAsyncTableImpl implements RawAsyncTable {
 
   private final long defaultScannerMaxResultSize;
 
-  private long readRpcTimeoutNs;
+  private final long rpcTimeoutNs;
 
-  private long writeRpcTimeoutNs;
+  private final long readRpcTimeoutNs;
 
-  private long operationTimeoutNs;
+  private final long writeRpcTimeoutNs;
 
-  private long scanTimeoutNs;
+  private final long operationTimeoutNs;
 
-  public RawAsyncTableImpl(AsyncConnectionImpl conn, TableName tableName) {
+  private final long scanTimeoutNs;
+
+  private final long pauseNs;
+
+  private final int maxAttempts;
+
+  private final int startLogErrorsCnt;
+
+  RawAsyncTableImpl(AsyncConnectionImpl conn, AsyncTableBuilderBase<?> builder) {
     this.conn = conn;
-    this.tableName = tableName;
-    this.readRpcTimeoutNs = conn.connConf.getReadRpcTimeoutNs();
-    this.writeRpcTimeoutNs = conn.connConf.getWriteRpcTimeoutNs();
-    this.operationTimeoutNs = tableName.isSystemTable() ? conn.connConf.getMetaOperationTimeoutNs()
-        : conn.connConf.getOperationTimeoutNs();
+    this.tableName = builder.tableName;
+    this.rpcTimeoutNs = builder.rpcTimeoutNs;
+    this.readRpcTimeoutNs = builder.readRpcTimeoutNs;
+    this.writeRpcTimeoutNs = builder.writeRpcTimeoutNs;
+    this.operationTimeoutNs = builder.operationTimeoutNs;
+    this.scanTimeoutNs = builder.scanTimeoutNs;
+    this.pauseNs = builder.pauseNs;
+    this.maxAttempts = builder.maxAttempts;
+    this.startLogErrorsCnt = builder.startLogErrorsCnt;
     this.defaultScannerCaching = conn.connConf.getScannerCaching();
     this.defaultScannerMaxResultSize = conn.connConf.getScannerMaxResultSize();
-    this.scanTimeoutNs = conn.connConf.getScanTimeoutNs();
   }
 
   @Override
@@ -178,7 +190,9 @@ class RawAsyncTableImpl implements RawAsyncTable {
   private <T> SingleRequestCallerBuilder<T> newCaller(byte[] row, long rpcTimeoutNs) {
     return conn.callerFactory.<T> single().table(tableName).row(row)
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS);
+        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
+        .pause(pauseNs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+        .startLogErrorsCnt(startLogErrorsCnt);
   }
 
   private <T> SingleRequestCallerBuilder<T> newCaller(Row row, long rpcTimeoutNs) {
@@ -214,7 +228,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
   @Override
   public CompletableFuture<Result> append(Append append) {
     checkHasFamilies(append);
-    return this.<Result> newCaller(append, writeRpcTimeoutNs)
+    return this.<Result> newCaller(append, rpcTimeoutNs)
         .action((controller, loc, stub) -> this.<Append, Result> noncedMutate(controller, loc, stub,
           append, RequestConverter::buildMutateRequest, RawAsyncTableImpl::toResult))
         .call();
@@ -223,7 +237,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
   @Override
   public CompletableFuture<Result> increment(Increment increment) {
     checkHasFamilies(increment);
-    return this.<Result> newCaller(increment, writeRpcTimeoutNs)
+    return this.<Result> newCaller(increment, rpcTimeoutNs)
         .action((controller, loc, stub) -> this.<Increment, Result> noncedMutate(controller, loc,
           stub, increment, RequestConverter::buildMutateRequest, RawAsyncTableImpl::toResult))
         .call();
@@ -232,7 +246,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
   @Override
   public CompletableFuture<Boolean> checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Put put) {
-    return this.<Boolean> newCaller(row, writeRpcTimeoutNs)
+    return this.<Boolean> newCaller(row, rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Put, Boolean> mutate(controller, loc,
           stub, put,
           (rn, p) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
@@ -244,7 +258,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
   @Override
   public CompletableFuture<Boolean> checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Delete delete) {
-    return this.<Boolean> newCaller(row, writeRpcTimeoutNs)
+    return this.<Boolean> newCaller(row, rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete, Boolean> mutate(controller,
           loc, stub, delete,
           (rn, d) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
@@ -303,20 +317,18 @@ class RawAsyncTableImpl implements RawAsyncTable {
           RegionAction.Builder regionMutationBuilder = RequestConverter.buildRegionAction(rn, rm);
           regionMutationBuilder.setAtomic(true);
           return MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
-        }, (resp) -> {
-          return null;
-        })).call();
+        }, resp -> null)).call();
   }
 
   @Override
   public CompletableFuture<Boolean> checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, RowMutations mutation) {
-    return this.<Boolean> newCaller(mutation, writeRpcTimeoutNs)
+    return this.<Boolean> newCaller(mutation, rpcTimeoutNs)
         .action((controller, loc, stub) -> RawAsyncTableImpl.<Boolean> mutateRow(controller, loc,
           stub, mutation,
           (rn, rm) -> RequestConverter.buildMutateRequest(rn, row, family, qualifier,
             new BinaryComparator(value), CompareType.valueOf(compareOp.name()), rm),
-          (resp) -> resp.getExists()))
+          resp -> resp.getExists()))
         .call();
   }
 
@@ -349,7 +361,8 @@ class RawAsyncTableImpl implements RawAsyncTable {
     }
     return conn.callerFactory.smallScan().table(tableName).setScan(setDefaultScanConfig(scan))
         .limit(limit).scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS)
-        .rpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS).call();
+        .rpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).call();
   }
 
   public void scan(Scan scan, RawScanResultConsumer consumer) {
@@ -362,13 +375,44 @@ class RawAsyncTableImpl implements RawAsyncTable {
       }
     }
     scan = setDefaultScanConfig(scan);
-    new AsyncClientScanner(scan, consumer, tableName, conn, scanTimeoutNs, readRpcTimeoutNs)
-        .start();
+    new AsyncClientScanner(scan, consumer, tableName, conn, pauseNs, maxAttempts, scanTimeoutNs,
+        readRpcTimeoutNs, startLogErrorsCnt).start();
   }
 
   @Override
-  public void setReadRpcTimeout(long timeout, TimeUnit unit) {
-    this.readRpcTimeoutNs = unit.toNanos(timeout);
+  public List<CompletableFuture<Result>> get(List<Get> gets) {
+    return batch(gets, readRpcTimeoutNs);
+  }
+
+  @Override
+  public List<CompletableFuture<Void>> put(List<Put> puts) {
+    return voidMutate(puts);
+  }
+  @Override
+  public List<CompletableFuture<Void>> delete(List<Delete> deletes) {
+    return voidMutate(deletes);
+  }
+
+  @Override
+  public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
+    return batch(actions, rpcTimeoutNs);
+  }
+
+  private List<CompletableFuture<Void>> voidMutate(List<? extends Row> actions) {
+    return this.<Object> batch(actions, writeRpcTimeoutNs).stream()
+        .map(f -> f.<Void> thenApply(r -> null)).collect(toList());
+  }
+
+  private <T> List<CompletableFuture<T>> batch(List<? extends Row> actions, long rpcTimeoutNs) {
+    return conn.callerFactory.batch().table(tableName).actions(actions)
+        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
+        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).call();
+  }
+
+  @Override
+  public long getRpcTimeout(TimeUnit unit) {
+    return unit.convert(rpcTimeoutNs, TimeUnit.NANOSECONDS);
   }
 
   @Override
@@ -377,18 +421,8 @@ class RawAsyncTableImpl implements RawAsyncTable {
   }
 
   @Override
-  public void setWriteRpcTimeout(long timeout, TimeUnit unit) {
-    this.writeRpcTimeoutNs = unit.toNanos(timeout);
-  }
-
-  @Override
   public long getWriteRpcTimeout(TimeUnit unit) {
     return unit.convert(writeRpcTimeoutNs, TimeUnit.NANOSECONDS);
-  }
-
-  @Override
-  public void setOperationTimeout(long timeout, TimeUnit unit) {
-    this.operationTimeoutNs = unit.toNanos(timeout);
   }
 
   @Override
@@ -397,20 +431,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
   }
 
   @Override
-  public void setScanTimeout(long timeout, TimeUnit unit) {
-    this.scanTimeoutNs = unit.toNanos(timeout);
-  }
-
-  @Override
   public long getScanTimeout(TimeUnit unit) {
-    return TimeUnit.NANOSECONDS.convert(scanTimeoutNs, unit);
-  }
-
-  @Override
-  public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
-    return conn.callerFactory.batch().table(tableName).actions(actions)
-        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-        .readRpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .writeRpcTimeout(writeRpcTimeoutNs, TimeUnit.NANOSECONDS).call();
+    return unit.convert(scanTimeoutNs, TimeUnit.NANOSECONDS);
   }
 }

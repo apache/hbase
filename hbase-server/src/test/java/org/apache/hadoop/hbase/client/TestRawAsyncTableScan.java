@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -122,10 +121,7 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
   @Override
   protected List<Result> doScan(Scan scan) throws Exception {
     SimpleRawScanResultConsumer scanConsumer = new SimpleRawScanResultConsumer();
-    RawAsyncTable table = ASYNC_CONN.getRawTable(TABLE_NAME);
-    table.setScanTimeout(1, TimeUnit.HOURS);
-    table.setReadRpcTimeout(1, TimeUnit.HOURS);
-    table.scan(scan, scanConsumer);
+    ASYNC_CONN.getRawTable(TABLE_NAME).scan(scan, scanConsumer);
     List<Result> results = new ArrayList<>();
     for (Result result; (result = scanConsumer.take()) != null;) {
       results.add(result);

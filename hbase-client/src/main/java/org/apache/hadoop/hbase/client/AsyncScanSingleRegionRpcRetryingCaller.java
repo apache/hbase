@@ -108,7 +108,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   public AsyncScanSingleRegionRpcRetryingCaller(HashedWheelTimer retryTimer,
       AsyncConnectionImpl conn, Scan scan, long scannerId, ScanResultCache resultCache,
       RawScanResultConsumer consumer, Interface stub, HRegionLocation loc, long pauseNs,
-      int maxRetries, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+      int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.scan = scan;
     this.scannerId = scannerId;
@@ -117,7 +117,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.stub = stub;
     this.loc = loc;
     this.pauseNs = pauseNs;
-    this.maxAttempts = retries2Attempts(maxRetries);
+    this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
     this.startLogErrorsCnt = startLogErrorsCnt;
