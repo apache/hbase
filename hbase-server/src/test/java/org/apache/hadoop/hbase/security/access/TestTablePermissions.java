@@ -340,6 +340,8 @@ public class TestTablePermissions {
         TablePermission.Action.READ));
     permissions.put("hubert", new TablePermission(TEST_TABLE2, null,
         TablePermission.Action.READ, TablePermission.Action.WRITE));
+    permissions.put("bruce",new TablePermission(TEST_NAMESPACE,
+        TablePermission.Action.READ));
     return permissions;
   }
 

@@ -191,7 +191,7 @@ public class TablePermission extends Permission {
    *   by this permission, <code>false</code>
    */
   public boolean implies(String namespace, Action action) {
-    if (!this.namespace.equals(namespace)) {
+    if (this.namespace == null || !this.namespace.equals(namespace)) {
       return false;
     }
 
@@ -214,7 +214,7 @@ public class TablePermission extends Permission {
    */
   public boolean implies(TableName table, byte[] family, byte[] qualifier,
       Action action) {
-    if (!this.table.equals(table)) {
+    if (this.table == null || !this.table.equals(table)) {
       return false;
     }
 
@@ -244,7 +244,7 @@ public class TablePermission extends Permission {
    *   by this permission, otherwise <code>false</code>
    */
   public boolean implies(TableName table, KeyValue kv, Action action) {
-    if (!this.table.equals(table)) {
+    if (this.table == null || !this.table.equals(table)) {
       return false;
     }
 
@@ -273,7 +273,7 @@ public class TablePermission extends Permission {
    * return false.
    */
   public boolean matchesFamily(TableName table, byte[] family, Action action) {
-    if (!this.table.equals(table)) {
+    if (this.table == null || !this.table.equals(table)) {
       return false;
     }
 
@@ -362,17 +362,16 @@ public class TablePermission extends Permission {
       str.append("namespace=").append(namespace)
          .append(", ");
     }
-    else if(table != null) {
+    if(table != null) {
        str.append("table=").append(table)
           .append(", family=")
           .append(family == null ? null : Bytes.toString(family))
           .append(", qualifier=")
           .append(qualifier == null ? null : Bytes.toString(qualifier))
           .append(", ");
-    } else {
-      str.append("actions=");
     }
     if (actions != null) {
+      str.append("actions=");
       for (int i=0; i<actions.length; i++) {
         if (i > 0)
           str.append(",");
@@ -391,7 +390,9 @@ public class TablePermission extends Permission {
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     byte[] tableBytes = Bytes.readByteArray(in);
-    table = TableName.valueOf(tableBytes);
+    if(tableBytes.length > 0) {
+      table = TableName.valueOf(tableBytes);
+    }
     if (in.readBoolean()) {
       family = Bytes.readByteArray(in);
     }
@@ -406,7 +407,8 @@ public class TablePermission extends Permission {
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
-    Bytes.writeByteArray(out, table.getName());
+    // Explicitly writing null to maintain se/deserialize backward compatibility.
+    Bytes.writeByteArray(out, (table == null) ? null : table.getName());
     out.writeBoolean(family != null);
     if (family != null) {
       Bytes.writeByteArray(out, family);
