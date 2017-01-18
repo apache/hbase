@@ -310,4 +310,38 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
     kv.setSequenceId(this.getSequenceId());
     return kv;
   }
+
+  /**
+   * Needed doing 'contains' on List. Only compares the key portion, not the value.
+   */
+  @Override
+  public boolean equals(Object other) {
+    if (!(other instanceof Cell)) {
+      return false;
+    }
+    return CellUtil.equals(this, (Cell) other);
+  }
+
+  /**
+   * In line with {@link #equals(Object)}, only uses the key portion, not the value.
+   */
+  @Override
+  public int hashCode() {
+    return calculateHashForKey(this);
+  }
+
+  private int calculateHashForKey(ByteBufferCell cell) {
+    int rowHash = ByteBufferUtils.hashCode(cell.getRowByteBuffer(), cell.getRowPosition(),
+      cell.getRowLength());
+    int familyHash = ByteBufferUtils.hashCode(cell.getFamilyByteBuffer(), cell.getFamilyPosition(),
+      cell.getFamilyLength());
+    int qualifierHash = ByteBufferUtils.hashCode(cell.getQualifierByteBuffer(),
+      cell.getQualifierPosition(), cell.getQualifierLength());
+
+    int hash = 31 * rowHash + familyHash;
+    hash = 31 * hash + qualifierHash;
+    hash = 31 * hash + (int) cell.getTimestamp();
+    hash = 31 * hash + cell.getTypeByte();
+    return hash;
+  }
 }
