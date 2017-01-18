@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -124,13 +125,20 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   /**
-   * This method is called when it is clear that the flush to disk is completed.
-   * The store may do any post-flush actions at this point.
-   * One example is to update the WAL with sequence number that is known only at the store level.
+   * This method is called before the flush is executed.
+   * @return an estimation (lower bound) of the unflushed sequence id in memstore after the flush
+   * is executed. if memstore will be cleared returns {@code HConstants.NO_SEQNUM}.
    */
   @Override
-  public void finalizeFlush() {
-    updateLowestUnflushedSequenceIdInWAL(false);
+  public long preFlushSeqIDEstimation() {
+    if(compositeSnapshot) {
+      return HConstants.NO_SEQNUM;
+    }
+    Segment segment = getLastSegment();
+    if(segment == null) {
+      return HConstants.NO_SEQNUM;
+    }
+    return segment.getMinSequenceId();
   }
 
   @Override
@@ -362,6 +370,12 @@ public class CompactingMemStore extends AbstractMemStore {
     } finally {
       inMemoryFlushInProgress.set(false);
     }
+  }
+
+  private Segment getLastSegment() {
+    Segment localActive = getActive();
+    Segment tail = pipeline.getTail();
+    return tail == null ? localActive : tail;
   }
 
   private byte[] getFamilyNameInBytes() {

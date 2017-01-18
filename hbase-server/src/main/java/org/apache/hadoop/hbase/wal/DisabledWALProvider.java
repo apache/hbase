@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.wal;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -193,6 +194,11 @@ class DisabledWALProvider implements WALProvider {
     @Override
     public void sync(long txid) {
       sync();
+    }
+
+    public Long startCacheFlush(final byte[] encodedRegionName, Map<byte[], Long>
+        flushedFamilyNamesToSeq) {
+      return startCacheFlush(encodedRegionName, flushedFamilyNamesToSeq.keySet());
     }
 
     @Override

@@ -119,12 +119,12 @@ public interface MemStore {
   MemstoreSize size();
 
   /**
-   * This method is called when it is clear that the flush to disk is completed.
-   * The store may do any post-flush actions at this point.
-   * One example is to update the wal with sequence number that is known only at the store level.
+   * This method is called before the flush is executed.
+   * @return an estimation (lower bound) of the unflushed sequence id in memstore after the flush
+   * is executed. if memstore will be cleared returns {@code HConstants.NO_SEQNUM}.
    */
-  void finalizeFlush();
+  long preFlushSeqIDEstimation();
 
-  /* Return true if the memstore may need some extra memory space*/
+  /* Return true if the memstore may use some extra memory space*/
   boolean isSloppy();
 }

@@ -2509,8 +2509,8 @@ public class HStore implements Store {
     }
   }
 
-  public void finalizeFlush() {
-    memstore.finalizeFlush();
+  public Long preFlushSeqIDEstimation() {
+    return memstore.preFlushSeqIDEstimation();
   }
 
   @Override

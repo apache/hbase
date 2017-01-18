@@ -161,6 +161,8 @@ public interface WAL extends Closeable {
    */
   Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> families);
 
+  Long startCacheFlush(final byte[] encodedRegionName, Map<byte[], Long> familyToSeq);
+
   /**
    * Complete the cache flush.
    * @param encodedRegionName Encoded region name.

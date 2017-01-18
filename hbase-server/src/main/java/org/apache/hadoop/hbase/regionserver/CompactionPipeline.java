@@ -267,6 +267,14 @@ public class CompactionPipeline {
     if(segment != null) pipeline.addLast(segment);
   }
 
+  public Segment getTail() {
+    List<? extends Segment> localCopy = getSegments();
+    if(localCopy.isEmpty()) {
+      return null;
+    }
+    return localCopy.get(localCopy.size()-1);
+  }
+
   private boolean addFirst(ImmutableSegment segment) {
     pipeline.addFirst(segment);
     return true;

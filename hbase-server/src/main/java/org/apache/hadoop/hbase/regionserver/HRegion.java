@@ -2412,9 +2412,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     status.setStatus("Preparing flush snapshotting stores in " + getRegionInfo().getEncodedName());
     MemstoreSize totalSizeOfFlushableStores = new MemstoreSize();
 
-    Set<byte[]> flushedFamilyNames = new HashSet<byte[]>();
+    Map<byte[], Long> flushedFamilyNamesToSeq = new HashMap<>();
     for (Store store: storesToFlush) {
-      flushedFamilyNames.add(store.getFamily().getName());
+      flushedFamilyNamesToSeq.put(store.getFamily().getName(),
+          ((HStore) store).preFlushSeqIDEstimation());
     }
 
     TreeMap<byte[], StoreFlushContext> storeFlushCtxs
@@ -2434,7 +2435,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       if (wal != null) {
         Long earliestUnflushedSequenceIdForTheRegion =
-            wal.startCacheFlush(encodedRegionName, flushedFamilyNames);
+            wal.startCacheFlush(encodedRegionName, flushedFamilyNamesToSeq);
         if (earliestUnflushedSequenceIdForTheRegion == null) {
           // This should never happen. This is how startCacheFlush signals flush cannot proceed.
           String msg = this.getRegionInfo().getEncodedName() + " flush aborted; WAL closing.";
@@ -2677,9 +2678,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     // If we get to here, the HStores have been written.
-    for(Store storeToFlush :storesToFlush) {
-      ((HStore) storeToFlush).finalizeFlush();
-    }
     if (wal != null) {
       wal.completeCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
     }

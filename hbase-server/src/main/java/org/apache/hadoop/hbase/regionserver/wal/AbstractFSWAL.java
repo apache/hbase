@@ -429,6 +429,15 @@ public abstract class AbstractFSWAL<W> implements WAL {
   }
 
   @Override
+  public Long startCacheFlush(byte[] encodedRegionName, Map<byte[], Long> familyToSeq) {
+    if (!closeBarrier.beginOp()) {
+      LOG.info("Flush not started for " + Bytes.toString(encodedRegionName) + "; server closing.");
+      return null;
+    }
+    return this.sequenceIdAccounting.startCacheFlush(encodedRegionName, familyToSeq);
+  }
+
+  @Override
   public void completeCacheFlush(byte[] encodedRegionName) {
     this.sequenceIdAccounting.completeCacheFlush(encodedRegionName);
     closeBarrier.endOp();
