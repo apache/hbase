@@ -1053,8 +1053,11 @@ class AsyncProcess {
         }
 
         // run all the runnables
+        // HBASE-17475: Do not reuse the thread after stack reach a certain depth to prevent stack overflow
+        // for now, we use HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER to control the depth
         for (Runnable runnable : runnables) {
-          if ((--actionsRemaining == 0) && reuseThread) {
+          if ((--actionsRemaining == 0) && reuseThread
+              && numAttempt % HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER != 0) {
             runnable.run();
           } else {
             try {
