@@ -29,6 +29,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * ImmutableSegment is an abstract class that extends the API supported by a {@link Segment},
@@ -67,6 +70,14 @@ public class ImmutableSegment extends Segment {
   }
 
   /////////////////////  CONSTRUCTORS  /////////////////////
+  /**------------------------------------------------------------------------
+   * Empty C-tor to be used only for CompositeImmutableSegment
+   */
+  protected ImmutableSegment(CellComparator comparator) {
+    super(comparator);
+    this.timeRange = null;
+  }
+
   /**------------------------------------------------------------------------
    * Copy C-tor to be used when new ImmutableSegment is being built from a Mutable one.
    * This C-tor should be used when active MutableSegment is pushed into the compaction
@@ -139,6 +150,15 @@ public class ImmutableSegment extends Segment {
   @Override
   public long getMinTimestamp() {
     return this.timeRange.getMin();
+  }
+
+  public int getNumOfSegments() {
+    return 1;
+  }
+
+  public List<Segment> getAllSegments() {
+    List<Segment> res = new ArrayList<Segment>(Arrays.asList(this));
+    return res;
   }
 
   /**------------------------------------------------------------------------
@@ -231,7 +251,7 @@ public class ImmutableSegment extends Segment {
     Cell curCell;
     int idx = 0;
     // create this segment scanner with maximal possible read point, to go over all Cells
-    SegmentScanner segmentScanner = this.getScanner(Long.MAX_VALUE);
+    KeyValueScanner segmentScanner = this.getScanner(Long.MAX_VALUE);
 
     try {
       while ((curCell = segmentScanner.next()) != null) {

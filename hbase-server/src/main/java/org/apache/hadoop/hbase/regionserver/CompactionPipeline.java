@@ -238,6 +238,18 @@ public class CompactionPipeline {
     return new MemstoreSize(localCopy.peekLast().keySize(), localCopy.peekLast().heapOverhead());
   }
 
+  public MemstoreSize getPipelineSize() {
+    long keySize = 0;
+    long heapOverhead = 0;
+    LinkedList<? extends Segment> localCopy = readOnlyCopy;
+    if (localCopy.isEmpty()) return MemstoreSize.EMPTY_SIZE;
+    for (Segment segment : localCopy) {
+      keySize += segment.keySize();
+      heapOverhead += segment.heapOverhead();
+    }
+    return new MemstoreSize(keySize, heapOverhead);
+  }
+
   private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,
       boolean closeSegmentsInSuffix) {
     // During index merge we won't be closing the segments undergoing the merge. Segment#close()
