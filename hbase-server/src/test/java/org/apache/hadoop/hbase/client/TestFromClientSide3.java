@@ -692,6 +692,63 @@ public class TestFromClientSide3 {
     }
   }
 
+  /**
+   * A test case for issue HBASE-17482
+   * After combile seqid with mvcc readpoint, seqid/mvcc is acquired and stamped
+   * onto cells in the append thread, a countdown latch is used to ensure that happened
+   * before cells can be put into memstore. But the MVCCPreAssign patch(HBASE-16698)
+   * make the seqid/mvcc acquirement in handler thread and stamping in append thread
+   * No countdown latch to assure cells in memstore are stamped with seqid/mvcc.
+   * If cells without mvcc(A.K.A mvcc=0) are put into memstore, then a scanner
+   * with a smaller readpoint can see these data, which disobey the multi version
+   * concurrency control rules.
+   * This test case is to reproduce this scenario.
+   * @throws IOException
+   */
+  @Test
+  public void testMVCCUsingMVCCPreAssign() throws IOException {
+    TableName tableName = TableName.valueOf("testMVCCUsingMVCCPreAssign");
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
+    htd.addFamily(fam);
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    admin.createTable(htd);
+    Table table = admin.getConnection().getTable(TableName.valueOf("testMVCCUsingMVCCPreAssign"));
+    //put two row first to init the scanner
+    Put put = new Put(Bytes.toBytes("0"));
+    put.addColumn(FAMILY, Bytes.toBytes( ""), Bytes.toBytes("0"));
+    table.put(put);
+    put = new Put(Bytes.toBytes("00"));
+    put.addColumn(FAMILY, Bytes.toBytes( ""), Bytes.toBytes("0"));
+    table.put(put);
+    Scan scan = new Scan();
+    scan.setTimeRange(0, Long.MAX_VALUE);
+    scan.setCaching(1);
+    ResultScanner scanner = table.getScanner(scan);
+    //the started scanner shouldn't see the rows put below
+    for(int i = 1; i < 1000; i++) {
+      put = new Put(Bytes.toBytes(String.valueOf(i)));
+      put.setDurability(Durability.ASYNC_WAL);
+      put.addColumn(FAMILY, Bytes.toBytes( ""), Bytes.toBytes(i));
+      table.put(put);
+    }
+    int rowNum = 0;
+    for(Result result : scanner) {
+      rowNum++;
+    }
+    //scanner should only see two rows
+    assertEquals(2, rowNum);
+    scanner = table.getScanner(scan);
+    rowNum = 0;
+    for(Result result : scanner) {
+      rowNum++;
+    }
+    // the new scanner should see all rows
+    assertEquals(1001, rowNum);
+
+
+  }
+
   private static void assertNoLocks(final TableName tableName) throws IOException, InterruptedException {
     HRegion region = (HRegion) find(tableName);
     assertEquals(0, region.getLockedRows().size());
