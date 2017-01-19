@@ -18,14 +18,20 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -64,6 +70,58 @@ public class TestAsyncAdmin {
   @Before
   public void setUp() throws Exception {
     this.admin = ASYNC_CONN.getAdmin();
+  }
+
+  @Test
+  public void testListTables() throws Exception {
+    TableName t1 = TableName.valueOf("testListTables1");
+    TableName t2 = TableName.valueOf("testListTables2");
+    TableName t3 = TableName.valueOf("testListTables3");
+    TableName[] tables = new TableName[] { t1, t2, t3 };
+    for (int i = 0; i < tables.length; i++) {
+      TEST_UTIL.createTable(tables[i], FAMILY);
+    }
+
+    HTableDescriptor[] tableDescs = admin.listTables().get();
+    int size = tableDescs.length;
+    assertTrue(size >= tables.length);
+    for (int i = 0; i < tables.length && i < size; i++) {
+      boolean found = false;
+      for (int j = 0; j < tableDescs.length; j++) {
+        if (tableDescs[j].getTableName().equals(tables[i])) {
+          found = true;
+          break;
+        }
+      }
+      assertTrue("Not found: " + tables[i], found);
+    }
+
+    TableName[] tableNames = admin.listTableNames().get();
+    size = tableNames.length;
+    assertTrue(size >= tables.length);
+    for (int i = 0; i < tables.length && i < size; i++) {
+      boolean found = false;
+      for (int j = 0; j < tableNames.length; j++) {
+        if (tableNames[j].equals(tables[i])) {
+          found = true;
+          break;
+        }
+      }
+      assertTrue("Not found: " + tables[i], found);
+    }
+
+    for (int i = 0; i < tables.length; i++) {
+      TEST_UTIL.deleteTable(tables[i]);
+    }
+    tableDescs = admin.listTables().get();
+    assertEquals(0, tableDescs.length);
+    tableNames = admin.listTableNames().get();
+    assertEquals(0, tableNames.length);
+
+    tableDescs = admin.listTables((Pattern) null, true).get();
+    assertTrue("Not found system tables", tableDescs.length > 0);
+    tableNames = admin.listTableNames((Pattern) null, true).get();
+    assertTrue("Not found system tables", tableNames.length > 0);
   }
 
   @Test
