@@ -23,8 +23,10 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -39,6 +41,7 @@ public class TestAsyncAdmin {
 
   private static final Log LOG = LogFactory.getLog(TestAdmin1.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static byte [] FAMILY = Bytes.toBytes("testFamily");
 
   private static AsyncConnection ASYNC_CONN;
   private AsyncAdmin admin;
@@ -61,6 +64,19 @@ public class TestAsyncAdmin {
   @Before
   public void setUp() throws Exception {
     this.admin = ASYNC_CONN.getAdmin();
+  }
+
+  @Test
+  public void testTableExist() throws Exception {
+    final TableName table = TableName.valueOf("testTableExist");
+    boolean exist;
+    exist = admin.tableExists(table).get();
+    assertEquals(false, exist);
+    TEST_UTIL.createTable(table, FAMILY);
+    exist = admin.tableExists(table).get();
+    assertEquals(true, exist);
+    exist = admin.tableExists(TableName.META_TABLE_NAME).get();
+    assertEquals(true, exist);
   }
 
   @Test(timeout = 30000)

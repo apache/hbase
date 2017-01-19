@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterRequestCallerBuilder;
@@ -140,5 +142,10 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
             controller, stub, RequestConverter.buildIsBalancerEnabledRequest(),
             (s, c, req, done) -> s.isBalancerEnabled(c, req, done), (resp) -> resp.getEnabled()))
         .call();
+  }
+
+  @Override
+  public CompletableFuture<Boolean> tableExists(TableName tableName) {
+    return AsyncMetaTableAccessor.tableExists(connection, tableName);
   }
 }
