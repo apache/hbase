@@ -27,8 +27,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +46,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
@@ -59,18 +56,14 @@ import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
-import org.apache.hadoop.hbase.regionserver.SplitTransaction;
-import org.apache.hadoop.hbase.regionserver.SplitTransactionFactory;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Mockito;
 
 @Category({CoprocessorTests.class, SmallTests.class})
 public class TestCoprocessorInterface {
@@ -163,7 +156,6 @@ public class TestCoprocessorInterface {
     private boolean postCompactCalled;
     private boolean preFlushCalled;
     private boolean postFlushCalled;
-    private boolean postSplitCalled;
     private ConcurrentMap<String, Object> sharedData;
 
     @Override
@@ -215,10 +207,6 @@ public class TestCoprocessorInterface {
     public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
       postFlushCalled = true;
     }
-    @Override
-    public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e, Region l, Region r) {
-      postSplitCalled = true;
-    }
 
     @Override
     public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
@@ -243,9 +231,6 @@ public class TestCoprocessorInterface {
     }
     boolean wasCompacted() {
       return (preCompactCalled && postCompactCalled);
-    }
-    boolean wasSplit() {
-      return postSplitCalled;
     }
     Map<String, Object> getSharedData() {
       return sharedData;
@@ -281,7 +266,7 @@ public class TestCoprocessorInterface {
     TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] families = { fam1, fam2, fam3 };
 
-    Configuration hc = initSplit();
+    Configuration hc = initConfig();
     Region region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{}, families);
 
@@ -292,15 +277,11 @@ public class TestCoprocessorInterface {
 
     region.compact(false);
 
-    byte [] splitRow = ((HRegion)region).checkSplit();
-    assertNotNull(splitRow);
-    Region [] regions = split(region, splitRow);
-    for (int i = 0; i < regions.length; i++) {
-      regions[i] = reopenRegion(regions[i], CoprocessorImpl.class, CoprocessorII.class);
-    }
-    Coprocessor c = regions[0].getCoprocessorHost().
+    region = reopenRegion(region, CoprocessorImpl.class, CoprocessorII.class);
+
+    Coprocessor c = region.getCoprocessorHost().
         findCoprocessor(CoprocessorImpl.class.getName());
-    Coprocessor c2 = regions[0].getCoprocessorHost().
+    Coprocessor c2 = region.getCoprocessorHost().
         findCoprocessor(CoprocessorII.class.getName());
     Object o = ((CoprocessorImpl)c).getSharedData().get("test1");
     Object o2 = ((CoprocessorII)c2).getSharedData().get("test2");
@@ -308,39 +289,33 @@ public class TestCoprocessorInterface {
     assertNotNull(o2);
     // to coprocessors get different sharedDatas
     assertFalse(((CoprocessorImpl)c).getSharedData() == ((CoprocessorII)c2).getSharedData());
-    for (int i = 1; i < regions.length; i++) {
-      c = regions[i].getCoprocessorHost().
-          findCoprocessor(CoprocessorImpl.class.getName());
-      c2 = regions[i].getCoprocessorHost().
-          findCoprocessor(CoprocessorII.class.getName());
-      // make sure that all coprocessor of a class have identical sharedDatas
-      assertTrue(((CoprocessorImpl)c).getSharedData().get("test1") == o);
-      assertTrue(((CoprocessorII)c2).getSharedData().get("test2") == o2);
-    }
+    c = region.getCoprocessorHost().findCoprocessor(CoprocessorImpl.class.getName());
+    c2 = region.getCoprocessorHost().findCoprocessor(CoprocessorII.class.getName());
+    // make sure that all coprocessor of a class have identical sharedDatas
+    assertTrue(((CoprocessorImpl)c).getSharedData().get("test1") == o);
+    assertTrue(((CoprocessorII)c2).getSharedData().get("test2") == o2);
+
     // now have all Environments fail
-    for (int i = 0; i < regions.length; i++) {
-      try {
-        byte [] r = regions[i].getRegionInfo().getStartKey();
-        if (r == null || r.length <= 0) {
-          // Its the start row.  Can't ask for null.  Ask for minimal key instead.
-          r = new byte [] {0};
-        }
-        Get g = new Get(r);
-        regions[i].get(g);
-        fail();
-      } catch (org.apache.hadoop.hbase.DoNotRetryIOException xc) {
+    try {
+      byte [] r = region.getRegionInfo().getStartKey();
+      if (r == null || r.length <= 0) {
+        // Its the start row.  Can't ask for null.  Ask for minimal key instead.
+        r = new byte [] {0};
       }
-      assertNull(regions[i].getCoprocessorHost().
-          findCoprocessor(CoprocessorII.class.getName()));
+      Get g = new Get(r);
+      region.get(g);
+      fail();
+    } catch (org.apache.hadoop.hbase.DoNotRetryIOException xc) {
     }
-    c = regions[0].getCoprocessorHost().
+    assertNull(region.getCoprocessorHost().findCoprocessor(CoprocessorII.class.getName()));
+    c = region.getCoprocessorHost().
         findCoprocessor(CoprocessorImpl.class.getName());
     assertTrue(((CoprocessorImpl)c).getSharedData().get("test1") == o);
     c = c2 = null;
     // perform a GC
     System.gc();
     // reopen the region
-    region = reopenRegion(regions[0], CoprocessorImpl.class, CoprocessorII.class);
+    region = reopenRegion(region, CoprocessorImpl.class, CoprocessorII.class);
     c = region.getCoprocessorHost().
         findCoprocessor(CoprocessorImpl.class.getName());
     // CPimpl is unaffected, still the same reference
@@ -359,7 +334,7 @@ public class TestCoprocessorInterface {
     TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] families = { fam1, fam2, fam3 };
 
-    Configuration hc = initSplit();
+    Configuration hc = initConfig();
     Region region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
@@ -369,23 +344,16 @@ public class TestCoprocessorInterface {
 
     region.compact(false);
 
-    byte [] splitRow = ((HRegion)region).checkSplit();
-
-    assertNotNull(splitRow);
-    Region [] regions = split(region, splitRow);
-    for (int i = 0; i < regions.length; i++) {
-      regions[i] = reopenRegion(regions[i], CoprocessorImpl.class);
-    }
-    HBaseTestingUtility.closeRegionAndWAL(region);
-    Coprocessor c = region.getCoprocessorHost().
-      findCoprocessor(CoprocessorImpl.class.getName());
-
     // HBASE-4197
     Scan s = new Scan();
-    RegionScanner scanner = regions[0].getCoprocessorHost().postScannerOpen(s, regions[0].getScanner(s));
+    RegionScanner scanner = region.getCoprocessorHost().postScannerOpen(s, region.getScanner(s));
     assertTrue(scanner instanceof CustomScanner);
     // this would throw an exception before HBASE-4197
     scanner.next(new ArrayList<Cell>());
+
+    HBaseTestingUtility.closeRegionAndWAL(region);
+    Coprocessor c = region.getCoprocessorHost().
+      findCoprocessor(CoprocessorImpl.class.getName());
 
     assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
     assertTrue("Coprocessor not stopped", ((CoprocessorImpl)c).wasStopped());
@@ -393,18 +361,6 @@ public class TestCoprocessorInterface {
     assertTrue(((CoprocessorImpl)c).wasClosed());
     assertTrue(((CoprocessorImpl)c).wasFlushed());
     assertTrue(((CoprocessorImpl)c).wasCompacted());
-    assertTrue(((CoprocessorImpl)c).wasSplit());
-
-    for (int i = 0; i < regions.length; i++) {
-      HBaseTestingUtility.closeRegionAndWAL(regions[i]);
-      c = region.getCoprocessorHost()
-            .findCoprocessor(CoprocessorImpl.class.getName());
-      assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
-      assertTrue("Coprocessor not stopped", ((CoprocessorImpl)c).wasStopped());
-      assertTrue(((CoprocessorImpl)c).wasOpened());
-      assertTrue(((CoprocessorImpl)c).wasClosed());
-      assertTrue(((CoprocessorImpl)c).wasCompacted());
-    }
   }
 
   Region reopenRegion(final Region closedRegion, Class<?> ... implClasses)
@@ -461,7 +417,7 @@ public class TestCoprocessorInterface {
     return r;
   }
 
-  Configuration initSplit() {
+  private Configuration initConfig() {
     // Always compact if there is more than one store file.
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 2);
     // Make lease timeout longer, lease checks less frequent
@@ -480,37 +436,4 @@ public class TestCoprocessorInterface {
 
     return TEST_UTIL.getConfiguration();
   }
-
-  private Region [] split(final Region r, final byte [] splitRow) throws IOException {
-    Region[] regions = new Region[2];
-
-    SplitTransaction st = new SplitTransactionFactory(TEST_UTIL.getConfiguration())
-      .create(r, splitRow);
-    int i = 0;
-
-    if (!st.prepare()) {
-      // test fails.
-      assertTrue(false);
-    }
-    try {
-      Server mockServer = Mockito.mock(Server.class);
-      when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
-      PairOfSameType<Region> daughters = st.execute(mockServer, null);
-      for (Region each_daughter: daughters) {
-        regions[i] = each_daughter;
-        i++;
-      }
-    } catch (IOException ioe) {
-      LOG.info("Split transaction of " + r.getRegionInfo().getRegionNameAsString() +
-          " failed:" + ioe.getMessage());
-      assertTrue(false);
-    } catch (RuntimeException e) {
-      LOG.info("Failed rollback of failed split of " +
-          r.getRegionInfo().getRegionNameAsString() + e.getMessage());
-    }
-
-    assertTrue(i == 2);
-    return regions;
-  }
-
 }

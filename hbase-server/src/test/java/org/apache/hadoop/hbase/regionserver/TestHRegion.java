@@ -19,9 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.FIRST_CHAR;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.LAST_CHAR;
-import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
@@ -43,7 +40,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -85,7 +81,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -159,7 +154,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FaultyFSLog;
@@ -2646,45 +2640,6 @@ public class TestHRegion {
     }
   }
 
-  /**
-   * @param parent
-   *          Region to split.
-   * @param midkey
-   *          Key to split around.
-   * @return The Regions we created.
-   * @throws IOException
-   */
-  HRegion[] splitRegion(final HRegion parent, final byte[] midkey) throws IOException {
-    PairOfSameType<Region> result = null;
-    SplitTransactionImpl st = new SplitTransactionImpl(parent, midkey);
-    // If prepare does not return true, for some reason -- logged inside in
-    // the prepare call -- we are not ready to split just now. Just return.
-    if (!st.prepare()) {
-      parent.clearSplit();
-      return null;
-    }
-    try {
-      result = st.execute(null, null);
-    } catch (IOException ioe) {
-      try {
-        LOG.info("Running rollback of failed split of " +
-          parent.getRegionInfo().getRegionNameAsString() + "; " + ioe.getMessage());
-        st.rollback(null, null);
-        LOG.info("Successful rollback of failed split of " +
-          parent.getRegionInfo().getRegionNameAsString());
-        return null;
-      } catch (RuntimeException e) {
-        // If failed rollback, kill this server to avoid having a hole in table.
-        LOG.info("Failed rollback of failed split of " +
-          parent.getRegionInfo().getRegionNameAsString() + " -- aborting server", e);
-      }
-    }
-    finally {
-      parent.clearSplit();
-    }
-    return new HRegion[] { (HRegion)result.getFirst(), (HRegion)result.getSecond() };
-  }
-
   // ////////////////////////////////////////////////////////////////////////////
   // Scanner tests
   // ////////////////////////////////////////////////////////////////////////////
@@ -3516,204 +3471,6 @@ public class TestHRegion {
     region.flush(false);
     HBaseTestingUtility.closeRegionAndWAL(this.region);
     this.region = null;
-  }
-  // ////////////////////////////////////////////////////////////////////////////
-  // Split test
-  // ////////////////////////////////////////////////////////////////////////////
-  /**
-   * Splits twice and verifies getting from each of the split regions.
-   *
-   * @throws Exception
-   */
-  @Test
-  public void testBasicSplit() throws Exception {
-    byte[][] families = { fam1, fam2, fam3 };
-
-    Configuration hc = initSplit();
-    // Setting up region
-    this.region = initHRegion(tableName, method, hc, families);
-
-    try {
-      LOG.info("" + HBaseTestCase.addContent(region, fam3));
-      region.flush(true);
-      region.compactStores();
-      byte[] splitRow = region.checkSplit();
-      assertNotNull(splitRow);
-      LOG.info("SplitRow: " + Bytes.toString(splitRow));
-      HRegion[] regions = splitRegion(region, splitRow);
-      try {
-        // Need to open the regions.
-        // TODO: Add an 'open' to HRegion... don't do open by constructing
-        // instance.
-        for (int i = 0; i < regions.length; i++) {
-          regions[i] = HRegion.openHRegion(regions[i], null);
-        }
-        // Assert can get rows out of new regions. Should be able to get first
-        // row from first region and the midkey from second region.
-        assertGet(regions[0], fam3, Bytes.toBytes(START_KEY));
-        assertGet(regions[1], fam3, splitRow);
-        // Test I can get scanner and that it starts at right place.
-        assertScan(regions[0], fam3, Bytes.toBytes(START_KEY));
-        assertScan(regions[1], fam3, splitRow);
-        // Now prove can't split regions that have references.
-        for (int i = 0; i < regions.length; i++) {
-          // Add so much data to this region, we create a store file that is >
-          // than one of our unsplitable references. it will.
-          for (int j = 0; j < 2; j++) {
-            HBaseTestCase.addContent(regions[i], fam3);
-          }
-          HBaseTestCase.addContent(regions[i], fam2);
-          HBaseTestCase.addContent(regions[i], fam1);
-          regions[i].flush(true);
-        }
-
-        byte[][] midkeys = new byte[regions.length][];
-        // To make regions splitable force compaction.
-        for (int i = 0; i < regions.length; i++) {
-          regions[i].compactStores();
-          midkeys[i] = regions[i].checkSplit();
-        }
-
-        TreeMap<String, HRegion> sortedMap = new TreeMap<String, HRegion>();
-        // Split these two daughter regions so then I'll have 4 regions. Will
-        // split because added data above.
-        for (int i = 0; i < regions.length; i++) {
-          HRegion[] rs = null;
-          if (midkeys[i] != null) {
-            rs = splitRegion(regions[i], midkeys[i]);
-            for (int j = 0; j < rs.length; j++) {
-              sortedMap.put(Bytes.toString(rs[j].getRegionInfo().getRegionName()),
-                HRegion.openHRegion(rs[j], null));
-            }
-          }
-        }
-        LOG.info("Made 4 regions");
-        // The splits should have been even. Test I can get some arbitrary row
-        // out of each.
-        int interval = (LAST_CHAR - FIRST_CHAR) / 3;
-        byte[] b = Bytes.toBytes(START_KEY);
-        for (HRegion r : sortedMap.values()) {
-          assertGet(r, fam3, b);
-          b[0] += interval;
-        }
-      } finally {
-        for (int i = 0; i < regions.length; i++) {
-          try {
-            regions[i].close();
-          } catch (IOException e) {
-            // Ignore.
-          }
-        }
-      }
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
-  }
-
-  @Test
-  public void testSplitRegion() throws IOException {
-    byte[] qualifier = Bytes.toBytes("qualifier");
-    Configuration hc = initSplit();
-    int numRows = 10;
-    byte[][] families = { fam1, fam3 };
-
-    // Setting up region
-    this.region = initHRegion(tableName, method, hc, families);
-
-    // Put data in region
-    int startRow = 100;
-    putData(startRow, numRows, qualifier, families);
-    int splitRow = startRow + numRows;
-    putData(splitRow, numRows, qualifier, families);
-    region.flush(true);
-
-    HRegion[] regions = null;
-    try {
-      regions = splitRegion(region, Bytes.toBytes("" + splitRow));
-      // Opening the regions returned.
-      for (int i = 0; i < regions.length; i++) {
-        regions[i] = HRegion.openHRegion(regions[i], null);
-      }
-      // Verifying that the region has been split
-      assertEquals(2, regions.length);
-
-      // Verifying that all data is still there and that data is in the right
-      // place
-      verifyData(regions[0], startRow, numRows, qualifier, families);
-      verifyData(regions[1], splitRow, numRows, qualifier, families);
-
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
-  }
-
-  @Test
-  public void testClearForceSplit() throws IOException {
-    byte[] qualifier = Bytes.toBytes("qualifier");
-    Configuration hc = initSplit();
-    int numRows = 10;
-    byte[][] families = { fam1, fam3 };
-
-    // Setting up region
-    this.region = initHRegion(tableName, method, hc, families);
-
-    // Put data in region
-    int startRow = 100;
-    putData(startRow, numRows, qualifier, families);
-    int splitRow = startRow + numRows;
-    byte[] splitRowBytes = Bytes.toBytes("" + splitRow);
-    putData(splitRow, numRows, qualifier, families);
-    region.flush(true);
-
-    HRegion[] regions = null;
-    try {
-      // Set force split
-      region.forceSplit(splitRowBytes);
-      assertTrue(region.shouldForceSplit());
-      // Split point should be the force split row
-      assertTrue(Bytes.equals(splitRowBytes, region.checkSplit()));
-
-      // Add a store that has references.
-      HStore storeMock = Mockito.mock(HStore.class);
-      when(storeMock.hasReferences()).thenReturn(true);
-      when(storeMock.getFamily()).thenReturn(new HColumnDescriptor("cf"));
-      when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
-      when(storeMock.getColumnFamilyName()).thenReturn("cf");
-      region.stores.put(Bytes.toBytes(storeMock.getColumnFamilyName()), storeMock);
-      assertTrue(region.hasReferences());
-
-      // Will not split since the store has references.
-      regions = splitRegion(region, splitRowBytes);
-      assertNull(regions);
-
-      // Region force split should be cleared after the split try.
-      assertFalse(region.shouldForceSplit());
-
-      // Remove the store that has references.
-      region.stores.remove(Bytes.toBytes(storeMock.getColumnFamilyName()));
-      assertFalse(region.hasReferences());
-
-      // Now we can split.
-      regions = splitRegion(region, splitRowBytes);
-
-      // Opening the regions returned.
-      for (int i = 0; i < regions.length; i++) {
-        regions[i] = HRegion.openHRegion(regions[i], null);
-      }
-      // Verifying that the region has been split
-      assertEquals(2, regions.length);
-
-      // Verifying that all data is still there and that data is in the right
-      // place
-      verifyData(regions[0], startRow, numRows, qualifier, families);
-      verifyData(regions[1], splitRow, numRows, qualifier, families);
-
-    } finally {
-      HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
   }
 
   /**
@@ -5902,103 +5659,6 @@ public class TestHRegion {
         currRow.get(1).getRowOffset(), currRow.get(1).getRowLength()));
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
-      this.region = null;
-    }
-  }
-
-  @Test
-  public void testSplitRegionWithReverseScan() throws IOException {
-    TableName tableName = TableName.valueOf("testSplitRegionWithReverseScan");
-    byte [] qualifier = Bytes.toBytes("qualifier");
-    Configuration hc = initSplit();
-    int numRows = 3;
-    byte [][] families = {fam1};
-
-    //Setting up region
-    this.region = initHRegion(tableName, method, hc, families);
-
-    //Put data in region
-    int startRow = 100;
-    putData(startRow, numRows, qualifier, families);
-    int splitRow = startRow + numRows;
-    putData(splitRow, numRows, qualifier, families);
-    region.flush(true);
-
-    HRegion [] regions = null;
-    try {
-      regions = splitRegion(region, Bytes.toBytes("" + splitRow));
-      //Opening the regions returned.
-      for (int i = 0; i < regions.length; i++) {
-        regions[i] = HRegion.openHRegion(regions[i], null);
-      }
-      //Verifying that the region has been split
-      assertEquals(2, regions.length);
-
-      //Verifying that all data is still there and that data is in the right
-      //place
-      verifyData(regions[0], startRow, numRows, qualifier, families);
-      verifyData(regions[1], splitRow, numRows, qualifier, families);
-
-      //fire the reverse scan1:  top range, and larger than the last row
-      Scan scan = new Scan(Bytes.toBytes(String.valueOf(startRow + 10 * numRows)));
-      scan.setReversed(true);
-      InternalScanner scanner = regions[1].getScanner(scan);
-      List<Cell> currRow = new ArrayList<Cell>();
-      boolean more = false;
-      int verify = startRow + 2 * numRows - 1;
-      do {
-        more = scanner.next(currRow);
-        assertEquals(Bytes.toString(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
-          currRow.get(0).getRowLength()), verify + "");
-        verify--;
-        currRow.clear();
-      } while(more);
-      assertEquals(verify, startRow + numRows - 1);
-      scanner.close();
-      //fire the reverse scan2:  top range, and equals to the last row
-      scan = new Scan(Bytes.toBytes(String.valueOf(startRow + 2 * numRows - 1)));
-      scan.setReversed(true);
-      scanner = regions[1].getScanner(scan);
-      verify = startRow + 2 * numRows - 1;
-      do {
-        more = scanner.next(currRow);
-        assertEquals(Bytes.toString(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
-          currRow.get(0).getRowLength()), verify + "");
-        verify--;
-        currRow.clear();
-      } while(more);
-      assertEquals(verify, startRow + numRows - 1);
-      scanner.close();
-      //fire the reverse scan3:  bottom range, and larger than the last row
-      scan = new Scan(Bytes.toBytes(String.valueOf(startRow + numRows)));
-      scan.setReversed(true);
-      scanner = regions[0].getScanner(scan);
-      verify = startRow + numRows - 1;
-      do {
-        more = scanner.next(currRow);
-        assertEquals(Bytes.toString(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
-          currRow.get(0).getRowLength()), verify + "");
-        verify--;
-        currRow.clear();
-      } while(more);
-      assertEquals(verify, 99);
-      scanner.close();
-      //fire the reverse scan4:  bottom range, and equals to the last row
-      scan = new Scan(Bytes.toBytes(String.valueOf(startRow + numRows - 1)));
-      scan.setReversed(true);
-      scanner = regions[0].getScanner(scan);
-      verify = startRow + numRows - 1;
-      do {
-        more = scanner.next(currRow);
-        assertEquals(Bytes.toString(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
-          currRow.get(0).getRowLength()), verify + "");
-        verify--;
-        currRow.clear();
-      } while(more);
-      assertEquals(verify, startRow - 1);
-      scanner.close();
-    } finally {
-      this.region.close();
       this.region = null;
     }
   }
