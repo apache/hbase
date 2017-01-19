@@ -33,15 +33,22 @@ Client::Client() {
                   "hbase-site.xml is absent in the search path or problems in XML parsing";
     throw std::runtime_error("Configuration object not present.");
   }
-  conf_ = std::make_shared<hbase::Configuration>(conf.value());
-  auto zk_quorum = conf_->Get(kHBaseZookeeperQuorum_, kDefHBaseZookeeperQuorum_);
-  location_cache_ = std::make_shared<hbase::LocationCache>(zk_quorum, cpu_executor_, io_executor_);
+  init(conf.value());
 }
 
-Client::Client(const hbase::Configuration &conf) {
+Client::Client(const hbase::Configuration &conf) { init(conf); }
+
+void Client::init(const hbase::Configuration &conf) {
   conf_ = std::make_shared<hbase::Configuration>(conf);
   auto zk_quorum = conf_->Get(kHBaseZookeeperQuorum_, kDefHBaseZookeeperQuorum_);
-  location_cache_ = std::make_shared<hbase::LocationCache>(zk_quorum, cpu_executor_, io_executor_);
+
+  cpu_executor_ =
+      std::make_shared<wangle::CPUThreadPoolExecutor>(4);  // TODO: read num threads from conf
+  io_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(sysconf(_SC_NPROCESSORS_ONLN));
+
+  rpc_client_ = std::make_shared<hbase::RpcClient>(io_executor_);
+  location_cache_ = std::make_shared<hbase::LocationCache>(zk_quorum, cpu_executor_,
+                                                           rpc_client_->connection_pool());
 }
 
 // We can't have the threads continue running after everything is done

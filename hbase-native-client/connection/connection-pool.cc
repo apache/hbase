@@ -41,15 +41,7 @@ ConnectionPool::ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_
 ConnectionPool::ConnectionPool(std::shared_ptr<ConnectionFactory> cf)
     : cf_(cf), clients_(), connections_(), map_mutex_() {}
 
-ConnectionPool::~ConnectionPool() {
-  SharedMutexWritePriority::WriteHolder holder(map_mutex_);
-  for (auto &item : connections_) {
-    auto &con = item.second;
-    con->Close();
-  }
-  connections_.clear();
-  clients_.clear();
-}
+ConnectionPool::~ConnectionPool() { Close(); }
 
 std::shared_ptr<RpcConnection> ConnectionPool::GetConnection(
     std::shared_ptr<ConnectionId> remote_id) {
@@ -116,4 +108,12 @@ void ConnectionPool::Close(std::shared_ptr<ConnectionId> remote_id) {
   connections_.erase(found);
 }
 
-void ConnectionPool::Close() {}
+void ConnectionPool::Close() {
+  SharedMutexWritePriority::WriteHolder holder{map_mutex_};
+  for (auto &item : connections_) {
+    auto &con = item.second;
+    con->Close();
+  }
+  connections_.clear();
+  clients_.clear();
+}

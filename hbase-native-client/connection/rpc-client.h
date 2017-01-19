@@ -26,6 +26,8 @@
 
 #include <google/protobuf/service.h>
 
+#include <utility>
+
 using hbase::security::User;
 using hbase::pb::ServerName;
 using hbase::Request;
@@ -49,7 +51,7 @@ class RpcClient : public std::enable_shared_from_this<RpcClient> {
   friend class RpcChannelImplementation;
 
  public:
-  RpcClient();
+  RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
 
   virtual ~RpcClient() { Close(); }
 
@@ -76,6 +78,8 @@ class RpcClient : public std::enable_shared_from_this<RpcClient> {
   virtual std::shared_ptr<RpcChannel> CreateRpcChannel(const std::string &host, uint16_t port,
                                                        std::shared_ptr<User> ticket,
                                                        int rpc_timeout);
+
+  std::shared_ptr<ConnectionPool> connection_pool() const { return cp_; }
 
  private:
   void CallMethod(const MethodDescriptor *method, RpcController *controller, const Message *req_msg,

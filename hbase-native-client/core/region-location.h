@@ -79,6 +79,10 @@ class RegionLocation {
    */
   void set_server_name(hbase::pb::ServerName sn) { sn_ = sn; }
 
+  const std::string DebugString() {
+    return "region_info:" + ri_.ShortDebugString() + ", server_name:" + sn_.ShortDebugString();
+  }
+
  private:
   std::string region_name_;
   hbase::pb::RegionInfo ri_;
