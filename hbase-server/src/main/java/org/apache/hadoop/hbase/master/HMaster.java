@@ -1087,7 +1087,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         new MasterProcedureEnv.WALStoreLeaseRecovery(this));
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
     procedureExecutor = new ProcedureExecutor(conf, procEnv, procedureStore,
-        procEnv.getProcedureQueue());
+        procEnv.getProcedureScheduler());
     configurationManager.registerObserver(procEnv);
 
     final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS,

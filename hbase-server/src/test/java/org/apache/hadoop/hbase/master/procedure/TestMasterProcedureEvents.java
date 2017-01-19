@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -37,15 +38,11 @@ import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterProcedureEvents {
@@ -141,7 +138,7 @@ public class TestMasterProcedureEvents {
   private void testProcedureEventWaitWake(final HMaster master, final ProcedureEvent event,
       final Procedure proc) throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    final MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureQueue();
+    final MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureScheduler();
 
     final long startPollCalls = procSched.getPollCalls();
     final long startNullPollCalls = procSched.getNullPollCalls();

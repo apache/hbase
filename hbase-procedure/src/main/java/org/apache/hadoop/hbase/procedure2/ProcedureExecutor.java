@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
+import org.apache.hadoop.hbase.procedure2.Procedure.LockState;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.util.DelayedUtil;
@@ -255,6 +256,7 @@ public class ProcedureExecutor<TEnvironment> {
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final TEnvironment environment;
   private final ProcedureStore store;
+
   private final boolean checkOwnerSet;
 
   public ProcedureExecutor(final Configuration conf, final TEnvironment environment,
@@ -1090,17 +1092,34 @@ public class ProcedureExecutor<TEnvironment> {
       if (!procStack.acquire(proc)) {
         if (procStack.setRollback()) {
           // we have the 'rollback-lock' we can start rollingback
-          if (!executeRollback(rootProcId, procStack)) {
-            procStack.unsetRollback();
-            scheduler.yield(proc);
+          switch (executeRollback(rootProcId, procStack)) {
+            case LOCK_ACQUIRED:
+                break;
+            case LOCK_YIELD_WAIT:
+              scheduler.yield(proc);
+              procStack.unsetRollback();
+              break;
+            case LOCK_EVENT_WAIT:
+              procStack.unsetRollback();
+              break;
+            default:
+              throw new UnsupportedOperationException();
           }
         } else {
           // if we can't rollback means that some child is still running.
           // the rollback will be executed after all the children are done.
           // If the procedure was never executed, remove and mark it as rolledback.
           if (!proc.wasExecuted()) {
-            if (!executeRollback(proc)) {
-              scheduler.yield(proc);
+            switch (executeRollback(proc)) {
+              case LOCK_ACQUIRED:
+                break;
+              case LOCK_YIELD_WAIT:
+                scheduler.yield(proc);
+                break;
+              case LOCK_EVENT_WAIT:
+                break;
+              default:
+                throw new UnsupportedOperationException();
             }
           }
         }
@@ -1109,11 +1128,19 @@ public class ProcedureExecutor<TEnvironment> {
 
       // Execute the procedure
       assert proc.getState() == ProcedureState.RUNNABLE : proc;
-      if (acquireLock(proc)) {
-        execProcedure(procStack, proc);
-        releaseLock(proc, false);
-      } else {
-        scheduler.yield(proc);
+      switch (acquireLock(proc)) {
+        case LOCK_ACQUIRED:
+          execProcedure(procStack, proc);
+          releaseLock(proc, false);
+          break;
+        case LOCK_YIELD_WAIT:
+          scheduler.yield(proc);
+          break;
+        case LOCK_EVENT_WAIT:
+          // someone will wake us up when the lock is available
+          break;
+        default:
+          throw new UnsupportedOperationException();
       }
       procStack.release(proc);
 
@@ -1139,13 +1166,13 @@ public class ProcedureExecutor<TEnvironment> {
     } while (procStack.isFailed());
   }
 
-  private boolean acquireLock(final Procedure proc) {
+  private LockState acquireLock(final Procedure proc) {
     final TEnvironment env = getEnvironment();
     // hasLock() is used in conjunction with holdLock().
     // This allows us to not rewrite or carry around the hasLock() flag
     // for every procedure. the hasLock() have meaning only if holdLock() is true.
     if (proc.holdLock(env) && proc.hasLock(env)) {
-      return true;
+      return LockState.LOCK_ACQUIRED;
     }
     return proc.doAcquireLock(env);
   }
@@ -1164,7 +1191,7 @@ public class ProcedureExecutor<TEnvironment> {
    * Once the procedure is rolledback, the root-procedure will be visible as
    * finished to user, and the result will be the fatal exception.
    */
-  private boolean executeRollback(final long rootProcId, final RootProcedureState procStack) {
+  private LockState executeRollback(final long rootProcId, final RootProcedureState procStack) {
     final Procedure rootProc = procedures.get(rootProcId);
     RemoteProcedureException exception = rootProc.getException();
     if (exception == null) {
@@ -1181,13 +1208,15 @@ public class ProcedureExecutor<TEnvironment> {
     while (stackTail --> 0) {
       final Procedure proc = subprocStack.get(stackTail);
 
-      if (!reuseLock && !acquireLock(proc)) {
+      LockState lockState;
+      if (!reuseLock && (lockState = acquireLock(proc)) != LockState.LOCK_ACQUIRED) {
         // can't take a lock on the procedure, add the root-proc back on the
         // queue waiting for the lock availability
-        return false;
+        return lockState;
       }
 
-      boolean abortRollback = !executeRollback(proc);
+      lockState = executeRollback(proc);
+      boolean abortRollback = lockState != LockState.LOCK_ACQUIRED;
       abortRollback |= !isRunning() || !store.isRunning();
 
       // If the next procedure is the same to this one
@@ -1201,14 +1230,14 @@ public class ProcedureExecutor<TEnvironment> {
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
       if (abortRollback) {
-        return false;
+        return lockState;
       }
 
       subprocStack.remove(stackTail);
 
       // if the procedure is kind enough to pass the slot to someone else, yield
       if (proc.isYieldAfterExecutionStep(getEnvironment())) {
-        return false;
+        return LockState.LOCK_YIELD_WAIT;
       }
 
       if (proc != rootProc) {
@@ -1221,7 +1250,7 @@ public class ProcedureExecutor<TEnvironment> {
              " exec-time=" + StringUtils.humanTimeDiff(rootProc.elapsedTime()) +
              " exception=" + exception.getMessage());
     procedureFinished(rootProc);
-    return true;
+    return LockState.LOCK_ACQUIRED;
   }
 
   /**
@@ -1229,17 +1258,17 @@ public class ProcedureExecutor<TEnvironment> {
    * It updates the store with the new state (stack index)
    * or will remove completly the procedure in case it is a child.
    */
-  private boolean executeRollback(final Procedure proc) {
+  private LockState executeRollback(final Procedure proc) {
     try {
       proc.doRollback(getEnvironment());
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Roll back attempt failed for " + proc, e);
       }
-      return false;
+      return LockState.LOCK_YIELD_WAIT;
     } catch (InterruptedException e) {
       handleInterruptedException(proc, e);
-      return false;
+      return LockState.LOCK_YIELD_WAIT;
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
       LOG.fatal("CODE-BUG: Uncatched runtime exception for procedure: " + proc, e);
@@ -1250,7 +1279,7 @@ public class ProcedureExecutor<TEnvironment> {
     if (testing != null && testing.shouldKillBeforeStoreUpdate()) {
       LOG.debug("TESTING: Kill before store update");
       stop();
-      return false;
+      return LockState.LOCK_YIELD_WAIT;
     }
 
     if (proc.removeStackIndex()) {
@@ -1270,7 +1299,7 @@ public class ProcedureExecutor<TEnvironment> {
       store.update(proc);
     }
 
-    return true;
+    return LockState.LOCK_ACQUIRED;
   }
 
   /**

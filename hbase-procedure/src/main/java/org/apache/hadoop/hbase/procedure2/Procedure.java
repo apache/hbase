@@ -59,7 +59,13 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   public static final long NO_PROC_ID = -1;
-  public static final int NO_TIMEOUT = -1;
+  protected static final int NO_TIMEOUT = -1;
+
+  public enum LockState {
+    LOCK_ACQUIRED,       // lock acquired and ready to execute
+    LOCK_YIELD_WAIT,     // lock not acquired, framework needs to yield
+    LOCK_EVENT_WAIT,     // lock not acquired, an event will yield the procedure
+  }
 
   // unchanged after initialization
   private NonceKey nonceKey = null;
@@ -79,9 +85,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   private volatile long lastUpdate;
 
   private volatile byte[] result = null;
-
-  // TODO: it will be nice having pointers to allow the scheduler doing suspend/resume tricks
-  private boolean suspended = false;
 
   /**
    * The main code of the procedure. It must be idempotent since execute()
@@ -142,14 +145,23 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   /**
    * The user should override this method, and try to take a lock if necessary.
    * A lock can be anything, and it is up to the implementor.
-   * Example: in our Master we can execute request in parallel for different tables
-   *          create t1 and create t2 can be executed at the same time.
-   *          anything else on t1/t2 is queued waiting that specific table create to happen.
    *
-   * @return true if the lock was acquired and false otherwise
+   * <p>Example: in our Master we can execute request in parallel for different tables.
+   * We can create t1 and create t2 and this can be executed at the same time.
+   * Anything else on t1/t2 is queued waiting that specific table create to happen.
+   *
+   * <p>There are 3 LockState:
+   * <ul><li>LOCK_ACQUIRED should be returned when the proc has the lock and the proc is
+   * ready to execute.</li>
+   * <li>LOCK_YIELD_WAIT should be returned when the proc has not the lock and the framework
+   * should take care of readding the procedure back to the runnable set for retry</li>
+   * <li>LOCK_EVENT_WAIT should be returned when the proc has not the lock and someone will
+   * take care of readding the procedure back to the runnable set when the lock is available.
+   * </li></ul>
+   * @return the lock state as described above.
    */
-  protected boolean acquireLock(final TEnvironment env) {
-    return true;
+  protected LockState acquireLock(final TEnvironment env) {
+    return LockState.LOCK_ACQUIRED;
   }
 
   /**
@@ -301,9 +313,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   protected void toStringState(StringBuilder builder) {
     builder.append(getState());
-    if (isSuspended()) {
-      builder.append("|SUSPENDED");
-    }
   }
 
   /**
@@ -493,23 +502,6 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   //  update its own state. but no concurrent updates. we use synchronized here
   //  just because the procedure can get scheduled on different executor threads on each step.
   // ==============================================================================================
-
-  /**
-   * @return true if the procedure is in a suspended state,
-   *         waiting for the resources required to execute the procedure will become available.
-   */
-  public synchronized boolean isSuspended() {
-    return suspended;
-  }
-
-  public synchronized void suspend() {
-    suspended = true;
-  }
-
-  public synchronized void resume() {
-    assert isSuspended() : this + " expected suspended state, got " + state;
-    suspended = false;
-  }
 
   /**
    * @return true if the procedure is in a RUNNABLE state.
@@ -737,7 +729,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * Internal method called by the ProcedureExecutor that starts the user-level code acquireLock().
    */
   @InterfaceAudience.Private
-  protected boolean doAcquireLock(final TEnvironment env) {
+  protected LockState doAcquireLock(final TEnvironment env) {
     return acquireLock(env);
   }
 

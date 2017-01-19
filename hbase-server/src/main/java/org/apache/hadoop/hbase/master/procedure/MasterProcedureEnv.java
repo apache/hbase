@@ -121,11 +121,6 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     return master.getMasterCoprocessorHost();
   }
 
-  @Deprecated
-  public MasterProcedureScheduler getProcedureQueue() {
-    return procSched;
-  }
-
   public MasterProcedureScheduler getProcedureScheduler() {
     return procSched;
   }

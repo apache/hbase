@@ -59,7 +59,6 @@ public class TestLockManager {
 
   private static final Log LOG = LogFactory.getLog(TestLockProcedure.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final Configuration conf = UTIL.getConfiguration();
   private static MasterServices masterServices;
 
   private static String namespace = "namespace";

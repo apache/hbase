@@ -289,7 +289,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     boolean ret = lock.acquireLock(env);
     locked.set(ret);
     hasLock = ret;
@@ -298,8 +298,10 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
         LOG.debug("LOCKED - " + toString());
       }
       lastHeartBeat.set(System.currentTimeMillis());
+      return LockState.LOCK_ACQUIRED;
     }
-    return ret;
+    LOG.warn("Failed acquire LOCK " + toString() + "; YIELDING");
+    return LockState.LOCK_EVENT_WAIT;
   }
 
   @Override
@@ -414,37 +416,43 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   private class TableExclusiveLock implements LockInterface {
     @Override
     public boolean acquireLock(final MasterProcedureEnv env) {
-      return env.getProcedureScheduler().tryAcquireTableExclusiveLock(LockProcedure.this, tableName);
+      // We invert return from waitNamespaceExclusiveLock; it returns true if you HAVE TO WAIT
+      // to get the lock and false if you don't; i.e. you got the lock.
+      return !env.getProcedureScheduler().waitTableExclusiveLock(LockProcedure.this, tableName);
     }
 
     @Override
     public void releaseLock(final MasterProcedureEnv env) {
-      env.getProcedureScheduler().releaseTableExclusiveLock(LockProcedure.this, tableName);
+      env.getProcedureScheduler().wakeTableExclusiveLock(LockProcedure.this, tableName);
     }
   }
 
   private class TableSharedLock implements LockInterface {
     @Override
     public boolean acquireLock(final MasterProcedureEnv env) {
-      return env.getProcedureScheduler().tryAcquireTableSharedLock(LockProcedure.this, tableName);
+      // We invert return from waitNamespaceExclusiveLock; it returns true if you HAVE TO WAIT
+      // to get the lock and false if you don't; i.e. you got the lock.
+      return !env.getProcedureScheduler().waitTableSharedLock(LockProcedure.this, tableName);
     }
 
     @Override
     public void releaseLock(final MasterProcedureEnv env) {
-      env.getProcedureScheduler().releaseTableSharedLock(LockProcedure.this, tableName);
+      env.getProcedureScheduler().wakeTableSharedLock(LockProcedure.this, tableName);
     }
   }
 
   private class NamespaceExclusiveLock implements LockInterface {
     @Override
     public boolean acquireLock(final MasterProcedureEnv env) {
-      return env.getProcedureScheduler().tryAcquireNamespaceExclusiveLock(
+      // We invert return from waitNamespaceExclusiveLock; it returns true if you HAVE TO WAIT
+      // to get the lock and false if you don't; i.e. you got the lock.
+      return !env.getProcedureScheduler().waitNamespaceExclusiveLock(
           LockProcedure.this, namespace);
     }
 
     @Override
     public void releaseLock(final MasterProcedureEnv env) {
-      env.getProcedureScheduler().releaseNamespaceExclusiveLock(
+      env.getProcedureScheduler().wakeNamespaceExclusiveLock(
           LockProcedure.this, namespace);
     }
   }
@@ -452,6 +460,8 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   private class RegionExclusiveLock implements LockInterface {
     @Override
     public boolean acquireLock(final MasterProcedureEnv env) {
+      // We invert return from waitNamespaceExclusiveLock; it returns true if you HAVE TO WAIT
+      // to get the lock and false if you don't; i.e. you got the lock.
       return !env.getProcedureScheduler().waitRegions(LockProcedure.this, tableName, regionInfos);
     }
 

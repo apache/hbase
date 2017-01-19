@@ -347,11 +347,12 @@ public class SplitTableRegionProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     if (env.waitInitialized(this)) {
-      return false;
+      return LockState.LOCK_EVENT_WAIT;
     }
-    return !env.getProcedureScheduler().waitRegions(this, getTableName(), parentHRI);
+    return env.getProcedureScheduler().waitRegions(this, getTableName(), parentHRI)?
+        LockState.LOCK_EVENT_WAIT: LockState.LOCK_ACQUIRED;
   }
 
   @Override

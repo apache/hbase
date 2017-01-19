@@ -289,12 +289,10 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   protected void suspendProcedure(final ProcedureEventQueue event, final Procedure procedure) {
-    procedure.suspend();
     event.suspendProcedure(procedure);
   }
 
   protected void wakeProcedure(final Procedure procedure) {
-    procedure.resume();
     push(procedure, /* addFront= */ true, /* notify= */false);
   }
 

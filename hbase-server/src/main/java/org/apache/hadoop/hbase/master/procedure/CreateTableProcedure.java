@@ -216,11 +216,14 @@ public class CreateTableProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     if (!getTableName().isSystemTable() && env.waitInitialized(this)) {
-      return false;
+      return LockState.LOCK_EVENT_WAIT;
     }
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
+    if (env.getProcedureScheduler().waitTableExclusiveLock(this, getTableName())) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
   }
 
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {

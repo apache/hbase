@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.Callable;
 import java.util.ArrayList;
 import java.util.Set;
 
@@ -67,27 +68,46 @@ public class ProcedureTestingUtility {
     });
   }
 
-  public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor)
-      throws Exception {
-    restart(procExecutor, null, true);
+  public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor) throws Exception {
+    restart(procExecutor, false, true, null, null);
   }
 
-  public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor,
-      Runnable beforeStartAction, boolean failOnCorrupted) throws Exception {
-    ProcedureStore procStore = procExecutor.getStore();
-    int storeThreads = procExecutor.getCorePoolSize();
-    int execThreads = procExecutor.getCorePoolSize();
-    // stop
-    procExecutor.stop();
-    procExecutor.join();
-    procStore.stop(false);
-    // nothing running...
-    if (beforeStartAction != null) {
-      beforeStartAction.run();
+  public static <TEnv> void restart(final ProcedureExecutor<TEnv> procExecutor,
+      final boolean avoidTestKillDuringRestart, final boolean failOnCorrupted,
+      final Callable<Void> stopAction, final Callable<Void> startAction)
+      throws Exception {
+    final ProcedureStore procStore = procExecutor.getStore();
+    final int storeThreads = procExecutor.getCorePoolSize();
+    final int execThreads = procExecutor.getCorePoolSize();
+
+    final ProcedureExecutor.Testing testing = procExecutor.testing;
+    if (avoidTestKillDuringRestart) {
+      procExecutor.testing = null;
     }
+
+    // stop
+    LOG.info("RESTART - Stop");
+    procExecutor.stop();
+    procStore.stop(false);
+    if (stopAction != null) {
+      stopAction.call();
+    }
+    procExecutor.join();
+    procExecutor.getScheduler().clear();
+
+    // nothing running...
+
     // re-start
+    LOG.info("RESTART - Start");
     procStore.start(storeThreads);
     procExecutor.start(execThreads, failOnCorrupted);
+    if (startAction != null) {
+      startAction.call();
+    }
+
+    if (avoidTestKillDuringRestart) {
+      procExecutor.testing = testing;
+    }
   }
 
   public static void storeRestart(ProcedureStore procStore, ProcedureStore.ProcedureLoader loader)
@@ -309,11 +329,11 @@ public class ProcedureTestingUtility {
   public static <TEnv> void testRecoveryAndDoubleExecution(final ProcedureExecutor<TEnv> procExec,
       final long procId, final boolean expectFailure, final Runnable customRestart)
       throws Exception {
-    final Procedure proc = procExec.getProcedure(procId);
+    Procedure proc = procExec.getProcedure(procId);
     waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
-
     for (int i = 0; !procExec.isFinished(procId); ++i) {
+      proc = procExec.getProcedure(procId);
       LOG.info("Restart " + i + " exec state: " + proc);
       if (customRestart != null) {
         customRestart.run();
@@ -415,8 +435,8 @@ public class ProcedureTestingUtility {
 
     // Mark acquire/release lock functions public for test uses.
     @Override
-    public boolean acquireLock(Void env) {
-      return true;
+    public LockState acquireLock(Void env) {
+      return LockState.LOCK_ACQUIRED;
     }
 
     @Override

@@ -322,17 +322,19 @@ public class MergeTableRegionsProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     if (env.waitInitialized(this)) {
-      return false;
+      return LockState.LOCK_EVENT_WAIT;
     }
-    return !env.getProcedureQueue().waitRegions(
-      this, getTableName(), regionsToMerge[0], regionsToMerge[1]);
+    return env.getProcedureScheduler().waitRegions(this, getTableName(),
+        regionsToMerge[0], regionsToMerge[1])?
+            LockState.LOCK_EVENT_WAIT: LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().wakeRegions(this, getTableName(), regionsToMerge[0], regionsToMerge[1]);
+    env.getProcedureScheduler().wakeRegions(this, getTableName(),
+        regionsToMerge[0], regionsToMerge[1]);
   }
 
   @Override

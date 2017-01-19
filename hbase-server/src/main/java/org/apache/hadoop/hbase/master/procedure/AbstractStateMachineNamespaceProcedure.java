@@ -58,13 +58,16 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(this, getNamespaceName());
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    if (env.waitInitialized(this)) return LockState.LOCK_EVENT_WAIT;
+    if (env.getProcedureScheduler().waitNamespaceExclusiveLock(this, getNamespaceName())) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseNamespaceExclusiveLock(this, getNamespaceName());
+    env.getProcedureScheduler().wakeNamespaceExclusiveLock(this, getNamespaceName());
   }
 }

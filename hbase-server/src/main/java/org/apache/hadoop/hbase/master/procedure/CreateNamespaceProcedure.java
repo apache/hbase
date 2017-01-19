@@ -160,16 +160,19 @@ public class CreateNamespaceProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     if (!env.getMasterServices().isInitialized()) {
       // Namespace manager might not be ready if master is not fully initialized,
       // return false to reject user namespace creation; return true for default
       // and system namespace creation (this is part of master initialization).
       if (!isBootstrapNamespace() && env.waitInitialized(this)) {
-        return false;
+        return LockState.LOCK_EVENT_WAIT;
       }
     }
-    return env.getProcedureQueue().tryAcquireNamespaceExclusiveLock(this, getNamespaceName());
+    if (env.getProcedureScheduler().waitNamespaceExclusiveLock(this, getNamespaceName())) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
   }
 
   @Override

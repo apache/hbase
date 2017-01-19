@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -25,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -38,10 +41,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestMasterProcedureScheduler {
@@ -89,8 +88,8 @@ public class TestMasterProcedureScheduler {
         Procedure proc = queue.poll();
         assertTrue(proc != null);
         TableName tableName = ((TestTableProcedure)proc).getTableName();
-        queue.tryAcquireTableExclusiveLock(proc, tableName);
-        queue.releaseTableExclusiveLock(proc, tableName);
+        queue.waitTableExclusiveLock(proc, tableName);
+        queue.wakeTableExclusiveLock(proc, tableName);
         queue.completionCleanup(proc);
         assertEquals(--count, queue.size());
         assertEquals(i * 1000 + j, proc.getProcId());
@@ -128,12 +127,12 @@ public class TestMasterProcedureScheduler {
     Procedure proc = queue.poll();
     assertEquals(1, proc.getProcId());
     // take the xlock
-    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
     // table can't be deleted because we have the lock
     assertEquals(0, queue.size());
     assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
     // release the xlock
-    queue.releaseTableExclusiveLock(proc, tableName);
+    queue.wakeTableExclusiveLock(proc, tableName);
     // complete the table deletion
     assertTrue(queue.markTableAsDeleted(tableName, proc));
   }
@@ -164,7 +163,7 @@ public class TestMasterProcedureScheduler {
       Procedure proc = procs[i] = queue.poll();
       assertEquals(i + 1, proc.getProcId());
       // take the rlock
-      assertTrue(queue.tryAcquireTableSharedLock(proc, tableName));
+      assertEquals(false, queue.waitTableSharedLock(proc, tableName));
       // table can't be deleted because we have locks and/or items in the queue
       assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
     }
@@ -173,7 +172,7 @@ public class TestMasterProcedureScheduler {
       // table can't be deleted because we have locks
       assertFalse(queue.markTableAsDeleted(tableName, dummyProc));
       // release the rlock
-      queue.releaseTableSharedLock(procs[i], tableName);
+      queue.wakeTableSharedLock(procs[i], tableName);
     }
 
     // there are no items and no lock in the queeu
@@ -202,48 +201,48 @@ public class TestMasterProcedureScheduler {
     // Fetch the 1st item and take the write lock
     Procedure proc = queue.poll();
     assertEquals(1, proc.getProcId());
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
 
     // Fetch the 2nd item and verify that the lock can't be acquired
     assertEquals(null, queue.poll(0));
 
     // Release the write lock and acquire the read lock
-    queue.releaseTableExclusiveLock(proc, tableName);
+    queue.wakeTableExclusiveLock(proc, tableName);
 
     // Fetch the 2nd item and take the read lock
     Procedure rdProc = queue.poll();
     assertEquals(2, rdProc.getProcId());
-    assertEquals(true, queue.tryAcquireTableSharedLock(rdProc, tableName));
+    assertEquals(false, queue.waitTableSharedLock(rdProc, tableName));
 
     // Fetch the 3rd item and verify that the lock can't be acquired
     assertEquals(null, queue.poll(0));
 
     // release the rdlock of item 2 and take the wrlock for the 3d item
-    queue.releaseTableSharedLock(rdProc, tableName);
+    queue.wakeTableSharedLock(rdProc, tableName);
 
     // Fetch the 3rd item and take the write lock
     Procedure wrProc = queue.poll();
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(wrProc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(wrProc, tableName));
 
     // Fetch 4th item and verify that the lock can't be acquired
     assertEquals(null, queue.poll(0));
 
     // Release the write lock and acquire the read lock
-    queue.releaseTableExclusiveLock(wrProc, tableName);
+    queue.wakeTableExclusiveLock(wrProc, tableName);
 
     // Fetch the 4th item and take the read lock
     rdProc = queue.poll();
     assertEquals(4, rdProc.getProcId());
-    assertEquals(true, queue.tryAcquireTableSharedLock(rdProc, tableName));
+    assertEquals(false, queue.waitTableSharedLock(rdProc, tableName));
 
     // Fetch the 4th item and take the read lock
     Procedure rdProc2 = queue.poll();
     assertEquals(5, rdProc2.getProcId());
-    assertEquals(true, queue.tryAcquireTableSharedLock(rdProc2, tableName));
+    assertEquals(false, queue.waitTableSharedLock(rdProc2, tableName));
 
     // Release 4th and 5th read-lock
-    queue.releaseTableSharedLock(rdProc, tableName);
-    queue.releaseTableSharedLock(rdProc2, tableName);
+    queue.wakeTableSharedLock(rdProc, tableName);
+    queue.wakeTableSharedLock(rdProc2, tableName);
 
     // remove table queue
     assertEquals(0, queue.size());
@@ -268,34 +267,36 @@ public class TestMasterProcedureScheduler {
     // Fetch the 1st item and take the write lock
     Procedure procNs1 = queue.poll();
     assertEquals(1, procNs1.getProcId());
-    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(procNs1, nsName1));
+    assertEquals(false, queue.waitNamespaceExclusiveLock(procNs1, nsName1));
 
     // System tables have 2 as default priority
     Procedure procNs2 = queue.poll();
     assertEquals(4, procNs2.getProcId());
-    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(procNs2, nsName2));
-    queue.releaseNamespaceExclusiveLock(procNs2, nsName2);
+    assertEquals(false, queue.waitNamespaceExclusiveLock(procNs2, nsName2));
+    queue.wakeNamespaceExclusiveLock(procNs2, nsName2);
+
+    // add procNs2 back in the queue
     queue.yield(procNs2);
 
     // table on ns1 is locked, so we get table on ns2
     procNs2 = queue.poll();
     assertEquals(3, procNs2.getProcId());
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(procNs2, tableName2));
+    assertEquals(false, queue.waitTableExclusiveLock(procNs2, tableName2));
 
     // ns2 is not available (TODO we may avoid this one)
     Procedure procNs2b = queue.poll();
     assertEquals(4, procNs2b.getProcId());
-    assertEquals(false, queue.tryAcquireNamespaceExclusiveLock(procNs2b, nsName2));
-    queue.yield(procNs2b);
+    assertEquals(true, queue.waitNamespaceExclusiveLock(procNs2b, nsName2));
 
     // release the ns1 lock
-    queue.releaseNamespaceExclusiveLock(procNs1, nsName1);
+    queue.wakeNamespaceExclusiveLock(procNs1, nsName1);
 
     // we are now able to execute table of ns1
     long procId = queue.poll().getProcId();
     assertEquals(2, procId);
 
-    queue.releaseTableExclusiveLock(procNs2, tableName2);
+    // release ns2
+    queue.wakeTableExclusiveLock(procNs2, tableName2);
 
     // we are now able to execute ns2
     procId = queue.poll().getProcId();
@@ -314,35 +315,18 @@ public class TestMasterProcedureScheduler {
     // Fetch the ns item and take the xlock
     Procedure proc = queue.poll();
     assertEquals(1, proc.getProcId());
-    assertEquals(true, queue.tryAcquireNamespaceExclusiveLock(proc, nsName));
+    assertEquals(false, queue.waitNamespaceExclusiveLock(proc, nsName));
 
     // the table operation can't be executed because the ns is locked
     assertEquals(null, queue.poll(0));
 
     // release the ns lock
-    queue.releaseNamespaceExclusiveLock(proc, nsName);
+    queue.wakeNamespaceExclusiveLock(proc, nsName);
 
     proc = queue.poll();
     assertEquals(2, proc.getProcId());
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
-    queue.releaseTableExclusiveLock(proc, tableName);
-  }
-
-  @Test
-  public void testSharedLock() throws Exception {
-    final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-    final TableName tableName = TableName.valueOf("testtb");
-    TestTableProcedure procA =
-        new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.READ);
-    TestTableProcedure procB =
-        new TestTableProcedure(2, tableName, TableProcedureInterface.TableOperationType.READ);
-
-    assertTrue(queue.tryAcquireTableSharedLock(procA, tableName));
-    assertTrue(queue.tryAcquireTableSharedLock(procB, tableName));
-
-    queue.releaseTableSharedLock(procA, tableName);
-    queue.releaseTableSharedLock(procB, tableName);
+    assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
+    queue.wakeTableExclusiveLock(proc, tableName);
   }
 
   @Test
@@ -371,13 +355,13 @@ public class TestMasterProcedureScheduler {
     // Fetch the 2nd item and take the xlock
     proc = queue.poll();
     assertEquals(2, proc.getProcId());
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
 
     // everything is locked by the table operation
     assertEquals(null, queue.poll(0));
 
     // release the table xlock
-    queue.releaseTableExclusiveLock(proc, tableName);
+    queue.wakeTableExclusiveLock(proc, tableName);
 
     // grab the last item in the queue
     proc = queue.poll();
@@ -410,13 +394,13 @@ public class TestMasterProcedureScheduler {
     // Fetch the 1st item and take the write lock
     Procedure proc = queue.poll();
     assertEquals(1, proc.getProcId());
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
 
     // everything is locked by the table operation
     assertEquals(null, queue.poll(0));
 
     // release the table lock
-    queue.releaseTableExclusiveLock(proc, tableName);
+    queue.wakeTableExclusiveLock(proc, tableName);
 
     // Fetch the 2nd item and the the lock on regionA and regionB
     Procedure mergeProc = queue.poll();
@@ -475,7 +459,7 @@ public class TestMasterProcedureScheduler {
     // Fetch the 1st item from the queue, "the root procedure" and take the table lock
     Procedure rootProc = queue.poll();
     assertEquals(1, rootProc.getProcId());
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(rootProc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(rootProc, tableName));
     assertEquals(null, queue.poll(0));
 
     // Execute the 1st step of the root-proc.
@@ -519,7 +503,7 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
 
     // release the table lock (for the root procedure)
-    queue.releaseTableExclusiveLock(rootProc, tableName);
+    queue.wakeTableExclusiveLock(rootProc, tableName);
   }
 
   @Test
@@ -639,7 +623,7 @@ public class TestMasterProcedureScheduler {
     // fetch and acquire first xlock proc
     Procedure parentProc = queue.poll();
     assertEquals(rootProc, parentProc);
-    assertTrue(queue.tryAcquireTableExclusiveLock(parentProc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(parentProc, tableName));
 
     // add child procedure
     for (int i = 0; i < childProcs.length; ++i) {
@@ -662,13 +646,13 @@ public class TestMasterProcedureScheduler {
     assertEquals(null, queue.poll(0));
 
     // release xlock
-    queue.releaseTableExclusiveLock(parentProc, tableName);
+    queue.wakeTableExclusiveLock(parentProc, tableName);
 
     // fetch the other xlock proc
     Procedure proc = queue.poll();
     assertEquals(100, proc.getProcId());
-    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
-    queue.releaseTableExclusiveLock(proc, tableName);
+    assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
+    queue.wakeTableExclusiveLock(proc, tableName);
   }
 
   @Test
@@ -697,7 +681,7 @@ public class TestMasterProcedureScheduler {
     // fetch and acquire first xlock proc
     Procedure parentProc = queue.poll();
     assertEquals(rootProc, parentProc);
-    assertTrue(queue.tryAcquireTableExclusiveLock(parentProc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(parentProc, tableName));
 
     // add child procedure
     queue.addFront(childProc);
@@ -705,11 +689,11 @@ public class TestMasterProcedureScheduler {
     // fetch the other xlock proc
     Procedure proc = queue.poll();
     assertEquals(childProc, proc);
-    assertTrue(queue.tryAcquireTableExclusiveLock(proc, tableName));
-    queue.releaseTableExclusiveLock(proc, tableName);
+    assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
+    queue.wakeTableExclusiveLock(proc, tableName);
 
     // release xlock
-    queue.releaseTableExclusiveLock(parentProc, tableName);
+    queue.wakeTableExclusiveLock(parentProc, tableName);
   }
 
   @Test
@@ -724,7 +708,7 @@ public class TestMasterProcedureScheduler {
     // fetch from the queue and acquire xlock for the first proc
     Procedure proc = queue.poll();
     assertEquals(1, proc.getProcId());
-    assertEquals(true, queue.tryAcquireTableExclusiveLock(proc, tableName));
+    assertEquals(false, queue.waitTableExclusiveLock(proc, tableName));
 
     // nothing available, until xlock release
     assertEquals(null, queue.poll(0));
@@ -737,7 +721,7 @@ public class TestMasterProcedureScheduler {
     assertEquals(1, proc.getProcId());
 
     // release the xlock
-    queue.releaseTableExclusiveLock(proc, tableName);
+    queue.wakeTableExclusiveLock(proc, tableName);
 
     proc = queue.poll();
     assertEquals(2, proc.getProcId());
@@ -757,12 +741,12 @@ public class TestMasterProcedureScheduler {
     // fetch and acquire the first shared-lock
     Procedure proc1 = queue.poll();
     assertEquals(1, proc1.getProcId());
-    assertEquals(true, queue.tryAcquireTableSharedLock(proc1, tableName));
+    assertEquals(false, queue.waitTableSharedLock(proc1, tableName));
 
     // fetch and acquire the second shared-lock
     Procedure proc2 = queue.poll();
     assertEquals(2, proc2.getProcId());
-    assertEquals(true, queue.tryAcquireTableSharedLock(proc2, tableName));
+    assertEquals(false, queue.waitTableSharedLock(proc2, tableName));
 
     // nothing available, until xlock release
     assertEquals(null, queue.poll(0));
@@ -778,8 +762,8 @@ public class TestMasterProcedureScheduler {
     assertEquals(2, proc2.getProcId());
 
     // release the xlock
-    queue.releaseTableSharedLock(proc1, tableName);
-    queue.releaseTableSharedLock(proc2, tableName);
+    queue.wakeTableSharedLock(proc1, tableName);
+    queue.wakeTableSharedLock(proc2, tableName);
 
     Procedure proc3 = queue.poll();
     assertEquals(3, proc3.getProcId());
