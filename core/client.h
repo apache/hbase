@@ -67,14 +67,13 @@ class Client {
   void Close();
 
  private:
+  void init(const hbase::Configuration &conf);
   const std::string kHBaseZookeeperQuorum_ = "hbase.zookeeper.quorum";
   const std::string kDefHBaseZookeeperQuorum_ = "localhost:2181";
-  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_ =
-      std::make_shared<wangle::CPUThreadPoolExecutor>(4);
-  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_ =
-      std::make_shared<wangle::IOThreadPoolExecutor>(sysconf(_SC_NPROCESSORS_ONLN));
+  std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
+  std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
   std::shared_ptr<hbase::LocationCache> location_cache_;
-  std::shared_ptr<hbase::RpcClient> rpc_client_ = std::make_shared<hbase::RpcClient>();
+  std::shared_ptr<hbase::RpcClient> rpc_client_;
   std::shared_ptr<hbase::Configuration> conf_;
   bool is_closed_ = false;
 };

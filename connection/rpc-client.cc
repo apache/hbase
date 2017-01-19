@@ -39,9 +39,8 @@ class RpcChannelImplementation : public AbstractRpcChannel {
 };
 }  // namespace hbase
 
-RpcClient::RpcClient() {
-  io_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(sysconf(_SC_NPROCESSORS_ONLN));
-
+RpcClient::RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
+    : io_executor_(io_executor) {
   cp_ = std::make_shared<ConnectionPool>(io_executor_);
 }
 

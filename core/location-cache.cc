@@ -55,14 +55,16 @@ static const char META_ZNODE_NAME[] = "/hbase/meta-region-server";
 
 LocationCache::LocationCache(std::string quorum_spec,
                              std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
-                             std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
+                             std::shared_ptr<ConnectionPool> cp)
     : quorum_spec_(quorum_spec),
       cpu_executor_(cpu_executor),
       meta_promise_(nullptr),
       meta_lock_(),
-      cp_(io_executor),
+      cp_(cp),
       meta_util_(),
-      zk_(nullptr) {
+      zk_(nullptr),
+      cached_locations_(),
+      locations_lock_() {
   zk_ = zookeeper_init(quorum_spec.c_str(), nullptr, 1000, 0, 0, 0);
 }
 
@@ -121,7 +123,7 @@ Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(const Tabl
       .via(cpu_executor_.get())
       .then([this](ServerName sn) {
         auto remote_id = std::make_shared<ConnectionId>(sn.host_name(), sn.port());
-        return this->cp_.GetConnection(remote_id);
+        return this->cp_->GetConnection(remote_id);
       })
       .then([tn, row, this](std::shared_ptr<RpcConnection> rpc_connection) {
         return (*rpc_connection->get_service())(std::move(meta_util_.MetaRequest(tn, row)));
@@ -143,9 +145,25 @@ Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(const Tabl
         auto remote_id =
             std::make_shared<ConnectionId>(rl->server_name().host_name(), rl->server_name().port());
         // Now fill out the connection.
-        rl->set_service(cp_.GetConnection(remote_id)->get_service());
+        // rl->set_service(cp_->GetConnection(remote_id)->get_service()); TODO: this causes wangle
+        // assertion errors
+        return rl;
+      })
+      .then([tn, this](shared_ptr<RegionLocation> rl) {
+        // now add fetched location to the cache.
+        this->CacheLocation(tn, rl);
         return rl;
       });
+}
+
+Future<shared_ptr<RegionLocation>> LocationCache::LocateRegion(const hbase::pb::TableName &tn,
+                                                               const std::string &row) {
+  auto cached_loc = this->GetCachedLocation(tn, row);
+  if (cached_loc != nullptr) {
+    return cached_loc;
+  } else {
+    return this->LocateFromMeta(tn, row);
+  }
 }
 
 std::shared_ptr<RegionLocation> LocationCache::CreateLocation(const Response &resp) {
@@ -162,4 +180,118 @@ std::shared_ptr<RegionLocation> LocationCache::CreateLocation(const Response &re
   auto region_info = folly::to<RegionInfo>(cell_zero);
   auto server_name = folly::to<ServerName>(cell_one);
   return std::make_shared<RegionLocation>(row, std::move(region_info), server_name, nullptr);
+}
+
+// must hold shared lock on locations_lock_
+shared_ptr<RegionLocation> LocationCache::GetCachedLocation(const hbase::pb::TableName &tn,
+                                                            const std::string &row) {
+  auto t_locs = this->GetTableLocations(tn);
+  std::shared_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
+
+  if (VLOG_IS_ON(2)) {
+    for (const auto &p : *t_locs) {
+      VLOG(2) << "t_locs[" << p.first << "] = " << p.second->DebugString();
+    }
+  }
+
+  // looking for the "floor" key as a start key
+  auto possible_region = t_locs->upper_bound(row);
+
+  if (t_locs->empty()) {
+    VLOG(2) << "Could not find region in cache, table map is empty";
+    return nullptr;
+  }
+
+  if (possible_region == t_locs->begin()) {
+    VLOG(2) << "Could not find region in cache, all keys are greater, row:" << row
+            << " ,possible_region:" << possible_region->second->DebugString();
+    return nullptr;
+  }
+  --possible_region;
+
+  VLOG(2) << "Found possible region in cache for row:" << row
+          << " ,possible_region:" << possible_region->second->DebugString();
+
+  // found possible start key, now need to check end key
+  if (possible_region->second->region_info().end_key() == "" ||
+      possible_region->second->region_info().end_key() > row) {
+    VLOG(1) << "Found region in cache for row:" << row
+            << " ,region:" << possible_region->second->DebugString();
+    return possible_region->second;
+  } else {
+    return nullptr;
+  }
+}
+
+// must hold unique lock on locations_lock_
+void LocationCache::CacheLocation(const hbase::pb::TableName &tn,
+                                  const shared_ptr<RegionLocation> loc) {
+  auto t_locs = this->GetTableLocations(tn);
+  std::unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
+
+  (*t_locs)[loc->region_info().start_key()] = loc;
+  VLOG(1) << "Cached location for region:" << loc->DebugString();
+}
+
+// must hold shared lock on locations_lock_
+bool LocationCache::IsLocationCached(const hbase::pb::TableName &tn, const std::string &row) {
+  return (this->GetCachedLocation(tn, row) != nullptr);
+}
+
+// shared lock needed for cases when this table has been requested before;
+// in the rare case it hasn't, unique lock will be grabbed to add it to cache
+shared_ptr<hbase::PerTableLocationMap> LocationCache::GetTableLocations(
+    const hbase::pb::TableName &tn) {
+  auto found_locs = this->GetCachedTableLocations(tn);
+  if (found_locs == nullptr) {
+    found_locs = this->GetNewTableLocations(tn);
+  }
+  return found_locs;
+}
+
+shared_ptr<hbase::PerTableLocationMap> LocationCache::GetCachedTableLocations(
+    const hbase::pb::TableName &tn) {
+  SharedMutexWritePriority::ReadHolder r_holder{locations_lock_};
+
+  auto table_locs = cached_locations_.find(tn);
+  if (table_locs != cached_locations_.end()) {
+    return table_locs->second;
+  } else {
+    return nullptr;
+  }
+}
+
+shared_ptr<hbase::PerTableLocationMap> LocationCache::GetNewTableLocations(
+    const hbase::pb::TableName &tn) {
+  // double-check locking under upgradable lock
+  SharedMutexWritePriority::UpgradeHolder u_holder{locations_lock_};
+
+  auto table_locs = cached_locations_.find(tn);
+  if (table_locs != cached_locations_.end()) {
+    return table_locs->second;
+  }
+  SharedMutexWritePriority::WriteHolder w_holder{std::move(u_holder)};
+
+  auto t_locs_p = make_shared<map<std::string, shared_ptr<RegionLocation>>>();
+  cached_locations_.insert(std::make_pair(tn, t_locs_p));
+  return t_locs_p;
+}
+
+// must hold unique lock on locations_lock_
+void LocationCache::ClearCache() {
+  unique_lock<SharedMutexWritePriority> lock(locations_lock_);
+  cached_locations_.clear();
+}
+
+// must hold unique lock on locations_lock_
+void LocationCache::ClearCachedLocations(const hbase::pb::TableName &tn) {
+  unique_lock<SharedMutexWritePriority> lock(locations_lock_);
+  cached_locations_.erase(tn);
+}
+
+// must hold unique lock on locations_lock_
+void LocationCache::ClearCachedLocation(const hbase::pb::TableName &tn, const std::string &row) {
+  auto table_locs = this->GetTableLocations(tn);
+  unique_lock<folly::SharedMutexWritePriority> lock(locations_lock_);
+  table_locs->erase(row);
 }

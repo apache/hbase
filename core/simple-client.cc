@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
   auto row = FLAGS_row;
   auto tn = folly::to<TableName>(FLAGS_table);
 
-  auto loc = cache.LocateFromMeta(tn, row).get(milliseconds(5000));
+  auto loc = cache.LocateRegion(tn, row).get(milliseconds(5000));
   auto connection = loc->service();
 
   auto num_puts = FLAGS_columns;
