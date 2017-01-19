@@ -661,7 +661,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       //check whether this caused maxRegionsPerTable in the new Server to be updated
       if (numRegionsPerServerPerTable[newServer][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
-        numRegionsPerServerPerTable[newServer][tableIndex] = numMaxRegionsPerTable[tableIndex];
+        numMaxRegionsPerTable[tableIndex] = numRegionsPerServerPerTable[newServer][tableIndex];
       } else if (oldServer >= 0 && (numRegionsPerServerPerTable[oldServer][tableIndex] + 1)
           == numMaxRegionsPerTable[tableIndex]) {
         //recompute maxRegionsPerTable since the previous value was coming from the old server
