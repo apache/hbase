@@ -28,23 +28,32 @@ import io.netty.util.HashedWheelTimer;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -87,6 +96,11 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final NonceGenerator nonceGenerator;
 
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
+
+  private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
+
+  private final AtomicReference<CompletableFuture<MasterService.Interface>> masterStubMakeFuture =
+      new AtomicReference<>();
 
   public AsyncConnectionImpl(Configuration conf, User user) {
     this.conf = conf;
@@ -149,6 +163,93 @@ class AsyncConnectionImpl implements AsyncConnection {
       () -> createRegionServerStub(serverName));
   }
 
+  private MasterService.Interface createMasterStub(ServerName serverName) throws IOException {
+    return MasterService.newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
+  }
+
+  private void makeMasterStub(CompletableFuture<MasterService.Interface> future) {
+    registry.getMasterAddress().whenComplete(
+      (sn, error) -> {
+        if (sn == null) {
+          String msg = "ZooKeeper available but no active master location found";
+          LOG.info(msg);
+          this.masterStubMakeFuture.getAndSet(null).completeExceptionally(
+            new MasterNotRunningException(msg));
+          return;
+        }
+        try {
+          MasterService.Interface stub = createMasterStub(sn);
+          HBaseRpcController controller = getRpcController();
+          stub.isMasterRunning(controller, RequestConverter.buildIsMasterRunningRequest(),
+            new RpcCallback<IsMasterRunningResponse>() {
+              @Override
+              public void run(IsMasterRunningResponse resp) {
+                if (controller.failed() || resp == null
+                    || (resp != null && !resp.getIsMasterRunning())) {
+                  masterStubMakeFuture.getAndSet(null).completeExceptionally(
+                    new MasterNotRunningException("Master connection is not running anymore"));
+                } else {
+                  masterStub.set(stub);
+                  masterStubMakeFuture.set(null);
+                  future.complete(stub);
+                }
+              }
+            });
+        } catch (IOException e) {
+          this.masterStubMakeFuture.getAndSet(null).completeExceptionally(
+            new IOException("Failed to create async master stub", e));
+        }
+      });
+  }
+
+  CompletableFuture<MasterService.Interface> getMasterStub() {
+    MasterService.Interface masterStub = this.masterStub.get();
+
+    if (masterStub == null) {
+      for (;;) {
+        if (this.masterStubMakeFuture.compareAndSet(null, new CompletableFuture<>())) {
+          CompletableFuture<MasterService.Interface> future = this.masterStubMakeFuture.get();
+          makeMasterStub(future);
+        } else {
+          CompletableFuture<MasterService.Interface> future = this.masterStubMakeFuture.get();
+          if (future != null) {
+            return future;
+          }
+        }
+      }
+    }
+
+    for (;;) {
+      if (masterStubMakeFuture.compareAndSet(null, new CompletableFuture<>())) {
+        CompletableFuture<MasterService.Interface> future = masterStubMakeFuture.get();
+        HBaseRpcController controller = getRpcController();
+        masterStub.isMasterRunning(controller, RequestConverter.buildIsMasterRunningRequest(),
+          new RpcCallback<IsMasterRunningResponse>() {
+            @Override
+            public void run(IsMasterRunningResponse resp) {
+              if (controller.failed() || resp == null
+                  || (resp != null && !resp.getIsMasterRunning())) {
+                makeMasterStub(future);
+              } else {
+                future.complete(masterStub);
+              }
+            }
+          });
+      } else {
+        CompletableFuture<MasterService.Interface> future = masterStubMakeFuture.get();
+        if (future != null) {
+          return future;
+        }
+      }
+    }
+  }
+
+  private HBaseRpcController getRpcController() {
+    HBaseRpcController controller = this.rpcControllerFactory.newController();
+    controller.setCallTimeout((int) TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));
+    return controller;
+  }
+
   @Override
   public AsyncTableBuilder<RawAsyncTable> getRawTableBuilder(TableName tableName) {
     return new AsyncTableBuilderBase<RawAsyncTable>(tableName, connConf) {
@@ -170,5 +271,10 @@ class AsyncConnectionImpl implements AsyncConnection {
         return new AsyncTableImpl(AsyncConnectionImpl.this, rawTable, pool);
       }
     };
+  }
+
+  @Override
+  public AsyncAdmin getAdmin() {
+    return new AsyncHBaseAdmin(this);
   }
 }

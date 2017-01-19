@@ -369,4 +369,59 @@ class AsyncRpcRetryingCallerFactory {
   public BatchCallerBuilder batch() {
     return new BatchCallerBuilder();
   }
+
+  public class MasterRequestCallerBuilder<T> extends BuilderBase {
+    private AsyncMasterRequestRpcRetryingCaller.Callable<T> callable;
+
+    private long operationTimeoutNs = -1L;
+
+    private long rpcTimeoutNs = -1L;
+
+    public MasterRequestCallerBuilder<T> action(AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
+      this.callable = callable;
+      return this;
+    }
+
+    public MasterRequestCallerBuilder<T> operationTimeout(long operationTimeout, TimeUnit unit) {
+      this.operationTimeoutNs = unit.toNanos(operationTimeout);
+      return this;
+    }
+
+    public MasterRequestCallerBuilder<T> rpcTimeout(long rpcTimeout, TimeUnit unit) {
+      this.rpcTimeoutNs = unit.toNanos(rpcTimeout);
+      return this;
+    }
+
+    public MasterRequestCallerBuilder<T> pause(long pause, TimeUnit unit) {
+      this.pauseNs = unit.toNanos(pause);
+      return this;
+    }
+
+    public MasterRequestCallerBuilder<T> maxAttempts(int maxAttempts) {
+      this.maxAttempts = maxAttempts;
+      return this;
+    }
+
+    public MasterRequestCallerBuilder<T> startLogErrorsCnt(int startLogErrorsCnt) {
+      this.startLogErrorsCnt = startLogErrorsCnt;
+      return this;
+    }
+
+    public AsyncMasterRequestRpcRetryingCaller<T> build() {
+      return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn, checkNotNull(callable,
+        "action is null"), pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
+          startLogErrorsCnt);
+    }
+
+    /**
+     * Shortcut for {@code build().call()}
+     */
+    public CompletableFuture<T> call() {
+      return build().call();
+    }
+  }
+
+  public <T> MasterRequestCallerBuilder<T> masterRequest() {
+    return new MasterRequestCallerBuilder<>();
+  }
 }
