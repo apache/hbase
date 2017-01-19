@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -92,6 +93,22 @@ public class TestReplicationAdmin {
       // OK!
     }
     assertEquals(1, admin.getPeersCount());
+
+    // try adding a peer contains "-"
+    try {
+      admin.addPeer(ID_ONE + "-" + ID_SECOND, KEY_ONE);
+    } catch (IllegalArgumentException iae) {
+      // OK!
+    }
+    assertEquals(1, admin.getPeersCount());
+    // try adding a peer named "lock"
+    try {
+      admin.addPeer(ReplicationQueuesZKImpl.RS_LOCK_ZNODE, KEY_ONE);
+    } catch (IllegalArgumentException iae) {
+      // OK!
+    }
+    assertEquals(1, admin.getPeersCount());
+
     // Try to remove an inexisting peer
     try {
       admin.removePeer(ID_SECOND);
