@@ -2132,6 +2132,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         throw new IllegalArgumentException("Number of clients must be > 0");
       }
 
+      // cmdName should not be null, print help and exit
+      if (opts.cmdName == null) {
+        printUsage();
+        return errCode;
+      }
+
       Class<? extends Test> cmdClass = determineCommandClass(opts.cmdName);
       if (cmdClass != null) {
         runTest(cmdClass, opts);
