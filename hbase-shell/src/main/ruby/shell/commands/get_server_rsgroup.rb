@@ -30,10 +30,9 @@ EOF
       end
 
       def command(server)
-        now = Time.now
-        group_name = rsgroup_admin.getRSGroupOfServer(server).getName
+        group_name = rsgroup_admin.get_rsgroup_of_server(server).getName
         formatter.row([group_name])
-        formatter.footer(now, 1)
+        formatter.footer(1)
       end
     end
   end

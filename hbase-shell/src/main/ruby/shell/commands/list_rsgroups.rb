@@ -34,7 +34,6 @@ EOF
       end
 
       def command(regex = '.*')
-        now = Time.now
         formatter.header(['GROUPS'])
 
         regex = /#{regex}/ unless regex.is_a?(Regexp)
@@ -43,7 +42,7 @@ EOF
           formatter.row([group])
         end
 
-        formatter.footer(now, list.size)
+        formatter.footer(list.size)
       end
     end
   end
