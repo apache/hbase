@@ -3280,11 +3280,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (fromCP != null) {
           cellCount += fromCP.size();
         }
-        for (List<Cell> cells : familyMaps[i].values()) {
-          cellCount += cells.size();
+        if (getEffectiveDurability(mutation.getDurability()) != Durability.SKIP_WAL) {
+          for (List<Cell> cells : familyMaps[i].values()) {
+            cellCount += cells.size();
+          }
         }
       }
-      walEdit = new WALEdit(cellCount, isInReplay);
       lock(this.updatesLock.readLock(), numReadyToWrite);
       locked = true;
 
@@ -3306,6 +3307,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             if (cpMutations == null) {
               continue;
             }
+            Mutation mutation = batchOp.getMutation(i);
+            boolean skipWal = getEffectiveDurability(mutation.getDurability()) == Durability.SKIP_WAL;
             // Else Coprocessor added more Mutations corresponding to the Mutation at this index.
             for (int j = 0; j < cpMutations.length; j++) {
               Mutation cpMutation = cpMutations[j];
@@ -3318,6 +3321,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               // Returned mutations from coprocessor correspond to the Mutation at index i. We can
               // directly add the cells from those mutations to the familyMaps of this mutation.
               mergeFamilyMaps(familyMaps[i], cpFamilyMap); // will get added to the memstore later
+
+              // The durability of returned mutation is replaced by the corresponding mutation.
+              // If the corresponding mutation contains the SKIP_WAL, we shouldn't count the
+              // cells of returned mutation.
+              if (!skipWal) {
+                for (List<Cell> cells : cpFamilyMap.values()) {
+                  cellCount += cells.size();
+                }
+              }
             }
           }
         }
@@ -3326,6 +3338,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // ------------------------------------
       // STEP 3. Build WAL edit
       // ----------------------------------
+      walEdit = new WALEdit(cellCount, isInReplay);
       Durability durability = Durability.USE_DEFAULT;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         // Skip puts that were determined to be invalid during preprocessing
