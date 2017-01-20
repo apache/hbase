@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.Collection;
 
 /**
  * Gateway to Replication.  Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
@@ -266,6 +267,15 @@ public class Replication extends WALActionsListener.Base implements
     scopeWALEdits(htd, logKey, logEdit, this.conf, this.getReplicationManager());
   }
 
+  private static boolean hasReplication(Collection<HColumnDescriptor> families) {
+    for (HColumnDescriptor col : families) {
+      if (col.getScope() != REPLICATION_SCOPE_LOCAL) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Utility method used to set the correct scopes on each log key. Doesn't set a scope on keys from
    * compaction WAL edits and if the scope is local.
@@ -278,8 +288,9 @@ public class Replication extends WALActionsListener.Base implements
   public static void scopeWALEdits(HTableDescriptor htd, WALKey logKey, WALEdit logEdit,
       Configuration conf, ReplicationSourceManager replicationManager) throws IOException {
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-    byte[] family;
     boolean replicationForBulkLoadEnabled = isReplicationForBulkLoadDataEnabled(conf);
+    Collection<HColumnDescriptor> families = htd.getFamilies();
+    boolean hasReplication = hasReplication(families);
     for (Cell cell : logEdit.getCells()) {
       if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
         if (replicationForBulkLoadEnabled && CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
@@ -289,7 +300,7 @@ public class Replication extends WALActionsListener.Base implements
           if (maybeEvent != null && (maybeEvent.getEventType() ==
               WALProtos.RegionEventDescriptor.EventType.REGION_CLOSE)) {
             // In serially replication, we use scopes when reading close marker.
-            for (HColumnDescriptor cf :htd.getFamilies()) {
+            for (HColumnDescriptor cf : families) {
               if (cf.getScope() != REPLICATION_SCOPE_LOCAL) {
                 scopes.put(cf.getName(), cf.getScope());
               }
@@ -299,8 +310,8 @@ public class Replication extends WALActionsListener.Base implements
           continue;
 
         }
-      } else {
-        family = CellUtil.cloneFamily(cell);
+      } else if (hasReplication) {
+        byte[] family = CellUtil.cloneFamily(cell);
         // Unexpected, has a tendency to happen in unit tests
         assert htd.getFamily(family) != null;
 
