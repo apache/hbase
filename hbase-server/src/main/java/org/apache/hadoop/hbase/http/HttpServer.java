@@ -360,12 +360,12 @@ public class HttpServer implements FilterContainer {
         }
       }
 
-      if (endpoints.size() == 0 && connector == null) {
+      if (endpoints.isEmpty() && connector == null) {
         throw new HadoopIllegalArgumentException("No endpoints specified");
       }
 
       if (hostName == null) {
-        hostName = endpoints.size() == 0 ? connector.getHost() : endpoints.get(
+        hostName = endpoints.isEmpty() ? connector.getHost() : endpoints.get(
             0).getHost();
       }
 
@@ -1179,7 +1179,7 @@ public class HttpServer implements FilterContainer {
    */
   @Override
   public String toString() {
-    if (listeners.size() == 0) {
+    if (listeners.isEmpty()) {
       return "Inactive HttpServer";
     } else {
       StringBuilder sb = new StringBuilder("HttpServer (")

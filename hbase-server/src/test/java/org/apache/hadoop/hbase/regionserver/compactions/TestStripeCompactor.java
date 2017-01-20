@@ -177,7 +177,7 @@ public class TestStripeCompactor {
       null, NoLimitThroughputController.INSTANCE, null);
     assertEquals(output.length, paths.size());
     writers.verifyKvs(output, true, true);
-    List<byte[]> boundaries = new ArrayList<byte[]>();
+    List<byte[]> boundaries = new ArrayList<byte[]>(output.length + 2);
     boundaries.add(left);
     for (int i = 1; i < output.length; ++i) {
       boundaries.add(CellUtil.cloneRow(output[i][0]));

@@ -112,7 +112,7 @@ public class CatalogJanitor extends ScheduledChore {
           && !this.services.isInMaintenanceMode()
           && am != null
           && am.isFailoverCleanupDone()
-          && am.getRegionStates().getRegionsInTransition().size() == 0) {
+          && am.getRegionStates().getRegionsInTransition().isEmpty()) {
         scan();
       } else {
         LOG.warn("CatalogJanitor disabled! Not running scan.");

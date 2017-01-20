@@ -350,7 +350,7 @@ public class MiniZooKeeperCluster {
     LOG.info("Kill the current active ZK servers in the cluster " +
         "on client port: " + clientPort);
 
-    if (standaloneServerFactoryList.size() == 0) {
+    if (standaloneServerFactoryList.isEmpty()) {
       // there is no backup servers;
       return -1;
     }

@@ -1184,7 +1184,7 @@ public class KeyValue implements ExtendedCell {
     stringMap.put("vlen", getValueLength());
     List<Tag> tags = getTags();
     if (tags != null) {
-      List<String> tagsString = new ArrayList<String>();
+      List<String> tagsString = new ArrayList<String>(tags.size());
       for (Tag t : tags) {
         tagsString.add(t.toString());
       }

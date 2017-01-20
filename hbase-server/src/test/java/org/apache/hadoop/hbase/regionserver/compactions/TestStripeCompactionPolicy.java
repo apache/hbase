@@ -666,7 +666,7 @@ public class TestStripeCompactionPolicy {
    */
   private static StripeInformationProvider createStripesWithSizes(
       int l0Count, long l0Size, Long[]... sizes) throws Exception {
-    ArrayList<List<Long>> sizeList = new ArrayList<List<Long>>();
+    ArrayList<List<Long>> sizeList = new ArrayList<List<Long>>(sizes.length);
     for (Long[] size : sizes) {
       sizeList.add(Arrays.asList(size));
     }
@@ -695,7 +695,7 @@ public class TestStripeCompactionPolicy {
       List<List<Long>> stripeSizes, List<Long> l0Sizes) throws Exception {
     List<List<StoreFile>> stripeFiles = new ArrayList<List<StoreFile>>(stripeSizes.size());
     for (List<Long> sizes : stripeSizes) {
-      List<StoreFile> sfs = new ArrayList<StoreFile>();
+      List<StoreFile> sfs = new ArrayList<StoreFile>(sizes.size());
       for (Long size : sizes) {
         sfs.add(createFile(size));
       }

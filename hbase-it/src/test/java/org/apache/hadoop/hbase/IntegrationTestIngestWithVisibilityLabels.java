@@ -45,28 +45,28 @@ public class IntegrationTestIngestWithVisibilityLabels extends IntegrationTestIn
   private static final List<List<String>> AUTHS = new ArrayList<List<String>>();
 
   static {
-    ArrayList<String> tmp = new ArrayList<String>();
+    ArrayList<String> tmp = new ArrayList<String>(2);
     tmp.add("secret");
     tmp.add("confidential");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>();
+    tmp = new ArrayList<String>(1);
     tmp.add("topsecret");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>();
+    tmp = new ArrayList<String>(2);
     tmp.add("confidential");
     tmp.add("private");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>();
+    tmp = new ArrayList<String>(1);
     tmp.add("public");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>();
+    tmp = new ArrayList<String>(2);
     tmp.add("topsecret");
     tmp.add("private");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>();
+    tmp = new ArrayList<String>(1);
     tmp.add("confidential");
     AUTHS.add(tmp);
-    tmp = new ArrayList<String>();
+    tmp = new ArrayList<String>(2);
     tmp.add("topsecret");
     tmp.add("private");
     AUTHS.add(tmp);

@@ -141,7 +141,7 @@ public class TestReplicationWALReaderManager {
   @Before
   public void setUp() throws Exception {
     logManager = new ReplicationWALReaderManager(fs, conf);
-    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
+    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>(1);
     pathWatcher = new PathWatcher();
     listeners.add(pathWatcher);
     final WALFactory wals = new WALFactory(conf, listeners, tn.getMethodName());

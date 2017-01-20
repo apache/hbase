@@ -134,7 +134,7 @@ public class MetricSampleQuantiles {
 
     // Base case: no samples
     int start = 0;
-    if (samples.size() == 0) {
+    if (samples.isEmpty()) {
       SampleItem newItem = new SampleItem(buffer[0], 1, 0);
       samples.add(newItem);
       start++;
@@ -203,7 +203,7 @@ public class MetricSampleQuantiles {
    * @return Estimated value at that quantile.
    */
   private long query(double quantile) throws IOException {
-    if (samples.size() == 0) {
+    if (samples.isEmpty()) {
       throw new IOException("No samples present");
     }
 

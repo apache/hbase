@@ -371,7 +371,7 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
     int maxVersions = Math.min(scan.getMaxVersions(), scanInfo.getMaxVersions());
     boolean hasNullColumn;
     ColumnTracker columnTracker;
-    if (columns == null || columns.size() == 0) {
+    if (columns == null || columns.isEmpty()) {
       // there is always a null column in the wildcard column query.
       hasNullColumn = true;
       // use a specialized scan for wildcard column tracker.

@@ -229,7 +229,7 @@ public class TestSplitTransactionOnCluster {
     htd.addFamily(new HColumnDescriptor(cf));
     admin.createTable(htd);
 
-    for (int i = 0; cluster.getRegions(tableName).size() == 0 && i < 100; i++) {
+    for (int i = 0; cluster.getRegions(tableName).isEmpty() && i < 100; i++) {
       Thread.sleep(100);
     }
     assertEquals(1, cluster.getRegions(tableName).size());

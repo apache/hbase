@@ -150,13 +150,13 @@ public class TestRegionPlacement {
     rp.setTargetTableName(new String[]{tableStr});
     List<AssignmentVerificationReport> reports = rp.verifyRegionPlacement(false);
     AssignmentVerificationReport report = reports.get(0);
-    assertTrue(report.getRegionsWithoutValidFavoredNodes().size() == 0);
-    assertTrue(report.getNonFavoredAssignedRegions().size() == 0);
+    assertTrue(report.getRegionsWithoutValidFavoredNodes().isEmpty());
+    assertTrue(report.getNonFavoredAssignedRegions().isEmpty());
     assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
     assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) != 0);
     assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) == 0);
     assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) == 0);
-    assertTrue(report.getUnassignedRegions().size() == 0);
+    assertTrue(report.getUnassignedRegions().isEmpty());
 
     // Check when a RS stops, the regions get assigned to their secondary/tertiary
     killRandomServerAndVerifyAssignment();
@@ -164,8 +164,8 @@ public class TestRegionPlacement {
     // also verify that the AssignmentVerificationReport has the correct information
     reports = rp.verifyRegionPlacement(false);
     report = reports.get(0);
-    assertTrue(report.getRegionsWithoutValidFavoredNodes().size() == 0);
-    assertTrue(report.getNonFavoredAssignedRegions().size() == 0);
+    assertTrue(report.getRegionsWithoutValidFavoredNodes().isEmpty());
+    assertTrue(report.getNonFavoredAssignedRegions().isEmpty());
     assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
     assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) > 0);
     assertTrue("secondary " +

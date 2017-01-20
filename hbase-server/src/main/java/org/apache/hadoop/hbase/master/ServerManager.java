@@ -554,7 +554,7 @@ public class ServerManager {
 
       try {
         List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.znodePaths.rsZNode);
-        if (servers == null || servers.size() == 0 || (servers.size() == 1
+        if (servers == null || servers.isEmpty() || (servers.size() == 1
             && servers.contains(sn.toString()))) {
           LOG.info("ZK shows there is only the master self online, exiting now");
           // Master could have lost some ZK events, no need to wait more.

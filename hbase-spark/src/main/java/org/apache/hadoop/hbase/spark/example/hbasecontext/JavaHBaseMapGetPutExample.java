@@ -59,7 +59,7 @@ final public class JavaHBaseMapGetPutExample {
     JavaSparkContext jsc = new JavaSparkContext(sparkConf);
 
     try {
-      List<byte[]> list = new ArrayList<>();
+      List<byte[]> list = new ArrayList<>(5);
       list.add(Bytes.toBytes("1"));
       list.add(Bytes.toBytes("2"));
       list.add(Bytes.toBytes("3"));

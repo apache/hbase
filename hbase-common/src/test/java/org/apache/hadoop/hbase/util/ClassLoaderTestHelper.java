@@ -133,13 +133,13 @@ public class ClassLoaderTestHelper {
 
     // compile it by JavaCompiler
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-    ArrayList<String> srcFileNames = new ArrayList<String>();
+    ArrayList<String> srcFileNames = new ArrayList<String>(1);
     srcFileNames.add(sourceCodeFile.toString());
     StandardJavaFileManager fm = compiler.getStandardFileManager(null, null,
       null);
     Iterable<? extends JavaFileObject> cu =
       fm.getJavaFileObjects(sourceCodeFile);
-    List<String> options = new ArrayList<String>();
+    List<String> options = new ArrayList<String>(2);
     options.add("-classpath");
     // only add hbase classes to classpath. This is a little bit tricky: assume
     // the classpath is {hbaseSrc}/target/classes.

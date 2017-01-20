@@ -364,7 +364,7 @@ public class TestRegionSplitCalculator {
     SimpleRange ae = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("E"));
     SimpleRange ac = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C"));
 
-    Collection<SimpleRange> bigOverlap = new ArrayList<SimpleRange>();
+    Collection<SimpleRange> bigOverlap = new ArrayList<SimpleRange>(8);
     bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("E")));
     bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C")));
     bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B")));

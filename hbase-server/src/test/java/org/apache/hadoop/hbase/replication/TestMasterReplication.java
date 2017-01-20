@@ -195,7 +195,7 @@ public class TestMasterReplication {
         ServerLoad serverLoad = clusterStatus.getLoad(rsName);
         List<ReplicationLoadSource> replicationLoadSourceList =
             serverLoad.getReplicationLoadSourceList();
-        return replicationLoadSourceList.size() == 0;
+        return replicationLoadSourceList.isEmpty();
       }
     });
 
@@ -673,7 +673,7 @@ public class TestMasterReplication {
             + ". IsDeleteReplication:" + isDeleted);
       }
       Result res = target.get(get);
-      boolean sleep = isDeleted ? res.size() > 0 : res.size() == 0;
+      boolean sleep = isDeleted ? res.size() > 0 : res.isEmpty();
       if (sleep) {
         LOG.info("Waiting for more time for replication. Row:"
             + Bytes.toString(row) + ". IsDeleteReplication:" + isDeleted);

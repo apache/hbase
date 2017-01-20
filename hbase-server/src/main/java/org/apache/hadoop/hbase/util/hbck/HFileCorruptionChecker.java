@@ -174,7 +174,7 @@ public class HFileCorruptionChecker {
 
     List<FileStatus> hfs = FSUtils.filterFileStatuses(statuses, new HFileFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
-    if (hfs.size() == 0 && !fs.exists(cfDir)) {
+    if (hfs.isEmpty() && !fs.exists(cfDir)) {
       LOG.warn("Colfam Directory " + cfDir +
           " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(cfDir);
@@ -207,7 +207,7 @@ public class HFileCorruptionChecker {
 
     List<FileStatus> hfs = FSUtils.filterFileStatuses(statuses, new HFileFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
-    if (hfs.size() == 0 && !fs.exists(cfDir)) {
+    if (hfs.isEmpty() && !fs.exists(cfDir)) {
       LOG.warn("Mob colfam Directory " + cfDir +
           " does not exist.  Likely the table is deleted. Skipping.");
       missedMobFiles.add(cfDir);
@@ -311,7 +311,7 @@ public class HFileCorruptionChecker {
 
     List<FileStatus> cfs = FSUtils.filterFileStatuses(statuses, new FamilyDirFilter(fs));
     // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
-    if (cfs.size() == 0 && !fs.exists(regionDir)) {
+    if (cfs.isEmpty() && !fs.exists(regionDir)) {
       LOG.warn("Region Directory " + regionDir +
           " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(regionDir);
@@ -343,7 +343,7 @@ public class HFileCorruptionChecker {
     }
 
     // Parallelize check at the region dir level
-    List<RegionDirChecker> rdcs = new ArrayList<RegionDirChecker>();
+    List<RegionDirChecker> rdcs = new ArrayList<RegionDirChecker>(rds.size() + 1);
     List<Future<Void>> rdFutures;
 
     for (FileStatus rdFs : rds) {
@@ -541,7 +541,7 @@ public class HFileCorruptionChecker {
       out.print("      " + mq);
     }
 
-    String initialState = (corrupted.size() == 0) ? "OK" : "CORRUPTED";
+    String initialState = (corrupted.isEmpty()) ? "OK" : "CORRUPTED";
     String fixedState = (corrupted.size() == quarantined.size()) ? "OK"
         : "CORRUPTED";
 
@@ -560,7 +560,7 @@ public class HFileCorruptionChecker {
     for (Path mq : missedMobFiles) {
       out.print("      " + mq);
     }
-    String initialMobState = (corruptedMobFiles.size() == 0) ? "OK" : "CORRUPTED";
+    String initialMobState = (corruptedMobFiles.isEmpty()) ? "OK" : "CORRUPTED";
     String fixedMobState = (corruptedMobFiles.size() == quarantinedMobFiles.size()) ? "OK"
         : "CORRUPTED";
 

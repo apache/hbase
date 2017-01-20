@@ -399,7 +399,7 @@ public class RestoreSnapshotHelper {
    */
   private void removeHdfsRegions(final ThreadPoolExecutor exec, final List<HRegionInfo> regions)
       throws IOException {
-    if (regions == null || regions.size() == 0) return;
+    if (regions == null || regions.isEmpty()) return;
     ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
       @Override
       public void editRegion(final HRegionInfo hri) throws IOException {
@@ -414,7 +414,7 @@ public class RestoreSnapshotHelper {
   private void restoreHdfsRegions(final ThreadPoolExecutor exec,
       final Map<String, SnapshotRegionManifest> regionManifests,
       final List<HRegionInfo> regions) throws IOException {
-    if (regions == null || regions.size() == 0) return;
+    if (regions == null || regions.isEmpty()) return;
     ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
       @Override
       public void editRegion(final HRegionInfo hri) throws IOException {
@@ -429,7 +429,7 @@ public class RestoreSnapshotHelper {
   private void restoreHdfsMobRegions(final ThreadPoolExecutor exec,
       final Map<String, SnapshotRegionManifest> regionManifests,
       final List<HRegionInfo> regions) throws IOException {
-    if (regions == null || regions.size() == 0) return;
+    if (regions == null || regions.isEmpty()) return;
     ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
       @Override
       public void editRegion(final HRegionInfo hri) throws IOException {
@@ -562,7 +562,7 @@ public class RestoreSnapshotHelper {
   private HRegionInfo[] cloneHdfsRegions(final ThreadPoolExecutor exec,
       final Map<String, SnapshotRegionManifest> regionManifests,
       final List<HRegionInfo> regions) throws IOException {
-    if (regions == null || regions.size() == 0) return null;
+    if (regions == null || regions.isEmpty()) return null;
 
     final Map<String, HRegionInfo> snapshotRegions =
       new HashMap<String, HRegionInfo>(regions.size());

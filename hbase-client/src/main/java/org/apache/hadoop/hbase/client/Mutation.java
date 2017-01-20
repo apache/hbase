@@ -159,7 +159,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   @Override
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>();
+    List<String> families = new ArrayList<String>(this.familyMap.entrySet().size());
     // ideally, we would also include table information, but that information
     // is not stored in each Operation instance.
     map.put("families", families);
@@ -227,7 +227,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     stringMap.put("vlen", c.getValueLength());
     List<Tag> tags = CellUtil.getTags(c);
     if (tags != null) {
-      List<String> tagsString = new ArrayList<String>();
+      List<String> tagsString = new ArrayList<String>(tags.size());
       for (Tag t : tags) {
         tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(TagUtil.cloneValue(t)));
       }

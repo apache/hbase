@@ -116,7 +116,7 @@ public abstract class AbstractHBaseTool implements Tool, Configurable {
     }
 
     CommandLine cmd;
-    List<String> argsList = new ArrayList<>();
+    List<String> argsList = new ArrayList<>(args.length);
     for (String arg : args) {
       argsList.add(arg);
     }

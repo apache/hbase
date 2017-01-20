@@ -29,7 +29,7 @@ public class TestTimestampDataRepeats implements TestTimestampData {
 
   @Override
   public List<Long> getInputs() {
-    List<Long> d = new ArrayList<Long>();
+    List<Long> d = new ArrayList<Long>(5);
     d.add(t);
     d.add(t);
     d.add(t);

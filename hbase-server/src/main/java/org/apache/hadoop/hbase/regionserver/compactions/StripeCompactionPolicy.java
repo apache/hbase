@@ -136,7 +136,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       return selectNewStripesCompaction(si);
     }
 
-    boolean canDropDeletesNoL0 = l0Files.size() == 0;
+    boolean canDropDeletesNoL0 = l0Files.isEmpty();
     if (shouldCompactL0) {
       if (!canDropDeletesNoL0) {
         // If we need to compact L0, see if we can add something to it, and drop deletes.

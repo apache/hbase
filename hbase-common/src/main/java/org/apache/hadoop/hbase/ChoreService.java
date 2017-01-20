@@ -348,7 +348,7 @@ public class ChoreService implements ChoreServicer {
   }
 
   private void cancelAllChores(final boolean mayInterruptIfRunning) {
-    ArrayList<ScheduledChore> choresToCancel = new ArrayList<ScheduledChore>();
+    ArrayList<ScheduledChore> choresToCancel = new ArrayList<ScheduledChore>(scheduledChores.keySet().size());
     // Build list of chores to cancel so we can iterate through a set that won't change
     // as chores are cancelled. If we tried to cancel each chore while iterating through
     // keySet the results would be undefined because the keySet would be changing

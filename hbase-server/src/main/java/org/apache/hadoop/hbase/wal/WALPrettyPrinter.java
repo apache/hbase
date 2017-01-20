@@ -293,7 +293,7 @@ public class WALPrettyPrinter {
             actions.add(op);
           }
         }
-        if (actions.size() == 0)
+        if (actions.isEmpty())
           continue;
         txn.put("actions", actions);
         if (outputJSON) {
@@ -381,7 +381,7 @@ public class WALPrettyPrinter {
     try {
       CommandLine cmd = parser.parse(options, args);
       files = cmd.getArgList();
-      if (files.size() == 0 || cmd.hasOption("h")) {
+      if (files.isEmpty() || cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("WAL <filename...>", options, true);
         System.exit(-1);

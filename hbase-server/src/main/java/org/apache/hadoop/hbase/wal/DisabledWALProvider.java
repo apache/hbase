@@ -67,7 +67,7 @@ class DisabledWALProvider implements WALProvider {
 
   @Override
   public List<WAL> getWALs() throws IOException {
-    List<WAL> wals = new ArrayList<WAL>();
+    List<WAL> wals = new ArrayList<WAL>(1);
     wals.add(disabled);
     return wals;
   }

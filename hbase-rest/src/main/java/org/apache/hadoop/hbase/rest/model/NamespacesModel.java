@@ -66,7 +66,7 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
    */
   public NamespacesModel(Admin admin) throws IOException {
     NamespaceDescriptor[] nds = admin.listNamespaceDescriptors();
-    namespaces = new ArrayList<String>();
+    namespaces = new ArrayList<String>(nds.length);
     for (NamespaceDescriptor nd : nds) {
       namespaces.add(nd.getName());
     }

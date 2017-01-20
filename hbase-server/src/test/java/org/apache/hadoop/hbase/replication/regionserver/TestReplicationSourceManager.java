@@ -225,7 +225,7 @@ public abstract class TestReplicationSourceManager {
     WALEdit edit = new WALEdit();
     edit.add(kv);
 
-    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
+    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>(1);
     listeners.add(replication);
     final WALFactory wals = new WALFactory(utility.getConfiguration(), listeners,
         URLEncoder.encode("regionserver:60020", "UTF8"));

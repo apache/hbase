@@ -215,7 +215,7 @@ public abstract class TestReplicationStateBasic {
     rq1.addHFileRefs(ID_ONE, files1);
     assertEquals(1, rqc.getAllPeersFromHFileRefsQueue().size());
     assertEquals(3, rqc.getReplicableHFiles(ID_ONE).size());
-    List<String> hfiles2 = new ArrayList<>();
+    List<String> hfiles2 = new ArrayList<>(files1.size());
     for (Pair<Path, Path> p : files1) {
       hfiles2.add(p.getSecond().getName());
     }

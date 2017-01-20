@@ -175,7 +175,7 @@ public class RemoteHTable implements Table {
   protected Result[] buildResultFromModel(final CellSetModel model) {
     List<Result> results = new ArrayList<Result>();
     for (RowModel row: model.getRows()) {
-      List<Cell> kvs = new ArrayList<Cell>();
+      List<Cell> kvs = new ArrayList<Cell>(row.getCells().size());
       for (CellModel cell: row.getCells()) {
         byte[][] split = KeyValue.parseColumn(cell.getColumn());
         byte[] column = split[0];

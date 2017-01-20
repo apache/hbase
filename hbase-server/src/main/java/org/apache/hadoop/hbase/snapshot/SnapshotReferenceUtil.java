@@ -112,7 +112,7 @@ public final class SnapshotReferenceUtil {
       throws IOException {
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, desc);
     List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
-    if (regionManifests == null || regionManifests.size() == 0) {
+    if (regionManifests == null || regionManifests.isEmpty()) {
       LOG.debug("No manifest files present: " + snapshotDir);
       return;
     }
@@ -184,7 +184,7 @@ public final class SnapshotReferenceUtil {
 
     final Path snapshotDir = manifest.getSnapshotDir();
     List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
-    if (regionManifests == null || regionManifests.size() == 0) {
+    if (regionManifests == null || regionManifests.isEmpty()) {
       LOG.debug("No manifest files present: " + snapshotDir);
       return;
     }
@@ -205,7 +205,7 @@ public final class SnapshotReferenceUtil {
     final Path snapshotDir = manifest.getSnapshotDir();
 
     List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
-    if (regionManifests == null || regionManifests.size() == 0) {
+    if (regionManifests == null || regionManifests.isEmpty()) {
       LOG.debug("No manifest files present: " + snapshotDir);
       return;
     }

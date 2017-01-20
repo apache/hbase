@@ -309,7 +309,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
 
     List<TableName> specialTables;
     if(!master.isInitialized()) {
-      specialTables = new ArrayList<TableName>();
+      specialTables = new ArrayList<TableName>(4);
       specialTables.add(AccessControlLists.ACL_TABLE_NAME);
       specialTables.add(TableName.META_TABLE_NAME);
       specialTables.add(TableName.NAMESPACE_TABLE_NAME);

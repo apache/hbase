@@ -780,7 +780,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     @Override
     public void run() {
       List<String> currentReplicators = replicationQueues.getListOfReplicators();
-      if (currentReplicators == null || currentReplicators.size() == 0) {
+      if (currentReplicators == null || currentReplicators.isEmpty()) {
         return;
       }
       List<String> otherRegionServers = replicationTracker.getListOfRegionServers();

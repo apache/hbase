@@ -52,7 +52,7 @@ final public class JavaHBaseBulkPutExample {
     JavaSparkContext jsc = new JavaSparkContext(sparkConf);
 
     try {
-      List<String> list = new ArrayList<>();
+      List<String> list = new ArrayList<>(5);
       list.add("1," + columnFamily + ",a,1");
       list.add("2," + columnFamily + ",a,2");
       list.add("3," + columnFamily + ",a,3");

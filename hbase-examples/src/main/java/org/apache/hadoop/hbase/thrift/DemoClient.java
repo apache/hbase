@@ -154,7 +154,7 @@ public class DemoClient {
         //
         // Create the demo table with two column families, entry: and unused:
         //
-        ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>();
+        ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>(2);
         ColumnDescriptor col;
         col = new ColumnDescriptor();
         col.name = ByteBuffer.wrap(bytes("entry:"));
@@ -194,7 +194,7 @@ public class DemoClient {
 
         ArrayList<Mutation> mutations;
         // non-utf8 is fine for data
-        mutations = new ArrayList<Mutation>();
+        mutations = new ArrayList<Mutation>(1);
         mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
             ByteBuffer.wrap(invalid), writeToWal));
         client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")),
@@ -202,13 +202,13 @@ public class DemoClient {
 
 
         // this row name is valid utf8
-        mutations = new ArrayList<Mutation>();
+        mutations = new ArrayList<Mutation>(1);
         mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(valid), writeToWal));
         client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(valid), mutations, dummyAttributes);
 
         // non-utf8 is now allowed in row names because HBase stores values as binary
 
-        mutations = new ArrayList<Mutation>();
+        mutations = new ArrayList<Mutation>(1);
         mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid), writeToWal));
         client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(invalid), mutations, dummyAttributes);
 
@@ -238,7 +238,7 @@ public class DemoClient {
             nf.setGroupingUsed(false);
             byte[] row = bytes(nf.format(i));
 
-            mutations = new ArrayList<Mutation>();
+            mutations = new ArrayList<Mutation>(1);
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("unused:")), ByteBuffer.wrap(bytes("DELETE_ME")), writeToWal));
             client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
             printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
@@ -251,14 +251,14 @@ public class DemoClient {
                 // no-op
             }
 
-            mutations = new ArrayList<Mutation>();
+            mutations = new ArrayList<Mutation>(2);
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes("0")), writeToWal));
             mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(bytes("FOO")), writeToWal));
             client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
             printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
 
             Mutation m;
-            mutations = new ArrayList<Mutation>();
+            mutations = new ArrayList<Mutation>(2);
             m = new Mutation();
             m.column = ByteBuffer.wrap(bytes("entry:foo"));
             m.isDelete = true;

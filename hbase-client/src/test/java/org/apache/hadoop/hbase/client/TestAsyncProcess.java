@@ -682,7 +682,7 @@ public class TestAsyncProcess {
     ClusterConnection hc = createHConnection();
     MyAsyncProcess ap = new MyAsyncProcess(hc, CONF);
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(1);
     puts.add(createPut(1, true));
 
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
@@ -701,7 +701,7 @@ public class TestAsyncProcess {
     };
     MyAsyncProcess ap = new MyAsyncProcess(hc, CONF);
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(1);
     puts.add(createPut(1, true));
 
     final AsyncRequestFuture ars = ap.submit(null, DUMMY_TABLE, puts, false, cb, false);
@@ -718,7 +718,7 @@ public class TestAsyncProcess {
       SimpleRequestController.class.getName());
     MyAsyncProcess ap = new MyAsyncProcess(conn, CONF);
     SimpleRequestController controller = (SimpleRequestController) ap.requestController;
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(1);
     puts.add(createPut(1, true));
 
     for (int i = 0; i != controller.maxConcurrentTasksPerRegion; ++i) {
@@ -747,7 +747,7 @@ public class TestAsyncProcess {
     SimpleRequestController controller = (SimpleRequestController) ap.requestController;
     controller.taskCounterPerServer.put(sn2, new AtomicInteger(controller.maxConcurrentTasksPerServer));
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(4);
     puts.add(createPut(1, true));
     puts.add(createPut(3, true)); // <== this one won't be taken, the rs is busy
     puts.add(createPut(1, true)); // <== this one will make it, the region is already in
@@ -769,7 +769,7 @@ public class TestAsyncProcess {
   public void testFail() throws Exception {
     MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), CONF, false);
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(1);
     Put p = createPut(1, false);
     puts.add(p);
 
@@ -817,7 +817,7 @@ public class TestAsyncProcess {
       }
     };
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(1);
     Put p = createPut(1, true);
     puts.add(p);
 
@@ -843,7 +843,7 @@ public class TestAsyncProcess {
   public void testFailAndSuccess() throws Exception {
     MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), CONF, false);
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(3);
     puts.add(createPut(1, false));
     puts.add(createPut(1, true));
     puts.add(createPut(1, true));
@@ -870,7 +870,7 @@ public class TestAsyncProcess {
   public void testFlush() throws Exception {
     MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), CONF, false);
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(3);
     puts.add(createPut(1, false));
     puts.add(createPut(1, true));
     puts.add(createPut(1, true));
@@ -955,7 +955,7 @@ public class TestAsyncProcess {
       }
     };
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(1);
     puts.add(createPut(1, true));
 
     t.start();
@@ -1171,7 +1171,7 @@ public class TestAsyncProcess {
     HTable ht = new HTable(conn, mutator);
     ht.multiAp = new MyAsyncProcess(conn, CONF, false);
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(7);
     puts.add(createPut(1, true));
     puts.add(createPut(1, true));
     puts.add(createPut(1, true));
@@ -1517,7 +1517,7 @@ public class TestAsyncProcess {
   }
 
   private static List<Get> makeTimelineGets(byte[]... rows) {
-    List<Get> result = new ArrayList<Get>();
+    List<Get> result = new ArrayList<Get>(rows.length);
     for (byte[] row : rows) {
       Get get = new Get(row);
       get.setConsistency(Consistency.TIMELINE);
@@ -1611,7 +1611,7 @@ public class TestAsyncProcess {
             new LinkedBlockingQueue<Runnable>(200));
     AsyncProcess ap = new AsyncProcessForThrowableCheck(hc, CONF);
 
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(1);
     puts.add(createPut(1, true));
     AsyncProcessTask task = AsyncProcessTask.newBuilder()
             .setPool(myPool)

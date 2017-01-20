@@ -143,7 +143,7 @@ public class HFileArchiveTestingUtil {
    * @return <expected, gotten, backup>, where each is sorted
    */
   private static List<List<String>> getFileLists(FileStatus[] previous, FileStatus[] archived) {
-    List<List<String>> files = new ArrayList<List<String>>();
+    List<List<String>> files = new ArrayList<List<String>>(3);
 
     // copy over the original files
     List<String> originalFileNames = convertToString(previous);

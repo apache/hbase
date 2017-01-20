@@ -39,8 +39,9 @@ public class TestHBaseRpcControllerImpl {
 
   @Test
   public void testListOfCellScannerables() throws IOException {
-    List<CellScannable> cells = new ArrayList<CellScannable>();
     final int count = 10;
+    List<CellScannable> cells = new ArrayList<CellScannable>(count);
+
     for (int i = 0; i < count; i++) {
       cells.add(createCell(i));
     }

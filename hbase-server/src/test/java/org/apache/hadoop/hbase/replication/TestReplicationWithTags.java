@@ -181,7 +181,7 @@ public class TestReplicationWithTags {
           fail("Waited too much time for put replication");
         }
         Result res = htable2.get(get);
-        if (res.size() == 0) {
+        if (res.isEmpty()) {
           LOG.info("Row not available");
           Thread.sleep(SLEEP_TIME);
         } else {
@@ -212,7 +212,7 @@ public class TestReplicationWithTags {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag(TAG_TYPE, attribute);
-            List<Tag> tagList = new ArrayList<Tag>();
+            List<Tag> tagList = new ArrayList<Tag>(1);
             tagList.add(tag);
 
             KeyValue newKV = new KeyValue(CellUtil.cloneRow(kv), 0, kv.getRowLength(),

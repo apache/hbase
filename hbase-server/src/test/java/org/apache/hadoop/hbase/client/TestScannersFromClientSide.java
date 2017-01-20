@@ -744,7 +744,7 @@ public class TestScannersFromClientSide {
     LOG.info(msg);
     LOG.info("Expected count: " + expKvList.size());
     LOG.info("Actual count: " + result.size());
-    if (expKvList.size() == 0)
+    if (expKvList.isEmpty())
       return;
 
     int i = 0;

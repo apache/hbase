@@ -384,7 +384,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new FamilyFilter(CompareOp.valueOf(op), comparator.build());
         break;
       case FilterList: {
-        List<Filter> list = new ArrayList<Filter>();
+        List<Filter> list = new ArrayList<Filter>(filters.size());
         for (FilterModel model: filters) {
           list.add(model.build());
         }

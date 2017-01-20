@@ -522,7 +522,7 @@ public class HStore implements Store {
   }
 
   private List<StoreFile> openStoreFiles(Collection<StoreFileInfo> files) throws IOException {
-    if (files == null || files.size() == 0) {
+    if (files == null || files.isEmpty()) {
       return new ArrayList<StoreFile>();
     }
     // initialize the thread pool for opening store files in parallel..

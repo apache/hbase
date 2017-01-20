@@ -1875,7 +1875,7 @@ public final class ProtobufUtil {
    */
   static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
     if (proto == null) return null;
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>(proto.getRegionInfoList().size());
     for (RegionInfo regionInfo: proto.getRegionInfoList()) {
       regionInfos.add(HRegionInfo.convert(regionInfo));
     }
@@ -2691,7 +2691,7 @@ public final class ProtobufUtil {
 
   public static List<ReplicationLoadSource> toReplicationLoadSourceList(
       List<ClusterStatusProtos.ReplicationLoadSource> clsList) {
-    ArrayList<ReplicationLoadSource> rlsList = new ArrayList<ReplicationLoadSource>();
+    ArrayList<ReplicationLoadSource> rlsList = new ArrayList<ReplicationLoadSource>(clsList.size());
     for (ClusterStatusProtos.ReplicationLoadSource cls : clsList) {
       rlsList.add(toReplicationLoadSource(cls));
     }

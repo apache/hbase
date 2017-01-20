@@ -85,7 +85,7 @@ public class TestWALActionsListener {
   @Test
   public void testActionListener() throws Exception {
     DummyWALActionsListener observer = new DummyWALActionsListener();
-    List<WALActionsListener> list = new ArrayList<WALActionsListener>();
+    List<WALActionsListener> list = new ArrayList<WALActionsListener>(1);
     list.add(observer);
     final WALFactory wals = new WALFactory(conf, list, "testActionListener");
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();

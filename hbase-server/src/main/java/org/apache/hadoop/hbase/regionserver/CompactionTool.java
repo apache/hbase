@@ -423,7 +423,7 @@ public class CompactionTool extends Configured implements Tool {
       return 1;
     }
 
-    if (toCompactDirs.size() == 0) {
+    if (toCompactDirs.isEmpty()) {
       printUsage("No directories to compact specified.");
       return 1;
     }

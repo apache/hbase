@@ -353,7 +353,7 @@ public class TestRowProcessorEndpoint {
         Scan scan = new Scan(row, row);
         scan.addColumn(FAM, COUNTER);
         doScan(region, scan, kvs);
-        counter = kvs.size() == 0 ? 0 :
+        counter = kvs.isEmpty() ? 0 :
           Bytes.toInt(CellUtil.cloneValue(kvs.iterator().next()));
 
         // Assert counter value
@@ -497,7 +497,7 @@ public class TestRowProcessorEndpoint {
 
       @Override
       public Collection<byte[]> getRowsToLock() {
-        List<byte[]> rows = new ArrayList<byte[]>();
+        List<byte[]> rows = new ArrayList<byte[]>(2);
         rows.add(row1);
         rows.add(row2);
         return rows;
@@ -538,7 +538,7 @@ public class TestRowProcessorEndpoint {
         swapped = !swapped;
 
         // Add and delete keyvalues
-        List<List<Cell>> kvs = new ArrayList<List<Cell>>();
+        List<List<Cell>> kvs = new ArrayList<List<Cell>>(2);
         kvs.add(kvs1);
         kvs.add(kvs2);
         byte[][] rows = new byte[][]{row1, row2};

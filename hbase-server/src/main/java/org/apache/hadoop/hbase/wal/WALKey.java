@@ -229,7 +229,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   public WALKey(final byte[] encodedRegionName, final TableName tablename,
                 long logSeqNum,
       final long now, UUID clusterId) {
-    List<UUID> clusterIds = new ArrayList<UUID>();
+    List<UUID> clusterIds = new ArrayList<UUID>(1);
     clusterIds.add(clusterId);
     init(encodedRegionName, tablename, logSeqNum, now, clusterIds,
         HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);

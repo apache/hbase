@@ -287,8 +287,8 @@ class AsyncProcess {
           }
           loc = locs.getDefaultRegionLocation();
         } catch (IOException ex) {
-          locationErrors = new ArrayList<Exception>();
-          locationErrorRows = new ArrayList<Integer>();
+          locationErrors = new ArrayList<Exception>(1);
+          locationErrorRows = new ArrayList<Integer>(1);
           LOG.error("Failed to get region location ", ex);
           // This action failed before creating ars. Retain it, but do not add to submit list.
           // We will then add it to ars in an already-failed state.

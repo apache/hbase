@@ -74,7 +74,7 @@ public class TestShellRSGroups {
     TEST_UTIL.startMiniCluster(1,4);
 
     // Configure jruby runtime
-    List<String> loadPaths = new ArrayList();
+    List<String> loadPaths = new ArrayList<>(2);
     loadPaths.add(basePath+"/src/main/ruby");
     loadPaths.add(basePath+"/src/test/ruby");
     jruby.getProvider().setLoadPaths(loadPaths);

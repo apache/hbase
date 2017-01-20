@@ -130,7 +130,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
         fail("Waited too much time for put replication");
       }
       Result res = htable2.get(get);
-      if (res.size() == 0) {
+      if (res.isEmpty()) {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME);
       } else {

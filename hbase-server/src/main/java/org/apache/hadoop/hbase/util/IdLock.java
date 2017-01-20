@@ -118,7 +118,7 @@ public class IdLock {
 
   /** For testing */
   void assertMapEmpty() {
-    assert map.size() == 0;
+    assert map.isEmpty();
   }
 
   @VisibleForTesting

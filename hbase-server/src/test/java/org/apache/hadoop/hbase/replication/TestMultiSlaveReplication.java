@@ -321,7 +321,7 @@ public class TestMultiSlaveReplication {
       boolean replicatedToAll = true;
       for (Table target : targets) {
         Result res = target.get(get);
-        if (res.size() == 0) {
+        if (res.isEmpty()) {
           LOG.info("Row not available");
           replicatedToAll = false;
           break;

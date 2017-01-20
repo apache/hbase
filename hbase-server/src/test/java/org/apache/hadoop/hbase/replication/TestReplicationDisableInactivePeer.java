@@ -80,7 +80,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
     Thread.sleep(SLEEP_TIME * NB_RETRIES);
     for (int i = 0; i < NB_RETRIES; i++) {
       Result res = htable2.get(get);
-      if (res.size() == 0) {
+      if (res.isEmpty()) {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME * NB_RETRIES);
       } else {

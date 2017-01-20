@@ -151,7 +151,7 @@ public class HttpDoAsClient {
     //
     // Create the demo table with two column families, entry: and unused:
     //
-    ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>();
+    ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>(2);
     ColumnDescriptor col;
     col = new ColumnDescriptor();
     col.name = ByteBuffer.wrap(bytes("entry:"));

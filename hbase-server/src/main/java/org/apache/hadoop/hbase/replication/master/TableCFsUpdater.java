@@ -75,7 +75,7 @@ public class TableCFsUpdater extends ReplicationStateZKBase {
         String peerNode = getPeerNode(peerId);
         ReplicationPeerConfig rpc = getReplicationPeerConig(peerNode);
         // We only need to copy data from tableCFs node to rpc Node the first time hmaster start.
-        if (rpc.getTableCFsMap() == null || rpc.getTableCFsMap().size() == 0) {
+        if (rpc.getTableCFsMap() == null || rpc.getTableCFsMap().isEmpty()) {
           // we copy TableCFs node into PeerNode
           LOG.info("copy tableCFs into peerNode:" + peerId);
           ReplicationProtos.TableCF[] tableCFs =

@@ -3865,7 +3865,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void drainRegionServers(List<ServerName> servers) throws IOException {
-    final List<HBaseProtos.ServerName> pbServers = new ArrayList<HBaseProtos.ServerName>();
+    final List<HBaseProtos.ServerName> pbServers = new ArrayList<HBaseProtos.ServerName>(servers.size());
     for (ServerName server : servers) {
       // Parse to ServerName to do simple validation.
       ServerName.parseServerName(server.toString());
@@ -3902,7 +3902,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void removeDrainFromRegionServers(List<ServerName> servers) throws IOException {
-    final List<HBaseProtos.ServerName> pbServers = new ArrayList<HBaseProtos.ServerName>();
+    final List<HBaseProtos.ServerName> pbServers = new ArrayList<HBaseProtos.ServerName>(servers.size());
     for (ServerName server : servers) {
       pbServers.add(ProtobufUtil.toServerName(server));
     }

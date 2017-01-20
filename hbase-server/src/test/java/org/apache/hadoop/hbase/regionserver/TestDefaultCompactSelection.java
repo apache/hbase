@@ -176,7 +176,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     CompactionRequest result = ((RatioBasedCompactionPolicy) store.storeEngine
         .getCompactionPolicy()).selectCompaction(candidates,
         new ArrayList<StoreFile>(), false, false, false);
-    Assert.assertTrue(result.getFiles().size() == 0);
+    Assert.assertTrue(result.getFiles().isEmpty());
     store.setScanInfo(oldScanInfo);
   }
 }

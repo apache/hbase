@@ -849,7 +849,7 @@ public class ThriftServerRunner implements Runnable {
     throws IOError {
       try (RegionLocator locator = connectionCache.getRegionLocator(getBytes(tableName))) {
         List<HRegionLocation> regionLocations = locator.getAllRegionLocations();
-        List<TRegionInfo> results = new ArrayList<TRegionInfo>();
+        List<TRegionInfo> results = new ArrayList<TRegionInfo>(regionLocations.size());
         for (HRegionLocation regionLocation : regionLocations) {
           HRegionInfo info = regionLocation.getRegionInfo();
           ServerName serverName = regionLocation.getServerName();
@@ -1861,7 +1861,7 @@ public class ThriftServerRunner implements Runnable {
    */
   private static void addAttributes(OperationWithAttributes op,
     Map<ByteBuffer, ByteBuffer> attributes) {
-    if (attributes == null || attributes.size() == 0) {
+    if (attributes == null || attributes.isEmpty()) {
       return;
     }
     for (Map.Entry<ByteBuffer, ByteBuffer> entry : attributes.entrySet()) {

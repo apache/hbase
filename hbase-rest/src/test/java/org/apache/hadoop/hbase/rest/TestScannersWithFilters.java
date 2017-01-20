@@ -957,7 +957,7 @@ public class TestScannersWithFilters {
     // Test getting a single row, single key using Row, Qualifier, and Value
     // regular expression and substring filters
     // Use must pass all
-    List<Filter> filters = new ArrayList<Filter>();
+    List<Filter> filters = new ArrayList<Filter>(3);
     filters.add(new RowFilter(CompareOp.EQUAL,
       new RegexStringComparator(".+-2")));
     filters.add(new QualifierFilter(CompareOp.EQUAL,

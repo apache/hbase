@@ -47,7 +47,7 @@ public class TestExportSnapshotHelpers {
   @Test
   public void testBalanceSplit() throws Exception {
     // Create a list of files
-    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>();
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>(21);
     for (long i = 0; i <= 20; i++) {
       SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
         .setType(SnapshotFileInfo.Type.HFILE)

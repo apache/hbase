@@ -232,7 +232,7 @@ public final class ResponseConverter {
   public static List<RegionOpeningState> getRegionOpeningStateList(
       final OpenRegionResponse proto) {
     if (proto == null) return null;
-    List<RegionOpeningState> regionOpeningStates = new ArrayList<RegionOpeningState>();
+    List<RegionOpeningState> regionOpeningStates = new ArrayList<RegionOpeningState>(proto.getOpeningStateCount());
     for (int i = 0; i < proto.getOpeningStateCount(); i++) {
       regionOpeningStates.add(RegionOpeningState.valueOf(
           proto.getOpeningState(i).name()));

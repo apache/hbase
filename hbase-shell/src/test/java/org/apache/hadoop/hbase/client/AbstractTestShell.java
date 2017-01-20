@@ -54,7 +54,7 @@ public abstract class AbstractTestShell {
     TEST_UTIL.startMiniCluster();
 
     // Configure jruby runtime
-    List<String> loadPaths = new ArrayList();
+    List<String> loadPaths = new ArrayList<>(2);
     loadPaths.add("src/main/ruby");
     loadPaths.add("src/test/ruby");
     jruby.getProvider().setLoadPaths(loadPaths);

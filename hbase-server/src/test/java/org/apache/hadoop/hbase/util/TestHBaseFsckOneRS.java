@@ -978,7 +978,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         undeployRegion(connection, firstSN, daughters.getFirst());
         undeployRegion(connection, secondSN, daughters.getSecond());
 
-        List<Delete> deletes = new ArrayList<>();
+        List<Delete> deletes = new ArrayList<>(2);
         deletes.add(new Delete(daughters.getFirst().getRegionName()));
         deletes.add(new Delete(daughters.getSecond().getRegionName()));
         meta.delete(deletes);

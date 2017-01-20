@@ -214,7 +214,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
           fail("Waited too much time for put replication");
         }
         Result res = target.get(get);
-        if (res.size() == 0) {
+        if (res.isEmpty()) {
           LOG.info("Row not available");
         } else {
           assertEquals(res.size(), 1);

@@ -553,7 +553,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       Byte deleteTagsFormat) throws IOException {
     if ((deleteTagsFormat != null && deleteTagsFormat == SORTED_ORDINAL_SERIALIZATION_FORMAT)
         && (putTagsFormat == null || putTagsFormat == SORTED_ORDINAL_SERIALIZATION_FORMAT)) {
-      if (putVisTags.size() == 0) {
+      if (putVisTags.isEmpty()) {
         // Early out if there are no tags in the cell
         return false;
       }

@@ -484,7 +484,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       setLoad(serverLoadList, i, balanceInfo.getNumRegionsAdded());
       if (balanceInfo.getHriList().size() + balanceInfo.getNumRegionsAdded() == max) {
         HRegionInfo hriToPlan;
-        if (balanceInfo.getHriList().size() == 0) {
+        if (balanceInfo.getHriList().isEmpty()) {
           LOG.debug("During balanceOverall, we found " + serverload.getServerName()
                   + " has no HRegionInfo, no operation needed");
           continue;

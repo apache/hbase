@@ -181,7 +181,7 @@ public class ForeignException extends IOException {
    *         the sender).
    */
   private static StackTraceElement[] toStackTrace(List<StackTraceElementMessage> traceList) {
-    if (traceList == null || traceList.size() == 0) {
+    if (traceList == null || traceList.isEmpty()) {
       return new StackTraceElement[0]; // empty array
     }
     StackTraceElement[] trace = new StackTraceElement[traceList.size()];

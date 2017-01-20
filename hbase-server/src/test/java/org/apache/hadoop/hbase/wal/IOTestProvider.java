@@ -108,7 +108,7 @@ public class IOTestProvider implements WALProvider {
 
   @Override
   public List<WAL> getWALs() throws IOException {
-    List<WAL> wals = new ArrayList<WAL>();
+    List<WAL> wals = new ArrayList<WAL>(1);
     wals.add(log);
     return wals;
   }

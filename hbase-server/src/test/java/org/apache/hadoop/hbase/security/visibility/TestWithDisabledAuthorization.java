@@ -142,7 +142,7 @@ public class TestWithDisabledAuthorization {
           } catch (Throwable t) {
             fail("Should not have failed");
           }
-          List<String> authsList = new ArrayList<String>();
+          List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
           for (ByteString authBS : authsResponse.getAuthList()) {
             authsList.add(Bytes.toString(authBS.toByteArray()));
           }
@@ -227,7 +227,7 @@ public class TestWithDisabledAuthorization {
 
   static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
       throws Exception {
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(labelExps.length + 1);
     for (int i = 0; i < labelExps.length; i++) {
       Put put = new Put(Bytes.toBytes("row" + (i+1)));
       put.addColumn(TEST_FAMILY, TEST_QUALIFIER, HConstants.LATEST_TIMESTAMP, ZERO);

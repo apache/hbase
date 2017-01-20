@@ -589,7 +589,7 @@ public abstract class TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterStatus().getRegionsInTransition().size() == 0;
+        return cluster.getClusterStatus().getRegionsInTransition().isEmpty();
       }
     });
     Set<HostAndPort> newServers = Sets.newHashSet();
@@ -606,7 +606,7 @@ public abstract class TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return cluster.getClusterStatus().getRegionsInTransition().size() == 0;
+        return cluster.getClusterStatus().getRegionsInTransition().isEmpty();
       }
     });
 

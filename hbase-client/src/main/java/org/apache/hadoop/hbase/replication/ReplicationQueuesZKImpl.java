@@ -327,8 +327,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     if (debugEnabled) {
       LOG.debug("Adding hfile references " + pairs + " in queue " + peerZnode);
     }
-    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+
     int size = pairs.size();
+    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>(size);
+
     for (int i = 0; i < size; i++) {
       listOfOps.add(ZKUtilOp.createAndFailSilent(
         ZKUtil.joinZNode(peerZnode, pairs.get(i).getSecond().getName()),
@@ -352,8 +354,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     if (debugEnabled) {
       LOG.debug("Removing hfile references " + files + " from queue " + peerZnode);
     }
-    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+
     int size = files.size();
+    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>(size);
+
     for (int i = 0; i < size; i++) {
       listOfOps.add(ZKUtilOp.deleteNodeFailSilent(ZKUtil.joinZNode(peerZnode, files.get(i))));
     }

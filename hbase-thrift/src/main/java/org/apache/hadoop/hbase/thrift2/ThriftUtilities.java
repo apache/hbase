@@ -160,7 +160,7 @@ public class ThriftUtilities {
     if (row != null) {
       out.setRow(in.getRow());
     }
-    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>(raw.length);
     for (Cell kv : raw) {
       TColumnValue col = new TColumnValue();
       col.setFamily(CellUtil.cloneFamily(kv));
@@ -328,7 +328,7 @@ public class ThriftUtilities {
   public static TDelete deleteFromHBase(Delete in) {
     TDelete out = new TDelete(ByteBuffer.wrap(in.getRow()));
 
-    List<TColumn> columns = new ArrayList<TColumn>();
+    List<TColumn> columns = new ArrayList<TColumn>(in.getFamilyCellMap().entrySet().size());
     long rowTimestamp = in.getTimeStamp();
     if (rowTimestamp != HConstants.LATEST_TIMESTAMP) {
       out.setTimestamp(rowTimestamp);
@@ -517,7 +517,7 @@ public class ThriftUtilities {
    */
   private static void addAttributes(OperationWithAttributes op,
                                     Map<ByteBuffer, ByteBuffer> attributes) {
-    if (attributes == null || attributes.size() == 0) {
+    if (attributes == null || attributes.isEmpty()) {
       return;
     }
     for (Map.Entry<ByteBuffer, ByteBuffer> entry : attributes.entrySet()) {

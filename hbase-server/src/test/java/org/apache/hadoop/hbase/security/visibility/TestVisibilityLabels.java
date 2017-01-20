@@ -456,7 +456,7 @@ public abstract class TestVisibilityLabels {
         } catch (Throwable e) {
           fail("Should not have failed");
         }
-        List<String> authsList = new ArrayList<String>();
+        List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));
         }
@@ -482,7 +482,7 @@ public abstract class TestVisibilityLabels {
           }
         } catch (Throwable e) {
         }
-        List<String> authsList = new ArrayList<String>();
+        List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));
         }
@@ -557,7 +557,7 @@ public abstract class TestVisibilityLabels {
         } catch (Throwable e) {
           fail("Should not have failed");
         }
-        List<String> authsList = new ArrayList<String>();
+        List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
         for (ByteString authBS : authsResponse.getAuthList()) {
           authsList.add(Bytes.toString(authBS.toByteArray()));
         }
@@ -853,7 +853,7 @@ public abstract class TestVisibilityLabels {
 
   static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
       throws Exception {
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(labelExps.length);
     for (int i = 0; i < labelExps.length; i++) {
       Put put = new Put(Bytes.toBytes("row" + (i+1)));
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);

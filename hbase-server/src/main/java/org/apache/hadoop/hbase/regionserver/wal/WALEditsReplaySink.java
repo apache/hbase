@@ -94,7 +94,7 @@ public class WALEditsReplaySink {
    * @throws IOException on IO failure
    */
   public void replayEntries(List<Pair<HRegionLocation, Entry>> entries) throws IOException {
-    if (entries.size() == 0) {
+    if (entries.isEmpty()) {
       return;
     }
 

@@ -762,7 +762,7 @@ public class SplitLogManager {
           EnvironmentEdgeManager.currentTime()
               - getSplitLogManagerCoordination().getLastRecoveryTime();
       if (!failedRecoveringRegionDeletions.isEmpty()
-          || (tot == 0 && tasks.size() == 0 && (timeInterval > checkRecoveringTimeThreshold))) {
+          || (tot == 0 && tasks.isEmpty() && (timeInterval > checkRecoveringTimeThreshold))) {
         // inside the function there have more checks before GC anything
         if (!failedRecoveringRegionDeletions.isEmpty()) {
           List<Pair<Set<ServerName>, Boolean>> previouslyFailedDeletions =

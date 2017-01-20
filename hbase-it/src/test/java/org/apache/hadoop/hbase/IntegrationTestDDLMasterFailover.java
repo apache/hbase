@@ -924,7 +924,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     String numThreadKey = String.format(NUM_THREADS_KEY, this.getClass().getSimpleName());
     numThreads = util.getConfiguration().getInt(numThreadKey, DEFAULT_NUM_THREADS);
 
-    ArrayList<Worker> workers = new ArrayList<>();
+    ArrayList<Worker> workers = new ArrayList<>(numThreads);
     for (int i = 0; i < numThreads; i++) {
       checkException(workers);
       Worker worker = new Worker();

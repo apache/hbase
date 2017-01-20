@@ -94,7 +94,7 @@ public class TestScannersWithLabels {
     byte[] k = new byte[3];
     byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
 
-    List<Put> puts = new ArrayList<>();
+    List<Put> puts = new ArrayList<>(9);
     for (int i = 0; i < 9; i++) {
       Put put = new Put(Bytes.toBytes("row" + i));
       put.setDurability(Durability.SKIP_WAL);

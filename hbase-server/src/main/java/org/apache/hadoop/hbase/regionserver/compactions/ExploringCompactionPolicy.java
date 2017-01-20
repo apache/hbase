@@ -114,7 +114,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
         }
       }
     }
-    if (bestSelection.size() == 0 && mightBeStuck) {
+    if (bestSelection.isEmpty() && mightBeStuck) {
       LOG.debug("Exploring compaction algorithm has selected " + smallest.size()
           + " files of size "+ smallestSize + " because the store might be stuck");
       return new ArrayList<StoreFile>(smallest);

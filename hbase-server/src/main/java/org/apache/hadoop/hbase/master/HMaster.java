@@ -2902,7 +2902,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       final String namespace, final String regex, final List<TableName> tableNameList,
       final boolean includeSysTables)
   throws IOException {
-    if (tableNameList == null || tableNameList.size() == 0) {
+    if (tableNameList == null || tableNameList.isEmpty()) {
       // request for all TableDescriptors
       Collection<HTableDescriptor> allHtds;
       if (namespace != null && namespace.length() > 0) {

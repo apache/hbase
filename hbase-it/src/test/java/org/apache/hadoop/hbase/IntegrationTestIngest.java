@@ -225,7 +225,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
       long numKeys) {
-    List<String> args = new ArrayList<String>();
+    List<String> args = new ArrayList<String>(11);
     args.add("-tn");
     args.add(getTablename().getNameAsString());
     args.add("-families");

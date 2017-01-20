@@ -681,7 +681,7 @@ public class TestPartialResultsFromClientSide {
       LOG.info("Actual count: " + result.size());
     }
 
-    if (expKvList.size() == 0) return;
+    if (expKvList.isEmpty()) return;
 
     int i = 0;
     for (Cell kv : result.rawCells()) {

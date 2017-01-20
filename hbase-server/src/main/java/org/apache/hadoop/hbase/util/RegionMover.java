@@ -463,17 +463,17 @@ public class RegionMover extends AbstractHBaseTool {
       boolean ack, List<HRegionInfo> movedRegions) throws Exception {
     List<HRegionInfo> regionsToMove = new ArrayList<HRegionInfo>();// FindBugs: DLS_DEAD_LOCAL_STORE
     regionsToMove = getRegions(this.conf, server);
-    if (regionsToMove.size() == 0) {
+    if (regionsToMove.isEmpty()) {
       LOG.info("No Regions to move....Quitting now");
       return;
-    } else if (regionServers.size() == 0) {
+    } else if (regionServers.isEmpty()) {
       LOG.warn("No Regions were moved - no servers available");
       throw new Exception("No online region servers");
     }
     while (true) {
       regionsToMove = getRegions(this.conf, server);
       regionsToMove.removeAll(movedRegions);
-      if (regionsToMove.size() == 0) {
+      if (regionsToMove.isEmpty()) {
         break;
       }
       int counter = 0;
@@ -823,7 +823,7 @@ public class RegionMover extends AbstractHBaseTool {
   private ArrayList<String> getServers(Admin admin) throws IOException {
     ArrayList<ServerName> serverInfo =
         new ArrayList<ServerName>(admin.getClusterStatus().getServers());
-    ArrayList<String> regionServers = new ArrayList<String>();
+    ArrayList<String> regionServers = new ArrayList<String>(serverInfo.size());
     for (ServerName server : serverInfo) {
       regionServers.add(server.getServerName());
     }

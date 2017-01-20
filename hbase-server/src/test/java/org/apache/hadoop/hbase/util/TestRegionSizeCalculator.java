@@ -118,7 +118,7 @@ public class TestRegionSizeCalculator {
   private RegionLocator mockRegionLocator(String... regionNames) throws IOException {
     RegionLocator mockedTable = Mockito.mock(RegionLocator.class);
     when(mockedTable.getName()).thenReturn(TableName.valueOf("sizeTestTable"));
-    List<HRegionLocation> regionLocations = new ArrayList<>();
+    List<HRegionLocation> regionLocations = new ArrayList<>(regionNames.length);
     when(mockedTable.getAllRegionLocations()).thenReturn(regionLocations);
 
     for (String regionName : regionNames) {

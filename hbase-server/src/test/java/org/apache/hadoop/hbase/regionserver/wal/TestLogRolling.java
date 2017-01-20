@@ -245,7 +245,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
       HRegionInfo region = server.getOnlineRegions(desc.getTableName()).get(0).getRegionInfo();
       final WAL log = server.getWAL(region);
-      final List<Path> paths = new ArrayList<Path>();
+      final List<Path> paths = new ArrayList<Path>(1);
       final List<Integer> preLogRolledCalled = new ArrayList<Integer>();
 
       paths.add(AbstractFSWALProvider.getCurrentFileName(log));

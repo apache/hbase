@@ -87,7 +87,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
     NamespaceDescriptor nd = admin.getNamespaceDescriptor(namespaceName);
 
     // For properly formed JSON, if no properties, field has to be null (not just no elements).
-    if(nd.getConfiguration().size() == 0){ return; }
+    if(nd.getConfiguration().isEmpty()){ return; }
 
     properties = new HashMap<String,String>();
     properties.putAll(nd.getConfiguration());

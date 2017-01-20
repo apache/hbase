@@ -44,20 +44,20 @@ public class TestScanWildcardColumnTracker {
     ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
 
     // Create list of qualifiers
-    List<byte[]> qualifiers = new ArrayList<byte[]>();
+    List<byte[]> qualifiers = new ArrayList<byte[]>(4);
     qualifiers.add(Bytes.toBytes("qualifier1"));
     qualifiers.add(Bytes.toBytes("qualifier2"));
     qualifiers.add(Bytes.toBytes("qualifier3"));
     qualifiers.add(Bytes.toBytes("qualifier4"));
 
     // Setting up expected result
-    List<MatchCode> expected = new ArrayList<MatchCode>();
+    List<MatchCode> expected = new ArrayList<MatchCode>(4);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
 
-    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<MatchCode>();
+    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<MatchCode>(qualifiers.size());
 
     for (byte[] qualifier : qualifiers) {
       ScanQueryMatcher.MatchCode mc = ScanQueryMatcher.checkColumn(tracker, qualifier, 0,
@@ -76,20 +76,20 @@ public class TestScanWildcardColumnTracker {
     ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
 
     // Create list of qualifiers
-    List<byte[]> qualifiers = new ArrayList<byte[]>();
+    List<byte[]> qualifiers = new ArrayList<byte[]>(4);
     qualifiers.add(Bytes.toBytes("qualifier1"));
     qualifiers.add(Bytes.toBytes("qualifier1"));
     qualifiers.add(Bytes.toBytes("qualifier1"));
     qualifiers.add(Bytes.toBytes("qualifier2"));
 
     // Setting up expected result
-    List<ScanQueryMatcher.MatchCode> expected = new ArrayList<MatchCode>();
+    List<ScanQueryMatcher.MatchCode> expected = new ArrayList<MatchCode>(4);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
 
-    List<MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
+    List<MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>(qualifiers.size());
 
     long timestamp = 0;
     for (byte[] qualifier : qualifiers) {
@@ -109,7 +109,7 @@ public class TestScanWildcardColumnTracker {
     ScanWildcardColumnTracker tracker = new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
 
     // Create list of qualifiers
-    List<byte[]> qualifiers = new ArrayList<byte[]>();
+    List<byte[]> qualifiers = new ArrayList<byte[]>(2);
     qualifiers.add(Bytes.toBytes("qualifier2"));
     qualifiers.add(Bytes.toBytes("qualifier1"));
 

@@ -2233,7 +2233,7 @@ public class TestFromClientSide {
       get = new Get(bytes);
       get.addFamily(FAMILIES[0]);
       result = ht.get(get);
-      assertTrue(result.size() == 0);
+      assertTrue(result.isEmpty());
     }
   }
 

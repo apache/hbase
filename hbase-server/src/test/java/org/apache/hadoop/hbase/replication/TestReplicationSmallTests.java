@@ -224,7 +224,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         fail("Waited too much time for put replication");
       }
       Result res = htable2.get(get);
-      if (res.size() == 0) {
+      if (res.isEmpty()) {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME);
       } else {
@@ -291,7 +291,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   }
 
   private void loadData(String prefix, byte[] row) throws IOException {
-    List<Put> puts = new ArrayList<>();
+    List<Put> puts = new ArrayList<>(NB_ROWS_IN_BATCH);
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(prefix + Integer.toString(i)));
       put.addColumn(famName, row, row);
@@ -333,7 +333,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     for (int i = 0; i < NB_RETRIES; i++) {
       Result res = htable2.get(get);
-      if (res.size() == 0) {
+      if (res.isEmpty()) {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME);
       } else {
@@ -389,7 +389,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         fail("Waited too much time for put replication");
       }
       Result res = htable2.get(get);
-      if (res.size() == 0) {
+      if (res.isEmpty()) {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME*i);
       } else {
@@ -408,7 +408,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   @Test(timeout=300000)
   public void testLoading() throws Exception {
     LOG.info("Writing out rows to table1 in testLoading");
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(NB_ROWS_IN_BIG_BATCH);
     for (int i = 0; i < NB_ROWS_IN_BIG_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.addColumn(famName, row, row);
@@ -544,7 +544,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
           fail("Waited too much time for put replication");
         }
         Result res = lHtable2.get(get);
-        if (res.size() == 0) {
+        if (res.isEmpty()) {
           LOG.info("Row not available");
           Thread.sleep(SLEEP_TIME);
         } else {

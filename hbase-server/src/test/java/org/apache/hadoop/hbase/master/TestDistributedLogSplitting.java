@@ -466,7 +466,7 @@ public class TestDistributedLogSplitting {
       public boolean evaluate() throws Exception {
         List<String> recoveringRegions = zkw.getRecoverableZooKeeper().getChildren(
             zkw.znodePaths.recoveringRegionsZNode, false);
-        return (recoveringRegions != null && recoveringRegions.size() == 0);
+        return (recoveringRegions != null && recoveringRegions.isEmpty());
       }
     });
   }
@@ -573,7 +573,7 @@ public class TestDistributedLogSplitting {
         public boolean evaluate() throws Exception {
           List<String> recoveringRegions = zkw.getRecoverableZooKeeper().getChildren(
               zkw.znodePaths.recoveringRegionsZNode, false);
-          boolean done = recoveringRegions != null && recoveringRegions.size() == 0;
+          boolean done = recoveringRegions != null && recoveringRegions.isEmpty();
           if (!done) {
             LOG.info("Recovering regions: " + recoveringRegions);
           }
@@ -665,7 +665,7 @@ public class TestDistributedLogSplitting {
         public boolean evaluate() throws Exception {
           List<String> recoveringRegions = zkw.getRecoverableZooKeeper().getChildren(
               zkw.znodePaths.recoveringRegionsZNode, false);
-          return (recoveringRegions != null && recoveringRegions.size() == 0);
+          return (recoveringRegions != null && recoveringRegions.isEmpty());
         }
       });
 
@@ -717,7 +717,7 @@ public class TestDistributedLogSplitting {
       TEST_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return (tmphrs.getRecoveringRegions().size() == 0);
+          return (tmphrs.getRecoveringRegions().isEmpty());
         }
       });
     } finally {
@@ -868,7 +868,7 @@ public class TestDistributedLogSplitting {
               zkw.znodePaths.recoveringRegionsZNode, false);
           ServerManager serverManager = master.getServerManager();
           return (!serverManager.areDeadServersInProgress() &&
-              recoveringRegions != null && recoveringRegions.size() == 0);
+              recoveringRegions != null && recoveringRegions.isEmpty());
         }
       });
 
@@ -1111,7 +1111,7 @@ public class TestDistributedLogSplitting {
         public boolean evaluate() throws Exception {
           List<String> recoveringRegions = zkw.getRecoverableZooKeeper().getChildren(
               zkw.znodePaths.recoveringRegionsZNode, false);
-          return (recoveringRegions != null && recoveringRegions.size() == 0);
+          return (recoveringRegions != null && recoveringRegions.isEmpty());
         }
       });
 
@@ -1286,7 +1286,7 @@ public class TestDistributedLogSplitting {
           it.remove();
         }
       }
-      if (regions.size() == 0) return;
+      if (regions.isEmpty()) return;
       HRegionInfo curRegionInfo = regions.get(0);
       byte[] startRow = curRegionInfo.getStartKey();
       if (startRow == null || startRow.length == 0) {
@@ -1381,7 +1381,7 @@ public class TestDistributedLogSplitting {
           it.remove();
         }
       }
-      if (regions.size() == 0) return;
+      if (regions.isEmpty()) return;
       HRegionInfo curRegionInfo = regions.get(0);
       byte[] startRow = curRegionInfo.getStartKey();
       if (startRow == null || startRow.length == 0) {

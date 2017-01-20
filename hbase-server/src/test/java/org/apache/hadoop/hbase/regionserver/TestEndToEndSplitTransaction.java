@@ -152,7 +152,7 @@ public class TestEndToEndSplitTransaction {
         for (int i= 0; i< 5; i++) {
           List<HRegionInfo> regions =
               MetaTableAccessor.getTableRegions(connection, tableName, true);
-          if (regions.size() == 0) {
+          if (regions.isEmpty()) {
             continue;
           }
           int regionIndex = random.nextInt(regions.size());

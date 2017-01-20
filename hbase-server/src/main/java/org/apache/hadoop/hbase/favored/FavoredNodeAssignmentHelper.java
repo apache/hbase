@@ -562,7 +562,7 @@ public class FavoredNodeAssignmentHelper {
 
     // Is the rack valid? Do we recognize it?
     if (rack == null || getServersFromRack(rack) == null ||
-        getServersFromRack(rack).size() == 0) {
+        getServersFromRack(rack).isEmpty()) {
       return null;
     }
 
@@ -577,7 +577,7 @@ public class FavoredNodeAssignmentHelper {
         serversToChooseFrom.remove(StartcodeAgnosticServerName.valueOf(sn));
       }
       // Do we have any servers left to choose from?
-      if (serversToChooseFrom.size() == 0) {
+      if (serversToChooseFrom.isEmpty()) {
         return null;
       }
     }

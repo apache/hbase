@@ -400,7 +400,7 @@ public class Get extends Query
   @Override
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>();
+    List<String> families = new ArrayList<String>(this.familyMap.entrySet().size());
     map.put("families", families);
     for (Map.Entry<byte [], NavigableSet<byte[]>> entry :
       this.familyMap.entrySet()) {
@@ -428,7 +428,7 @@ public class Get extends Query
     map.put("row", Bytes.toStringBinary(this.row));
     map.put("maxVersions", this.maxVersions);
     map.put("cacheBlocks", this.cacheBlocks);
-    List<Long> timeRange = new ArrayList<Long>();
+    List<Long> timeRange = new ArrayList<Long>(2);
     timeRange.add(this.tr.getMin());
     timeRange.add(this.tr.getMax());
     map.put("timeRange", timeRange);

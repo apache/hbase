@@ -184,7 +184,7 @@ public class ReplicationSink {
                   CellUtil.isDelete(cell) ? new Delete(cell.getRowArray(), cell.getRowOffset(),
                       cell.getRowLength()) : new Put(cell.getRowArray(), cell.getRowOffset(),
                       cell.getRowLength());
-              List<UUID> clusterIds = new ArrayList<UUID>();
+              List<UUID> clusterIds = new ArrayList<UUID>(entry.getKey().getClusterIdsList().size());
               for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
                 clusterIds.add(toUUID(clusterId));
               }
@@ -275,7 +275,7 @@ public class ReplicationSink {
 
   private void addFamilyAndItsHFilePathToTableInMap(byte[] family, String pathToHfileFromNS,
       List<Pair<byte[], List<String>>> familyHFilePathsList) {
-    List<String> hfilePaths = new ArrayList<String>();
+    List<String> hfilePaths = new ArrayList<String>(1);
     hfilePaths.add(pathToHfileFromNS);
     familyHFilePathsList.add(new Pair<byte[], List<String>>(family, hfilePaths));
   }
@@ -283,7 +283,7 @@ public class ReplicationSink {
   private void addNewTableEntryInMap(
       final Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, byte[] family,
       String pathToHfileFromNS, String tableName) {
-    List<String> hfilePaths = new ArrayList<String>();
+    List<String> hfilePaths = new ArrayList<String>(1);
     hfilePaths.add(pathToHfileFromNS);
     Pair<byte[], List<String>> newFamilyHFilePathsPair =
         new Pair<byte[], List<String>>(family, hfilePaths);

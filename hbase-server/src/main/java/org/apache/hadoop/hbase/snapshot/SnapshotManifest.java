@@ -425,7 +425,7 @@ public final class SnapshotManifest {
    * This is an helper to get a map with the region encoded name
    */
   public Map<String, SnapshotRegionManifest> getRegionManifestsMap() {
-    if (regionManifests == null || regionManifests.size() == 0) return null;
+    if (regionManifests == null || regionManifests.isEmpty()) return null;
 
     HashMap<String, SnapshotRegionManifest> regionsMap =
         new HashMap<String, SnapshotRegionManifest>(regionManifests.size());

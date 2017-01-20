@@ -163,7 +163,7 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
         files.add(new Path(cmd.getOptionValue("f")));
       }
 
-      if (files.size() == 0 || cmd.hasOption("h")) {
+      if (files.isEmpty() || cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("ProcedureWALPrettyPrinter ", options, true);
         return(-1);

@@ -1318,7 +1318,7 @@ public final class Canary implements Tool {
             "option, tablenames:" + foundTableNames.toString());
         this.errorCode = USAGE_EXIT_CODE;
       }
-      return foundTableNames.size() == 0;
+      return foundTableNames.isEmpty();
     }
 
     private void monitorRegionServers(Map<String, List<HRegionInfo>> rsAndRMap) {

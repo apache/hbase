@@ -177,7 +177,7 @@ public abstract class CompareFilter extends FilterBase {
                                             " can only be used with EQUAL and NOT_EQUAL");
       }
     }
-    ArrayList<Object> arguments = new ArrayList<Object>();
+    ArrayList<Object> arguments = new ArrayList<Object>(2);
     arguments.add(compareOp);
     arguments.add(comparator);
     return arguments;

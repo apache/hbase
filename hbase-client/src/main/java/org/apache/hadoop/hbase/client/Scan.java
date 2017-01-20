@@ -908,7 +908,7 @@ public class Scan extends Query {
     map.put("maxResultSize", this.maxResultSize);
     map.put("cacheBlocks", this.cacheBlocks);
     map.put("loadColumnFamiliesOnDemand", this.loadColumnFamiliesOnDemand);
-    List<Long> timeRange = new ArrayList<Long>();
+    List<Long> timeRange = new ArrayList<Long>(2);
     timeRange.add(this.tr.getMin());
     timeRange.add(this.tr.getMax());
     map.put("timeRange", timeRange);

@@ -41,7 +41,7 @@ public class TestRowDataUrls extends BaseTestRowData{
 
   static List<ByteRange> rows;
   static{
-    List<String> rowStrings = new ArrayList<String>();
+    List<String> rowStrings = new ArrayList<String>(16);
     rowStrings.add("com.edsBlog/directoryAa/pageAaa");
     rowStrings.add("com.edsBlog/directoryAa/pageBbb");
     rowStrings.add("com.edsBlog/directoryAa/pageCcc");

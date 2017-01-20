@@ -1759,10 +1759,12 @@ public class TestAccessController extends SecureTestUtil {
     } finally {
       acl.close();
     }
-    List<UserPermission> adminPerms = new ArrayList<UserPermission>();
+
+    List<String> superUsers = Superusers.getSuperUsers();
+    List<UserPermission> adminPerms = new ArrayList<UserPermission>(superUsers.size() + 1);
     adminPerms.add(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
       AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW")));
-    List<String> superUsers = Superusers.getSuperUsers();
+
     for(String user: superUsers) {
       adminPerms.add(new UserPermission(Bytes.toBytes(user), AccessControlLists.ACL_TABLE_NAME,
           null, null, Action.values()));

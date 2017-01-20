@@ -107,7 +107,7 @@ class HBaseTableScanRDD(relation: HBaseRelation,
       columns: Seq[Field],
       hbaseContext: HBaseContext): Iterator[Result] = {
     g.grouped(relation.bulkGetSize).flatMap{ x =>
-      val gets = new ArrayList[Get]()
+      val gets = new ArrayList[Get](x.size)
       x.foreach{ y =>
         val g = new Get(y)
         handleTimeSemantics(g)

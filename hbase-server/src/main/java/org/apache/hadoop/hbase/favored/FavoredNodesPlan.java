@@ -55,7 +55,7 @@ public class FavoredNodesPlan {
    * @param servers
    */
   public void updateFavoredNodesMap(HRegionInfo region, List<ServerName> servers) {
-    if (region == null || servers == null || servers.size() == 0) {
+    if (region == null || servers == null || servers.isEmpty()) {
       return;
     }
     this.favoredNodesMap.put(region.getRegionNameAsString(), servers);

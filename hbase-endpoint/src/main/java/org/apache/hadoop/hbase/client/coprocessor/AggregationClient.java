@@ -587,7 +587,7 @@ public class AggregationClient implements Closeable {
       S sumVal = null, sumSqVal = null;
 
       public synchronized Pair<List<S>, Long> getStdParams() {
-        List<S> l = new ArrayList<S>();
+        List<S> l = new ArrayList<S>(2);
         l.add(sumVal);
         l.add(sumSqVal);
         Pair<List<S>, Long> p = new Pair<List<S>, Long>(l, rowCountVal);
@@ -704,7 +704,7 @@ public class AggregationClient implements Closeable {
       S sumVal = null, sumWeights = null;
 
       public synchronized Pair<NavigableMap<byte[], List<S>>, List<S>> getMedianParams() {
-        List<S> l = new ArrayList<S>();
+        List<S> l = new ArrayList<S>(2);
         l.add(sumVal);
         l.add(sumWeights);
         Pair<NavigableMap<byte[], List<S>>, List<S>> p =

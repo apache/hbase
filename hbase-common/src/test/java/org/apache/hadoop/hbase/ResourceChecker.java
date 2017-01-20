@@ -180,7 +180,7 @@ public class ResourceChecker {
    * - logs them.
    */
   public void start() {
-    if (ras.size() == 0) {
+    if (ras.isEmpty()) {
       LOG.info("No resource analyzer");
       return;
     }
@@ -197,7 +197,7 @@ public class ResourceChecker {
    * - logs them.
    */
   public void end() {
-    if (ras.size() == 0) {
+    if (ras.isEmpty()) {
       LOG.info("No resource analyzer");
       return;
     }

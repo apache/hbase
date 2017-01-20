@@ -686,7 +686,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     List<SnapshotDescription> snapshotList = getSnapshotList(conf);
 
 
-    if (snapshotList.size() == 0) {
+    if (snapshotList.isEmpty()) {
       return Collections.emptyMap();
     }
 

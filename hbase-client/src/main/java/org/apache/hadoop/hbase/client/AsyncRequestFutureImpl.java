@@ -463,7 +463,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       if (loc == null || loc.getServerName() == null) {
         if (isReplica) {
           if (unknownReplicaActions == null) {
-            unknownReplicaActions = new ArrayList<Action>();
+            unknownReplicaActions = new ArrayList<Action>(1);
           }
           unknownReplicaActions.add(action);
         } else {

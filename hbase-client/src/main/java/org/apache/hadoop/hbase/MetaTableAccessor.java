@@ -1897,7 +1897,7 @@ public class MetaTableAccessor {
    */
   public static void updateReplicationPositions(Connection connection, String peerId,
       Map<String, Long> positions) throws IOException {
-    List<Put> puts = new ArrayList<>();
+    List<Put> puts = new ArrayList<>(positions.entrySet().size());
     for (Map.Entry<String, Long> entry : positions.entrySet()) {
       long value = Math.abs(entry.getValue());
       Put put = new Put(Bytes.toBytes(entry.getKey()));
@@ -2169,7 +2169,7 @@ public class MetaTableAccessor {
       Result result;
       while ((result = scanner.next()) != null) {
         String key = Bytes.toString(result.getRow());
-        List<Long> list = new ArrayList<>();
+        List<Long> list = new ArrayList<>(result.rawCells().length);
         for (Cell cell : result.rawCells()) {
           list.add(Bytes.toLong(cell.getQualifierArray(), cell.getQualifierOffset(),
               cell.getQualifierLength()));

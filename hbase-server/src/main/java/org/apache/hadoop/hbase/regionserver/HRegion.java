@@ -3698,7 +3698,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         boolean valueIsNull = comparator.getValue() == null || comparator.getValue().length == 0;
         boolean matches = false;
         long cellTs = 0;
-        if (result.size() == 0 && valueIsNull) {
+        if (result.isEmpty() && valueIsNull) {
           matches = true;
         } else if (result.size() > 0 && result.get(0).getValueLength() == 0 && valueIsNull) {
           matches = true;

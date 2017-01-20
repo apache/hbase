@@ -157,7 +157,7 @@ public class TimestampsFilter extends FilterBase {
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    ArrayList<Long> timestamps = new ArrayList<Long>();
+    ArrayList<Long> timestamps = new ArrayList<Long>(filterArguments.size());
     for (int i = 0; i<filterArguments.size(); i++) {
       long timestamp = ParseFilter.convertByteArrayToLong(filterArguments.get(i));
       timestamps.add(timestamp);

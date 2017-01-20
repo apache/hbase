@@ -105,7 +105,7 @@ public class MultiRowResource extends ResourceBase implements Constants {
         }
       }
 
-      if (model.getRows().size() == 0) {
+      if (model.getRows().isEmpty()) {
       //If no rows found.
         servlet.getMetrics().incrementFailedGetRequests(1);
         return Response.status(Response.Status.NOT_FOUND)

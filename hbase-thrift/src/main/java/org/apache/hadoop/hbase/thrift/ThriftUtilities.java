@@ -149,7 +149,7 @@ public class ThriftUtilities {
    * @return Thrift TRowResult array
    */
   static public List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
-    List<TRowResult> results = new ArrayList<TRowResult>();
+    List<TRowResult> results = new ArrayList<TRowResult>(in.length);
     for ( Result result_ : in) {
         if(result_ == null || result_.isEmpty()) {
             continue;

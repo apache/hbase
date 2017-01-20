@@ -808,7 +808,7 @@ public class RegionStates {
     TableName table = hri.getTable();
     Map<String, RegionState> indexMap = regionStatesTableIndex.get(table);
     indexMap.remove(encodedName);
-    if (indexMap.size() == 0)
+    if (indexMap.isEmpty())
       regionStatesTableIndex.remove(table);
     lastAssignments.remove(encodedName);
     ServerName sn = regionAssignments.remove(hri);

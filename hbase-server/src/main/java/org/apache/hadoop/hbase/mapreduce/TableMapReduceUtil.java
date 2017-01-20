@@ -807,7 +807,7 @@ public class TableMapReduceUtil {
       throw new IllegalArgumentException("Must provide a configuration object.");
     }
     Set<String> paths = new HashSet<String>(conf.getStringCollection("tmpjars"));
-    if (paths.size() == 0) {
+    if (paths.isEmpty()) {
       throw new IllegalArgumentException("Configuration contains no tmpjars.");
     }
     StringBuilder sb = new StringBuilder();

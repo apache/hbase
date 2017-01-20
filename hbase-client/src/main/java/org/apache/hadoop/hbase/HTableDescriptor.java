@@ -1387,7 +1387,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @return The list of co-processors classNames
    */
   public List<String> getCoprocessors() {
-    List<String> result = new ArrayList<String>();
+    List<String> result = new ArrayList<String>(this.values.entrySet().size());
     Matcher keyMatcher;
     for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
       keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));

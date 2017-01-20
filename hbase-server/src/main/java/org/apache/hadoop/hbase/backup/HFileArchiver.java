@@ -229,7 +229,7 @@ public class HFileArchiver {
     }
 
     // short circuit if we don't have any files to delete
-    if (compactedFiles.size() == 0) {
+    if (compactedFiles.isEmpty()) {
       LOG.debug("No store files to dispose, done!");
       return;
     }
@@ -311,7 +311,7 @@ public class HFileArchiver {
   private static List<File> resolveAndArchive(FileSystem fs, Path baseArchiveDir,
       Collection<File> toArchive, long start) throws IOException {
     // short circuit if no files to move
-    if (toArchive.size() == 0) return Collections.emptyList();
+    if (toArchive.isEmpty()) return Collections.emptyList();
 
     if (LOG.isTraceEnabled()) LOG.trace("moving files to the archive directory: " + baseArchiveDir);
 

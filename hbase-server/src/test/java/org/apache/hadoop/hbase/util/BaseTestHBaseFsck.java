@@ -259,7 +259,7 @@ public class BaseTestHBaseFsck {
     createTable(TEST_UTIL, desc, SPLITS);
 
     tbl = connection.getTable(tablename, tableExecutorService);
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(ROWKEYS.length);
     for (byte[] row : ROWKEYS) {
       Put p = new Put(row);
       p.addColumn(FAM, Bytes.toBytes("val"), row);
@@ -283,7 +283,7 @@ public class BaseTestHBaseFsck {
     createTable(TEST_UTIL, desc, SPLITS);
 
     tbl = connection.getTable(tablename, tableExecutorService);
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<Put>(ROWKEYS.length);
     for (byte[] row : ROWKEYS) {
       Put p = new Put(row);
       p.addColumn(FAM, Bytes.toBytes("val"), row);
@@ -335,7 +335,7 @@ public class BaseTestHBaseFsck {
 
       // list all online regions from this region server
       List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(server);
-      List<String> regionNames = new ArrayList<>();
+      List<String> regionNames = new ArrayList<>(regions.size());
       for (HRegionInfo hri : regions) {
         regionNames.add(hri.getRegionNameAsString());
       }

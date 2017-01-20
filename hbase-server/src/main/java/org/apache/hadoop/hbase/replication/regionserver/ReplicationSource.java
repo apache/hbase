@@ -614,7 +614,7 @@ public class ReplicationSource extends Thread
         //We take the snapshot now so that we are protected against races
         //where a new file gets enqueued while the current file is being processed
         //(and where we just finished reading the current file).
-        if (!this.replicationQueueInfo.isQueueRecovered() && queue.size() == 0) {
+        if (!this.replicationQueueInfo.isQueueRecovered() && queue.isEmpty()) {
           currentWALisBeingWrittenTo = true;
         }
         // Open a reader on it
@@ -1075,7 +1075,7 @@ public class ReplicationSource extends Thread
      */
     private boolean isCurrentLogEmpty() {
       return (this.repLogReader.getPosition() == 0 &&
-          !this.replicationQueueInfo.isQueueRecovered() && queue.size() == 0);
+          !this.replicationQueueInfo.isQueueRecovered() && queue.isEmpty());
     }
 
     /**

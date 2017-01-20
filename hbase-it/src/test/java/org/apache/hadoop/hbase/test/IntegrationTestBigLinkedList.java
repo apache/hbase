@@ -1181,7 +1181,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             // useless for debugging.
             context.getCounter("undef", keyString).increment(1);
           }
-        } else if (defCount > 0 && refs.size() == 0) {
+        } else if (defCount > 0 && refs.isEmpty()) {
           // node is defined but not referenced
           context.write(key, UNREF);
           context.getCounter(Counts.UNREFERENCED).increment(1);

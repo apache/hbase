@@ -392,7 +392,7 @@ public class IntegrationTestRpcClient {
       cluster.startServer();
     }
 
-    ArrayList<SimpleClient> clients = new ArrayList<>();
+    ArrayList<SimpleClient> clients = new ArrayList<>(30);
 
     // all threads should share the same rpc client
     AbstractRpcClient<?> rpcClient = createRpcClient(conf, isSyncClient);

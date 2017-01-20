@@ -133,7 +133,7 @@ public class SecureBulkLoadEndpointClient {
       }
 
       List<ClientProtos.BulkLoadHFileRequest.FamilyPath> protoFamilyPaths =
-          new ArrayList<ClientProtos.BulkLoadHFileRequest.FamilyPath>();
+          new ArrayList<ClientProtos.BulkLoadHFileRequest.FamilyPath>(familyPaths.size());
       for(Pair<byte[], String> el: familyPaths) {
         protoFamilyPaths.add(ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder()
           .setFamily(ByteStringer.wrap(el.getFirst()))

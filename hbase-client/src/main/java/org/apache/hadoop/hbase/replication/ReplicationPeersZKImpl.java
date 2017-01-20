@@ -128,7 +128,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
 
-      List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+      List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>(2);
       ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(getPeerNode(id),
         ReplicationSerDeHelper.toByteArray(peerConfig));
       // b/w PeerWatcher and ReplicationZookeeper#add method to create the

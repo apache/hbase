@@ -315,7 +315,7 @@ public class TestSerialReplication {
   }
 
   private List<Integer> getRowNumbers(List<Cell> cells) {
-    List<Integer> listOfRowNumbers = new ArrayList<>();
+    List<Integer> listOfRowNumbers = new ArrayList<>(cells.size());
     for (Cell c : cells) {
       listOfRowNumbers.add(Integer.parseInt(Bytes
           .toString(c.getRowArray(), c.getRowOffset() + ROW.length,

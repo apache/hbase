@@ -399,7 +399,7 @@ public abstract class AbstractTestFSWAL {
         }
       }
       // Add any old cluster id.
-      List<UUID> clusterIds = new ArrayList<UUID>();
+      List<UUID> clusterIds = new ArrayList<UUID>(1);
       clusterIds.add(UUID.randomUUID());
       // Now make appends run slow.
       goslow.set(true);

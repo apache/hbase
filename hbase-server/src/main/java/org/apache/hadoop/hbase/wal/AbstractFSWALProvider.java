@@ -115,7 +115,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     if (wal == null) {
       return Collections.emptyList();
     }
-    List<WAL> wals = new ArrayList<WAL>();
+    List<WAL> wals = new ArrayList<WAL>(1);
     wals.add(wal);
     return wals;
   }

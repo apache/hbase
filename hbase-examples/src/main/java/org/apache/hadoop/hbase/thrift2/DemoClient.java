@@ -126,7 +126,7 @@ public class DemoClient {
     columnValue.setFamily("family1".getBytes());
     columnValue.setQualifier("qualifier1".getBytes());
     columnValue.setValue("value1".getBytes());
-    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>(1);
     columnValues.add(columnValue);
     put.setColumnValues(columnValues);
 

@@ -300,7 +300,7 @@ public class TestVisibilityLabelsWithACL {
     GetAuthsResponse authsResponse = NORMAL_USER1.runAs(action1);
     assertNull(authsResponse);
     authsResponse = SUPERUSER.runAs(action1);
-    List<String> authsList = new ArrayList<String>();
+    List<String> authsList = new ArrayList<String>(authsResponse.getAuthList().size());
     for (ByteString authBS : authsResponse.getAuthList()) {
       authsList.add(Bytes.toString(authBS.toByteArray()));
     }
@@ -315,7 +315,7 @@ public class TestVisibilityLabelsWithACL {
     try {
       table = TEST_UTIL.createTable(tableName, fam);
       int i = 1;
-      List<Put> puts = new ArrayList<Put>();
+      List<Put> puts = new ArrayList<Put>(labelExps.length);
       for (String labelExp : labelExps) {
         Put put = new Put(Bytes.toBytes("row" + i));
         put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
