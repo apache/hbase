@@ -53,7 +53,7 @@ final class StabilityOptions {
   }
 
   public static String[][] filterOptions(String[][] options) {
-    List<String[]> optionsList = new ArrayList<String[]>(options.length);
+    List<String[]> optionsList = new ArrayList<>();
     for (int i = 0; i < options.length; i++) {
       if (!options[i][0].equalsIgnoreCase(UNSTABLE_OPTION)
           && !options[i][0].equalsIgnoreCase(EVOLVING_OPTION)

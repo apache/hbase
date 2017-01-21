@@ -79,8 +79,7 @@ final class RootDocProcessor {
     return obj;
   }
 
-  private static Map<Object, Object> proxies =
-    new WeakHashMap<Object, Object>();
+  private static Map<Object, Object> proxies = new WeakHashMap<>();
 
   private static Object getProxy(Object obj) {
     Object proxy = proxies.get(obj);
@@ -207,7 +206,7 @@ final class RootDocProcessor {
       if (array == null || array.length == 0) {
         return array;
       }
-      List<Object> list = new ArrayList<Object>(array.length);
+      List<Object> list = new ArrayList<>(array.length);
       for (Doc entry : array) {
         if (!exclude(entry)) {
           list.add(process(entry, componentType));
