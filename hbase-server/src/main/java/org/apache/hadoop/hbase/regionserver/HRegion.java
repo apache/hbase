@@ -7984,7 +7984,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       // sync the transaction log outside the rowlock
       if(txid != 0) {
-        syncOrDefer(txid, durability);
+        syncOrDefer(txid, effectiveDurability);
       }
       doRollBackMemstore = false;
     } finally {
@@ -8060,13 +8060,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       // Append new incremented KeyValue to list
-      byte [] qualifier = CellUtil.cloneQualifier(inc);
       byte [] incrementAmountInBytes = Bytes.toBytes(incrementAmount);
       tags = carryForwardTTLTag(tags, increment);
 
       Cell newValue = new KeyValue(row, 0, row.length,
         columnFamilyName, 0, columnFamilyName.length,
-        qualifier, 0, qualifier.length,
+        inc.getQualifierArray(), inc.getQualifierOffset(), inc.getQualifierLength(),
         ts, KeyValue.Type.Put,
         incrementAmountInBytes, 0, incrementAmountInBytes.length,
         tags);
