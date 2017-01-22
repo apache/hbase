@@ -150,7 +150,8 @@ public class TestClientScanner {
                 ScannerCallableWithReplicas.class);
           switch (count) {
             case 0: // initialize
-            case 2: // close
+            case 2: // detect no more results
+            case 3: // close
               count++;
               return null;
             case 1:
@@ -176,8 +177,10 @@ public class TestClientScanner {
 
       scanner.loadCache();
 
-      // One more call due to initializeScannerInConstruction()
-      inOrder.verify(caller, Mockito.times(2)).callWithoutRetries(
+      // One for initializeScannerInConstruction()
+      // One for fetching the results
+      // One for fetching null results and quit as we do not have moreResults hint.
+      inOrder.verify(caller, Mockito.times(3)).callWithoutRetries(
           Mockito.any(RetryingCallable.class), Mockito.anyInt());
 
       assertEquals(1, scanner.cache.size());
@@ -216,7 +219,8 @@ public class TestClientScanner {
             case 1:
               count++;
               callable.setHasMoreResultsContext(true);
-              callable.setServerHasMoreResults(false);
+              // if we set false here the implementation will trigger a close
+              callable.setServerHasMoreResults(true);
               return results;
             default:
               throw new RuntimeException("Expected only 2 invocations");
@@ -283,7 +287,8 @@ public class TestClientScanner {
             case 1:
               count++;
               callable.setHasMoreResultsContext(true);
-              callable.setServerHasMoreResults(false);
+              // if we set false here the implementation will trigger a close
+              callable.setServerHasMoreResults(true);
               return results;
             default:
               throw new RuntimeException("Expected only 2 invocations");
@@ -462,28 +467,20 @@ public class TestClientScanner {
           Mockito.anyInt());
 
       InOrder inOrder = Mockito.inOrder(caller);
+      scanner.setRpcFinished(true);
 
       scanner.loadCache();
 
-      inOrder.verify(caller, Mockito.times(2)).callWithoutRetries(
+      inOrder.verify(caller, Mockito.times(3)).callWithoutRetries(
           Mockito.any(RetryingCallable.class), Mockito.anyInt());
 
-      assertEquals(1, scanner.cache.size());
+      assertEquals(2, scanner.cache.size());
       Result r = scanner.cache.poll();
       assertNotNull(r);
       CellScanner cs = r.cellScanner();
       assertTrue(cs.advance());
       assertEquals(kv1, cs.current());
       assertFalse(cs.advance());
-
-      scanner.setRpcFinished(true);
-
-      inOrder = Mockito.inOrder(caller);
-
-      scanner.loadCache();
-
-      inOrder.verify(caller, Mockito.times(3)).callWithoutRetries(
-          Mockito.any(RetryingCallable.class), Mockito.anyInt());
 
       r = scanner.cache.poll();
       assertNotNull(r);
