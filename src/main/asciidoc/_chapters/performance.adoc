@@ -552,16 +552,6 @@ This is safer, however, than not using WAL at all with Puts.
 Deferred log flush can be configured on tables via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor].
 The default value of `hbase.regionserver.optionallogflushinterval` is 1000ms.
 
-[[perf.hbase.client.autoflush]]
-=== HBase Client: AutoFlush
-
-When performing a lot of Puts, make sure that setAutoFlush is set to false on your link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instance.
-Otherwise, the Puts will be sent one at a time to the RegionServer.
-Puts added via `table.add(Put)` and `table.add( <List> Put)` wind up in the same write buffer.
-If `autoFlush = false`, these messages are not sent until the write-buffer is filled.
-To explicitly flush the messages, call `flushCommits`.
-Calling `close` on the `Table` instance will invoke `flushCommits`.
-
 [[perf.hbase.client.putwal]]
 === HBase Client: Turn off WAL on Puts
 
