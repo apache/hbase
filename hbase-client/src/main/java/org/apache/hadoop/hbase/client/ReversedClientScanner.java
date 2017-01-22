@@ -63,13 +63,7 @@ public class ReversedClientScanner extends ClientSimpleScanner {
   protected boolean nextScanner(int nbRows, final boolean done)
       throws IOException {
     // Close the previous scanner if it's open
-    if (this.callable != null) {
-      this.callable.setClose();
-      // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
-      // we do a callWithRetries
-      this.caller.callWithoutRetries(callable, scannerTimeout);
-      this.callable = null;
-    }
+    closeScanner();
 
     // Where to start the next scanner
     byte[] localStartKey;

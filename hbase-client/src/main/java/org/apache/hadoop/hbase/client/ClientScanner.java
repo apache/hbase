@@ -54,9 +54,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Implements the scanner interface for the HBase client.
- * If there are multiple regions in a table, this scanner will iterate
- * through them all.
+ * Implements the scanner interface for the HBase client. If there are multiple regions in a table,
+ * this scanner will iterate through them all.
  */
 @InterfaceAudience.Private
 public abstract class ClientScanner extends AbstractClientScanner {
@@ -229,15 +228,13 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return false; // unlikely.
   }
 
-  private boolean possiblyNextScanner(int nbRows, final boolean done) throws IOException {
-    // If we have just switched replica, don't go to the next scanner yet. Rather, try
-    // the scanner operations on the new replica, from the right point in the scan
-    // Note that when we switched to a different replica we left it at a point
-    // where we just did the "openScanner" with the appropriate startrow
-    if (callable != null && callable.switchedToADifferentReplica()) return true;
-    return nextScanner(nbRows, done);
+  protected final void closeScanner() throws IOException {
+    if (this.callable != null) {
+      this.callable.setClose();
+      call(callable, caller, scannerTimeout);
+      this.callable = null;
+    }
   }
-
   /*
    * Gets a scanner for the next region. If this.currentRegion != null, then we will move to the
    * endrow of this.currentRegion. Else we will get scanner at the scan.getStartRow(). We will go no
@@ -248,11 +245,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
    */
   protected boolean nextScanner(int nbRows, final boolean done) throws IOException {
     // Close the previous scanner if it's open
-    if (this.callable != null) {
-      this.callable.setClose();
-      call(callable, caller, scannerTimeout);
-      this.callable = null;
-    }
+    closeScanner();
 
     // Where to start the next scanner
     byte[] localStartKey;
@@ -371,6 +364,37 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return cache != null ? cache.size() : 0;
   }
 
+  private boolean regionExhausted(Result[] values) {
+    // This means the server tells us the whole scan operation is done. Usually decided by filter.
+    if (values == null) {
+      return true;
+    }
+    // Not a heartbeat message and we get nothing, this means the region is exhausted
+    if (values.length == 0 && !callable.isHeartbeatMessage()) {
+      return true;
+    }
+    // Server tells us that it has no more results for this region. Notice that this flag is get
+    // from the ScanResponse.getMoreResultsInRegion, not ScanResponse.getMoreResults. If the latter
+    // one is false then we will get a null values and quit in the first condition of this method.
+    if (callable.hasMoreResultsContext() && !callable.getServerHasMoreResults()) {
+      return true;
+    }
+    return false;
+  }
+
+  private void closeScannerIfExhausted(boolean exhausted) throws IOException {
+    if (exhausted) {
+      if (!partialResults.isEmpty()) {
+        // XXX: continue if there are partial results. But in fact server should not set
+        // hasMoreResults to false if there are partial results.
+        LOG.warn("Server tells us there is no more results for this region but we still have"
+            + " partialResults, this should not happen, retry on the current scanner anyway");
+      } else {
+        closeScanner();
+      }
+    }
+  }
+
   /**
    * Contact the servers to load more {@link Result}s in the cache.
    */
@@ -380,17 +404,18 @@ public abstract class ClientScanner extends AbstractClientScanner {
     Result[] values = null;
     long remainingResultSize = maxScannerResultSize;
     int countdown = this.caching;
+    // This is possible if we just stopped at the boundary of a region in the previous call.
+    if (callable == null) {
+      if (!nextScanner(countdown, false)) {
+        return;
+      }
+    }
     // We need to reset it if it's a new callable that was created with a countdown in nextScanner
     callable.setCaching(this.caching);
     // This flag is set when we want to skip the result returned. We do
     // this when we reset scanner because it split under us.
     boolean retryAfterOutOfOrderException = true;
-    // We don't expect that the server will have more results for us if
-    // it doesn't tell us otherwise. We rely on the size or count of results
-    boolean serverHasMoreResults = false;
-    boolean allResultsSkipped = false;
-    do {
-      allResultsSkipped = false;
+    for (;;) {
       try {
         // Server returns a null values if scanning is to stop. Else,
         // returns an empty array if scanning is to go on and we've just
@@ -436,7 +461,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
           // Reset the startRow to the row we've seen last so that the new scanner starts at
           // the correct row. Otherwise we may see previously returned rows again.
           // (ScannerCallable by now has "relocated" the correct region)
-          if (!this.lastResult.isPartial() && scan.getBatch() < 0 ) {
+          if (!this.lastResult.isPartial() && scan.getBatch() < 0) {
             if (scan.isReversed()) {
               scan.setStartRow(createClosestRowBefore(lastResult.getRow()));
             } else {
@@ -461,7 +486,10 @@ public abstract class ClientScanner extends AbstractClientScanner {
         // Set this to zero so we don't try and do an rpc and close on remote server when
         // the exception we got was UnknownScanner or the Server is going down.
         callable = null;
-        // This continue will take us to while at end of loop where we will set up new scanner.
+        // reopen the scanner
+        if (!nextScanner(countdown, false)) {
+          break;
+        }
         continue;
       }
       long currentTime = System.currentTimeMillis();
@@ -487,61 +515,58 @@ public abstract class ClientScanner extends AbstractClientScanner {
           remainingResultSize -= estimatedHeapSizeOfResult;
           addEstimatedSize(estimatedHeapSizeOfResult);
           this.lastResult = rs;
-          if (this.lastResult.isPartial() || scan.getBatch() > 0 ) {
+          if (this.lastResult.isPartial() || scan.getBatch() > 0) {
             updateLastCellLoadedToCache(this.lastResult);
           } else {
             this.lastCellLoadedToCache = null;
           }
         }
-        if (cache.isEmpty()) {
-          // all result has been seen before, we need scan more.
-          allResultsSkipped = true;
-          continue;
-        }
       }
+      boolean exhausted = regionExhausted(values);
       if (callable.isHeartbeatMessage()) {
-        if (cache.size() > 0) {
+        if (!cache.isEmpty()) {
           // Caller of this method just wants a Result. If we see a heartbeat message, it means
           // processing of the scan is taking a long time server side. Rather than continue to
           // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
           // unnecesary delays to the caller
           if (LOG.isTraceEnabled()) {
             LOG.trace("Heartbeat message received and cache contains Results."
-                    + " Breaking out of scan loop");
+                + " Breaking out of scan loop");
           }
+          // we know that the region has not been exhausted yet so just break without calling
+          // closeScannerIfExhausted
           break;
         }
-        continue;
       }
-
-      // We expect that the server won't have more results for us when we exhaust
-      // the size (bytes or count) of the results returned. If the server *does* inform us that
-      // there are more results, we want to avoid possiblyNextScanner(...). Only when we actually
-      // get results is the moreResults context valid.
-      if (null != values && values.length > 0 && callable.hasMoreResultsContext()) {
-        // Only adhere to more server results when we don't have any partialResults
-        // as it keeps the outer loop logic the same.
-        serverHasMoreResults = callable.getServerHasMoreResults() && partialResults.isEmpty();
+      if (countdown <= 0) {
+        // we have enough result.
+        closeScannerIfExhausted(exhausted);
+        break;
       }
-      // Values == null means server-side filter has determined we must STOP
-      // !partialResults.isEmpty() means that we are still accumulating partial Results for a
-      // row. We should not change scanners before we receive all the partial Results for that
-      // row.
-    } while (allResultsSkipped || (callable != null && callable.isHeartbeatMessage())
-        || (doneWithRegion(remainingResultSize, countdown, serverHasMoreResults)
-        && (!partialResults.isEmpty() || possiblyNextScanner(countdown, values == null))));
-  }
-
-  /**
-   * @param remainingResultSize
-   * @param remainingRows
-   * @param regionHasMoreResults
-   * @return true when the current region has been exhausted. When the current region has been
-   *         exhausted, the region must be changed before scanning can continue
-   */
-  private boolean doneWithRegion(long remainingResultSize, int remainingRows,
-      boolean regionHasMoreResults) {
-    return remainingResultSize > 0 && remainingRows > 0 && !regionHasMoreResults;
+      if (remainingResultSize <= 0) {
+        if (!cache.isEmpty()) {
+          closeScannerIfExhausted(exhausted);
+          break;
+        } else {
+          // we have reached the max result size but we still can not find anything to return to the
+          // user. Reset the maxResultSize and try again.
+          remainingResultSize = maxScannerResultSize;
+        }
+      }
+      // we are done with the current region
+      if (exhausted) {
+        if (!partialResults.isEmpty()) {
+          // XXX: continue if there are partial results. But in fact server should not set
+          // hasMoreResults to false if there are partial results.
+          LOG.warn("Server tells us there is no more results for this region but we still have"
+              + " partialResults, this should not happen, retry on the current scanner anyway");
+          continue;
+        }
+        if (!nextScanner(countdown, values == null)) {
+          break;
+        }
+      }
+    }
   }
 
   protected void addEstimatedSize(long estimatedHeapSizeOfResult) {
@@ -566,9 +591,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
    * @return the list of results that should be added to the cache.
    * @throws IOException
    */
-  protected List<Result>
-      getResultsToAddToCache(Result[] resultsFromServer, boolean heartbeatMessage)
-          throws IOException {
+  protected List<Result> getResultsToAddToCache(Result[] resultsFromServer,
+      boolean heartbeatMessage) throws IOException {
     int resultSize = resultsFromServer != null ? resultsFromServer.length : 0;
     List<Result> resultsToAddToCache = new ArrayList<Result>(resultSize);
 
@@ -583,7 +607,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // the batch size even though it may not be the last group of cells for that row.
     if (allowPartials || isBatchSet) {
       addResultsToList(resultsToAddToCache, resultsFromServer, 0,
-          (null == resultsFromServer ? 0 : resultsFromServer.length));
+        (null == resultsFromServer ? 0 : resultsFromServer.length));
       return resultsToAddToCache;
     }
 
@@ -769,12 +793,12 @@ public abstract class ClientScanner extends AbstractClientScanner {
   }
 
   /**
-   * Compare two Cells considering reversed scanner.
-   * ReversedScanner only reverses rows, not columns.
+   * Compare two Cells considering reversed scanner. ReversedScanner only reverses rows, not
+   * columns.
    */
   private int compare(Cell a, Cell b) {
-    CellComparator comparator = currentRegion != null && currentRegion.isMetaRegion() ?
-        CellComparator.META_COMPARATOR : CellComparator.COMPARATOR;
+    CellComparator comparator = currentRegion != null && currentRegion.isMetaRegion()
+        ? CellComparator.META_COMPARATOR : CellComparator.COMPARATOR;
     int r = comparator.compareRows(a, b);
     if (r != 0) {
       return this.scan.isReversed() ? -r : r;
