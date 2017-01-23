@@ -231,6 +231,30 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   }
 
   @Test
+  public void testRegionLoadCost() {
+    List<RegionLoad> regionLoads = new ArrayList<>();
+    for (int i = 1; i < 5; i++) {
+      RegionLoad regionLoad = mock(RegionLoad.class);
+      when(regionLoad.getReadRequestsCount()).thenReturn(new Long(i));
+      when(regionLoad.getStorefileSizeMB()).thenReturn(i);
+      regionLoads.add(regionLoad);
+    }
+
+    Configuration conf = HBaseConfiguration.create();
+    StochasticLoadBalancer.ReadRequestCostFunction readCostFunction =
+        new StochasticLoadBalancer.ReadRequestCostFunction(conf);
+    double rateResult = readCostFunction.getRegionLoadCost(regionLoads);
+    // read requests are treated as a rate so the average rate here is simply 1
+    assertEquals(1, rateResult, 0.01);
+
+    StochasticLoadBalancer.StoreFileCostFunction storeFileCostFunction =
+        new StochasticLoadBalancer.StoreFileCostFunction(conf);
+    double result = storeFileCostFunction.getRegionLoadCost(regionLoads);
+    // storefile size cost is simply an average of it's value over time
+    assertEquals(2.5, result, 0.01);
+  }
+
+  @Test
   public void testCostFromArray() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFromRegionLoadFunction
