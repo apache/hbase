@@ -1301,19 +1301,42 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       double cost = 0;
 
       for (RegionLoad rl : regionLoadList) {
-        double toAdd = getCostFromRl(rl);
-
-        if (cost == 0) {
-          cost = toAdd;
-        } else {
-          cost = (.5 * cost) + (.5 * toAdd);
-        }
+        cost += getCostFromRl(rl);
       }
-
-      return cost;
+      return cost / regionLoadList.size();
     }
 
+
     protected abstract double getCostFromRl(RegionLoad rl);
+  }
+
+  /**
+   * Class to be used for the subset of RegionLoad costs that should be treated as rates.
+   * We do not compare about the actual rate in requests per second but rather the rate relative
+   * to the rest of the regions.
+   */
+  abstract static class CostFromRegionLoadAsRateFunction extends CostFromRegionLoadFunction {
+
+    CostFromRegionLoadAsRateFunction(Configuration conf) {
+      super(conf);
+    }
+
+    @Override
+    protected double getRegionLoadCost(Collection<RegionLoad> regionLoadList) {
+      double cost = 0;
+      double previous = 0;
+      boolean isFirst = true;
+      for (RegionLoad rl : regionLoadList) {
+        double current = getCostFromRl(rl);
+        if (isFirst) {
+          isFirst = false;
+        } else {
+          cost += current - previous;
+        }
+        previous = current;
+      }
+      return Math.max(0, cost / (regionLoadList.size() - 1));
+    }
   }
 
   /**
@@ -1321,7 +1344,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * computed cost will be.  This uses a rolling average of regionload.
    */
 
-  static class ReadRequestCostFunction extends CostFromRegionLoadFunction {
+  static class ReadRequestCostFunction extends CostFromRegionLoadAsRateFunction {
 
     private static final String READ_REQUEST_COST_KEY =
         "hbase.master.balancer.stochastic.readRequestCost";
@@ -1343,7 +1366,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Compute the cost of total number of write requests.  The more unbalanced the higher the
    * computed cost will be.  This uses a rolling average of regionload.
    */
-  static class WriteRequestCostFunction extends CostFromRegionLoadFunction {
+  static class WriteRequestCostFunction extends CostFromRegionLoadAsRateFunction {
 
     private static final String WRITE_REQUEST_COST_KEY =
         "hbase.master.balancer.stochastic.writeRequestCost";
@@ -1521,7 +1544,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * Compute the cost of total memstore size.  The more unbalanced the higher the
    * computed cost will be.  This uses a rolling average of regionload.
    */
-  static class MemstoreSizeCostFunction extends CostFromRegionLoadFunction {
+  static class MemstoreSizeCostFunction extends CostFromRegionLoadAsRateFunction {
 
     private static final String MEMSTORE_SIZE_COST_KEY =
         "hbase.master.balancer.stochastic.memstoreSizeCost";
