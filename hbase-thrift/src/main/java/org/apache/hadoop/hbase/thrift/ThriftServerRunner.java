@@ -48,6 +48,7 @@ import javax.security.sasl.SaslServer;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -80,7 +81,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.jetty.SslSelectChannelConnectorSecure;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
@@ -123,16 +123,17 @@ import org.apache.thrift.transport.TSaslServerTransport;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.thread.QueuedThreadPool;
+
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.server.*;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 /**
  * ThriftServerRunner - this class starts up a Thrift server which implements
@@ -142,6 +143,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class ThriftServerRunner implements Runnable {
 
   private static final Log LOG = LogFactory.getLog(ThriftServerRunner.class);
+
+  private static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
 
   static final String SERVER_TYPE_CONF_KEY =
       "hbase.regionserver.thrift.server.type";
@@ -160,6 +163,10 @@ public class ThriftServerRunner implements Runnable {
   static final String THRIFT_SSL_KEYSTORE_STORE = "hbase.thrift.ssl.keystore.store";
   static final String THRIFT_SSL_KEYSTORE_PASSWORD = "hbase.thrift.ssl.keystore.password";
   static final String THRIFT_SSL_KEYSTORE_KEYPASSWORD = "hbase.thrift.ssl.keystore.keypassword";
+  static final String THRIFT_SSL_EXCLUDE_CIPHER_SUITES = "hbase.thrift.ssl.exclude.cipher.suites";
+  static final String THRIFT_SSL_INCLUDE_CIPHER_SUITES = "hbase.thrift.ssl.include.cipher.suites";
+  static final String THRIFT_SSL_EXCLUDE_PROTOCOLS = "hbase.thrift.ssl.exclude.protocols";
+  static final String THRIFT_SSL_INCLUDE_PROTOCOLS = "hbase.thrift.ssl.include.protocols";
 
   /**
    * Amount of time in milliseconds before a server thread will timeout
@@ -393,38 +400,6 @@ public class ThriftServerRunner implements Runnable {
     TServlet thriftHttpServlet = new ThriftHttpServlet(processor, protocolFactory, realUser,
         conf, hbaseHandler, securityEnabled, doAsEnabled);
 
-    httpServer = new Server();
-    // Context handler
-    Context context = new Context(httpServer, "/", Context.SESSIONS);
-    context.setContextPath("/");
-    String httpPath = "/*";
-    httpServer.setHandler(context);
-    context.addServlet(new ServletHolder(thriftHttpServlet), httpPath);
-
-    // set up Jetty and run the embedded server
-    Connector connector = new SelectChannelConnector();
-    if(conf.getBoolean(THRIFT_SSL_ENABLED, false)) {
-      SslSelectChannelConnectorSecure sslConnector = new SslSelectChannelConnectorSecure();
-      String keystore = conf.get(THRIFT_SSL_KEYSTORE_STORE);
-      String password = HBaseConfiguration.getPassword(conf,
-          THRIFT_SSL_KEYSTORE_PASSWORD, null);
-      String keyPassword = HBaseConfiguration.getPassword(conf,
-          THRIFT_SSL_KEYSTORE_KEYPASSWORD, password);
-      sslConnector.setKeystore(keystore);
-      sslConnector.setPassword(password);
-      sslConnector.setKeyPassword(keyPassword);
-      connector = sslConnector;
-    }
-    String host = getBindAddress(conf).getHostAddress();
-    connector.setPort(listenPort);
-    connector.setHost(host);
-    connector.setHeaderBufferSize(1024 * 64);
-    httpServer.addConnector(connector);
-
-    if (doAsEnabled) {
-      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
-    }
-
     // Set the default max thread number to 100 to limit
     // the number of concurrent requests so that Thrfit HTTP server doesn't OOM easily.
     // Jetty set the default max thread number to 250, if we don't set it.
@@ -434,11 +409,75 @@ public class ThriftServerRunner implements Runnable {
     int maxThreads = conf.getInt(HTTP_MAX_THREADS, 100);
     QueuedThreadPool threadPool = new QueuedThreadPool(maxThreads);
     threadPool.setMinThreads(minThreads);
-    httpServer.setThreadPool(threadPool);
+    httpServer = new Server(threadPool);
 
-    httpServer.setSendServerVersion(false);
-    httpServer.setSendDateHeader(false);
+    // Context handler
+    ServletContextHandler ctxHandler = new ServletContextHandler(httpServer, "/", ServletContextHandler.SESSIONS);
+    ctxHandler.addServlet(new ServletHolder(thriftHttpServlet), "/*");
+
+    // set up Jetty and run the embedded server
+    HttpConfiguration httpConfig = new HttpConfiguration();
+    httpConfig.setSecureScheme("https");
+    httpConfig.setSecurePort(listenPort);
+    httpConfig.setHeaderCacheSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setRequestHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setResponseHeaderSize(DEFAULT_HTTP_MAX_HEADER_SIZE);
+    httpConfig.setSendServerVersion(false);
+    httpConfig.setSendDateHeader(false);
+
+    ServerConnector serverConnector;
+    if(conf.getBoolean(THRIFT_SSL_ENABLED, false)) {
+      HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
+      httpsConfig.addCustomizer(new SecureRequestCustomizer());
+
+      SslContextFactory sslCtxFactory = new SslContextFactory();
+      String keystore = conf.get(THRIFT_SSL_KEYSTORE_STORE);
+      String password = HBaseConfiguration.getPassword(conf,
+          THRIFT_SSL_KEYSTORE_PASSWORD, null);
+      String keyPassword = HBaseConfiguration.getPassword(conf,
+          THRIFT_SSL_KEYSTORE_KEYPASSWORD, password);
+      sslCtxFactory.setKeyStorePath(keystore);
+      sslCtxFactory.setKeyStorePassword(password);
+      sslCtxFactory.setKeyManagerPassword(keyPassword);
+
+      String[] excludeCiphers = conf.getStrings(
+          THRIFT_SSL_EXCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
+      if (excludeCiphers.length != 0) {
+        sslCtxFactory.setExcludeCipherSuites(excludeCiphers);
+      }
+      String[] includeCiphers = conf.getStrings(
+          THRIFT_SSL_INCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
+      if (includeCiphers.length != 0) {
+        sslCtxFactory.setIncludeCipherSuites(includeCiphers);
+      }
+
+      // Disable SSLv3 by default due to "Poodle" Vulnerability - CVE-2014-3566
+      String[] excludeProtocols = conf.getStrings(
+          THRIFT_SSL_EXCLUDE_PROTOCOLS, "SSLv3");
+      if (excludeProtocols.length != 0) {
+        sslCtxFactory.setExcludeProtocols(excludeProtocols);
+      }
+      String[] includeProtocols = conf.getStrings(
+          THRIFT_SSL_INCLUDE_PROTOCOLS, ArrayUtils.EMPTY_STRING_ARRAY);
+      if (includeProtocols.length != 0) {
+        sslCtxFactory.setIncludeProtocols(includeProtocols);
+      }
+
+      serverConnector = new ServerConnector(httpServer,
+          new SslConnectionFactory(sslCtxFactory, HttpVersion.HTTP_1_1.toString()),
+          new HttpConnectionFactory(httpsConfig));
+    } else {
+      serverConnector = new ServerConnector(httpServer, new HttpConnectionFactory(httpConfig));
+    }
+    serverConnector.setPort(listenPort);
+    String host = getBindAddress(conf).getHostAddress();
+    serverConnector.setHost(host);
+    httpServer.addConnector(serverConnector);
     httpServer.setStopAtShutdown(true);
+
+    if (doAsEnabled) {
+      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    }
 
     LOG.info("Starting Thrift HTTP Server on " + Integer.toString(listenPort));
   }

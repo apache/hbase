@@ -101,21 +101,13 @@ noted in the LICENSE file.
 ## Leave out all the 'optionally depends on' bits.
 
 #end
-## NOTICE.txt from jetty 6.1.26, which isn't in the org.mortbay.jetty:jetty-util jar
-## Obtained from fedora's mirror of the 6.1.26 source
-## http://pkgs.fedoraproject.org/repo/pkgs/jetty/jetty-6.1.26-src.zip/
-##     4980757517064efbf655e025d005a0b8/jetty-6.1.26-src.zip
-## https://github.com/toddlipcon/jetty-hadoop-fix/tree/6.1.26
-##
-## updated for server side to include jsp bits from 6.1.14 (notice files are identical save
-## copyright span)
+
 #macro(jetty_notice $jetty-include-unixcrypt)
 --
 This product includes portions of 'The Jetty Web Container'
 
-Copyright 1995-2009 Mort Bay Consulting Pty Ltd
+Copyright 1995-2016 Mort Bay Consulting Pty Ltd.
 
-## javax.servlet paragraph is generated via org.mortbay.jetty:servlet-api-2.5
 #if(${jetty-include-unixcrypt})
 ## UnixCrypt.java paragraph only in server
 The UnixCrypt.java code ~Implements the one way cryptography used by
@@ -126,7 +118,7 @@ for non-commercial or commercial purposes and without fee is
 granted provided that the copyright notice appears in all copies.
 
 #end
-## jsp implementation paragraph is handled via org.mortbay.jetty:jsp-2.1
+## jsp implementation paragraph is handled via org.eclipse.jetty:jetty-jsp:jar
 
 Some portions of the code are Copyright:
   2006 Tim Vernum

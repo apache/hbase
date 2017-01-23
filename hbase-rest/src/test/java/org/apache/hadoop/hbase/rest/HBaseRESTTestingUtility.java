@@ -25,11 +25,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.HttpServerUtil;
 import org.apache.hadoop.util.StringUtils;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
 
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+
+import org.glassfish.jersey.jackson1.Jackson1Feature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
+
+import javax.servlet.DispatcherType;
+import java.util.EnumSet;
 
 public class HBaseRESTTestingUtility {
 
@@ -52,37 +62,43 @@ public class HBaseRESTTestingUtility {
     RESTServlet.getInstance(conf, UserProvider.instantiate(conf));
 
     // set up the Jersey servlet container for Jetty
-    ServletHolder sh = new ServletHolder(ServletContainer.class);
-    sh.setInitParameter(
-      "com.sun.jersey.config.property.resourceConfigClass",
-      ResourceConfig.class.getCanonicalName());
-    sh.setInitParameter("com.sun.jersey.config.property.packages",
-      "jetty");
+    ResourceConfig app = new ResourceConfig().
+        packages("org.apache.hadoop.hbase.rest").register(Jackson1Feature.class);
+    ServletHolder sh = new ServletHolder(new ServletContainer(app));
 
-    LOG.info("configured " + ServletContainer.class.getName());
-    
     // set up Jetty and run the embedded server
     server = new Server(0);
-    server.setSendServerVersion(false);
-    server.setSendDateHeader(false);
-      // set up context
-    Context context = new Context(server, "/", Context.SESSIONS);
-    context.addServlet(sh, "/*");
+    LOG.info("configured " + ServletContainer.class.getName());
+
+    HttpConfiguration httpConfig = new HttpConfiguration();
+    httpConfig.setSendDateHeader(false);
+    httpConfig.setSendServerVersion(false);
+    ServerConnector serverConnector = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
+    serverConnector.setPort(testServletPort);
+
+    server.addConnector(serverConnector);
+
+    // set up context
+    ServletContextHandler ctxHandler = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
+    ctxHandler.addServlet(sh, "/*");
     // Load filters specified from configuration.
     String[] filterClasses = conf.getStrings(Constants.FILTER_CLASSES,
-      ArrayUtils.EMPTY_STRING_ARRAY);
+        ArrayUtils.EMPTY_STRING_ARRAY);
     for (String filter : filterClasses) {
       filter = filter.trim();
-      context.addFilter(Class.forName(filter), "/*", 0);
+      ctxHandler.addFilter(filter, "/*", EnumSet.of(DispatcherType.REQUEST));
     }
-    conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
-    RESTServer.addCSRFFilter(context, conf);
-    HttpServerUtil.constrainHttpMethods(context);
     LOG.info("Loaded filter classes :" + filterClasses);
-      // start the server
+
+    conf.set(RESTServer.REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY, ".*");
+    RESTServer.addCSRFFilter(ctxHandler, conf);
+
+    HttpServerUtil.constrainHttpMethods(ctxHandler);
+
+    // start the server
     server.start();
-      // get the port
-    testServletPort = server.getConnectors()[0].getLocalPort();
+    // get the port
+    testServletPort = ((ServerConnector)server.getConnectors()[0]).getLocalPort();
 
     LOG.info("started " + server.getClass().getName() + " on port " + 
       testServletPort);

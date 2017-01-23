@@ -70,8 +70,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
-import org.mortbay.jetty.Connector;
-import org.mortbay.util.ajax.JSON;
+
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.ajax.JSON;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHttpServer extends HttpServerFunctionalTest {
@@ -564,7 +565,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       // not bound, ephemeral should return requested port (0 for ephemeral)
       List<?> listeners = (List<?>) Whitebox.getInternalState(server,
           "listeners");
-      Connector listener = (Connector) Whitebox.getInternalState(
+      ServerConnector listener = (ServerConnector) Whitebox.getInternalState(
           listeners.get(0), "listener");
 
       assertEquals(port, listener.getPort());
@@ -622,17 +623,5 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertNotNull(conn.getHeaderField("Date"));
     assertEquals(conn.getHeaderField("Expires"), conn.getHeaderField("Date"));
     assertEquals("DENY", conn.getHeaderField("X-Frame-Options"));
-  }
-
-  /**
-   * HTTPServer.Builder should proceed if a external connector is available.
-   */
-  @Test
-  public void testHttpServerBuilderWithExternalConnector() throws Exception {
-    Connector c = mock(Connector.class);
-    doReturn("localhost").when(c).getHost();
-    HttpServer s = new HttpServer.Builder().setName("test").setConnector(c)
-        .build();
-    s.stop();
   }
 }

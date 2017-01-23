@@ -22,8 +22,9 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mortbay.jetty.NCSARequestLog;
-import org.mortbay.jetty.RequestLog;
+
+import org.eclipse.jetty.server.RequestLog;
+import org.eclipse.jetty.server.NCSARequestLog;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;

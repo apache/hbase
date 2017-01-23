@@ -27,7 +27,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -64,31 +63,35 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.Shell;
-import org.mortbay.io.Buffer;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Handler;
-import org.mortbay.jetty.MimeTypes;
-import org.mortbay.jetty.RequestLog;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.handler.ContextHandler;
-import org.mortbay.jetty.handler.ContextHandlerCollection;
-import org.mortbay.jetty.handler.HandlerCollection;
-import org.mortbay.jetty.handler.RequestLogHandler;
-import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.security.SslSocketConnector;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.DefaultServlet;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.servlet.FilterMapping;
-import org.mortbay.jetty.servlet.ServletHandler;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.jetty.webapp.WebAppContext;
-import org.mortbay.thread.QueuedThreadPool;
-import org.mortbay.util.MultiException;
+
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.RequestLog;
+import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.servlet.FilterMapping;
+import org.eclipse.jetty.servlet.ServletHandler;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.MultiException;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.eclipse.jetty.webapp.WebAppContext;
+
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal
@@ -103,6 +106,8 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 public class HttpServer implements FilterContainer {
   private static final Log LOG = LogFactory.getLog(HttpServer.class);
   private static final String EMPTY_STRING = "";
+
+  private static final int DEFAULT_MAX_HEADER_SIZE = 64 * 1024; // 64K
 
   static final String FILTER_INITIALIZERS_PROPERTY
       = "hbase.http.filter.initializers";
@@ -147,8 +152,8 @@ public class HttpServer implements FilterContainer {
      * listener in stop().
      */
     private final boolean isManaged;
-    private final Connector listener;
-    private ListenerInfo(boolean isManaged, Connector listener) {
+    private final ServerConnector listener;
+    private ListenerInfo(boolean isManaged, ServerConnector listener) {
       this.isManaged = isManaged;
       this.listener = listener;
     }
@@ -158,8 +163,8 @@ public class HttpServer implements FilterContainer {
 
   protected final WebAppContext webAppContext;
   protected final boolean findPort;
-  protected final Map<Context, Boolean> defaultContexts =
-      new HashMap<Context, Boolean>();
+  protected final Map<ServletContextHandler, Boolean> defaultContexts =
+      new HashMap<ServletContextHandler, Boolean>();
   protected final List<String> filterNames = new ArrayList<String>();
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
@@ -169,7 +174,6 @@ public class HttpServer implements FilterContainer {
    */
   public static class Builder {
     private ArrayList<URI> endpoints = Lists.newArrayList();
-    private Connector connector;
     private Configuration conf;
     private String[] pathSpecs;
     private AccessControlList adminsAcl;
@@ -294,11 +298,6 @@ public class HttpServer implements FilterContainer {
       return this;
     }
 
-    public Builder setConnector(Connector connector) {
-      this.connector = connector;
-      return this;
-    }
-
     public Builder setPathSpec(String[] pathSpec) {
       this.pathSpecs = pathSpec;
       return this;
@@ -356,17 +355,15 @@ public class HttpServer implements FilterContainer {
         try {
           endpoints.add(0, new URI("http", "", bindAddress, port, "", "", ""));
         } catch (URISyntaxException e) {
-          throw new HadoopIllegalArgumentException("Invalid endpoint: "+ e);
-        }
+          throw new HadoopIllegalArgumentException("Invalid endpoint: "+ e); }
       }
 
-      if (endpoints.isEmpty() && connector == null) {
+      if (endpoints.isEmpty()) {
         throw new HadoopIllegalArgumentException("No endpoints specified");
       }
 
       if (hostName == null) {
-        hostName = endpoints.isEmpty() ? connector.getHost() : endpoints.get(
-            0).getHost();
+        hostName = endpoints.get(0).getHost();
       }
 
       if (this.conf == null) {
@@ -380,37 +377,53 @@ public class HttpServer implements FilterContainer {
             signatureSecretFileKey);
       }
 
-      if (connector != null) {
-        server.addUnmanagedListener(connector);
-      }
-
       for (URI ep : endpoints) {
-        Connector listener = null;
+        ServerConnector listener = null;
         String scheme = ep.getScheme();
+        HttpConfiguration httpConfig = new HttpConfiguration();
+        httpConfig.setSecureScheme("https");
+        httpConfig.setHeaderCacheSize(DEFAULT_MAX_HEADER_SIZE);
+        httpConfig.setResponseHeaderSize(DEFAULT_MAX_HEADER_SIZE);
+        httpConfig.setRequestHeaderSize(DEFAULT_MAX_HEADER_SIZE);
+
         if ("http".equals(scheme)) {
-          listener = HttpServer.createDefaultChannelConnector();
+          listener = new ServerConnector(server.webServer, new HttpConnectionFactory(httpConfig));
         } else if ("https".equals(scheme)) {
-          SslSocketConnector c = new SslSocketConnectorSecure();
-          c.setNeedClientAuth(needsClientAuth);
-          c.setKeyPassword(keyPassword);
+          HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
+          httpsConfig.addCustomizer(new SecureRequestCustomizer());
+          SslContextFactory sslCtxFactory = new SslContextFactory();
+          sslCtxFactory.setNeedClientAuth(needsClientAuth);
+          sslCtxFactory.setKeyManagerPassword(keyPassword);
 
           if (keyStore != null) {
-            c.setKeystore(keyStore);
-            c.setKeystoreType(keyStoreType);
-            c.setPassword(keyStorePassword);
+            sslCtxFactory.setKeyStorePath(keyStore);
+            sslCtxFactory.setKeyStoreType(keyStoreType);
+            sslCtxFactory.setKeyStorePassword(keyStorePassword);
           }
 
           if (trustStore != null) {
-            c.setTruststore(trustStore);
-            c.setTruststoreType(trustStoreType);
-            c.setTrustPassword(trustStorePassword);
-          }
-          listener = c;
+            sslCtxFactory.setTrustStorePath(trustStore);
+            sslCtxFactory.setTrustStoreType(trustStoreType);
+            sslCtxFactory.setTrustStorePassword(trustStorePassword);
 
+          }
+          listener = new ServerConnector(server.webServer, new SslConnectionFactory(sslCtxFactory,
+              HttpVersion.HTTP_1_1.toString()), new HttpConnectionFactory(httpsConfig));
         } else {
           throw new HadoopIllegalArgumentException(
               "unknown scheme for endpoint:" + ep);
         }
+
+        // default settings for connector
+        listener.setAcceptQueueSize(128);
+        if (Shell.WINDOWS) {
+          // result of setting the SO_REUSEADDR flag is different on Windows
+          // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
+          // without this 2 NN's can start on the same machine and listen on
+          // the same port with indeterminate routing of incoming requests to them
+          listener.setReuseAddress(false);
+        }
+
         listener.setHost(ep.getHost());
         listener.setPort(ep.getPort() == -1 ? 0 : ep.getPort());
         server.addManagedListener(listener);
@@ -430,12 +443,6 @@ public class HttpServer implements FilterContainer {
     this(name, bindAddress, port, findPort, new Configuration());
   }
 
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf, Connector connector) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, connector, null);
-  }
-
   /**
    * Create a status server on the given port. Allows you to specify the
    * path specifications that this server will be serving so that they will be
@@ -453,7 +460,7 @@ public class HttpServer implements FilterContainer {
   @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, String[] pathSpecs) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, null, pathSpecs);
+    this(name, bindAddress, port, findPort, conf, null, pathSpecs);
   }
 
   /**
@@ -468,14 +475,14 @@ public class HttpServer implements FilterContainer {
   @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, null, null);
+    this(name, bindAddress, port, findPort, conf, null, null);
   }
 
   @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, AccessControlList adminsAcl)
       throws IOException {
-    this(name, bindAddress, port, findPort, conf, adminsAcl, null, null);
+    this(name, bindAddress, port, findPort, conf, adminsAcl, null);
   }
 
   /**
@@ -488,44 +495,33 @@ public class HttpServer implements FilterContainer {
    *        increment by 1 until it finds a free port.
    * @param conf Configuration
    * @param adminsAcl {@link AccessControlList} of the admins
-   * @param connector The jetty {@link Connector} to use
-   */
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf, AccessControlList adminsAcl,
-      Connector connector) throws IOException {
-    this(name, bindAddress, port, findPort, conf, adminsAcl, connector, null);
-  }
-
-  /**
-   * Create a status server on the given port.
-   * The jsp scripts are taken from src/webapps/&lt;name&gt;.
-   * @param name The name of the server
-   * @param bindAddress The address for this server
-   * @param port The port to use on the server
-   * @param findPort whether the server should start at the given port and
-   *        increment by 1 until it finds a free port.
-   * @param conf Configuration
-   * @param adminsAcl {@link AccessControlList} of the admins
-   * @param connector A jetty connection listener
    * @param pathSpecs Path specifications that this httpserver will be serving.
    *        These will be added to any filters.
    */
   @Deprecated
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, AccessControlList adminsAcl,
-      Connector connector, String[] pathSpecs) throws IOException {
+      String[] pathSpecs) throws IOException {
     this(new Builder().setName(name)
         .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
         .setFindPort(findPort).setConf(conf).setACL(adminsAcl)
-        .setConnector(connector).setPathSpec(pathSpecs));
+        .setPathSpec(pathSpecs));
   }
 
   private HttpServer(final Builder b) throws IOException {
     this.appDir = b.appDir;
     this.logDir = b.logDir;
     final String appDir = getWebAppsPath(b.name);
-    this.webServer = new Server();
+
+
+    int maxThreads = b.conf.getInt(HTTP_MAX_THREADS, -1);
+    // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
+    // default value (currently 250).
+    QueuedThreadPool threadPool = maxThreads == -1 ? new QueuedThreadPool()
+        : new QueuedThreadPool(maxThreads);
+    threadPool.setDaemon(true);
+    this.webServer = new Server(threadPool);
+
     this.adminsAcl = b.adminsAcl;
     this.webAppContext = createWebAppContext(b.name, b.conf, adminsAcl, appDir);
     this.findPort = b.findPort;
@@ -537,14 +533,6 @@ public class HttpServer implements FilterContainer {
       throws FileNotFoundException, IOException {
 
     Preconditions.checkNotNull(webAppContext);
-
-    int maxThreads = conf.getInt(HTTP_MAX_THREADS, -1);
-    // If HTTP_MAX_THREADS is not configured, QueueThreadPool() will use the
-    // default value (currently 250).
-    QueuedThreadPool threadPool = maxThreads == -1 ? new QueuedThreadPool()
-        : new QueuedThreadPool(maxThreads);
-    threadPool.setDaemon(true);
-    webServer.setThreadPool(threadPool);
 
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     RequestLog requestLog = HttpRequestLog.getRequestLog(name);
@@ -561,7 +549,7 @@ public class HttpServer implements FilterContainer {
 
     final String appDir = getWebAppsPath(name);
 
-    webServer.addHandler(webAppContext);
+    webServer.setHandler(webAppContext);
 
     addDefaultApps(contexts, appDir, conf);
 
@@ -589,11 +577,7 @@ public class HttpServer implements FilterContainer {
     }
   }
 
-  private void addUnmanagedListener(Connector connector) {
-    listeners.add(new ListenerInfo(false, connector));
-  }
-
-  private void addManagedListener(Connector connector) {
+  private void addManagedListener(ServerConnector connector) {
     listeners.add(new ListenerInfo(true, connector));
   }
 
@@ -612,33 +596,6 @@ public class HttpServer implements FilterContainer {
   private static void addNoCacheFilter(WebAppContext ctxt) {
     defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
         Collections.<String, String> emptyMap(), new String[] { "/*" });
-  }
-
-  /**
-   * Create a required listener for the Jetty instance listening on the port
-   * provided. This wrapper and all subclasses must create at least one
-   * listener.
-   */
-  public Connector createBaseListener(Configuration conf) throws IOException {
-    return HttpServer.createDefaultChannelConnector();
-  }
-
-  @InterfaceAudience.Private
-  public static Connector createDefaultChannelConnector() {
-    SelectChannelConnector ret = new SelectChannelConnector();
-    ret.setLowResourceMaxIdleTime(10000);
-    ret.setAcceptQueueSize(128);
-    ret.setResolveNames(false);
-    ret.setUseDirectBuffers(false);
-    if(Shell.WINDOWS) {
-      // result of setting the SO_REUSEADDR flag is different on Windows
-      // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
-      // without this 2 NN's can start on the same machine and listen on
-      // the same port with indeterminate routing of incoming requests to them
-      ret.setReuseAddress(false);
-    }
-    ret.setHeaderBufferSize(1024*64);
-    return ret;
   }
 
   /** Get an array of FilterConfiguration specified in the conf */
@@ -672,9 +629,10 @@ public class HttpServer implements FilterContainer {
         logDir = System.getProperty("hadoop.log.dir");
     }
     if (logDir != null) {
-      Context logContext = new Context(parent, "/logs");
-      logContext.setResourceBase(logDir);
+      ServletContextHandler logContext = new ServletContextHandler(parent, "/*");
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
+      logContext.setResourceBase(logDir);
+
       if (conf.getBoolean(
           ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
           ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES)) {
@@ -689,7 +647,7 @@ public class HttpServer implements FilterContainer {
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
-    Context staticContext = new Context(parent, "/static");
+    ServletContextHandler staticContext = new ServletContextHandler(parent, "/static");
     staticContext.setResourceBase(appDir + "/static");
     staticContext.addServlet(DefaultServlet.class, "/*");
     staticContext.setDisplayName("static");
@@ -697,7 +655,7 @@ public class HttpServer implements FilterContainer {
     defaultContexts.put(staticContext, true);
   }
 
-  private void setContextAttributes(Context context, Configuration conf) {
+  private void setContextAttributes(ServletContextHandler context, Configuration conf) {
     context.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     context.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
   }
@@ -724,30 +682,6 @@ public class HttpServer implements FilterContainer {
     addServlet("conf", "/conf", ConfServlet.class);
   }
 
-  public void addContext(Context ctxt, boolean isFiltered)
-      throws IOException {
-    webServer.addHandler(ctxt);
-    addNoCacheFilter(webAppContext);
-    defaultContexts.put(ctxt, isFiltered);
-  }
-
-  /**
-   * Add a context
-   * @param pathSpec The path spec for the context
-   * @param dir The directory containing the context
-   * @param isFiltered if true, the servlet is added to the filter path mapping
-   * @throws IOException
-   */
-  protected void addContext(String pathSpec, String dir, boolean isFiltered) throws IOException {
-    if (0 == webServer.getHandlers().length) {
-      throw new RuntimeException("Couldn't find handler");
-    }
-    WebAppContext webAppCtx = new WebAppContext();
-    webAppCtx.setContextPath(pathSpec);
-    webAppCtx.setWar(dir);
-    addContext(webAppCtx, true);
-  }
-
   /**
    * Set a value in the webapp context. These values are available to the jsp
    * pages as "application.getAttribute(name)".
@@ -767,10 +701,9 @@ public class HttpServer implements FilterContainer {
       final String pathSpec) {
     LOG.info("addJerseyResourcePackage: packageName=" + packageName
         + ", pathSpec=" + pathSpec);
-    final ServletHolder sh = new ServletHolder(ServletContainer.class);
-    sh.setInitParameter("com.sun.jersey.config.property.resourceConfigClass",
-        "com.sun.jersey.api.core.PackagesResourceConfig");
-    sh.setInitParameter("com.sun.jersey.config.property.packages", packageName);
+
+    ResourceConfig application = new ResourceConfig().packages(packageName);
+    final ServletHolder sh = new ServletHolder(new ServletContainer(application));
     webAppContext.addServlet(sh, pathSpec);
   }
 
@@ -828,7 +761,7 @@ public class HttpServer implements FilterContainer {
        FilterMapping fmap = new FilterMapping();
        fmap.setPathSpec(pathSpec);
        fmap.setFilterName(SPNEGO_FILTER);
-       fmap.setDispatches(Handler.ALL);
+       fmap.setDispatches(FilterMapping.ALL);
        handler.addFilterMapping(fmap);
     }
   }
@@ -842,12 +775,12 @@ public class HttpServer implements FilterContainer {
     LOG.info("Added filter " + name + " (class=" + classname
         + ") to context " + webAppContext.getDisplayName());
     final String[] ALL_URLS = { "/*" };
-    for (Map.Entry<Context, Boolean> e : defaultContexts.entrySet()) {
+    for (Map.Entry<ServletContextHandler, Boolean> e : defaultContexts.entrySet()) {
       if (e.getValue()) {
-        Context ctx = e.getKey();
-        defineFilter(ctx, name, classname, parameters, ALL_URLS);
+        ServletContextHandler handler = e.getKey();
+        defineFilter(handler, name, classname, parameters, ALL_URLS);
         LOG.info("Added filter " + name + " (class=" + classname
-            + ") to context " + ctx.getDisplayName());
+            + ") to context " + handler.getDisplayName());
       }
     }
     filterNames.add(name);
@@ -858,7 +791,7 @@ public class HttpServer implements FilterContainer {
       Map<String, String> parameters) {
     final String[] ALL_URLS = { "/*" };
     defineFilter(webAppContext, name, classname, parameters, ALL_URLS);
-    for (Context ctx : defaultContexts.keySet()) {
+    for (ServletContextHandler ctx : defaultContexts.keySet()) {
       defineFilter(ctx, name, classname, parameters, ALL_URLS);
     }
     LOG.info("Added global filter '" + name + "' (class=" + classname + ")");
@@ -867,19 +800,20 @@ public class HttpServer implements FilterContainer {
   /**
    * Define a filter for a context and set up default url mappings.
    */
-  public static void defineFilter(Context ctx, String name,
+  public static void defineFilter(ServletContextHandler handler, String name,
       String classname, Map<String,String> parameters, String[] urls) {
 
     FilterHolder holder = new FilterHolder();
     holder.setName(name);
     holder.setClassName(classname);
-    holder.setInitParameters(parameters);
+    if (parameters != null) {
+      holder.setInitParameters(parameters);
+    }
     FilterMapping fmap = new FilterMapping();
     fmap.setPathSpecs(urls);
-    fmap.setDispatches(Handler.ALL);
+    fmap.setDispatches(FilterMapping.ALL);
     fmap.setFilterName(name);
-    ServletHandler handler = ctx.getServletHandler();
-    handler.addFilter(holder, fmap);
+    handler.getServletHandler().addFilter(holder, fmap);
   }
 
   /**
@@ -888,14 +822,13 @@ public class HttpServer implements FilterContainer {
    * @param webAppCtx The WebApplicationContext to add to
    */
   protected void addFilterPathMapping(String pathSpec,
-      Context webAppCtx) {
-    ServletHandler handler = webAppCtx.getServletHandler();
+      WebAppContext webAppCtx) {
     for(String name : filterNames) {
       FilterMapping fmap = new FilterMapping();
       fmap.setPathSpec(pathSpec);
       fmap.setFilterName(name);
-      fmap.setDispatches(Handler.ALL);
-      handler.addFilterMapping(fmap);
+      fmap.setDispatches(FilterMapping.ALL);
+      webAppCtx.getServletHandler().addFilterMapping(fmap);
     }
   }
 
@@ -937,7 +870,7 @@ public class HttpServer implements FilterContainer {
    */
   @Deprecated
   public int getPort() {
-    return webServer.getConnectors()[0].getLocalPort();
+    return ((ServerConnector)webServer.getConnectors()[0]).getLocalPort();
   }
 
   /**
@@ -951,9 +884,10 @@ public class HttpServer implements FilterContainer {
     if (index > webServer.getConnectors().length)
       return null;
 
-    Connector c = webServer.getConnectors()[index];
-    if (c.getLocalPort() == -1) {
-      // The connector is not bounded
+    ServerConnector c = (ServerConnector)webServer.getConnectors()[index];
+    if (c.getLocalPort() == -1 || c.getLocalPort() == -2) {
+      // -1 if the connector has not been opened
+      // -2 if it has been closed
       return null;
     }
 
@@ -1080,9 +1014,9 @@ public class HttpServer implements FilterContainer {
    */
   void openListeners() throws Exception {
     for (ListenerInfo li : listeners) {
-      Connector listener = li.listener;
-      if (!li.isManaged || li.listener.getLocalPort() != -1) {
-        // This listener is either started externally or has been bound
+      ServerConnector listener = li.listener;
+      if (!li.isManaged || (li.listener.getLocalPort() != -1 && li.listener.getLocalPort() != -2)) {
+        // This listener is either started externally, or has not been opened, or has been closed
         continue;
       }
       int port = listener.getPort();
@@ -1185,7 +1119,7 @@ public class HttpServer implements FilterContainer {
       StringBuilder sb = new StringBuilder("HttpServer (")
         .append(isAlive() ? STATE_DESCRIPTION_ALIVE : STATE_DESCRIPTION_NOT_LIVE).append("), listening at:");
       for (ListenerInfo li : listeners) {
-        Connector l = li.listener;
+        ServerConnector l = li.listener;
         sb.append(l.getHost()).append(":").append(l.getPort()).append("/,");
       }
       return sb.toString();
@@ -1442,12 +1376,8 @@ public class HttpServer implements FilterContainer {
      */
     private String inferMimeType(ServletRequest request) {
       String path = ((HttpServletRequest)request).getRequestURI();
-      ContextHandler.SContext sContext = (ContextHandler.SContext)config.getServletContext();
-      MimeTypes mimes = sContext.getContextHandler().getMimeTypes();
-      Buffer mimeBuffer = mimes.getMimeByExtension(path);
-      return (mimeBuffer == null) ? null : mimeBuffer.toString();
+      ServletContext context = config.getServletContext();
+      return context.getMimeType(path);
     }
-
   }
-
 }

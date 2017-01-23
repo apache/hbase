@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 
+import javax.ws.rs.core.MediaType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -78,10 +79,8 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ByteString;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
-import com.sun.jersey.api.json.JSONUnmarshaller;
+
+import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
 
 /**
  * A representation of Scanner parameters.
@@ -119,6 +118,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private int caching = -1;
   private List<String> labels = new ArrayList<String>();
   private boolean cacheBlocks = true;
+
+  /**
+   * Implement lazily-instantiated singleton as per recipe
+   * here: http://literatejava.com/jvm/fastest-threadsafe-singleton-jvm/
+   */
+  private static class JaxbJsonProviderHolder {
+    static final JacksonJaxbJsonProvider INSTANCE = new JacksonJaxbJsonProvider();
+  }
 
   @XmlRootElement
   static class FilterModel {
@@ -466,18 +473,27 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
   }
 
+  // The singleton <code>JacksonJaxbJsonProvider</code> instance
+  private static JacksonJaxbJsonProvider jsonProvider;
+  private static final Object jsonProviderLock = new Object();
+
+  /**
+   * Get the <code>JacksonJaxbJsonProvider</code> instance;
+   *
+   * @return A <code>JacksonJaxbJsonProvider</code>.
+   */
+  private static JacksonJaxbJsonProvider getJasonProvider() {
+    return JaxbJsonProviderHolder.INSTANCE;
+  }
+
   /**
    * @param s the JSON representation of the filter
    * @return the filter
    * @throws Exception
    */
   public static Filter buildFilter(String s) throws Exception {
-    JSONJAXBContext context =
-      new JSONJAXBContext(JSONConfiguration.natural().build(),
-        FilterModel.class);
-    JSONUnmarshaller unmarshaller = context.createJSONUnmarshaller();
-    FilterModel model = unmarshaller.unmarshalFromJSON(new StringReader(s),
-      FilterModel.class);
+    FilterModel model = getJasonProvider().locateMapper(FilterModel.class,
+        MediaType.APPLICATION_JSON_TYPE).readValue(s, FilterModel.class);
     return model.build();
   }
 
@@ -487,13 +503,8 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
    * @throws Exception
    */
   public static String stringifyFilter(final Filter filter) throws Exception {
-    JSONJAXBContext context =
-      new JSONJAXBContext(JSONConfiguration.natural().build(),
-        FilterModel.class);
-    JSONMarshaller marshaller = context.createJSONMarshaller();
-    StringWriter writer = new StringWriter();
-    marshaller.marshallToJSON(new FilterModel(filter), writer);
-    return writer.toString();
+    return getJasonProvider().locateMapper(FilterModel.class,
+        MediaType.APPLICATION_JSON_TYPE).writeValueAsString(new FilterModel(filter));
   }
 
   private static final byte[] COLUMN_DIVIDER = Bytes.toBytes(":");
