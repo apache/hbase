@@ -26,15 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.KeepDeletedCells;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -82,7 +74,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void setUp() throws Exception {
     compactingSetUp();
     this.memstore = new CompactingMemStore(HBaseConfiguration.create(), CellComparator.COMPARATOR,
-        store, regionServicesForStores, HColumnDescriptor.MemoryCompaction.EAGER);
+        store, regionServicesForStores, MemoryCompactionPolicy.EAGER);
   }
 
   protected void compactingSetUp() throws Exception {
@@ -136,7 +128,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     // use case 3: first in snapshot second in kvset
     this.memstore = new CompactingMemStore(HBaseConfiguration.create(),
         CellComparator.COMPARATOR, store, regionServicesForStores,
-        HColumnDescriptor.MemoryCompaction.EAGER);
+        MemoryCompactionPolicy.EAGER);
     this.memstore.add(kv1.clone(), null);
     // As compaction is starting in the background the repetition
     // of the k1 might be removed BUT the scanners created earlier
@@ -475,7 +467,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       throws IOException {
 
     // set memstore to do data compaction and not to use the speculative scan
-    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.EAGER;
+    MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.EAGER;
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(compactionType));
     ((CompactingMemStore)memstore).initiateType(compactionType);
@@ -562,7 +554,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void testCompaction1Bucket() throws IOException {
 
     // set memstore to do data compaction and not to use the speculative scan
-    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.EAGER;
+    MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.EAGER;
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(compactionType));
     ((CompactingMemStore)memstore).initiateType(compactionType);
@@ -599,7 +591,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void testCompaction2Buckets() throws IOException {
 
     // set memstore to do data compaction and not to use the speculative scan
-    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.EAGER;
+    MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.EAGER;
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(compactionType));
     ((CompactingMemStore)memstore).initiateType(compactionType);
@@ -654,7 +646,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void testCompaction3Buckets() throws IOException {
 
     // set memstore to do data compaction and not to use the speculative scan
-    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.EAGER;
+    MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.EAGER;
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(compactionType));
     ((CompactingMemStore)memstore).initiateType(compactionType);

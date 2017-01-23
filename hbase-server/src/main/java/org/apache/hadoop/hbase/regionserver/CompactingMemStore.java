@@ -31,8 +31,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -57,7 +57,7 @@ public class CompactingMemStore extends AbstractMemStore {
   public static final String COMPACTING_MEMSTORE_TYPE_KEY =
       "hbase.hregion.compacting.memstore.type";
   public static final String COMPACTING_MEMSTORE_TYPE_DEFAULT =
-      String.valueOf(HColumnDescriptor.MemoryCompaction.NONE);
+      String.valueOf(MemoryCompactionPolicy.NONE);
   // Default fraction of in-memory-flush size w.r.t. flush-to-disk size
   public static final String IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY =
       "hbase.memstore.inmemoryflush.threshold.factor";
@@ -84,7 +84,7 @@ public class CompactingMemStore extends AbstractMemStore {
 
   public CompactingMemStore(Configuration conf, CellComparator c,
       HStore store, RegionServicesForStores regionServices,
-      HColumnDescriptor.MemoryCompaction compactionPolicy) throws IOException {
+      MemoryCompactionPolicy compactionPolicy) throws IOException {
     super(conf, c);
     this.store = store;
     this.regionServices = regionServices;
@@ -496,7 +496,7 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   @VisibleForTesting
-  void initiateType(HColumnDescriptor.MemoryCompaction compactionType) {
+  void initiateType(MemoryCompactionPolicy compactionType) {
     compactor.initiateAction(compactionType);
   }
 

@@ -631,8 +631,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int columns = 1;
     int caching = 30;
     boolean addColumns = true;
-    HColumnDescriptor.MemoryCompaction inMemoryCompaction =
-        HColumnDescriptor.MemoryCompaction.valueOf(
+    MemoryCompactionPolicy inMemoryCompaction =
+        MemoryCompactionPolicy.valueOf(
             CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT);
 
     public TestOptions() {}
@@ -978,11 +978,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.addColumns = addColumns;
     }
 
-    public void setInMemoryCompaction(HColumnDescriptor.MemoryCompaction inMemoryCompaction) {
+    public void setInMemoryCompaction(MemoryCompactionPolicy inMemoryCompaction) {
       this.inMemoryCompaction = inMemoryCompaction;
     }
 
-    public HColumnDescriptor.MemoryCompaction getInMemoryCompaction() {
+    public MemoryCompactionPolicy getInMemoryCompaction() {
       return this.inMemoryCompaction;
     }
   }

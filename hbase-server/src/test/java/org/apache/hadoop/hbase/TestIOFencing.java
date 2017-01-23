@@ -251,7 +251,7 @@ public class TestIOFencing {
     // Compact quickly after we tell it to!
     c.setInt("hbase.regionserver.thread.splitcompactcheckfrequency", 1000);
     c.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(HColumnDescriptor.MemoryCompaction.NONE));
+        String.valueOf(MemoryCompactionPolicy.NONE));
     LOG.info("Starting mini cluster");
     TEST_UTIL.startMiniCluster(1);
     CompactionBlockerRegion compactingRegion = null;

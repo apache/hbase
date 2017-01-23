@@ -37,11 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.io.ByteBufferPool;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -77,10 +73,10 @@ public class TestAsyncTableGetMultiThreaded {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    setUp(HColumnDescriptor.MemoryCompaction.NONE);
+    setUp(MemoryCompactionPolicy.NONE);
   }
 
-  protected static void setUp(HColumnDescriptor.MemoryCompaction memoryCompaction)
+  protected static void setUp(MemoryCompactionPolicy memoryCompaction)
       throws Exception {
     TEST_UTIL.getConfiguration().set(TABLES_ON_MASTER, "none");
     TEST_UTIL.getConfiguration().setLong(HBASE_CLIENT_META_OPERATION_TIMEOUT, 60000L);

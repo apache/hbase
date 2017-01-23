@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor.MemoryCompaction;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -86,7 +86,7 @@ public class MemStoreCompactor {
   private Action action = Action.FLATTEN;
 
   public MemStoreCompactor(CompactingMemStore compactingMemStore,
-      MemoryCompaction compactionPolicy) {
+      MemoryCompactionPolicy compactionPolicy) {
     this.compactingMemStore = compactingMemStore;
     this.compactionKVMax = compactingMemStore.getConfiguration()
         .getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
@@ -270,7 +270,7 @@ public class MemStoreCompactor {
    * Initiate the action according to user config, after its default is Action.MERGE
    */
   @VisibleForTesting
-  void initiateAction(MemoryCompaction compType) {
+  void initiateAction(MemoryCompactionPolicy compType) {
 
     switch (compType){
     case NONE: action = Action.NOOP;

@@ -64,11 +64,11 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
 
     // set memstore to do data compaction
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(HColumnDescriptor.MemoryCompaction.EAGER));
+        String.valueOf(MemoryCompactionPolicy.EAGER));
 
     this.memstore =
         new CompactingMemStore(conf, CellComparator.COMPARATOR, store,
-            regionServicesForStores, HColumnDescriptor.MemoryCompaction.EAGER);
+            regionServicesForStores, MemoryCompactionPolicy.EAGER);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -267,7 +267,7 @@ public class TestCompactingToCellArrayMapMemStore extends TestCompactingMemStore
     String[] keys2 = { "A", "B", "D", "G", "I", "J"};
     String[] keys3 = { "D", "B", "B", "E" };
 
-    HColumnDescriptor.MemoryCompaction compactionType = HColumnDescriptor.MemoryCompaction.BASIC;
+    MemoryCompactionPolicy compactionType = MemoryCompactionPolicy.BASIC;
     memstore.getConfiguration().set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
         String.valueOf(compactionType));
     ((CompactingMemStore)memstore).initiateType(compactionType);

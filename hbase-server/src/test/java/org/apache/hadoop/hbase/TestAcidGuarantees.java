@@ -102,7 +102,7 @@ public class TestAcidGuarantees implements Tool {
             ConstantSizeRegionSplitPolicy.class.getName());
     conf.setInt("hfile.format.version", 3); // for mob tests
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(HColumnDescriptor.MemoryCompaction.NONE));
+        String.valueOf(MemoryCompactionPolicy.NONE));
     util = new HBaseTestingUtility(conf);
   }
 

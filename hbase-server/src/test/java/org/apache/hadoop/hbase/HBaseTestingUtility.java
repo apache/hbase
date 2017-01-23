@@ -1881,9 +1881,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       if(compactedMemStore != null && i < compactedMemStore.length) {
-        hcd.setInMemoryCompaction(HColumnDescriptor.MemoryCompaction.BASIC);
+        hcd.setInMemoryCompaction(MemoryCompactionPolicy.BASIC);
       } else {
-        hcd.setInMemoryCompaction(HColumnDescriptor.MemoryCompaction.NONE);
+        hcd.setInMemoryCompaction(MemoryCompactionPolicy.NONE);
 
       }
       i++;

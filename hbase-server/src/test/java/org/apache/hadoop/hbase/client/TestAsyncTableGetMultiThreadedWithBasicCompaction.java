@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
@@ -29,7 +30,7 @@ public class TestAsyncTableGetMultiThreadedWithBasicCompaction extends
 
   @BeforeClass
   public static void setUp() throws Exception {
-    setUp(HColumnDescriptor.MemoryCompaction.BASIC);
+    setUp(MemoryCompactionPolicy.BASIC);
   }
 
 }
