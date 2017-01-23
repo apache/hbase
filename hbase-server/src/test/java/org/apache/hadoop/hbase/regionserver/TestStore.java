@@ -90,6 +90,7 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
+import java.util.Arrays;
 
 /**
  * Test class for the Store
@@ -355,6 +356,29 @@ public class TestStore {
 
     for (StoreFile sf : sfs) {
       sf.closeReader(true);
+    }
+  }
+
+  @Test
+  public void testRollback() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem fs = FileSystem.get(conf);
+    // Initialize region
+    init(name.getMethodName(), conf);
+    Cell cell = CellUtil.createCell(row, family, qf1);
+    int len = KeyValueUtil.length(cell);
+    int offset = 77;
+    byte[] buf = new byte[offset + len];
+    KeyValueUtil.appendToByteArray(cell, buf, offset);
+    KeyValue newKv = new KeyValue(buf, offset, len);
+    newKv.setSequenceId(cell.getSequenceId());
+    List<Cell> testCells = Arrays.asList(cell, cell, newKv);
+    for (Cell c : testCells) {
+      long sizeBeforeRollback = store.heapSize();
+      store.add(cell);
+      store.rollback(cell);
+      long sizeAeforeRollback = store.heapSize();
+      assertEquals(sizeBeforeRollback, sizeAeforeRollback);
     }
   }
 

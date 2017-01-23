@@ -347,8 +347,8 @@ public class DefaultMemStore implements MemStore {
     // If the key is in the memstore, delete it. Update this.size.
     found = this.cellSet.get(cell);
     if (found != null && found.getSequenceId() == cell.getSequenceId()) {
-      removeFromCellSet(cell);
-      long s = heapSizeChange(cell, true);
+      removeFromCellSet(found);
+      long s = heapSizeChange(found, true);
       this.size.addAndGet(-s);
     }
   }
