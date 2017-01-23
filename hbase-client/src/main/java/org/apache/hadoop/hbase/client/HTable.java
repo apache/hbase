@@ -82,10 +82,9 @@ import org.apache.hadoop.hbase.util.Threads;
  * Obtain an instance via {@link Connection}. See {@link ConnectionFactory}
  * class comment for an example of how.
  *
- * <p>This class is NOT thread safe for reads nor writes.
- * In the case of writes (Put, Delete), the underlying write buffer can
- * be corrupted if multiple threads contend over a single HTable instance.
- * In the case of reads, some fields used by a Scan are shared among all threads.
+ * <p>This class is thread safe since 2.0.0 if not invoking any of the setter methods.
+ * All setters are moved into {@link TableBuilder} and reserved here only for keeping
+ * backward compatibility, and TODO will be removed soon.
  *
  * <p>HTable is no longer a client API. Use {@link Table} instead. It is marked
  * InterfaceAudience.Private indicating that this is an HBase-internal class as defined in
@@ -115,10 +114,12 @@ public class HTable implements Table {
   private final long scannerMaxResultSize;
   private final ExecutorService pool;  // For Multi & Scan
   private int operationTimeout; // global timeout for each blocking method with retrying rpc
+  private final int rpcTimeout; // FIXME we should use this for rpc like batch and checkAndXXX
   private int readRpcTimeout; // timeout for each read rpc request
   private int writeRpcTimeout; // timeout for each write rpc request
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final HRegionLocator locator;
+  private final long writeBufferSize;
 
   /** The Async process for batch */
   @VisibleForTesting
@@ -150,31 +151,24 @@ public class HTable implements Table {
    * Creates an object to access a HBase table.
    * Used by HBase internally.  DO NOT USE. See {@link ConnectionFactory} class comment for how to
    * get a {@link Table} instance (use {@link Table} instead of {@link HTable}).
-   * @param tableName Name of the table.
    * @param connection Connection to be used.
+   * @param builder The table builder
+   * @param rpcCallerFactory The RPC caller factory
+   * @param rpcControllerFactory The RPC controller factory
    * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs
    */
   @InterfaceAudience.Private
-  protected HTable(TableName tableName, final ClusterConnection connection,
-      final ConnectionConfiguration tableConfig,
+  protected HTable(final ClusterConnection connection,
+      final TableBuilderBase builder,
       final RpcRetryingCallerFactory rpcCallerFactory,
       final RpcControllerFactory rpcControllerFactory,
-      final ExecutorService pool) throws IOException {
+      final ExecutorService pool) {
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
-    if (tableName == null) {
-      throw new IllegalArgumentException("Given table name is null");
-    }
-    this.tableName = tableName;
     this.connection = connection;
     this.configuration = connection.getConfiguration();
-    if (tableConfig == null) {
-      connConfiguration = new ConnectionConfiguration(configuration);
-    } else {
-      connConfiguration = tableConfig;
-    }
+    this.connConfiguration = connection.getConnectionConfiguration();
     if (pool == null) {
       this.pool = getDefaultExecutor(this.configuration);
       this.cleanupPoolOnClose = true;
@@ -194,10 +188,12 @@ public class HTable implements Table {
       this.rpcControllerFactory = rpcControllerFactory;
     }
 
-    this.operationTimeout = tableName.isSystemTable() ?
-        connConfiguration.getMetaOperationTimeout() : connConfiguration.getOperationTimeout();
-    this.readRpcTimeout = connConfiguration.getReadRpcTimeout();
-    this.writeRpcTimeout = connConfiguration.getWriteRpcTimeout();
+    this.tableName = builder.tableName;
+    this.operationTimeout = builder.operationTimeout;
+    this.rpcTimeout = builder.rpcTimeout;
+    this.readRpcTimeout = builder.readRpcTimeout;
+    this.writeRpcTimeout = builder.writeRpcTimeout;
+    this.writeBufferSize = builder.writeBufferSize;
     this.scannerCaching = connConfiguration.getScannerCaching();
     this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
 
@@ -215,15 +211,16 @@ public class HTable implements Table {
     connection = conn;
     this.tableName = mutator.getName();
     this.configuration = connection.getConfiguration();
-    connConfiguration = new ConnectionConfiguration(configuration);
+    connConfiguration = connection.getConnectionConfiguration();
     cleanupPoolOnClose = false;
     this.mutator = mutator;
-    this.operationTimeout = tableName.isSystemTable() ?
-        connConfiguration.getMetaOperationTimeout() : connConfiguration.getOperationTimeout();
+    this.operationTimeout = connConfiguration.getOperationTimeout();
+    this.rpcTimeout = connConfiguration.getRpcTimeout();
     this.readRpcTimeout = connConfiguration.getReadRpcTimeout();
     this.writeRpcTimeout = connConfiguration.getWriteRpcTimeout();
     this.scannerCaching = connConfiguration.getScannerCaching();
     this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
+    this.writeBufferSize = connConfiguration.getWriteBufferSize();
     this.rpcControllerFactory = null;
     this.rpcCallerFactory = null;
     this.pool = mutator.getPool();
@@ -1058,6 +1055,7 @@ public class HTable implements Table {
    * @throws IOException if a remote or network exception occurs.
    */
   @Override
+  @Deprecated
   public void setWriteBufferSize(long writeBufferSize) throws IOException {
     getBufferedMutator();
     mutator.setWriteBufferSize(writeBufferSize);
@@ -1162,6 +1160,7 @@ public class HTable implements Table {
   }
 
   @Override
+  @Deprecated
   public void setOperationTimeout(int operationTimeout) {
     this.operationTimeout = operationTimeout;
     if (mutator != null) {
@@ -1177,7 +1176,7 @@ public class HTable implements Table {
   @Override
   @Deprecated
   public int getRpcTimeout() {
-    return readRpcTimeout;
+    return rpcTimeout;
   }
 
   @Override
@@ -1193,6 +1192,7 @@ public class HTable implements Table {
   }
 
   @Override
+  @Deprecated
   public void setWriteRpcTimeout(int writeRpcTimeout) {
     this.writeRpcTimeout = writeRpcTimeout;
     if (mutator != null) {
@@ -1204,6 +1204,7 @@ public class HTable implements Table {
   public int getReadRpcTimeout() { return readRpcTimeout; }
 
   @Override
+  @Deprecated
   public void setReadRpcTimeout(int readRpcTimeout) {
     this.readRpcTimeout = readRpcTimeout;
   }
@@ -1335,7 +1336,7 @@ public class HTable implements Table {
       this.mutator = (BufferedMutatorImpl) connection.getBufferedMutator(
           new BufferedMutatorParams(tableName)
               .pool(pool)
-              .writeBufferSize(connConfiguration.getWriteBufferSize())
+              .writeBufferSize(writeBufferSize)
               .maxKeyValueSize(connConfiguration.getMaxKeyValueSize())
               .opertationTimeout(operationTimeout)
               .rpcTimeout(writeRpcTimeout)

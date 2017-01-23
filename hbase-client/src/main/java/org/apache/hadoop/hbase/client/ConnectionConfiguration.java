@@ -42,9 +42,10 @@ public class ConnectionConfiguration {
   private final int replicaCallTimeoutMicroSecondScan;
   private final int retries;
   private final int maxKeyValueSize;
+  private final int rpcTimeout;
   private final int readRpcTimeout;
   private final int writeRpcTimeout;
-    // toggle for async/sync prefetch
+  // toggle for async/sync prefetch
   private final boolean clientScannerAsyncPrefetch;
 
     /**
@@ -82,6 +83,9 @@ public class ConnectionConfiguration {
 
     this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
 
+    this.rpcTimeout =
+        conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+
     this.readRpcTimeout = conf.getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
         conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
 
@@ -108,6 +112,7 @@ public class ConnectionConfiguration {
     this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
     this.readRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.writeRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.rpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
   }
 
   public int getReadRpcTimeout() {
@@ -156,6 +161,10 @@ public class ConnectionConfiguration {
 
   public boolean isClientScannerAsyncPrefetch() {
     return clientScannerAsyncPrefetch;
+  }
+
+  public int getRpcTimeout() {
+    return rpcTimeout;
   }
 
 }

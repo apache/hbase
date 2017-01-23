@@ -83,7 +83,9 @@ public interface Connection extends Abortable, Closeable {
    * @param tableName the name of the table
    * @return a Table to use for interactions with this table
    */
-  Table getTable(TableName tableName) throws IOException;
+  default Table getTable(TableName tableName) throws IOException {
+    return getTable(tableName, null);
+  }
 
   /**
    * Retrieve a Table implementation for accessing a table.
@@ -102,7 +104,9 @@ public interface Connection extends Abortable, Closeable {
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return a Table to use for interactions with this table
    */
-  Table getTable(TableName tableName, ExecutorService pool)  throws IOException;
+  default Table getTable(TableName tableName, ExecutorService pool) throws IOException {
+    return getTableBuilder(tableName, pool).build();
+  }
 
   /**
    * <p>
@@ -173,4 +177,11 @@ public interface Connection extends Abortable, Closeable {
    * @return true if this connection is closed
    */
   boolean isClosed();
+
+  /**
+   * Returns an {@link TableBuilder} for creating {@link Table}.
+   * @param tableName the name of the table
+   * @param pool the thread pool to use for requests like batch and scan
+   */
+  TableBuilder getTableBuilder(TableName tableName, ExecutorService pool);
 }

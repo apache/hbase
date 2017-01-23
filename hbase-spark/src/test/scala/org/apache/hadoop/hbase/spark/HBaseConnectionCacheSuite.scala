@@ -21,7 +21,7 @@ import java.util.concurrent.ExecutorService
 import scala.util.Random
 
 import org.apache.hadoop.hbase.client.{BufferedMutator, Table, RegionLocator,
-  Connection, BufferedMutatorParams, Admin}
+  Connection, BufferedMutatorParams, Admin, TableBuilder}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.TableName
 import org.apache.spark.Logging
@@ -50,6 +50,7 @@ class ConnectionMocker extends Connection {
   def getBufferedMutator (params: BufferedMutatorParams): BufferedMutator = null
   def getBufferedMutator (tableName: TableName): BufferedMutator = null
   def getAdmin: Admin = null
+  def getTableBuilder(tableName: TableName, pool: ExecutorService): TableBuilder = null
 
   def close(): Unit = {
     if (isClosed)

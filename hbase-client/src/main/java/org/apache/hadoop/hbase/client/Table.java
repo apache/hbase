@@ -593,7 +593,9 @@ public interface Table extends Closeable {
    * total time being blocking reach the operation timeout before retries exhausted, it will break
    * early and throw SocketTimeoutException.
    * @param operationTimeout the total timeout of each operation in millisecond.
+   * @deprecated since 2.0.0, use {@link TableBuilder#setOperationTimeout} instead
    */
+  @Deprecated
   void setOperationTimeout(int operationTimeout);
 
   /**
@@ -637,7 +639,9 @@ public interface Table extends Closeable {
    * until retries exhausted or operation timeout reached.
    *
    * @param readRpcTimeout
+   * @deprecated since 2.0.0, use {@link TableBuilder#setReadRpcTimeout} instead
    */
+  @Deprecated
   void setReadRpcTimeout(int readRpcTimeout);
 
   /**
@@ -652,6 +656,8 @@ public interface Table extends Closeable {
    * until retries exhausted or operation timeout reached.
    *
    * @param writeRpcTimeout
+   * @deprecated since 2.0.0, use {@link TableBuilder#setWriteRpcTimeout} instead
    */
+  @Deprecated
   void setWriteRpcTimeout(int writeRpcTimeout);
 }
