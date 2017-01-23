@@ -108,7 +108,8 @@ public class HTable implements Table {
   private final Configuration configuration;
   private final ConnectionConfiguration connConfiguration;
   @VisibleForTesting
-  BufferedMutatorImpl mutator;
+  volatile BufferedMutatorImpl mutator;
+  private final Object mutatorLock = new Object();
   private boolean closed = false;
   private final int scannerCaching;
   private final long scannerMaxResultSize;
@@ -1333,14 +1334,14 @@ public class HTable implements Table {
   @VisibleForTesting
   BufferedMutator getBufferedMutator() throws IOException {
     if (mutator == null) {
-      this.mutator = (BufferedMutatorImpl) connection.getBufferedMutator(
-          new BufferedMutatorParams(tableName)
-              .pool(pool)
-              .writeBufferSize(writeBufferSize)
-              .maxKeyValueSize(connConfiguration.getMaxKeyValueSize())
-              .opertationTimeout(operationTimeout)
-              .rpcTimeout(writeRpcTimeout)
-      );
+      synchronized (mutatorLock) {
+        if (mutator == null) {
+          this.mutator = (BufferedMutatorImpl) connection.getBufferedMutator(
+            new BufferedMutatorParams(tableName).pool(pool).writeBufferSize(writeBufferSize)
+                .maxKeyValueSize(connConfiguration.getMaxKeyValueSize())
+                .opertationTimeout(operationTimeout).rpcTimeout(writeRpcTimeout));
+        }
+      }
     }
     return mutator;
   }

@@ -28,6 +28,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -747,6 +749,56 @@ public class TestFromClientSide3 {
     assertEquals(1001, rowNum);
 
 
+  }
+
+  @Test
+  public void testPutThenGetWithMultipleThreads() throws Exception {
+    TableName TABLE = TableName.valueOf("testParallelPutAndGet");
+    final int THREAD_NUM = 20;
+    final int ROUND_NUM = 10;
+    for (int round = 0; round < ROUND_NUM; round++) {
+      ArrayList<Thread> threads = new ArrayList<>(THREAD_NUM);
+      final AtomicInteger successCnt = new AtomicInteger(0);
+      Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+      for (int i = 0; i < THREAD_NUM; i++) {
+        final int index = i;
+        Thread t = new Thread(new Runnable() {
+
+          @Override
+          public void run() {
+            final byte[] row = Bytes.toBytes("row-" + index);
+            final byte[] value = Bytes.toBytes("v" + index);
+            try {
+              Put put = new Put(row);
+              put.addColumn(FAMILY, QUALIFIER, value);
+              ht.put(put);
+              Get get = new Get(row);
+              Result result = ht.get(get);
+              byte[] returnedValue = result.getValue(FAMILY, QUALIFIER);
+              if (Bytes.equals(value, returnedValue)) {
+                successCnt.getAndIncrement();
+              } else {
+                LOG.error("Should be equal but not, original value: " + Bytes.toString(value)
+                    + ", returned value: "
+                    + (returnedValue == null ? "null" : Bytes.toString(returnedValue)));
+              }
+            } catch (Throwable e) {
+              // do nothing
+            }
+          }
+        });
+        threads.add(t);
+      }
+      for (Thread t : threads) {
+        t.start();
+      }
+      for (Thread t : threads) {
+        t.join();
+      }
+      assertEquals("Not equal in round " + round, THREAD_NUM, successCnt.get());
+      ht.close();
+      TEST_UTIL.deleteTable(TABLE);
+    }
   }
 
   private static void assertNoLocks(final TableName tableName) throws IOException, InterruptedException {
