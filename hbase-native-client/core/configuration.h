@@ -33,6 +33,14 @@ using optional = std::experimental::optional<T>;
 
 class Configuration {
  public:
+  /**
+   * @brief Create Configuration object using an empty map. This
+   * object WILL NOT be initialized from reading XML configuration (hbase-site.xml, etc).
+   * Use HBaseConfigurationLoader to initialize the configuration from
+   * hbase-default.xml and hbase-site.xml files.
+   */
+  Configuration();
+
   ~Configuration();
 
   /**
@@ -78,6 +86,41 @@ class Configuration {
    * @throws std::runtime_error if conversion to bool fails
    */
   bool GetBool(const std::string &key, bool default_value) const;
+
+  /**
+   * @brief This method sets the given key to the value.
+   * @param key property name
+   * @param value property value
+   */
+  void Set(const std::string &key, const std::string &value);
+
+  /**
+   * @brief This method sets the given key to the value.
+   * @param key property name
+   * @param value property value
+   */
+  void SetInt(const std::string &key, int32_t value);
+
+  /**
+   * @brief This method sets the given key to the value.
+   * @param key property name
+   * @param value property value
+   */
+  void SetLong(const std::string &key, int64_t value);
+
+  /**
+   * @brief This method sets the given key to the value.
+   * @param key property name
+   * @param value property value
+   */
+  void SetDouble(const std::string &key, double value);
+
+  /**
+   * @brief This method sets the given key to the value.
+   * @param key property name
+   * @param value property value
+   */
+  void SetBool(const std::string &key, bool value);
 
  private:
   friend class HBaseConfigurationLoader;
