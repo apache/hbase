@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
@@ -1928,4 +1929,23 @@ public interface Admin extends Abortable, Closeable {
    */
   void removeDrainFromRegionServers(List<ServerName> servers) throws IOException;
 
+  /**
+   * Find all table and column families that are replicated from this cluster
+   * @return the replicated table-cfs list of this cluster.
+   */
+  List<TableCFs> listReplicatedTableCFs() throws IOException;
+
+  /**
+   * Enable a table's replication switch.
+   * @param tableName name of the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  void enableTableReplication(final TableName tableName) throws IOException;
+
+  /**
+   * Disable a table's replication switch.
+   * @param tableName name of the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  void disableTableReplication(final TableName tableName) throws IOException;
 }

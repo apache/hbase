@@ -430,7 +430,6 @@ public class ReplicationAdmin implements Closeable {
     admin.close();
   }
 
-
   /**
    * Find all column families that are replicated from this cluster
    * @return the full list of the replicated column families of this cluster as:
@@ -441,36 +440,26 @@ public class ReplicationAdmin implements Closeable {
    *  1) the replication may only apply to selected peers instead of all peers
    *  2) the replicationType may indicate the host Cluster servers as Slave
    *     for the table:columnFam.
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#listReplicatedTableCFs()} instead
    */
+  @Deprecated
   public List<HashMap<String, String>> listReplicated() throws IOException {
-    List<HashMap<String, String>> replicationColFams = new ArrayList<HashMap<String, String>>();
-
-    Admin admin = connection.getAdmin();
-    HTableDescriptor[] tables;
-    try {
-      tables = admin.listTables();
-    } finally {
-      if (admin!= null) admin.close();
-    }
-
-    for (HTableDescriptor table : tables) {
-      HColumnDescriptor[] columns = table.getColumnFamilies();
-      String tableName = table.getNameAsString();
-      for (HColumnDescriptor column : columns) {
-        if (column.getScope() != HConstants.REPLICATION_SCOPE_LOCAL) {
-          // At this moment, the columfam is replicated to all peers
-          HashMap<String, String> replicationEntry = new HashMap<String, String>();
-          replicationEntry.put(TNAME, tableName);
-          replicationEntry.put(CFNAME, column.getNameAsString());
-          replicationEntry.put(REPLICATIONTYPE,
-              column.getScope() == HConstants.REPLICATION_SCOPE_GLOBAL ?
-                  REPLICATIONGLOBAL :
-                  REPLICATIONSERIAL);
-          replicationColFams.add(replicationEntry);
-        }
-      }
-    }
-
+    List<HashMap<String, String>> replicationColFams = new ArrayList<>();
+    admin.listReplicatedTableCFs().forEach(
+      (tableCFs) -> {
+        String table = tableCFs.getTable().getNameAsString();
+        tableCFs.getColumnFamilyMap()
+            .forEach(
+              (cf, scope) -> {
+                HashMap<String, String> replicationEntry = new HashMap<String, String>();
+                replicationEntry.put(TNAME, table);
+                replicationEntry.put(CFNAME, cf);
+                replicationEntry.put(REPLICATIONTYPE,
+                  scope == HConstants.REPLICATION_SCOPE_GLOBAL ? REPLICATIONGLOBAL
+                      : REPLICATIONSERIAL);
+                replicationColFams.add(replicationEntry);
+              });
+      });
     return replicationColFams;
   }
 
@@ -478,110 +467,24 @@ public class ReplicationAdmin implements Closeable {
    * Enable a table's replication switch.
    * @param tableName name of the table
    * @throws IOException if a remote or network exception occurs
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#enableTableReplication(TableName)}
+   *             instead
    */
+  @Deprecated
   public void enableTableRep(final TableName tableName) throws IOException {
-    if (tableName == null) {
-      throw new IllegalArgumentException("Table name cannot be null");
-    }
-    try (Admin admin = this.connection.getAdmin()) {
-      if (!admin.tableExists(tableName)) {
-        throw new TableNotFoundException("Table '" + tableName.getNameAsString()
-            + "' does not exists.");
-      }
-    }
-    byte[][] splits = getTableSplitRowKeys(tableName);
-    checkAndSyncTableDescToPeers(tableName, splits);
-    setTableRep(tableName, true);
+    admin.enableTableReplication(tableName);
   }
 
   /**
    * Disable a table's replication switch.
    * @param tableName name of the table
    * @throws IOException if a remote or network exception occurs
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#disableTableReplication(TableName)}
+   *             instead
    */
+  @Deprecated
   public void disableTableRep(final TableName tableName) throws IOException {
-    if (tableName == null) {
-      throw new IllegalArgumentException("Table name is null");
-    }
-    try (Admin admin = this.connection.getAdmin()) {
-      if (!admin.tableExists(tableName)) {
-        throw new TableNotFoundException("Table '" + tableName.getNamespaceAsString()
-            + "' does not exists.");
-      }
-    }
-    setTableRep(tableName, false);
-  }
-
-  /**
-   * Get the split row keys of table
-   * @param tableName table name
-   * @return array of split row keys
-   * @throws IOException
-   */
-  private byte[][] getTableSplitRowKeys(TableName tableName) throws IOException {
-    try (RegionLocator locator = connection.getRegionLocator(tableName);) {
-      byte[][] startKeys = locator.getStartKeys();
-      if (startKeys.length == 1) {
-        return null;
-      }
-      byte[][] splits = new byte[startKeys.length - 1][];
-      for (int i = 1; i < startKeys.length; i++) {
-        splits[i - 1] = startKeys[i];
-      }
-      return splits;
-    }
-  }
-
-  /**
-   * Connect to peer and check the table descriptor on peer:
-   * <ol>
-   * <li>Create the same table on peer when not exist.</li>
-   * <li>Throw exception if the table exists on peer cluster but descriptors are not same.</li>
-   * </ol>
-   * @param tableName name of the table to sync to the peer
-   * @param splits table split keys
-   * @throws IOException
-   */
-  private void checkAndSyncTableDescToPeers(final TableName tableName, final byte[][] splits)
-      throws IOException {
-    List<ReplicationPeer> repPeers = listReplicationPeers();
-    if (repPeers == null || repPeers.size() <= 0) {
-      throw new IllegalArgumentException("Found no peer cluster for replication.");
-    }
-
-    final TableName onlyTableNameQualifier = TableName.valueOf(tableName.getQualifierAsString());
-
-    for (ReplicationPeer repPeer : repPeers) {
-      Map<TableName, List<String>> tableCFMap = repPeer.getTableCFs();
-      // TODO Currently peer TableCFs will not include namespace so we need to check only for table
-      // name without namespace in it. Need to correct this logic once we fix HBASE-11386.
-      if (tableCFMap != null && !tableCFMap.containsKey(onlyTableNameQualifier)) {
-        continue;
-      }
-
-      Configuration peerConf = repPeer.getConfiguration();
-      HTableDescriptor htd = null;
-      try (Connection conn = ConnectionFactory.createConnection(peerConf);
-          Admin admin = this.connection.getAdmin();
-          Admin repHBaseAdmin = conn.getAdmin()) {
-        htd = admin.getTableDescriptor(tableName);
-        HTableDescriptor peerHtd = null;
-        if (!repHBaseAdmin.tableExists(tableName)) {
-          repHBaseAdmin.createTable(htd, splits);
-        } else {
-          peerHtd = repHBaseAdmin.getTableDescriptor(tableName);
-          if (peerHtd == null) {
-            throw new IllegalArgumentException("Failed to get table descriptor for table "
-                + tableName.getNameAsString() + " from peer cluster " + repPeer.getId());
-          } else if (!peerHtd.equals(htd)) {
-            throw new IllegalArgumentException("Table " + tableName.getNameAsString()
-                + " exists in peer cluster " + repPeer.getId()
-                + ", but the table descriptors are not same when compared with source cluster."
-                + " Thus can not enable the table's replication switch.");
-          }
-        }
-      }
-    }
+    admin.disableTableReplication(tableName);
   }
 
   @VisibleForTesting
@@ -613,50 +516,6 @@ public class ReplicationAdmin implements Closeable {
       }
     }
     return listOfPeers;
-  }
-
-  /**
-   * Set the table's replication switch if the table's replication switch is already not set.
-   * @param tableName name of the table
-   * @param isRepEnabled is replication switch enable or disable
-   * @throws IOException if a remote or network exception occurs
-   */
-  private void setTableRep(final TableName tableName, boolean isRepEnabled) throws IOException {
-    Admin admin = null;
-    try {
-      admin = this.connection.getAdmin();
-      HTableDescriptor htd = admin.getTableDescriptor(tableName);
-      if (isTableRepEnabled(htd) ^ isRepEnabled) {
-        for (HColumnDescriptor hcd : htd.getFamilies()) {
-          hcd.setScope(isRepEnabled ? HConstants.REPLICATION_SCOPE_GLOBAL
-              : HConstants.REPLICATION_SCOPE_LOCAL);
-        }
-        admin.modifyTable(tableName, htd);
-      }
-    } finally {
-      if (admin != null) {
-        try {
-          admin.close();
-        } catch (IOException e) {
-          LOG.warn("Failed to close admin connection.");
-          LOG.debug("Details on failure to close admin connection.", e);
-        }
-      }
-    }
-  }
-
-  /**
-   * @param htd table descriptor details for the table to check
-   * @return true if table's replication switch is enabled
-   */
-  private boolean isTableRepEnabled(HTableDescriptor htd) {
-    for (HColumnDescriptor hcd : htd.getFamilies()) {
-      if (hcd.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL
-          && hcd.getScope() != HConstants.REPLICATION_SCOPE_SERIAL) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /**

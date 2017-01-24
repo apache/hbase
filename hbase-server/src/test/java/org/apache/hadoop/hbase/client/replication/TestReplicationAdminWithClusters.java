@@ -75,7 +75,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin2.disableTable(tableName);
     admin2.deleteTable(tableName);
     assertFalse(admin2.tableExists(tableName));
-    adminExt.enableTableRep(tableName);
+    admin1.enableTableReplication(tableName);
     assertTrue(admin2.tableExists(tableName));
   }
 
@@ -93,7 +93,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin2.modifyTable(tableName, table);
     admin2.enableTable(tableName);
 
-    adminExt.enableTableRep(tableName);
+    admin1.enableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_GLOBAL);
@@ -110,7 +110,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin2.enableTable(tableName);
 
     try {
-      adminExt.enableTableRep(tableName);
+      admin1.enableTableReplication(tableName);
       fail("Exception should be thrown if table descriptors in the clusters are not same.");
     } catch (RuntimeException ignored) {
 
@@ -118,7 +118,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     admin1.disableTable(tableName);
     admin1.modifyTable(tableName, table);
     admin1.enableTable(tableName);
-    adminExt.enableTableRep(tableName);
+    admin1.enableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_GLOBAL);
@@ -127,7 +127,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test(timeout = 300000)
   public void testDisableAndEnableReplication() throws Exception {
-    adminExt.disableTableRep(tableName);
+    admin1.disableTableReplication(tableName);
     HTableDescriptor table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_LOCAL);
@@ -136,7 +136,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_LOCAL);
     }
-    adminExt.enableTableRep(tableName);
+    admin1.enableTableReplication(tableName);
     table = admin1.getTableDescriptor(tableName);
     for (HColumnDescriptor fam : table.getColumnFamilies()) {
       assertEquals(fam.getScope(), HConstants.REPLICATION_SCOPE_GLOBAL);
@@ -145,24 +145,24 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test(timeout = 300000, expected = TableNotFoundException.class)
   public void testDisableReplicationForNonExistingTable() throws Exception {
-    adminExt.disableTableRep(TableName.valueOf("nonExistingTable"));
+    admin1.disableTableReplication(TableName.valueOf("nonExistingTable"));
   }
 
   @Test(timeout = 300000, expected = TableNotFoundException.class)
   public void testEnableReplicationForNonExistingTable() throws Exception {
-    adminExt.enableTableRep(TableName.valueOf("nonExistingTable"));
+    admin1.enableTableReplication(TableName.valueOf("nonExistingTable"));
   }
 
   @Test(timeout = 300000, expected = IllegalArgumentException.class)
   public void testDisableReplicationWhenTableNameAsNull() throws Exception {
-    adminExt.disableTableRep(null);
+    admin1.disableTableReplication(null);
   }
 
   @Test(timeout = 300000, expected = IllegalArgumentException.class)
   public void testEnableReplicationWhenTableNameAsNull() throws Exception {
-    adminExt.enableTableRep(null);
+    admin1.enableTableReplication(null);
   }
-  
+
   /*
    * Test enable table replication should create table only in user explicit specified table-cfs.
    * HBASE-14717
@@ -182,20 +182,20 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     tableCfs.put(tn, null);
     try {
       adminExt.setPeerTableCFs(peerId, tableCfs);
-      adminExt.enableTableRep(tableName);
+      admin1.enableTableReplication(tableName);
       assertFalse("Table should not be created if user has set table cfs explicitly for the "
           + "peer and this is not part of that collection",
         admin2.isTableAvailable(tableName));
 
       tableCfs.put(tableName, null);
       adminExt.setPeerTableCFs(peerId, tableCfs);
-      adminExt.enableTableRep(tableName);
+      admin1.enableTableReplication(tableName);
       assertTrue(
         "Table should be created if user has explicitly added table into table cfs collection",
         admin2.isTableAvailable(tableName));
     } finally {
       adminExt.removePeerTableCFs(peerId, adminExt.getPeerTableCFs(peerId));
-      adminExt.disableTableRep(tableName);
+      admin1.disableTableReplication(tableName);
     }
   }
 

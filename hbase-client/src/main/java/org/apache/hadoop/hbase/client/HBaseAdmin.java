@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -43,6 +44,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -68,6 +70,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper;
+import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -3916,5 +3919,177 @@ public class HBaseAdmin implements Admin {
         return null;
       }
     });
+  }
+
+  @Override
+  public List<TableCFs> listReplicatedTableCFs() throws IOException {
+    List<TableCFs> replicatedTableCFs = new ArrayList<>();
+    HTableDescriptor[] tables = listTables();
+    for (HTableDescriptor table : tables) {
+      HColumnDescriptor[] columns = table.getColumnFamilies();
+      Map<String, Integer> cfs = new HashMap<>();
+      for (HColumnDescriptor column : columns) {
+        if (column.getScope() != HConstants.REPLICATION_SCOPE_LOCAL) {
+          cfs.put(column.getNameAsString(), column.getScope());
+        }
+      }
+      if (!cfs.isEmpty()) {
+        replicatedTableCFs.add(new TableCFs(table.getTableName(), cfs));
+      }
+    }
+    return replicatedTableCFs;
+  }
+
+  @Override
+  public void enableTableReplication(final TableName tableName) throws IOException {
+    if (tableName == null) {
+      throw new IllegalArgumentException("Table name cannot be null");
+    }
+    if (!tableExists(tableName)) {
+      throw new TableNotFoundException("Table '" + tableName.getNameAsString()
+          + "' does not exists.");
+    }
+    byte[][] splits = getTableSplits(tableName);
+    checkAndSyncTableDescToPeers(tableName, splits);
+    setTableRep(tableName, true);
+  }
+
+  @Override
+  public void disableTableReplication(final TableName tableName) throws IOException {
+    if (tableName == null) {
+      throw new IllegalArgumentException("Table name is null");
+    }
+    if (!tableExists(tableName)) {
+      throw new TableNotFoundException("Table '" + tableName.getNamespaceAsString()
+          + "' does not exists.");
+    }
+    setTableRep(tableName, false);
+  }
+
+  /**
+   * Connect to peer and check the table descriptor on peer:
+   * <ol>
+   * <li>Create the same table on peer when not exist.</li>
+   * <li>Throw exception if the table exists on peer cluster but descriptors are not same.</li>
+   * </ol>
+   * @param tableName name of the table to sync to the peer
+   * @param splits table split keys
+   * @throws IOException
+   */
+  private void checkAndSyncTableDescToPeers(final TableName tableName, final byte[][] splits)
+      throws IOException {
+    List<ReplicationPeerDescription> peers = listReplicationPeers();
+    if (peers == null || peers.size() <= 0) {
+      throw new IllegalArgumentException("Found no peer cluster for replication.");
+    }
+
+    for (ReplicationPeerDescription peerDesc : peers) {
+      if (needToReplicate(tableName, peerDesc)) {
+        Configuration peerConf = getPeerClusterConfiguration(peerDesc);
+        try (Connection conn = ConnectionFactory.createConnection(peerConf);
+            Admin repHBaseAdmin = conn.getAdmin()) {
+          HTableDescriptor htd = getTableDescriptor(tableName);
+          HTableDescriptor peerHtd = null;
+          if (!repHBaseAdmin.tableExists(tableName)) {
+            repHBaseAdmin.createTable(htd, splits);
+          } else {
+            peerHtd = repHBaseAdmin.getTableDescriptor(tableName);
+            if (peerHtd == null) {
+              throw new IllegalArgumentException("Failed to get table descriptor for table "
+                  + tableName.getNameAsString() + " from peer cluster " + peerDesc.getPeerId());
+            } else if (!peerHtd.equals(htd)) {
+              throw new IllegalArgumentException("Table " + tableName.getNameAsString()
+                  + " exists in peer cluster " + peerDesc.getPeerId()
+                  + ", but the table descriptors are not same when compared with source cluster."
+                  + " Thus can not enable the table's replication switch.");
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Decide whether the table need replicate to the peer cluster according to the peer config
+   * @param table name of the table
+   * @param peerConfig config for the peer
+   * @return true if the table need replicate to the peer cluster
+   */
+  private boolean needToReplicate(TableName table, ReplicationPeerDescription peer) {
+    ReplicationPeerConfig peerConfig = peer.getPeerConfig();
+    Set<String> namespaces = peerConfig.getNamespaces();
+    Map<TableName, List<String>> tableCFsMap = peerConfig.getTableCFsMap();
+    // If null means user has explicitly not configured any namespaces and table CFs
+    // so all the tables data are applicable for replication
+    if (namespaces == null && tableCFsMap == null) {
+      return true;
+    }
+    if (namespaces != null && namespaces.contains(table.getNamespaceAsString())) {
+      return true;
+    }
+    if (tableCFsMap != null && tableCFsMap.containsKey(table)) {
+      return true;
+    }
+    LOG.debug("Table " + table.getNameAsString()
+        + " doesn't need replicate to peer cluster, peerId=" + peer.getPeerId() + ", clusterKey="
+        + peerConfig.getClusterKey());
+    return false;
+  }
+
+  /**
+   * Set the table's replication switch if the table's replication switch is already not set.
+   * @param tableName name of the table
+   * @param isRepEnabled is replication switch enable or disable
+   * @throws IOException if a remote or network exception occurs
+   */
+  private void setTableRep(final TableName tableName, boolean isRepEnabled) throws IOException {
+    HTableDescriptor htd = getTableDescriptor(tableName);
+    if (isTableRepEnabled(htd) ^ isRepEnabled) {
+      for (HColumnDescriptor hcd : htd.getFamilies()) {
+        hcd.setScope(isRepEnabled ? HConstants.REPLICATION_SCOPE_GLOBAL
+            : HConstants.REPLICATION_SCOPE_LOCAL);
+      }
+      modifyTable(tableName, htd);
+    }
+  }
+
+  /**
+   * @param htd table descriptor details for the table to check
+   * @return true if table's replication switch is enabled
+   */
+  private boolean isTableRepEnabled(HTableDescriptor htd) {
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
+      if (hcd.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL
+          && hcd.getScope() != HConstants.REPLICATION_SCOPE_SERIAL) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns the configuration needed to talk to the remote slave cluster.
+   * @param peer the description of replication peer
+   * @return the configuration for the peer cluster, null if it was unable to get the configuration
+   * @throws IOException
+   */
+  private Configuration getPeerClusterConfiguration(ReplicationPeerDescription peer)
+      throws IOException {
+    ReplicationPeerConfig peerConfig = peer.getPeerConfig();
+    Configuration otherConf;
+    try {
+      otherConf = HBaseConfiguration.createClusterConf(this.conf, peerConfig.getClusterKey());
+    } catch (IOException e) {
+      throw new IOException("Can't get peer configuration for peerId=" + peer.getPeerId(), e);
+    }
+
+    if (!peerConfig.getConfiguration().isEmpty()) {
+      CompoundConfiguration compound = new CompoundConfiguration();
+      compound.add(otherConf);
+      compound.addStringMap(peerConfig.getConfiguration());
+      return compound;
+    }
+
+    return otherConf;
   }
 }
