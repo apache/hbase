@@ -141,14 +141,6 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     return procSched.waitEvent(((HMaster)master).getServerCrashProcessingEnabledEvent(), proc);
   }
 
-  public void wake(ProcedureEvent event) {
-    procSched.wakeEvent(event);
-  }
-
-  public void suspend(ProcedureEvent event) {
-    procSched.suspendEvent(event);
-  }
-
   public void setEventReady(ProcedureEvent event, boolean isReady) {
     if (isReady) {
       procSched.wakeEvent(event);

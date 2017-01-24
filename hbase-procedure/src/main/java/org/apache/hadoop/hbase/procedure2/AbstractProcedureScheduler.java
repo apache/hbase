@@ -232,7 +232,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
       if (event.isReady()) {
         return false;
       }
-      suspendProcedure(event, procedure);
+      waitProcedure(event.getSuspendedProcedures(), procedure);
       return true;
     }
   }
@@ -266,7 +266,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
           if (isTraceEnabled) {
             LOG.trace("Wake event " + event);
           }
-          waitingCount += popEventWaitingObjects(event);
+          waitingCount += wakeWaitingProcedures(event.getSuspendedProcedures());
         }
       }
       wakePollIfNeeded(waitingCount);
@@ -275,21 +275,23 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
     }
   }
 
-  protected int popEventWaitingObjects(final ProcedureEvent event) {
-    return popEventWaitingProcedures(event);
-  }
-
-  protected int popEventWaitingProcedures(final ProcedureEventQueue event) {
-    int count = 0;
-    while (event.hasWaitingProcedures()) {
-      wakeProcedure(event.popWaitingProcedure(false));
-      count++;
+  /**
+   * Wakes up given waiting procedures by pushing them back into scheduler queues.
+   * @return size of given {@code waitQueue}.
+   */
+  protected int wakeWaitingProcedures(final ProcedureDeque waitQueue) {
+    int count = waitQueue.size();
+    // wakeProcedure adds to the front of queue, so we start from last in the
+    // waitQueue' queue, so that the procedure which was added first goes in the front for
+    // the scheduler queue.
+    while (!waitQueue.isEmpty()) {
+      wakeProcedure(waitQueue.removeLast());
     }
     return count;
   }
 
-  protected void suspendProcedure(final ProcedureEventQueue event, final Procedure procedure) {
-    event.suspendProcedure(procedure);
+  protected void waitProcedure(final ProcedureDeque waitQueue, final Procedure proc) {
+    waitQueue.addLast(proc);
   }
 
   protected void wakeProcedure(final Procedure procedure) {
@@ -308,10 +310,11 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   protected void wakePollIfNeeded(final int waitingCount) {
-    if (waitingCount > 1) {
-      schedWaitCond.signalAll();
-    } else if (waitingCount > 0) {
+    if (waitingCount <= 0) return;
+    if (waitingCount == 1) {
       schedWaitCond.signal();
+    } else {
+      schedWaitCond.signalAll();
     }
   }
 }

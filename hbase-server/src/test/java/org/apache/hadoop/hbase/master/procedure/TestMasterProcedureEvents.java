@@ -146,7 +146,7 @@ public class TestMasterProcedureEvents {
     // check that nothing is in the event queue
     LOG.debug("checking " + event);
     assertEquals(false, event.isReady());
-    assertEquals(0, event.size());
+    assertEquals(0, event.getSuspendedProcedures().size());
 
     // submit the procedure
     LOG.debug("submit " + proc);
@@ -154,12 +154,12 @@ public class TestMasterProcedureEvents {
 
     // wait until the event is in the queue (proc executed and got into suspended state)
     LOG.debug("wait procedure suspended on " + event);
-    while (event.size() < 1) Thread.sleep(25);
+    while (event.getSuspendedProcedures().size() < 1) Thread.sleep(25);
 
     // check that the proc is in the event queue
-    LOG.debug("checking " + event + " size=" + event.size());
+    LOG.debug("checking " + event + " size=" + event.getSuspendedProcedures().size());
     assertEquals(false, event.isReady());
-    assertEquals(1, event.size());
+    assertEquals(1, event.getSuspendedProcedures().size());
 
     // wake the event
     LOG.debug("wake " + event);
@@ -172,7 +172,7 @@ public class TestMasterProcedureEvents {
 
     // check that nothing is in the event queue and the event is not suspended
     assertEquals(true, event.isReady());
-    assertEquals(0, event.size());
+    assertEquals(0, event.getSuspendedProcedures().size());
     LOG.debug("completed execution of " + proc +
       " pollCalls=" + (procSched.getPollCalls() - startPollCalls) +
       " nullPollCalls=" + (procSched.getNullPollCalls() - startNullPollCalls));

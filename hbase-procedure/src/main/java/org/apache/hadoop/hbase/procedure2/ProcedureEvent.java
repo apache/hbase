@@ -22,32 +22,30 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * Basic ProcedureEvent that contains an "object", which can be a
- * description or a reference to the resource to wait on, and a
- * queue for suspended procedures.
+ * Basic ProcedureEvent that contains an "object", which can be a description or a reference to the
+ * resource to wait on, and a queue for suspended procedures.
+ * Access to suspended procedures queue is 'synchronized' on the event itself.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class ProcedureEvent<T> extends ProcedureEventQueue {
+public class ProcedureEvent<T> {
   private final T object;
-
   private boolean ready = false;
+  private ProcedureDeque suspendedProcedures = new ProcedureDeque();
 
   public ProcedureEvent(final T object) {
     this.object = object;
-  }
-
-  public T getObject() {
-    return object;
   }
 
   public synchronized boolean isReady() {
     return ready;
   }
 
-  @InterfaceAudience.Private
-  protected synchronized void setReady(final boolean isReady) {
+  synchronized void setReady(final boolean isReady) {
     this.ready = isReady;
+  }
+
+  public ProcedureDeque getSuspendedProcedures() {
+    return suspendedProcedures;
   }
 
   @Override

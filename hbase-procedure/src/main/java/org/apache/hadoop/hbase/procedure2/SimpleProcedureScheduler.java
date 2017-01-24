@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import java.util.ArrayDeque;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
@@ -29,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SimpleProcedureScheduler extends AbstractProcedureScheduler {
-  private final ArrayDeque<Procedure> runnables = new ArrayDeque<Procedure>();
+  private final ProcedureDeque runnables = new ProcedureDeque();
 
   @Override
   protected void enqueue(final Procedure procedure, final boolean addFront) {

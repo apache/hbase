@@ -42,6 +42,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Procedure to allow clients and external admin tools to take locks on table/namespace/regions.
+ * This procedure when scheduled, acquires specified locks, suspends itself and waits for :
+ * - call to unlock: if lock request came from the process itself, say master chore.
+ * - Timeout : if lock request came from RPC. On timeout, evaluates if it should continue holding
+ * the lock or not based on last heartbeat timestamp.
+ */
 @InterfaceAudience.Private
 public final class LockProcedure extends Procedure<MasterProcedureEnv>
     implements TableProcedureInterface {
@@ -71,7 +78,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   // this is for internal working
   private boolean hasLock;
 
-  private final ProcedureEvent<LockProcedure> event = new ProcedureEvent<LockProcedure>(this);
+  private final ProcedureEvent<LockProcedure> event = new ProcedureEvent<>(this);
   // True if this proc acquired relevant locks. This value is for client checks.
   private final AtomicBoolean locked = new AtomicBoolean(false);
   // Last system time (in ms) when client sent the heartbeat.
