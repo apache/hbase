@@ -31,7 +31,7 @@ import org.apache.spark.{SparkContext, SparkConf}
 object HBaseForeachPartitionExample {
   def main(args: Array[String]) {
     if (args.length < 2) {
-      println("HBaseBulkPutExample {tableName} {columnFamily}")
+      println("HBaseBulkPutExample - {tableName} {columnFamily} missing at arguments")
       return
     }
 

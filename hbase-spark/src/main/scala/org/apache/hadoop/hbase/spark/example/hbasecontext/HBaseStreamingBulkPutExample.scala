@@ -33,7 +33,7 @@ object HBaseStreamingBulkPutExample {
   def main(args: Array[String]) {
     if (args.length < 4) {
       println("HBaseStreamingBulkPutExample " +
-        "{host} {port} {tableName} {columnFamily}")
+        "{host} {port} {tableName} {columnFamily} are missing at argument")
       return
     }
 
@@ -42,7 +42,7 @@ object HBaseStreamingBulkPutExample {
     val tableName = args(2)
     val columnFamily = args(3)
 
-    val sparkConf = new SparkConf().setAppName("HBaseBulkPutTimestampExample " +
+    val sparkConf = new SparkConf().setAppName("HBaseStreamingBulkPutExample " +
       tableName + " " + columnFamily)
     val sc = new SparkContext(sparkConf)
     try {
