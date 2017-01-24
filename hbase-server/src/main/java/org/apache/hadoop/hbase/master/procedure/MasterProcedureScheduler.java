@@ -119,7 +119,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       addToRunQueue(fairq, queue);
     } else if (queue.hasParentLock(proc)) {
       assert addFront : "expected to add a child in the front";
-      assert !queue.isSuspended() : "unexpected suspended state for the queue";
       // our (proc) parent has the xlock,
       // so the queue is not in the fairq (run-queue)
       // add it back to let the child run (inherit the lock)
@@ -150,7 +149,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       return null;
     }
 
-    assert !rq.isSuspended() : "rq=" + rq + " is suspended";
     final Procedure pollResult = rq.peek();
     final boolean xlockReq = rq.requireExclusiveLock(pollResult);
     if (xlockReq && rq.isLocked() && !rq.hasLockAccess(pollResult)) {
@@ -198,7 +196,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final FairQueue<T> fairq, final AvlKeyComparator<TNode> comparator) {
     while (treeMap != null) {
       Queue<T> node = AvlTree.getFirst(treeMap);
-      assert !node.isSuspended() : "can't clear suspended " + node.getKey();
       treeMap = AvlTree.remove(treeMap, node.getKey(), comparator);
       if (fairq != null) removeFromRunQueue(fairq, node);
     }
@@ -254,8 +251,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   }
 
   private <T extends Comparable<T>> void addToRunQueue(FairQueue<T> fairq, Queue<T> queue) {
-    if (!AvlIterableList.isLinked(queue) &&
-        !queue.isEmpty() && !queue.isSuspended())  {
+    if (!AvlIterableList.isLinked(queue) && !queue.isEmpty()) {
       fairq.add(queue);
     }
   }
@@ -963,8 +959,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     boolean requireExclusiveLock(Procedure proc);
     Procedure peek();
     Procedure poll();
-
-    boolean isSuspended();
   }
 
   // TODO Why OK not having synchronized access and/or volatiles and
@@ -1001,19 +995,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
     public ProcedureEventQueue getEvent() {
       return event;
-    }
-
-    /**
-     * True if the queue is not in the run-queue and it is owned by an event.
-     */
-    public boolean isSuspended() {
-      return suspended;
-    }
-
-    protected boolean setSuspended(boolean isSuspended) {
-      if (this.suspended == isSuspended) return false;
-      this.suspended = isSuspended;
-      return true;
     }
 
     // ======================================================================
@@ -1088,8 +1069,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
     @Override
     public String toString() {
-      return String.format("%s(%s, suspended=%s xlock=%s sharedLock=%s size=%s)",
-          getClass().getSimpleName(), key, isSuspended(),
+      return String.format("%s(%s, xlock=%s sharedLock=%s size=%s)",
+          getClass().getSimpleName(), key,
           hasExclusiveLock() ? "true (" + exclusiveLockProcIdOwner + ")" : "false",
           sharedLock, size());
     }
