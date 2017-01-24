@@ -28,6 +28,8 @@
 
 namespace hbase {
 
+Configuration::Configuration() : hb_property_() {}
+
 Configuration::Configuration(ConfigMap &config_map) : hb_property_(std::move(config_map)) {}
 
 Configuration::~Configuration() {}
@@ -213,6 +215,26 @@ optional<bool> Configuration::GetBool(const std::string &key) const {
 
 bool Configuration::GetBool(const std::string &key, bool default_value) const {
   return GetBool(key).value_or(default_value);
+}
+
+void Configuration::Set(const std::string &key, const std::string &value) {
+  hb_property_[key] = value;
+}
+
+void Configuration::SetInt(const std::string &key, int32_t value) {
+  Set(key, boost::lexical_cast<std::string>(value));
+}
+
+void Configuration::SetLong(const std::string &key, int64_t value) {
+  Set(key, boost::lexical_cast<std::string>(value));
+}
+
+void Configuration::SetDouble(const std::string &key, double value) {
+  Set(key, boost::lexical_cast<std::string>(value));
+}
+
+void Configuration::SetBool(const std::string &key, bool value) {
+  Set(key, boost::lexical_cast<std::string>(value));
 }
 
 } /* namespace hbase */

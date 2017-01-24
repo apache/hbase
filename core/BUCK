@@ -86,6 +86,11 @@ cxx_test(
     deps=[":core",],
     run_test_separately=True,)
 cxx_test(
+    name="configuration-test",
+    srcs=["configuration-test.cc",],
+    deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
     name="hbase_configuration-test",
     srcs=["hbase_configuration-test.cc",],
     deps=[":core",],
