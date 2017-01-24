@@ -1133,6 +1133,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
   }
 
+  @VisibleForTesting
+  public int getScannersCount() {
+    return scanners.size();
+  }
+
   public
   RegionScanner getScanner(long scannerId) {
     String scannerIdString = Long.toString(scannerId);
@@ -3014,6 +3019,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RegionScanner scanner = rsh.s;
     boolean moreResults = true;
     boolean moreResultsInRegion = true;
+    // this is the limit of rows for this scan, if we the number of rows reach this value, we will
+    // close the scanner.
+    int limitOfRows;
+    if (request.hasLimitOfRows()) {
+      limitOfRows = request.getLimitOfRows();
+      rows = Math.min(rows, limitOfRows);
+    } else {
+      limitOfRows = -1;
+    }
     MutableObject lastBlock = new MutableObject();
     boolean scannerClosed = false;
     try {
@@ -3045,6 +3059,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // only set moreResults to false if the results is empty. This is used to keep compatible
         // with the old scan implementation where we just ignore the returned results if moreResults
         // is false. Can remove the isEmpty check after we get rid of the old implementation.
+        moreResults = false;
+      } else if (limitOfRows > 0 && results.size() >= limitOfRows
+          && !results.get(results.size() - 1).isPartial()) {
+        // if we have reached the limit of rows
         moreResults = false;
       }
       addResults(builder, results, (HBaseRpcController) controller,

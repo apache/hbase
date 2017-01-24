@@ -462,11 +462,10 @@ public final class RequestConverter {
    * @return a scan request
    * @throws IOException
    */
-  public static ScanRequest buildScanRequest(final byte[] regionName, final Scan scan,
-      final int numberOfRows, final boolean closeScanner) throws IOException {
+  public static ScanRequest buildScanRequest(byte[] regionName, Scan scan, int numberOfRows,
+      boolean closeScanner) throws IOException {
     ScanRequest.Builder builder = ScanRequest.newBuilder();
-    RegionSpecifier region = buildRegionSpecifier(
-      RegionSpecifierType.REGION_NAME, regionName);
+    RegionSpecifier region = buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
     builder.setRegion(region);
@@ -474,19 +473,21 @@ public final class RequestConverter {
     builder.setClientHandlesPartials(true);
     builder.setClientHandlesHeartbeats(true);
     builder.setTrackScanMetrics(scan.isScanMetricsEnabled());
+    if (scan.getLimit() > 0) {
+      builder.setLimitOfRows(scan.getLimit());
+    }
     return builder.build();
   }
 
   /**
    * Create a protocol buffer ScanRequest for a scanner id
-   *
    * @param scannerId
    * @param numberOfRows
    * @param closeScanner
    * @return a scan request
    */
-  public static ScanRequest buildScanRequest(final long scannerId, final int numberOfRows,
-      final boolean closeScanner, final boolean trackMetrics) {
+  public static ScanRequest buildScanRequest(long scannerId, int numberOfRows, boolean closeScanner,
+      boolean trackMetrics) {
     ScanRequest.Builder builder = ScanRequest.newBuilder();
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
@@ -499,16 +500,14 @@ public final class RequestConverter {
 
   /**
    * Create a protocol buffer ScanRequest for a scanner id
-   *
    * @param scannerId
    * @param numberOfRows
    * @param closeScanner
    * @param nextCallSeq
    * @return a scan request
    */
-  public static ScanRequest buildScanRequest(final long scannerId, final int numberOfRows,
-      final boolean closeScanner, final long nextCallSeq, final boolean trackMetrics,
-      final boolean renew) {
+  public static ScanRequest buildScanRequest(long scannerId, int numberOfRows, boolean closeScanner,
+      long nextCallSeq, boolean trackMetrics, boolean renew, int limitOfRows) {
     ScanRequest.Builder builder = ScanRequest.newBuilder();
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
@@ -518,6 +517,9 @@ public final class RequestConverter {
     builder.setClientHandlesHeartbeats(true);
     builder.setTrackScanMetrics(trackMetrics);
     builder.setRenew(renew);
+    if (limitOfRows > 0) {
+      builder.setLimitOfRows(limitOfRows);
+    }
     return builder.build();
   }
 

@@ -95,6 +95,12 @@ public abstract class AbstractTestAsyncTableScan {
   @Test
   public void testScanAll() throws Exception {
     List<Result> results = doScan(createScan());
+    // make sure all scanners are closed at RS side
+    TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
+        .forEach(rs -> assertEquals(
+          "The scanner count of " + rs.getServerName() + " is "
+              + rs.getRSRpcServices().getScannersCount(),
+          0, rs.getRSRpcServices().getScannersCount()));
     assertEquals(COUNT, results.size());
     IntStream.range(0, COUNT).forEach(i -> {
       Result result = results.get(i);

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.Interface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
 /**
  * The asynchronous client scanner implementation.
@@ -95,12 +96,16 @@ class AsyncClientScanner {
 
     public final ClientService.Interface stub;
 
-    public final long scannerId;
+    public final HBaseRpcController controller;
 
-    public OpenScannerResponse(HRegionLocation loc, Interface stub, long scannerId) {
+    public final ScanResponse resp;
+
+    public OpenScannerResponse(HRegionLocation loc, Interface stub, HBaseRpcController controller,
+        ScanResponse resp) {
       this.loc = loc;
       this.stub = stub;
-      this.scannerId = scannerId;
+      this.controller = controller;
+      this.resp = resp;
     }
   }
 
@@ -108,14 +113,14 @@ class AsyncClientScanner {
       HRegionLocation loc, ClientService.Interface stub) {
     CompletableFuture<OpenScannerResponse> future = new CompletableFuture<>();
     try {
-      ScanRequest request =
-          RequestConverter.buildScanRequest(loc.getRegionInfo().getRegionName(), scan, 0, false);
+      ScanRequest request = RequestConverter.buildScanRequest(loc.getRegionInfo().getRegionName(),
+        scan, scan.getCaching(), false);
       stub.scan(controller, request, resp -> {
         if (controller.failed()) {
           future.completeExceptionally(controller.getFailed());
           return;
         }
-        future.complete(new OpenScannerResponse(loc, stub, resp.getScannerId()));
+        future.complete(new OpenScannerResponse(loc, stub, controller, resp));
       });
     } catch (IOException e) {
       future.completeExceptionally(e);
@@ -124,11 +129,11 @@ class AsyncClientScanner {
   }
 
   private void startScan(OpenScannerResponse resp) {
-    conn.callerFactory.scanSingleRegion().id(resp.scannerId).location(resp.loc).stub(resp.stub)
-        .setScan(scan).consumer(consumer).resultCache(resultCache)
+    conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId()).location(resp.loc)
+        .stub(resp.stub).setScan(scan).consumer(consumer).resultCache(resultCache)
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).start()
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp)
         .whenComplete((hasMore, error) -> {
           if (error != null) {
             consumer.onError(error);

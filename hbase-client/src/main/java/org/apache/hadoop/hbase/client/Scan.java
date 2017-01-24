@@ -46,38 +46,45 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Used to perform Scan operations.
  * <p>
- * All operations are identical to {@link Get} with the exception of
- * instantiation.  Rather than specifying a single row, an optional startRow
- * and stopRow may be defined.  If rows are not specified, the Scanner will
- * iterate over all rows.
+ * All operations are identical to {@link Get} with the exception of instantiation. Rather than
+ * specifying a single row, an optional startRow and stopRow may be defined. If rows are not
+ * specified, the Scanner will iterate over all rows.
  * <p>
  * To get all columns from all rows of a Table, create an instance with no constraints; use the
- * {@link #Scan()} constructor. To constrain the scan to specific column families,
- * call {@link #addFamily(byte[]) addFamily} for each family to retrieve on your Scan instance.
+ * {@link #Scan()} constructor. To constrain the scan to specific column families, call
+ * {@link #addFamily(byte[]) addFamily} for each family to retrieve on your Scan instance.
  * <p>
- * To get specific columns, call {@link #addColumn(byte[], byte[]) addColumn}
- * for each column to retrieve.
+ * To get specific columns, call {@link #addColumn(byte[], byte[]) addColumn} for each column to
+ * retrieve.
  * <p>
- * To only retrieve columns within a specific range of version timestamps,
- * call {@link #setTimeRange(long, long) setTimeRange}.
+ * To only retrieve columns within a specific range of version timestamps, call
+ * {@link #setTimeRange(long, long) setTimeRange}.
  * <p>
- * To only retrieve columns with a specific timestamp, call
- * {@link #setTimeStamp(long) setTimestamp}.
+ * To only retrieve columns with a specific timestamp, call {@link #setTimeStamp(long) setTimestamp}
+ * .
  * <p>
- * To limit the number of versions of each column to be returned, call
- * {@link #setMaxVersions(int) setMaxVersions}.
+ * To limit the number of versions of each column to be returned, call {@link #setMaxVersions(int)
+ * setMaxVersions}.
  * <p>
- * To limit the maximum number of values returned for each call to next(),
- * call {@link #setBatch(int) setBatch}.
+ * To limit the maximum number of values returned for each call to next(), call
+ * {@link #setBatch(int) setBatch}.
  * <p>
  * To add a filter, call {@link #setFilter(org.apache.hadoop.hbase.filter.Filter) setFilter}.
  * <p>
- * Expert: To explicitly disable server-side block caching for this scan,
- * execute {@link #setCacheBlocks(boolean)}.
- * <p><em>Note:</em> Usage alters Scan instances. Internally, attributes are updated as the Scan
- * runs and if enabled, metrics accumulate in the Scan instance. Be aware this is the case when
- * you go to clone a Scan instance or if you go to reuse a created Scan instance; safer is create
- * a Scan instance per usage.
+ * For small scan, it is deprecated in 2.0.0. Now we have a {@link #setLimit(int)} method in Scan
+ * object which is used to tell RS how many rows we want. If the rows return reaches the limit, the
+ * RS will close the RegionScanner automatically. And we will also fetch data when openScanner in
+ * the new implementation, this means we can also finish a scan operation in one rpc call. And we
+ * have also introduced a {@link #setReadType(ReadType)} method. You can use this method to tell RS
+ * to use pread explicitly.
+ * <p>
+ * Expert: To explicitly disable server-side block caching for this scan, execute
+ * {@link #setCacheBlocks(boolean)}.
+ * <p>
+ * <em>Note:</em> Usage alters Scan instances. Internally, attributes are updated as the Scan runs
+ * and if enabled, metrics accumulate in the Scan instance. Be aware this is the case when you go to
+ * clone a Scan instance or if you go to reuse a created Scan instance; safer is create a Scan
+ * instance per usage.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -86,9 +93,9 @@ public class Scan extends Query {
 
   private static final String RAW_ATTR = "_raw_";
 
-  private byte [] startRow = HConstants.EMPTY_START_ROW;
+  private byte[] startRow = HConstants.EMPTY_START_ROW;
   private boolean includeStartRow = true;
-  private byte [] stopRow  = HConstants.EMPTY_END_ROW;
+  private byte[] stopRow  = HConstants.EMPTY_END_ROW;
   private boolean includeStopRow = false;
   private int maxVersions = 1;
   private int batch = -1;
@@ -171,6 +178,16 @@ public class Scan extends Query {
    */
   private long mvccReadPoint = -1L;
 
+  /**
+   * The number of rows we want for this scan. We will terminate the scan if the number of return
+   * rows reaches this value.
+   */
+  private int limit = -1;
+
+  /**
+   * Control whether to use pread at server side.
+   */
+  private ReadType readType = ReadType.DEFAULT;
   /**
    * Create a Scan operation across all rows.
    */
@@ -257,6 +274,7 @@ public class Scan extends Query {
       setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
     this.mvccReadPoint = scan.getMvccReadPoint();
+    this.limit = scan.getLimit();
   }
 
   /**
@@ -969,37 +987,36 @@ public class Scan extends Query {
     return attr == null ? false : Bytes.toBoolean(attr);
   }
 
-
-
   /**
    * Set whether this scan is a small scan
    * <p>
-   * Small scan should use pread and big scan can use seek + read
-   *
-   * seek + read is fast but can cause two problem (1) resource contention (2)
-   * cause too much network io
-   *
-   * [89-fb] Using pread for non-compaction read request
-   * https://issues.apache.org/jira/browse/HBASE-7266
-   *
-   * On the other hand, if setting it true, we would do
-   * openScanner,next,closeScanner in one RPC call. It means the better
-   * performance for small scan. [HBASE-9488].
-   *
-   * Generally, if the scan range is within one data block(64KB), it could be
-   * considered as a small scan.
-   *
+   * Small scan should use pread and big scan can use seek + read seek + read is fast but can cause
+   * two problem (1) resource contention (2) cause too much network io [89-fb] Using pread for
+   * non-compaction read request https://issues.apache.org/jira/browse/HBASE-7266 On the other hand,
+   * if setting it true, we would do openScanner,next,closeScanner in one RPC call. It means the
+   * better performance for small scan. [HBASE-9488]. Generally, if the scan range is within one
+   * data block(64KB), it could be considered as a small scan.
    * @param small
+   * @deprecated since 2.0.0. Use {@link #setLimit(int)} and {@link #setReadType(ReadType)} instead.
+   *             And for the one rpc optimization, now we will also fetch data when openScanner, and
+   *             if the number of rows reaches the limit then we will close the scanner
+   *             automatically which means we will fall back to one rpc.
+   * @see #setLimit(int)
+   * @see #setReadType(ReadType)
    */
+  @Deprecated
   public Scan setSmall(boolean small) {
     this.small = small;
+    this.readType = ReadType.PREAD;
     return this;
   }
 
   /**
    * Get whether this scan is a small scan
    * @return true if small scan
+   * @deprecated since 2.0.0. See the comment of {@link #setSmall(boolean)}
    */
+  @Deprecated
   public boolean isSmall() {
     return small;
   }
@@ -1077,6 +1094,53 @@ public class Scan extends Query {
 
   public Scan setAsyncPrefetch(boolean asyncPrefetch) {
     this.asyncPrefetch = asyncPrefetch;
+    return this;
+  }
+
+  /**
+   * @return the limit of rows for this scan
+   */
+  public int getLimit() {
+    return limit;
+  }
+
+  /**
+   * Set the limit of rows for this scan. We will terminate the scan if the number of returned rows
+   * reaches this value.
+   * <p>
+   * This condition will be tested at last, after all other conditions such as stopRow, filter, etc.
+   * <p>
+   * Can not be used together with batch and allowPartial.
+   * @param limit the limit of rows for this scan
+   * @return this
+   */
+  public Scan setLimit(int limit) {
+    this.limit = limit;
+    return this;
+  }
+
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public enum ReadType {
+    DEFAULT, STREAM, PREAD
+  }
+
+  /**
+   * @return the read type for this scan
+   */
+  public ReadType getReadType() {
+    return readType;
+  }
+
+  /**
+   * Set the read type for this scan.
+   * <p>
+   * Notice that we may choose to use pread even if you specific {@link ReadType#STREAM} here. For
+   * example, we will always use pread if this is a get scan.
+   * @return this
+   */
+  public Scan setReadType(ReadType readType) {
+    this.readType = readType;
     return this;
   }
 

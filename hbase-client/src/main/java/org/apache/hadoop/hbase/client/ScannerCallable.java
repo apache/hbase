@@ -194,7 +194,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
         try {
           incRPCcallsMetrics();
           request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq,
-                this.scanMetrics != null, renew);
+            this.scanMetrics != null, renew, -1);
           ScanResponse response = null;
           response = getStub().scan(getRpcController(), request);
           // Client and RS maintain a nextCallSeq number during the scan. Every next() call

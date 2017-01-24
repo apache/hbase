@@ -144,8 +144,8 @@ class AsyncTableImpl implements AsyncTable {
   }
 
   @Override
-  public CompletableFuture<List<Result>> smallScan(Scan scan, int limit) {
-    return wrap(rawTable.smallScan(scan, limit));
+  public CompletableFuture<List<Result>> scanAll(Scan scan) {
+    return wrap(rawTable.scanAll(scan));
   }
 
   private long resultSize2CacheSize(long maxResultSize) {
@@ -197,4 +197,5 @@ class AsyncTableImpl implements AsyncTable {
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
     return rawTable.<T> batch(actions).stream().map(this::wrap).collect(toList());
   }
+
 }

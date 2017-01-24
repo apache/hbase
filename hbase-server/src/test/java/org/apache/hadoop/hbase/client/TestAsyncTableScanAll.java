@@ -26,6 +26,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,10 +39,19 @@ import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
-public class TestAsyncTableSmallScan extends AbstractTestAsyncTableScan {
+public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
 
-  @Parameter
+  @Parameter(0)
+  public String tableType;
+
+  @Parameter(1)
   public Supplier<AsyncTableBase> getTable;
+
+  @Parameter(2)
+  public String scanType;
+
+  @Parameter(3)
+  public Supplier<Scan> scanCreator;
 
   private static RawAsyncTable getRawTable() {
     return ASYNC_CONN.getRawTable(TABLE_NAME);
@@ -51,24 +61,37 @@ public class TestAsyncTableSmallScan extends AbstractTestAsyncTableScan {
     return ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
   }
 
-  @Parameters
+  private static Scan createNormalScan() {
+    return new Scan();
+  }
+
+  // test if we can handle partial result when open scanner.
+  private static Scan createSmallResultSizeScan() {
+    return new Scan().setMaxResultSize(1);
+  }
+
+  @Parameters(name = "{index}: table={0}, scan={2}")
   public static List<Object[]> params() {
-    return Arrays.asList(new Supplier<?>[] { TestAsyncTableSmallScan::getRawTable },
-      new Supplier<?>[] { TestAsyncTableSmallScan::getTable });
+    Supplier<AsyncTableBase> rawTable = TestAsyncTableScanAll::getRawTable;
+    Supplier<AsyncTableBase> normalTable = TestAsyncTableScanAll::getTable;
+    Supplier<Scan> normalScan = TestAsyncTableScanAll::createNormalScan;
+    Supplier<Scan> smallResultSizeScan = TestAsyncTableScanAll::createSmallResultSizeScan;
+    return Arrays.asList(new Object[] { "raw", rawTable, "normal", normalScan },
+      new Object[] { "raw", rawTable, "smallResultSize", smallResultSizeScan },
+      new Object[] { "normal", normalTable, "normal", normalScan },
+      new Object[] { "normal", normalTable, "smallResultSize", smallResultSizeScan });
   }
 
   @Test
   public void testScanWithLimit() throws InterruptedException, ExecutionException {
-    AsyncTableBase table = getTable.get();
     int start = 111;
     int stop = 888;
     int limit = 300;
-    List<Result> results =
-        table
-            .smallScan(new Scan(Bytes.toBytes(String.format("%03d", start)))
-                .setStopRow(Bytes.toBytes(String.format("%03d", stop))).setSmall(true),
-              limit)
-            .get();
+    List<Result> results = getTable.get()
+        .scanAll(scanCreator.get().withStartRow(Bytes.toBytes(String.format("%03d", start)))
+            .withStopRow(Bytes.toBytes(String.format("%03d", stop))).setLimit(limit)
+            .setReadType(ReadType.PREAD))
+        .get();
     assertEquals(limit, results.size());
     IntStream.range(0, limit).forEach(i -> {
       Result result = results.get(i);
@@ -80,14 +103,14 @@ public class TestAsyncTableSmallScan extends AbstractTestAsyncTableScan {
 
   @Test
   public void testReversedScanWithLimit() throws InterruptedException, ExecutionException {
-    AsyncTableBase table = getTable.get();
     int start = 888;
     int stop = 111;
     int limit = 300;
-    List<Result> results = table.smallScan(
-      new Scan(Bytes.toBytes(String.format("%03d", start)))
-          .setStopRow(Bytes.toBytes(String.format("%03d", stop))).setSmall(true).setReversed(true),
-      limit).get();
+    List<Result> results = getTable.get()
+        .scanAll(scanCreator.get().withStartRow(Bytes.toBytes(String.format("%03d", start)))
+            .withStopRow(Bytes.toBytes(String.format("%03d", stop))).setLimit(limit)
+            .setReadType(ReadType.PREAD).setReversed(true))
+        .get();
     assertEquals(limit, results.size());
     IntStream.range(0, limit).forEach(i -> {
       Result result = results.get(i);
@@ -99,11 +122,11 @@ public class TestAsyncTableSmallScan extends AbstractTestAsyncTableScan {
 
   @Override
   protected Scan createScan() {
-    return new Scan().setSmall(true);
+    return scanCreator.get();
   }
 
   @Override
   protected List<Result> doScan(Scan scan) throws Exception {
-    return getTable.get().smallScan(scan).get();
+    return getTable.get().scanAll(scan).get();
   }
 }

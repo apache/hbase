@@ -300,26 +300,34 @@ public interface AsyncTableBase {
       CompareOp compareOp, byte[] value, RowMutations mutation);
 
   /**
-   * Just call {@link #smallScan(Scan, int)} with {@link Integer#MAX_VALUE}.
-   * @see #smallScan(Scan, int)
-   */
-  default CompletableFuture<List<Result>> smallScan(Scan scan) {
-    return smallScan(scan, Integer.MAX_VALUE);
-  }
-
-  /**
-   * Return all the results that match the given scan object. The number of the returned results
-   * will not be greater than {@code limit}.
+   * Return all the results that match the given scan object.
    * <p>
-   * Notice that the scan must be small, and should not use batch or allowPartialResults. The
-   * {@code caching} property of the scan object is also ignored as we will use {@code limit}
-   * instead.
-   * @param scan A configured {@link Scan} object.
-   * @param limit the limit of results count
+   * Notice that usually you should use this method with a {@link Scan} object that has limit set.
+   * For example, if you want to get the closest row after a given row, you could do this:
+   * <p>
+   *
+   * <pre>
+   * <code>
+   * table.scanAll(new Scan().withStartRow(row, false).setLimit(1)).thenAccept(results -> {
+   *   if (results.isEmpty()) {
+   *      System.out.println("No row after " + Bytes.toStringBinary(row));
+   *   } else {
+   *     System.out.println("The closest row after " + Bytes.toStringBinary(row) + " is "
+   *         + Bytes.toStringBinary(results.stream().findFirst().get().getRow()));
+   *   }
+   * });
+   * </code>
+   * </pre>
+   * <p>
+   * If your result set is very large, you should use other scan method to get a scanner or use
+   * callback to process the results. They will do chunking to prevent OOM. The scanAll method will
+   * fetch all the results and store them in a List and then return the list to you.
+   * @param scan A configured {@link Scan} object. SO if you use this method to fetch a really large
+   *          result set, it is likely to cause OOM.
    * @return The results of this small scan operation. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
-  CompletableFuture<List<Result>> smallScan(Scan scan, int limit);
+  CompletableFuture<List<Result>> scanAll(Scan scan);
 
   /**
    * Test for the existence of columns in the table, as specified by the Gets.

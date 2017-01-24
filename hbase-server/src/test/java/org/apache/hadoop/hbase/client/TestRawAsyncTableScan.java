@@ -57,11 +57,6 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
     }
 
     @Override
-    public boolean onHeartbeat() {
-      return true;
-    }
-
-    @Override
     public synchronized void onError(Throwable error) {
       finished = true;
       this.error = error;

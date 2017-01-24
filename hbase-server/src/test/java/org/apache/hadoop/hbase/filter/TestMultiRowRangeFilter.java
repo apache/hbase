@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -369,7 +370,10 @@ public class TestMultiRowRangeFilter {
   @Test
   public void testMultiRowRangeFilterWithExclusive() throws IOException {
     tableName = TableName.valueOf("testMultiRowRangeFilterWithExclusive");
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 6000000);
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
+    ht.setReadRpcTimeout(600000);
+    ht.setOperationTimeout(6000000);
     generateRows(numRows, ht, family, qf, value);
 
     Scan scan = new Scan();

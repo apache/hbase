@@ -127,7 +127,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected Cell lastTop = null;
 
   // A flag whether use pread for scan
-  private boolean scanUsePread = false;
+  private final boolean scanUsePread;
   // Indicates whether there was flush during the course of the scan
   protected volatile boolean flushed = false;
   // generally we get one file from a flush
@@ -168,7 +168,21 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
      this.useRowColBloom = numCol > 1 || (!get && numCol == 1);
 
      this.maxRowSize = scanInfo.getTableMaxRowSize();
-     this.scanUsePread = scan.isSmall()? true: scanInfo.isUsePread();
+    if (get) {
+      this.scanUsePread = true;
+    } else {
+      switch (scan.getReadType()) {
+        case STREAM:
+          this.scanUsePread = false;
+          break;
+        case PREAD:
+          this.scanUsePread = true;
+          break;
+        default:
+          this.scanUsePread = scanInfo.isUsePread();
+          break;
+      }
+    }
      this.cellsPerHeartbeatCheck = scanInfo.getCellsPerTimeoutCheck();
      // Parallel seeking is on if the config allows and more there is more than one store file.
      if (this.store != null && this.store.getStorefilesCount() > 1) {
@@ -348,10 +362,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @return list of scanners to seek
    */
   protected List<KeyValueScanner> getScannersNoCompaction() throws IOException {
-    final boolean isCompaction = false;
-    boolean usePread = get || scanUsePread;
-    return selectScannersFrom(store.getScanners(cacheBlocks, get, usePread,
-        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt));
+    return selectScannersFrom(store.getScanners(cacheBlocks, get, scanUsePread, false, matcher,
+      scan.getStartRow(), scan.getStopRow(), this.readPt));
   }
 
   /**
@@ -803,18 +815,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   protected void resetScannerStack(Cell lastTopKey) throws IOException {
-    /* When we have the scan object, should we not pass it to getScanners()
-     * to get a limited set of scanners? We did so in the constructor and we
-     * could have done it now by storing the scan object from the constructor
-     */
-
-    final boolean isCompaction = false;
-    boolean usePread = get || scanUsePread;
+    // When we have the scan object, should we not pass it to getScanners() to get a limited set of
+    // scanners? We did so in the constructor and we could have done it now by storing the scan
+    // object from the constructor
     List<KeyValueScanner> scanners = null;
     try {
       flushLock.lock();
-      scanners = selectScannersFrom(store.getScanners(flushedStoreFiles, cacheBlocks, get, usePread,
-        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, true));
+      scanners = selectScannersFrom(store.getScanners(flushedStoreFiles, cacheBlocks, get,
+        scanUsePread, false, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, true));
       // Clear the current set of flushed store files so that they don't get added again
       flushedStoreFiles.clear();
     } finally {

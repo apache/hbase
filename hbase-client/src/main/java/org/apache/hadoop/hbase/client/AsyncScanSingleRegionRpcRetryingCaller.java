@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.*;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForScan;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 
 import io.netty.util.HashedWheelTimer;
@@ -135,6 +134,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - nextCallStartNs);
   }
 
+  private long remainingTimeNs() {
+    return scanTimeoutNs - (System.nanoTime() - nextCallStartNs);
+  }
+
   private void closeScanner() {
     resetController(controller, rpcTimeoutNs);
     ScanRequest req = RequestConverter.buildScanRequest(this.scannerId, 0, true, false);
@@ -199,7 +202,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     long delayNs;
     if (scanTimeoutNs > 0) {
-      long maxDelayNs = scanTimeoutNs - (System.nanoTime() - nextCallStartNs);
+      long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
         completeExceptionally(!scannerClosed);
         return;
@@ -245,7 +248,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
   }
 
-  private void onComplete(ScanResponse resp) {
+  private void onComplete(HBaseRpcController controller, ScanResponse resp) {
     if (controller.failed()) {
       onError(controller.getFailed());
       return;
@@ -288,6 +291,13 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       completeNoMoreResults();
       return;
     }
+    if (scan.getLimit() > 0) {
+      // The RS should have set the moreResults field in ScanResponse to false when we have reached
+      // the limit.
+      int limit = scan.getLimit() - results.length;
+      assert limit > 0;
+      scan.setLimit(limit);
+    }
     // as in 2.0 this value will always be set
     if (!resp.getMoreResultsInRegion()) {
       completeWhenNoMoreResultsInRegion.run();
@@ -297,10 +307,26 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   }
 
   private void call() {
-    resetController(controller, rpcTimeoutNs);
+    // As we have a call sequence for scan, it is useless to have a different rpc timeout which is
+    // less than the scan timeout. If the server does not respond in time(usually this will not
+    // happen as we have heartbeat now), we will get an OutOfOrderScannerNextException when
+    // resending the next request and the only way to fix this is to close the scanner and open a
+    // new one.
+    long callTimeoutNs;
+    if (scanTimeoutNs > 0) {
+      long remainingNs = scanTimeoutNs - (System.nanoTime() - nextCallStartNs);
+      if (remainingNs <= 0) {
+        completeExceptionally(true);
+        return;
+      }
+      callTimeoutNs = remainingNs;
+    } else {
+      callTimeoutNs = 0L;
+    }
+    resetController(controller, callTimeoutNs);
     ScanRequest req = RequestConverter.buildScanRequest(scannerId, scan.getCaching(), false,
-      nextCallSeq, false, false);
-    stub.scan(controller, req, this::onComplete);
+      nextCallSeq, false, false, scan.getLimit());
+    stub.scan(controller, req, resp -> onComplete(controller, resp));
   }
 
   private void next() {
@@ -312,10 +338,15 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   }
 
   /**
+   * Now we will also fetch some cells along with the scanner id when opening a scanner, so we also
+   * need to process the ScanResponse for the open scanner request. The HBaseRpcController for the
+   * open scanner request is also needed because we may have some data in the CellScanner which is
+   * contained in the controller.
    * @return {@code true} if we should continue, otherwise {@code false}.
    */
-  public CompletableFuture<Boolean> start() {
-    next();
+  public CompletableFuture<Boolean> start(HBaseRpcController controller,
+      ScanResponse respWhenOpen) {
+    onComplete(controller, respWhenOpen);
     return future;
   }
 }

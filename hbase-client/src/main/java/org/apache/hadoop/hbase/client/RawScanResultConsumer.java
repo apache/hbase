@@ -47,7 +47,9 @@ public interface RawScanResultConsumer {
    * This method give you a chance to terminate a slow scan operation.
    * @return {@code false} if you want to terminate the scan process. Otherwise {@code true}
    */
-  boolean onHeartbeat();
+  default boolean onHeartbeat() {
+    return true;
+  }
 
   /**
    * Indicate that we hit an unrecoverable error and the scan operation is terminated.

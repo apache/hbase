@@ -30,7 +30,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
 /**
  * Factory to create an AsyncRpcRetryCaller.
@@ -138,81 +140,6 @@ class AsyncRpcRetryingCallerFactory {
     return new SingleRequestCallerBuilder<>();
   }
 
-  public class SmallScanCallerBuilder extends BuilderBase {
-
-    private TableName tableName;
-
-    private Scan scan;
-
-    private int limit;
-
-    private long scanTimeoutNs = -1L;
-
-    private long rpcTimeoutNs = -1L;
-
-    public SmallScanCallerBuilder table(TableName tableName) {
-      this.tableName = tableName;
-      return this;
-    }
-
-    public SmallScanCallerBuilder setScan(Scan scan) {
-      this.scan = scan;
-      return this;
-    }
-
-    public SmallScanCallerBuilder limit(int limit) {
-      this.limit = limit;
-      return this;
-    }
-
-    public SmallScanCallerBuilder scanTimeout(long scanTimeout, TimeUnit unit) {
-      this.scanTimeoutNs = unit.toNanos(scanTimeout);
-      return this;
-    }
-
-    public SmallScanCallerBuilder rpcTimeout(long rpcTimeout, TimeUnit unit) {
-      this.rpcTimeoutNs = unit.toNanos(rpcTimeout);
-      return this;
-    }
-
-    public SmallScanCallerBuilder pause(long pause, TimeUnit unit) {
-      this.pauseNs = unit.toNanos(pause);
-      return this;
-    }
-
-    public SmallScanCallerBuilder maxAttempts(int maxAttempts) {
-      this.maxAttempts = maxAttempts;
-      return this;
-    }
-
-    public SmallScanCallerBuilder startLogErrorsCnt(int startLogErrorsCnt) {
-      this.startLogErrorsCnt = startLogErrorsCnt;
-      return this;
-    }
-
-    public AsyncSmallScanRpcRetryingCaller build() {
-      TableName tableName = checkNotNull(this.tableName, "tableName is null");
-      Scan scan = checkNotNull(this.scan, "scan is null");
-      checkArgument(limit > 0, "invalid limit %d", limit);
-      return new AsyncSmallScanRpcRetryingCaller(conn, tableName, scan, limit, pauseNs, maxAttempts,
-          scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
-    }
-
-    /**
-     * Shortcut for {@code build().call()}
-     */
-    public CompletableFuture<List<Result>> call() {
-      return build().call();
-    }
-  }
-
-  /**
-   * Create retry caller for small scan.
-   */
-  public SmallScanCallerBuilder smallScan() {
-    return new SmallScanCallerBuilder();
-  }
-
   public class ScanSingleRegionCallerBuilder extends BuilderBase {
 
     private long scannerId = -1L;
@@ -297,10 +224,11 @@ class AsyncRpcRetryingCallerFactory {
     }
 
     /**
-     * Short cut for {@code build().start()}.
+     * Short cut for {@code build().start(HBaseRpcController, ScanResponse)}.
      */
-    public CompletableFuture<Boolean> start() {
-      return build().start();
+    public CompletableFuture<Boolean> start(HBaseRpcController controller,
+        ScanResponse respWhenOpen) {
+      return build().start(controller, respWhenOpen);
     }
   }
 

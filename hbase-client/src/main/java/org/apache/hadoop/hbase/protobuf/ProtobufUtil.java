@@ -814,6 +814,32 @@ public final class ProtobufUtil {
     return get;
   }
 
+  public static ClientProtos.Scan.ReadType toReadType(Scan.ReadType readType) {
+    switch (readType) {
+      case DEFAULT:
+        return ClientProtos.Scan.ReadType.DEFAULT;
+      case STREAM:
+        return ClientProtos.Scan.ReadType.STREAM;
+      case PREAD:
+        return ClientProtos.Scan.ReadType.PREAD;
+      default:
+        throw new IllegalArgumentException("Unknown ReadType: " + readType);
+    }
+  }
+
+  public static Scan.ReadType toReadType(ClientProtos.Scan.ReadType readType) {
+    switch (readType) {
+      case DEFAULT:
+        return Scan.ReadType.DEFAULT;
+      case STREAM:
+        return Scan.ReadType.STREAM;
+      case PREAD:
+        return Scan.ReadType.PREAD;
+      default:
+        throw new IllegalArgumentException("Unknown ReadType: " + readType);
+    }
+  }
+
   /**
    * Convert a client Scan to a protocol buffer Scan
    *
@@ -917,6 +943,9 @@ public final class ProtobufUtil {
     if (scan.includeStopRow()) {
       scanBuilder.setIncludeStopRow(true);
     }
+    if (scan.getReadType() != Scan.ReadType.DEFAULT) {
+      scanBuilder.setReadType(toReadType(scan.getReadType()));
+    }
     return scanBuilder.build();
   }
 
@@ -1014,6 +1043,11 @@ public final class ProtobufUtil {
     }
     if (proto.hasMvccReadPoint()) {
       PackagePrivateFieldAccessor.setMvccReadPoint(scan, proto.getMvccReadPoint());
+    }
+    if (scan.isSmall()) {
+      scan.setReadType(Scan.ReadType.PREAD);
+    } else if (proto.hasReadType()) {
+      scan.setReadType(toReadType(proto.getReadType()));
     }
     return scan;
   }

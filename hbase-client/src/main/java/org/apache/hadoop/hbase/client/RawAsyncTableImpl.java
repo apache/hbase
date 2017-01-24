@@ -21,13 +21,13 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -57,8 +57,6 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 class RawAsyncTableImpl implements RawAsyncTable {
-
-  private static final Log LOG = LogFactory.getLog(RawAsyncTableImpl.class);
 
   private final AsyncConnectionImpl conn;
 
@@ -332,12 +330,6 @@ class RawAsyncTableImpl implements RawAsyncTable {
         .call();
   }
 
-  private <T> CompletableFuture<T> failedFuture(Throwable error) {
-    CompletableFuture<T> future = new CompletableFuture<>();
-    future.completeExceptionally(error);
-    return future;
-  }
-
   private Scan setDefaultScanConfig(Scan scan) {
     // always create a new scan object as we may reset the start row later.
     Scan newScan = ReflectionUtils.newInstance(scan.getClass(), scan);
@@ -351,27 +343,35 @@ class RawAsyncTableImpl implements RawAsyncTable {
   }
 
   @Override
-  public CompletableFuture<List<Result>> smallScan(Scan scan, int limit) {
-    if (!scan.isSmall()) {
-      return failedFuture(new IllegalArgumentException("Only small scan is allowed"));
-    }
-    if (scan.getBatch() > 0 || scan.getAllowPartialResults()) {
-      return failedFuture(
-        new IllegalArgumentException("Batch and allowPartial is not allowed for small scan"));
-    }
-    return conn.callerFactory.smallScan().table(tableName).setScan(setDefaultScanConfig(scan))
-        .limit(limit).scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS)
-        .rpcTimeout(readRpcTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).call();
+  public CompletableFuture<List<Result>> scanAll(Scan scan) {
+    CompletableFuture<List<Result>> future = new CompletableFuture<>();
+    List<Result> scanResults = new ArrayList<>();
+    scan(scan, new RawScanResultConsumer() {
+
+      @Override
+      public boolean onNext(Result[] results) {
+        scanResults.addAll(Arrays.asList(results));
+        return true;
+      }
+
+      @Override
+      public void onError(Throwable error) {
+        future.completeExceptionally(error);
+      }
+
+      @Override
+      public void onComplete() {
+        future.complete(scanResults);
+      }
+    });
+    return future;
   }
 
   public void scan(Scan scan, RawScanResultConsumer consumer) {
-    if (scan.isSmall()) {
+    if (scan.isSmall() || scan.getLimit() > 0) {
       if (scan.getBatch() > 0 || scan.getAllowPartialResults()) {
-        consumer.onError(
-          new IllegalArgumentException("Batch and allowPartial is not allowed for small scan"));
-      } else {
-        LOG.warn("This is small scan " + scan + ", consider using smallScan directly?");
+        consumer.onError(new IllegalArgumentException(
+            "Batch and allowPartial is not allowed for small scan or limited scan"));
       }
     }
     scan = setDefaultScanConfig(scan);
@@ -388,6 +388,7 @@ class RawAsyncTableImpl implements RawAsyncTable {
   public List<CompletableFuture<Void>> put(List<Put> puts) {
     return voidMutate(puts);
   }
+
   @Override
   public List<CompletableFuture<Void>> delete(List<Delete> deletes) {
     return voidMutate(deletes);
@@ -434,4 +435,5 @@ class RawAsyncTableImpl implements RawAsyncTable {
   public long getScanTimeout(TimeUnit unit) {
     return unit.convert(scanTimeoutNs, TimeUnit.NANOSECONDS);
   }
+
 }
