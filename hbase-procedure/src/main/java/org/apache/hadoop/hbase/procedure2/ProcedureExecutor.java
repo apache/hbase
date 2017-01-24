@@ -1096,8 +1096,8 @@ public class ProcedureExecutor<TEnvironment> {
             case LOCK_ACQUIRED:
                 break;
             case LOCK_YIELD_WAIT:
-              scheduler.yield(proc);
               procStack.unsetRollback();
+              scheduler.yield(proc);
               break;
             case LOCK_EVENT_WAIT:
               procStack.unsetRollback();
