@@ -32,6 +32,7 @@
 #include <string>
 
 #include "connection/connection-pool.h"
+#include "core/configuration.h"
 #include "core/meta-utils.h"
 #include "core/region-location.h"
 #include "serde/table-name.h"
@@ -77,12 +78,12 @@ class LocationCache {
  public:
   /**
    * Constructor.
-   * @param quorum_spec Where to connect for Zookeeper.
+   * @param conf Configuration instance to fetch Zookeeper Quorum and Zookeeper Znode.
    * @param cpu_executor executor used to run non network IO based
    * continuations.
    * @param io_executor executor used to talk to the network
    */
-  LocationCache(std::string quorum_spec,
+  LocationCache(std::shared_ptr<hbase::Configuration> conf,
                 std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                 std::shared_ptr<ConnectionPool> cp);
   /**
@@ -179,7 +180,14 @@ class LocationCache {
       const hbase::pb::TableName &tn);
   std::shared_ptr<hbase::PerTableLocationMap> GetNewTableLocations(const hbase::pb::TableName &tn);
 
+  const std::string kHBaseZookeeperQuorum_ = "hbase.zookeeper.quorum";
+  const std::string kDefHBaseZookeeperQuorum_ = "localhost:2181";
+  const std::string kHBaseMetaZnodeName_ = "zookeeper.znode.parent";
+  const std::string kDefHBaseMetaZnodeName_ = "/hbase";
+  const std::string kHBaseMetaRegionServer_ = "meta-region-server";
+
   /* data */
+  std::shared_ptr<hbase::Configuration> conf_;
   std::string quorum_spec_;
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::unique_ptr<folly::SharedPromise<hbase::pb::ServerName>> meta_promise_;

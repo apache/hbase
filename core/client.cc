@@ -47,8 +47,8 @@ void Client::init(const hbase::Configuration &conf) {
   io_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(sysconf(_SC_NPROCESSORS_ONLN));
 
   rpc_client_ = std::make_shared<hbase::RpcClient>(io_executor_);
-  location_cache_ = std::make_shared<hbase::LocationCache>(zk_quorum, cpu_executor_,
-                                                           rpc_client_->connection_pool());
+  location_cache_ =
+      std::make_shared<hbase::LocationCache>(conf_, cpu_executor_, rpc_client_->connection_pool());
 }
 
 // We can't have the threads continue running after everything is done

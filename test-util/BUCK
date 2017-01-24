@@ -22,6 +22,7 @@ cxx_library(name="test-util",
   srcs=["test-util.cc"],
   deps=[
     "//third-party:folly",
+    "//core:core"
     ],
               visibility=[
                 'PUBLIC',

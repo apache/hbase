@@ -50,13 +50,10 @@ using hbase::pb::ServerName;
 using hbase::pb::MetaRegionServer;
 using hbase::pb::RegionInfo;
 
-// TODO(eclark): make this configurable on client creation
-static const char META_ZNODE_NAME[] = "/hbase/meta-region-server";
-
-LocationCache::LocationCache(std::string quorum_spec,
+LocationCache::LocationCache(std::shared_ptr<hbase::Configuration> conf,
                              std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor,
                              std::shared_ptr<ConnectionPool> cp)
-    : quorum_spec_(quorum_spec),
+    : conf_(conf),
       cpu_executor_(cpu_executor),
       meta_promise_(nullptr),
       meta_lock_(),
@@ -65,7 +62,8 @@ LocationCache::LocationCache(std::string quorum_spec,
       zk_(nullptr),
       cached_locations_(),
       locations_lock_() {
-  zk_ = zookeeper_init(quorum_spec.c_str(), nullptr, 1000, 0, 0, 0);
+  quorum_spec_ = conf_->Get(kHBaseZookeeperQuorum_, kDefHBaseZookeeperQuorum_);
+  zk_ = zookeeper_init(quorum_spec_.c_str(), nullptr, 1000, 0, 0, 0);
 }
 
 LocationCache::~LocationCache() {
@@ -101,8 +99,10 @@ ServerName LocationCache::ReadMetaLocation() {
 
   // This needs to be int rather than size_t as that's what ZK expects.
   int len = buf->capacity();
+  std::string zk_node = conf_->Get(kHBaseMetaZnodeName_, kDefHBaseMetaZnodeName_);
+  zk_node += "/" + kHBaseMetaRegionServer_;
   // TODO(elliott): handle disconnects/reconntion as needed.
-  int zk_result = zoo_get(this->zk_, META_ZNODE_NAME, 0,
+  int zk_result = zoo_get(this->zk_, zk_node.c_str(), 0,
                           reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
