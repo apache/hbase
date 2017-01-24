@@ -31,11 +31,10 @@ using namespace std::chrono;
 
 TEST(LocationCacheTest, TestGetMetaNodeContents) {
   TestUtil test_util{};
-
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto cp = std::make_shared<ConnectionPool>(io);
-  LocationCache cache{"localhost:2181", cpu, cp};
+  LocationCache cache{test_util.conf(), cpu, cp};
   auto f = cache.LocateMeta();
   auto result = f.get();
   ASSERT_FALSE(f.hasException());
@@ -51,7 +50,7 @@ TEST(LocationCacheTest, TestGetRegionLocation) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto cp = std::make_shared<ConnectionPool>(io);
-  LocationCache cache{"localhost:2181", cpu, cp};
+  LocationCache cache{test_util.conf(), cpu, cp};
 
   // If there is no table this should throw an exception
   auto tn = folly::to<hbase::pb::TableName>("t");
@@ -70,7 +69,7 @@ TEST(LocationCacheTest, TestCaching) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto cp = std::make_shared<ConnectionPool>(io);
-  LocationCache cache{"localhost:2181", cpu, cp};
+  LocationCache cache{test_util.conf(), cpu, cp};
 
   auto tn_1 = folly::to<hbase::pb::TableName>("t1");
   auto tn_2 = folly::to<hbase::pb::TableName>("t2");

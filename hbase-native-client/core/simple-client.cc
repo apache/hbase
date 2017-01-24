@@ -39,6 +39,7 @@
 using namespace folly;
 using namespace std;
 using namespace std::chrono;
+using hbase::Configuration;
 using hbase::Response;
 using hbase::Request;
 using hbase::HBaseService;
@@ -87,9 +88,14 @@ int main(int argc, char *argv[]) {
   // Set up thread pools.
   auto cpu_pool = std::make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_threads);
   auto io_pool = std::make_shared<wangle::IOThreadPoolExecutor>(5);
+  auto cp = std::make_shared<ConnectionPool>(io_pool);
+
+  // Configuration
+  auto conf = std::make_shared<Configuration>();
+  conf->Set("hbase.zookeeper.quorum", FLAGS_zookeeper);
 
   // Create the cache.
-  LocationCache cache{FLAGS_zookeeper, cpu_pool, io_pool};
+  LocationCache cache{conf, cpu_pool, cp};
 
   auto row = FLAGS_row;
   auto tn = folly::to<TableName>(FLAGS_table);

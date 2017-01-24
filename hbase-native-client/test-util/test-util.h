@@ -24,6 +24,8 @@
 #include <cstdlib>
 #include <string>
 
+#include "core/configuration.h"
+
 namespace hbase {
 /**
  * @brief Class to deal with a local instance cluster for testing.
@@ -55,7 +57,13 @@ class TestUtil {
    */
   static std::string RandString(int len = 32);
 
+  /**
+   * Returns the configuration to talk to the local cluster
+   */
+  std::shared_ptr<Configuration> conf() const { return conf_; }
+
  private:
   folly::test::TemporaryDirectory temp_dir_;
+  std::shared_ptr<Configuration> conf_ = std::make_shared<Configuration>();
 };
 }  // namespace hbase
