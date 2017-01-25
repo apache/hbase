@@ -111,8 +111,8 @@ public class HBaseSaslRpcServer {
         UserGroupInformation user = null;
         user = tokenIdentifier.getUser(); // may throw exception
         connection.attemptingUser = user;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("SASL server DIGEST-MD5 callback: setting password "
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("SASL server DIGEST-MD5 callback: setting password "
               + "for client: " + tokenIdentifier.getUser());
         }
         pc.setPassword(password);
@@ -126,10 +126,10 @@ public class HBaseSaslRpcServer {
           ac.setAuthorized(false);
         }
         if (ac.isAuthorized()) {
-          if (LOG.isDebugEnabled()) {
+          if (LOG.isTraceEnabled()) {
             String username =
               getIdentifier(authzid, secretManager).getUser().getUserName();
-            LOG.debug("SASL server DIGEST-MD5 callback: setting "
+            LOG.trace("SASL server DIGEST-MD5 callback: setting "
                 + "canonicalized client ID: " + username);
           }
           ac.setAuthorizedID(authzid);
