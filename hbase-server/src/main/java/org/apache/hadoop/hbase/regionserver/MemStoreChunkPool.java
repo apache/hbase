@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -201,7 +201,11 @@ public class MemStoreChunkPool {
       if (poolSizePercentage > 1.0) {
         throw new IllegalArgumentException(CHUNK_POOL_MAXSIZE_KEY + " must be between 0.0 and 1.0");
       }
-      long heapMax = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+      long heapMax = -1L;
+      final MemoryUsage usage = HeapMemorySizeUtil.safeGetHeapMemoryUsage();
+      if (usage != null) {
+        heapMax = usage.getMax();
+      }
       long globalMemStoreLimit = (long) (heapMax * HeapMemorySizeUtil.getGlobalMemStorePercent(conf,
           false));
       int chunkSize = conf.getInt(HeapMemStoreLAB.CHUNK_SIZE_KEY,

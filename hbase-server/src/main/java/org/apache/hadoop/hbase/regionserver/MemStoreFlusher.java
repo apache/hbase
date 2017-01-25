@@ -22,7 +22,7 @@ import static org.apache.hadoop.util.StringUtils.humanReadableInt;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -110,7 +110,11 @@ class MemStoreFlusher implements FlushRequester {
     this.server = server;
     this.threadWakeFrequency =
       conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-    long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+    long max = -1L;
+    final MemoryUsage usage = HeapMemorySizeUtil.safeGetHeapMemoryUsage();
+    if (usage != null) {
+      max = usage.getMax();
+    }
     float globalMemStorePercent = HeapMemorySizeUtil.getGlobalMemStorePercent(conf, true);
     this.globalMemStoreLimit = (long) (max * globalMemStorePercent);
     this.globalMemStoreLimitLowMarkPercent =
@@ -806,8 +810,4 @@ class MemStoreFlusher implements FlushRequester {
       return compareTo(other) == 0;
     }
   }
-}
-
-enum FlushType {
-  NORMAL, ABOVE_LOWER_MARK, ABOVE_HIGHER_MARK;
 }
