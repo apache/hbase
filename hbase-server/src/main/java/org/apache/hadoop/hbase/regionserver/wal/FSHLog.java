@@ -23,7 +23,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
-import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URLEncoder;
@@ -574,8 +573,12 @@ public class FSHLog implements WAL {
   }
 
   private int calculateMaxLogFiles(float memstoreSizeRatio, long logRollSize) {
-    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    int maxLogs = Math.round(mu.getMax() * memstoreSizeRatio * 2 / logRollSize);
+    long max = -1L;
+    final MemoryUsage usage = HeapMemorySizeUtil.safeGetHeapMemoryUsage();
+    if (usage != null) {
+      max = usage.getMax();
+    }
+    int maxLogs = Math.round(max * memstoreSizeRatio * 2 / logRollSize);
     return maxLogs;
   }
 
