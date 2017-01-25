@@ -58,7 +58,7 @@ object HBaseBulkGetExample {
       val hbaseContext = new HBaseContext(sc, conf)
 
       val getRdd = hbaseContext.bulkGet[Array[Byte], String](
-        TableName.valueOf(tableName),
+        tableName,
         2,
         rdd,
         record => {
