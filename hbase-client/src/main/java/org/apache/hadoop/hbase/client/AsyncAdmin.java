@@ -19,10 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
- 
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
 
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -33,6 +31,19 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public interface AsyncAdmin {
+
+  /**
+   * @return Async Connection used by this object.
+   */
+  AsyncConnectionImpl getConnection();
+
+  /**
+   * @param tableName Table to check.
+   * @return True if table exists already. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> tableExists(final TableName tableName);
+
   /**
    * List all the userspace tables.
    * @return - returns an array of HTableDescriptors wrapped by a {@link CompletableFuture}.
@@ -83,11 +94,75 @@ public interface AsyncAdmin {
       final boolean includeSysTables);
 
   /**
-   * @param tableName Table to check.
-   * @return True if table exists already. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   * Method for getting the tableDescriptor
+   * @param tableName as a {@link TableName}
+   * @return the tableDescriptor wrapped by a {@link CompletableFuture}.
    */
-  CompletableFuture<Boolean> tableExists(final TableName tableName);
+  CompletableFuture<HTableDescriptor> getTableDescriptor(final TableName tableName);
+
+  /**
+   * Creates a new table.
+   * @param desc table descriptor for table
+   */
+  CompletableFuture<Void> createTable(HTableDescriptor desc);
+
+  /**
+   * Creates a new table with the specified number of regions. The start key specified will become
+   * the end key of the first region of the table, and the end key specified will become the start
+   * key of the last region of the table (the first region has a null start key and the last region
+   * has a null end key). BigInteger math will be used to divide the key range specified into enough
+   * segments to make the required number of total regions.
+   * @param desc table descriptor for table
+   * @param startKey beginning of key range
+   * @param endKey end of key range
+   * @param numRegions the total number of regions to create
+   */
+  CompletableFuture<Void> createTable(HTableDescriptor desc, byte[] startKey, byte[] endKey,
+      int numRegions);
+
+  /**
+   * Creates a new table with an initial set of empty regions defined by the specified split keys.
+   * The total number of regions created will be the number of split keys plus one.
+   * Note : Avoid passing empty split key.
+   * @param desc table descriptor for table
+   * @param splitKeys array of split keys for the initial regions of the table
+   */
+  CompletableFuture<Void> createTable(final HTableDescriptor desc, byte[][] splitKeys);
+
+  /**
+   * Deletes a table.
+   * @param tableName name of table to delete
+   */
+  CompletableFuture<Void> deleteTable(final TableName tableName);
+
+  /**
+   * Deletes tables matching the passed in pattern and wait on completion. Warning: Use this method
+   * carefully, there is no prompting and the effect is immediate. Consider using
+   * {@link #listTables(String, boolean)} and
+   * {@link #deleteTable(org.apache.hadoop.hbase.TableName)}
+   * @param regex The regular expression to match table names against
+   * @return Table descriptors for tables that couldn't be deleted. The return value will be wrapped
+   *         by a {@link CompletableFuture}.
+   */
+  CompletableFuture<HTableDescriptor[]> deleteTables(String regex);
+
+  /**
+   * Delete tables matching the passed in pattern and wait on completion. Warning: Use this method
+   * carefully, there is no prompting and the effect is immediate. Consider using
+   * {@link #listTables(Pattern, boolean) } and
+   * {@link #deleteTable(org.apache.hadoop.hbase.TableName)}
+   * @param pattern The pattern to match table names against
+   * @return Table descriptors for tables that couldn't be deleted. The return value will be wrapped
+   *         by a {@link CompletableFuture}.
+   */
+  CompletableFuture<HTableDescriptor[]> deleteTables(Pattern pattern);
+
+  /**
+   * Truncate a table.
+   * @param tableName name of table to truncate
+   * @param preserveSplits True if the splits should be preserved
+   */
+  CompletableFuture<Void> truncateTable(final TableName tableName, final boolean preserveSplits);
 
   /**
    * Turn the load balancer on or off.

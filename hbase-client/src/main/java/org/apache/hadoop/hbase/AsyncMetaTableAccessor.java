@@ -55,7 +55,7 @@ public class AsyncMetaTableAccessor {
     return getTableState(conn, tableName).thenApply(Optional::isPresent);
   }
 
-  private static CompletableFuture<Optional<TableState>> getTableState(AsyncConnection conn,
+  public static CompletableFuture<Optional<TableState>> getTableState(AsyncConnection conn,
       TableName tableName) {
     CompletableFuture<Optional<TableState>> future = new CompletableFuture<>();
     getMetaTable(conn).thenAccept((metaTable) -> {
