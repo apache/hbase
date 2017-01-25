@@ -6980,8 +6980,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     stats.setMemstoreLoad((int) (Math.min(100, (this.memstoreDataSize.get() * 100) / this
         .memstoreFlushSize)));
     if (rsServices.getHeapMemoryManager() != null) {
-      stats.setHeapOccupancy(
-          (int) rsServices.getHeapMemoryManager().getHeapOccupancyPercent() * 100);
+      // the HeapMemoryManager uses -0.0 to signal a problem asking the JVM,
+      // so we could just do the calculation below and we'll get a 0.
+      // treating it as a special case analogous to no HMM instead so that it can be
+      // programatically treated different from using <1% of heap.
+      final float occupancy = rsServices.getHeapMemoryManager().getHeapOccupancyPercent();
+      if (occupancy != HeapMemoryManager.HEAP_OCCUPANCY_ERROR_VALUE) {
+        stats.setHeapOccupancy((int)(occupancy * 100));
+      }
     }
     stats.setCompactionPressure((int)rsServices.getCompactionPressure()*100 > 100 ? 100 :
                 (int)rsServices.getCompactionPressure()*100);

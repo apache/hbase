@@ -65,8 +65,6 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

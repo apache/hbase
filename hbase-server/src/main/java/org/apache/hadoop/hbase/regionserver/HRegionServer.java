@@ -1243,14 +1243,20 @@ public class HRegionServer extends HasThread implements
     // history.
     MetricsRegionServerWrapper regionServerWrapper = metricsRegionServer.getRegionServerWrapper();
     Collection<Region> regions = getOnlineRegionsLocalContext();
-    MemoryUsage memory = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    long usedMemory = -1L;
+    long maxMemory = -1L;
+    final MemoryUsage usage = MemorySizeUtil.safeGetHeapMemoryUsage();
+    if (usage != null) {
+      usedMemory = usage.getUsed();
+      maxMemory = usage.getMax();
+    }
 
     ClusterStatusProtos.ServerLoad.Builder serverLoad =
       ClusterStatusProtos.ServerLoad.newBuilder();
     serverLoad.setNumberOfRequests((int) regionServerWrapper.getRequestsPerSecond());
     serverLoad.setTotalNumberOfRequests((int) regionServerWrapper.getTotalRequestCount());
-    serverLoad.setUsedHeapMB((int)(memory.getUsed() / 1024 / 1024));
-    serverLoad.setMaxHeapMB((int) (memory.getMax() / 1024 / 1024));
+    serverLoad.setUsedHeapMB((int)(usedMemory / 1024 / 1024));
+    serverLoad.setMaxHeapMB((int) (maxMemory / 1024 / 1024));
     Set<String> coprocessors = getWAL(null).getCoprocessorHost().getCoprocessors();
     Builder coprocessorBuilder = Coprocessor.newBuilder();
     for (String coprocessor : coprocessors) {

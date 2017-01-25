@@ -34,7 +34,8 @@ org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 org.apache.hadoop.hbase.util.DirectMemoryUtils;
 org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
-java.lang.management.ManagementFactory;
+java.lang.management.MemoryUsage;
+org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 </%import>
 <div class="tabbable">
     <ul class="nav nav-pills">
@@ -94,6 +95,15 @@ java.lang.management.ManagementFactory;
 <%args>
 MetricsRegionServerWrapper mWrap;
 </%args>
+<%java
+  long usedHeap = -1L;
+  long maxHeap = -1L;
+  final MemoryUsage usage = MemorySizeUtil.safeGetHeapMemoryUsage();
+  if (usage != null) {
+    maxHeap = usage.getMax();
+    usedHeap = usage.getUsed();
+  }
+%>
 <table class="table table-striped">
 <tr>
     <tr>
@@ -106,12 +116,10 @@ MetricsRegionServerWrapper mWrap;
 </tr>
 <tr>
     <td>
-        <% TraditionalBinaryPrefix.long2String(
-            ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed(), "B", 1) %>
+        <% TraditionalBinaryPrefix.long2String(usedHeap, "B", 1) %>
     </td>
     <td>
-        <% TraditionalBinaryPrefix.long2String(
-            ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax(), "B", 1) %>
+        <% TraditionalBinaryPrefix.long2String(maxHeap, "B", 1) %>
     </td>
     <td>
         <% TraditionalBinaryPrefix.long2String(DirectMemoryUtils.getDirectMemoryUsage(), "B", 1) %>
