@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.util.FastLongHistogram;
+import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 /**

@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.metrics.MetricRegistries;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
+import org.apache.hadoop.hbase.metrics.Timer;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>
@@ -36,11 +40,20 @@ public class MetricsRegionServer {
   private MetricsRegionServerSource serverSource;
   private MetricsRegionServerWrapper regionServerWrapper;
 
+  private MetricRegistry metricRegistry;
+  private Timer bulkLoadTimer;
+
   public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper) {
     this(regionServerWrapper,
         CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
             .createServer(regionServerWrapper));
 
+    // Create hbase-metrics module based metrics. The registry should already be registered by the
+    // MetricsRegionServerSource
+    metricRegistry = MetricRegistries.global().get(serverSource.getMetricRegistryInfo()).get();
+
+    // create and use metrics from the new hbase-metrics based registry.
+    bulkLoadTimer = metricRegistry.timer("Bulkload");
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
@@ -130,5 +143,9 @@ public class MetricsRegionServer {
     serverSource.updateCompactionOutputFileCount(isMajor, outputFileCount);
     serverSource.updateCompactionInputSize(isMajor, inputBytes);
     serverSource.updateCompactionOutputSize(isMajor, outputBytes);
+  }
+
+  public void updateBulkLoad(long millis) {
+    this.bulkLoadTimer.updateMillis(millis);
   }
 }

@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.master;
 
-import com.google.common.net.HostAndPort;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -45,15 +43,19 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
+import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.security.User;
+
+import com.google.common.net.HostAndPort;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -72,8 +74,9 @@ public class MasterCoprocessorHost
    */
   static class MasterEnvironment extends CoprocessorHost.Environment
       implements MasterCoprocessorEnvironment {
-    private MasterServices masterServices;
-    final boolean supportGroupCPs;
+    private final MasterServices masterServices;
+    private final boolean supportGroupCPs;
+    private final MetricRegistry metricRegistry;
 
     public MasterEnvironment(final Class<?> implClass, final Coprocessor impl,
         final int priority, final int seq, final Configuration conf,
@@ -82,10 +85,24 @@ public class MasterCoprocessorHost
       this.masterServices = services;
       supportGroupCPs = !useLegacyMethod(impl.getClass(),
           "preBalanceRSGroup", ObserverContext.class, String.class);
+      this.metricRegistry =
+          MetricsCoprocessor.createRegistryForMasterCoprocessor(implClass.getName());
     }
 
+    @Override
     public MasterServices getMasterServices() {
       return masterServices;
+    }
+
+    @Override
+    public MetricRegistry getMetricRegistryForMaster() {
+      return metricRegistry;
+    }
+
+    @Override
+    protected void shutdown() {
+      super.shutdown();
+      MetricsCoprocessor.removeRegistry(this.metricRegistry);
     }
   }
 

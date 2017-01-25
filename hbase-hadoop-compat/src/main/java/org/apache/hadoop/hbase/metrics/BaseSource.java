@@ -104,4 +104,9 @@ public interface BaseSource {
    */
   String getMetricsName();
 
+  default MetricRegistryInfo getMetricRegistryInfo() {
+    return new MetricRegistryInfo(getMetricsName(), getMetricsDescription(),
+        getMetricsContext(), getMetricsJmxContext(), true);
+  }
+
 }

@@ -25,24 +25,26 @@ import java.util.List;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.coprocessor.SingletonCoprocessorService;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -335,8 +337,8 @@ public class RegionServerCoprocessorHost extends
    */
   static class RegionServerEnvironment extends CoprocessorHost.Environment
       implements RegionServerCoprocessorEnvironment {
-
-    private RegionServerServices regionServerServices;
+    private final RegionServerServices regionServerServices;
+    private final MetricRegistry metricRegistry;
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BC_UNCONFIRMED_CAST",
         justification="Intentional; FB has trouble detecting isAssignableFrom")
@@ -353,11 +355,24 @@ public class RegionServerCoprocessorHost extends
           break;
         }
       }
+      this.metricRegistry =
+          MetricsCoprocessor.createRegistryForRSCoprocessor(implClass.getName());
     }
 
     @Override
     public RegionServerServices getRegionServerServices() {
       return regionServerServices;
+    }
+
+    @Override
+    public MetricRegistry getMetricRegistryForRegionServer() {
+      return metricRegistry;
+    }
+
+    @Override
+    protected void shutdown() {
+      super.shutdown();
+      MetricsCoprocessor.removeRegistry(metricRegistry);
     }
   }
 
@@ -367,6 +382,7 @@ public class RegionServerCoprocessorHost extends
    */
   static class EnvironmentPriorityComparator implements
       Comparator<CoprocessorEnvironment> {
+    @Override
     public int compare(final CoprocessorEnvironment env1,
         final CoprocessorEnvironment env2) {
       if (env1.getPriority() < env2.getPriority()) {

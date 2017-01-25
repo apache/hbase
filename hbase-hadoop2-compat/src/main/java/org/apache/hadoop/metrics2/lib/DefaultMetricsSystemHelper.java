@@ -17,26 +17,44 @@
  */
 package org.apache.hadoop.metrics2.lib;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import java.lang.reflect.Method;
 
 public class DefaultMetricsSystemHelper {
 
   private static final Log LOG = LogFactory.getLog(DefaultMetricsSystemHelper.class);
   private final Method removeObjectMethod;
+  private final Field sourceNamesField;
+  private final Field mapField;
 
   public DefaultMetricsSystemHelper() {
+    Class<? extends DefaultMetricsSystem> clazz = DefaultMetricsSystem.INSTANCE.getClass();
     Method m;
     try {
-      Class<? extends DefaultMetricsSystem> clazz = DefaultMetricsSystem.INSTANCE.getClass();
       m = clazz.getDeclaredMethod("removeObjectName", String.class);
       m.setAccessible(true);
     } catch (NoSuchMethodException e) {
       m = null;
     }
     removeObjectMethod = m;
+
+    Field f1, f2;
+    try {
+      f1 = clazz.getDeclaredField("sourceNames");
+      f1.setAccessible(true);
+      f2 = UniqueNames.class.getDeclaredField("map");
+      f2.setAccessible(true);
+    } catch (NoSuchFieldException e) {
+      LOG.trace(e);
+      f1 = null;
+      f2 = null;
+    }
+    sourceNamesField = f1;
+    mapField = f2;
   }
 
   public boolean removeObjectName(final String name) {
@@ -51,5 +69,31 @@ public class DefaultMetricsSystemHelper {
       }
     }
     return false;
+  }
+
+  /**
+   * Unfortunately Hadoop tries to be too-clever and permanently keeps track of all names registered
+   * so far as a Source, thus preventing further re-registration of the source with the same name.
+   * In case of dynamic metrics tied to region-lifecycles, this becomes a problem because we would
+   * like to be able to re-register and remove with the same name. Otherwise, it is resource leak.
+   * This ugly code manually removes the name from the UniqueNames map.
+   * TODO: May not be needed for Hadoop versions after YARN-5190.
+   */
+  public void removeSourceName(String name) {
+    if (sourceNamesField == null || mapField == null) {
+      return;
+    }
+    try {
+      Object sourceNames = sourceNamesField.get(DefaultMetricsSystem.INSTANCE);
+      HashMap map = (HashMap) mapField.get(sourceNames);
+      synchronized (sourceNames) {
+        map.remove(name);
+      }
+    } catch (Exception ex) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Received exception while trying to access Hadoop Metrics classes via reflection.",
+            ex);
+      }
+    }
   }
 }

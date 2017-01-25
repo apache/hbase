@@ -29,9 +29,11 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.WALObserver;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 
@@ -50,6 +52,8 @@ public class WALCoprocessorHost
     implements WALCoprocessorEnvironment {
 
     private final WAL wal;
+
+    private final MetricRegistry metricRegistry;
 
     @Override
     public WAL getWAL() {
@@ -70,6 +74,18 @@ public class WALCoprocessorHost
         final WAL wal) {
       super(impl, priority, seq, conf);
       this.wal = wal;
+      this.metricRegistry = MetricsCoprocessor.createRegistryForWALCoprocessor(implClass.getName());
+    }
+
+    @Override
+    public MetricRegistry getMetricRegistryForRegionServer() {
+      return metricRegistry;
+    }
+
+    @Override
+    protected void shutdown() {
+      super.shutdown();
+      MetricsCoprocessor.removeRegistry(this.metricRegistry);
     }
   }
 

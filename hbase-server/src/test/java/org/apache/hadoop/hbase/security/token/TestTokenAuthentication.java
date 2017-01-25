@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -258,6 +259,11 @@ public class TestTokenAuthentication {
 
         @Override
         public ConcurrentMap<String, Object> getSharedData() { return null; }
+
+        @Override
+        public MetricRegistry getMetricRegistryForRegionServer() {
+          return null;
+        }
 
         @Override
         public int getVersion() { return 0; }

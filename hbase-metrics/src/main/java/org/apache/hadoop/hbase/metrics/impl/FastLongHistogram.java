@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.metrics.impl;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,12 +24,14 @@ import java.util.stream.Stream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.metrics.Snapshot;
+import org.apache.hadoop.hbase.util.AtomicUtils;
 
 /**
  * FastLongHistogram is a thread-safe class that estimate distribution of data and computes the
  * quantiles.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FastLongHistogram {
 
@@ -214,6 +216,20 @@ public class FastLongHistogram {
     long getNumAtOrBelow(long val) {
       return Arrays.stream(counts).mapToLong(c -> c.sum()).limit(getIndex(val) + 1).sum();
     }
+
+    public long getMin() {
+      long min = this.min.get();
+      return min == Long.MAX_VALUE ? 0 : min; // in case it is not initialized
+    }
+
+    public long getMean() {
+      long count = this.count.sum();
+      long total = this.total.sum();
+      if (count == 0) {
+        return 0;
+      }
+      return total / count;
+    }
   }
 
   // The bins counting values. It is replaced with a new one in calling of reset().
@@ -273,8 +289,7 @@ public class FastLongHistogram {
   }
 
   public long getMin() {
-    long min = this.bins.min.get();
-    return min == Long.MAX_VALUE ? 0 : min; // in case it is not initialized
+    return this.bins.getMin();
   }
 
   public long getMax() {
@@ -286,13 +301,7 @@ public class FastLongHistogram {
   }
 
   public long getMean() {
-    Bins bins = this.bins;
-    long count = bins.count.sum();
-    long total = bins.total.sum();
-    if (count == 0) {
-      return 0;
-    }
-    return total / count;
+    return this.bins.getMean();
   }
 
   public long getNumAtOrBelow(long value) {
@@ -302,9 +311,87 @@ public class FastLongHistogram {
   /**
    * Resets the histogram for new counting.
    */
-  public FastLongHistogram reset() {
-    Bins oldBins = this.bins;
+  public Snapshot snapshotAndReset() {
+    final Bins oldBins = this.bins;
     this.bins = new Bins(this.bins, this.bins.counts.length - 3, 0.01, 0.99);
-    return new FastLongHistogram(oldBins);
+    final long[] percentiles = oldBins.getQuantiles(DEFAULT_QUANTILES);
+    final long count = oldBins.count.sum();
+
+    return new Snapshot() {
+      @Override
+      public long[] getQuantiles(double[] quantiles) {
+        return oldBins.getQuantiles(quantiles);
+      }
+
+      @Override
+      public long[] getQuantiles() {
+        return percentiles;
+      }
+
+      @Override
+      public long getCount() {
+        return count;
+      }
+
+      @Override
+      public long getCountAtOrBelow(long val) {
+        return oldBins.getNumAtOrBelow(val);
+      }
+
+      @Override
+      public long get25thPercentile() {
+        return percentiles[0];
+      }
+
+      @Override
+      public long get75thPercentile() {
+        return percentiles[2];
+      }
+
+      @Override
+      public long get90thPercentile() {
+        return percentiles[3];
+      }
+
+      @Override
+      public long get95thPercentile() {
+        return percentiles[4];
+      }
+
+      @Override
+      public long get98thPercentile() {
+        return percentiles[5];
+      }
+
+      @Override
+      public long get99thPercentile() {
+        return percentiles[6];
+      }
+
+      @Override
+      public long get999thPercentile() {
+        return percentiles[7];
+      }
+
+      @Override
+      public long getMedian() {
+        return percentiles[1];
+      }
+
+      @Override
+      public long getMax() {
+        return oldBins.max.get();
+      }
+
+      @Override
+      public long getMean() {
+        return oldBins.getMean();
+      }
+
+      @Override
+      public long getMin() {
+        return oldBins.getMin();
+      }
+    };
   }
 }
