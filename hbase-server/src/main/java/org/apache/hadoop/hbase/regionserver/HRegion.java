@@ -4025,11 +4025,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * the wal. This method is then invoked to rollback the memstore.
    */
   private void rollbackMemstore(List<Cell> memstoreCells) {
-    int kvsRolledback = 0;
+    rollbackMemstore(null, memstoreCells);
+  }
 
+  private void rollbackMemstore(final Store defaultStore, List<Cell> memstoreCells) {
+    int kvsRolledback = 0;
     for (Cell cell : memstoreCells) {
-      byte[] family = CellUtil.cloneFamily(cell);
-      Store store = getStore(family);
+      Store store = defaultStore;
+      if (store == null) {
+        byte[] family = CellUtil.cloneFamily(cell);
+        store = getStore(family);
+      }
       store.rollback(cell);
       kvsRolledback++;
     }
@@ -7586,12 +7592,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     byte[] row = mutate.getRow();
     checkRow(row, op.toString());
     checkFamilies(mutate.getFamilyCellMap().keySet());
-    boolean flush = false;
     Durability durability = getEffectiveDurability(mutate.getDurability());
     boolean writeToWAL = durability != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<Cell> allKVs = new ArrayList<Cell>(mutate.size());
     Map<Store, List<Cell>> tempMemstore = new HashMap<Store, List<Cell>>();
+    Map<Store, List<Cell>> removedCellsForMemStore = new HashMap<>();
     long size = 0;
     long txid = 0;
     checkReadOnly();
@@ -7718,26 +7724,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           // Actually write to Memstore now
-          if (!tempMemstore.isEmpty()) {
-            for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
-              Store store = entry.getKey();
-              if (store.getFamily().getMaxVersions() == 1) {
-                // upsert if VERSIONS for this CF == 1
-                size += store.upsert(entry.getValue(), getSmallestReadPoint());
-              } else {
-                // otherwise keep older versions around
-                size += store.add(entry.getValue());
-                if (!entry.getValue().isEmpty()) {
-                  doRollBackMemstore = true;
-                }
+          doRollBackMemstore = !tempMemstore.isEmpty();
+          for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
+            Store store = entry.getKey();
+            if (store.getFamily().getMaxVersions() == 1) {
+              List<Cell> removedCells = removedCellsForMemStore.get(store);
+              if (removedCells == null) {
+                removedCells = new ArrayList<>();
+                removedCellsForMemStore.put(store, removedCells);
               }
-              // We add to all KVs here whereas when doing increment, we do it
-              // earlier... why?
-              allKVs.addAll(entry.getValue());
+              // upsert if VERSIONS for this CF == 1
+              size += store.upsert(entry.getValue(), getSmallestReadPoint(), removedCells);
+            } else {
+              // otherwise keep older versions around
+              size += store.add(entry.getValue());
             }
-
-            size = this.addAndGetGlobalMemstoreSize(size);
-            flush = isFlushSize(size);
+            // We add to all KVs here whereas when doing increment, we do it
+            // earlier... why?
+            allKVs.addAll(entry.getValue());
           }
         } finally {
           this.updatesLock.readLock().unlock();
@@ -7763,7 +7767,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // if the wal sync was unsuccessful, remove keys from memstore
       WriteEntry we = walKey != null? walKey.getWriteEntry(): null;
       if (doRollBackMemstore) {
-        rollbackMemstore(allKVs);
+        for (Map.Entry<Store, List<Cell>> entry: tempMemstore.entrySet()) {
+          rollbackMemstore(entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<Store, List<Cell>> entry: removedCellsForMemStore.entrySet()) {
+          entry.getKey().add(entry.getValue());
+        }
         if (we != null) mvcc.complete(we);
       } else if (we != null) {
         mvcc.completeAndWait(we);
@@ -7775,12 +7784,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.metricsRegion != null) {
       this.metricsRegion.updateAppend();
     }
-
-    if (flush) {
-      // Request a cache flush. Do it outside update lock.
-      requestFlush();
-    }
-
+    if (isFlushSize(this.addAndGetGlobalMemstoreSize(size))) requestFlush();
     return mutate.isReturnResults() ? Result.create(allKVs) : null;
   }
 
@@ -7887,7 +7891,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     boolean doRollBackMemstore = false;
     long accumulatedResultSize = 0;
     List<Cell> allKVs = new ArrayList<Cell>(increment.size());
-    List<Cell> memstoreCells = new ArrayList<Cell>();
+    Map<Store, List<Cell>> removedCellsForMemStore = new HashMap<>();
+    Map<Store, List<Cell>> forMemStore = new HashMap<>();
     Durability effectiveDurability = getEffectiveDurability(increment.getDurability());
     try {
       rowLock = getRowLockInternal(increment.getRow(), false);
@@ -7907,7 +7912,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           WALEdit walEdits = null;
           // Process increments a Store/family at a time.
           // Accumulate edits for memstore to add later after we've added to WAL.
-          Map<Store, List<Cell>> forMemStore = new HashMap<Store, List<Cell>>();
           for (Map.Entry<byte [], List<Cell>> entry: increment.getFamilyCellMap().entrySet()) {
             byte [] columnFamilyName = entry.getKey();
             List<Cell> increments = entry.getValue();
@@ -7956,19 +7960,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
 
           // Now write to memstore, a family at a time.
+          doRollBackMemstore = !forMemStore.isEmpty();
           for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {
             Store store = entry.getKey();
             List<Cell> results = entry.getValue();
             if (store.getFamily().getMaxVersions() == 1) {
+              List<Cell> removedCells = removedCellsForMemStore.get(store);
+              if (removedCells == null) {
+                removedCells = new ArrayList<>();
+                removedCellsForMemStore.put(store, removedCells);
+              }
               // Upsert if VERSIONS for this CF == 1
-              accumulatedResultSize += store.upsert(results, getSmallestReadPoint());
-              // TODO: St.Ack 20151222 Why no rollback in this case?
+              accumulatedResultSize += store.upsert(results, getSmallestReadPoint(), removedCells);
             } else {
               // Otherwise keep older versions around
               accumulatedResultSize += store.add(entry.getValue());
-              if (!entry.getValue().isEmpty()) {
-                doRollBackMemstore = true;
-              }
             }
           }
         } finally {
@@ -7993,7 +7999,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       // if the wal sync was unsuccessful, remove keys from memstore
       if (doRollBackMemstore) {
-        rollbackMemstore(memstoreCells);
+        for (Map.Entry<Store, List<Cell>> entry: forMemStore.entrySet()) {
+          rollbackMemstore(entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<Store, List<Cell>> entry: removedCellsForMemStore.entrySet()) {
+          entry.getKey().add(entry.getValue());
+        }
         if (walKey != null) mvcc.complete(walKey.getWriteEntry());
       } else {
         if (walKey != null) mvcc.completeAndWait(walKey.getWriteEntry());
