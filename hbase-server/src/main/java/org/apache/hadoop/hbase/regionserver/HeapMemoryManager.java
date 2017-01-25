@@ -62,6 +62,8 @@ public class HeapMemoryManager {
   public static final String HBASE_RS_HEAP_MEMORY_TUNER_CLASS = 
       "hbase.regionserver.heapmemory.tuner.class";
 
+  public static final float HEAP_OCCUPANCY_ERROR_VALUE = -0.0f;
+
   private float globalMemStorePercent;
   private float globalMemStorePercentMinRange;
   private float globalMemStorePercentMaxRange;
@@ -83,7 +85,19 @@ public class HeapMemoryManager {
   private final int defaultChorePeriod;
   private final float heapOccupancyLowWatermark;
 
-  private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+  private final long maxHeapSize;
+  {
+    // note that this initialization still isn't threadsafe, because updating a long isn't atomic.
+    long tempMaxHeap = -1L;
+    try {
+      final MemoryUsage usage = HeapMemorySizeUtil.safeGetHeapMemoryUsage();
+      if (usage != null) {
+        tempMaxHeap = usage.getMax();
+      }
+    } finally {
+      maxHeapSize = tempMaxHeap;
+    }
+  }
 
   public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
                 Server server, RegionServerAccounting regionServerAccounting) {
@@ -210,10 +224,10 @@ public class HeapMemoryManager {
   }
 
   /**
-   * @return heap occupancy percentage, 0 &lt;= n &lt;= 1
+   * @return heap occupancy percentage, 0 &lt;= n &lt;= 1. or -0.0 for error asking JVM
    */
   public float getHeapOccupancyPercent() {
-    return this.heapOccupancyPercent;
+    return this.heapOccupancyPercent == Float.MAX_VALUE ? HEAP_OCCUPANCY_ERROR_VALUE : this.heapOccupancyPercent;
   }
 
   private class HeapMemoryTunerChore extends ScheduledChore implements FlushRequestListener {
@@ -235,8 +249,15 @@ public class HeapMemoryManager {
     @Override
     protected void chore() {
       // Sample heap occupancy
-      MemoryUsage memUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-      heapOccupancyPercent = (float)memUsage.getUsed() / (float)memUsage.getCommitted();
+      final MemoryUsage usage = HeapMemorySizeUtil.safeGetHeapMemoryUsage();
+      if (usage != null) {
+        heapOccupancyPercent = (float)usage.getUsed() / (float)usage.getCommitted();
+      } else {
+        // previously, an exception would have meant death for the tuning chore
+        // so switch to alarming so that we similarly stop tuning until we get
+        // heap usage information again.
+        heapOccupancyPercent = Float.MAX_VALUE;
+      }
       // If we are above the heap occupancy alarm low watermark, switch to short
       // sleeps for close monitoring. Stop autotuning, we are in a danger zone.
       if (heapOccupancyPercent >= heapOccupancyLowWatermark) {

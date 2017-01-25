@@ -45,6 +45,27 @@ public class HeapMemorySizeUtil {
   // a constant to convert a fraction to a percentage
   private static final int CONVERT_TO_PERCENTAGE = 100;
 
+  private static final String JVM_HEAP_EXCEPTION = "Got an exception while attempting to read " +
+      "information about the JVM heap. Please submit this log information in a bug report and " +
+      "include your JVM settings, specifically the GC in use and any -XX options. Consider " +
+      "restarting the service.";
+
+  /**
+   * Return JVM memory statistics while properly handling runtime exceptions from the JVM.
+   * @return a memory usage object, null if there was a runtime exception. (n.b. you
+   *         could also get -1 values back from the JVM)
+   * @see MemoryUsage
+   */
+  public static MemoryUsage safeGetHeapMemoryUsage() {
+    MemoryUsage usage = null;
+    try {
+      usage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    } catch (RuntimeException exception) {
+      LOG.warn(JVM_HEAP_EXCEPTION, exception);
+    }
+    return usage;
+  }
+
   /**
    * Checks whether we have enough heap memory left out after portion for Memstore and Block cache.
    * We need atleast 20% of heap left out for other RS functions.
@@ -143,10 +164,62 @@ public class HeapMemorySizeUtil {
     // L2 block cache can be on heap when IOEngine is "heap"
     if (bucketCacheIOEngineName != null && bucketCacheIOEngineName.startsWith("heap")) {
       float bucketCachePercentage = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
-      MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+      long max = -1L;
+      final MemoryUsage usage = safeGetHeapMemoryUsage();
+      if (usage != null) {
+        max = usage.getMax();
+      }
       l2CachePercent = bucketCachePercentage < 1 ? bucketCachePercentage
-          : (bucketCachePercentage * 1024 * 1024) / mu.getMax();
+          : (bucketCachePercentage * 1024 * 1024) / max;
     }
     return l2CachePercent;
   }
+
+  /**
+   * @param conf used to read cache configs
+   * @return the number of bytes to use for LRU, negative if disabled.
+   * @throws IllegalArgumentException if HFILE_BLOCK_CACHE_SIZE_KEY is > 1.0
+   */
+  public static long getLruCacheSize(final Configuration conf) {
+    float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
+      HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+    if (cachePercentage <= 0.0001f) {
+      return -1;
+    }
+    if (cachePercentage > 1.0) {
+      throw new IllegalArgumentException(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY +
+        " must be between 0.0 and 1.0, and not > 1.0");
+    }
+    long max = -1L;
+    final MemoryUsage usage = safeGetHeapMemoryUsage();
+    if (usage != null) {
+      max = usage.getMax();
+    }
+
+    // Calculate the amount of heap to give the heap.
+    return (long) (max * cachePercentage);
+  }
+
+  /**
+   * @param conf used to read config for bucket cache size. (< 1 is treated as % and > is treated as MiB)
+   * @return the number of bytes to use for bucket cache, negative if disabled.
+   */
+  public static long getBucketCacheSize(final Configuration conf) {
+    final float bucketCachePercentage = conf.getFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0F);
+    long bucketCacheSize;
+    // Values < 1 are treated as % of heap
+    if (bucketCachePercentage < 1) {
+      long max = -1L;
+      final MemoryUsage usage = safeGetHeapMemoryUsage();
+      if (usage != null) {
+        max = usage.getMax();
+      }
+      bucketCacheSize = (long)(max * bucketCachePercentage);
+    // values >= 1 are treated as # of MiB
+    } else {
+      bucketCacheSize = (long)(bucketCachePercentage * 1024 * 1024);
+    }
+    return bucketCacheSize;
+  }
+
 }
