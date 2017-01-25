@@ -80,6 +80,9 @@ public class SecureBulkLoadClient {
 
       return response.getBulkToken();
     } catch (Throwable throwable) {
+      if (throwable instanceof IOException) {
+        throw (IOException) throwable;
+      }
       throw new IOException(throwable);
     }
   }
@@ -107,6 +110,9 @@ public class SecureBulkLoadClient {
         throw controller.getFailedOn();
       }
     } catch (Throwable throwable) {
+      if (throwable instanceof IOException) {
+        throw (IOException) throwable;
+      }
       throw new IOException(throwable);
     }
   }
@@ -160,6 +166,9 @@ public class SecureBulkLoadClient {
       }
       return response.getLoaded();
     } catch (Throwable throwable) {
+      if (throwable instanceof IOException) {
+        throw (IOException) throwable;
+      }
       throw new IOException(throwable);
     }
   }
