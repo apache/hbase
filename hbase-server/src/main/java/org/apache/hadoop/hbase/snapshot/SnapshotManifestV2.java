@@ -139,7 +139,7 @@ public final class SnapshotManifestV2 {
     if (manifestFiles == null || manifestFiles.length == 0) return null;
 
     final ExecutorCompletionService<SnapshotRegionManifest> completionService =
-      new ExecutorCompletionService<SnapshotRegionManifest>(executor);
+      new ExecutorCompletionService<>(executor);
     for (final FileStatus st: manifestFiles) {
       completionService.submit(new Callable<SnapshotRegionManifest>() {
         @Override
@@ -157,8 +157,7 @@ public final class SnapshotManifestV2 {
       });
     }
 
-    ArrayList<SnapshotRegionManifest> regionsManifest =
-        new ArrayList<SnapshotRegionManifest>(manifestFiles.length);
+    ArrayList<SnapshotRegionManifest> regionsManifest = new ArrayList<>(manifestFiles.length);
     try {
       for (int i = 0; i < manifestFiles.length; ++i) {
         regionsManifest.add(completionService.take().get());

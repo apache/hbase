@@ -42,7 +42,7 @@ public class TestConnectionUtils {
       retries[i] = ConnectionUtils.getPauseTime(baseTime, 0);
     }
 
-    Set<Long> retyTimeSet = new TreeSet<Long>();
+    Set<Long> retyTimeSet = new TreeSet<>();
     for (long l : retries) {
       /*make sure that there is some jitter but only 1%*/
       assertTrue(l >= baseTime);
@@ -62,7 +62,7 @@ public class TestConnectionUtils {
     long minTimeExpected = (long) (basePause * 0.75f);
     int testTries = 100;
 
-    Set<Long> timeSet = new TreeSet<Long>();
+    Set<Long> timeSet = new TreeSet<>();
     for (int i = 0; i < testTries; i++) {
       long withJitter = ConnectionUtils.addJitter(basePause, 0.5f);
       assertTrue(withJitter >= minTimeExpected);

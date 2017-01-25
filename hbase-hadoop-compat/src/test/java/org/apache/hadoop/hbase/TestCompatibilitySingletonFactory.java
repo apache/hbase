@@ -55,9 +55,8 @@ public class TestCompatibilitySingletonFactory {
 
   @Test
   public void testGetInstance() throws Exception {
-    List<TestCompatibilitySingletonFactoryCallable> callables =
-        new ArrayList<TestCompatibilitySingletonFactoryCallable>(ITERATIONS);
-    List<String> resultStrings = new ArrayList<String>(ITERATIONS);
+    List<TestCompatibilitySingletonFactoryCallable> callables = new ArrayList<>(ITERATIONS);
+    List<String> resultStrings = new ArrayList<>(ITERATIONS);
 
 
     // Create the callables.

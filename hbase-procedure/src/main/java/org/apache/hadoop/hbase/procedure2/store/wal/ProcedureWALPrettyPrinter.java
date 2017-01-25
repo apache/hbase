@@ -155,7 +155,7 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
     options.addOption("h", "help", false, "Output help message");
     options.addOption("f", "file", true, "File to print");
 
-    final List<Path> files = new ArrayList<Path>();
+    final List<Path> files = new ArrayList<>();
     try {
       CommandLine cmd = new PosixParser().parse(options, args);
 

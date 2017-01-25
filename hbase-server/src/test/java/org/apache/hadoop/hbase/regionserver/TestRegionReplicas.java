@@ -329,7 +329,7 @@ public class TestRegionReplicas {
       @SuppressWarnings("unchecked")
       final AtomicReference<Exception>[] exceptions = new AtomicReference[3];
       for (int i=0; i < exceptions.length; i++) {
-        exceptions[i] = new AtomicReference<Exception>();
+        exceptions[i] = new AtomicReference<>();
       }
 
       Runnable writer = new Runnable() {

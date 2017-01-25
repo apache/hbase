@@ -142,8 +142,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * to the BucketCache.  It then updates the ramCache and backingMap accordingly.
    */
   @VisibleForTesting
-  final ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues =
-      new ArrayList<BlockingQueue<RAMQueueEntry>>();
+  final ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues = new ArrayList<>();
   @VisibleForTesting
   final WriterThread[] writerThreads;
 
@@ -151,7 +150,7 @@ public class BucketCache implements BlockCache, HeapSize {
   private volatile boolean freeInProgress = false;
   private final Lock freeSpaceLock = new ReentrantLock();
 
-  private UniqueIndexMap<Integer> deserialiserMap = new UniqueIndexMap<Integer>();
+  private UniqueIndexMap<Integer> deserialiserMap = new UniqueIndexMap<>();
 
   private final AtomicLong realCacheSize = new AtomicLong(0);
   private final AtomicLong heapSize = new AtomicLong(0);
@@ -191,7 +190,7 @@ public class BucketCache implements BlockCache, HeapSize {
   final IdReadWriteLock offsetLock = new IdReadWriteLock();
 
   private final NavigableSet<BlockCacheKey> blocksByHFile =
-      new ConcurrentSkipListSet<BlockCacheKey>(new Comparator<BlockCacheKey>() {
+      new ConcurrentSkipListSet<>(new Comparator<BlockCacheKey>() {
         @Override
         public int compare(BlockCacheKey a, BlockCacheKey b) {
           int nameComparison = a.getHfileName().compareTo(b.getHfileName());
@@ -240,13 +239,13 @@ public class BucketCache implements BlockCache, HeapSize {
 
     bucketAllocator = new BucketAllocator(capacity, bucketSizes);
     for (int i = 0; i < writerThreads.length; ++i) {
-      writerQueues.add(new ArrayBlockingQueue<RAMQueueEntry>(writerQLen));
+      writerQueues.add(new ArrayBlockingQueue<>(writerQLen));
     }
 
     assert writerQueues.size() == writerThreads.length;
-    this.ramCache = new ConcurrentHashMap<BlockCacheKey, RAMQueueEntry>();
+    this.ramCache = new ConcurrentHashMap<>();
 
-    this.backingMap = new ConcurrentHashMap<BlockCacheKey, BucketEntry>((int) blockNumCapacity);
+    this.backingMap = new ConcurrentHashMap<>((int) blockNumCapacity);
 
     if (ioEngine.isPersistent() && persistencePath != null) {
       try {
@@ -756,7 +755,7 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       }
 
-      PriorityQueue<BucketEntryGroup> bucketQueue = new PriorityQueue<BucketEntryGroup>(3);
+      PriorityQueue<BucketEntryGroup> bucketQueue = new PriorityQueue<>(3);
 
       bucketQueue.add(bucketSingle);
       bucketQueue.add(bucketMulti);
@@ -841,7 +840,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     public void run() {
-      List<RAMQueueEntry> entries = new ArrayList<RAMQueueEntry>();
+      List<RAMQueueEntry> entries = new ArrayList<>();
       try {
         while (cacheEnabled && writerEnabled) {
           try {

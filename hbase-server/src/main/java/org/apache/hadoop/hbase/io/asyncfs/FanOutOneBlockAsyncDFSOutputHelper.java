@@ -682,8 +682,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     try {
       stat = namenode.create(src,
         FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), clientName,
-        new EnumSetWritable<CreateFlag>(
-            overwrite ? EnumSet.of(CREATE, OVERWRITE) : EnumSet.of(CREATE)),
+        new EnumSetWritable<>(overwrite ? EnumSet.of(CREATE, OVERWRITE) : EnumSet.of(CREATE)),
         createParent, replication, blockSize, CryptoProtocolVersion.supported());
     } catch (Exception e) {
       if (e instanceof RemoteException) {

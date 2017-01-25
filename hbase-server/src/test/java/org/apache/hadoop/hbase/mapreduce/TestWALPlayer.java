@@ -172,7 +172,7 @@ public class TestWALPlayer {
     when(context.getConfiguration()).thenReturn(configuration);
 
     WALEdit value = mock(WALEdit.class);
-    ArrayList<Cell> values = new ArrayList<Cell>();
+    ArrayList<Cell> values = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), null);
 
     values.add(kv1);

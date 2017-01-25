@@ -102,7 +102,7 @@ public class DemoClient {
        *
        * The HBase cluster must be secure, allow proxy user.
        */
-      Map<String, String> saslProperties = new HashMap<String, String>();
+      Map<String, String> saslProperties = new HashMap<>();
       saslProperties.put(Sasl.QOP, "auth-conf,auth-int,auth");
       transport = new TSaslClientTransport("GSSAPI", null,
         user != null ? user : "hbase",// Thrift server user name, should be an authorized proxy user
@@ -126,7 +126,7 @@ public class DemoClient {
     columnValue.setFamily("family1".getBytes());
     columnValue.setQualifier("qualifier1".getBytes());
     columnValue.setValue("value1".getBytes());
-    List<TColumnValue> columnValues = new ArrayList<TColumnValue>(1);
+    List<TColumnValue> columnValues = new ArrayList<>(1);
     columnValues.add(columnValue);
     put.setColumnValues(columnValues);
 
@@ -159,7 +159,7 @@ public class DemoClient {
       new Configuration() {
         @Override
         public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-          Map<String, String> options = new HashMap<String, String>();
+          Map<String, String> options = new HashMap<>();
           options.put("useKeyTab", "false");
           options.put("storeKey", "false");
           options.put("doNotPrompt", "true");

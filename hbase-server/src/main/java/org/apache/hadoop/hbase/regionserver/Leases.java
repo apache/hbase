@@ -56,7 +56,7 @@ import java.io.IOException;
 public class Leases extends HasThread {
   private static final Log LOG = LogFactory.getLog(Leases.class.getName());
   public static final int MIN_WAIT_TIME = 100;
-  private final Map<String, Lease> leases = new ConcurrentHashMap<String, Lease>();
+  private final Map<String, Lease> leases = new ConcurrentHashMap<>();
 
   protected final int leaseCheckFrequency;
   protected volatile boolean stopRequested = false;

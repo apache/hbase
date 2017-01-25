@@ -336,7 +336,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   // ClusterManager methods take a "ServiceType" object (e.g. "HBASE_MASTER," "HADOOP_NAMENODE").
   // These "service types," which cluster managers call "roles" or "components," need to be mapped
   // to their corresponding service (e.g. "HBase," "HDFS") in order to be controlled.
-  private static Map<ServiceType, Service> roleServiceType = new HashMap<ServiceType, Service>();
+  private static Map<ServiceType, Service> roleServiceType = new HashMap<>();
   static {
     roleServiceType.put(ServiceType.HADOOP_NAMENODE, Service.HDFS);
     roleServiceType.put(ServiceType.HADOOP_DATANODE, Service.HDFS);

@@ -39,7 +39,7 @@ public class FlushNonSloppyStoresFirstPolicy extends FlushLargeStoresPolicy {
    * @return the stores need to be flushed.
    */
   @Override public Collection<Store> selectStoresToFlush() {
-    Collection<Store> specificStoresToFlush = new HashSet<Store>();
+    Collection<Store> specificStoresToFlush = new HashSet<>();
     for(Store store : regularStores) {
       if(shouldFlush(store) || region.shouldFlushStore(store)) {
         specificStoresToFlush.add(store);

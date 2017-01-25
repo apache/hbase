@@ -128,7 +128,7 @@ public class TestScannerRetriableFailure {
   }
 
   public void loadTable(final Table table, int numRows) throws IOException {
-    List<Put> puts = new ArrayList<Put>(numRows);
+    List<Put> puts = new ArrayList<>(numRows);
     for (int i = 0; i < numRows; ++i) {
       byte[] row = Bytes.toBytes(String.format("%09d", i));
       Put put = new Put(row);

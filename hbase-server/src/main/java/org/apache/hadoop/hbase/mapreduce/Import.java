@@ -471,7 +471,7 @@ public class Import extends Configured implements Tool {
   }
 
   private static ArrayList<byte[]> toQuotedByteArrays(String... stringArgs) {
-    ArrayList<byte[]> quotedArgs = new ArrayList<byte[]>();
+    ArrayList<byte[]> quotedArgs = new ArrayList<>();
     for (String stringArg : stringArgs) {
       // all the filters' instantiation methods expected quoted args since they are coming from
       // the shell, so add them here, though it shouldn't really be needed :-/
@@ -536,7 +536,7 @@ public class Import extends Configured implements Tool {
       String[] allMappings = allMappingsPropVal.split(",");
       for (String mapping: allMappings) {
         if(cfRenameMap == null) {
-            cfRenameMap = new TreeMap<byte[],byte[]>(Bytes.BYTES_COMPARATOR);
+            cfRenameMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         }
         String [] srcAndDest = mapping.split(":");
         if(srcAndDest.length != 2) {

@@ -80,19 +80,19 @@ public class SnapshotOfRegionAssignmentFromMeta {
   private final boolean excludeOfflinedSplitParents;
 
   public SnapshotOfRegionAssignmentFromMeta(Connection connection) {
-    this(connection, new HashSet<TableName>(), false);
+    this(connection, new HashSet<>(), false);
   }
 
   public SnapshotOfRegionAssignmentFromMeta(Connection connection, Set<TableName> disabledTables,
       boolean excludeOfflinedSplitParents) {
     this.connection = connection;
-    tableToRegionMap = new HashMap<TableName, List<HRegionInfo>>();
-    regionToRegionServerMap = new HashMap<HRegionInfo, ServerName>();
-    currentRSToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
-    primaryRSToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
-    secondaryRSToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
-    teritiaryRSToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
-    regionNameToRegionInfoMap = new TreeMap<String, HRegionInfo>();
+    tableToRegionMap = new HashMap<>();
+    regionToRegionServerMap = new HashMap<>();
+    currentRSToRegionMap = new HashMap<>();
+    primaryRSToRegionMap = new HashMap<>();
+    secondaryRSToRegionMap = new HashMap<>();
+    teritiaryRSToRegionMap = new HashMap<>();
+    regionNameToRegionInfoMap = new TreeMap<>();
     existingAssignmentPlan = new FavoredNodesPlan();
     this.disabledTables = disabledTables;
     this.excludeOfflinedSplitParents = excludeOfflinedSplitParents;
@@ -180,7 +180,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
     TableName tableName = regionInfo.getTable();
     List<HRegionInfo> regionList = tableToRegionMap.get(tableName);
     if (regionList == null) {
-      regionList = new ArrayList<HRegionInfo>();
+      regionList = new ArrayList<>();
     }
     // Add the current region info into the tableToRegionMap
     regionList.add(regionInfo);
@@ -196,7 +196,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
     // Process the region server to region map
     List<HRegionInfo> regionList = currentRSToRegionMap.get(server);
     if (regionList == null) {
-      regionList = new ArrayList<HRegionInfo>();
+      regionList = new ArrayList<>();
     }
     regionList.add(regionInfo);
     currentRSToRegionMap.put(server, regionList);
@@ -206,7 +206,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
     // Process the region server to region map
     List<HRegionInfo> regionList = primaryRSToRegionMap.get(server);
     if (regionList == null) {
-      regionList = new ArrayList<HRegionInfo>();
+      regionList = new ArrayList<>();
     }
     regionList.add(regionInfo);
     primaryRSToRegionMap.put(server, regionList);
@@ -216,7 +216,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
     // Process the region server to region map
     List<HRegionInfo> regionList = secondaryRSToRegionMap.get(server);
     if (regionList == null) {
-      regionList = new ArrayList<HRegionInfo>();
+      regionList = new ArrayList<>();
     }
     regionList.add(regionInfo);
     secondaryRSToRegionMap.put(server, regionList);
@@ -226,7 +226,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
     // Process the region server to region map
     List<HRegionInfo> regionList = teritiaryRSToRegionMap.get(server);
     if (regionList == null) {
-      regionList = new ArrayList<HRegionInfo>();
+      regionList = new ArrayList<>();
     }
     regionList.add(regionInfo);
     teritiaryRSToRegionMap.put(server, regionList);

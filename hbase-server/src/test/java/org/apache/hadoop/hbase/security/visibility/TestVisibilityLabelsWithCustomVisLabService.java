@@ -66,7 +66,7 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
   }
 
   protected List<String> extractAuths(String user, List<Result> results) {
-    List<String> auths = new ArrayList<String>();
+    List<String> auths = new ArrayList<>();
     for (Result result : results) {
       if (Bytes.equals(result.getRow(), Bytes.toBytes(user))) {
         NavigableMap<byte[], byte[]> familyMap = result.getFamilyMap(LABELS_TABLE_FAMILY);

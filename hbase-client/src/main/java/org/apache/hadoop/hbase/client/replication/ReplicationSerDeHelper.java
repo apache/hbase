@@ -215,7 +215,7 @@ public final class ReplicationSerDeHelper {
     if (tableCFs == null || tableCFs.length == 0) {
       return null;
     }
-    Map<TableName, List<String>> tableCFsMap = new HashMap<TableName, List<String>>();
+    Map<TableName, List<String>> tableCFsMap = new HashMap<>();
     for (int i = 0, n = tableCFs.length; i < n; i++) {
       ReplicationProtos.TableCF tableCF = tableCFs[i];
       List<String> families = new ArrayList<>();
@@ -283,7 +283,7 @@ public final class ReplicationSerDeHelper {
     }
     List<ByteString> namespacesList = peer.getNamespacesList();
     if (namespacesList != null && namespacesList.size() != 0) {
-      Set<String> namespaces = new HashSet<String>();
+      Set<String> namespaces = new HashSet<>();
       for (ByteString namespace : namespacesList) {
         namespaces.add(namespace.toStringUtf8());
       }

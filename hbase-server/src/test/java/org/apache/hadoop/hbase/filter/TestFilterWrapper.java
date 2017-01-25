@@ -75,7 +75,7 @@ public class TestFilterWrapper {
     int row_number = 0;
     try {
       Scan scan = new Scan();
-      List<Filter> fs = new ArrayList<Filter>();
+      List<Filter> fs = new ArrayList<>();
 
       DependentColumnFilter f1 = new DependentColumnFilter(Bytes.toBytes("f1"),
           Bytes.toBytes("c5"), true, CompareFilter.CompareOp.EQUAL,
@@ -115,7 +115,7 @@ public class TestFilterWrapper {
     try {
       Table table = connection.getTable(name);
       assertTrue("Fail to create the table", admin.tableExists(name));
-      List<Put> puts = new ArrayList<Put>();
+      List<Put> puts = new ArrayList<>();
 
       // row1 => <f1:c1, 1_c1, ts=1>, <f1:c2, 1_c2, ts=2>, <f1:c3, 1_c3,ts=3>,
       // <f1:c4,1_c4, ts=4>, <f1:c5, 1_c5, ts=5>

@@ -453,7 +453,7 @@ final public class FilterList extends FilterBase {
       throw new DeserializationException(e);
     }
 
-    List<Filter> rowFilters = new ArrayList<Filter>(proto.getFiltersCount());
+    List<Filter> rowFilters = new ArrayList<>(proto.getFiltersCount());
     try {
       List<FilterProtos.Filter> filtersList = proto.getFiltersList();
       int listSize = filtersList.size();

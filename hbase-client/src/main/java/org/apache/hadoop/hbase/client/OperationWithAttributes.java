@@ -44,7 +44,7 @@ public abstract class OperationWithAttributes extends Operation implements Attri
     }
 
     if (attributes == null) {
-      attributes = new HashMap<String, byte[]>();
+      attributes = new HashMap<>();
     }
 
     if (value == null) {

@@ -175,7 +175,7 @@ public class VisibilityUtils {
     String slgClassesCommaSeparated = conf.get(VISIBILITY_LABEL_GENERATOR_CLASS);
     // We have only System level SLGs now. The order of execution will be same as the order in the
     // comma separated config value
-    List<ScanLabelGenerator> slgs = new ArrayList<ScanLabelGenerator>();
+    List<ScanLabelGenerator> slgs = new ArrayList<>();
     if (StringUtils.isNotEmpty(slgClassesCommaSeparated)) {
       String[] slgClasses = slgClassesCommaSeparated.split(COMMA);
       for (String slgClass : slgClasses) {
@@ -266,7 +266,7 @@ public class VisibilityUtils {
 
   public static Filter createVisibilityLabelFilter(Region region, Authorizations authorizations)
       throws IOException {
-    Map<ByteRange, Integer> cfVsMaxVersions = new HashMap<ByteRange, Integer>();
+    Map<ByteRange, Integer> cfVsMaxVersions = new HashMap<>();
     for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
       cfVsMaxVersions.put(new SimpleMutableByteRange(hcd.getName()), hcd.getMaxVersions());
     }
@@ -302,10 +302,10 @@ public class VisibilityUtils {
       throw new IOException(e);
     }
     node = EXP_EXPANDER.expand(node);
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
-    List<Integer> labelOrdinals = new ArrayList<Integer>();
+    List<Integer> labelOrdinals = new ArrayList<>();
     // We will be adding this tag before the visibility tags and the presence of this
     // tag indicates we are supporting deletes with cell visibility
     if (withSerializationFormat) {

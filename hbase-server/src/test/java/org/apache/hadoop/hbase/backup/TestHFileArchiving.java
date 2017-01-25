@@ -193,7 +193,7 @@ public class TestHFileArchiving {
     FileStatus[] regionFiles = FSUtils.listStatus(fs, regionDir, null);
     Assert.assertNotNull("No files in the region directory", regionFiles);
     if (LOG.isDebugEnabled()) {
-      List<Path> files = new ArrayList<Path>();
+      List<Path> files = new ArrayList<>();
       for (FileStatus file : regionFiles) {
         files.add(file.getPath());
       }
@@ -269,7 +269,7 @@ public class TestHFileArchiving {
   private void assertArchiveFiles(FileSystem fs, List<String> storeFiles, long timeout) throws IOException {
     long end = System.currentTimeMillis() + timeout;
     Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
-    List<String> archivedFiles = new ArrayList<String>();
+    List<String> archivedFiles = new ArrayList<>();
 
     // We have to ensure that the DeleteTableHandler is finished. HBaseAdmin.deleteXXX() can return before all files
     // are archived. We should fix HBASE-5487 and fix synchronous operations from admin.
@@ -434,7 +434,7 @@ public class TestHFileArchiving {
         return true;
       }
     });
-    return recurseOnFiles(fs, files, new ArrayList<String>());
+    return recurseOnFiles(fs, files, new ArrayList<>());
   }
 
   /** Recursively lookup all the file names under the file[] array **/

@@ -34,7 +34,7 @@ public class TestSortedCopyOnWriteSet {
 
   @Test
   public void testSorting() throws Exception {
-    SortedCopyOnWriteSet<String> set = new SortedCopyOnWriteSet<String>();
+    SortedCopyOnWriteSet<String> set = new SortedCopyOnWriteSet<>();
     set.add("c");
     set.add("d");
     set.add("a");
@@ -52,8 +52,7 @@ public class TestSortedCopyOnWriteSet {
 
   @Test
   public void testIteratorIsolation() throws Exception {
-    SortedCopyOnWriteSet<String> set = new SortedCopyOnWriteSet<String>(
-        Lists.newArrayList("a", "b", "c", "d", "e"));
+    SortedCopyOnWriteSet<String> set = new SortedCopyOnWriteSet<>(Lists.newArrayList("a", "b", "c", "d", "e"));
 
     // isolation of remove()
     Iterator<String> iter = set.iterator();

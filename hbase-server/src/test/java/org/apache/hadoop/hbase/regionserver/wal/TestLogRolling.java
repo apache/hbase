@@ -245,8 +245,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
       HRegionInfo region = server.getOnlineRegions(desc.getTableName()).get(0).getRegionInfo();
       final WAL log = server.getWAL(region);
-      final List<Path> paths = new ArrayList<Path>(1);
-      final List<Integer> preLogRolledCalled = new ArrayList<Integer>();
+      final List<Path> paths = new ArrayList<>(1);
+      final List<Integer> preLogRolledCalled = new ArrayList<>();
 
       paths.add(AbstractFSWALProvider.getCurrentFileName(log));
       log.registerWALActionsListener(new WALActionsListener.Base() {
@@ -307,7 +307,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
         preLogRolledCalled.size() >= 1);
 
       // read back the data written
-      Set<String> loggedRows = new HashSet<String>();
+      Set<String> loggedRows = new HashSet<>();
       FSUtils fsUtils = FSUtils.getInstance(fs, TEST_UTIL.getConfiguration());
       for (Path p : paths) {
         LOG.debug("recovering lease for " + p);

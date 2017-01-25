@@ -353,7 +353,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     @Override
     public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException {
       int numSplits = context.getConfiguration().getInt(NUM_MAPS_KEY, NUM_MAPS);
-      ArrayList<InputSplit> ret = new ArrayList<InputSplit>(numSplits);
+      ArrayList<InputSplit> ret = new ArrayList<>(numSplits);
       for (int i = 0; i < numSplits; ++i) {
         ret.add(new EmptySplit());
       }
@@ -376,7 +376,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       chainId = chainId - (chainId % numMapTasks) + taskId; // ensure that chainId is unique per task and across iterations
       LongWritable[] keys = new LongWritable[] {new LongWritable(chainId)};
 
-      return new FixedRecordReader<LongWritable, LongWritable>(keys, keys);
+      return new FixedRecordReader<>(keys, keys);
     }
   }
 

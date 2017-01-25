@@ -49,15 +49,15 @@ public class SortedCopyOnWriteSet<E> implements SortedSet<E> {
   private volatile SortedSet<E> internalSet;
 
   public SortedCopyOnWriteSet() {
-    this.internalSet = new TreeSet<E>();
+    this.internalSet = new TreeSet<>();
   }
 
   public SortedCopyOnWriteSet(Collection<? extends E> c) {
-    this.internalSet = new TreeSet<E>(c);
+    this.internalSet = new TreeSet<>(c);
   }
 
   public SortedCopyOnWriteSet(Comparator<? super E> comparator) {
-    this.internalSet = new TreeSet<E>(comparator);
+    this.internalSet = new TreeSet<>(comparator);
   }
 
   @Override
@@ -92,7 +92,7 @@ public class SortedCopyOnWriteSet<E> implements SortedSet<E> {
 
   @Override
   public synchronized boolean add(E e) {
-    SortedSet<E> newSet = new TreeSet<E>(internalSet);
+    SortedSet<E> newSet = new TreeSet<>(internalSet);
     boolean added = newSet.add(e);
     internalSet = newSet;
     return added;
@@ -100,7 +100,7 @@ public class SortedCopyOnWriteSet<E> implements SortedSet<E> {
 
   @Override
   public synchronized boolean remove(Object o) {
-    SortedSet<E> newSet = new TreeSet<E>(internalSet);
+    SortedSet<E> newSet = new TreeSet<>(internalSet);
     boolean removed = newSet.remove(o);
     internalSet = newSet;
     return removed;
@@ -113,7 +113,7 @@ public class SortedCopyOnWriteSet<E> implements SortedSet<E> {
 
   @Override
   public synchronized boolean addAll(Collection<? extends E> c) {
-    SortedSet<E> newSet = new TreeSet<E>(internalSet);
+    SortedSet<E> newSet = new TreeSet<>(internalSet);
     boolean changed = newSet.addAll(c);
     internalSet = newSet;
     return changed;
@@ -121,7 +121,7 @@ public class SortedCopyOnWriteSet<E> implements SortedSet<E> {
 
   @Override
   public synchronized boolean retainAll(Collection<?> c) {
-    SortedSet<E> newSet = new TreeSet<E>(internalSet);
+    SortedSet<E> newSet = new TreeSet<>(internalSet);
     boolean changed = newSet.retainAll(c);
     internalSet = newSet;
     return changed;
@@ -129,7 +129,7 @@ public class SortedCopyOnWriteSet<E> implements SortedSet<E> {
 
   @Override
   public synchronized boolean removeAll(Collection<?> c) {
-    SortedSet<E> newSet = new TreeSet<E>(internalSet);
+    SortedSet<E> newSet = new TreeSet<>(internalSet);
     boolean changed = newSet.removeAll(c);
     internalSet = newSet;
     return changed;
@@ -139,9 +139,9 @@ public class SortedCopyOnWriteSet<E> implements SortedSet<E> {
   public synchronized void clear() {
     Comparator<? super E> comparator = internalSet.comparator();
     if (comparator != null) {
-      internalSet = new TreeSet<E>(comparator);
+      internalSet = new TreeSet<>(comparator);
     } else {
-      internalSet = new TreeSet<E>();
+      internalSet = new TreeSet<>();
     }
   }
 

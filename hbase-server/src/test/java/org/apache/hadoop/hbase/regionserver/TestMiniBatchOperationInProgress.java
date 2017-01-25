@@ -40,10 +40,10 @@ public class TestMiniBatchOperationInProgress {
     OperationStatus[] retCodeDetails = new OperationStatus[10];
     WALEdit[] walEditsFromCoprocessors = new WALEdit[10];
     for (int i = 0; i < 10; i++) {
-      operations[i] = new Pair<Mutation, Integer>(new Put(Bytes.toBytes(i)), null);
+      operations[i] = new Pair<>(new Put(Bytes.toBytes(i)), null);
     }
     MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatch = 
-      new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(operations, retCodeDetails, 
+      new MiniBatchOperationInProgress<>(operations, retCodeDetails,
       walEditsFromCoprocessors, 0, 5);
 
     assertEquals(5, miniBatch.size());
@@ -68,7 +68,7 @@ public class TestMiniBatchOperationInProgress {
     } catch (ArrayIndexOutOfBoundsException e) {
     }
 
-    miniBatch = new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(operations,
+    miniBatch = new MiniBatchOperationInProgress<>(operations,
         retCodeDetails, walEditsFromCoprocessors, 7, 10);
     try {
       miniBatch.setWalEdit(-1, new WALEdit());

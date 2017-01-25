@@ -130,13 +130,13 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
   /**
    * A locker used to synchronize class loader initialization per coprocessor jar file
    */
-  private static final KeyLocker<String> locker = new KeyLocker<String>();
+  private static final KeyLocker<String> locker = new KeyLocker<>();
 
   /**
    * A set used to synchronized parent path clean up.  Generally, there
    * should be only one parent path, but using a set so that we can support more.
    */
-  static final HashSet<String> parentDirLockSet = new HashSet<String>();
+  static final HashSet<String> parentDirLockSet = new HashSet<>();
 
   /**
    * Creates a JarClassLoader that loads classes from the given paths.

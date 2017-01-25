@@ -323,7 +323,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * completion of multiGets.
    */
    static class RegionScannersCloseCallBack implements RpcCallback {
-    private final List<RegionScanner> scanners = new ArrayList<RegionScanner>();
+    private final List<RegionScanner> scanners = new ArrayList<>();
 
     public void addScanner(RegionScanner scanner) {
       this.scanners.add(scanner);
@@ -818,7 +818,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             case DELETE:
               // Collect the individual mutations and apply in a batch
               if (mutations == null) {
-                mutations = new ArrayList<ClientProtos.Action>(actions.getActionCount());
+                mutations = new ArrayList<>(actions.getActionCount());
               }
               mutations.add(action);
               break;
@@ -834,7 +834,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             pbResult = ProtobufUtil.toResultNoData(r);
             //  Hard to guess the size here.  Just make a rough guess.
             if (cellsToReturn == null) {
-              cellsToReturn = new ArrayList<CellScannable>();
+              cellsToReturn = new ArrayList<>();
             }
             cellsToReturn.add(r);
           } else {
@@ -1301,7 +1301,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @return list of blocking services and their security info classes that this server supports
    */
   protected List<BlockingServiceAndInterface> getServices() {
-    List<BlockingServiceAndInterface> bssi = new ArrayList<BlockingServiceAndInterface>(2);
+    List<BlockingServiceAndInterface> bssi = new ArrayList<>(2);
     bssi.add(new BlockingServiceAndInterface(
       ClientService.newReflectiveBlockingService(this),
       ClientService.BlockingInterface.class));
@@ -1543,7 +1543,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       Map<String, Region> onlineRegions = regionServer.onlineRegions;
-      List<HRegionInfo> list = new ArrayList<HRegionInfo>(onlineRegions.size());
+      List<HRegionInfo> list = new ArrayList<>(onlineRegions.size());
       for (Region region: onlineRegions.values()) {
         list.add(region.getRegionInfo());
       }
@@ -1587,7 +1587,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } else {
       regions = regionServer.getOnlineRegions();
     }
-    List<RegionLoad> rLoads = new ArrayList<RegionLoad>(regions.size());
+    List<RegionLoad> rLoads = new ArrayList<>(regions.size());
     RegionLoad.Builder regionLoadBuilder = ClusterStatusProtos.RegionLoad.newBuilder();
     RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
 
@@ -1636,7 +1636,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (request.getFamilyCount() == 0) {
         columnFamilies = region.getTableDesc().getFamiliesKeys();
       } else {
-        columnFamilies = new TreeSet<byte[]>(Bytes.BYTES_RAWCOMPARATOR);
+        columnFamilies = new TreeSet<>(Bytes.BYTES_RAWCOMPARATOR);
         for (ByteString cf: request.getFamilyList()) {
           columnFamilies.add(cf.toByteArray());
         }
@@ -1692,8 +1692,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
     OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
     final int regionCount = request.getOpenInfoCount();
-    final Map<TableName, HTableDescriptor> htds =
-        new HashMap<TableName, HTableDescriptor>(regionCount);
+    final Map<TableName, HTableDescriptor> htds = new HashMap<>(regionCount);
     final boolean isBulkAssign = regionCount > 1;
     try {
       checkOpen();
@@ -1783,7 +1782,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             } else {
               // Remove stale recovery region from ZK when we open region not for recovering which
               // could happen when turn distributedLogReplay off from on.
-              List<String> tmpRegions = new ArrayList<String>();
+              List<String> tmpRegions = new ArrayList<>();
               tmpRegions.add(region.getEncodedName());
               ZKSplitLog.deleteRecoveringRegionZNodes(regionServer.getZooKeeper(),
                 tmpRegions);
@@ -1914,7 +1913,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
             ? region.getCoprocessorHost()
             : null; // do not invoke coprocessors if this is a secondary region replica
-      List<Pair<WALKey, WALEdit>> walEntries = new ArrayList<Pair<WALKey, WALEdit>>();
+      List<Pair<WALKey, WALEdit>> walEntries = new ArrayList<>();
 
       // Skip adding the edits to WAL if this is a secondary region replica
       boolean isPrimary = RegionReplicaUtil.isDefaultReplica(region.getRegionInfo());
@@ -1935,8 +1934,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               nonce,
               entry.getKey().getWriteTime());
         }
-        Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
-          new Pair<WALKey, WALEdit>();
+        Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null : new Pair<>();
         List<WALSplitter.MutationReplay> edits = WALSplitter.getMutationsFromWALEntry(entry,
           cells, walEntry, durability);
         if (coprocessorHost != null) {
@@ -2132,11 +2130,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
       if (!request.hasBulkToken()) {
         // Old style bulk load. This will not be supported in future releases
-        List<Pair<byte[], String>> familyPaths =
-            new ArrayList<Pair<byte[], String>>(request.getFamilyPathCount());
+        List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
         for (FamilyPath familyPath : request.getFamilyPathList()) {
-          familyPaths.add(new Pair<byte[], String>(familyPath.getFamily().toByteArray(), familyPath
-              .getPath()));
+          familyPaths.add(new Pair<>(familyPath.getFamily().toByteArray(), familyPath.getPath()));
         }
         if (region.getCoprocessorHost() != null) {
           bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
@@ -2317,7 +2313,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private Result get(Get get, HRegion region, RegionScannersCloseCallBack closeCallBack,
       RpcCallContext context) throws IOException {
     region.prepareGet(get);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     boolean stale = region.getRegionInfo().getReplicaId() != 0;
     // pre-get CP hook
     if (region.getCoprocessorHost() != null) {
@@ -2789,7 +2785,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // This is cells inside a row. Default size is 10 so if many versions or many cfs,
     // then we'll resize. Resizings show in profiler. Set it higher than 10. For now
     // arbitrary 32. TODO: keep record of general size of results being returned.
-    List<Cell> values = new ArrayList<Cell>(32);
+    List<Cell> values = new ArrayList<>(32);
     region.startRegionOperation(Operation.SCAN);
     try {
       int i = 0;

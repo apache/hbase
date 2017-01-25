@@ -111,9 +111,9 @@ public class TestSeekOptimizations {
   private Put put;
   private Delete del;
   private Random rand;
-  private Set<Long> putTimestamps = new HashSet<Long>();
-  private Set<Long> delTimestamps = new HashSet<Long>();
-  private List<Cell> expectedKVs = new ArrayList<Cell>();
+  private Set<Long> putTimestamps = new HashSet<>();
+  private Set<Long> delTimestamps = new HashSet<>();
+  private List<Cell> expectedKVs = new ArrayList<>();
 
   private Compression.Algorithm comprAlgo;
   private BloomType bloomType;
@@ -199,7 +199,7 @@ public class TestSeekOptimizations {
       throws IOException {
     StoreScanner.enableLazySeekGlobally(lazySeekEnabled);
     final Scan scan = new Scan();
-    final Set<String> qualSet = new HashSet<String>();
+    final Set<String> qualSet = new HashSet<>();
     for (int iColumn : columnArr) {
       String qualStr = getQualStr(iColumn);
       scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qualStr));
@@ -217,8 +217,8 @@ public class TestSeekOptimizations {
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();
     final InternalScanner scanner = region.getScanner(scan);
-    final List<Cell> results = new ArrayList<Cell>();
-    final List<Cell> actualKVs = new ArrayList<Cell>();
+    final List<Cell> results = new ArrayList<>();
+    final List<Cell> actualKVs = new ArrayList<>();
 
     // Such a clumsy do-while loop appears to be the official way to use an
     // internalScanner. scanner.next() return value refers to the _next_
@@ -260,8 +260,8 @@ public class TestSeekOptimizations {
 
   private List<Cell> filterExpectedResults(Set<String> qualSet,
       byte[] startRow, byte[] endRow, int maxVersions) {
-    final List<Cell> filteredKVs = new ArrayList<Cell>();
-    final Map<String, Integer> verCount = new HashMap<String, Integer>();
+    final List<Cell> filteredKVs = new ArrayList<>();
+    final Map<String, Integer> verCount = new HashMap<>();
     for (Cell kv : expectedKVs) {
       if (startRow.length > 0 &&
           Bytes.compareTo(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
@@ -297,7 +297,7 @@ public class TestSeekOptimizations {
   }
 
   private void prepareExpectedKVs(long latestDelTS) {
-    final List<Cell> filteredKVs = new ArrayList<Cell>();
+    final List<Cell> filteredKVs = new ArrayList<>();
     for (Cell kv : expectedKVs) {
       if (kv.getTimestamp() > latestDelTS || latestDelTS == -1) {
         filteredKVs.add(kv);

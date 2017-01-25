@@ -323,7 +323,7 @@ public class TestLoadIncrementalHFiles {
       list = new ArrayList<>();
     }
     if (useMap) {
-      map = new TreeMap<byte[], List<Path>>(Bytes.BYTES_COMPARATOR);
+      map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       map.put(FAMILY, list);
     }
     Path last = null;
@@ -630,7 +630,7 @@ public class TestLoadIncrementalHFiles {
 
   @Test(timeout = 120000)
   public void testInferBoundaries() {
-    TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte[], Integer> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
     /* Toy example
      *     c---------i            o------p          s---------t     v------x

@@ -266,8 +266,8 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
       format("--nomapred --table=%s --latency --sampleRate=0.1 randomRead 4", tableName);
     String replicaReadOpts = format("%s %s", replicas, readOpts);
 
-    ArrayList<TimingResult> resultsWithoutReplicas = new ArrayList<TimingResult>(maxIters);
-    ArrayList<TimingResult> resultsWithReplicas = new ArrayList<TimingResult>(maxIters);
+    ArrayList<TimingResult> resultsWithoutReplicas = new ArrayList<>(maxIters);
+    ArrayList<TimingResult> resultsWithReplicas = new ArrayList<>(maxIters);
 
     // create/populate the table, replicas disabled
     LOG.debug("Populating table.");

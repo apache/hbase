@@ -58,7 +58,7 @@ public class FSHDFSUtils extends FSUtils {
    */
   private static Set<InetSocketAddress> getNNAddresses(DistributedFileSystem fs,
                                                       Configuration conf) {
-    Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>();
+    Set<InetSocketAddress> addresses = new HashSet<>();
     String serviceName = fs.getCanonicalServiceName();
 
     if (serviceName.startsWith("ha-hdfs")) {

@@ -47,7 +47,7 @@ import org.apache.hadoop.util.StringUtils;
 public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   private static final Log LOG = LogFactory.getLog(QuotaRetriever.class);
 
-  private final Queue<QuotaSettings> cache = new LinkedList<QuotaSettings>();
+  private final Queue<QuotaSettings> cache = new LinkedList<>();
   private ResultScanner scanner;
   /**
    * Connection to use.

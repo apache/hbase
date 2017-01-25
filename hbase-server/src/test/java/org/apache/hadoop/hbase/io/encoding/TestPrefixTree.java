@@ -114,7 +114,7 @@ public class TestPrefixTree {
     scan.setStopRow(Bytes.toBytes("a-b-A-1:"));
 
     RegionScanner scanner = region.getScanner(scan);
-    List<Cell> cells = new ArrayList<Cell>();
+    List<Cell> cells = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       assertEquals(i < 2, scanner.next(cells));
       CellScanner cellScanner = Result.create(cells).cellScanner();
@@ -184,7 +184,7 @@ public class TestPrefixTree {
     region.flush(true);
     Scan scan = new Scan(Bytes.toBytes("obj29995"));
     RegionScanner scanner = region.getScanner(scan);
-    List<Cell> cells = new ArrayList<Cell>();
+    List<Cell> cells = new ArrayList<>();
     assertFalse(scanner.next(cells));
     assertArrayEquals(Bytes.toBytes("obj3"), Result.create(cells).getRow());
   }

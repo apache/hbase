@@ -40,7 +40,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
   // A temp pair object which will be reused by ByteBuff#asSubByteBuffer calls. This avoids too
   // many object creations.
-  protected final ObjectIntPair<ByteBuffer> tmpPair = new ObjectIntPair<ByteBuffer>();
+  protected final ObjectIntPair<ByteBuffer> tmpPair = new ObjectIntPair<>();
 
   private ByteBuff currentBuffer;
   private SeekerState current = new SeekerState(); // always valid

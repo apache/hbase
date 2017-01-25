@@ -413,7 +413,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   @Test(timeout=300000)
   public void testLoading() throws Exception {
     LOG.info("Writing out rows to table1 in testLoading");
-    List<Put> puts = new ArrayList<Put>(NB_ROWS_IN_BIG_BATCH);
+    List<Put> puts = new ArrayList<>(NB_ROWS_IN_BIG_BATCH);
     for (int i = 0; i < NB_ROWS_IN_BIG_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.addColumn(famName, row, row);
@@ -519,8 +519,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       fam.setMaxVersions(100);
       fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
       table.addFamily(fam);
-      scopes = new TreeMap<byte[], Integer>(
-          Bytes.BYTES_COMPARATOR);
+      scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (HColumnDescriptor f : table.getColumnFamilies()) {
         scopes.put(f.getName(), f.getScope());
       }
@@ -818,7 +817,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     HRegion region = utility1.getMiniHBaseCluster().getRegions(tableName).get(0);
     HRegionInfo hri = region.getRegionInfo();
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htable1.getTableDescriptor().getFamiliesKeys()) {
       scopes.put(fam, 1);
     }

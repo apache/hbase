@@ -72,8 +72,8 @@ public class TestReseekTo {
 
     String valueString = "Value";
 
-    List<Integer> keyList = new ArrayList<Integer>();
-    List<String> valueList = new ArrayList<String>();
+    List<Integer> keyList = new ArrayList<>();
+    List<String> valueList = new ArrayList<>();
 
     for (int key = 0; key < numberOfKeys; key++) {
       String value = valueString + key;

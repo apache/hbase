@@ -83,8 +83,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public final ZNodePaths znodePaths;
 
   // listeners to be notified
-  private final List<ZooKeeperListener> listeners =
-    new CopyOnWriteArrayList<ZooKeeperListener>();
+  private final List<ZooKeeperListener> listeners = new CopyOnWriteArrayList<>();
 
   // Used by ZKUtil:waitForZKConnectionIfAuthenticating to wait for SASL
   // negotiation to complete
@@ -374,7 +373,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    */
   public List<String> getMetaReplicaNodes() throws KeeperException {
     List<String> childrenOfBaseNode = ZKUtil.listChildrenNoWatch(this, znodePaths.baseZNode);
-    List<String> metaReplicaNodes = new ArrayList<String>(2);
+    List<String> metaReplicaNodes = new ArrayList<>(2);
     if (childrenOfBaseNode != null) {
       String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
       for (String child : childrenOfBaseNode) {
@@ -416,7 +415,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    * Get a copy of current registered listeners
    */
   public List<ZooKeeperListener> getListeners() {
-    return new ArrayList<ZooKeeperListener>(listeners);
+    return new ArrayList<>(listeners);
   }
 
   /**

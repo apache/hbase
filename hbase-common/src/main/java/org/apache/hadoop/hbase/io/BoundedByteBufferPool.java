@@ -51,7 +51,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class BoundedByteBufferPool {
   private static final Log LOG = LogFactory.getLog(BoundedByteBufferPool.class);
 
-  private final Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<ByteBuffer>();
+  private final Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 
   @VisibleForTesting
   int getQueueSize() {

@@ -96,7 +96,7 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
    * @return The result (may be "this" or "other").
    */
   public CompactionRequest combineWith(CompactionRequest other) {
-    this.filesToCompact = new ArrayList<StoreFile>(other.getFiles());
+    this.filesToCompact = new ArrayList<>(other.getFiles());
     this.isOffPeak = other.isOffPeak;
     this.isMajor = other.isMajor;
     this.priority = other.priority;

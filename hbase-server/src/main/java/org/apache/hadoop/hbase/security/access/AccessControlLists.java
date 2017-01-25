@@ -286,7 +286,7 @@ public class AccessControlLists {
             ACL_KEY_DELIMITER, columnName, ACL_KEY_DELIMITER,
             ACL_KEY_DELIMITER, columnName))));
 
-    Set<byte[]> qualifierSet = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    Set<byte[]> qualifierSet = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     ResultScanner scanner = null;
     try {
       scanner = table.getScanner(scan);
@@ -384,8 +384,7 @@ public class AccessControlLists {
       throw new IOException("Can only load permissions from "+ACL_TABLE_NAME);
     }
 
-    Map<byte[], ListMultimap<String, TablePermission>> allPerms =
-        new TreeMap<byte[], ListMultimap<String, TablePermission>>(Bytes.BYTES_RAWCOMPARATOR);
+    Map<byte[], ListMultimap<String, TablePermission>> allPerms = new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
     // do a full scan of _acl_ table
 
@@ -397,7 +396,7 @@ public class AccessControlLists {
       iScanner = aclRegion.getScanner(scan);
 
       while (true) {
-        List<Cell> row = new ArrayList<Cell>();
+        List<Cell> row = new ArrayList<>();
 
         boolean hasNext = iScanner.next(row);
         ListMultimap<String,TablePermission> perms = ArrayListMultimap.create();
@@ -436,8 +435,7 @@ public class AccessControlLists {
    */
   static Map<byte[], ListMultimap<String,TablePermission>> loadAll(
       Configuration conf) throws IOException {
-    Map<byte[], ListMultimap<String,TablePermission>> allPerms =
-        new TreeMap<byte[], ListMultimap<String,TablePermission>>(Bytes.BYTES_RAWCOMPARATOR);
+    Map<byte[], ListMultimap<String,TablePermission>> allPerms = new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
     // do a full scan of _acl_, filtering on only first table region rows
 
@@ -530,7 +528,7 @@ public class AccessControlLists {
     ListMultimap<String,TablePermission> allPerms = getPermissions(
         conf, entryName, null);
 
-    List<UserPermission> perms = new ArrayList<UserPermission>();
+    List<UserPermission> perms = new ArrayList<>();
 
     if(isNamespaceEntry(entryName)) {  // Namespace
       for (Map.Entry<String, TablePermission> entry : allPerms.entries()) {
@@ -591,8 +589,7 @@ public class AccessControlLists {
 
     //Handle namespace entry
     if(isNamespaceEntry(entryName)) {
-      return new Pair<String, TablePermission>(username,
-          new TablePermission(Bytes.toString(fromNamespaceEntry(entryName)), value));
+      return new Pair<>(username, new TablePermission(Bytes.toString(fromNamespaceEntry(entryName)), value));
     }
 
     //Handle table and global entry
@@ -612,8 +609,7 @@ public class AccessControlLists {
       }
     }
 
-    return new Pair<String,TablePermission>(username,
-        new TablePermission(TableName.valueOf(entryName), permFamily, permQualifier, value));
+    return new Pair<>(username, new TablePermission(TableName.valueOf(entryName), permFamily, permQualifier, value));
   }
 
   /**

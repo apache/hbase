@@ -108,7 +108,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
       throw new DeserializationException(e);
     }
 
-    TreeSet<byte []> qualifiers = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte []> qualifiers = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     for (ByteString qualifier : proto.getQualifiersList()) {
       qualifiers.add(qualifier.toByteArray());
     }

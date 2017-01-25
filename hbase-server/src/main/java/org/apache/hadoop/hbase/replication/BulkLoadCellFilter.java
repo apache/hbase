@@ -52,7 +52,7 @@ public class BulkLoadCellFilter {
     }
     List<StoreDescriptor> storesList = bld.getStoresList();
     // Copy the StoreDescriptor list and update it as storesList is a unmodifiableList
-    List<StoreDescriptor> copiedStoresList = new ArrayList<StoreDescriptor>(storesList);
+    List<StoreDescriptor> copiedStoresList = new ArrayList<>(storesList);
     Iterator<StoreDescriptor> copiedStoresListIterator = copiedStoresList.iterator();
     boolean anyStoreRemoved = false;
     while (copiedStoresListIterator.hasNext()) {

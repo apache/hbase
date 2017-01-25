@@ -57,7 +57,7 @@ public class ColumnSchemaModel implements Serializable {
   private static QName VERSIONS = new QName(HConstants.VERSIONS);
 
   private String name;
-  private Map<QName,Object> attrs = new LinkedHashMap<QName,Object>();
+  private Map<QName,Object> attrs = new LinkedHashMap<>();
 
   /**
    * Default constructor

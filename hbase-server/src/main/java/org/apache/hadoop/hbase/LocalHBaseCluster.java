@@ -61,10 +61,8 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 @InterfaceStability.Evolving
 public class LocalHBaseCluster {
   private static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);
-  private final List<JVMClusterUtil.MasterThread> masterThreads =
-    new CopyOnWriteArrayList<JVMClusterUtil.MasterThread>();
-  private final List<JVMClusterUtil.RegionServerThread> regionThreads =
-    new CopyOnWriteArrayList<JVMClusterUtil.RegionServerThread>();
+  private final List<JVMClusterUtil.MasterThread> masterThreads = new CopyOnWriteArrayList<>();
+  private final List<JVMClusterUtil.RegionServerThread> regionThreads = new CopyOnWriteArrayList<>();
   private final static int DEFAULT_NO = 1;
   /** local mode */
   public static final String LOCAL = "local";
@@ -257,8 +255,7 @@ public class LocalHBaseCluster {
    * list).
    */
   public List<JVMClusterUtil.RegionServerThread> getLiveRegionServers() {
-    List<JVMClusterUtil.RegionServerThread> liveServers =
-      new ArrayList<JVMClusterUtil.RegionServerThread>();
+    List<JVMClusterUtil.RegionServerThread> liveServers = new ArrayList<>();
     List<RegionServerThread> list = getRegionServers();
     for (JVMClusterUtil.RegionServerThread rst: list) {
       if (rst.isAlive()) liveServers.add(rst);

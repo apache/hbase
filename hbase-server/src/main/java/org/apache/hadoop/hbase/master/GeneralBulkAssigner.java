@@ -43,8 +43,7 @@ import org.apache.hadoop.hbase.ServerName;
 public class GeneralBulkAssigner extends BulkAssigner {
   private static final Log LOG = LogFactory.getLog(GeneralBulkAssigner.class);
 
-  private Map<ServerName, List<HRegionInfo>> failedPlans
-    = new ConcurrentHashMap<ServerName, List<HRegionInfo>>();
+  private Map<ServerName, List<HRegionInfo>> failedPlans = new ConcurrentHashMap<>();
   private ExecutorService pool;
 
   final Map<ServerName, List<HRegionInfo>> bulkPlan;
@@ -82,7 +81,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
   @Override
   protected boolean waitUntilDone(final long timeout)
   throws InterruptedException {
-    Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
+    Set<HRegionInfo> regionSet = new HashSet<>();
     for (List<HRegionInfo> regionList : bulkPlan.values()) {
       regionSet.addAll(regionList);
     }
@@ -164,7 +163,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
   }
 
   private int reassignFailedPlans() {
-    List<HRegionInfo> reassigningRegions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> reassigningRegions = new ArrayList<>();
     for (Map.Entry<ServerName, List<HRegionInfo>> e : failedPlans.entrySet()) {
       LOG.info("Failed assigning " + e.getValue().size()
           + " regions to server " + e.getKey() + ", reassigning them");

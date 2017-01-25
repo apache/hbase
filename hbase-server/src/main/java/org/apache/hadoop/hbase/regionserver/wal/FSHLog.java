@@ -226,7 +226,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     String hostingThreadName = Thread.currentThread().getName();
     // Using BlockingWaitStrategy. Stuff that is going on here takes so long it makes no sense
     // spinning as other strategies do.
-    this.disruptor = new Disruptor<RingBufferTruck>(RingBufferTruck::new,
+    this.disruptor = new Disruptor<>(RingBufferTruck::new,
         getPreallocatedEventCount(), Threads.getNamedThreadFactory(hostingThreadName + ".append"),
         ProducerType.MULTI, new BlockingWaitStrategy());
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
@@ -489,7 +489,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       // the meta table when succesful (i.e. sync), closing handlers -- etc. These are usually
       // much fewer in number than the user-space handlers so Q-size should be user handlers plus
       // some space for these other handlers. Lets multiply by 3 for good-measure.
-      this.syncFutures = new LinkedBlockingQueue<SyncFuture>(maxHandlersCount * 3);
+      this.syncFutures = new LinkedBlockingQueue<>(maxHandlersCount * 3);
     }
 
     void offer(final long sequence, final SyncFuture[] syncFutures, final int syncFutureCount) {

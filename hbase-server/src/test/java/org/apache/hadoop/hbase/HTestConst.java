@@ -41,7 +41,7 @@ public class HTestConst {
   public static final byte[] DEFAULT_CF_BYTES = Bytes.toBytes(DEFAULT_CF_STR);
 
   public static final Set<String> DEFAULT_CF_STR_SET =
-      Collections.unmodifiableSet(new HashSet<String>(
+      Collections.unmodifiableSet(new HashSet<>(
           Arrays.asList(new String[] { DEFAULT_CF_STR })));
 
   public static final String DEFAULT_ROW_STR = "MyTestRow";

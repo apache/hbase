@@ -34,7 +34,7 @@ public class Authorizations {
 
   private List<String> labels;
   public Authorizations(String... labels) {
-    this.labels = new ArrayList<String>(labels.length);
+    this.labels = new ArrayList<>(labels.length);
     Collections.addAll(this.labels, labels);
   }
 

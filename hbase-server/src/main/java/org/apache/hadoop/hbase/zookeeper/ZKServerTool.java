@@ -36,7 +36,7 @@ import java.util.List;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ZKServerTool {
   public static ServerName[] readZKNodes(Configuration conf) {
-    List<ServerName> hosts = new LinkedList<ServerName>();
+    List<ServerName> hosts = new LinkedList<>();
     String quorum = conf.get(HConstants.ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
 
     String[] values = quorum.split(",");

@@ -512,7 +512,7 @@ public class TestStoreFile extends HBaseTestCase {
     int falseNeg = 0;
     for (int i = 0; i < 2000; i++) {
       String row = String.format(localFormatter, i);
-      TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+      TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
       columns.add("family:col".getBytes());
 
       Scan scan = new Scan(row.getBytes(),row.getBytes());
@@ -712,7 +712,7 @@ public class TestStoreFile extends HBaseTestCase {
         for (int j = 0; j < colCount*2; ++j) {   // column qualifiers
           String row = String.format(localFormatter, i);
           String col = String.format(localFormatter, j);
-          TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+          TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
           columns.add(("col" + col).getBytes());
 
           Scan scan = new Scan(row.getBytes(),row.getBytes());
@@ -799,7 +799,7 @@ public class TestStoreFile extends HBaseTestCase {
    */
   List<KeyValue> getKeyValueSet(long[] timestamps, int numRows,
       byte[] qualifier, byte[] family) {
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<KeyValue> kvList = new ArrayList<>();
     for (int i=1;i<=numRows;i++) {
       byte[] b = Bytes.toBytes(i) ;
       LOG.info(Bytes.toString(b));
@@ -851,7 +851,7 @@ public class TestStoreFile extends HBaseTestCase {
     when(store.getFamily()).thenReturn(hcd);
     StoreFileReader reader = hsf.createReader();
     StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
-    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     columns.add(qualifier);
 
     scan.setTimeRange(20, 100);
@@ -1019,7 +1019,7 @@ public class TestStoreFile extends HBaseTestCase {
   throws IOException {
     // Let's put ~5 small KVs in each block, so let's make 5*numBlocks KVs
     int numKVs = 5 * numBlocks;
-    List<KeyValue> kvs = new ArrayList<KeyValue>(numKVs);
+    List<KeyValue> kvs = new ArrayList<>(numKVs);
     byte [] b = Bytes.toBytes("x");
     int totalSize = 0;
     for (int i=numKVs;i>0;i--) {

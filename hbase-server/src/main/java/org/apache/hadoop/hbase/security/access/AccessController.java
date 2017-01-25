@@ -259,8 +259,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
    */
   void updateACL(RegionCoprocessorEnvironment e,
       final Map<byte[], List<Cell>> familyMap) {
-    Set<byte[]> entries =
-        new TreeSet<byte[]>(Bytes.BYTES_RAWCOMPARATOR);
+    Set<byte[]> entries = new TreeSet<>(Bytes.BYTES_RAWCOMPARATOR);
     for (Map.Entry<byte[], List<Cell>> f : familyMap.entrySet()) {
       List<Cell> cells = f.getValue();
       for (Cell cell: cells) {
@@ -793,7 +792,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
     // This Map is identical to familyMap. The key is a BR rather than byte[].
     // It will be easy to do gets over this new Map as we can create get keys over the Cell cf by
     // new SimpleByteRange(cell.familyArray, cell.familyOffset, cell.familyLen)
-    Map<ByteRange, List<Cell>> familyMap1 = new HashMap<ByteRange, List<Cell>>();
+    Map<ByteRange, List<Cell>> familyMap1 = new HashMap<>();
     for (Entry<byte[], ? extends Collection<?>> entry : familyMap.entrySet()) {
       if (entry.getValue() instanceof List) {
         familyMap1.put(new SimpleMutableByteRange(entry.getKey()), (List<Cell>) entry.getValue());
@@ -882,7 +881,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
       List<Cell> newCells = Lists.newArrayList();
       for (Cell cell: e.getValue()) {
         // Prepend the supplied perms in a new ACL tag to an update list of tags for the cell
-        List<Tag> tags = new ArrayList<Tag>();
+        List<Tag> tags = new ArrayList<>();
         tags.add(new ArrayBackedTag(AccessControlLists.ACL_TAG_TYPE, perms));
         Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell);
         while (tagIterator.hasNext()) {
@@ -990,7 +989,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
     Set<byte[]> families = desc.getFamiliesKeys();
-    Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Set<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] family: families) {
       familyMap.put(family, null);
     }
@@ -2407,8 +2406,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
                   tperm.getTableName()));
             }
 
-            Map<byte[], Set<byte[]>> familyMap =
-                new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
+            Map<byte[], Set<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
             if (tperm.getFamily() != null) {
               if (tperm.getQualifier() != null) {
                 Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
@@ -2515,7 +2513,7 @@ public class AccessController implements MasterObserver, RegionObserver, RegionS
       return null;
     }
 
-    Map<byte[], Collection<byte[]>> familyMap = new TreeMap<byte[], Collection<byte[]>>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Collection<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     familyMap.put(family, qualifier != null ? ImmutableSet.of(qualifier) : null);
     return familyMap;
   }

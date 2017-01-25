@@ -84,7 +84,7 @@ implements Coprocessor, CoprocessorService {
     InternalScanner scanner = null;
     try {
       scanner = this.env.getRegion().getScanner(scan);
-      List<Cell> curVals = new ArrayList<Cell>();
+      List<Cell> curVals = new ArrayList<>();
       boolean hasMore = false;
       do {
         curVals.clear();

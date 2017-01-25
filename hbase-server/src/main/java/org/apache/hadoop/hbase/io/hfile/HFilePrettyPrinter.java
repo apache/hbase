@@ -122,7 +122,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
    */
   private byte[] row = null;
 
-  private List<Path> files = new ArrayList<Path>();
+  private List<Path> files = new ArrayList<>();
   private int count;
 
   private static final String FOUR_SPACES = "    ";
@@ -232,7 +232,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       if (verbose) {
         System.out.println("checkMobIntegrity is enabled");
       }
-      mobFileLocations = new HashMap<String, List<Path>>();
+      mobFileLocations = new HashMap<>();
     }
 
     cmd.getArgList().forEach((file) -> files.add(new Path(file)));
@@ -372,8 +372,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       HFileScanner scanner,  byte[] row) throws IOException {
     Cell pCell = null;
     FileSystem fs = FileSystem.get(getConf());
-    Set<String> foundMobFiles = new LinkedHashSet<String>(FOUND_MOB_FILES_CACHE_CAPACITY);
-    Set<String> missingMobFiles = new LinkedHashSet<String>(MISSING_MOB_FILES_CACHE_CAPACITY);
+    Set<String> foundMobFiles = new LinkedHashSet<>(FOUND_MOB_FILES_CACHE_CAPACITY);
+    Set<String> missingMobFiles = new LinkedHashSet<>(MISSING_MOB_FILES_CACHE_CAPACITY);
     do {
       Cell cell = scanner.getCell();
       if (row != null && row.length != 0) {
@@ -469,7 +469,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     String tableName = tn.getNameAsString();
     List<Path> locations = mobFileLocations.get(tableName);
     if (locations == null) {
-      locations = new ArrayList<Path>(2);
+      locations = new ArrayList<>(2);
       locations.add(MobUtils.getMobFamilyPath(getConf(), tn, family));
       locations.add(HFileArchiveUtil.getStoreArchivePath(getConf(), tn,
         MobUtils.getMobRegionInfo(tn).getEncodedName(), family));

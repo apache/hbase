@@ -204,10 +204,9 @@ public class Increment extends Mutation implements Comparable<Row> {
    */
   public Map<byte[], NavigableMap<byte [], Long>> getFamilyMapOfLongs() {
     NavigableMap<byte[], List<Cell>> map = super.getFamilyCellMap();
-    Map<byte [], NavigableMap<byte[], Long>> results =
-      new TreeMap<byte[], NavigableMap<byte [], Long>>(Bytes.BYTES_COMPARATOR);
+    Map<byte [], NavigableMap<byte[], Long>> results = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte [], List<Cell>> entry: map.entrySet()) {
-      NavigableMap<byte [], Long> longs = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
+      NavigableMap<byte [], Long> longs = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
         longs.put(CellUtil.cloneQualifier(cell),
             Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));

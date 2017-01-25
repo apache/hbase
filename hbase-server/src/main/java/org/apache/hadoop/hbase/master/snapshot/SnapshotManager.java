@@ -147,8 +147,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   // The map is always accessed and modified under the object lock using synchronized.
   // snapshotTable() will insert an Handler in the table.
   // isSnapshotDone() will remove the handler requested if the operation is finished.
-  private Map<TableName, SnapshotSentinel> snapshotHandlers =
-      new HashMap<TableName, SnapshotSentinel>();
+  private Map<TableName, SnapshotSentinel> snapshotHandlers = new HashMap<>();
 
   // Restore map, with table name as key, procedure ID as value.
   // The map is always accessed and modified under the object lock using synchronized.
@@ -157,7 +156,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   // TODO: just as the Apache HBase 1.x implementation, this map would not survive master
   // restart/failover. This is just a stopgap implementation until implementation of taking
   // snapshot using Procedure-V2.
-  private Map<TableName, Long> restoreTableToProcIdMap = new HashMap<TableName, Long>();
+  private Map<TableName, Long> restoreTableToProcIdMap = new HashMap<>();
 
   private Path rootDir;
   private ExecutorService executorService;
@@ -168,7 +167,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    *    - create snapshot
    *    - SnapshotCleaner
    * */
-  private KeyLocker<String> locks = new KeyLocker<String>();
+  private KeyLocker<String> locks = new KeyLocker<>();
 
 
 
@@ -209,7 +208,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @throws IOException File system exception
    */
   private List<SnapshotDescription> getCompletedSnapshots(Path snapshotDir) throws IOException {
-    List<SnapshotDescription> snapshotDescs = new ArrayList<SnapshotDescription>();
+    List<SnapshotDescription> snapshotDescs = new ArrayList<>();
     // first create the snapshot root path and check to see if it exists
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     if (snapshotDir == null) snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
@@ -1032,11 +1031,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     boolean userDisabled = (enabled != null && enabled.trim().length() > 0 && !snapshotEnabled);
 
     // Extract cleaners from conf
-    Set<String> hfileCleaners = new HashSet<String>();
+    Set<String> hfileCleaners = new HashSet<>();
     String[] cleaners = conf.getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
     if (cleaners != null) Collections.addAll(hfileCleaners, cleaners);
 
-    Set<String> logCleaners = new HashSet<String>();
+    Set<String> logCleaners = new HashSet<>();
     cleaners = conf.getStrings(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS);
     if (cleaners != null) Collections.addAll(logCleaners, cleaners);
 

@@ -255,7 +255,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       if (clusterMap.size() <= 2) {
         return null;
       }
-      clusterMap = new HashMap<ServerName, List<HRegionInfo>>(clusterMap);
+      clusterMap = new HashMap<>(clusterMap);
       clusterMap.remove(masterServerName);
     }
 
@@ -285,14 +285,13 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // TODO: Look at data block locality or a more complex load to do this
     MinMaxPriorityQueue<RegionPlan> regionsToMove =
       MinMaxPriorityQueue.orderedBy(rpComparator).create();
-    regionsToReturn = new ArrayList<RegionPlan>();
+    regionsToReturn = new ArrayList<>();
 
     // Walk down most loaded, pruning each to the max
     int serversOverloaded = 0;
     // flag used to fetch regions from head and tail of list, alternately
     boolean fetchFromTail = false;
-    Map<ServerName, BalanceInfo> serverBalanceInfo =
-      new TreeMap<ServerName, BalanceInfo>();
+    Map<ServerName, BalanceInfo> serverBalanceInfo = new TreeMap<>();
     for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
         serversByLoad.descendingMap().entrySet()) {
       ServerAndLoad sal = server.getKey();
@@ -330,7 +329,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     int neededRegions = 0; // number of regions needed to bring all up to min
     fetchFromTail = false;
 
-    Map<ServerName, Integer> underloadedServers = new HashMap<ServerName, Integer>();
+    Map<ServerName, Integer> underloadedServers = new HashMap<>();
     int maxToTake = numRegions - min;
     for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
         serversByLoad.entrySet()) {
@@ -524,8 +523,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // A structure help to map ServerName to  it's load and index in ServerLoadList
     Map<ServerName, Pair<ServerAndLoad,Integer>> SnLoadMap = new HashMap<>();
     for (int i = 0; i < serverLoadList.size(); i++) {
-      SnLoadMap.put(serverLoadList.get(i).getServerName(),
-              new Pair<ServerAndLoad, Integer>(serverLoadList.get(i), i));
+      SnLoadMap.put(serverLoadList.get(i).getServerName(), new Pair<>(serverLoadList.get(i), i));
     }
     Pair<ServerAndLoad,Integer> shredLoad;
     // A List to help mark the plan in regionsToMove that should be removed

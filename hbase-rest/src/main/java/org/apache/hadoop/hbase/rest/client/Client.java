@@ -77,7 +77,7 @@ public class Client {
   private void initialize(Cluster cluster, boolean sslEnabled) {
     this.cluster = cluster;
     this.sslEnabled = sslEnabled;
-    extraHeaders = new ConcurrentHashMap<String, String>();
+    extraHeaders = new ConcurrentHashMap<>();
     String clspath = System.getProperty("java.class.path");
     LOG.debug("classpath " + clspath);
     this.httpClient = new DefaultHttpClient();

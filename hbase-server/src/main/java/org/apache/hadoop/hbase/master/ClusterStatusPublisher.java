@@ -97,8 +97,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
   private long lastMessageTime = 0;
   private final HMaster master;
   private final int messagePeriod; // time between two message
-  private final ConcurrentMap<ServerName, Integer> lastSent =
-      new ConcurrentHashMap<ServerName, Integer>();
+  private final ConcurrentMap<ServerName, Integer> lastSent = new ConcurrentHashMap<>();
   private Publisher publisher;
   private boolean connected = false;
 
@@ -194,7 +193,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
     }
 
     // We're sending the new deads first.
-    List<Map.Entry<ServerName, Integer>> entries = new ArrayList<Map.Entry<ServerName, Integer>>();
+    List<Map.Entry<ServerName, Integer>> entries = new ArrayList<>();
     entries.addAll(lastSent.entrySet());
     Collections.sort(entries, new Comparator<Map.Entry<ServerName, Integer>>() {
       @Override
@@ -205,7 +204,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
     // With a limit of MAX_SERVER_PER_MESSAGE
     int max = entries.size() > MAX_SERVER_PER_MESSAGE ? MAX_SERVER_PER_MESSAGE : entries.size();
-    List<ServerName> res = new ArrayList<ServerName>(max);
+    List<ServerName> res = new ArrayList<>(max);
 
     for (int i = 0; i < max; i++) {
       Map.Entry<ServerName, Integer> toSend = entries.get(i);

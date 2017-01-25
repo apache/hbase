@@ -90,7 +90,7 @@ public class TestMasterWalManager {
     inRecoveringRegionPath = ZKUtil.joinZNode(inRecoveringRegionPath,
       inRecoveryServerName.getServerName());
     ZKUtil.createWithParents(zkw, inRecoveringRegionPath);
-    Set<ServerName> servers = new HashSet<ServerName>();
+    Set<ServerName> servers = new HashSet<>();
     servers.add(previouselyFaildServerName);
     mwm.removeStaleRecoveringRegionsFromZK(servers);
 

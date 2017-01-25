@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class HFileArchiveTableMonitor {
   private static final Log LOG = LogFactory.getLog(HFileArchiveTableMonitor.class);
-  private final Set<String> archivedTables = new TreeSet<String>();
+  private final Set<String> archivedTables = new TreeSet<>();
 
   /**
    * Set the tables to be archived. Internally adds each table and attempts to

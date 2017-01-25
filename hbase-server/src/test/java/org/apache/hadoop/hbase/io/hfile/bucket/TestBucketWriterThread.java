@@ -169,7 +169,7 @@ public class TestBucketWriterThread {
   private static void doDrainOfOneEntry(final BucketCache bc, final BucketCache.WriterThread wt,
       final BlockingQueue<RAMQueueEntry> q)
   throws InterruptedException {
-    List<RAMQueueEntry> rqes = BucketCache.getRAMQueueEntries(q, new ArrayList<RAMQueueEntry>(1));
+    List<RAMQueueEntry> rqes = BucketCache.getRAMQueueEntries(q, new ArrayList<>(1));
     wt.doDrain(rqes);
     assertTrue(q.isEmpty());
     assertTrue(bc.ramCache.isEmpty());

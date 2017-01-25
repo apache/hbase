@@ -87,8 +87,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   // nextScannerId and scannerMap are used to manage scanner state
   // TODO: Cleanup thread for Scanners, Scanner id wrap
   private final AtomicInteger nextScannerId = new AtomicInteger(0);
-  private final Map<Integer, ResultScanner> scannerMap =
-      new ConcurrentHashMap<Integer, ResultScanner>();
+  private final Map<Integer, ResultScanner> scannerMap = new ConcurrentHashMap<>();
 
   private final ConnectionCache connectionCache;
 

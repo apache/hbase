@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 public final class TableName implements Comparable<TableName> {
 
   /** See {@link #createTableNameIfNecessary(ByteBuffer, ByteBuffer)} */
-  private static final Set<TableName> tableCache = new CopyOnWriteArraySet<TableName>();
+  private static final Set<TableName> tableCache = new CopyOnWriteArraySet<>();
 
   /** Namespace delimiter */
   //this should always be only 1 byte long

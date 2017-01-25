@@ -112,7 +112,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
     TEST_UTIL.startMiniCluster(1);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("testhbck"));
+        new SynchronousQueue<>(), Threads.newDaemonThreadFactory("testhbck"));
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
@@ -1402,7 +1402,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       setupTable(tableName);
 
       // Mess it up by removing the RegionInfo for one region.
-      final List<Delete> deletes = new LinkedList<Delete>();
+      final List<Delete> deletes = new LinkedList<>();
       Table meta = connection.getTable(TableName.META_TABLE_NAME, hbfsckExecutorService);
       MetaTableAccessor.fullScanRegions(connection, new MetaTableAccessor.Visitor() {
 
@@ -1630,7 +1630,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         am.regionOffline(state.getRegion());
       }
 
-      Map<HRegionInfo, ServerName> regionsMap = new HashMap<HRegionInfo, ServerName>();
+      Map<HRegionInfo, ServerName> regionsMap = new HashMap<>();
       regionsMap.put(regions.get(0).getRegionInfo(), regionServer.getServerName());
       am.assign(regionsMap);
       am.waitForAssignment(regions.get(0).getRegionInfo());

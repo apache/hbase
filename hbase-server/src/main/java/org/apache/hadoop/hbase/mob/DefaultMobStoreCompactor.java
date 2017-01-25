@@ -174,7 +174,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     long bytesWrittenProgressForShippedCall = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
-    List<Cell> cells = new ArrayList<Cell>();
+    List<Cell> cells = new ArrayList<>();
     // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
     int closeCheckSizeLimit = HStore.getCloseCheckInterval();
     long lastMillis = 0;

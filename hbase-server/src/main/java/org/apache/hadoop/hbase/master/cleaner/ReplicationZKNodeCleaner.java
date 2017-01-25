@@ -82,7 +82,7 @@ public class ReplicationZKNodeCleaner {
         for (String queueId : queueIds) {
           ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
           if (!peerIds.contains(queueInfo.getPeerId())) {
-            undeletedQueues.computeIfAbsent(replicator, (key) -> new ArrayList<String>()).add(
+            undeletedQueues.computeIfAbsent(replicator, (key) -> new ArrayList<>()).add(
               queueId);
             if (LOG.isDebugEnabled()) {
               LOG.debug("Undeleted replication queue for removed peer found: "

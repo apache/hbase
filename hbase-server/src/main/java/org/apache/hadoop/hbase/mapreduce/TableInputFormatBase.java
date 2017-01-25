@@ -137,8 +137,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   
   /** The reverse DNS lookup cache mapping: IPAddress => HostName */
-  private HashMap<InetAddress, String> reverseDNSCacheMap =
-    new HashMap<InetAddress, String>();
+  private HashMap<InetAddress, String> reverseDNSCacheMap = new HashMap<>();
 
   /**
    * Builds a {@link TableRecordReader}. If no {@link TableRecordReader} was provided, uses
@@ -262,7 +261,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         if (null == regLoc) {
           throw new IOException("Expecting at least one region.");
         }
-        List<InputSplit> splits = new ArrayList<InputSplit>(1);
+        List<InputSplit> splits = new ArrayList<>(1);
         long regionSize = sizeCalculator.getRegionSize(regLoc.getRegionInfo().getRegionName());
         TableSplit split = new TableSplit(tableName, scan,
             HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
@@ -270,7 +269,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         splits.add(split);
         return splits;
       }
-      List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length);
+      List<InputSplit> splits = new ArrayList<>(keys.getFirst().length);
       for (int i = 0; i < keys.getFirst().length; i++) {
         if (!includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
           continue;
@@ -373,7 +372,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   private List<InputSplit> calculateRebalancedSplits(List<InputSplit> list, JobContext context,
                                                long average) throws IOException {
-    List<InputSplit> resultList = new ArrayList<InputSplit>();
+    List<InputSplit> resultList = new ArrayList<>();
     Configuration conf = context.getConfiguration();
     //The default data skew ratio is 3
     long dataSkewRatio = conf.getLong(INPUT_AUTOBALANCE_MAXSKEWRATIO, 3);

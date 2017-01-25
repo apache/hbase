@@ -51,7 +51,7 @@ public class TestGroupingTableMapper {
     Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Result>.Context context =
         mock(Mapper.Context.class);
     context.write(any(ImmutableBytesWritable.class), any(Result.class));
-    List<Cell> keyValue = new ArrayList<Cell>();
+    List<Cell> keyValue = new ArrayList<>();
     byte[] row = {};
     keyValue.add(new KeyValue(row, Bytes.toBytes("family2"), Bytes.toBytes("clm"), Bytes
         .toBytes("value1")));

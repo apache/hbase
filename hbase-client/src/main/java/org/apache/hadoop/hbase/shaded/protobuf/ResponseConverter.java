@@ -233,7 +233,7 @@ public final class ResponseConverter {
   public static List<RegionOpeningState> getRegionOpeningStateList(
       final OpenRegionResponse proto) {
     if (proto == null) return null;
-    List<RegionOpeningState> regionOpeningStates = new ArrayList<RegionOpeningState>(proto.getOpeningStateCount());
+    List<RegionOpeningState> regionOpeningStates = new ArrayList<>(proto.getOpeningStateCount());
     for (int i = 0; i < proto.getOpeningStateCount(); i++) {
       regionOpeningStates.add(RegionOpeningState.valueOf(
           proto.getOpeningState(i).name()));
@@ -394,7 +394,7 @@ public final class ResponseConverter {
         boolean isPartial =
             response.getPartialFlagPerResultCount() > i ?
                 response.getPartialFlagPerResult(i) : false;
-        List<Cell> cells = new ArrayList<Cell>(noOfCells);
+        List<Cell> cells = new ArrayList<>(noOfCells);
         for (int j = 0; j < noOfCells; j++) {
           try {
             if (cellScanner.advance() == false) {
@@ -426,7 +426,7 @@ public final class ResponseConverter {
   }
 
   public static Map<String, Long> getScanMetrics(ScanResponse response) {
-    Map<String, Long> metricMap = new HashMap<String, Long>();
+    Map<String, Long> metricMap = new HashMap<>();
     if (response == null || !response.hasScanMetrics() || response.getScanMetrics() == null) {
       return metricMap;
     }

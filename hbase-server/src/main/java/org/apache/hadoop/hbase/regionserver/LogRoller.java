@@ -54,8 +54,7 @@ public class LogRoller extends HasThread implements Closeable {
   private static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
-  private final ConcurrentHashMap<WAL, Boolean> walNeedsRoll =
-      new ConcurrentHashMap<WAL, Boolean>();
+  private final ConcurrentHashMap<WAL, Boolean> walNeedsRoll = new ConcurrentHashMap<>();
   private final Server server;
   protected final RegionServerServices services;
   private volatile long lastrolltime = System.currentTimeMillis();

@@ -312,7 +312,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     LOG.info("Executed remote command, exit code:" + shell.getExitCode()
         + " , output:" + shell.getOutput());
 
-    return new Pair<Integer, String>(shell.getExitCode(), shell.getOutput());
+    return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
 
   private Pair<Integer, String> execWithRetries(String hostname, ServiceType service, String... cmd)

@@ -46,9 +46,9 @@ public class EverythingPolicy extends RatioBasedCompactionPolicy {
     final boolean mayUseOffPeak, final boolean mayBeStuck) throws IOException {
 
     if (candidates.size() < comConf.getMinFilesToCompact()) {
-      return new ArrayList<StoreFile>(0);
+      return new ArrayList<>(0);
     }
 
-    return new ArrayList<StoreFile>(candidates);
+    return new ArrayList<>(candidates);
   }
 }

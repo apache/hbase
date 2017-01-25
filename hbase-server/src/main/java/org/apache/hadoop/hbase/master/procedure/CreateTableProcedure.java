@@ -208,7 +208,7 @@ public class CreateTableProcedure
     if (state.getRegionInfoCount() == 0) {
       newRegions = null;
     } else {
-      newRegions = new ArrayList<HRegionInfo>(state.getRegionInfoCount());
+      newRegions = new ArrayList<>(state.getRegionInfoCount());
       for (HBaseProtos.RegionInfo hri: state.getRegionInfoList()) {
         newRegions.add(HRegionInfo.convert(hri));
       }
@@ -364,8 +364,7 @@ public class CreateTableProcedure
     if (numRegionReplicas <= 0) {
       return regions;
     }
-    List<HRegionInfo> hRegionInfos =
-        new ArrayList<HRegionInfo>((numRegionReplicas+1)*regions.size());
+    List<HRegionInfo> hRegionInfos = new ArrayList<>((numRegionReplicas+1)*regions.size());
     for (int i = 0; i < regions.size(); i++) {
       for (int j = 1; j <= numRegionReplicas; j++) {
         hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(i), j));

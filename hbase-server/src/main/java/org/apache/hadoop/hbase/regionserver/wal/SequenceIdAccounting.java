@@ -154,7 +154,7 @@ class SequenceIdAccounting {
    */
   Map<byte[], Long> resetHighest() {
     Map<byte[], Long> old = this.highestSequenceIds;
-    this.highestSequenceIds = new HashMap<byte[], Long>();
+    this.highestSequenceIds = new HashMap<>();
     return old;
   }
 
@@ -422,7 +422,7 @@ class SequenceIdAccounting {
         long lowest = getLowestSequenceId(m);
         if (lowest != HConstants.NO_SEQNUM && lowest <= e.getValue()) {
           if (toFlush == null) {
-            toFlush = new ArrayList<byte[]>();
+            toFlush = new ArrayList<>();
           }
           toFlush.add(e.getKey());
         }

@@ -64,15 +64,14 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * includes values like IS_ROOT, IS_META, DEFERRED_LOG_FLUSH, SPLIT_POLICY,
    * MAX_FILE_SIZE, READONLY, MEMSTORE_FLUSHSIZE etc...
    */
-  private final Map<Bytes, Bytes> values =
-      new HashMap<Bytes, Bytes>();
+  private final Map<Bytes, Bytes> values = new HashMap<>();
 
   /**
    * A map which holds the configuration specific to the table.
    * The keys of the map have the same names as config keys and override the defaults with
    * table-specific settings. Example usage may be for compactions, etc.
    */
-  private final Map<String, String> configuration = new HashMap<String, String>();
+  private final Map<String, String> configuration = new HashMap<>();
 
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
 
@@ -236,10 +235,8 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION = true;
 
-  private final static Map<String, String> DEFAULT_VALUES
-    = new HashMap<String, String>();
-  private final static Set<Bytes> RESERVED_KEYWORDS
-      = new HashSet<Bytes>();
+  private final static Map<String, String> DEFAULT_VALUES = new HashMap<>();
+  private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
 
   static {
     DEFAULT_VALUES.put(MAX_FILESIZE,
@@ -278,7 +275,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * Maps column family name to the respective HColumnDescriptors
    */
   private final Map<byte [], HColumnDescriptor> families =
-    new TreeMap<byte [], HColumnDescriptor>(Bytes.BYTES_RAWCOMPARATOR);
+    new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
   /**
    * <em> INTERNAL </em> Private constructor used internally creating table descriptors for
@@ -933,8 +930,8 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     StringBuilder s = new StringBuilder();
 
     // step 1: set partitioning and pruning
-    Set<Bytes> reservedKeys = new TreeSet<Bytes>();
-    Set<Bytes> userKeys = new TreeSet<Bytes>();
+    Set<Bytes> reservedKeys = new TreeSet<>();
+    Set<Bytes> userKeys = new TreeSet<>();
     for (Map.Entry<Bytes, Bytes> entry : values.entrySet()) {
       if (entry.getKey() == null || entry.getKey().get() == null) continue;
       String key = Bytes.toString(entry.getKey().get());
@@ -1412,7 +1409,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @return The list of co-processors classNames
    */
   public List<String> getCoprocessors() {
-    List<String> result = new ArrayList<String>(this.values.entrySet().size());
+    List<String> result = new ArrayList<>(this.values.entrySet().size());
     Matcher keyMatcher;
     for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
       keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));

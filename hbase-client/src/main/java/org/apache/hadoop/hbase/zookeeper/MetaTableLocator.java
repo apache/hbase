@@ -106,8 +106,8 @@ public class MetaTableLocator {
   public List<Pair<HRegionInfo, ServerName>> getMetaRegionsAndLocations(ZooKeeperWatcher zkw,
       int replicaId) {
     ServerName serverName = getMetaRegionLocation(zkw, replicaId);
-    List<Pair<HRegionInfo, ServerName>> list = new ArrayList<Pair<HRegionInfo, ServerName>>(1);
-    list.add(new Pair<HRegionInfo, ServerName>(RegionReplicaUtil.getRegionInfoForReplica(
+    List<Pair<HRegionInfo, ServerName>> list = new ArrayList<>(1);
+    list.add(new Pair<>(RegionReplicaUtil.getRegionInfoForReplica(
         HRegionInfo.FIRST_META_REGIONINFO, replicaId), serverName));
     return list;
   }
@@ -135,7 +135,7 @@ public class MetaTableLocator {
   private List<HRegionInfo> getListOfHRegionInfos(
       final List<Pair<HRegionInfo, ServerName>> pairs) {
     if (pairs == null || pairs.isEmpty()) return null;
-    List<HRegionInfo> result = new ArrayList<HRegionInfo>(pairs.size());
+    List<HRegionInfo> result = new ArrayList<>(pairs.size());
     for (Pair<HRegionInfo, ServerName> pair: pairs) {
       result.add(pair.getFirst());
     }
@@ -550,7 +550,7 @@ public class MetaTableLocator {
           throws InterruptedException {
     int numReplicasConfigured = 1;
 
-    List<ServerName> servers = new ArrayList<ServerName>();
+    List<ServerName> servers = new ArrayList<>();
     // Make the blocking call first so that we do the wait to know
     // the znodes are all in place or timeout.
     ServerName server = blockUntilAvailable(zkw, timeout);

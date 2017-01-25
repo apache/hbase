@@ -46,7 +46,7 @@ public class FavoredNodesPlan {
   }
 
   public FavoredNodesPlan() {
-    favoredNodesMap = new ConcurrentHashMap<String, List<ServerName>>();
+    favoredNodesMap = new ConcurrentHashMap<>();
   }
 
   /**

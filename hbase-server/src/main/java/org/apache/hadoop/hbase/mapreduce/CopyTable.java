@@ -120,7 +120,7 @@ public class CopyTable extends Configured implements Tool {
 
     if(families != null) {
       String[] fams = families.split(",");
-      Map<String,String> cfRenameMap = new HashMap<String,String>();
+      Map<String,String> cfRenameMap = new HashMap<>();
       for(String fam : fams) {
         String sourceCf;
         if(fam.contains(":")) {

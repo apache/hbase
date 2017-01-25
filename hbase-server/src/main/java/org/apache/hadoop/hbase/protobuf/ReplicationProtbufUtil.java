@@ -99,7 +99,7 @@ public class ReplicationProtbufUtil {
       buildReplicateWALEntryRequest(final Entry[] entries, byte[] encodedRegionName,
           String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir) {
     // Accumulate all the Cells seen in here.
-    List<List<? extends Cell>> allCells = new ArrayList<List<? extends Cell>>(entries.length);
+    List<List<? extends Cell>> allCells = new ArrayList<>(entries.length);
     int size = 0;
     WALProtos.FamilyScope.Builder scopeBuilder = WALProtos.FamilyScope.newBuilder();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
@@ -165,7 +165,7 @@ public class ReplicationProtbufUtil {
       builder.setSourceHFileArchiveDirPath(sourceHFileArchiveDir.toString());
     }
 
-    return new Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>(builder.build(),
+    return new Pair<>(builder.build(),
       getCellScanner(allCells, size));
   }
 

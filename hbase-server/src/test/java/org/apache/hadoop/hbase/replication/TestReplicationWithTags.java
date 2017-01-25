@@ -203,7 +203,7 @@ public class TestReplicationWithTags {
         final WALEdit edit, final Durability durability) throws IOException {
       byte[] attribute = put.getAttribute("visibility");
       byte[] cf = null;
-      List<Cell> updatedCells = new ArrayList<Cell>();
+      List<Cell> updatedCells = new ArrayList<>();
       if (attribute != null) {
         for (List<? extends Cell> edits : put.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
@@ -212,7 +212,7 @@ public class TestReplicationWithTags {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag(TAG_TYPE, attribute);
-            List<Tag> tagList = new ArrayList<Tag>(1);
+            List<Tag> tagList = new ArrayList<>(1);
             tagList.add(tag);
 
             KeyValue newKV = new KeyValue(CellUtil.cloneRow(kv), 0, kv.getRowLength(),

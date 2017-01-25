@@ -51,6 +51,9 @@ public class ScanDeleteTracker implements DeleteTracker {
   protected long familyStamp = 0L;
   protected SortedSet<Long> familyVersionStamps = new TreeSet<Long>();
   protected Cell deleteCell = null;
+  protected byte[] deleteBuffer = null;
+  protected int deleteOffset = 0;
+  protected int deleteLength = 0;
   protected byte deleteType = 0;
   protected long deleteTimestamp = 0L;
 

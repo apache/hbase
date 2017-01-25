@@ -151,7 +151,7 @@ public class TestScannersFromClientSide {
     scanner = ht.getScanner(scan);
 
     // c4:4, c5:5, c6:6, c7:7
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[4], 4, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[5], 5, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[6], 6, VALUE));
@@ -166,14 +166,14 @@ public class TestScannersFromClientSide {
     scanner = ht.getScanner(scan);
 
     // First batch: c4:4, c5:5
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[4], 4, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[5], 5, VALUE));
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing first batch of scan");
 
     // Second batch: c6:6, c7:7
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[6], 6, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[7], 7, VALUE));
     result = scanner.next();
@@ -204,7 +204,7 @@ public class TestScannersFromClientSide {
     byte[] cellValue = Bytes.createMaxByteArray(cellSize);
 
     Put put;
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (int row = 0; row < ROWS.length; row++) {
       put = new Put(ROWS[row]);
       for (int qual = 0; qual < QUALIFIERS.length; qual++) {
@@ -244,7 +244,7 @@ public class TestScannersFromClientSide {
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     Put put;
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (int row = 0; row < ROWS.length; row++) {
       put = new Put(ROWS[row]);
       for (int qual = 0; qual < QUALIFIERS.length; qual++) {
@@ -327,7 +327,7 @@ public class TestScannersFromClientSide {
     boolean toLog = true;
     List<Cell> kvListExp;
 
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     // Insert one CF for row[0]
     put = new Put(ROW);
     for (int i=0; i < 10; i++) {
@@ -344,7 +344,7 @@ public class TestScannersFromClientSide {
     get = new Get(ROW);
     get.setMaxResultsPerColumnFamily(2);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[0], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
     verifyResult(result, kvListExp, toLog, "Testing basic setMaxResults");
@@ -355,7 +355,7 @@ public class TestScannersFromClientSide {
     get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5],
                                         true));
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[2], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[3], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[4], 1, VALUE));
@@ -383,7 +383,7 @@ public class TestScannersFromClientSide {
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     //Exp: CF1:q0, ..., q9, CF2: q0, q1, q10, q11, ..., q19
     for (int i=0; i < 10; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[i], 1, VALUE));
@@ -401,7 +401,7 @@ public class TestScannersFromClientSide {
     get.setMaxResultsPerColumnFamily(3);
     get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, null, true));
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     for (int i=2; i < 5; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
     }
@@ -417,7 +417,7 @@ public class TestScannersFromClientSide {
     get.setMaxResultsPerColumnFamily(7);
     get.setFilter(new ColumnPrefixFilter(QUALIFIERS[1]));
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[1], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[1], 1, VALUE));
@@ -448,7 +448,7 @@ public class TestScannersFromClientSide {
     boolean toLog = true;
     List<Cell> kvListExp, kvListScan;
 
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
 
     for (int r=0; r < ROWS.length; r++) {
       put = new Put(ROWS[r]);
@@ -467,7 +467,7 @@ public class TestScannersFromClientSide {
     scan = new Scan();
     scan.setMaxResultsPerColumnFamily(4);
     ResultScanner scanner = ht.getScanner(scan);
-    kvListScan = new ArrayList<Cell>();
+    kvListScan = new ArrayList<>();
     while ((result = scanner.next()) != null) {
       for (Cell kv : result.listCells()) {
         kvListScan.add(kv);
@@ -498,7 +498,7 @@ public class TestScannersFromClientSide {
     List<Cell> kvListExp;
 
     // Insert one CF for row
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     put = new Put(ROW);
     for (int i=0; i < 10; i++) {
       KeyValue kv = new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE);
@@ -519,7 +519,7 @@ public class TestScannersFromClientSide {
     get = new Get(ROW);
     get.setRowOffsetPerColumnFamily(20);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     verifyResult(result, kvListExp, toLog, "Testing offset > #kvs");
 
     //offset + maxResultPerCF
@@ -527,7 +527,7 @@ public class TestScannersFromClientSide {
     get.setRowOffsetPerColumnFamily(4);
     get.setMaxResultsPerColumnFamily(5);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     for (int i=4; i < 9; i++) {
       kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
     }
@@ -540,7 +540,7 @@ public class TestScannersFromClientSide {
     get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5],
                                         true));
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[3], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[4], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[5], 1, VALUE));
@@ -563,7 +563,7 @@ public class TestScannersFromClientSide {
     get.addFamily(FAMILIES[1]);
     get.addFamily(FAMILIES[2]);
     result = ht.get(get);
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     //Exp: CF1:q4, q5, CF2: q4, q5
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[4], 1, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[5], 1, VALUE));
@@ -644,7 +644,7 @@ public class TestScannersFromClientSide {
     }
 
     // c0:0, c1:1
-    kvListExp = new ArrayList<Cell>();
+    kvListExp = new ArrayList<>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[0], 0, VALUE));
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[1], 1, VALUE));
     result = scanner.next();

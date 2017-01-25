@@ -84,8 +84,8 @@ public class TestInvocationRecordFilter {
 
   @Test
   public void testFilterInvocation() throws Exception {
-    List<Integer> selectQualifiers = new ArrayList<Integer>();
-    List<Integer> expectedQualifiers = new ArrayList<Integer>();
+    List<Integer> selectQualifiers = new ArrayList<>();
+    List<Integer> expectedQualifiers = new ArrayList<>();
 
     selectQualifiers.add(-1);
     verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
@@ -127,7 +127,7 @@ public class TestInvocationRecordFilter {
 
     get.setFilter(new InvocationRecordFilter());
 
-    List<KeyValue> expectedValues = new ArrayList<KeyValue>();
+    List<KeyValue> expectedValues = new ArrayList<>();
     for (int i = 0; i < expectedQualifiers.length; i++) {
       expectedValues.add(new KeyValue(ROW_BYTES, FAMILY_NAME_BYTES, Bytes
           .toBytes(QUALIFIER_PREFIX + expectedQualifiers[i]),
@@ -136,8 +136,8 @@ public class TestInvocationRecordFilter {
     }
 
     Scan scan = new Scan(get);
-    List<Cell> actualValues = new ArrayList<Cell>();
-    List<Cell> temp = new ArrayList<Cell>();
+    List<Cell> actualValues = new ArrayList<>();
+    List<Cell> temp = new ArrayList<>();
     InternalScanner scanner = this.region.getScanner(scan);
     while (scanner.next(temp)) {
       actualValues.addAll(temp);
@@ -161,7 +161,7 @@ public class TestInvocationRecordFilter {
    */
   private static class InvocationRecordFilter extends FilterBase {
 
-    private List<Cell> visitedKeyValues = new ArrayList<Cell>();
+    private List<Cell> visitedKeyValues = new ArrayList<>();
 
     public void reset() {
       visitedKeyValues.clear();

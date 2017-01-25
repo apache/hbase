@@ -125,9 +125,9 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   public Procedure(ProcedureCoordinator coord, ForeignExceptionDispatcher monitor, long wakeFreq,
       long timeout, String procName, byte[] args, List<String> expectedMembers) {
     this.coord = coord;
-    this.acquiringMembers = new ArrayList<String>(expectedMembers);
-    this.inBarrierMembers = new ArrayList<String>(acquiringMembers.size());
-    this.dataFromFinishedMembers = new HashMap<String, byte[]>();
+    this.acquiringMembers = new ArrayList<>(expectedMembers);
+    this.inBarrierMembers = new ArrayList<>(acquiringMembers.size());
+    this.dataFromFinishedMembers = new HashMap<>();
     this.procName = procName;
     this.args = args;
     this.monitor = monitor;

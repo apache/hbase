@@ -38,7 +38,7 @@ public class TestSequenceIdAccounting {
   private static final byte [] FAMILY_NAME = Bytes.toBytes("cf");
   private static final Set<byte[]> FAMILIES;
   static {
-    FAMILIES = new HashSet<byte[]>();
+    FAMILIES = new HashSet<>();
     FAMILIES.add(FAMILY_NAME);
   }
 
@@ -46,7 +46,7 @@ public class TestSequenceIdAccounting {
   public void testStartCacheFlush() {
     SequenceIdAccounting sida = new SequenceIdAccounting();
     sida.getOrCreateLowestSequenceIds(ENCODED_REGION_NAME);
-    Map<byte[], Long> m = new HashMap<byte[], Long>();
+    Map<byte[], Long> m = new HashMap<>();
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     assertEquals(HConstants.NO_SEQNUM, (long)sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
     sida.completeCacheFlush(ENCODED_REGION_NAME);
@@ -57,7 +57,7 @@ public class TestSequenceIdAccounting {
     sida.completeCacheFlush(ENCODED_REGION_NAME);
     long currentSequenceId = sequenceid;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
-    final Set<byte[]> otherFamily = new HashSet<byte[]>(1);
+    final Set<byte[]> otherFamily = new HashSet<>(1);
     otherFamily.add(Bytes.toBytes("otherCf"));
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
     // Should return oldest sequence id in the region.
@@ -69,7 +69,7 @@ public class TestSequenceIdAccounting {
   public void testAreAllLower() {
     SequenceIdAccounting sida = new SequenceIdAccounting();
     sida.getOrCreateLowestSequenceIds(ENCODED_REGION_NAME);
-    Map<byte[], Long> m = new HashMap<byte[], Long>();
+    Map<byte[], Long> m = new HashMap<>();
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     assertTrue(sida.areAllLower(m));
     long sequenceid = 1;
@@ -117,7 +117,7 @@ public class TestSequenceIdAccounting {
   public void testFindLower() {
     SequenceIdAccounting sida = new SequenceIdAccounting();
     sida.getOrCreateLowestSequenceIds(ENCODED_REGION_NAME);
-    Map<byte[], Long> m = new HashMap<byte[], Long>();
+    Map<byte[], Long> m = new HashMap<>();
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     long sequenceid = 1;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);

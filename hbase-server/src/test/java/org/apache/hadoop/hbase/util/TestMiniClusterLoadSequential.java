@@ -88,7 +88,7 @@ public class TestMiniClusterLoadSequential {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> parameters = new ArrayList<Object[]>();
+    List<Object[]> parameters = new ArrayList<>();
     for (boolean multiPut : new boolean[]{false, true}) {
       for (DataBlockEncoding dataBlockEncoding : new DataBlockEncoding[] {
           DataBlockEncoding.NONE, DataBlockEncoding.PREFIX }) {

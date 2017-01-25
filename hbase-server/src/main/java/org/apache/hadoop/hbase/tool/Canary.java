@@ -140,8 +140,8 @@ public final class Canary implements Tool {
     private AtomicLong readFailureCount = new AtomicLong(0),
         writeFailureCount = new AtomicLong(0);
 
-    private Map<String, String> readFailures = new ConcurrentHashMap<String, String>();
-    private Map<String, String> writeFailures = new ConcurrentHashMap<String, String>();
+    private Map<String, String> readFailures = new ConcurrentHashMap<>();
+    private Map<String, String> writeFailures = new ConcurrentHashMap<>();
 
     @Override
     public long getReadFailureCount() {
@@ -949,7 +949,7 @@ public final class Canary implements Tool {
     public void run() {
       if (this.initAdmin()) {
         try {
-          List<Future<Void>> taskFutures = new LinkedList<Future<Void>>();
+          List<Future<Void>> taskFutures = new LinkedList<>();
           if (this.targets != null && this.targets.length > 0) {
             String[] tables = generateMonitorTables(this.targets);
             this.initialized = true;
@@ -996,7 +996,7 @@ public final class Canary implements Tool {
       if (this.useRegExp) {
         Pattern pattern = null;
         HTableDescriptor[] tds = null;
-        Set<String> tmpTables = new TreeSet<String>();
+        Set<String> tmpTables = new TreeSet<>();
         try {
           if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("reading list of tables"));
@@ -1040,7 +1040,7 @@ public final class Canary implements Tool {
       if (LOG.isDebugEnabled()) {
         LOG.debug(String.format("reading list of tables"));
       }
-      List<Future<Void>> taskFutures = new LinkedList<Future<Void>>();
+      List<Future<Void>> taskFutures = new LinkedList<>();
       for (HTableDescriptor table : admin.listTables()) {
         if (admin.isTableEnabled(table.getTableName())
             && (!table.getTableName().equals(writeTableName))) {
@@ -1078,7 +1078,7 @@ public final class Canary implements Tool {
         admin.deleteTable(writeTableName);
         createWriteTable(numberOfServers);
       }
-      HashSet<ServerName> serverSet = new HashSet<ServerName>();
+      HashSet<ServerName> serverSet = new HashSet<>();
       for (Pair<HRegionInfo, ServerName> pair : pairs) {
         serverSet.add(pair.getSecond());
       }
@@ -1165,7 +1165,7 @@ public final class Canary implements Tool {
     } else {
       LOG.warn(String.format("Table %s is not enabled", tableName));
     }
-    return new LinkedList<Future<Void>>();
+    return new LinkedList<>();
   }
 
   /*
@@ -1183,7 +1183,7 @@ public final class Canary implements Tool {
     try {
       table = admin.getConnection().getTable(tableDesc.getTableName());
     } catch (TableNotFoundException e) {
-      return new ArrayList<Future<Void>>();
+      return new ArrayList<>();
     }
     finally {
       if (table !=null) {
@@ -1191,7 +1191,7 @@ public final class Canary implements Tool {
       }
     }
 
-    List<RegionTask> tasks = new ArrayList<RegionTask>();
+    List<RegionTask> tasks = new ArrayList<>();
     RegionLocator regionLocator = null;
     try {
       regionLocator = admin.getConnection().getRegionLocator(tableDesc.getTableName());
@@ -1290,7 +1290,7 @@ public final class Canary implements Tool {
     }
 
     private boolean checkNoTableNames() {
-      List<String> foundTableNames = new ArrayList<String>();
+      List<String> foundTableNames = new ArrayList<>();
       TableName[] tableNames = null;
 
       if (LOG.isDebugEnabled()) {
@@ -1323,8 +1323,8 @@ public final class Canary implements Tool {
     }
 
     private void monitorRegionServers(Map<String, List<HRegionInfo>> rsAndRMap) {
-      List<RegionServerTask> tasks = new ArrayList<RegionServerTask>();
-      Map<String, AtomicLong> successMap = new HashMap<String, AtomicLong>();
+      List<RegionServerTask> tasks = new ArrayList<>();
+      Map<String, AtomicLong> successMap = new HashMap<>();
       Random rand = new Random();
       for (Map.Entry<String, List<HRegionInfo>> entry : rsAndRMap.entrySet()) {
         String serverName = entry.getKey();
@@ -1379,7 +1379,7 @@ public final class Canary implements Tool {
     }
 
     private Map<String, List<HRegionInfo>> getAllRegionServerByName() {
-      Map<String, List<HRegionInfo>> rsAndRMap = new HashMap<String, List<HRegionInfo>>();
+      Map<String, List<HRegionInfo>> rsAndRMap = new HashMap<>();
       Table table = null;
       RegionLocator regionLocator = null;
       try {
@@ -1400,7 +1400,7 @@ public final class Canary implements Tool {
             if (rsAndRMap.containsKey(rsName)) {
               regions = rsAndRMap.get(rsName);
             } else {
-              regions = new ArrayList<HRegionInfo>();
+              regions = new ArrayList<>();
               rsAndRMap.put(rsName, regions);
             }
             regions.add(r);
@@ -1438,7 +1438,7 @@ public final class Canary implements Tool {
       Map<String, List<HRegionInfo>> filteredRsAndRMap = null;
 
       if (this.targets != null && this.targets.length > 0) {
-        filteredRsAndRMap = new HashMap<String, List<HRegionInfo>>();
+        filteredRsAndRMap = new HashMap<>();
         Pattern pattern = null;
         Matcher matcher = null;
         boolean regExpFound = false;

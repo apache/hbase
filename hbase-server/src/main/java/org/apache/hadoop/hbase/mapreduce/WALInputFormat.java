@@ -239,7 +239,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
     FileSystem fs = inputDir.getFileSystem(conf);
     List<FileStatus> files = getFiles(fs, inputDir, startTime, endTime);
 
-    List<InputSplit> splits = new ArrayList<InputSplit>(files.size());
+    List<InputSplit> splits = new ArrayList<>(files.size());
     for (FileStatus file : files) {
       splits.add(new WALSplit(file.getPath().toString(), file.getLen(), startTime, endTime));
     }
@@ -248,7 +248,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
 
   private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime)
       throws IOException {
-    List<FileStatus> result = new ArrayList<FileStatus>();
+    List<FileStatus> result = new ArrayList<>();
     LOG.debug("Scanning " + dir.toString() + " for WAL files");
 
     FileStatus[] files = fs.listStatus(dir);

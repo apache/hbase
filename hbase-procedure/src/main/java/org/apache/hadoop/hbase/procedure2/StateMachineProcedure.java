@@ -130,7 +130,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    */
   protected void addChildProcedure(Procedure... subProcedure) {
     if (subProcList == null) {
-      subProcList = new ArrayList<Procedure>(subProcedure.length);
+      subProcList = new ArrayList<>(subProcedure.length);
     }
     for (int i = 0; i < subProcedure.length; ++i) {
       Procedure proc = subProcedure[i];

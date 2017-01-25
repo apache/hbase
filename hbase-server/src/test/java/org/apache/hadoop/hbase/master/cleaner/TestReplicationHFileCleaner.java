@@ -140,7 +140,7 @@ public class TestReplicationHFileCleaner {
       cleaner.isFileDeletable(fs.getFileStatus(file)));
 
     List<Pair<Path, Path>> files = new ArrayList<>(1);
-    files.add(new Pair<Path, Path>(null, file));
+    files.add(new Pair<>(null, file));
     // 4. Add the file to hfile-refs queue
     rq.addHFileRefs(peerId, files);
     // 5. Assert file should not be deletable
@@ -159,7 +159,7 @@ public class TestReplicationHFileCleaner {
     fs.createNewFile(deletablefile);
     assertTrue("Test file not created!", fs.exists(deletablefile));
 
-    List<FileStatus> files = new ArrayList<FileStatus>(2);
+    List<FileStatus> files = new ArrayList<>(2);
     FileStatus f = new FileStatus();
     f.setPath(deletablefile);
     files.add(f);
@@ -168,7 +168,7 @@ public class TestReplicationHFileCleaner {
     files.add(f);
 
     List<Pair<Path, Path>> hfiles = new ArrayList<>(1);
-    hfiles.add(new Pair<Path, Path>(null, notDeletablefile));
+    hfiles.add(new Pair<>(null, notDeletablefile));
     // 2. Add one file to hfile-refs queue
     rq.addHFileRefs(peerId, hfiles);
 

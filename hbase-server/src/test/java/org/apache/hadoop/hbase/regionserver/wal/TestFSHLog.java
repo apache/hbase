@@ -102,7 +102,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       syncRunnerIndexField.set(ringBufferEventHandler, Integer.MAX_VALUE - 1);
       HTableDescriptor htd =
           new HTableDescriptor(TableName.valueOf(this.name.getMethodName())).addFamily(new HColumnDescriptor("row"));
-      NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (byte[] fam : htd.getFamiliesKeys()) {
         scopes.put(fam, 0);
       }

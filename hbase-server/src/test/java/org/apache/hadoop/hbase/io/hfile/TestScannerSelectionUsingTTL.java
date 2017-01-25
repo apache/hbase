@@ -79,7 +79,7 @@ public class TestScannerSelectionUsingTTL {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<Object[]>();
+    List<Object[]> params = new ArrayList<>();
     for (int numFreshFiles = 1; numFreshFiles <= 3; ++numFreshFiles) {
       for (boolean explicitCompaction : new boolean[] { false, true }) {
         params.add(new Object[] { numFreshFiles, explicitCompaction });
@@ -135,7 +135,7 @@ public class TestScannerSelectionUsingTTL {
     LruBlockCache cache = (LruBlockCache) cacheConf.getBlockCache();
     cache.clearCache();
     InternalScanner scanner = region.getScanner(scan);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     final int expectedKVsPerRow = numFreshFiles * NUM_COLS_PER_ROW;
     int numReturnedRows = 0;
     LOG.info("Scanning the entire table");

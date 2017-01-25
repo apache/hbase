@@ -130,7 +130,7 @@ public class WALEdit implements Writable, HeapSize {
 
   public WALEdit(int cellCount, boolean isReplay) {
     this.isReplay = isReplay;
-    cells = new ArrayList<Cell>(cellCount);
+    cells = new ArrayList<>(cellCount);
   }
 
   /**
@@ -222,7 +222,7 @@ public class WALEdit implements Writable, HeapSize {
       int numFamilies = in.readInt();
       if (numFamilies > 0) {
         if (scopes == null) {
-          scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+          scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         }
         for (int i = 0; i < numFamilies; i++) {
           byte[] fam = Bytes.readByteArray(in);

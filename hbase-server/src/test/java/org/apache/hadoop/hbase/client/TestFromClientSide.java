@@ -190,7 +190,7 @@ public class TestFromClientSide {
   @Test
   public void testDuplicateAppend() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(name.getMethodName());
-    Map<String, String> kvs = new HashMap<String, String>();
+    Map<String, String> kvs = new HashMap<>();
     kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
     hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
     TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();
@@ -2299,7 +2299,7 @@ public class TestFromClientSide {
       result = ht.get(get);
       assertTrue(result.size() == 1);
     }
-    ArrayList<Delete> deletes = new ArrayList<Delete>();
+    ArrayList<Delete> deletes = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       byte [] bytes = Bytes.toBytes(i);
       delete = new Delete(bytes);
@@ -4707,7 +4707,7 @@ public class TestFromClientSide {
 
     final Object waitLock = new Object();
     ExecutorService executorService = Executors.newFixedThreadPool(numVersions);
-    final AtomicReference<AssertionError> error = new AtomicReference<AssertionError>(null);
+    final AtomicReference<AssertionError> error = new AtomicReference<>(null);
     for (int versions = numVersions; versions < numVersions * 2; versions++) {
       final int versionsCopy = versions;
       executorService.submit(new Callable<Void>() {
@@ -5315,7 +5315,7 @@ public class TestFromClientSide {
 
   private List<HRegionLocation> getRegionsInRange(TableName tableName, byte[] startKey,
       byte[] endKey) throws IOException {
-    List<HRegionLocation> regionsInRange = new ArrayList<HRegionLocation>();
+    List<HRegionLocation> regionsInRange = new ArrayList<>();
     byte[] currentKey = startKey;
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey, HConstants.EMPTY_END_ROW);
     try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName);) {
@@ -6237,7 +6237,7 @@ public class TestFromClientSide {
     HRegionLocator locator =
         (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());
     for (int regionReplication = 1; regionReplication < 4; regionReplication++) {
-      List<RegionLocations> regionLocations = new ArrayList<RegionLocations>();
+      List<RegionLocations> regionLocations = new ArrayList<>();
 
       // mock region locations coming from meta with multiple replicas
       for (HRegionInfo region : regions) {

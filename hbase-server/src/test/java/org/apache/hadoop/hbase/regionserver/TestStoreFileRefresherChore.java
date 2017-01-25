@@ -170,7 +170,7 @@ public class TestStoreFileRefresherChore {
     byte[] qf = Bytes.toBytes("cq");
 
     HRegionServer regionServer = mock(HRegionServer.class);
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 

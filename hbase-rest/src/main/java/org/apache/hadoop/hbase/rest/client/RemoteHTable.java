@@ -173,9 +173,9 @@ public class RemoteHTable implements Table {
   }
 
   protected Result[] buildResultFromModel(final CellSetModel model) {
-    List<Result> results = new ArrayList<Result>();
+    List<Result> results = new ArrayList<>();
     for (RowModel row: model.getRows()) {
-      List<Cell> kvs = new ArrayList<Cell>(row.getCells().size());
+      List<Cell> kvs = new ArrayList<>(row.getCells().size());
       for (CellModel cell: row.getCells()) {
         byte[][] split = KeyValue.parseColumn(cell.getColumn());
         byte[] column = split[0];
@@ -425,13 +425,12 @@ public class RemoteHTable implements Table {
     // ignores the row specification in the URI
 
     // separate puts by row
-    TreeMap<byte[],List<Cell>> map =
-      new TreeMap<byte[],List<Cell>>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte[],List<Cell>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (Put put: puts) {
       byte[] row = put.getRow();
       List<Cell> cells = map.get(row);
       if (cells == null) {
-        cells = new ArrayList<Cell>();
+        cells = new ArrayList<>();
         map.put(row, cells);
       }
       for (List<Cell> l: put.getFamilyCellMap().values()) {

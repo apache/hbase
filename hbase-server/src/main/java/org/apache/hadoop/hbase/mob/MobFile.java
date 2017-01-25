@@ -55,7 +55,7 @@ public class MobFile {
    * @throws IOException
    */
   public StoreFileScanner getScanner() throws IOException {
-    List<StoreFile> sfs = new ArrayList<StoreFile>();
+    List<StoreFile> sfs = new ArrayList<>();
     sfs.add(sf);
     List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true,
         false, false, sf.getMaxMemstoreTS());
@@ -85,7 +85,7 @@ public class MobFile {
   public Cell readCell(Cell search, boolean cacheMobBlocks, long readPt) throws IOException {
     Cell result = null;
     StoreFileScanner scanner = null;
-    List<StoreFile> sfs = new ArrayList<StoreFile>();
+    List<StoreFile> sfs = new ArrayList<>();
     sfs.add(sf);
     try {
       List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(sfs,

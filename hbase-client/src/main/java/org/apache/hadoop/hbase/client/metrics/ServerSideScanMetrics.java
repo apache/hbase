@@ -35,7 +35,7 @@ public class ServerSideScanMetrics {
   /**
    * Hash to hold the String -&gt; Atomic Long mappings for each metric
    */
-  private final Map<String, AtomicLong> counters = new HashMap<String, AtomicLong>();
+  private final Map<String, AtomicLong> counters = new HashMap<>();
 
   /**
    * Create a new counter with the specified name

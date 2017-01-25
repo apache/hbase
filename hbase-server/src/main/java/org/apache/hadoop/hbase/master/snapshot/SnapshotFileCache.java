@@ -90,13 +90,12 @@ public class SnapshotFileCache implements Stoppable {
   private final FileSystem fs;
   private final SnapshotFileInspector fileInspector;
   private final Path snapshotDir;
-  private final Set<String> cache = new HashSet<String>();
+  private final Set<String> cache = new HashSet<>();
   /**
    * This is a helper map of information about the snapshot directories so we don't need to rescan
    * them if they haven't changed since the last time we looked.
    */
-  private final Map<String, SnapshotDirectoryInfo> snapshots =
-      new HashMap<String, SnapshotDirectoryInfo>();
+  private final Map<String, SnapshotDirectoryInfo> snapshots = new HashMap<>();
   private final Timer refreshTimer;
 
   private long lastModifiedTime = Long.MIN_VALUE;
@@ -229,7 +228,7 @@ public class SnapshotFileCache implements Stoppable {
 
     // 2.clear the cache
     this.cache.clear();
-    Map<String, SnapshotDirectoryInfo> known = new HashMap<String, SnapshotDirectoryInfo>();
+    Map<String, SnapshotDirectoryInfo> known = new HashMap<>();
 
     // 3. check each of the snapshot directories
     FileStatus[] snapshots = FSUtils.listStatus(fs, snapshotDir);

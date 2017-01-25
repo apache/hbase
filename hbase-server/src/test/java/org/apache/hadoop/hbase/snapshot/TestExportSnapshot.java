@@ -205,7 +205,7 @@ public class TestExportSnapshot {
     FileSystem fs = FileSystem.get(copyDir.toUri(), new Configuration());
     copyDir = copyDir.makeQualified(fs);
 
-    List<String> opts = new ArrayList<String>();
+    List<String> opts = new ArrayList<>();
     opts.add("--snapshot");
     opts.add(Bytes.toString(snapshotName));
     opts.add("--copy-to");
@@ -302,7 +302,7 @@ public class TestExportSnapshot {
       final RegionPredicate bypassregionPredicate) throws IOException {
     final Path exportedSnapshot = new Path(rootDir,
       new Path(HConstants.SNAPSHOT_DIR_NAME, snapshotName));
-    final Set<String> snapshotFiles = new HashSet<String>();
+    final Set<String> snapshotFiles = new HashSet<>();
     final Path exportedArchive = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
     SnapshotReferenceUtil.visitReferencedFiles(conf, fs, exportedSnapshot,
           new SnapshotReferenceUtil.SnapshotVisitor() {
@@ -338,7 +338,7 @@ public class TestExportSnapshot {
 
   private static Set<String> listFiles(final FileSystem fs, final Path root, final Path dir)
       throws IOException {
-    Set<String> files = new HashSet<String>();
+    Set<String> files = new HashSet<>();
     int rootPrefix = root.makeQualified(fs).toString().length();
     FileStatus[] list = FSUtils.listStatus(fs, dir);
     if (list != null) {

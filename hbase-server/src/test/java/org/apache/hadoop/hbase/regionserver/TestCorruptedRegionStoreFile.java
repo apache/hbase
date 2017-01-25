@@ -67,7 +67,7 @@ public class TestCorruptedRegionStoreFile {
 
   @Rule public TestTableName TEST_TABLE = new TestTableName();
 
-  private final ArrayList<Path> storeFiles = new ArrayList<Path>();
+  private final ArrayList<Path> storeFiles = new ArrayList<>();
   private Path tableDir;
   private int rowCount;
 

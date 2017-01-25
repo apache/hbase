@@ -73,14 +73,13 @@ public class TestPrefixTreeEncoding {
   private static final int NUM_COLS_PER_ROW = 20;
 
   private int numBatchesWritten = 0;
-  private ConcurrentSkipListSet<Cell> kvset = new ConcurrentSkipListSet<Cell>(
-      CellComparator.COMPARATOR);
+  private ConcurrentSkipListSet<Cell> kvset = new ConcurrentSkipListSet<>(CellComparator.COMPARATOR);
 
   private static boolean formatRowNum = false;
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<Object[]>();
+    List<Object[]> paramList = new ArrayList<>();
     {
       paramList.add(new Object[] { false });
       paramList.add(new Object[] { true });
@@ -228,7 +227,7 @@ public class TestPrefixTreeEncoding {
 
   private void verifySeeking(EncodedSeeker encodeSeeker,
       ByteBuffer encodedData, int batchId) {
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<KeyValue> kvList = new ArrayList<>();
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       kvList.clear();
       encodeSeeker.setCurrentBuffer(new SingleByteBuff(encodedData));

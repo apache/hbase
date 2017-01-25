@@ -155,7 +155,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
   protected final Configuration conf;
 
   /** Listeners that are called on WAL events. */
-  protected final List<WALActionsListener> listeners = new CopyOnWriteArrayList<WALActionsListener>();
+  protected final List<WALActionsListener> listeners = new CopyOnWriteArrayList<>();
 
   /**
    * Class that does accounting of sequenceids in WAL subsystem. Holds oldest outstanding sequence
@@ -413,7 +413,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
         .toNanos(conf.getLong("hbase.regionserver.hlog.sync.timeout", DEFAULT_WAL_SYNC_TIMEOUT_MS));
     int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
     // Presize our map of SyncFutures by handler objects.
-    this.syncFuturesByHandler = new ConcurrentHashMap<Thread, SyncFuture>(maxHandlersCount);
+    this.syncFuturesByHandler = new ConcurrentHashMap<>(maxHandlersCount);
     this.implClassName = getClass().getSimpleName();
   }
 

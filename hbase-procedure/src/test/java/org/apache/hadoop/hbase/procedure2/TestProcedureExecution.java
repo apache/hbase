@@ -129,7 +129,7 @@ public class TestProcedureExecution {
 
   @Test(timeout=30000)
   public void testBadSubprocList() {
-    List<String> state = new ArrayList<String>();
+    List<String> state = new ArrayList<>();
     Procedure subProc2 = new TestSequentialProcedure("subProc2", state);
     Procedure subProc1 = new TestSequentialProcedure("subProc1", state, subProc2, NULL_PROC);
     Procedure rootProc = new TestSequentialProcedure("rootProc", state, subProc1);
@@ -151,7 +151,7 @@ public class TestProcedureExecution {
 
   @Test(timeout=30000)
   public void testSingleSequentialProc() {
-    List<String> state = new ArrayList<String>();
+    List<String> state = new ArrayList<>();
     Procedure subProc2 = new TestSequentialProcedure("subProc2", state);
     Procedure subProc1 = new TestSequentialProcedure("subProc1", state, subProc2);
     Procedure rootProc = new TestSequentialProcedure("rootProc", state, subProc1);
@@ -166,7 +166,7 @@ public class TestProcedureExecution {
 
   @Test(timeout=30000)
   public void testSingleSequentialProcRollback() {
-    List<String> state = new ArrayList<String>();
+    List<String> state = new ArrayList<>();
     Procedure subProc2 = new TestSequentialProcedure("subProc2", state,
                                                      new TestProcedureException("fail test"));
     Procedure subProc1 = new TestSequentialProcedure("subProc1", state, subProc2);
@@ -295,7 +295,7 @@ public class TestProcedureExecution {
   @Test(timeout=30000)
   public void testAbortTimeout() {
     final int PROC_TIMEOUT_MSEC = 2500;
-    List<String> state = new ArrayList<String>();
+    List<String> state = new ArrayList<>();
     Procedure proc = new TestWaitingProcedure("wproc", state, false);
     proc.setTimeout(PROC_TIMEOUT_MSEC);
     long startTime = EnvironmentEdgeManager.currentTime();
@@ -313,7 +313,7 @@ public class TestProcedureExecution {
 
   @Test(timeout=30000)
   public void testAbortTimeoutWithChildren() {
-    List<String> state = new ArrayList<String>();
+    List<String> state = new ArrayList<>();
     Procedure proc = new TestWaitingProcedure("wproc", state, true);
     proc.setTimeout(2500);
     long rootId = ProcedureTestingUtility.submitAndWait(procExecutor, proc);

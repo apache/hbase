@@ -118,7 +118,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized boolean add(E e) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     boolean changed = newList.add(e);
     if (changed) {
       Collections.sort(newList, comparator);
@@ -129,7 +129,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized boolean remove(Object o) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     // Removals in ArrayList won't break sorting
     boolean changed = newList.remove(o);
     list = Collections.unmodifiableList(newList);
@@ -143,7 +143,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized boolean addAll(Collection<? extends E> c) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     boolean changed = newList.addAll(c);
     if (changed) {
       Collections.sort(newList, comparator);
@@ -154,7 +154,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized boolean addAll(int index, Collection<? extends E> c) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     boolean changed = newList.addAll(index, c);
     if (changed) {
       Collections.sort(newList, comparator);
@@ -165,7 +165,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized boolean removeAll(Collection<?> c) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     // Removals in ArrayList won't break sorting
     boolean changed = newList.removeAll(c);
     list = Collections.unmodifiableList(newList);
@@ -174,7 +174,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized boolean retainAll(Collection<?> c) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     // Removals in ArrayList won't break sorting
     boolean changed = newList.retainAll(c);
     list = Collections.unmodifiableList(newList);
@@ -193,7 +193,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized E set(int index, E element) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     E result = newList.set(index, element);
     Collections.sort(list, comparator);
     list = Collections.unmodifiableList(newList);
@@ -202,7 +202,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized void add(int index, E element) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     newList.add(index, element);
     Collections.sort(list, comparator);
     list = Collections.unmodifiableList(newList);
@@ -210,7 +210,7 @@ public class SortedList<E> implements List<E>, RandomAccess {
 
   @Override
   public synchronized E remove(int index) {
-    ArrayList<E> newList = new ArrayList<E>(list);
+    ArrayList<E> newList = new ArrayList<>(list);
     // Removals in ArrayList won't break sorting
     E result = newList.remove(index);
     list = Collections.unmodifiableList(newList);

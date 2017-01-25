@@ -94,7 +94,7 @@ public class Result implements CellScannable, CellScanner {
   private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
       familyMap = null;
 
-  private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<byte[]>();
+  private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<>();
   private static final int PAD_WIDTH = 128;
   public static final Result EMPTY_RESULT = new Result(true);
 
@@ -247,7 +247,7 @@ public class Result implements CellScannable, CellScanner {
    * did not exist in the result set
    */
   public List<Cell> getColumnCells(byte [] family, byte [] qualifier) {
-    List<Cell> result = new ArrayList<Cell>();
+    List<Cell> result = new ArrayList<>();
 
     Cell [] kvs = rawCells();
 
@@ -662,12 +662,10 @@ public class Result implements CellScannable, CellScanner {
     if(isEmpty()) {
       return null;
     }
-    NavigableMap<byte[], NavigableMap<byte[], byte[]>> returnMap =
-      new TreeMap<byte[], NavigableMap<byte[], byte[]>>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], NavigableMap<byte[], byte[]>> returnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
       familyEntry : familyMap.entrySet()) {
-      NavigableMap<byte[], byte[]> qualifierMap =
-        new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+      NavigableMap<byte[], byte[]> qualifierMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for(Map.Entry<byte[], NavigableMap<Long, byte[]>> qualifierEntry :
         familyEntry.getValue().entrySet()) {
         byte [] value =
@@ -693,8 +691,7 @@ public class Result implements CellScannable, CellScanner {
     if(isEmpty()) {
       return null;
     }
-    NavigableMap<byte[], byte[]> returnMap =
-      new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], byte[]> returnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap =
       familyMap.get(family);
     if(qualifierMap == null) {
@@ -797,7 +794,7 @@ public class Result implements CellScannable, CellScanner {
    */
   public static Result createCompleteResult(List<Result> partialResults)
       throws IOException {
-    List<Cell> cells = new ArrayList<Cell>();
+    List<Cell> cells = new ArrayList<>();
     boolean stale = false;
     byte[] prevRow = null;
     byte[] currentRow = null;

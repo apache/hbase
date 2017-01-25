@@ -58,7 +58,7 @@ public class TestSingleColumnValueExcludeFilter {
         CompareOp.EQUAL, VAL_1);
 
     // A 'match' situation
-    List<Cell> kvs = new ArrayList<Cell>();
+    List<Cell> kvs = new ArrayList<>();
     KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
 
     kvs.add (new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1));

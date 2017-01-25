@@ -99,7 +99,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    * @see #getVersionedBytes()
    */
   private byte [] bytes;
-  public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<ServerName>(0);
+  public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<>(0);
 
   protected ServerName(final String hostname, final int port, final long startcode) {
     this(Address.fromParts(hostname, port), startcode);

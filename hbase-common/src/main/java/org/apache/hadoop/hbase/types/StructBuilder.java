@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class StructBuilder {
 
-  protected final List<DataType<?>> fields = new ArrayList<DataType<?>>();
+  protected final List<DataType<?>> fields = new ArrayList<>();
 
   /**
    * Create an empty {@code StructBuilder}.

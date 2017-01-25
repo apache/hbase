@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequ
  * <code>${HBASE_HOME}/bin/hbase ./bin/hbase org.apache.hadoop.hbase.OOMERegionServer start</code>.
  */
 public class OOMERegionServer extends HRegionServer {
-  private List<Put> retainer = new ArrayList<Put>();
+  private List<Put> retainer = new ArrayList<>();
 
   public OOMERegionServer(HBaseConfiguration conf, CoordinatedStateManager cp)
       throws IOException, InterruptedException {

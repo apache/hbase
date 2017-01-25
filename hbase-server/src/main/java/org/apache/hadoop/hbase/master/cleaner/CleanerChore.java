@@ -92,7 +92,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param confKey key to get the file cleaner classes from the configuration
    */
   private void initCleanerChain(String confKey) {
-    this.cleanersChain = new LinkedList<T>();
+    this.cleanersChain = new LinkedList<>();
     String[] logCleaners = conf.getStrings(confKey);
     if (logCleaners != null) {
       for (String className : logCleaners) {

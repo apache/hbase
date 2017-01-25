@@ -125,7 +125,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private int maxFilesPerRegionPerFamily;
   private boolean assignSeqIds;
-  private Set<String> unmatchedFamilies = new HashSet<String>();
+  private Set<String> unmatchedFamilies = new HashSet<>();
 
   // Source filesystem
   private FileSystem fs;
@@ -630,7 +630,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
     builder.setNameFormat("LoadIncrementalHFiles-%1$d");
     ExecutorService pool = new ThreadPoolExecutor(nrThreads, nrThreads, 60, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>(), builder.build());
+        new LinkedBlockingQueue<>(), builder.build());
     ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
     return pool;
   }
@@ -889,7 +889,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     // Add these back at the *front* of the queue, so there's a lower
     // chance that the region will just split again before we get there.
-    List<LoadQueueItem> lqis = new ArrayList<LoadQueueItem>(2);
+    List<LoadQueueItem> lqis = new ArrayList<>(2);
     lqis.add(new LoadQueueItem(item.family, botOut));
     lqis.add(new LoadQueueItem(item.family, topOut));
 

@@ -156,7 +156,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   }
 
   private long write(Consumer<CompletableFuture<Long>> action) throws IOException {
-    CompletableFuture<Long> future = new CompletableFuture<Long>();
+    CompletableFuture<Long> future = new CompletableFuture<>();
     eventLoop.execute(() -> action.accept(future));
     try {
       return future.get().longValue();

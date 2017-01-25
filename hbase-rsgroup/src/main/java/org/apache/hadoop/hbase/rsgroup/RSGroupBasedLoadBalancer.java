@@ -120,7 +120,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     }
 
     Map<ServerName,List<HRegionInfo>> correctedState = correctAssignments(clusterState);
-    List<RegionPlan> regionPlans = new ArrayList<RegionPlan>();
+    List<RegionPlan> regionPlans = new ArrayList<>();
 
     List<HRegionInfo> misplacedRegions = correctedState.get(LoadBalancer.BOGUS_SERVER_NAME);
     for (HRegionInfo regionInfo : misplacedRegions) {
@@ -129,10 +129,8 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
     try {
       List<RSGroupInfo> rsgi = rsGroupInfoManager.listRSGroups();
       for (RSGroupInfo info: rsgi) {
-        Map<ServerName, List<HRegionInfo>> groupClusterState =
-            new HashMap<ServerName, List<HRegionInfo>>();
-        Map<TableName, Map<ServerName, List<HRegionInfo>>> groupClusterLoad =
-            new HashMap<TableName, Map<ServerName, List<HRegionInfo>>>();
+        Map<ServerName, List<HRegionInfo>> groupClusterState = new HashMap<>();
+        Map<TableName, Map<ServerName, List<HRegionInfo>>> groupClusterLoad = new HashMap<>();
         for (Address sName : info.getServers()) {
           for(ServerName curr: clusterState.keySet()) {
             if(curr.getAddress().equals(sName)) {
@@ -180,7 +178,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   public Map<ServerName, List<HRegionInfo>> retainAssignment(
       Map<HRegionInfo, ServerName> regions, List<ServerName> servers) throws HBaseIOException {
     try {
-      Map<ServerName, List<HRegionInfo>> assignments = new TreeMap<ServerName, List<HRegionInfo>>();
+      Map<ServerName, List<HRegionInfo>> assignments = new TreeMap<>();
       ListMultimap<String, HRegionInfo> groupToRegion = ArrayListMultimap.create();
       Set<HRegionInfo> misplacedRegions = getMisplacedRegions(regions);
       for (HRegionInfo region : regions.keySet()) {
@@ -213,13 +211,13 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
             candidateList);
         if (server != null) {
           if (!assignments.containsKey(server)) {
-            assignments.put(server, new ArrayList<HRegionInfo>());
+            assignments.put(server, new ArrayList<>());
           }
           assignments.get(server).add(region);
         } else {
           //if not server is available assign to bogus so it ends up in RIT
           if(!assignments.containsKey(LoadBalancer.BOGUS_SERVER_NAME)) {
-            assignments.put(LoadBalancer.BOGUS_SERVER_NAME, new ArrayList<HRegionInfo>());
+            assignments.put(LoadBalancer.BOGUS_SERVER_NAME, new ArrayList<>());
           }
           assignments.get(LoadBalancer.BOGUS_SERVER_NAME).add(region);
         }
@@ -299,7 +297,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
   private Set<HRegionInfo> getMisplacedRegions(
       Map<HRegionInfo, ServerName> regions) throws IOException {
-    Set<HRegionInfo> misplacedRegions = new HashSet<HRegionInfo>();
+    Set<HRegionInfo> misplacedRegions = new HashSet<>();
     for(Map.Entry<HRegionInfo, ServerName> region : regions.entrySet()) {
       HRegionInfo regionInfo = region.getKey();
       ServerName assignedServer = region.getValue();
@@ -321,13 +319,12 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
   private Map<ServerName, List<HRegionInfo>> correctAssignments(
        Map<ServerName, List<HRegionInfo>> existingAssignments){
-    Map<ServerName, List<HRegionInfo>> correctAssignments =
-        new TreeMap<ServerName, List<HRegionInfo>>();
-    List<HRegionInfo> misplacedRegions = new LinkedList<HRegionInfo>();
-    correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<HRegionInfo>());
+    Map<ServerName, List<HRegionInfo>> correctAssignments = new TreeMap<>();
+    List<HRegionInfo> misplacedRegions = new LinkedList<>();
+    correctAssignments.put(LoadBalancer.BOGUS_SERVER_NAME, new LinkedList<>());
     for (Map.Entry<ServerName, List<HRegionInfo>> assignments : existingAssignments.entrySet()){
       ServerName sName = assignments.getKey();
-      correctAssignments.put(sName, new LinkedList<HRegionInfo>());
+      correctAssignments.put(sName, new LinkedList<>());
       List<HRegionInfo> regions = assignments.getValue();
       for (HRegionInfo region : regions) {
         RSGroupInfo info = null;

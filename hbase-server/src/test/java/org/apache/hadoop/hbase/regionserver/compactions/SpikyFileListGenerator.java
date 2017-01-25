@@ -43,7 +43,7 @@ class SpikyFileListGenerator extends StoreFileListGenerator {
       @Override
       public List<StoreFile> next() {
         count += 1;
-        ArrayList<StoreFile> files = new ArrayList<StoreFile>(NUM_FILES_GEN);
+        ArrayList<StoreFile> files = new ArrayList<>(NUM_FILES_GEN);
         for (int x = 0; x < NUM_FILES_GEN; x++) {
           int fileSize = random.nextInt(5) + 1;
           if ( x % 10 == 0) {

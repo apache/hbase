@@ -50,7 +50,7 @@ public class WeakObjectPool<K, V> {
     V createObject(K key);
   }
 
-  private final ReferenceQueue<V> staleRefQueue = new ReferenceQueue<V>();
+  private final ReferenceQueue<V> staleRefQueue = new ReferenceQueue<>();
 
   private class ObjectReference extends WeakReference<V> {
     final K key;
@@ -126,8 +126,7 @@ public class WeakObjectPool<K, V> {
     }
     this.objectFactory = objectFactory;
 
-    this.referenceCache = new ConcurrentHashMap<K, ObjectReference>(
-        initialCapacity, 0.75f, concurrencyLevel);
+    this.referenceCache = new ConcurrentHashMap<>(initialCapacity, 0.75f, concurrencyLevel);
     // 0.75f is the default load factor threshold of ConcurrentHashMap.
   }
 

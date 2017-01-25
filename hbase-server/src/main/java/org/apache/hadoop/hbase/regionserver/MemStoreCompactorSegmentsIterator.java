@@ -38,7 +38,7 @@ import java.util.List;
 @InterfaceAudience.Private
 public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator {
 
-  private List<Cell> kvs = new ArrayList<Cell>();
+  private List<Cell> kvs = new ArrayList<>();
   private boolean hasMore;
   private Iterator<Cell> kvsIterator;
 

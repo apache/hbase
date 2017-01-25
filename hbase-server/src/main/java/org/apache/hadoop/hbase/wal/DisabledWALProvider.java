@@ -68,7 +68,7 @@ class DisabledWALProvider implements WALProvider {
 
   @Override
   public List<WAL> getWALs() throws IOException {
-    List<WAL> wals = new ArrayList<WAL>(1);
+    List<WAL> wals = new ArrayList<>(1);
     wals.add(disabled);
     return wals;
   }
@@ -89,8 +89,7 @@ class DisabledWALProvider implements WALProvider {
   }
 
   private static class DisabledWAL implements WAL {
-    protected final List<WALActionsListener> listeners =
-        new CopyOnWriteArrayList<WALActionsListener>();
+    protected final List<WALActionsListener> listeners = new CopyOnWriteArrayList<>();
     protected final Path path;
     protected final WALCoprocessorHost coprocessorHost;
     protected final AtomicBoolean closed = new AtomicBoolean(false);

@@ -112,7 +112,7 @@ public final class SnapshotTestingUtils {
     // list the snapshot
     List<SnapshotDescription> snapshots = admin.listSnapshots();
 
-    List<SnapshotDescription> returnedSnapshots = new ArrayList<SnapshotDescription>();
+    List<SnapshotDescription> returnedSnapshots = new ArrayList<>();
     for (SnapshotDescription sd : snapshots) {
       if (snapshotName.equals(sd.getName()) && tableName.equals(sd.getTableName())) {
         returnedSnapshots.add(sd);
@@ -213,7 +213,7 @@ public final class SnapshotTestingUtils {
     HBaseProtos.SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
     // Extract regions and families with store files
-    final Set<byte[]> snapshotFamilies = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    final Set<byte[]> snapshotFamilies = new TreeSet<>(Bytes.BYTES_COMPARATOR);
 
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, desc);
     Map<String, SnapshotRegionManifest> regionManifests = manifest.getRegionManifestsMap();
@@ -355,7 +355,7 @@ public final class SnapshotTestingUtils {
    */
   public static ArrayList<String> listHFileNames(final FileSystem fs, final Path tableDir)
       throws IOException {
-    final ArrayList<String> hfiles = new ArrayList<String>();
+    final ArrayList<String> hfiles = new ArrayList<>();
     FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
       @Override
       public void storeFile(final String region, final String family, final String hfileName)
@@ -376,7 +376,7 @@ public final class SnapshotTestingUtils {
       TableName tableName, String familyName, String snapshotNameString,
       Path rootDir, FileSystem fs, boolean onlineSnapshot)
       throws Exception {
-    ArrayList<byte[]> nonEmptyFamilyNames = new ArrayList<byte[]>(1);
+    ArrayList<byte[]> nonEmptyFamilyNames = new ArrayList<>(1);
     nonEmptyFamilyNames.add(Bytes.toBytes(familyName));
     createSnapshotAndValidate(admin, tableName, nonEmptyFamilyNames, /* emptyFamilyNames= */ null,
                               snapshotNameString, rootDir, fs, onlineSnapshot);
@@ -869,7 +869,7 @@ public final class SnapshotTestingUtils {
   public static void verifyReplicasCameOnline(TableName tableName, Admin admin,
       int regionReplication) throws IOException {
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
-    HashSet<HRegionInfo> set = new HashSet<HRegionInfo>();
+    HashSet<HRegionInfo> set = new HashSet<>();
     for (HRegionInfo hri : regions) {
       set.add(RegionReplicaUtil.getRegionInfoForDefaultReplica(hri));
       for (int i = 0; i < regionReplication; i++) {

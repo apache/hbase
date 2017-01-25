@@ -51,7 +51,7 @@ public class DeadServer {
    * and it's server logs are recovered, it will be told to call server startup
    * because by then, its regions have probably been reassigned.
    */
-  private final Map<ServerName, Long> deadServers = new HashMap<ServerName, Long>();
+  private final Map<ServerName, Long> deadServers = new HashMap<>();
 
   /**
    * Number of dead servers currently being processed
@@ -102,7 +102,7 @@ public class DeadServer {
   public synchronized boolean areDeadServersInProgress() { return processing; }
 
   public synchronized Set<ServerName> copyServerNames() {
-    Set<ServerName> clone = new HashSet<ServerName>(deadServers.size());
+    Set<ServerName> clone = new HashSet<>(deadServers.size());
     clone.addAll(deadServers.keySet());
     return clone;
   }
@@ -177,11 +177,11 @@ public class DeadServer {
    * @return a sorted array list, by death time, lowest values first.
    */
   public synchronized List<Pair<ServerName, Long>> copyDeadServersSince(long ts){
-    List<Pair<ServerName, Long>> res =  new ArrayList<Pair<ServerName, Long>>(size());
+    List<Pair<ServerName, Long>> res =  new ArrayList<>(size());
 
     for (Map.Entry<ServerName, Long> entry:deadServers.entrySet()){
       if (entry.getValue() >= ts){
-        res.add(new Pair<ServerName, Long>(entry.getKey(), entry.getValue()));
+        res.add(new Pair<>(entry.getKey(), entry.getValue()));
       }
     }
 

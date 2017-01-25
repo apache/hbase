@@ -150,7 +150,7 @@ public class TestDefaultMemStore {
     int rowCount = addRows(this.memstore);
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners(0);
     Scan scan = new Scan();
-    List<Cell> result = new ArrayList<Cell>();
+    List<Cell> result = new ArrayList<>();
     Configuration conf = HBaseConfiguration.create();
     ScanInfo scanInfo =
         new ScanInfo(conf, null, 0, 1, HConstants.LATEST_TIMESTAMP, KeepDeletedCells.FALSE, 0,
@@ -502,7 +502,7 @@ public class TestDefaultMemStore {
     int NUM_THREADS = 8;
 
     ReadOwnWritesTester threads[] = new ReadOwnWritesTester[NUM_THREADS];
-    AtomicReference<Throwable> caught = new AtomicReference<Throwable>();
+    AtomicReference<Throwable> caught = new AtomicReference<>();
 
     for (int i = 0; i < NUM_THREADS; i++) {
       threads[i] = new ReadOwnWritesTester(i, memstore, mvcc, caught, this.startSeqNum);
@@ -589,7 +589,7 @@ public class TestDefaultMemStore {
       try (InternalScanner scanner = new StoreScanner(new Scan(
           Bytes.toBytes(startRowId)), scanInfo, scanType, null,
           memstore.getScanners(0))) {
-        List<Cell> results = new ArrayList<Cell>();
+        List<Cell> results = new ArrayList<>();
         for (int i = 0; scanner.next(results); i++) {
           int rowId = startRowId + i;
           Cell left = results.get(0);
@@ -598,7 +598,7 @@ public class TestDefaultMemStore {
               "Row name",
               CellComparator.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
           assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
-          List<Cell> row = new ArrayList<Cell>();
+          List<Cell> row = new ArrayList<>();
           for (Cell kv : results) {
             row.add(kv);
           }
@@ -660,7 +660,7 @@ public class TestDefaultMemStore {
     KeyValue del2 = new KeyValue(row, fam, qf1, ts2, KeyValue.Type.Delete, val);
     memstore.add(del2, null);
 
-    List<Cell> expected = new ArrayList<Cell>();
+    List<Cell> expected = new ArrayList<>();
     expected.add(put3);
     expected.add(del2);
     expected.add(put2);
@@ -696,7 +696,7 @@ public class TestDefaultMemStore {
       new KeyValue(row, fam, qf1, ts2, KeyValue.Type.DeleteColumn, val);
     memstore.add(del2, null);
 
-    List<Cell> expected = new ArrayList<Cell>();
+    List<Cell> expected = new ArrayList<>();
     expected.add(put3);
     expected.add(del2);
     expected.add(put2);
@@ -733,7 +733,7 @@ public class TestDefaultMemStore {
       new KeyValue(row, fam, null, ts, KeyValue.Type.DeleteFamily, val);
     memstore.add(del, null);
 
-    List<Cell> expected = new ArrayList<Cell>();
+    List<Cell> expected = new ArrayList<>();
     expected.add(del);
     expected.add(put1);
     expected.add(put2);
@@ -822,7 +822,7 @@ public class TestDefaultMemStore {
     memstore = new DefaultMemStore(conf, CellComparator.COMPARATOR);
     MemstoreSize oldSize = memstore.size();
 
-    List<Cell> l = new ArrayList<Cell>();
+    List<Cell> l = new ArrayList<>();
     KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
     KeyValue kv2 = KeyValueTestUtil.create("r", "f", "q", 101, "v");
     KeyValue kv3 = KeyValueTestUtil.create("r", "f", "q", 102, "v");
@@ -880,7 +880,7 @@ public class TestDefaultMemStore {
       t = runSnapshot(memstore);
 
       // test the case that the timeOfOldestEdit is updated after a KV upsert
-      List<Cell> l = new ArrayList<Cell>();
+      List<Cell> l = new ArrayList<>();
       KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
       kv1.setSequenceId(100);
       l.add(kv1);

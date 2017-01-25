@@ -259,8 +259,7 @@ public class SimpleRpcServer extends RpcServer {
       private final Selector readSelector;
 
       Reader() throws IOException {
-        this.pendingConnections =
-          new LinkedBlockingQueue<Connection>(readerPendingConnectionQueueLength);
+        this.pendingConnections = new LinkedBlockingQueue<>(readerPendingConnectionQueueLength);
         this.readSelector = Selector.open();
       }
 
@@ -603,7 +602,7 @@ public class SimpleRpcServer extends RpcServer {
         return lastPurgeTime;
       }
 
-      ArrayList<Connection> conWithOldCalls = new ArrayList<Connection>();
+      ArrayList<Connection> conWithOldCalls = new ArrayList<>();
       // get the list of channels from list of keys.
       synchronized (writeSelector.keys()) {
         for (SelectionKey key : writeSelector.keys()) {
@@ -763,7 +762,7 @@ public class SimpleRpcServer extends RpcServer {
     protected SocketChannel channel;
     private ByteBuff data;
     private ByteBuffer dataLengthBuffer;
-    protected final ConcurrentLinkedDeque<Call> responseQueue = new ConcurrentLinkedDeque<Call>();
+    protected final ConcurrentLinkedDeque<Call> responseQueue = new ConcurrentLinkedDeque<>();
     private final Lock responseWriteLock = new ReentrantLock();
     private LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
     private long lastContact;

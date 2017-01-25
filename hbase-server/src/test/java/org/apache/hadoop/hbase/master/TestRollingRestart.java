@@ -259,8 +259,8 @@ public class  TestRollingRestart {
 
   private NavigableSet<String> getDoubleAssignedRegions(
       MiniHBaseCluster cluster) throws IOException {
-    NavigableSet<String> online = new TreeSet<String>();
-    NavigableSet<String> doubled = new TreeSet<String>();
+    NavigableSet<String> online = new TreeSet<>();
+    NavigableSet<String> doubled = new TreeSet<>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       for (HRegionInfo region : ProtobufUtil.getOnlineRegions(
           rst.getRegionServer().getRSRpcServices())) {

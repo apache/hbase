@@ -166,10 +166,9 @@ public class TestRowProcessorEndpoint {
     ProcessResponse protoResult = service.process(null, request);
     FriendsOfFriendsProcessorResponse response =
         FriendsOfFriendsProcessorResponse.parseFrom(protoResult.getRowProcessorResult());
-    Set<String> result = new HashSet<String>();
+    Set<String> result = new HashSet<>();
     result.addAll(response.getResultList());
-    Set<String> expected =
-      new HashSet<String>(Arrays.asList(new String[]{"d", "e", "f", "g"}));
+    Set<String> expected = new HashSet<>(Arrays.asList(new String[]{"d", "e", "f", "g"}));
     Get get = new Get(ROW);
     LOG.debug("row keyvalues:" + stringifyKvs(table.get(get).listCells()));
     assertEquals(expected, result);
@@ -349,7 +348,7 @@ public class TestRowProcessorEndpoint {
       public void process(long now, HRegion region,
           List<Mutation> mutations, WALEdit walEdit) throws IOException {
         // Scan current counter
-        List<Cell> kvs = new ArrayList<Cell>();
+        List<Cell> kvs = new ArrayList<>();
         Scan scan = new Scan(row, row);
         scan.addColumn(FAM, COUNTER);
         doScan(region, scan, kvs);
@@ -398,7 +397,7 @@ public class TestRowProcessorEndpoint {
         BaseRowProcessor<FriendsOfFriendsProcessorRequest, FriendsOfFriendsProcessorResponse> {
       byte[] row = null;
       byte[] person = null;
-      final Set<String> result = new HashSet<String>();
+      final Set<String> result = new HashSet<>();
 
       /**
        * Empty constructor for Writable
@@ -432,7 +431,7 @@ public class TestRowProcessorEndpoint {
       @Override
       public void process(long now, HRegion region,
           List<Mutation> mutations, WALEdit walEdit) throws IOException {
-        List<Cell> kvs = new ArrayList<Cell>();
+        List<Cell> kvs = new ArrayList<>();
         { // First scan to get friends of the person
           Scan scan = new Scan(row, row);
           scan.addColumn(FAM, person);
@@ -497,7 +496,7 @@ public class TestRowProcessorEndpoint {
 
       @Override
       public Collection<byte[]> getRowsToLock() {
-        List<byte[]> rows = new ArrayList<byte[]>(2);
+        List<byte[]> rows = new ArrayList<>(2);
         rows.add(row1);
         rows.add(row2);
         return rows;
@@ -522,8 +521,8 @@ public class TestRowProcessorEndpoint {
         now = myTimer.getAndIncrement();
 
         // Scan both rows
-        List<Cell> kvs1 = new ArrayList<Cell>();
-        List<Cell> kvs2 = new ArrayList<Cell>();
+        List<Cell> kvs1 = new ArrayList<>();
+        List<Cell> kvs2 = new ArrayList<>();
         doScan(region, new Scan(row1, row1), kvs1);
         doScan(region, new Scan(row2, row2), kvs2);
 
@@ -538,7 +537,7 @@ public class TestRowProcessorEndpoint {
         swapped = !swapped;
 
         // Add and delete keyvalues
-        List<List<Cell>> kvs = new ArrayList<List<Cell>>(2);
+        List<List<Cell>> kvs = new ArrayList<>(2);
         kvs.add(kvs1);
         kvs.add(kvs2);
         byte[][] rows = new byte[][]{row1, row2};

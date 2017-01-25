@@ -30,8 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class CacheableDeserializerIdManager {
-  private static final Map<Integer, CacheableDeserializer<Cacheable>> registeredDeserializers =
-    new HashMap<Integer, CacheableDeserializer<Cacheable>>();
+  private static final Map<Integer, CacheableDeserializer<Cacheable>> registeredDeserializers = new HashMap<>();
   private static final AtomicInteger identifier = new AtomicInteger(0);
 
   /**

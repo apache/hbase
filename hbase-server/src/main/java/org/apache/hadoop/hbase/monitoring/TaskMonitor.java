@@ -72,7 +72,7 @@ public class TaskMonitor {
     MonitoredTask proxy = (MonitoredTask) Proxy.newProxyInstance(
         stat.getClass().getClassLoader(),
         new Class<?>[] { MonitoredTask.class },
-        new PassthroughInvocationHandler<MonitoredTask>(stat));
+        new PassthroughInvocationHandler<>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
     if (tasks.isFull()) {
       purgeExpiredTasks();
@@ -87,7 +87,7 @@ public class TaskMonitor {
     MonitoredRPCHandler proxy = (MonitoredRPCHandler) Proxy.newProxyInstance(
         stat.getClass().getClassLoader(),
         new Class<?>[] { MonitoredRPCHandler.class },
-        new PassthroughInvocationHandler<MonitoredRPCHandler>(stat));
+        new PassthroughInvocationHandler<>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
     rpcTasks.add(pair);
     return proxy;
@@ -189,7 +189,7 @@ public class TaskMonitor {
     public TaskAndWeakRefPair(MonitoredTask stat,
         MonitoredTask proxy) {
       this.impl = stat;
-      this.weakProxy = new WeakReference<MonitoredTask>(proxy);
+      this.weakProxy = new WeakReference<>(proxy);
     }
     
     public MonitoredTask get() {

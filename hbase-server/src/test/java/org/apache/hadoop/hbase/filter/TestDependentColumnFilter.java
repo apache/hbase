@@ -125,7 +125,7 @@ public class TestDependentColumnFilter {
   }
 
   private List<KeyValue> makeTestVals() {
-    List<KeyValue> testVals = new ArrayList<KeyValue>();
+    List<KeyValue> testVals = new ArrayList<>();
     testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]));
     testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[1], BAD_VALS[1]));
     testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[1], BAD_VALS[2]));
@@ -147,7 +147,7 @@ public class TestDependentColumnFilter {
   private void verifyScan(Scan s, long expectedRows, long expectedCells)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     int i = 0;
     int cells = 0;
     for (boolean done = true; done; i++) {
@@ -231,7 +231,7 @@ public class TestDependentColumnFilter {
   @Test
   public void testFilterDropping() throws Exception {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
-    List<Cell> accepted = new ArrayList<Cell>();
+    List<Cell> accepted = new ArrayList<>();
     for(Cell val : testVals) {
       if(filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
         accepted.add(val);

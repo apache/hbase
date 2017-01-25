@@ -178,7 +178,7 @@ public class TestBoundedRegionGroupingStrategy {
       FSUtils.setRootDir(CONF, TEST_UTIL.getDataTestDirOnTestFS());
 
       wals = new WALFactory(CONF, null, "setMembershipDedups");
-      final Set<WAL> seen = new HashSet<WAL>(temp * 4);
+      final Set<WAL> seen = new HashSet<>(temp * 4);
       final Random random = new Random();
       int count = 0;
       // we know that this should see one of the wals more than once

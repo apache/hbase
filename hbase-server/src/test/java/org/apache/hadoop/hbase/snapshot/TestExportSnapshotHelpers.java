@@ -47,13 +47,13 @@ public class TestExportSnapshotHelpers {
   @Test
   public void testBalanceSplit() throws Exception {
     // Create a list of files
-    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>(21);
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>(21);
     for (long i = 0; i <= 20; i++) {
       SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
         .setType(SnapshotFileInfo.Type.HFILE)
         .setHfile("file-" + i)
         .build();
-      files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, i));
+      files.add(new Pair<>(fileInfo, i));
     }
 
     // Create 5 groups (total size 210)

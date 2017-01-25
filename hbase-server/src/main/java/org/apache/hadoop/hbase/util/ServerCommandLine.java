@@ -94,7 +94,7 @@ public abstract class ServerCommandLine extends Configured implements Tool {
   public static void logProcessInfo(Configuration conf) {
     // log environment variables unless asked not to
     if (conf == null || !conf.getBoolean("hbase.envvars.logging.disabled", false)) {
-      Set<String> skipWords = new HashSet<String>(DEFAULT_SKIP_WORDS);
+      Set<String> skipWords = new HashSet<>(DEFAULT_SKIP_WORDS);
       if (conf != null) {
         String[] confSkipWords = conf.getStrings("hbase.envvars.logging.skipwords");
         if (confSkipWords != null) {

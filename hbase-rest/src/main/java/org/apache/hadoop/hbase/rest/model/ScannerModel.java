@@ -109,14 +109,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
   private byte[] startRow = HConstants.EMPTY_START_ROW;
   private byte[] endRow = HConstants.EMPTY_END_ROW;;
-  private List<byte[]> columns = new ArrayList<byte[]>();
+  private List<byte[]> columns = new ArrayList<>();
   private int batch = Integer.MAX_VALUE;
   private long startTime = 0;
   private long endTime = Long.MAX_VALUE;
   private String filter = null;
   private int maxVersions = Integer.MAX_VALUE;
   private int caching = -1;
-  private List<String> labels = new ArrayList<String>();
+  private List<String> labels = new ArrayList<>();
   private boolean cacheBlocks = true;
 
   /**
@@ -287,7 +287,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         } break;
         case FilterList:
           this.op = ((FilterList)filter).getOperator().toString();
-          this.filters = new ArrayList<FilterModel>();
+          this.filters = new ArrayList<>();
           for (Filter child: ((FilterList)filter).getFilters()) {
             this.filters.add(new FilterModel(child));
           }
@@ -300,13 +300,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
             Base64.encodeBytes(((InclusiveStopFilter)filter).getStopRowKey());
           break;
         case MultipleColumnPrefixFilter:
-          this.prefixes = new ArrayList<String>();
+          this.prefixes = new ArrayList<>();
           for (byte[] prefix: ((MultipleColumnPrefixFilter)filter).getPrefix()) {
             this.prefixes.add(Base64.encodeBytes(prefix));
           }
           break;
         case MultiRowRangeFilter:
-          this.ranges = new ArrayList<RowRange>();
+          this.ranges = new ArrayList<>();
           for(RowRange range : ((MultiRowRangeFilter)filter).getRowRanges()) {
             this.ranges.add(new RowRange(range.getStartRow(), range.isStartRowInclusive(),
                 range.getStopRow(), range.isStopRowInclusive()));
@@ -349,14 +349,14 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           }
         } break;
         case SkipFilter:
-          this.filters = new ArrayList<FilterModel>();
+          this.filters = new ArrayList<>();
           this.filters.add(new FilterModel(((SkipFilter)filter).getFilter()));
           break;
         case TimestampsFilter:
           this.timestamps = ((TimestampsFilter)filter).getTimestamps();
           break;
         case WhileMatchFilter:
-          this.filters = new ArrayList<FilterModel>();
+          this.filters = new ArrayList<>();
           this.filters.add(
             new FilterModel(((WhileMatchFilter)filter).getFilter()));
           break;
@@ -391,7 +391,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         filter = new FamilyFilter(CompareOp.valueOf(op), comparator.build());
         break;
       case FilterList: {
-        List<Filter> list = new ArrayList<Filter>(filters.size());
+        List<Filter> list = new ArrayList<>(filters.size());
         for (FilterModel model: filters) {
           list.add(model.build());
         }

@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public abstract class JvmVersion {
-  private static Set<String> BAD_JVM_VERSIONS = new HashSet<String>();
+  private static Set<String> BAD_JVM_VERSIONS = new HashSet<>();
   static {
     BAD_JVM_VERSIONS.add("1.6.0_18");
   }

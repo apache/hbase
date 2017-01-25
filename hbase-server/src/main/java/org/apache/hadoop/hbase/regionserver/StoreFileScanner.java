@@ -125,7 +125,7 @@ public class StoreFileScanner implements KeyValueScanner {
   public static List<StoreFileScanner> getScannersForStoreFiles(Collection<StoreFile> files,
       boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean canUseDrop,
       ScanQueryMatcher matcher, long readPt, boolean isPrimaryReplica) throws IOException {
-    List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(files.size());
+    List<StoreFileScanner> scanners = new ArrayList<>(files.size());
     List<StoreFile> sorted_files = new ArrayList<>(files);
     Collections.sort(sorted_files, StoreFile.Comparators.SEQ_ID);
     for (int i = 0; i < sorted_files.size(); i++) {

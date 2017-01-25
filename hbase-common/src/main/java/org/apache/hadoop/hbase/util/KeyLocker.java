@@ -49,7 +49,7 @@ public class KeyLocker<K> {
   private static final int NB_CONCURRENT_LOCKS = 1000;
 
   private final WeakObjectPool<K, ReentrantLock> lockPool =
-      new WeakObjectPool<K, ReentrantLock>(
+      new WeakObjectPool<>(
           new WeakObjectPool.ObjectFactory<K, ReentrantLock>() {
             @Override
             public ReentrantLock createObject(K key) {
@@ -85,7 +85,7 @@ public class KeyLocker<K> {
     Arrays.sort(keyArray);
 
     lockPool.purge();
-    Map<K, Lock> locks = new LinkedHashMap<K, Lock>(keyArray.length);
+    Map<K, Lock> locks = new LinkedHashMap<>(keyArray.length);
     for (Object o : keyArray) {
       @SuppressWarnings("unchecked")
       K key = (K)o;

@@ -54,7 +54,7 @@ public class MultiVersionConcurrencyControl {
   // reduce the number of allocations on the write path?
   // This could be equal to the number of handlers + a small number.
   // TODO: St.Ack 20150903 Sounds good to me.
-  private final LinkedList<WriteEntry> writeQueue = new LinkedList<WriteEntry>();
+  private final LinkedList<WriteEntry> writeQueue = new LinkedList<>();
 
   public MultiVersionConcurrencyControl() {
     super();

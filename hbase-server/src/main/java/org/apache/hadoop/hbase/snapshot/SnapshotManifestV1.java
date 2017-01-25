@@ -121,7 +121,7 @@ public final class SnapshotManifestV1 {
     }
 
     final ExecutorCompletionService<SnapshotRegionManifest> completionService =
-      new ExecutorCompletionService<SnapshotRegionManifest>(executor);
+      new ExecutorCompletionService<>(executor);
     for (final FileStatus region: regions) {
       completionService.submit(new Callable<SnapshotRegionManifest>() {
         @Override
@@ -132,8 +132,7 @@ public final class SnapshotManifestV1 {
       });
     }
 
-    ArrayList<SnapshotRegionManifest> regionsManifest =
-        new ArrayList<SnapshotRegionManifest>(regions.length);
+    ArrayList<SnapshotRegionManifest> regionsManifest = new ArrayList<>(regions.length);
     try {
       for (int i = 0; i < regions.length; ++i) {
         regionsManifest.add(completionService.take().get());

@@ -266,7 +266,7 @@ public class AccessControlClient {
     HBaseRpcController controller
       = ((ClusterConnection) connection).getRpcControllerFactory().newController();
       */
-    List<UserPermission> permList = new ArrayList<UserPermission>();
+    List<UserPermission> permList = new ArrayList<>();
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
       try (Admin admin = connection.getAdmin()) {
         CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);

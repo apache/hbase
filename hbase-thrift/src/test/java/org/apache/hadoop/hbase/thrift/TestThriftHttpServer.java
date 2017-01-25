@@ -127,7 +127,7 @@ public class TestThriftHttpServer {
   }
 
   private void runThriftServer(int customHeaderSize) throws Exception {
-    List<String> args = new ArrayList<String>(3);
+    List<String> args = new ArrayList<>(3);
     port = HBaseTestingUtility.randomFreePort();
     args.add("-" + ThriftServer.PORT_OPTION);
     args.add(String.valueOf(port));

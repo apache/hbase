@@ -297,9 +297,9 @@ public class IntegrationTestMTTR {
     LOG.info("Starting " + testName + " with " + maxIters + " iterations.");
 
     // Array to keep track of times.
-    ArrayList<TimingResult> resultPuts = new ArrayList<TimingResult>(maxIters);
-    ArrayList<TimingResult> resultScan = new ArrayList<TimingResult>(maxIters);
-    ArrayList<TimingResult> resultAdmin = new ArrayList<TimingResult>(maxIters);
+    ArrayList<TimingResult> resultPuts = new ArrayList<>(maxIters);
+    ArrayList<TimingResult> resultScan = new ArrayList<>(maxIters);
+    ArrayList<TimingResult> resultAdmin = new ArrayList<>(maxIters);
     long start = System.nanoTime();
 
     try {
@@ -357,7 +357,7 @@ public class IntegrationTestMTTR {
    */
   private static class TimingResult {
     DescriptiveStatistics stats = new DescriptiveStatistics();
-    ArrayList<Long> traces = new ArrayList<Long>(10);
+    ArrayList<Long> traces = new ArrayList<>(10);
 
     /**
      * Add a result to this aggregate result.

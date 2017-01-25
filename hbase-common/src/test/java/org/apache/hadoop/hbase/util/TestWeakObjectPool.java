@@ -35,7 +35,7 @@ public class TestWeakObjectPool {
 
   @Before
   public void setUp() {
-    pool = new WeakObjectPool<String, Object>(
+    pool = new WeakObjectPool<>(
         new WeakObjectPool.ObjectFactory<String, Object>() {
           @Override
           public Object createObject(String key) {
@@ -94,7 +94,7 @@ public class TestWeakObjectPool {
     final int THREAD_COUNT = 100;
 
     final AtomicBoolean assertionFailed = new AtomicBoolean();
-    final AtomicReference<Object> expectedObjRef = new AtomicReference<Object>();
+    final AtomicReference<Object> expectedObjRef = new AtomicReference<>();
     final CountDownLatch prepareLatch = new CountDownLatch(THREAD_COUNT);
     final CountDownLatch startLatch = new CountDownLatch(1);
     final CountDownLatch endLatch = new CountDownLatch(THREAD_COUNT);

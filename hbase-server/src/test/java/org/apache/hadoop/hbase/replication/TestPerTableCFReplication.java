@@ -283,7 +283,7 @@ public class TestPerTableCFReplication {
     // 1. null or empty string, result should be null
     assertNull(ReplicationSerDeHelper.convert(tabCFsMap));
 
-    tabCFsMap = new HashMap<TableName, List<String>>();
+    tabCFsMap = new HashMap<>();
     tableCFs = ReplicationSerDeHelper.convert(tabCFsMap);
     assertEquals(0, tableCFs.length);
 
@@ -301,7 +301,7 @@ public class TestPerTableCFReplication {
     assertEquals(0, tableCFs[0].getFamiliesCount());
 
     tabCFsMap.clear();
-    tabCFsMap.put(tableName2, new ArrayList<String>());
+    tabCFsMap.put(tableName2, new ArrayList<>());
     tabCFsMap.get(tableName2).add("cf1");
     tableCFs = ReplicationSerDeHelper.convert(tabCFsMap);
     assertEquals(1, tableCFs.length); // only one table
@@ -311,7 +311,7 @@ public class TestPerTableCFReplication {
     assertEquals("cf1", tableCFs[0].getFamilies(0).toStringUtf8());
 
     tabCFsMap.clear();
-    tabCFsMap.put(tableName3, new ArrayList<String>());
+    tabCFsMap.put(tableName3, new ArrayList<>());
     tabCFsMap.get(tableName3).add("cf1");
     tabCFsMap.get(tableName3).add("cf3");
     tableCFs = ReplicationSerDeHelper.convert(tabCFsMap);
@@ -324,9 +324,9 @@ public class TestPerTableCFReplication {
 
     tabCFsMap.clear();
     tabCFsMap.put(tableName1, null);
-    tabCFsMap.put(tableName2, new ArrayList<String>());
+    tabCFsMap.put(tableName2, new ArrayList<>());
     tabCFsMap.get(tableName2).add("cf1");
-    tabCFsMap.put(tableName3, new ArrayList<String>());
+    tabCFsMap.put(tableName3, new ArrayList<>());
     tabCFsMap.get(tableName3).add("cf1");
     tabCFsMap.get(tableName3).add("cf3");
 
@@ -406,7 +406,7 @@ public class TestPerTableCFReplication {
       rpc2.setClusterKey(utility2.getClusterKey());
       Map<TableName, List<String>> tableCFs = new HashMap<>();
       tableCFs.put(tabCName, null);
-      tableCFs.put(tabBName, new ArrayList<String>());
+      tableCFs.put(tabBName, new ArrayList<>());
       tableCFs.get(tabBName).add("f1");
       tableCFs.get(tabBName).add("f3");
       replicationAdmin.addPeer("2", rpc2, tableCFs);
@@ -415,7 +415,7 @@ public class TestPerTableCFReplication {
       rpc3.setClusterKey(utility3.getClusterKey());
       tableCFs.clear();
       tableCFs.put(tabAName, null);
-      tableCFs.put(tabBName, new ArrayList<String>());
+      tableCFs.put(tabBName, new ArrayList<>());
       tableCFs.get(tabBName).add("f1");
       tableCFs.get(tabBName).add("f2");
       replicationAdmin.addPeer("3", rpc3, tableCFs);
@@ -462,17 +462,17 @@ public class TestPerTableCFReplication {
 
       // B. change peers' replicable table-cf config
       tableCFs.clear();
-      tableCFs.put(tabAName, new ArrayList<String>());
+      tableCFs.put(tabAName, new ArrayList<>());
       tableCFs.get(tabAName).add("f1");
       tableCFs.get(tabAName).add("f2");
-      tableCFs.put(tabCName, new ArrayList<String>());
+      tableCFs.put(tabCName, new ArrayList<>());
       tableCFs.get(tabCName).add("f2");
       tableCFs.get(tabCName).add("f3");
       replicationAdmin.setPeerTableCFs("2", tableCFs);
 
       tableCFs.clear();
       tableCFs.put(tabBName, null);
-      tableCFs.put(tabCName, new ArrayList<String>());
+      tableCFs.put(tabCName, new ArrayList<>());
       tableCFs.get(tabCName).add("f3");
       replicationAdmin.setPeerTableCFs("3", tableCFs);
 

@@ -171,7 +171,7 @@ public class RegionGroupingProvider implements WALProvider {
 
   @Override
   public List<WAL> getWALs() throws IOException {
-    List<WAL> wals = new ArrayList<WAL>();
+    List<WAL> wals = new ArrayList<>();
     for (WALProvider provider : cached.values()) {
       wals.addAll(provider.getWALs());
     }

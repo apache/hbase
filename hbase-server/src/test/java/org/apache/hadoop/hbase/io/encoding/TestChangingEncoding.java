@@ -77,8 +77,7 @@ public class TestChangingEncoding {
       createEncodingsToIterate();
 
   private static final List<DataBlockEncoding> createEncodingsToIterate() {
-    List<DataBlockEncoding> encodings = new ArrayList<DataBlockEncoding>(
-        Arrays.asList(DataBlockEncoding.values()));
+    List<DataBlockEncoding> encodings = new ArrayList<>(Arrays.asList(DataBlockEncoding.values()));
     encodings.add(DataBlockEncoding.NONE);
     return Collections.unmodifiableList(encodings);
   }

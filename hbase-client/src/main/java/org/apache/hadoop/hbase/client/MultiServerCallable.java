@@ -107,7 +107,7 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
           HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName));
       if (this.cellBlock) {
         // Pre-size. Presume at least a KV per Action.  There are likely more.
-        if (cells == null) cells = new ArrayList<CellScannable>(countOfActions);
+        if (cells == null) cells = new ArrayList<>(countOfActions);
         // Send data in cellblocks. The call to buildNoDataMultiRequest will skip RowMutations.
         // They have already been handled above. Guess at count of cells
         regionActionBuilder = RequestConverter.buildNoDataRegionAction(regionName, actions, cells,

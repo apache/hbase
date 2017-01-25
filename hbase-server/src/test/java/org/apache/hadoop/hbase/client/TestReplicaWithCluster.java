@@ -377,12 +377,12 @@ public class TestReplicaWithCluster {
     final int numRows = 10;
     final byte[] qual = Bytes.toBytes("qual");
     final byte[] val  = Bytes.toBytes("val");
-    final List<Pair<byte[], String>> famPaths = new ArrayList<Pair<byte[], String>>();
+    final List<Pair<byte[], String>> famPaths = new ArrayList<>();
     for (HColumnDescriptor col : hdt.getColumnFamilies()) {
       Path hfile = new Path(dir, col.getNameAsString());
       TestHRegionServerBulkLoad.createHFile(HTU.getTestFileSystem(), hfile, col.getName(),
         qual, val, numRows);
-      famPaths.add(new Pair<byte[], String>(col.getName(), hfile.toString()));
+      famPaths.add(new Pair<>(col.getName(), hfile.toString()));
     }
 
     // bulk load HFiles

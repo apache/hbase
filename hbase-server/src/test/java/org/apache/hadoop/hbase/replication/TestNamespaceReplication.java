@@ -165,7 +165,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     namespaces.add(ns2);
     rpc.setNamespaces(namespaces);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
-    tableCfs.put(tabAName, new ArrayList<String>());
+    tableCfs.put(tabAName, new ArrayList<>());
     tableCfs.get(tabAName).add("f1");
     rpc.setTableCFsMap(tableCfs);
     admin.updatePeerConfig("2", rpc);

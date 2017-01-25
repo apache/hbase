@@ -493,7 +493,7 @@ public class TestAtomicOperation {
                 }
               }
               long ts = timeStamps.incrementAndGet();
-              List<Mutation> mrm = new ArrayList<Mutation>();
+              List<Mutation> mrm = new ArrayList<>();
               if (op) {
                 Put p = new Put(row2, ts);
                 p.addColumn(fam1, qual1, value1);
@@ -518,7 +518,7 @@ public class TestAtomicOperation {
               // check: should always see exactly one column
               Scan s = new Scan(row);
               RegionScanner rs = region.getScanner(s);
-              List<Cell> r = new ArrayList<Cell>();
+              List<Cell> r = new ArrayList<>();
               while (rs.next(r))
                 ;
               rs.close();
@@ -610,7 +610,7 @@ public class TestAtomicOperation {
     ctx.stop();
     Scan s = new Scan();
     RegionScanner scanner = region.getScanner(s);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(2).build();
     scanner.next(results, scannerContext);
     for (Cell keyValue : results) {

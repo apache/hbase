@@ -250,7 +250,7 @@ public class TruncateTableProcedure
     if (state.getRegionInfoCount() == 0) {
       regions = null;
     } else {
-      regions = new ArrayList<HRegionInfo>(state.getRegionInfoCount());
+      regions = new ArrayList<>(state.getRegionInfoCount());
       for (HBaseProtos.RegionInfo hri: state.getRegionInfoList()) {
         regions.add(HRegionInfo.convert(hri));
       }
@@ -258,7 +258,7 @@ public class TruncateTableProcedure
   }
 
   private static List<HRegionInfo> recreateRegionInfo(final List<HRegionInfo> regions) {
-    ArrayList<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(regions.size());
+    ArrayList<HRegionInfo> newRegions = new ArrayList<>(regions.size());
     for (HRegionInfo hri: regions) {
       newRegions.add(new HRegionInfo(hri.getTable(), hri.getStartKey(), hri.getEndKey()));
     }

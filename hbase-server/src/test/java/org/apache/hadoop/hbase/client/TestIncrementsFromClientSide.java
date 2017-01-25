@@ -94,7 +94,7 @@ public class TestIncrementsFromClientSide {
   @Test
   public void testDuplicateIncrement() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
-    Map<String, String> kvs = new HashMap<String, String>();
+    Map<String, String> kvs = new HashMap<>();
     kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
     hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
     TEST_UTIL.createTable(hdt, new byte[][] { ROW }).close();

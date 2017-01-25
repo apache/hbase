@@ -624,7 +624,7 @@ public class TestMobCompactor {
     // the ref name is the new file
     Path mobFamilyPath =
       MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, hcd1.getNameAsString());
-    List<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<>();
     if (fs.exists(mobFamilyPath)) {
       FileStatus[] files = fs.listStatus(mobFamilyPath);
       for (FileStatus file : files) {
@@ -1015,7 +1015,7 @@ public class TestMobCompactor {
   private static ExecutorService createThreadPool(Configuration conf) {
     int maxThreads = 10;
     long keepAliveTime = 60;
-    final SynchronousQueue<Runnable> queue = new SynchronousQueue<Runnable>();
+    final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads,
         keepAliveTime, TimeUnit.SECONDS, queue,
         Threads.newDaemonThreadFactory("MobFileCompactionChore"),

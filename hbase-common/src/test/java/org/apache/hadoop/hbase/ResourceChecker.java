@@ -94,7 +94,7 @@ public class ResourceChecker {
     public List<String> getStringsToLog() { return null; }
   }
 
-  private List<ResourceAnalyzer> ras = new ArrayList<ResourceAnalyzer>();
+  private List<ResourceAnalyzer> ras = new ArrayList<>();
   private int[] initialValues;
   private int[] endingValues;
 

@@ -55,7 +55,7 @@ public class JerseyResource {
       ) throws IOException {
     LOG.info("get: " + PATH + "=" + path + ", " + OP + "=" + op);
 
-    final Map<String, Object> m = new TreeMap<String, Object>();
+    final Map<String, Object> m = new TreeMap<>();
     m.put(PATH, path);
     m.put(OP, op);
     final String js = JSON.toString(m);

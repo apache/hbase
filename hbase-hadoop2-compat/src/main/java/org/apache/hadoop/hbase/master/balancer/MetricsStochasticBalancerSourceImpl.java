@@ -46,7 +46,7 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
           return size() > mruCap;
         }
       };
-  private Map<String, String> costFunctionDescs = new ConcurrentHashMap<String, String>();
+  private Map<String, String> costFunctionDescs = new ConcurrentHashMap<>();
 
   /**
    * Calculates the mru cache capacity from the metrics size
@@ -79,7 +79,7 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
     synchronized (stochasticCosts) {
       Map<String, Double> costs = stochasticCosts.get(tableName);
       if (costs == null) {
-        costs = new ConcurrentHashMap<String, Double>();
+        costs = new ConcurrentHashMap<>();
       }
 
       costs.put(costFunctionName, cost);

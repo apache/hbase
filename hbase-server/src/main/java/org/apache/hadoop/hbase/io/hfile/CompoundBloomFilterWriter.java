@@ -70,7 +70,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     BloomFilterChunk chunk;
   }
 
-  private Queue<ReadyChunk> readyChunks = new LinkedList<ReadyChunk>();
+  private Queue<ReadyChunk> readyChunks = new LinkedList<>();
 
   /** The first key in the current Bloom filter chunk. */
   private byte[] firstKeyInChunk = null;

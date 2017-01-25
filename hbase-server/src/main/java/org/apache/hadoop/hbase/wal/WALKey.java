@@ -192,19 +192,19 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
 
   public WALKey() {
     init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        new ArrayList<UUID>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
+        new ArrayList<>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
   }
 
   public WALKey(final NavigableMap<byte[], Integer> replicationScope) {
     init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        new ArrayList<UUID>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, replicationScope);
+        new ArrayList<>(), HConstants.NO_NONCE, HConstants.NO_NONCE, null, replicationScope);
   }
 
   @VisibleForTesting
   public WALKey(final byte[] encodedRegionName, final TableName tablename,
                 long logSeqNum,
       final long now, UUID clusterId) {
-    List<UUID> clusterIds = new ArrayList<UUID>(1);
+    List<UUID> clusterIds = new ArrayList<>(1);
     clusterIds.add(clusterId);
     init(encodedRegionName, tablename, logSeqNum, now, clusterIds,
         HConstants.NO_NONCE, HConstants.NO_NONCE, null, null);
@@ -543,7 +543,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    * @return a Map containing data from this key
    */
   public Map<String, Object> toStringMap() {
-    Map<String, Object> stringMap = new HashMap<String, Object>();
+    Map<String, Object> stringMap = new HashMap<>();
     stringMap.put("table", tablename);
     stringMap.put("region", Bytes.toStringBinary(encodedRegionName));
     stringMap.put("sequence", getSequenceId());
@@ -684,7 +684,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     }
     this.replicationScope = null;
     if (walKey.getScopesCount() > 0) {
-      this.replicationScope = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      this.replicationScope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (FamilyScope scope : walKey.getScopesList()) {
         byte[] family = (compressionContext == null) ? scope.getFamily().toByteArray() :
           uncompressor.uncompress(scope.getFamily(), compressionContext.familyDict);

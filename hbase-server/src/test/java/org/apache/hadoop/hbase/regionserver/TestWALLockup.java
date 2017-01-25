@@ -218,7 +218,7 @@ public class TestWALLockup {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     final HRegion region = initHRegion(tableName, null, null, dodgyWAL);
     byte [] bytes = Bytes.toBytes(getName());
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(
         Bytes.BYTES_COMPARATOR);
     scopes.put(COLUMN_FAMILY_BYTES, 0);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
@@ -398,7 +398,7 @@ public class TestWALLockup {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     final HRegion region = initHRegion(tableName, null, null, dodgyWAL1);
     byte[] bytes = Bytes.toBytes(getName());
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(
         Bytes.BYTES_COMPARATOR);
     scopes.put(COLUMN_FAMILY_BYTES, 0);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();

@@ -73,8 +73,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       RegionLoad rl = mock(RegionLoad.class);
       when(rl.getStorefileSizeMB()).thenReturn(i);
 
-      Map<byte[], RegionLoad> regionLoadMap =
-          new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+      Map<byte[], RegionLoad> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       regionLoadMap.put(Bytes.toBytes(REGION_KEY), rl);
       when(sl.getRegionsLoad()).thenReturn(regionLoadMap);
 
@@ -341,7 +340,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     ServerName deadSn = ServerName.valueOf(sn.getHostname(), sn.getPort(), sn.getStartcode() - 100);
 
-    serverMap.put(deadSn, new ArrayList<HRegionInfo>(0));
+    serverMap.put(deadSn, new ArrayList<>(0));
 
     plans = loadBalancer.balanceCluster(serverMap);
     assertNull(plans);
@@ -443,7 +442,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     List<HRegionInfo> regions = randomRegions(1);
     ServerName s1 = ServerName.valueOf("host1", 1000, 11111);
     ServerName s2 = ServerName.valueOf("host11", 1000, 11111);
-    Map<ServerName, List<HRegionInfo>> map = new HashMap<ServerName, List<HRegionInfo>>();
+    Map<ServerName, List<HRegionInfo>> map = new HashMap<>();
     map.put(s1, regions);
     regions.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
     // until the step above s1 holds two replicas of a region
@@ -454,7 +453,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     // and both the replicas are on the same rack
     map.clear();
     regions = randomRegions(1);
-    List<HRegionInfo> regionsOnS2 = new ArrayList<HRegionInfo>(1);
+    List<HRegionInfo> regionsOnS2 = new ArrayList<>(1);
     regionsOnS2.add(RegionReplicaUtil.getRegionInfoForReplica(regions.get(0), 1));
     map.put(s1, regions);
     map.put(s2, regionsOnS2);
@@ -569,12 +568,12 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     int numNodesPerHost = 4;
 
     // create a new map with 4 RS per host.
-    Map<ServerName, List<HRegionInfo>> newServerMap = new TreeMap<ServerName, List<HRegionInfo>>(serverMap);
+    Map<ServerName, List<HRegionInfo>> newServerMap = new TreeMap<>(serverMap);
     for (Map.Entry<ServerName, List<HRegionInfo>> entry : serverMap.entrySet()) {
       for (int i=1; i < numNodesPerHost; i++) {
         ServerName s1 = entry.getKey();
         ServerName s2 = ServerName.valueOf(s1.getHostname(), s1.getPort() + i, 1); // create an RS for the same host
-        newServerMap.put(s2, new ArrayList<HRegionInfo>());
+        newServerMap.put(s2, new ArrayList<>());
       }
     }
 

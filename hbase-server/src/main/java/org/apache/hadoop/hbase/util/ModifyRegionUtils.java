@@ -128,9 +128,8 @@ public abstract class ModifyRegionUtils {
       final RegionFillTask task) throws IOException {
     if (newRegions == null) return null;
     int regionNumber = newRegions.length;
-    CompletionService<HRegionInfo> completionService =
-      new ExecutorCompletionService<HRegionInfo>(exec);
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
+    CompletionService<HRegionInfo> completionService = new ExecutorCompletionService<>(exec);
+    List<HRegionInfo> regionInfos = new ArrayList<>();
     for (final HRegionInfo newRegion : newRegions) {
       completionService.submit(new Callable<HRegionInfo>() {
         @Override
@@ -193,8 +192,7 @@ public abstract class ModifyRegionUtils {
    */
   public static void editRegions(final ThreadPoolExecutor exec,
       final Collection<HRegionInfo> regions, final RegionEditTask task) throws IOException {
-    final ExecutorCompletionService<Void> completionService =
-      new ExecutorCompletionService<Void>(exec);
+    final ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<>(exec);
     for (final HRegionInfo hri: regions) {
       completionService.submit(new Callable<Void>() {
         @Override

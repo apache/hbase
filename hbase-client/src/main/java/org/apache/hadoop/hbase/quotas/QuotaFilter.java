@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.util.Strings;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class QuotaFilter {
-  private Set<QuotaType> types = new HashSet<QuotaType>();
+  private Set<QuotaType> types = new HashSet<>();
   private boolean hasFilters = false;
   private String namespaceRegex;
   private String tableRegex;

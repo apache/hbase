@@ -41,7 +41,7 @@ public class MultiThreadedReader extends MultiThreadedAction
 {
   private static final Log LOG = LogFactory.getLog(MultiThreadedReader.class);
 
-  protected Set<HBaseReaderThread> readers = new HashSet<HBaseReaderThread>();
+  protected Set<HBaseReaderThread> readers = new HashSet<>();
   private final double verifyPercent;
   protected volatile boolean aborted;
 

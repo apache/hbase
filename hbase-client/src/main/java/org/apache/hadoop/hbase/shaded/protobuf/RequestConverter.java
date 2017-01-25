@@ -572,8 +572,7 @@ public final class RequestConverter {
             .setService(userToken.getService().toString()).build();
     }
 
-    List<ClientProtos.BulkLoadHFileRequest.FamilyPath> protoFamilyPaths =
-        new ArrayList<ClientProtos.BulkLoadHFileRequest.FamilyPath>(familyPaths.size());
+    List<ClientProtos.BulkLoadHFileRequest.FamilyPath> protoFamilyPaths = new ArrayList<>(familyPaths.size());
     if (!familyPaths.isEmpty()) {
       ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder pathBuilder
         = ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder();

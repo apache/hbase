@@ -146,7 +146,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   public void after() throws Exception {
   }
 
-  static ConcurrentLinkedQueue<Entry> entries = new ConcurrentLinkedQueue<Entry>();
+  static ConcurrentLinkedQueue<Entry> entries = new ConcurrentLinkedQueue<>();
 
   public static class WALEditCopro implements WALObserver {
     public WALEditCopro() {

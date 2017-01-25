@@ -498,7 +498,7 @@ public class TestBytes extends TestCase {
   }
   
   public void testToFromHex() {
-    List<String> testStrings = new ArrayList<String>(8);
+    List<String> testStrings = new ArrayList<>(8);
     testStrings.addAll(Arrays.asList(new String[] {
         "",
         "00",
@@ -517,7 +517,7 @@ public class TestBytes extends TestCase {
       Assert.assertTrue(testString.equalsIgnoreCase(result));
     }
     
-    List<byte[]> testByteData = new ArrayList<byte[]>(5);
+    List<byte[]> testByteData = new ArrayList<>(5);
     testByteData.addAll(Arrays.asList(new byte[][] {
       new byte[0],
       new byte[1],

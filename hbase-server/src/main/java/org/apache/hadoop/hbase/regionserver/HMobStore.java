@@ -91,7 +91,7 @@ public class HMobStore extends HStore {
   private volatile long mobScanCellsCount = 0;
   private volatile long mobScanCellsSize = 0;
   private HColumnDescriptor family;
-  private Map<String, List<Path>> map = new ConcurrentHashMap<String, List<Path>>();
+  private Map<String, List<Path>> map = new ConcurrentHashMap<>();
   private final IdLock keyLock = new IdLock();
   // When we add a MOB reference cell to the HFile, we will add 2 tags along with it
   // 1. A ref tag with type TagType.MOB_REFERENCE_TAG_TYPE. This just denote this this cell is not
@@ -109,7 +109,7 @@ public class HMobStore extends HStore {
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath = MobUtils.getMobFamilyPath(conf, this.getTableName(),
         family.getNameAsString());
-    List<Path> locations = new ArrayList<Path>(2);
+    List<Path> locations = new ArrayList<>(2);
     locations.add(mobFamilyPath);
     TableName tn = region.getTableDesc().getTableName();
     locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
@@ -341,7 +341,7 @@ public class HMobStore extends HStore {
           try {
             locations = map.get(tableNameString);
             if (locations == null) {
-              locations = new ArrayList<Path>(2);
+              locations = new ArrayList<>(2);
               TableName tn = TableName.valueOf(tableNameString);
               locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
               locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils

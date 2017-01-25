@@ -96,7 +96,7 @@ public class TestClientOperationInterrupt {
     final AtomicInteger badEx = new AtomicInteger(0);
     final AtomicInteger noInt = new AtomicInteger(0);
     final AtomicInteger done = new AtomicInteger(0);
-    List<Thread> threads = new ArrayList<Thread>();
+    List<Thread> threads = new ArrayList<>();
 
     final int nbThread = 100;
 

@@ -68,7 +68,7 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
       long numKeys) {
     String[] args = super.getArgsForLoadTestTool(mode, modeSpecificArg, startKey, numKeys);
-    List<String> tmp = new ArrayList<String>(Arrays.asList(args));
+    List<String> tmp = new ArrayList<>(Arrays.asList(args));
     tmp.add(HYPHEN + LoadTestTool.OPT_GENERATOR);
     StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithACL.class.getName());
     sb.append(COLON);

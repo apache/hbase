@@ -135,7 +135,7 @@ public class TestWALSplit {
   private static final byte[] QUALIFIER = "q1".getBytes();
   private static final byte[] VALUE = "v1".getBytes();
   private static final String WAL_FILE_PREFIX = "wal.dat.";
-  private static List<String> REGIONS = new ArrayList<String>();
+  private static List<String> REGIONS = new ArrayList<>();
   private static final String HBASE_SKIP_ERRORS = "hbase.hlog.split.skip.errors";
   private static String ROBBER;
   private static String ZOMBIE;
@@ -158,7 +158,7 @@ public class TestWALSplit {
     // This is how you turn off shortcircuit read currently.  TODO: Fix.  Should read config.
     System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
     // Create fake maping user to group and set it to the conf.
-    Map<String, String []> u2g_map = new HashMap<String, String []>(2);
+    Map<String, String []> u2g_map = new HashMap<>(2);
     ROBBER = User.getCurrent().getName() + "-robber";
     ZOMBIE = User.getCurrent().getName() + "-zombie";
     u2g_map.put(ROBBER, GROUP);
@@ -585,7 +585,7 @@ public class TestWALSplit {
         .filter(x -> x != FaultyProtobufLogReader.FailureType.NONE).collect(Collectors.toList());
     for (FaultyProtobufLogReader.FailureType failureType : failureTypes) {
       final Set<String> walDirContents = splitCorruptWALs(failureType);
-      final Set<String> archivedLogs = new HashSet<String>();
+      final Set<String> archivedLogs = new HashSet<>();
       final StringBuilder archived = new StringBuilder("Archived logs in CORRUPTDIR:");
       for (FileStatus log : fs.listStatus(CORRUPTDIR)) {
         archived.append("\n\t").append(log.toString());
@@ -630,7 +630,7 @@ public class TestWALSplit {
       wals = new WALFactory(conf, null, name.getMethodName());
       generateWALs(-1);
       // Our reader will render all of these files corrupt.
-      final Set<String> walDirContents = new HashSet<String>();
+      final Set<String> walDirContents = new HashSet<>();
       for (FileStatus status : fs.listStatus(WALDIR)) {
         walDirContents.add(status.getPath().getName());
       }

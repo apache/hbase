@@ -129,16 +129,15 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
    */
   @Test (timeout=60000)
   public void testBalanceClusterOverall() throws Exception {
-    Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad
-            = new TreeMap<TableName, Map<ServerName, List<HRegionInfo>>>();
+    Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad = new TreeMap<>();
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<HRegionInfo>> clusterServers = mockClusterServers(mockCluster, 50);
       List<ServerAndLoad> clusterList = convertToList(clusterServers);
       clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
       HashMap<TableName, TreeMap<ServerName, List<HRegionInfo>>> result = mockClusterServersWithTables(clusterServers);
       loadBalancer.setClusterLoad(clusterLoad);
-      List<RegionPlan> clusterplans = new ArrayList<RegionPlan>();
-      List<Pair<TableName, Integer>> regionAmountList = new ArrayList<Pair<TableName, Integer>>();
+      List<RegionPlan> clusterplans = new ArrayList<>();
+      List<Pair<TableName, Integer>> regionAmountList = new ArrayList<>();
       for(TreeMap<ServerName, List<HRegionInfo>> servers : result.values()){
         List<ServerAndLoad> list = convertToList(servers);
         LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
@@ -168,8 +167,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
    */
   @Test (timeout=60000)
   public void testImpactOfBalanceClusterOverall() throws Exception {
-    Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad
-            = new TreeMap<TableName, Map<ServerName, List<HRegionInfo>>>();
+    Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad = new TreeMap<>();
     Map<ServerName, List<HRegionInfo>> clusterServers = mockUniformClusterServers(mockUniformCluster);
     List<ServerAndLoad> clusterList = convertToList(clusterServers);
     clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);

@@ -107,8 +107,7 @@ public class TestWALFiltering {
   public void testFlushedSequenceIdsSentToHMaster()
   throws IOException, InterruptedException,
   org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException, ServiceException {
-    SortedMap<byte[], Long> allFlushedSequenceIds =
-        new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+    SortedMap<byte[], Long> allFlushedSequenceIds = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < NUM_RS; ++i) {
       flushAllRegions(i);
     }

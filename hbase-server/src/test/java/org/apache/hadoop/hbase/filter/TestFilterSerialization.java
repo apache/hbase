@@ -105,12 +105,12 @@ public class TestFilterSerialization {
   @Test
   public void testFilterList() throws Exception {
     // empty filter list
-    FilterList filterList = new FilterList(new LinkedList<Filter>());
+    FilterList filterList = new FilterList(new LinkedList<>());
     assertTrue(filterList.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterList))));
 
     // non-empty filter list
-    LinkedList<Filter> list = new LinkedList<Filter>();
+    LinkedList<Filter> list = new LinkedList<>();
     list.add(new ColumnCountGetFilter(1));
     list.add(new RowFilter(CompareFilter.CompareOp.EQUAL,
       new SubstringComparator("testFilterList")));
@@ -131,7 +131,7 @@ public class TestFilterSerialization {
   @Test
   public void testFirstKeyValueMatchingQualifiersFilter() throws Exception {
     // empty qualifiers set
-    TreeSet<byte []> set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte []> set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     FirstKeyValueMatchingQualifiersFilter firstKeyValueMatchingQualifiersFilter =
       new FirstKeyValueMatchingQualifiersFilter(set);
     assertTrue(firstKeyValueMatchingQualifiersFilter.areSerializedFieldsEqual(
@@ -155,9 +155,9 @@ public class TestFilterSerialization {
 
   @Test
   public void testFuzzyRowFilter() throws Exception {
-    LinkedList<Pair<byte[], byte[]>> fuzzyList = new LinkedList<Pair<byte[], byte[]>>();
-    fuzzyList.add(new Pair<byte[], byte[]>(Bytes.toBytes("999"),new byte[] {0, 0, 1}));
-    fuzzyList.add(new Pair<byte[], byte[]>(Bytes.toBytes("abcd"),new byte[] {1, 0, 1, 1}));
+    LinkedList<Pair<byte[], byte[]>> fuzzyList = new LinkedList<>();
+    fuzzyList.add(new Pair<>(Bytes.toBytes("999"),new byte[] {0, 0, 1}));
+    fuzzyList.add(new Pair<>(Bytes.toBytes("abcd"),new byte[] {1, 0, 1, 1}));
     FuzzyRowFilter fuzzyRowFilter = new FuzzyRowFilter(fuzzyList);
     assertTrue(fuzzyRowFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(fuzzyRowFilter))));
@@ -294,12 +294,12 @@ public class TestFilterSerialization {
   @Test
   public void testTimestampsFilter() throws Exception {
     // Empty timestamp list
-    TimestampsFilter timestampsFilter = new TimestampsFilter(new LinkedList<Long>());
+    TimestampsFilter timestampsFilter = new TimestampsFilter(new LinkedList<>());
     assertTrue(timestampsFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));
 
     // Non-empty timestamp list
-    LinkedList<Long> list = new LinkedList<Long>();
+    LinkedList<Long> list = new LinkedList<>();
     list.add(new Long(System.currentTimeMillis()));
     list.add(new Long(System.currentTimeMillis()));
     timestampsFilter = new TimestampsFilter(list);
@@ -326,7 +326,7 @@ public class TestFilterSerialization {
 
   @Test
   public void testMultiRowRangeFilter() throws Exception {
-    List<RowRange> ranges = new ArrayList<RowRange>();
+    List<RowRange> ranges = new ArrayList<>();
     ranges.add(new RowRange(Bytes.toBytes(30), true, Bytes.toBytes(40), false));
     ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
     ranges.add(new RowRange(Bytes.toBytes(60), true, Bytes.toBytes(70), false));

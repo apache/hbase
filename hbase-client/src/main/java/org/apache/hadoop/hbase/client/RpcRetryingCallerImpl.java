@@ -94,8 +94,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   @Override
   public T callWithRetries(RetryingCallable<T> callable, int callTimeout)
   throws IOException, RuntimeException {
-    List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
-      new ArrayList<RetriesExhaustedException.ThrowableWithExtraContext>();
+    List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions = new ArrayList<>();
     tracker.start();
     context.clear();
     for (int tries = 0;; tries++) {

@@ -126,7 +126,7 @@ public class TestFileLink {
 
     writeSomeData(fs, originalPath, 256 << 20, (byte)2);
 
-    List<Path> files = new ArrayList<Path>();
+    List<Path> files = new ArrayList<>();
     files.add(originalPath);
     files.add(archivedPath);
 
@@ -194,7 +194,7 @@ public class TestFileLink {
     assertEquals("hdfs", fs.getUri().getScheme());
 
     try {
-      List<Path> files = new ArrayList<Path>();
+      List<Path> files = new ArrayList<>();
       for (int i = 0; i < 3; i++) {
         Path path = new Path(String.format("test-data-%d", i));
         writeSomeData(fs, path, 1 << 20, (byte)i);

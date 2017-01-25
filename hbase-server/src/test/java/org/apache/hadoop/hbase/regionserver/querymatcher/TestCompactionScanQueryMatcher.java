@@ -79,8 +79,7 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
     CompactionScanQueryMatcher qm = CompactionScanQueryMatcher.create(scanInfo,
       ScanType.COMPACT_RETAIN_DELETES, Long.MAX_VALUE, HConstants.OLDEST_TIMESTAMP,
       HConstants.OLDEST_TIMESTAMP, now, from, to, null);
-    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>(
-        rows.length);
+    List<ScanQueryMatcher.MatchCode> actual = new ArrayList<>(rows.length);
     byte[] prevRow = null;
     for (byte[] row : rows) {
       if (prevRow == null || !Bytes.equals(prevRow, row)) {

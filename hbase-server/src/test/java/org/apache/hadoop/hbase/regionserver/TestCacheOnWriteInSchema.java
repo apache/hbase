@@ -137,7 +137,7 @@ public class TestCacheOnWriteInSchema {
 
   @Parameters
   public static Collection<Object[]> getParameters() {
-    List<Object[]> cowTypes = new ArrayList<Object[]>();
+    List<Object[]> cowTypes = new ArrayList<>();
     for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
       cowTypes.add(new Object[] { cowType });
     }

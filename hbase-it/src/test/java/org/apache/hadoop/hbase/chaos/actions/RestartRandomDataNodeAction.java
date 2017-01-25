@@ -49,7 +49,7 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
     DistributedFileSystem fs = (DistributedFileSystem) FSUtils.getRootDir(getConf())
         .getFileSystem(getConf());
     DFSClient dfsClient = fs.getClient();
-    List<ServerName> hosts = new LinkedList<ServerName>();
+    List<ServerName> hosts = new LinkedList<>();
     for (DatanodeInfo dataNode: dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE)) {
       hosts.add(ServerName.valueOf(dataNode.getHostName(), -1, -1));
     }

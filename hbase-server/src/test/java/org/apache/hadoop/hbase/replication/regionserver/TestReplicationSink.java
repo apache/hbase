@@ -153,8 +153,8 @@ public class TestReplicationSink {
    */
   @Test
   public void testBatchSink() throws Exception {
-    List<WALEntry> entries = new ArrayList<WALEntry>(BATCH_SIZE);
-    List<Cell> cells = new ArrayList<Cell>();
+    List<WALEntry> entries = new ArrayList<>(BATCH_SIZE);
+    List<Cell> cells = new ArrayList<>();
     for(int i = 0; i < BATCH_SIZE; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
@@ -171,16 +171,16 @@ public class TestReplicationSink {
    */
   @Test
   public void testMixedPutDelete() throws Exception {
-    List<WALEntry> entries = new ArrayList<WALEntry>(BATCH_SIZE/2);
-    List<Cell> cells = new ArrayList<Cell>();
+    List<WALEntry> entries = new ArrayList<>(BATCH_SIZE/2);
+    List<Cell> cells = new ArrayList<>();
     for(int i = 0; i < BATCH_SIZE/2; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells), replicationClusterId,
       baseNamespaceDir, hfileArchiveDir);
 
-    entries = new ArrayList<WALEntry>(BATCH_SIZE);
-    cells = new ArrayList<Cell>();
+    entries = new ArrayList<>(BATCH_SIZE);
+    cells = new ArrayList<>();
     for(int i = 0; i < BATCH_SIZE; i++) {
       entries.add(createEntry(TABLE_NAME1, i,
           i % 2 != 0 ? KeyValue.Type.Put: KeyValue.Type.DeleteColumn, cells));
@@ -199,8 +199,8 @@ public class TestReplicationSink {
    */
   @Test
   public void testMixedPutTables() throws Exception {
-    List<WALEntry> entries = new ArrayList<WALEntry>(BATCH_SIZE/2);
-    List<Cell> cells = new ArrayList<Cell>();
+    List<WALEntry> entries = new ArrayList<>(BATCH_SIZE/2);
+    List<Cell> cells = new ArrayList<>();
     for(int i = 0; i < BATCH_SIZE; i++) {
       entries.add(createEntry( i % 2 == 0 ? TABLE_NAME2 : TABLE_NAME1,
               i, KeyValue.Type.Put, cells));
@@ -221,15 +221,15 @@ public class TestReplicationSink {
    */
   @Test
   public void testMixedDeletes() throws Exception {
-    List<WALEntry> entries = new ArrayList<WALEntry>(3);
-    List<Cell> cells = new ArrayList<Cell>();
+    List<WALEntry> entries = new ArrayList<>(3);
+    List<Cell> cells = new ArrayList<>();
     for(int i = 0; i < 3; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
       replicationClusterId, baseNamespaceDir, hfileArchiveDir);
-    entries = new ArrayList<WALEntry>(3);
-    cells = new ArrayList<Cell>();
+    entries = new ArrayList<>(3);
+    cells = new ArrayList<>();
     entries.add(createEntry(TABLE_NAME1, 0, KeyValue.Type.DeleteColumn, cells));
     entries.add(createEntry(TABLE_NAME1, 1, KeyValue.Type.DeleteFamily, cells));
     entries.add(createEntry(TABLE_NAME1, 2, KeyValue.Type.DeleteColumn, cells));
@@ -249,8 +249,8 @@ public class TestReplicationSink {
    */
   @Test
   public void testApplyDeleteBeforePut() throws Exception {
-    List<WALEntry> entries = new ArrayList<WALEntry>(5);
-    List<Cell> cells = new ArrayList<Cell>();
+    List<WALEntry> entries = new ArrayList<>(5);
+    List<Cell> cells = new ArrayList<>();
     for(int i = 0; i < 2; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
@@ -284,7 +284,7 @@ public class TestReplicationSink {
     }
     List<Integer> numberList = new ArrayList<>(numbers);
     Collections.sort(numberList);
-    Map<String, Long> storeFilesSize = new HashMap<String, Long>(1);
+    Map<String, Long> storeFilesSize = new HashMap<>(1);
 
     // 2. Create 25 hfiles
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -313,7 +313,7 @@ public class TestReplicationSink {
               storeFiles, storeFilesSize, 1);
       edit = WALEdit.createBulkLoadEvent(regionInfo, loadDescriptor);
     }
-    List<WALEntry> entries = new ArrayList<WALEntry>(1);
+    List<WALEntry> entries = new ArrayList<>(1);
 
     // 4. Create a WALEntryBuilder
     WALEntry.Builder builder = createWALEntryBuilder(TABLE_NAME1);

@@ -83,7 +83,7 @@ public class FuzzyRowFilter extends FilterBase {
       p = fuzzyKeysData.get(i);
       if (p.getFirst().length != p.getSecond().length) {
         Pair<String, String> readable =
-            new Pair<String, String>(Bytes.toStringBinary(p.getFirst()), Bytes.toStringBinary(p
+            new Pair<>(Bytes.toStringBinary(p.getFirst()), Bytes.toStringBinary(p
                 .getSecond()));
         throw new IllegalArgumentException("Fuzzy pair lengths do not match: " + readable);
       }
@@ -191,8 +191,7 @@ public class FuzzyRowFilter extends FilterBase {
     private boolean initialized = false;
 
     RowTracker() {
-      nextRows =
-          new PriorityQueue<Pair<byte[], Pair<byte[], byte[]>>>(fuzzyKeysData.size(),
+      nextRows = new PriorityQueue<>(fuzzyKeysData.size(),
               new Comparator<Pair<byte[], Pair<byte[], byte[]>>>() {
                 @Override
                 public int compare(Pair<byte[], Pair<byte[], byte[]>> o1,
@@ -239,7 +238,7 @@ public class FuzzyRowFilter extends FilterBase {
           getNextForFuzzyRule(isReversed(), currentCell.getRowArray(), currentCell.getRowOffset(),
             currentCell.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (nextRowKeyCandidate != null) {
-        nextRows.add(new Pair<byte[], Pair<byte[], byte[]>>(nextRowKeyCandidate, fuzzyData));
+        nextRows.add(new Pair<>(nextRowKeyCandidate, fuzzyData));
       }
     }
 
@@ -278,12 +277,12 @@ public class FuzzyRowFilter extends FilterBase {
       throw new DeserializationException(e);
     }
     int count = proto.getFuzzyKeysDataCount();
-    ArrayList<Pair<byte[], byte[]>> fuzzyKeysData = new ArrayList<Pair<byte[], byte[]>>(count);
+    ArrayList<Pair<byte[], byte[]>> fuzzyKeysData = new ArrayList<>(count);
     for (int i = 0; i < count; ++i) {
       BytesBytesPair current = proto.getFuzzyKeysData(i);
       byte[] keyBytes = current.getFirst().toByteArray();
       byte[] keyMeta = current.getSecond().toByteArray();
-      fuzzyKeysData.add(new Pair<byte[], byte[]>(keyBytes, keyMeta));
+      fuzzyKeysData.add(new Pair<>(keyBytes, keyMeta));
     }
     return new FuzzyRowFilter(fuzzyKeysData);
   }

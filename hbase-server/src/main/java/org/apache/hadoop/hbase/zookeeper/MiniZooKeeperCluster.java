@@ -80,9 +80,9 @@ public class MiniZooKeeperCluster {
     this.started = false;
     this.configuration = configuration;
     activeZKServerIndex = -1;
-    zooKeeperServers = new ArrayList<ZooKeeperServer>();
-    clientPortList = new ArrayList<Integer>();
-    standaloneServerFactoryList = new ArrayList<NIOServerCnxnFactory>();
+    zooKeeperServers = new ArrayList<>();
+    clientPortList = new ArrayList<>();
+    standaloneServerFactoryList = new ArrayList<>();
     connectionTimeout = configuration.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster",
       DEFAULT_CONNECTION_TIMEOUT);
   }

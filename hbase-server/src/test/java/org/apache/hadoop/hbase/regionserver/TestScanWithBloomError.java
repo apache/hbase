@@ -74,7 +74,7 @@ public class TestScanWithBloomError {
   private static final String ROW = "theRow";
   private static final String QUALIFIER_PREFIX = "qual";
   private static final byte[] ROW_BYTES = Bytes.toBytes(ROW);
-  private static NavigableSet<Integer> allColIds = new TreeSet<Integer>();
+  private static NavigableSet<Integer> allColIds = new TreeSet<>();
   private Region region;
   private BloomType bloomType;
   private FileSystem fs;
@@ -84,7 +84,7 @@ public class TestScanWithBloomError {
 
   @Parameters
   public static final Collection<Object[]> parameters() {
-    List<Object[]> configurations = new ArrayList<Object[]>();
+    List<Object[]> configurations = new ArrayList<>();
     for (BloomType bloomType : BloomType.values()) {
       configurations.add(new Object[] { bloomType });
     }
@@ -160,24 +160,24 @@ public class TestScanWithBloomError {
         + lastStoreFileReader.getHFileReader().getName());
     lastStoreFileReader.disableBloomFilterForTesting();
 
-    List<Cell> allResults = new ArrayList<Cell>();
+    List<Cell> allResults = new ArrayList<>();
 
     { // Limit the scope of results.
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       while (scanner.next(results) || results.size() > 0) {
         allResults.addAll(results);
         results.clear();
       }
     }
 
-    List<Integer> actualIds = new ArrayList<Integer>();
+    List<Integer> actualIds = new ArrayList<>();
     for (Cell kv : allResults) {
       String qual = Bytes.toString(CellUtil.cloneQualifier(kv));
       assertTrue(qual.startsWith(QUALIFIER_PREFIX));
       actualIds.add(Integer.valueOf(qual.substring(
           QUALIFIER_PREFIX.length())));
     }
-    List<Integer> expectedIds = new ArrayList<Integer>();
+    List<Integer> expectedIds = new ArrayList<>();
     for (int expectedId : expectedResultCols)
       expectedIds.add(expectedId);
 

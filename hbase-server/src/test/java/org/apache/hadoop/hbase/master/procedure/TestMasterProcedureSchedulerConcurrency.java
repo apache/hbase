@@ -84,8 +84,8 @@ public class TestMasterProcedureSchedulerConcurrency {
     assertEquals(opsCount.get(), queue.size());
 
     final Thread[] threads = new Thread[NUM_TABLES * 2];
-    final HashSet<TableName> concurrentTables = new HashSet<TableName>();
-    final ArrayList<String> failures = new ArrayList<String>();
+    final HashSet<TableName> concurrentTables = new HashSet<>();
+    final ArrayList<String> failures = new ArrayList<>();
     final AtomicInteger concurrentCount = new AtomicInteger(0);
     for (int i = 0; i < threads.length; ++i) {
       threads[i] = new Thread() {

@@ -44,7 +44,7 @@ public class LabelFilteringScanLabelGenerator implements ScanLabelGenerator {
   public List<String> getLabels(User user, Authorizations authorizations) {
     if (authorizations != null) {
       if (labelToFilter == null) return authorizations.getLabels();
-      List<String> newAuths = new ArrayList<String>();
+      List<String> newAuths = new ArrayList<>();
       for (String auth : authorizations.getLabels()) {
         if (!labelToFilter.equals(auth)) newAuths.add(auth);
       }

@@ -78,7 +78,7 @@ public class TestRegionSplitter {
      */
     @Test
     public void testCreatePresplitTableHex() throws Exception {
-      final List<byte[]> expectedBounds = new ArrayList<byte[]>(17);
+      final List<byte[]> expectedBounds = new ArrayList<>(17);
       expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
       expectedBounds.add("10000000".getBytes());
       expectedBounds.add("20000000".getBytes());
@@ -108,7 +108,7 @@ public class TestRegionSplitter {
      */
     @Test
     public void testCreatePresplitTableUniform() throws Exception {
-      List<byte[]> expectedBounds = new ArrayList<byte[]>(17);
+      List<byte[]> expectedBounds = new ArrayList<>(17);
       expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
       expectedBounds.add(new byte[] {      0x10, 0, 0, 0, 0, 0, 0, 0});
       expectedBounds.add(new byte[] {      0x20, 0, 0, 0, 0, 0, 0, 0});
@@ -293,7 +293,7 @@ public class TestRegionSplitter {
 
   @Test
   public void noopRollingSplit() throws Exception {
-    final List<byte[]> expectedBounds = new ArrayList<byte[]>(1);
+    final List<byte[]> expectedBounds = new ArrayList<>(1);
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
     rollingSplitAndVerify(TableName.valueOf(TestRegionSplitter.class.getSimpleName()),
         "UniformSplit", expectedBounds);

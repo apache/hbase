@@ -52,7 +52,7 @@ public class TestImportTsvParser {
   }
 
   private void checkParsing(ParsedLine parsed, Iterable<String> expected) {
-    ArrayList<String> parsedCols = new ArrayList<String>();
+    ArrayList<String> parsedCols = new ArrayList<>();
     for (int i = 0; i < parsed.getColumnCount(); i++) {
       parsedCols.add(Bytes.toString(parsed.getLineBytes(), parsed.getColumnOffset(i),
           parsed.getColumnLength(i)));

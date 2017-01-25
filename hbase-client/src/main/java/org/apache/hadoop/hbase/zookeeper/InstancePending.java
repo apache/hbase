@@ -74,7 +74,7 @@ class InstancePending<T> {
    */
   void prepare(T instance) {
     assert instance != null;
-    instanceHolder = new InstanceHolder<T>(instance);
+    instanceHolder = new InstanceHolder<>(instance);
     pendingLatch.countDown();
   }
 }

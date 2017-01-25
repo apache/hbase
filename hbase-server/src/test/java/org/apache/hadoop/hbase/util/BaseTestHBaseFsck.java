@@ -259,7 +259,7 @@ public class BaseTestHBaseFsck {
     createTable(TEST_UTIL, desc, SPLITS);
 
     tbl = connection.getTable(tablename, tableExecutorService);
-    List<Put> puts = new ArrayList<Put>(ROWKEYS.length);
+    List<Put> puts = new ArrayList<>(ROWKEYS.length);
     for (byte[] row : ROWKEYS) {
       Put p = new Put(row);
       p.addColumn(FAM, Bytes.toBytes("val"), row);
@@ -283,7 +283,7 @@ public class BaseTestHBaseFsck {
     createTable(TEST_UTIL, desc, SPLITS);
 
     tbl = connection.getTable(tablename, tableExecutorService);
-    List<Put> puts = new ArrayList<Put>(ROWKEYS.length);
+    List<Put> puts = new ArrayList<>(ROWKEYS.length);
     for (byte[] row : ROWKEYS) {
       Put p = new Put(row);
       p.addColumn(FAM, Bytes.toBytes("val"), row);
@@ -328,8 +328,7 @@ public class BaseTestHBaseFsck {
   Map<ServerName, List<String>> getDeployedHRIs(final Admin admin) throws IOException {
     ClusterStatus status = admin.getClusterStatus();
     Collection<ServerName> regionServers = status.getServers();
-    Map<ServerName, List<String>> mm =
-        new HashMap<ServerName, List<String>>();
+    Map<ServerName, List<String>> mm = new HashMap<>();
     for (ServerName hsi : regionServers) {
       AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(hsi);
 
@@ -525,7 +524,7 @@ public class BaseTestHBaseFsck {
     @Override
     public ArrayList<ERROR_CODE> getErrorList() {
       calledCount++;
-      return new ArrayList<ERROR_CODE>();
+      return new ArrayList<>();
     }
 
     @Override

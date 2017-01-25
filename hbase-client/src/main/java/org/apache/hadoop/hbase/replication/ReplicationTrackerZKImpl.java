@@ -45,10 +45,9 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
   // All about stopping
   private final Stoppable stopper;
   // listeners to be notified
-  private final List<ReplicationListener> listeners =
-      new CopyOnWriteArrayList<ReplicationListener>();
+  private final List<ReplicationListener> listeners = new CopyOnWriteArrayList<>();
   // List of all the other region servers in this cluster
-  private final ArrayList<String> otherRegionServers = new ArrayList<String>();
+  private final ArrayList<String> otherRegionServers = new ArrayList<>();
   private final ReplicationPeers replicationPeers;
 
   public ReplicationTrackerZKImpl(ZooKeeperWatcher zookeeper,
@@ -80,7 +79,7 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
 
     List<String> list = null;
     synchronized (otherRegionServers) {
-      list = new ArrayList<String>(otherRegionServers);
+      list = new ArrayList<>(otherRegionServers);
     }
     return list;
   }

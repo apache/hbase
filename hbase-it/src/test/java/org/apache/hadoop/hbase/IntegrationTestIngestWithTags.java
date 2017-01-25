@@ -45,7 +45,7 @@ public class IntegrationTestIngestWithTags extends IntegrationTestIngest {
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
       long numKeys) {
     String[] args = super.getArgsForLoadTestTool(mode, modeSpecificArg, startKey, numKeys);
-    List<String> tmp = new ArrayList<String>(Arrays.asList(args));
+    List<String> tmp = new ArrayList<>(Arrays.asList(args));
     // LoadTestDataGeneratorWithTags:minNumTags:maxNumTags:minTagLength:maxTagLength
     tmp.add(HIPHEN + LoadTestTool.OPT_GENERATOR);
     StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithTags.class.getName());

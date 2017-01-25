@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ConcatenatedLists<T> implements Collection<T> {
-  protected final ArrayList<List<T>> components = new ArrayList<List<T>>();
+  protected final ArrayList<List<T>> components = new ArrayList<>();
   protected int size = 0;
 
   public void addAllSublists(List<? extends List<T>> items) {

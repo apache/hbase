@@ -73,7 +73,7 @@ public class TestBoundedPriorityBlockingQueue {
 
   @Before
   public void setUp() throws Exception {
-    this.queue = new BoundedPriorityBlockingQueue<TestObject>(CAPACITY, new TestObjectComparator());
+    this.queue = new BoundedPriorityBlockingQueue<>(CAPACITY, new TestObjectComparator());
   }
 
   @After
@@ -186,7 +186,7 @@ public class TestBoundedPriorityBlockingQueue {
   @Test
   public void testPoll() {
     assertNull(queue.poll());
-    PriorityQueue<TestObject> testList = new PriorityQueue<TestObject>(CAPACITY, new TestObjectComparator());
+    PriorityQueue<TestObject> testList = new PriorityQueue<>(CAPACITY, new TestObjectComparator());
 
     for (int i = 0; i < CAPACITY; ++i) {
       TestObject obj = new TestObject(i, i);

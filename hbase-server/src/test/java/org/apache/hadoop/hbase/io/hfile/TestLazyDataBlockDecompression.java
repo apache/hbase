@@ -122,7 +122,7 @@ public class TestLazyDataBlockDecompression {
     reader.loadFileInfo();
     long offset = trailer.getFirstDataBlockOffset(),
       max = trailer.getLastDataBlockOffset();
-    List<HFileBlock> blocks = new ArrayList<HFileBlock>(4);
+    List<HFileBlock> blocks = new ArrayList<>(4);
     HFileBlock block;
     while (offset <= max) {
       block = reader.readBlock(offset, -1, /* cacheBlock */ true, /* pread */ false,

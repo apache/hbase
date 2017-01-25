@@ -628,7 +628,7 @@ public class TestImportExport {
   public void testAddFilterAndArguments() throws IOException {
     Configuration configuration = new Configuration();
 
-    List<String> args = new ArrayList<String>();
+    List<String> args = new ArrayList<>();
     args.add("param1");
     args.add("param2");
 

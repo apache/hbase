@@ -295,7 +295,7 @@ class AsyncRpcRetryingCallerFactory {
     }
 
     public <T> AsyncBatchRpcRetryingCaller<T> build() {
-      return new AsyncBatchRpcRetryingCaller<T>(retryTimer, conn, tableName, actions, pauseNs,
+      return new AsyncBatchRpcRetryingCaller<>(retryTimer, conn, tableName, actions, pauseNs,
           maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     }
 

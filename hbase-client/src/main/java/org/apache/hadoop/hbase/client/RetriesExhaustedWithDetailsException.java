@@ -110,7 +110,7 @@ extends RetriesExhaustedException {
     String s = getDesc(classifyExs(exceptions));
     StringBuilder addrs = new StringBuilder(s);
     addrs.append("servers with issues: ");
-    Set<String> uniqAddr = new HashSet<String>();
+    Set<String> uniqAddr = new HashSet<>();
     uniqAddr.addAll(hostnamePort);
 
     for(String addr : uniqAddr) {
@@ -143,7 +143,7 @@ extends RetriesExhaustedException {
 
 
   public static Map<String, Integer> classifyExs(List<Throwable> ths) {
-    Map<String, Integer> cls = new HashMap<String, Integer>();
+    Map<String, Integer> cls = new HashMap<>();
     for (Throwable t : ths) {
       if (t == null) continue;
       String name = "";

@@ -59,7 +59,7 @@ class HealthChecker {
   public void init(String location, long timeout) {
     this.healthCheckScript = location;
     this.scriptTimeout = timeout;
-    ArrayList<String> execScript = new ArrayList<String>();
+    ArrayList<String> execScript = new ArrayList<>();
     execScript.add(healthCheckScript);
     this.shexec = new ShellCommandExecutor(execScript.toArray(new String[execScript.size()]), null,
         null, scriptTimeout);

@@ -53,8 +53,8 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
    * Maps user with Table instance. Because the table instance has to be created
    * per user inorder to work in that user's context
    */
-  private Map<String, Table> userVsTable = new HashMap<String, Table>();
-  private Map<String, User> users = new HashMap<String, User>();
+  private Map<String, Table> userVsTable = new HashMap<>();
+  private Map<String, User> users = new HashMap<>();
   private String[] userNames;
 
   public MultiThreadedUpdaterWithACL(LoadTestDataGenerator dataGen, Configuration conf,

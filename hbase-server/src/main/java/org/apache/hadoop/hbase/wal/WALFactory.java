@@ -93,7 +93,7 @@ public class WALFactory {
   // The meta updates are written to a different wal. If this
   // regionserver holds meta regions, then this ref will be non-null.
   // lazily intialized; most RegionServers don't deal with META
-  final AtomicReference<WALProvider> metaProvider = new AtomicReference<WALProvider>();
+  final AtomicReference<WALProvider> metaProvider = new AtomicReference<>();
 
   /**
    * Configuration-specified WAL Reader used when a custom reader is requested
@@ -368,7 +368,7 @@ public class WALFactory {
   // untangle the reliance on state in the filesystem. They rely on singleton
   // WALFactory that just provides Reader / Writers.
   // For now, first Configuration object wins. Practically this just impacts the reader/writer class
-  private static final AtomicReference<WALFactory> singleton = new AtomicReference<WALFactory>();
+  private static final AtomicReference<WALFactory> singleton = new AtomicReference<>();
   private static final String SINGLETON_ID = WALFactory.class.getName();
   
   // public only for FSHLog

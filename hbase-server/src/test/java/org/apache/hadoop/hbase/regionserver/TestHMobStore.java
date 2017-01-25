@@ -100,9 +100,8 @@ public class TestHMobStore {
   private Cell seekKey1;
   private Cell seekKey2;
   private Cell seekKey3;
-  private NavigableSet<byte[]> qualifiers =
-    new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
-  private List<Cell> expected = new ArrayList<Cell>();
+  private NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<>(Bytes.BYTES_COMPARATOR);
+  private List<Cell> expected = new ArrayList<>();
   private long id = System.currentTimeMillis();
   private Get get = new Get(row);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -222,7 +221,7 @@ public class TestHMobStore {
         scan.getFamilyMap().get(store.getFamily().getName()),
         0);
 
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
@@ -267,7 +266,7 @@ public class TestHMobStore {
         scan.getFamilyMap().get(store.getFamily().getName()),
         0);
 
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
@@ -312,7 +311,7 @@ public class TestHMobStore {
       scan.getFamilyMap().get(store.getFamily().getName()),
       0);
 
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
@@ -357,7 +356,7 @@ public class TestHMobStore {
         scan.getFamilyMap().get(store.getFamily().getName()),
         0);
 
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
@@ -409,7 +408,7 @@ public class TestHMobStore {
       scan.getFamilyMap().get(store.getFamily().getName()),
       0);
 
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();
@@ -525,7 +524,7 @@ public class TestHMobStore {
         scan.getFamilyMap().get(store.getFamily().getName()),
         0);
 
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparator.COMPARATOR);
     scanner.close();

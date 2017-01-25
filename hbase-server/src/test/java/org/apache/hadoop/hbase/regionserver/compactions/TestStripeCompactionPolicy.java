@@ -415,7 +415,7 @@ public class TestStripeCompactionPolicy {
   private static StripeCompactionPolicy.StripeInformationProvider createStripesWithFiles(
       List<StoreFile>... stripeFiles) throws Exception {
     return createStripesWithFiles(createBoundaries(stripeFiles.length),
-        Lists.newArrayList(stripeFiles), new ArrayList<StoreFile>());
+        Lists.newArrayList(stripeFiles), new ArrayList<>());
   }
 
   @Test
@@ -433,7 +433,7 @@ public class TestStripeCompactionPolicy {
     verifySingleStripeCompaction(policy, si, 0, false);
     // Unless there are enough to cause L0 compaction.
     si = createStripesWithSizes(6, 2, stripes);
-    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<StoreFile>();
+    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<>();
     sfs.addSublist(si.getLevel0Files());
     sfs.addSublist(si.getStripes().get(0));
     verifyCompaction(
@@ -446,7 +446,7 @@ public class TestStripeCompactionPolicy {
     // if all files of stripe aren't selected, delete must not be dropped.
     stripes = new Long[][] { new Long[] { 100L, 3L, 2L, 2L, 2L }, new Long[] { 6L } };
     si = createStripesWithSizes(0, 0, stripes);
-    List<StoreFile> compact_file = new ArrayList<StoreFile>();
+    List<StoreFile> compact_file = new ArrayList<>();
     Iterator<StoreFile> iter = si.getStripes().get(0).listIterator(1);
     while (iter.hasNext()) {
         compact_file.add(iter.next());
@@ -472,7 +472,7 @@ public class TestStripeCompactionPolicy {
   }
 
   private static ArrayList<StoreFile> al(StoreFile... sfs) {
-    return new ArrayList<StoreFile>(Arrays.asList(sfs));
+    return new ArrayList<>(Arrays.asList(sfs));
   }
 
   private void verifyMergeCompatcion(StripeCompactionPolicy policy, StripeInformationProvider si,
@@ -619,7 +619,7 @@ public class TestStripeCompactionPolicy {
 
   private static List<StoreFile> getAllFiles(
       StripeInformationProvider si, int fromStripe, int toStripe) {
-    ArrayList<StoreFile> expected = new ArrayList<StoreFile>();
+    ArrayList<StoreFile> expected = new ArrayList<>();
     for (int i = fromStripe; i <= toStripe; ++i) {
       expected.addAll(si.getStripes().get(i));
     }
@@ -633,11 +633,11 @@ public class TestStripeCompactionPolicy {
    */
   private static StripeInformationProvider createStripes(
       int l0Count, byte[]... boundaries) throws Exception {
-    List<Long> l0Sizes = new ArrayList<Long>();
+    List<Long> l0Sizes = new ArrayList<>();
     for (int i = 0; i < l0Count; ++i) {
       l0Sizes.add(5L);
     }
-    List<List<Long>> sizes = new ArrayList<List<Long>>();
+    List<List<Long>> sizes = new ArrayList<>();
     for (int i = 0; i <= boundaries.length; ++i) {
       sizes.add(Arrays.asList(Long.valueOf(5)));
     }
@@ -651,11 +651,11 @@ public class TestStripeCompactionPolicy {
    */
   private static StripeInformationProvider createStripesL0Only(
       int l0Count, long l0Size) throws Exception {
-    List<Long> l0Sizes = new ArrayList<Long>();
+    List<Long> l0Sizes = new ArrayList<>();
     for (int i = 0; i < l0Count; ++i) {
       l0Sizes.add(l0Size);
     }
-    return createStripes(null, new ArrayList<List<Long>>(), l0Sizes);
+    return createStripes(null, new ArrayList<>(), l0Sizes);
   }
 
   /**
@@ -666,7 +666,7 @@ public class TestStripeCompactionPolicy {
    */
   private static StripeInformationProvider createStripesWithSizes(
       int l0Count, long l0Size, Long[]... sizes) throws Exception {
-    ArrayList<List<Long>> sizeList = new ArrayList<List<Long>>(sizes.length);
+    ArrayList<List<Long>> sizeList = new ArrayList<>(sizes.length);
     for (Long[] size : sizes) {
       sizeList.add(Arrays.asList(size));
     }
@@ -676,7 +676,7 @@ public class TestStripeCompactionPolicy {
   private static StripeInformationProvider createStripesWithSizes(
       int l0Count, long l0Size, List<List<Long>> sizes) throws Exception {
     List<byte[]> boundaries = createBoundaries(sizes.size());
-    List<Long> l0Sizes = new ArrayList<Long>();
+    List<Long> l0Sizes = new ArrayList<>();
     for (int i = 0; i < l0Count; ++i) {
       l0Sizes.add(l0Size);
     }
@@ -686,22 +686,22 @@ public class TestStripeCompactionPolicy {
   private static List<byte[]> createBoundaries(int stripeCount) {
     byte[][] keys = new byte[][] { KEY_A, KEY_B, KEY_C, KEY_D, KEY_E };
     assert stripeCount <= keys.length + 1;
-    List<byte[]> boundaries = new ArrayList<byte[]>();
+    List<byte[]> boundaries = new ArrayList<>();
     boundaries.addAll(Arrays.asList(keys).subList(0, stripeCount - 1));
     return boundaries;
   }
 
   private static StripeInformationProvider createStripes(List<byte[]> boundaries,
       List<List<Long>> stripeSizes, List<Long> l0Sizes) throws Exception {
-    List<List<StoreFile>> stripeFiles = new ArrayList<List<StoreFile>>(stripeSizes.size());
+    List<List<StoreFile>> stripeFiles = new ArrayList<>(stripeSizes.size());
     for (List<Long> sizes : stripeSizes) {
-      List<StoreFile> sfs = new ArrayList<StoreFile>(sizes.size());
+      List<StoreFile> sfs = new ArrayList<>(sizes.size());
       for (Long size : sizes) {
         sfs.add(createFile(size));
       }
       stripeFiles.add(sfs);
     }
-    List<StoreFile> l0Files = new ArrayList<StoreFile>();
+    List<StoreFile> l0Files = new ArrayList<>();
     for (Long size : l0Sizes) {
       l0Files.add(createFile(size));
     }
@@ -713,8 +713,8 @@ public class TestStripeCompactionPolicy {
    */
   private static StripeInformationProvider createStripesWithFiles(List<byte[]> boundaries,
       List<List<StoreFile>> stripeFiles, List<StoreFile> l0Files) throws Exception {
-    ArrayList<ImmutableList<StoreFile>> stripes = new ArrayList<ImmutableList<StoreFile>>();
-    ArrayList<byte[]> boundariesList = new ArrayList<byte[]>();
+    ArrayList<ImmutableList<StoreFile>> stripes = new ArrayList<>();
+    ArrayList<byte[]> boundariesList = new ArrayList<>();
     StripeInformationProvider si = mock(StripeInformationProvider.class);
     if (!stripeFiles.isEmpty()) {
       assert stripeFiles.size() == (boundaries.size() + 1);
@@ -731,7 +731,7 @@ public class TestStripeCompactionPolicy {
         when(si.getEndRow(eq(i))).thenReturn(endKey);
       }
     }
-    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<StoreFile>();
+    ConcatenatedLists<StoreFile> sfs = new ConcatenatedLists<>();
     sfs.addAllSublists(stripes);
     sfs.addSublist(l0Files);
     when(si.getStorefiles()).thenReturn(sfs);
@@ -803,7 +803,7 @@ public class TestStripeCompactionPolicy {
     private final ArrayList<KeyValue> kvs;
 
     public Scanner(KeyValue... kvs) {
-      this.kvs = new ArrayList<KeyValue>(Arrays.asList(kvs));
+      this.kvs = new ArrayList<>(Arrays.asList(kvs));
     }
 
     @Override

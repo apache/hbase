@@ -397,7 +397,7 @@ public class RegionMover extends AbstractHBaseTool {
     LOG.info("Moving " + regionsToMove.size() + " regions to " + server + " using "
         + this.maxthreads + " threads.Ack mode:" + this.ack);
     ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
-    List<Future<Boolean>> taskList = new ArrayList<Future<Boolean>>();
+    List<Future<Boolean>> taskList = new ArrayList<>();
     int counter = 0;
     while (counter < regionsToMove.size()) {
       HRegionInfo region = regionsToMove.get(counter);
@@ -461,7 +461,7 @@ public class RegionMover extends AbstractHBaseTool {
       justification="FB is wrong; its size is read")
   private void unloadRegions(Admin admin, String server, ArrayList<String> regionServers,
       boolean ack, List<HRegionInfo> movedRegions) throws Exception {
-    List<HRegionInfo> regionsToMove = new ArrayList<HRegionInfo>();// FindBugs: DLS_DEAD_LOCAL_STORE
+    List<HRegionInfo> regionsToMove = new ArrayList<>();// FindBugs: DLS_DEAD_LOCAL_STORE
     regionsToMove = getRegions(this.conf, server);
     if (regionsToMove.isEmpty()) {
       LOG.info("No Regions to move....Quitting now");
@@ -481,7 +481,7 @@ public class RegionMover extends AbstractHBaseTool {
           + regionServers.size() + " servers using " + this.maxthreads + " threads .Ack Mode:"
           + ack);
       ExecutorService moveRegionsPool = Executors.newFixedThreadPool(this.maxthreads);
-      List<Future<Boolean>> taskList = new ArrayList<Future<Boolean>>();
+      List<Future<Boolean>> taskList = new ArrayList<>();
       int serverIndex = 0;
       while (counter < regionsToMove.size()) {
         if (ack) {
@@ -636,7 +636,7 @@ public class RegionMover extends AbstractHBaseTool {
   }
 
   private List<HRegionInfo> readRegionsFromFile(String filename) throws IOException {
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> regions = new ArrayList<>();
     File f = new File(filename);
     if (!f.exists()) {
       return regions;
@@ -758,7 +758,7 @@ public class RegionMover extends AbstractHBaseTool {
    * @return List of servers from the exclude file in format 'hostname:port'.
    */
   private ArrayList<String> readExcludes(String excludeFile) throws IOException {
-    ArrayList<String> excludeServers = new ArrayList<String>();
+    ArrayList<String> excludeServers = new ArrayList<>();
     if (excludeFile == null) {
       return excludeServers;
     } else {
@@ -821,9 +821,8 @@ public class RegionMover extends AbstractHBaseTool {
    * @throws IOException
    */
   private ArrayList<String> getServers(Admin admin) throws IOException {
-    ArrayList<ServerName> serverInfo =
-        new ArrayList<ServerName>(admin.getClusterStatus().getServers());
-    ArrayList<String> regionServers = new ArrayList<String>(serverInfo.size());
+    ArrayList<ServerName> serverInfo = new ArrayList<>(admin.getClusterStatus().getServers());
+    ArrayList<String> regionServers = new ArrayList<>(serverInfo.size());
     for (ServerName server : serverInfo) {
       regionServers.add(server.getServerName());
     }

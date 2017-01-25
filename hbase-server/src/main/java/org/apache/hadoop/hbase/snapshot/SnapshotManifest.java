@@ -220,7 +220,7 @@ public final class SnapshotManifest {
       Object familyData = visitor.familyOpen(regionData, store.getFamily().getName());
       monitor.rethrowException();
 
-      List<StoreFile> storeFiles = new ArrayList<StoreFile>(store.getStorefiles());
+      List<StoreFile> storeFiles = new ArrayList<>(store.getStorefiles());
       if (LOG.isDebugEnabled()) {
         LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
       }
@@ -305,7 +305,7 @@ public final class SnapshotManifest {
     FileStatus[] stats = FSUtils.listStatus(fs, storeDir);
     if (stats == null) return null;
 
-    ArrayList<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>(stats.length);
+    ArrayList<StoreFileInfo> storeFiles = new ArrayList<>(stats.length);
     for (int i = 0; i < stats.length; ++i) {
       storeFiles.add(new StoreFileInfo(conf, fs, stats[i]));
     }
@@ -374,8 +374,7 @@ public final class SnapshotManifest {
             tpool.shutdown();
           }
           if (v1Regions != null && v2Regions != null) {
-            regionManifests =
-              new ArrayList<SnapshotRegionManifest>(v1Regions.size() + v2Regions.size());
+            regionManifests = new ArrayList<>(v1Regions.size() + v2Regions.size());
             regionManifests.addAll(v1Regions);
             regionManifests.addAll(v2Regions);
           } else if (v1Regions != null) {
@@ -427,8 +426,7 @@ public final class SnapshotManifest {
   public Map<String, SnapshotRegionManifest> getRegionManifestsMap() {
     if (regionManifests == null || regionManifests.isEmpty()) return null;
 
-    HashMap<String, SnapshotRegionManifest> regionsMap =
-        new HashMap<String, SnapshotRegionManifest>(regionManifests.size());
+    HashMap<String, SnapshotRegionManifest> regionsMap = new HashMap<>(regionManifests.size());
     for (SnapshotRegionManifest manifest: regionManifests) {
       String regionName = getRegionNameFromManifest(manifest);
       regionsMap.put(regionName, manifest);

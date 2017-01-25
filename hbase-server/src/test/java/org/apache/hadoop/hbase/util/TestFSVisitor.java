@@ -59,9 +59,9 @@ public class TestFSVisitor {
     fs = FileSystem.get(TEST_UTIL.getConfiguration());
     rootDir = TEST_UTIL.getDataTestDir("hbase");
 
-    tableFamilies = new HashSet<String>();
-    tableRegions = new HashSet<String>();
-    tableHFiles = new HashSet<String>();
+    tableFamilies = new HashSet<>();
+    tableRegions = new HashSet<>();
+    tableHFiles = new HashSet<>();
     tableDir = createTableFiles(rootDir, TABLE_NAME, tableRegions, tableFamilies, tableHFiles);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
   }
@@ -73,9 +73,9 @@ public class TestFSVisitor {
 
   @Test
   public void testVisitStoreFiles() throws IOException {
-    final Set<String> regions = new HashSet<String>();
-    final Set<String> families = new HashSet<String>();
-    final Set<String> hfiles = new HashSet<String>();
+    final Set<String> regions = new HashSet<>();
+    final Set<String> families = new HashSet<>();
+    final Set<String> hfiles = new HashSet<>();
     FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
       public void storeFile(final String region, final String family, final String hfileName)
           throws IOException {

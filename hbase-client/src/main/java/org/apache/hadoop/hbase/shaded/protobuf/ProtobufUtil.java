@@ -191,8 +191,7 @@ public final class ProtobufUtil {
   /**
    * Primitive type to class mapping.
    */
-  private final static Map<String, Class<?>>
-    PRIMITIVES = new HashMap<String, Class<?>>();
+  private final static Map<String, Class<?>> PRIMITIVES = new HashMap<>();
 
   /**
    * Many results are simple: no cell, exists true or false. To save on object creations,
@@ -1491,7 +1490,7 @@ public final class ProtobufUtil {
       return proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
     }
 
-    List<Cell> cells = new ArrayList<Cell>(values.size());
+    List<Cell> cells = new ArrayList<>(values.size());
     for (CellProtos.Cell c : values) {
       cells.add(toCell(c));
     }
@@ -1525,7 +1524,7 @@ public final class ProtobufUtil {
     List<Cell> cells = null;
     if (proto.hasAssociatedCellCount()) {
       int count = proto.getAssociatedCellCount();
-      cells = new ArrayList<Cell>(count + values.size());
+      cells = new ArrayList<>(count + values.size());
       for (int i = 0; i < count; i++) {
         if (!scanner.advance()) throw new IOException("Failed get " + i + " of " + count);
         cells.add(scanner.current());
@@ -1533,7 +1532,7 @@ public final class ProtobufUtil {
     }
 
     if (!values.isEmpty()){
-      if (cells == null) cells = new ArrayList<Cell>(values.size());
+      if (cells == null) cells = new ArrayList<>(values.size());
       for (CellProtos.Cell c: values) {
         cells.add(toCell(c));
       }
@@ -1903,7 +1902,7 @@ public final class ProtobufUtil {
    */
   static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
     if (proto == null) return null;
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>(proto.getRegionInfoList().size());
+    List<HRegionInfo> regionInfos = new ArrayList<>(proto.getRegionInfoList().size());
     for (RegionInfo regionInfo: proto.getRegionInfoList()) {
       regionInfos.add(HRegionInfo.convert(regionInfo));
     }
@@ -2719,7 +2718,7 @@ public final class ProtobufUtil {
 
   public static List<ReplicationLoadSource> toReplicationLoadSourceList(
       List<ClusterStatusProtos.ReplicationLoadSource> clsList) {
-    ArrayList<ReplicationLoadSource> rlsList = new ArrayList<ReplicationLoadSource>(clsList.size());
+    ArrayList<ReplicationLoadSource> rlsList = new ArrayList<>(clsList.size());
     for (ClusterStatusProtos.ReplicationLoadSource cls : clsList) {
       rlsList.add(toReplicationLoadSource(cls));
     }
@@ -2976,26 +2975,26 @@ public final class ProtobufUtil {
   public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
 
     Map<ServerName, ServerLoad> servers = null;
-    servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
+    servers = new HashMap<>(proto.getLiveServersList().size());
     for (LiveServerInfo lsi : proto.getLiveServersList()) {
       servers.put(ProtobufUtil.toServerName(
           lsi.getServer()), new ServerLoad(lsi.getServerLoad()));
     }
 
     Collection<ServerName> deadServers = null;
-    deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
+    deadServers = new ArrayList<>(proto.getDeadServersList().size());
     for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
       deadServers.add(ProtobufUtil.toServerName(sn));
     }
 
     Collection<ServerName> backupMasters = null;
-    backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
+    backupMasters = new ArrayList<>(proto.getBackupMastersList().size());
     for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
       backupMasters.add(ProtobufUtil.toServerName(sn));
     }
 
     Set<RegionState> rit = null;
-    rit = new HashSet<RegionState>(proto.getRegionsInTransitionList().size());
+    rit = new HashSet<>(proto.getRegionsInTransitionList().size());
     for (RegionInTransition region : proto.getRegionsInTransitionList()) {
       RegionState value = RegionState.convert(region.getRegionState());
       rit.add(value);

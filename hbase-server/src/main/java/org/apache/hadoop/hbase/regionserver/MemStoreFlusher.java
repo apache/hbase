@@ -77,10 +77,8 @@ class MemStoreFlusher implements FlushRequester {
   private Configuration conf;
   // These two data members go together.  Any entry in the one must have
   // a corresponding entry in the other.
-  private final BlockingQueue<FlushQueueEntry> flushQueue =
-    new DelayQueue<FlushQueueEntry>();
-  private final Map<Region, FlushRegionEntry> regionsInQueue =
-    new HashMap<Region, FlushRegionEntry>();
+  private final BlockingQueue<FlushQueueEntry> flushQueue = new DelayQueue<>();
+  private final Map<Region, FlushRegionEntry> regionsInQueue = new HashMap<>();
   private AtomicBoolean wakeupPending = new AtomicBoolean();
 
   private final long threadWakeFrequency;
@@ -92,7 +90,7 @@ class MemStoreFlusher implements FlushRequester {
   private final LongAdder updatesBlockedMsHighWater = new LongAdder();
 
   private final FlushHandler[] flushHandlers;
-  private List<FlushRequestListener> flushRequestListeners = new ArrayList<FlushRequestListener>(1);
+  private List<FlushRequestListener> flushRequestListeners = new ArrayList<>(1);
 
   /**
    * @param conf
@@ -131,7 +129,7 @@ class MemStoreFlusher implements FlushRequester {
    */
   private boolean flushOneForGlobalPressure() {
     SortedMap<Long, Region> regionsBySize = server.getCopyOfOnlineRegionsSortedBySize();
-    Set<Region> excludedRegions = new HashSet<Region>();
+    Set<Region> excludedRegions = new HashSet<>();
 
     double secondaryMultiplier
       = ServerRegionReplicaUtil.getRegionReplicaStoreFileRefreshMultiplier(conf);

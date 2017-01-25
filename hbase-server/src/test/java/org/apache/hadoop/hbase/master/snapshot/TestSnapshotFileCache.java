@@ -199,7 +199,7 @@ public class TestSnapshotFileCache {
 
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
-      Collection<String> files =  new HashSet<String>();
+      Collection<String> files =  new HashSet<>();
       files.addAll(SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotDir));
       return files;
     }
@@ -223,7 +223,7 @@ public class TestSnapshotFileCache {
   private void createAndTestSnapshot(final SnapshotFileCache cache,
       final SnapshotMock.SnapshotBuilder builder,
       final boolean tmp, final boolean removeOnExit) throws IOException {
-    List<Path> files = new ArrayList<Path>();
+    List<Path> files = new ArrayList<>();
     for (int i = 0; i < 3; ++i) {
       for (Path filePath: builder.addRegion()) {
         String fileName = filePath.getName();

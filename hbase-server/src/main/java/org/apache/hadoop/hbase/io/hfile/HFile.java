@@ -638,7 +638,7 @@ public class HFile {
     static final byte [] COMPARATOR = Bytes.toBytes(RESERVED_PREFIX + "COMPARATOR");
     static final byte [] TAGS_COMPRESSED = Bytes.toBytes(RESERVED_PREFIX + "TAGS_COMPRESSED");
     public static final byte [] MAX_TAGS_LEN = Bytes.toBytes(RESERVED_PREFIX + "MAX_TAGS_LEN");
-    private final SortedMap<byte [], byte []> map = new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+    private final SortedMap<byte [], byte []> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
     public FileInfo() {
       super();
@@ -894,7 +894,7 @@ public class HFile {
    */
   static List<Path> getStoreFiles(FileSystem fs, Path regionDir)
       throws IOException {
-    List<Path> regionHFiles = new ArrayList<Path>();
+    List<Path> regionHFiles = new ArrayList<>();
     PathFilter dirFilter = new FSUtils.DirFilter(fs);
     FileStatus[] familyDirs = fs.listStatus(regionDir, dirFilter);
     for(FileStatus dir : familyDirs) {

@@ -357,7 +357,7 @@ public class EnableTableProcedure
 
     // need to potentially create some regions for the replicas
     List<HRegionInfo> unrecordedReplicas =
-        AssignmentManager.replicaRegionsNotRecordedInMeta(new HashSet<HRegionInfo>(
+        AssignmentManager.replicaRegionsNotRecordedInMeta(new HashSet<>(
             regionsToAssign.keySet()), masterServices);
     Map<ServerName, List<HRegionInfo>> srvToUnassignedRegs =
         assignmentManager.getBalancer().roundRobinAssignment(unrecordedReplicas,
@@ -464,8 +464,7 @@ public class EnableTableProcedure
   private static Map<HRegionInfo, ServerName> regionsToAssignWithServerName(
       final MasterProcedureEnv env,
       final List<Pair<HRegionInfo, ServerName>> regionsInMeta) throws IOException {
-    Map<HRegionInfo, ServerName> regionsToAssign =
-        new HashMap<HRegionInfo, ServerName>(regionsInMeta.size());
+    Map<HRegionInfo, ServerName> regionsToAssign = new HashMap<>(regionsInMeta.size());
     RegionStates regionStates = env.getMasterServices().getAssignmentManager().getRegionStates();
     for (Pair<HRegionInfo, ServerName> regionLocation : regionsInMeta) {
       HRegionInfo hri = regionLocation.getFirst();

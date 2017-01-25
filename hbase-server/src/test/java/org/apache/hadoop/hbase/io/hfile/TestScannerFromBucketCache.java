@@ -208,7 +208,7 @@ public class TestScannerFromBucketCache {
       Scan scan = new Scan(row1);
       scan.addFamily(fam1);
       scan.setMaxVersions(10);
-      actual = new ArrayList<Cell>();
+      actual = new ArrayList<>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -314,7 +314,7 @@ public class TestScannerFromBucketCache {
     }
 
     // Expected
-    List<Cell> expected = new ArrayList<Cell>();
+    List<Cell> expected = new ArrayList<>();
     expected.add(kv13);
     expected.add(kv12);
     expected.add(kv23);
@@ -326,7 +326,7 @@ public class TestScannerFromBucketCache {
     Scan scan = new Scan(row1);
     scan.addFamily(fam1);
     scan.setMaxVersions(MAX_VERSIONS);
-    List<Cell> actual = new ArrayList<Cell>();
+    List<Cell> actual = new ArrayList<>();
     InternalScanner scanner = region.getScanner(scan);
 
     boolean hasNext = scanner.next(actual);

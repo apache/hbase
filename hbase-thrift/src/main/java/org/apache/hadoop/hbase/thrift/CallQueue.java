@@ -133,7 +133,7 @@ public class CallQueue implements BlockingQueue<Runnable> {
       throw new IllegalArgumentException(
           "A BlockingQueue cannot drain to itself.");
     }
-    List<Call> drained = new ArrayList<Call>();
+    List<Call> drained = new ArrayList<>();
     underlyingQueue.drainTo(drained, maxElements);
     for (Call r : drained) {
       updateMetrics(r);

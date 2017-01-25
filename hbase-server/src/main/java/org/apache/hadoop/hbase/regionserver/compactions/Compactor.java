@@ -294,7 +294,7 @@ public abstract class Compactor<T extends CellSink> {
     if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", true)) {
       // clone all StoreFiles, so we'll do the compaction on a independent copy of StoreFiles,
       // HFiles, and their readers
-      readersToClose = new ArrayList<StoreFile>(request.getFiles().size());
+      readersToClose = new ArrayList<>(request.getFiles().size());
       for (StoreFile f : request.getFiles()) {
         StoreFile clonedStoreFile = f.cloneForReader();
         // create the reader after the store file is cloned in case
@@ -320,7 +320,7 @@ public abstract class Compactor<T extends CellSink> {
       scanner = postCreateCoprocScanner(request, scanType, scanner, user);
       if (scanner == null) {
         // NULL scanner returned from coprocessor hooks means skip normal processing.
-        return new ArrayList<Path>();
+        return new ArrayList<>();
       }
       boolean cleanSeqId = false;
       if (fd.minSeqIdToKeep > 0) {
@@ -413,7 +413,7 @@ public abstract class Compactor<T extends CellSink> {
     long bytesWrittenProgressForShippedCall = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
-    List<Cell> cells = new ArrayList<Cell>();
+    List<Cell> cells = new ArrayList<>();
     long closeCheckSizeLimit = HStore.getCloseCheckInterval();
     long lastMillis = 0;
     if (LOG.isDebugEnabled()) {

@@ -82,7 +82,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   private void checkOnlineServersOnly(Set<Address> servers) throws ConstraintException {
     // This uglyness is because we only have Address, not ServerName.
     // Online servers are keyed by ServerName.
-    Set<Address> onlineServers = new HashSet<Address>();
+    Set<Address> onlineServers = new HashSet<>();
     for(ServerName server: master.getServerManager().getOnlineServers().keySet()) {
       onlineServers.add(server.getAddress());
     }
@@ -114,7 +114,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
    * @return List of Regions associated with this <code>server</code>.
    */
   private List<HRegionInfo> getRegions(final Address server) {
-    LinkedList<HRegionInfo> regions = new LinkedList<HRegionInfo>();
+    LinkedList<HRegionInfo> regions = new LinkedList<>();
     for (Map.Entry<HRegionInfo, ServerName> el :
         master.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
       if (el.getValue().getAddress().equals(server)) {
@@ -381,7 +381,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       }
 
       //We balance per group instead of per table
-      List<RegionPlan> plans = new ArrayList<RegionPlan>();
+      List<RegionPlan> plans = new ArrayList<>();
       for(Map.Entry<TableName, Map<ServerName, List<HRegionInfo>>> tableMap:
           getRSGroupAssignmentsByTable(groupName).entrySet()) {
         LOG.info("Creating partial plan for table " + tableMap.getKey() + ": "

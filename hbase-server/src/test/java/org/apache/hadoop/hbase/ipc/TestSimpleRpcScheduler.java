@@ -216,7 +216,7 @@ public class TestSimpleRpcScheduler {/*
       when(priority.getDeadline(eq(largeHead), any(Message.class))).thenReturn(50L);
       when(priority.getDeadline(eq(hugeHead), any(Message.class))).thenReturn(100L);
 
-      final ArrayList<Integer> work = new ArrayList<Integer>();
+      final ArrayList<Integer> work = new ArrayList<>();
       doAnswerTaskExecution(smallCallTask, work, 10, 250);
       doAnswerTaskExecution(largeCallTask, work, 50, 250);
       doAnswerTaskExecution(hugeCallTask, work, 100, 250);
@@ -312,7 +312,7 @@ public class TestSimpleRpcScheduler {/*
       when(scanCall.getHeader()).thenReturn(scanHead);
       when(scanCall.getParam()).thenReturn(scanCall.param);
 
-      ArrayList<Integer> work = new ArrayList<Integer>();
+      ArrayList<Integer> work = new ArrayList<>();
       doAnswerTaskExecution(putCallTask, work, 1, 1000);
       doAnswerTaskExecution(getCallTask, work, 2, 1000);
       doAnswerTaskExecution(scanCallTask, work, 3, 1000);

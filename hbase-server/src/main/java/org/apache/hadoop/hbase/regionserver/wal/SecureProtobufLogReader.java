@@ -44,7 +44,7 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
   private static final Log LOG = LogFactory.getLog(SecureProtobufLogReader.class);
 
   private Decryptor decryptor = null;
-  private static List<String> writerClsNames = new ArrayList<String>();
+  private static List<String> writerClsNames = new ArrayList<>();
   static {
     writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
     writerClsNames.add(SecureProtobufLogWriter.class.getSimpleName());

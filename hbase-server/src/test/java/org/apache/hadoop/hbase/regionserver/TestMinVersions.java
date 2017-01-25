@@ -427,7 +427,7 @@ public class TestMinVersions {
       p.addColumn(c1, c1, T3);
       region.put(p);
 
-      List<Long> tss = new ArrayList<Long>();
+      List<Long> tss = new ArrayList<>();
       tss.add(ts-1);
       tss.add(ts-2);
 

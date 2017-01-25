@@ -421,7 +421,7 @@ public class TestTags {
       assertEquals(5L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       assertEquals(2, tags.size());
       // We cannot assume the ordering of tags
-      List<String> tagValues = new ArrayList<String>();
+      List<String> tagValues = new ArrayList<>();
       for (Tag tag: tags) {
         tagValues.add(Bytes.toString(TagUtil.cloneValue(tag)));
       }
@@ -557,7 +557,7 @@ public class TestTags {
     private void updateMutationAddingTags(final Mutation m) {
       byte[] attribute = m.getAttribute("visibility");
       byte[] cf = null;
-      List<Cell> updatedCells = new ArrayList<Cell>();
+      List<Cell> updatedCells = new ArrayList<>();
       if (attribute != null) {
         for (List<? extends Cell> edits : m.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
@@ -566,7 +566,7 @@ public class TestTags {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag((byte) 1, attribute);
-            List<Tag> tagList = new ArrayList<Tag>();
+            List<Tag> tagList = new ArrayList<>();
             tagList.add(tag);
 
             KeyValue newKV = new KeyValue(CellUtil.cloneRow(kv), 0, kv.getRowLength(),

@@ -38,7 +38,7 @@ public class HttpRequestLog {
   private static final HashMap<String, String> serverToComponent;
 
   static {
-    serverToComponent = new HashMap<String, String>();
+    serverToComponent = new HashMap<>();
     serverToComponent.put("master", "master");
     serverToComponent.put("region", "regionserver");
   }

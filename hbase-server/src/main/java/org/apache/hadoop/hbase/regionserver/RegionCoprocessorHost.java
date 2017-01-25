@@ -361,7 +361,7 @@ public class RegionCoprocessorHost
 
     // scan the table attributes for coprocessor load specifications
     // initialize the coprocessors
-    List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
+    List<RegionEnvironment> configured = new ArrayList<>();
     for (TableCoprocessorAttribute attr: getTableCoprocessorAttrsFromSchema(conf, 
         region.getTableDesc())) {
       // Load encompasses classloading and coprocessor initialization
@@ -405,7 +405,7 @@ public class RegionCoprocessorHost
       // remain in this map
       classData = (ConcurrentMap<String, Object>)sharedDataMap.get(implClass.getName());
       if (classData == null) {
-        classData = new ConcurrentHashMap<String, Object>();
+        classData = new ConcurrentHashMap<>();
         sharedDataMap.put(implClass.getName(), classData);
       }
     }

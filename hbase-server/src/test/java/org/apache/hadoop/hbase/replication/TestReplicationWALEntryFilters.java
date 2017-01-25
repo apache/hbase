@@ -93,19 +93,19 @@ public class TestReplicationWALEntryFilters {
     assertEquals(null, filter.filter(userEntry));
 
     // empty scopes
-    TreeMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     userEntry = createEntry(scopes, a, b);
     assertEquals(null, filter.filter(userEntry));
 
     // different scope
-    scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(c, HConstants.REPLICATION_SCOPE_GLOBAL);
     userEntry = createEntry(scopes, a, b);
     // all kvs should be filtered
     assertEquals(userEntryEmpty, filter.filter(userEntry));
 
     // local scope
-    scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(a, HConstants.REPLICATION_SCOPE_LOCAL);
     userEntry = createEntry(scopes, a, b);
     assertEquals(userEntryEmpty, filter.filter(userEntry));
@@ -113,7 +113,7 @@ public class TestReplicationWALEntryFilters {
     assertEquals(userEntryEmpty, filter.filter(userEntry));
 
     // only scope a
-    scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(a, HConstants.REPLICATION_SCOPE_GLOBAL);
     userEntry = createEntry(scopes, a, b);
     assertEquals(userEntryA, filter.filter(userEntry));
@@ -121,7 +121,7 @@ public class TestReplicationWALEntryFilters {
     assertEquals(userEntryA, filter.filter(userEntry));
 
     // only scope b
-    scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(b, HConstants.REPLICATION_SCOPE_GLOBAL);
     userEntry = createEntry(scopes, a, b);
     assertEquals(userEntryB, filter.filter(userEntry));
@@ -129,7 +129,7 @@ public class TestReplicationWALEntryFilters {
     assertEquals(userEntryB, filter.filter(userEntry));
 
     // scope a and b
-    scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(b, HConstants.REPLICATION_SCOPE_GLOBAL);
     userEntry = createEntry(scopes, a, b);
     assertEquals(userEntryB, filter.filter(userEntry));
@@ -213,14 +213,14 @@ public class TestReplicationWALEntryFilters {
     // 2. Only config table-cfs in peer
     // empty map
     userEntry = createEntry(null, a, b, c);
-    Map<TableName, List<String>> tableCfs = new HashMap<TableName, List<String>>();
+    Map<TableName, List<String>> tableCfs = new HashMap<>();
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
 
     // table bar
     userEntry = createEntry(null, a, b, c);
-    tableCfs = new HashMap<TableName, List<String>>();
+    tableCfs = new HashMap<>();
     tableCfs.put(TableName.valueOf("bar"), null);
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
@@ -228,7 +228,7 @@ public class TestReplicationWALEntryFilters {
 
     // table foo:a
     userEntry = createEntry(null, a, b, c);
-    tableCfs = new HashMap<TableName, List<String>>();
+    tableCfs = new HashMap<>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a"));
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
@@ -236,7 +236,7 @@ public class TestReplicationWALEntryFilters {
 
     // table foo:a,c
     userEntry = createEntry(null, a, b, c, d);
-    tableCfs = new HashMap<TableName, List<String>>();
+    tableCfs = new HashMap<>();
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a", "c"));
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
@@ -245,7 +245,7 @@ public class TestReplicationWALEntryFilters {
     // 3. Only config namespaces in peer
     when(peer.getTableCFs()).thenReturn(null);
     // empty set
-    Set<String> namespaces = new HashSet<String>();
+    Set<String> namespaces = new HashSet<>();
     when(peer.getNamespaces()).thenReturn(namespaces);
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
@@ -259,7 +259,7 @@ public class TestReplicationWALEntryFilters {
     assertEquals(createEntry(null, a,b,c), filter.filter(userEntry));
 
     // namespace ns1
-    namespaces = new HashSet<String>();;
+    namespaces = new HashSet<>();
     namespaces.add("ns1");
     when(peer.getNamespaces()).thenReturn(namespaces);
     userEntry = createEntry(null, a, b, c);
@@ -268,8 +268,8 @@ public class TestReplicationWALEntryFilters {
 
     // 4. Config namespaces and table-cfs both
     // Namespaces config should not confict with table-cfs config
-    namespaces = new HashSet<String>();
-    tableCfs = new HashMap<TableName, List<String>>();
+    namespaces = new HashSet<>();
+    tableCfs = new HashMap<>();
     namespaces.add("ns1");
     when(peer.getNamespaces()).thenReturn(namespaces);
     tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a", "c"));
@@ -278,8 +278,8 @@ public class TestReplicationWALEntryFilters {
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a, c), filter.filter(userEntry));
 
-    namespaces = new HashSet<String>();;
-    tableCfs = new HashMap<TableName, List<String>>();
+    namespaces = new HashSet<>();
+    tableCfs = new HashMap<>();
     namespaces.add("default");
     when(peer.getNamespaces()).thenReturn(namespaces);
     tableCfs.put(TableName.valueOf("ns1:foo"), Lists.newArrayList("a", "c"));
@@ -288,8 +288,8 @@ public class TestReplicationWALEntryFilters {
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(createEntry(null, a, b, c), filter.filter(userEntry));
 
-    namespaces = new HashSet<String>();;
-    tableCfs = new HashMap<TableName, List<String>>();
+    namespaces = new HashSet<>();
+    tableCfs = new HashMap<>();
     namespaces.add("ns1");
     when(peer.getNamespaces()).thenReturn(namespaces);
     tableCfs.put(TableName.valueOf("bar"), null);

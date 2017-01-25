@@ -224,7 +224,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
     if (getState() != State.RUNNING) {
       return map;
     }
-    Map<String, Object> rpcJSON = new HashMap<String, Object>();
+    Map<String, Object> rpcJSON = new HashMap<>();
     ArrayList paramList = new ArrayList();
     map.put("rpcCall", rpcJSON);
     rpcJSON.put("queuetimems", getRPCQueueTime());

@@ -93,7 +93,7 @@ public class TestBoundedByteBufferPool {
 
   @Test
   public void testBufferSizeGrowWithMultiThread() throws Exception {
-    final ConcurrentLinkedDeque<ByteBuffer> bufferQueue = new ConcurrentLinkedDeque<ByteBuffer>();
+    final ConcurrentLinkedDeque<ByteBuffer> bufferQueue = new ConcurrentLinkedDeque<>();
     int takeBufferThreadsCount = 30;
     int putBufferThreadsCount = 1;
     Thread takeBufferThreads[] = new Thread[takeBufferThreadsCount];

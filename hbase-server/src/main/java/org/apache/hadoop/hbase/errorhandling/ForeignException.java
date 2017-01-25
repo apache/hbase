@@ -107,8 +107,7 @@ public class ForeignException extends IOException {
     // if there is no stack trace, ignore it and just return the message
     if (trace == null) return null;
     // build the stack trace for the message
-    List<StackTraceElementMessage> pbTrace =
-        new ArrayList<StackTraceElementMessage>(trace.length);
+    List<StackTraceElementMessage> pbTrace = new ArrayList<>(trace.length);
     for (StackTraceElement elem : trace) {
       StackTraceElementMessage.Builder stackBuilder = StackTraceElementMessage.newBuilder();
       stackBuilder.setDeclaringClass(elem.getClassName());

@@ -103,7 +103,7 @@ public class TestReplicasClient {
     static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
     static final AtomicInteger countOfNext = new AtomicInteger(0);
     private static final AtomicReference<CountDownLatch> cdl =
-        new AtomicReference<CountDownLatch>(new CountDownLatch(0));
+        new AtomicReference<>(new CountDownLatch(0));
     Random r = new Random();
     public SlowMeCopro() {
     }
@@ -530,7 +530,7 @@ public class TestReplicasClient {
   public void testCancelOfMultiGet() throws Exception {
     openRegion(hriSecondary);
     try {
-      List<Put> puts = new ArrayList<Put>(2);
+      List<Put> puts = new ArrayList<>(2);
       byte[] b1 = Bytes.toBytes("testCancelOfMultiGet" + 0);
       Put p = new Put(b1);
       p.addColumn(f, b1, b1);
@@ -552,7 +552,7 @@ public class TestReplicasClient {
       // Make primary slowdown
       SlowMeCopro.getCdl().set(new CountDownLatch(1));
 
-      List<Get> gets = new ArrayList<Get>();
+      List<Get> gets = new ArrayList<>();
       Get g = new Get(b1);
       g.setCheckExistenceOnly(true);
       g.setConsistency(Consistency.TIMELINE);
@@ -762,7 +762,7 @@ public class TestReplicasClient {
     Iterator<Result> iter = scanner.iterator();
 
     // Maps of row keys that we have seen so far
-    HashMap<String, Boolean> map = new HashMap<String, Boolean>();
+    HashMap<String, Boolean> map = new HashMap<>();
 
     // Tracked metrics
     int rowCount = 0;

@@ -133,9 +133,9 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       // filter and having necessary column(s).
       scanner = region.getScanner(scan);
       while (hasMore) {
-        List<List<Cell>> deleteRows = new ArrayList<List<Cell>>(rowBatchSize);
+        List<List<Cell>> deleteRows = new ArrayList<>(rowBatchSize);
         for (int i = 0; i < rowBatchSize; i++) {
-          List<Cell> results = new ArrayList<Cell>();
+          List<Cell> results = new ArrayList<>();
           hasMore = scanner.next(results);
           if (results.size() > 0) {
             deleteRows.add(results);
@@ -202,14 +202,14 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
     byte[] row = CellUtil.cloneRow(deleteRow.get(0));
     Delete delete = new Delete(row, ts);
     if (deleteType == DeleteType.FAMILY) {
-      Set<byte[]> families = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+      Set<byte[]> families = new TreeSet<>(Bytes.BYTES_COMPARATOR);
       for (Cell kv : deleteRow) {
         if (families.add(CellUtil.cloneFamily(kv))) {
           delete.addFamily(CellUtil.cloneFamily(kv), ts);
         }
       }
     } else if (deleteType == DeleteType.COLUMN) {
-      Set<Column> columns = new HashSet<Column>();
+      Set<Column> columns = new HashSet<>();
       for (Cell kv : deleteRow) {
         Column column = new Column(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv));
         if (columns.add(column)) {
@@ -231,7 +231,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
           noOfVersionsToDelete++;
         }
       } else {
-        Set<Column> columns = new HashSet<Column>();
+        Set<Column> columns = new HashSet<>();
         for (Cell kv : deleteRow) {
           Column column = new Column(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv));
           // Only one version of particular column getting deleted.

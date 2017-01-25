@@ -141,8 +141,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       this.numFamilies = htd.getColumnFamilyCount();
       this.region = region;
       this.htd = htd;
-      scopes = new TreeMap<byte[], Integer>(
-          Bytes.BYTES_COMPARATOR);
+      scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for(byte[] fam : htd.getFamiliesKeys()) {
         scopes.put(fam, 0);
       }
@@ -420,7 +419,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       throws IOException {
     WAL.Reader reader = wals.createReader(wal.getFileSystem(getConf()), wal);
     long count = 0;
-    Map<String, Long> sequenceIds = new HashMap<String, Long>();
+    Map<String, Long> sequenceIds = new HashMap<>();
     try {
       while (true) {
         WAL.Entry e = reader.next();
@@ -490,7 +489,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     System.exit(1);
   }
 
-  private final Set<WAL> walsListenedTo = new HashSet<WAL>();
+  private final Set<WAL> walsListenedTo = new HashSet<>();
 
   private HRegion openRegion(final FileSystem fs, final Path dir, final HTableDescriptor htd,
       final WALFactory wals, final long whenToRoll, final LogRoller roller) throws IOException {

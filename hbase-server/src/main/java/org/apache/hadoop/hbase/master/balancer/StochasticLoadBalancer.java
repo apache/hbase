@@ -121,7 +121,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(StochasticLoadBalancer.class);
 
-  Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<String, Deque<BalancerRegionLoad>>();
+  Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
   // values are defaults
   private int maxSteps = 1000000;
@@ -332,7 +332,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (clusterState.size() <= 2) {
         return null;
       }
-      clusterState = new HashMap<ServerName, List<HRegionInfo>>(clusterState);
+      clusterState = new HashMap<>(clusterState);
       clusterState.remove(masterServerName);
     }
 
@@ -482,7 +482,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    * @return List of RegionPlan's that represent the moves needed to get to desired final state.
    */
   private List<RegionPlan> createRegionPlans(Cluster cluster) {
-    List<RegionPlan> plans = new LinkedList<RegionPlan>();
+    List<RegionPlan> plans = new LinkedList<>();
     for (int regionIndex = 0;
          regionIndex < cluster.regionIndexToServerIndex.length; regionIndex++) {
       int initialServerIndex = cluster.initialRegionIndexToServerIndex[regionIndex];
@@ -511,7 +511,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // We create a new hashmap so that regions that are no longer there are removed.
     // However we temporarily need the old loads so we can use them to keep the rolling average.
     Map<String, Deque<BalancerRegionLoad>> oldLoads = loads;
-    loads = new HashMap<String, Deque<BalancerRegionLoad>>();
+    loads = new HashMap<>();
 
     for (ServerName sn : clusterStatus.getServers()) {
       ServerLoad sl = clusterStatus.getLoad(sn);
@@ -522,7 +522,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         Deque<BalancerRegionLoad> rLoads = oldLoads.get(Bytes.toString(entry.getKey()));
         if (rLoads == null) {
           // There was nothing there
-          rLoads = new ArrayDeque<BalancerRegionLoad>();
+          rLoads = new ArrayDeque<>();
         } else if (rLoads.size() >= numRegionLoadsToRemember) {
           rLoads.remove();
         }

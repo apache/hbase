@@ -112,7 +112,7 @@ public class TestRegionObserverBypass {
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
 
     Table t = util.getConnection().getTable(tableName);
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     Put p = new Put(row1);
     p.addColumn(dummy, dummy, dummy);
     puts.add(p);

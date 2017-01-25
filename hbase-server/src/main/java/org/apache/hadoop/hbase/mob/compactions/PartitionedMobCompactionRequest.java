@@ -71,7 +71,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
    * the same partition.
    */
   protected static class CompactionPartition {
-    private List<FileStatus> files = new ArrayList<FileStatus>();
+    private List<FileStatus> files = new ArrayList<>();
     private CompactionPartitionId partitionId;
 
     // The startKey and endKey of this partition, both are inclusive.

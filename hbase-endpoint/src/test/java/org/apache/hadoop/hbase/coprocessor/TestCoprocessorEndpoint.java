@@ -124,7 +124,7 @@ public class TestCoprocessorEndpoint {
         public Long call(ColumnAggregationProtos.ColumnAggregationService instance)
         throws IOException {
           CoprocessorRpcUtils.BlockingRpcCallback<ColumnAggregationProtos.SumResponse> rpcCallback =
-              new CoprocessorRpcUtils.BlockingRpcCallback<ColumnAggregationProtos.SumResponse>();
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
           ColumnAggregationProtos.SumRequest.Builder builder =
             ColumnAggregationProtos.SumRequest.newBuilder();
           builder.setFamily(ByteStringer.wrap(family));
@@ -193,7 +193,7 @@ public class TestCoprocessorEndpoint {
                 throws IOException {
               LOG.debug("Default response is " + TestProtos.EchoRequestProto.getDefaultInstance());
               CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto> callback =
-                  new CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto>();
+                  new CoprocessorRpcUtils.BlockingRpcCallback<>();
               instance.echo(controller, request, callback);
               TestProtos.EchoResponseProto response = callback.get();
               LOG.debug("Batch.Call returning result " + response);
@@ -226,7 +226,7 @@ public class TestCoprocessorEndpoint {
                 throws IOException {
               LOG.debug("Default response is " + TestProtos.EchoRequestProto.getDefaultInstance());
               CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto> callback =
-                  new CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto>();
+                  new CoprocessorRpcUtils.BlockingRpcCallback<>();
               instance.echo(controller, request, callback);
               TestProtos.EchoResponseProto response = callback.get();
               LOG.debug("Batch.Call returning result " + response);
@@ -271,7 +271,7 @@ public class TestCoprocessorEndpoint {
             public String call(TestRpcServiceProtos.TestProtobufRpcProto instance)
                 throws IOException {
               CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto> callback =
-                  new CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto>();
+                  new CoprocessorRpcUtils.BlockingRpcCallback<>();
               instance.echo(controller, request, callback);
               TestProtos.EchoResponseProto response = callback.get();
               LOG.debug("Batch.Call got result " + response);

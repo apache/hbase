@@ -107,7 +107,7 @@ public class TestKeyValueCompression {
     byte[] cf = Bytes.toBytes("myCF");
     byte[] q = Bytes.toBytes("myQualifier");
     byte[] value = Bytes.toBytes("myValue");
-    List<Tag> tags = new ArrayList<Tag>(noOfTags);
+    List<Tag> tags = new ArrayList<>(noOfTags);
     for (int i = 1; i <= noOfTags; i++) {
       tags.add(new ArrayBackedTag((byte) i, Bytes.toBytes("tagValue" + i)));
     }

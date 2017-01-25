@@ -39,7 +39,7 @@ public class ClusterLoadState {
     this.numRegions = 0;
     this.numServers = clusterState.size();
     this.clusterState = clusterState;
-    serversByLoad = new TreeMap<ServerAndLoad, List<HRegionInfo>>();
+    serversByLoad = new TreeMap<>();
     // Iterate so we can count regions as we build the map
     for (Map.Entry<ServerName, List<HRegionInfo>> server : clusterState.entrySet()) {
       List<HRegionInfo> regions = server.getValue();

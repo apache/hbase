@@ -82,7 +82,7 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getInstance());
 
     List<ServerName> serverNames = master.getServerManager().getOnlineServersList();
-    List<String> servers = new ArrayList<String>();
+    List<String> servers = new ArrayList<>();
     for (ServerName sn : serverNames) {
       servers.add(sn.toString());
     }

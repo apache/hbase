@@ -62,7 +62,7 @@ public class RegionSplitCalculator<R extends KeyRange> {
    * Invariant: once populated this has 0 entries if empty or at most n+1 values
    * where n == number of added ranges.
    */
-  private final TreeSet<byte[]> splits = new TreeSet<byte[]>(BYTES_COMPARATOR);
+  private final TreeSet<byte[]> splits = new TreeSet<>(BYTES_COMPARATOR);
 
   /**
    * This is a map from start key to regions with the same start key.
@@ -177,11 +177,11 @@ public class RegionSplitCalculator<R extends KeyRange> {
    */
   public static <R extends KeyRange> List<R>
       findBigRanges(Collection<R> bigOverlap, int count) {
-    List<R> bigRanges = new ArrayList<R>();
+    List<R> bigRanges = new ArrayList<>();
 
     // The key is the count of overlaps,
     // The value is a list of ranges that have that many overlaps
-    TreeMap<Integer, List<R>> overlapRangeMap = new TreeMap<Integer, List<R>>();
+    TreeMap<Integer, List<R>> overlapRangeMap = new TreeMap<>();
     for (R r: bigOverlap) {
       // Calculates the # of overlaps for each region
       // and populates rangeOverlapMap
@@ -206,7 +206,7 @@ public class RegionSplitCalculator<R extends KeyRange> {
         Integer key = Integer.valueOf(overlappedRegions);
         List<R> ranges = overlapRangeMap.get(key);
         if (ranges == null) {
-          ranges = new ArrayList<R>();
+          ranges = new ArrayList<>();
           overlapRangeMap.put(key, ranges);
         }
         ranges.add(r);

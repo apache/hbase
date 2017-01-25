@@ -112,11 +112,10 @@ public class TestStore {
   byte [] qf5 = Bytes.toBytes("qf5");
   byte [] qf6 = Bytes.toBytes("qf6");
 
-  NavigableSet<byte[]> qualifiers =
-    new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
+  NavigableSet<byte[]> qualifiers = new ConcurrentSkipListSet<>(Bytes.BYTES_COMPARATOR);
 
-  List<Cell> expected = new ArrayList<Cell>();
-  List<Cell> result = new ArrayList<Cell>();
+  List<Cell> expected = new ArrayList<>();
+  List<Cell> result = new ArrayList<>();
 
   long id = System.currentTimeMillis();
   Get get = new Get(row);
@@ -624,8 +623,7 @@ public class TestStore {
    * only; thereafter it will succeed.  Used by {@link TestHRegion} too.
    */
   static class FaultyFileSystem extends FilterFileSystem {
-    List<SoftReference<FaultyOutputStream>> outStreams =
-      new ArrayList<SoftReference<FaultyOutputStream>>();
+    List<SoftReference<FaultyOutputStream>> outStreams = new ArrayList<>();
     private long faultPos = 200;
     AtomicBoolean fault = new AtomicBoolean(true);
 
@@ -699,7 +697,7 @@ public class TestStore {
    */
   List<Cell> getKeyValueSet(long[] timestamps, int numRows,
       byte[] qualifier, byte[] family) {
-    List<Cell> kvList = new ArrayList<Cell>();
+    List<Cell> kvList = new ArrayList<>();
     for (int i=1;i<=numRows;i++) {
       byte[] b = Bytes.toBytes(i);
       for (long timestamp: timestamps) {

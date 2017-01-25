@@ -448,7 +448,7 @@ public class TestHFileOutputFormat2  {
       writer = hof.getRecordWriter(context);
       final byte [] b = Bytes.toBytes("b");
 
-      List< Tag > tags = new ArrayList<Tag>();
+      List< Tag > tags = new ArrayList<>();
       tags.add(new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(978670)));
       KeyValue kv = new KeyValue(b, b, b, HConstants.LATEST_TIMESTAMP, b, tags);
       writer.write(new ImmutableBytesWritable(), kv);
@@ -735,8 +735,7 @@ public class TestHFileOutputFormat2  {
    */
   private Map<String, Compression.Algorithm>
       getMockColumnFamiliesForCompression (int numCfs) {
-    Map<String, Compression.Algorithm> familyToCompression
-      = new HashMap<String, Compression.Algorithm>();
+    Map<String, Compression.Algorithm> familyToCompression = new HashMap<>();
     // use column family names having special characters
     if (numCfs-- > 0) {
       familyToCompression.put("Family1!@#!@#&", Compression.Algorithm.LZO);
@@ -809,8 +808,7 @@ public class TestHFileOutputFormat2  {
    */
   private Map<String, BloomType>
   getMockColumnFamiliesForBloomType (int numCfs) {
-    Map<String, BloomType> familyToBloomType =
-        new HashMap<String, BloomType>();
+    Map<String, BloomType> familyToBloomType = new HashMap<>();
     // use column family names having special characters
     if (numCfs-- > 0) {
       familyToBloomType.put("Family1!@#!@#&", BloomType.ROW);
@@ -881,8 +879,7 @@ public class TestHFileOutputFormat2  {
    */
   private Map<String, Integer>
   getMockColumnFamiliesForBlockSize (int numCfs) {
-    Map<String, Integer> familyToBlockSize =
-        new HashMap<String, Integer>();
+    Map<String, Integer> familyToBlockSize = new HashMap<>();
     // use column family names having special characters
     if (numCfs-- > 0) {
       familyToBlockSize.put("Family1!@#!@#&", 1234);
@@ -956,8 +953,7 @@ public class TestHFileOutputFormat2  {
    */
   private Map<String, DataBlockEncoding>
       getMockColumnFamiliesForDataBlockEncoding (int numCfs) {
-    Map<String, DataBlockEncoding> familyToDataBlockEncoding =
-        new HashMap<String, DataBlockEncoding>();
+    Map<String, DataBlockEncoding> familyToDataBlockEncoding = new HashMap<>();
     // use column family names having special characters
     if (numCfs-- > 0) {
       familyToDataBlockEncoding.put("Family1!@#!@#&", DataBlockEncoding.DIFF);

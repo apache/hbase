@@ -117,7 +117,7 @@ public class TestCoprocessorTableEndpoint {
       public Long call(ColumnAggregationProtos.ColumnAggregationService instance)
       throws IOException {
         CoprocessorRpcUtils.BlockingRpcCallback<ColumnAggregationProtos.SumResponse> rpcCallback =
-            new CoprocessorRpcUtils.BlockingRpcCallback<ColumnAggregationProtos.SumResponse>();
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
         ColumnAggregationProtos.SumRequest.Builder builder =
           ColumnAggregationProtos.SumRequest.newBuilder();
         builder.setFamily(ByteString.copyFrom(family));

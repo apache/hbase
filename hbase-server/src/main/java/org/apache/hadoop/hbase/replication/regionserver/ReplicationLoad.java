@@ -68,8 +68,7 @@ public class ReplicationLoad {
     this.replicationLoadSink = rLoadSinkBuild.build();
 
     // build the SourceLoad List
-    Map<String, ClusterStatusProtos.ReplicationLoadSource> replicationLoadSourceMap =
-        new HashMap<String, ClusterStatusProtos.ReplicationLoadSource>();
+    Map<String, ClusterStatusProtos.ReplicationLoadSource> replicationLoadSourceMap = new HashMap<>();
     for (MetricsSource sm : this.sourceMetricsList) {
       // Get the actual peer id
       String peerId = sm.getPeerID();
@@ -111,8 +110,7 @@ public class ReplicationLoad {
 
       replicationLoadSourceMap.put(peerId, rLoadSourceBuild.build());
     }
-    this.replicationLoadSourceList = new ArrayList<ClusterStatusProtos.ReplicationLoadSource>(
-        replicationLoadSourceMap.values());
+    this.replicationLoadSourceList = new ArrayList<>(replicationLoadSourceMap.values());
   }
 
   /**

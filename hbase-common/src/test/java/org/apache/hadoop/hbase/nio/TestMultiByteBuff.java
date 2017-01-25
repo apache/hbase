@@ -243,7 +243,7 @@ public class TestMultiByteBuff {
     assertFalse(bb2 == sub);
     assertEquals(l2, ByteBufferUtils.toLong(sub, sub.position()));
     multi.rewind();
-    ObjectIntPair<ByteBuffer> p = new ObjectIntPair<ByteBuffer>();
+    ObjectIntPair<ByteBuffer> p = new ObjectIntPair<>();
     multi.asSubByteBuffer(8, Bytes.SIZEOF_LONG, p);
     assertFalse(bb1 == p.getFirst());
     assertFalse(bb2 == p.getFirst());

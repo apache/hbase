@@ -181,8 +181,7 @@ public class TestWALObserver {
     HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(TEST_TABLE));
     final HTableDescriptor htd = createBasic3FamilyHTD(Bytes
         .toString(TEST_TABLE));
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
@@ -272,8 +271,7 @@ public class TestWALObserver {
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(TEST_TABLE));
     final HTableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
@@ -328,8 +326,7 @@ public class TestWALObserver {
     WALEdit edit = new WALEdit();
     long now = EnvironmentEdgeManager.currentTime();
     final int countPerFamily = 1000;
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       scopes.put(hcd.getName(), 0);
     }

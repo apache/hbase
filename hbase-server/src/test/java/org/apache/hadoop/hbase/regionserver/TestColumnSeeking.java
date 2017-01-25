@@ -90,14 +90,14 @@ public class TestColumnSeeking {
       double majorPercentage = 0.2;
       double putPercentage = 0.2;
 
-      HashMap<String, KeyValue> allKVMap = new HashMap<String, KeyValue>();
+      HashMap<String, KeyValue> allKVMap = new HashMap<>();
 
       HashMap<String, KeyValue>[] kvMaps = new HashMap[numberOfTests];
       ArrayList<String>[] columnLists = new ArrayList[numberOfTests];
 
       for (int i = 0; i < numberOfTests; i++) {
-        kvMaps[i] = new HashMap<String, KeyValue>();
-        columnLists[i] = new ArrayList<String>();
+        kvMaps[i] = new HashMap<>();
+        columnLists[i] = new ArrayList<>();
         for (String column : allColumns) {
           if (Math.random() < selectPercent) {
             columnLists[i].add(column);
@@ -162,7 +162,7 @@ public class TestColumnSeeking {
 
         }
         InternalScanner scanner = region.getScanner(scan);
-        List<Cell> results = new ArrayList<Cell>();
+        List<Cell> results = new ArrayList<>();
         while (scanner.next(results))
           ;
         assertEquals(kvSet.size(), results.size());
@@ -201,15 +201,15 @@ public class TestColumnSeeking {
     double majorPercentage = 0.2;
     double putPercentage = 0.2;
 
-    HashMap<String, KeyValue> allKVMap = new HashMap<String, KeyValue>();
+    HashMap<String, KeyValue> allKVMap = new HashMap<>();
 
     HashMap<String, KeyValue>[] kvMaps = new HashMap[numberOfTests];
     ArrayList<String>[] columnLists = new ArrayList[numberOfTests];
     String valueString = "Value";
 
     for (int i = 0; i < numberOfTests; i++) {
-      kvMaps[i] = new HashMap<String, KeyValue>();
-      columnLists[i] = new ArrayList<String>();
+      kvMaps[i] = new HashMap<>();
+      columnLists[i] = new ArrayList<>();
       for (String column : allColumns) {
         if (Math.random() < selectPercent) {
           columnLists[i].add(column);
@@ -274,7 +274,7 @@ public class TestColumnSeeking {
 
       }
       InternalScanner scanner = region.getScanner(scan);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       while (scanner.next(results))
         ;
       assertEquals(kvSet.size(), results.size());
@@ -285,7 +285,7 @@ public class TestColumnSeeking {
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {
-    Set<String> wordSet = new HashSet<String>();
+    Set<String> wordSet = new HashSet<>();
     for (int i = 0; i < numberOfWords; i++) {
       int lengthOfWords = (int) (Math.random() * 5) + 1;
       char[] wordChar = new char[lengthOfWords];
@@ -300,7 +300,7 @@ public class TestColumnSeeking {
       }
       wordSet.add(word);
     }
-    List<String> wordList = new ArrayList<String>(wordSet);
+    List<String> wordList = new ArrayList<>(wordSet);
     return wordList;
   }
 

@@ -382,11 +382,11 @@ public class TestRegionMergeTransactionOnCluster {
     List<Pair<HRegionInfo, ServerName>> currentRegionToServers =
         MetaTableAccessor.getTableRegionsAndLocations(
             TEST_UTIL.getConnection(), tableName);
-    List<HRegionInfo> initialRegions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> initialRegions = new ArrayList<>();
     for (Pair<HRegionInfo, ServerName> p : initialRegionToServers) {
       initialRegions.add(p.getFirst());
     }
-    List<HRegionInfo> currentRegions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> currentRegions = new ArrayList<>();
     for (Pair<HRegionInfo, ServerName> p : currentRegionToServers) {
       currentRegions.add(p.getFirst());
     }
@@ -427,7 +427,7 @@ public class TestRegionMergeTransactionOnCluster {
     ADMIN.mergeRegionsAsync(
       regionA.getEncodedNameAsBytes(),
       regionB.getEncodedNameAsBytes(), false);
-    return new PairOfSameType<HRegionInfo>(regionA, regionB);
+    return new PairOfSameType<>(regionA, regionB);
   }
 
   private void waitAndVerifyRegionNum(HMaster master, TableName tablename,

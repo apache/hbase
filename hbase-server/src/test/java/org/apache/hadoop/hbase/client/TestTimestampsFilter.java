@@ -145,7 +145,7 @@ public class TestTimestampsFilter {
 
     // Request an empty list of versions using the Timestamps filter;
     // Should return none.
-    kvs = getNVersions(ht, FAMILY, 2, 2, new ArrayList<Long>());
+    kvs = getNVersions(ht, FAMILY, 2, 2, new ArrayList<>());
     assertEquals(0, kvs == null? 0: kvs.length);
 
     //
@@ -192,7 +192,7 @@ public class TestTimestampsFilter {
     p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 3, Bytes.toBytes("value4-3"));
     ht.put(p);
 
-    ArrayList<Long> timestamps = new ArrayList<Long>();
+    ArrayList<Long> timestamps = new ArrayList<>();
     timestamps.add(new Long(3));
     TimestampsFilter filter = new TimestampsFilter(timestamps);
 

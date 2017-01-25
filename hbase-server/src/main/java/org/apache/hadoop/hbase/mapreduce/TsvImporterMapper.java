@@ -113,7 +113,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
       throw new RuntimeException("No row key column specified");
     }
     this.kvCreator = new CellCreator(conf);
-    tags = new ArrayList<Tag>();
+    tags = new ArrayList<>();
   }
 
   /**

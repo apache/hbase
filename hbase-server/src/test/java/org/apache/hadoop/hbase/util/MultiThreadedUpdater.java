@@ -57,7 +57,7 @@ import com.google.common.base.Preconditions;
 public class MultiThreadedUpdater extends MultiThreadedWriterBase {
   private static final Log LOG = LogFactory.getLog(MultiThreadedUpdater.class);
 
-  protected Set<HBaseUpdaterThread> updaters = new HashSet<HBaseUpdaterThread>();
+  protected Set<HBaseUpdaterThread> updaters = new HashSet<>();
 
   private MultiThreadedWriterBase writer = null;
   private boolean isBatchUpdate = false;

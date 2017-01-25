@@ -54,7 +54,7 @@ public class DependentColumnFilter extends CompareFilter {
   protected byte[] columnQualifier;
   protected boolean dropDependentColumn;
 
-  protected Set<Long> stampSet = new HashSet<Long>();
+  protected Set<Long> stampSet = new HashSet<>();
   
   /**
    * Build a dependent column filter with value checking

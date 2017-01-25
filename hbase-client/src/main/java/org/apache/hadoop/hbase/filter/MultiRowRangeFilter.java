@@ -174,7 +174,7 @@ public class MultiRowRangeFilter extends FilterBase {
     }
     int length = proto.getRowRangeListCount();
     List<FilterProtos.RowRange> rangeProtos = proto.getRowRangeListList();
-    List<RowRange> rangeList = new ArrayList<RowRange>(length);
+    List<RowRange> rangeList = new ArrayList<>(length);
     for (FilterProtos.RowRange rangeProto : rangeProtos) {
       RowRange range = new RowRange(rangeProto.hasStartRow() ? rangeProto.getStartRow()
           .toByteArray() : null, rangeProto.getStartRowInclusive(), rangeProto.hasStopRow() ?
@@ -252,8 +252,8 @@ public class MultiRowRangeFilter extends FilterBase {
     if (ranges.isEmpty()) {
       throw new IllegalArgumentException("No ranges found.");
     }
-    List<RowRange> invalidRanges = new ArrayList<RowRange>();
-    List<RowRange> newRanges = new ArrayList<RowRange>(ranges.size());
+    List<RowRange> invalidRanges = new ArrayList<>();
+    List<RowRange> newRanges = new ArrayList<>(ranges.size());
     Collections.sort(ranges);
     if(ranges.get(0).isValid()) {
       if (ranges.size() == 1) {

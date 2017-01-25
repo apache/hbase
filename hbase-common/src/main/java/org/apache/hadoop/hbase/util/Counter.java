@@ -94,7 +94,7 @@ public class Counter {
   }
 
   private Counter(Cell initCell) {
-    containerRef = new AtomicReference<Container>(new Container(initCell));
+    containerRef = new AtomicReference<>(new Container(initCell));
   }
 
   private static int hash() {

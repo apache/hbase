@@ -40,7 +40,7 @@ class NamespaceTableAndRegionInfo {
 
   public NamespaceTableAndRegionInfo(String namespace) {
     this.name = namespace;
-    this.tableAndRegionInfo = new HashMap<TableName, AtomicInteger>();
+    this.tableAndRegionInfo = new HashMap<>();
   }
 
   /**

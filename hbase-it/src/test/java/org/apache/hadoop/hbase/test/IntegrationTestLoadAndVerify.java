@@ -456,7 +456,7 @@ public void cleanUpCluster() throws Exception {
       throws IOException, InterruptedException {
     Path keysInputDir = new Path(conf.get(SEARCHER_INPUTDIR_KEY));
     FileSystem fs = FileSystem.get(conf);
-    SortedSet<byte []> result = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+    SortedSet<byte []> result = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     if (!fs.exists(keysInputDir)) {
       throw new FileNotFoundException(keysInputDir.toString());
     }

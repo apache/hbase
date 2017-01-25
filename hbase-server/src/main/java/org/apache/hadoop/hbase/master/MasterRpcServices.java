@@ -234,7 +234,7 @@ public class MasterRpcServices extends RSRpcServices
    * @return list of blocking services and their security info classes that this server supports
    */
   protected List<BlockingServiceAndInterface> getServices() {
-    List<BlockingServiceAndInterface> bssi = new ArrayList<BlockingServiceAndInterface>(5);
+    List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);
     bssi.add(new BlockingServiceAndInterface(
       MasterService.newReflectiveBlockingService(this),
       MasterService.BlockingInterface.class));
@@ -1333,7 +1333,7 @@ public class MasterRpcServices extends RSRpcServices
       Pair<HRegionInfo, ServerName> pair =
         MetaTableAccessor.getRegion(master.getConnection(), regionName);
       if (Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),regionName)) {
-        pair = new Pair<HRegionInfo, ServerName>(HRegionInfo.FIRST_META_REGIONINFO,
+        pair = new Pair<>(HRegionInfo.FIRST_META_REGIONINFO,
             master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper()));
       }
       if (pair == null) {
@@ -1491,7 +1491,7 @@ public class MasterRpcServices extends RSRpcServices
       throw new DoNotRetryIOException("Table " + tableName + " is not enabled");
     }
     boolean allFiles = false;
-    List<HColumnDescriptor> compactedColumns = new ArrayList<HColumnDescriptor>();
+    List<HColumnDescriptor> compactedColumns = new ArrayList<>();
     HColumnDescriptor[] hcds = master.getTableDescriptors().get(tableName).getColumnFamilies();
     byte[] family = null;
     if (request.hasFamily()) {

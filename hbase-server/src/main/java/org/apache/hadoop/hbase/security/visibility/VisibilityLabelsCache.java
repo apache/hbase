@@ -54,10 +54,10 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   private static VisibilityLabelsCache instance;
 
   private ZKVisibilityLabelWatcher zkVisibilityWatcher;
-  private Map<String, Integer> labels = new HashMap<String, Integer>();
-  private Map<Integer, String> ordinalVsLabels = new HashMap<Integer, String>();
-  private Map<String, Set<Integer>> userAuths = new HashMap<String, Set<Integer>>();
-  private Map<String, Set<Integer>> groupAuths = new HashMap<String, Set<Integer>>();
+  private Map<String, Integer> labels = new HashMap<>();
+  private Map<Integer, String> ordinalVsLabels = new HashMap<>();
+  private Map<String, Set<Integer>> userAuths = new HashMap<>();
+  private Map<String, Set<Integer>> groupAuths = new HashMap<>();
 
   /**
    * This covers the members labels, ordinalVsLabels and userAuths
@@ -145,10 +145,9 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
       for (UserAuthorizations userAuths : multiUserAuths.getUserAuthsList()) {
         String user = Bytes.toString(userAuths.getUser().toByteArray());
         if (AuthUtil.isGroupPrincipal(user)) {
-          this.groupAuths.put(AuthUtil.getGroupName(user),
-            new HashSet<Integer>(userAuths.getAuthList()));
+          this.groupAuths.put(AuthUtil.getGroupName(user), new HashSet<>(userAuths.getAuthList()));
         } else {
-          this.userAuths.put(user, new HashSet<Integer>(userAuths.getAuthList()));
+          this.userAuths.put(user, new HashSet<>(userAuths.getAuthList()));
         }
       }
     } finally {
@@ -210,7 +209,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
       List<String> auths = EMPTY_LIST;
       Set<Integer> authOrdinals = getUserAuthsAsOrdinals(user);
       if (!authOrdinals.equals(EMPTY_SET)) {
-        auths = new ArrayList<String>(authOrdinals.size());
+        auths = new ArrayList<>(authOrdinals.size());
         for (Integer authOrdinal : authOrdinals) {
           auths.add(ordinalVsLabels.get(authOrdinal));
         }
@@ -227,7 +226,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
       List<String> auths = EMPTY_LIST;
       Set<Integer> authOrdinals = getGroupAuthsAsOrdinals(groups);
       if (!authOrdinals.equals(EMPTY_SET)) {
-        auths = new ArrayList<String>(authOrdinals.size());
+        auths = new ArrayList<>(authOrdinals.size());
         for (Integer authOrdinal : authOrdinals) {
           auths.add(ordinalVsLabels.get(authOrdinal));
         }
@@ -263,7 +262,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   public Set<Integer> getGroupAuthsAsOrdinals(String[] groups) {
     this.lock.readLock().lock();
     try {
-      Set<Integer> authOrdinals = new HashSet<Integer>();
+      Set<Integer> authOrdinals = new HashSet<>();
       if (groups != null && groups.length > 0) {
         Set<Integer> groupAuthOrdinals = null;
         for (String group : groups) {

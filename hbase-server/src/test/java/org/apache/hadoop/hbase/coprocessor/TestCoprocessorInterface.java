@@ -349,7 +349,7 @@ public class TestCoprocessorInterface {
     RegionScanner scanner = region.getCoprocessorHost().postScannerOpen(s, region.getScanner(s));
     assertTrue(scanner instanceof CustomScanner);
     // this would throw an exception before HBASE-4197
-    scanner.next(new ArrayList<Cell>());
+    scanner.next(new ArrayList<>());
 
     HBaseTestingUtility.closeRegionAndWAL(region);
     Coprocessor c = region.getCoprocessorHost().

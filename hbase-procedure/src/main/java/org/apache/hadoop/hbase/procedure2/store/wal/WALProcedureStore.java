@@ -125,7 +125,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private final FileSystem fs;
   private final Path walDir;
 
-  private final AtomicReference<Throwable> syncException = new AtomicReference<Throwable>();
+  private final AtomicReference<Throwable> syncException = new AtomicReference<>();
   private final AtomicBoolean loading = new AtomicBoolean(true);
   private final AtomicBoolean inSync = new AtomicBoolean(false);
   private final AtomicLong totalSynced = new AtomicLong(0);
@@ -304,7 +304,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   public ArrayList<ProcedureWALFile> getActiveLogs() {
     lock.lock();
     try {
-      return new ArrayList<ProcedureWALFile>(logs);
+      return new ArrayList<>(logs);
     } finally {
       lock.unlock();
     }
@@ -395,7 +395,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         @Override
         public void markCorruptedWAL(ProcedureWALFile log, IOException e) {
           if (corruptedLogs == null) {
-            corruptedLogs = new HashSet<ProcedureWALFile>();
+            corruptedLogs = new HashSet<>();
           }
           corruptedLogs.add(log);
           // TODO: sideline corrupted log
@@ -790,7 +790,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   public ArrayList<SyncMetrics> getSyncMetrics() {
     lock.lock();
     try {
-      return new ArrayList<SyncMetrics>(syncMetricsBuffer);
+      return new ArrayList<>(syncMetricsBuffer);
     } finally {
       lock.unlock();
     }

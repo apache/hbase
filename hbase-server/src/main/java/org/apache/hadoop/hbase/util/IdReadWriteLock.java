@@ -46,8 +46,7 @@ public class IdReadWriteLock {
   private static final int NB_CONCURRENT_LOCKS = 1000;
   // The pool to get entry from, entries are mapped by weak reference to make it able to be
   // garbage-collected asap
-  private final WeakObjectPool<Long, ReentrantReadWriteLock> lockPool =
-      new WeakObjectPool<Long, ReentrantReadWriteLock>(
+  private final WeakObjectPool<Long, ReentrantReadWriteLock> lockPool = new WeakObjectPool<>(
           new WeakObjectPool.ObjectFactory<Long, ReentrantReadWriteLock>() {
             @Override
             public ReentrantReadWriteLock createObject(Long id) {

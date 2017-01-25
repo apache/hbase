@@ -322,7 +322,7 @@ public class CompactingMemStore extends AbstractMemStore {
     // The list of elements in pipeline + the active element + the snapshot segment
     // TODO : This will change when the snapshot is made of more than one element
     // The order is the Segment ordinal
-    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(order+1);
+    List<KeyValueScanner> list = new ArrayList<>(order+1);
     list.add(this.active.getScanner(readPt, order + 1));
     for (Segment item : pipelineList) {
       list.add(item.getScanner(readPt, order));

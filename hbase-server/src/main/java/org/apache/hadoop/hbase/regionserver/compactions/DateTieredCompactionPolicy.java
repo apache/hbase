@@ -99,7 +99,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   @VisibleForTesting
   public boolean needsCompaction(final Collection<StoreFile> storeFiles,
       final List<StoreFile> filesCompacting) {
-    ArrayList<StoreFile> candidates = new ArrayList<StoreFile>(storeFiles);
+    ArrayList<StoreFile> candidates = new ArrayList<>(storeFiles);
     try {
       return !selectMinorCompaction(candidates, false, true).getFiles().isEmpty();
     } catch (Exception e) {
@@ -222,7 +222,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
       // we put them in the same window as the last file in increasing order
       maxTimestampSeen = Math.max(maxTimestampSeen,
         storeFile.getMaximumTimestamp() == null? Long.MIN_VALUE : storeFile.getMaximumTimestamp());
-      storefileMaxTimestampPairs.add(new Pair<StoreFile, Long>(storeFile, maxTimestampSeen));
+      storefileMaxTimestampPairs.add(new Pair<>(storeFile, maxTimestampSeen));
     }
     Collections.reverse(storefileMaxTimestampPairs);
 
@@ -299,7 +299,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
           file.getMinimumTimestamp() == null ? Long.MAX_VALUE : file.getMinimumTimestamp());
     }
 
-    List<Long> boundaries = new ArrayList<Long>();
+    List<Long> boundaries = new ArrayList<>();
 
     // Add startMillis of all windows between now and min timestamp
     for (CompactionWindow window = getIncomingWindow(now);
@@ -317,7 +317,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
    */
   private static List<Long> getCompactionBoundariesForMinor(CompactionWindow window,
       boolean singleOutput) {
-    List<Long> boundaries = new ArrayList<Long>();
+    List<Long> boundaries = new ArrayList<>();
     boundaries.add(Long.MIN_VALUE);
     if (!singleOutput) {
       boundaries.add(window.startMillis());

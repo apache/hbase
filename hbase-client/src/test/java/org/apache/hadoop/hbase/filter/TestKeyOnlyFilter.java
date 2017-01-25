@@ -48,7 +48,7 @@ public class TestKeyOnlyFilter {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<Object[]>(2);
+    List<Object[]> paramList = new ArrayList<>(2);
     {
       paramList.add(new Object[] { false });
       paramList.add(new Object[] { true });

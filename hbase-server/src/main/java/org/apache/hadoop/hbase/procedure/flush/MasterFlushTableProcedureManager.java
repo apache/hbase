@@ -68,7 +68,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
   private MasterServices master;
   private ProcedureCoordinator coordinator;
-  private Map<TableName, Procedure> procMap = new HashMap<TableName, Procedure>();
+  private Map<TableName, Procedure> procMap = new HashMap<>();
   private boolean stopped;
 
   public MasterFlushTableProcedureManager() {};
@@ -135,7 +135,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
         master.getConnection(), tableName, false);
     }
 
-    Set<String> regionServers = new HashSet<String>(regionsAndLocations.size());
+    Set<String> regionServers = new HashSet<>(regionsAndLocations.size());
     for (Pair<HRegionInfo, ServerName> region : regionsAndLocations) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {
         HRegionInfo hri = region.getFirst();

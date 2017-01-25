@@ -114,7 +114,7 @@ public class TestImportTsv implements Configurable {
   @Before
   public void setup() throws Exception {
     tn = TableName.valueOf("test-" + UUID.randomUUID());
-    args = new HashMap<String, String>();
+    args = new HashMap<>();
     // Prepare the arguments required for the test.
     args.put(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,FAM:A,FAM:B");
     args.put(ImportTsv.SEPARATOR_CONF_KEY, "\u001b");
@@ -515,9 +515,9 @@ public class TestImportTsv implements Configurable {
       int expectedKVCount) throws IOException {
     // validate number and content of output columns
     LOG.debug("Validating HFiles.");
-    Set<String> configFamilies = new HashSet<String>();
+    Set<String> configFamilies = new HashSet<>();
     configFamilies.add(family);
-    Set<String> foundFamilies = new HashSet<String>();
+    Set<String> foundFamilies = new HashSet<>();
     int actualKVCount = 0;
     for (FileStatus cfStatus : fs.listStatus(new Path(outputPath), new OutputFilesFilter())) {
       String[] elements = cfStatus.getPath().toString().split(Path.SEPARATOR);

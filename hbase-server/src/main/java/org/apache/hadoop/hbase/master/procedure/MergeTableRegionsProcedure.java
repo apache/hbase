@@ -678,7 +678,7 @@ public class MergeTableRegionsProcedure
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       @MetaMutationAnnotation
-      final List<Mutation> metaEntries = new ArrayList<Mutation>();
+      final List<Mutation> metaEntries = new ArrayList<>();
       boolean ret = cpHost.preMergeRegionsCommit(regionsToMerge, metaEntries, getUser());
 
       if (ret) {

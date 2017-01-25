@@ -48,8 +48,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class RegionServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(RegionServerTracker.class);
-  private NavigableMap<ServerName, RegionServerInfo> regionServers = 
-      new TreeMap<ServerName, RegionServerInfo>();
+  private NavigableMap<ServerName, RegionServerInfo> regionServers = new TreeMap<>();
   private ServerManager serverManager;
   private Server server;
 
@@ -154,7 +153,7 @@ public class RegionServerTracker extends ZooKeeperListener {
    */
   public List<ServerName> getOnlineServers() {
     synchronized (this.regionServers) {
-      return new ArrayList<ServerName>(this.regionServers.keySet());
+      return new ArrayList<>(this.regionServers.keySet());
     }
   }
 }

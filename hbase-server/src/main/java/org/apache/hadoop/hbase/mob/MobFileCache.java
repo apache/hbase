@@ -102,7 +102,7 @@ public class MobFileCache {
     this.mobFileMaxCacheSize = conf.getInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY,
         MobConstants.DEFAULT_MOB_FILE_CACHE_SIZE);
     isCacheEnabled = (mobFileMaxCacheSize > 0);
-    map = new ConcurrentHashMap<String, CachedMobFile>(mobFileMaxCacheSize);
+    map = new ConcurrentHashMap<>(mobFileMaxCacheSize);
     if (isCacheEnabled) {
       long period = conf.getLong(MobConstants.MOB_CACHE_EVICT_PERIOD,
           MobConstants.DEFAULT_MOB_CACHE_EVICT_PERIOD); // in seconds
@@ -136,12 +136,12 @@ public class MobFileCache {
         return;
       }
       printStatistics();
-      List<CachedMobFile> evictedFiles = new ArrayList<CachedMobFile>();
+      List<CachedMobFile> evictedFiles = new ArrayList<>();
       try {
         if (map.size() <= mobFileMaxCacheSize) {
           return;
         }
-        List<CachedMobFile> files = new ArrayList<CachedMobFile>(map.values());
+        List<CachedMobFile> files = new ArrayList<>(map.values());
         Collections.sort(files);
         int start = (int) (mobFileMaxCacheSize * evictRemainRatio);
         if (start >= 0) {

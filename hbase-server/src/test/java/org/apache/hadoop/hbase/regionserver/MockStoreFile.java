@@ -36,7 +36,7 @@ public class MockStoreFile extends StoreFile {
   boolean isRef = false;
   long ageInDisk;
   long sequenceid;
-  private Map<byte[], byte[]> metadata = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], byte[]> metadata = new TreeMap<>(Bytes.BYTES_COMPARATOR);
   byte[] splitPoint = null;
   TimeRangeTracker timeRangeTracker;
   long entryCount;

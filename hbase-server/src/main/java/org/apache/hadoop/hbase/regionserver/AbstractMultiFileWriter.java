@@ -70,7 +70,7 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
       LOG.debug("Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId
           + ", majorCompaction=" + majorCompaction);
     }
-    List<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<>();
     for (StoreFileWriter writer : writers) {
       if (writer == null) {
         continue;
@@ -87,7 +87,7 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
    * Close all writers without throwing any exceptions. This is used when compaction failed usually.
    */
   public List<Path> abortWriters() {
-    List<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<>();
     for (StoreFileWriter writer : writers()) {
       try {
         if (writer != null) {

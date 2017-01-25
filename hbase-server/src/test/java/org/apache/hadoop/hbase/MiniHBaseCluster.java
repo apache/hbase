@@ -672,7 +672,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   public List<HRegion> getRegions(TableName tableName) {
-    List<HRegion> ret = new ArrayList<HRegion>();
+    List<HRegion> ret = new ArrayList<>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       for (Region region : hrs.getOnlineRegionsLocalContext()) {
@@ -770,7 +770,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   public List<HRegion> findRegionsForTable(TableName tableName) {
-    ArrayList<HRegion> ret = new ArrayList<HRegion>();
+    ArrayList<HRegion> ret = new ArrayList<>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       for (Region region : hrs.getOnlineRegions(tableName)) {

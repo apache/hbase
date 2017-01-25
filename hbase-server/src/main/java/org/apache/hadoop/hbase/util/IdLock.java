@@ -58,8 +58,7 @@ public class IdLock {
     }
   }
 
-  private ConcurrentMap<Long, Entry> map =
-      new ConcurrentHashMap<Long, Entry>();
+  private ConcurrentMap<Long, Entry> map = new ConcurrentHashMap<>();
 
   /**
    * Blocks until the lock corresponding to the given id is acquired.

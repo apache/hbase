@@ -106,7 +106,7 @@ extends TableMapper<ImmutableBytesWritable,Result> implements Configurable {
    */
   protected byte[][] extractKeyValues(Result r) {
     byte[][] keyVals = null;
-    ArrayList<byte[]> foundList = new ArrayList<byte[]>();
+    ArrayList<byte[]> foundList = new ArrayList<>();
     int numCols = columns.length;
     if (numCols > 0) {
       for (Cell value: r.listCells()) {

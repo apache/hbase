@@ -176,7 +176,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     }
 
     // run the import
-    List<String> argv = new ArrayList<String>(Arrays.asList(args));
+    List<String> argv = new ArrayList<>(Arrays.asList(args));
     argv.add(inputPath.toString());
     Tool tool = new ImportTsv();
     LOG.debug("Running ImportTsv with arguments: " + argv);

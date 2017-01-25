@@ -370,8 +370,7 @@ public class TestCompaction {
 
     // setup a region/store with some files
     int numStores = r.getStores().size();
-    List<Pair<CompactionRequest, Store>> requests =
-        new ArrayList<Pair<CompactionRequest, Store>>(numStores);
+    List<Pair<CompactionRequest, Store>> requests = new ArrayList<>(numStores);
     CountDownLatch latch = new CountDownLatch(numStores);
     // create some store files and setup requests for each store on which we want to do a
     // compaction
@@ -379,8 +378,7 @@ public class TestCompaction {
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
-      requests
-          .add(new Pair<CompactionRequest, Store>(new TrackableCompactionRequest(latch), store));
+      requests.add(new Pair<>(new TrackableCompactionRequest(latch), store));
     }
 
     thread.requestCompaction(r, "test mulitple custom comapctions", Store.PRIORITY_USER,
@@ -393,8 +391,8 @@ public class TestCompaction {
   }
 
   private class StoreMockMaker extends StatefulStoreMockMaker {
-    public ArrayList<StoreFile> compacting = new ArrayList<StoreFile>();
-    public ArrayList<StoreFile> notCompacting = new ArrayList<StoreFile>();
+    public ArrayList<StoreFile> compacting = new ArrayList<>();
+    public ArrayList<StoreFile> notCompacting = new ArrayList<>();
     private ArrayList<Integer> results;
 
     public StoreMockMaker(ArrayList<Integer> results) {
@@ -410,7 +408,7 @@ public class TestCompaction {
 
       @Override
       public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
-        return new ArrayList<StoreFile>();
+        return new ArrayList<>();
       }
 
       @Override
@@ -425,13 +423,13 @@ public class TestCompaction {
       public List<Path> compact(ThroughputController throughputController, User user)
           throws IOException {
         finishCompaction(this.selectedFiles);
-        return new ArrayList<Path>();
+        return new ArrayList<>();
       }
     }
 
     @Override
     public synchronized CompactionContext selectCompaction() {
-      CompactionContext ctx = new TestCompactionContext(new ArrayList<StoreFile>(notCompacting));
+      CompactionContext ctx = new TestCompactionContext(new ArrayList<>(notCompacting));
       compacting.addAll(notCompacting);
       notCompacting.clear();
       try {
@@ -484,18 +482,18 @@ public class TestCompaction {
         } catch (InterruptedException e) {
           Assume.assumeNoException(e);
         }
-        return new ArrayList<Path>();
+        return new ArrayList<>();
       }
 
       @Override
       public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
-        return new ArrayList<StoreFile>();
+        return new ArrayList<>();
       }
 
       @Override
       public boolean select(List<StoreFile> f, boolean i, boolean m, boolean e)
           throws IOException {
-        this.request = new CompactionRequest(new ArrayList<StoreFile>());
+        this.request = new CompactionRequest(new ArrayList<>());
         return true;
       }
     }
@@ -568,7 +566,7 @@ public class TestCompaction {
     });
 
     // Set up store mocks for 2 "real" stores and the one we use for blocking CST.
-    ArrayList<Integer> results = new ArrayList<Integer>();
+    ArrayList<Integer> results = new ArrayList<>();
     StoreMockMaker sm = new StoreMockMaker(results), sm2 = new StoreMockMaker(results);
     Store store = sm.createStoreMock("store1"), store2 = sm2.createStoreMock("store2");
     BlockingStoreMockMaker blocker = new BlockingStoreMockMaker();

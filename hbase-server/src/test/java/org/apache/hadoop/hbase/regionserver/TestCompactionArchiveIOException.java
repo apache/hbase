@@ -98,7 +98,7 @@ public class TestCompactionArchiveIOException {
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     final HRegion region = initHRegion(htd, info);
     RegionServerServices rss = mock(RegionServerServices.class);
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     regions.add(region);
     when(rss.getOnlineRegions()).thenReturn(regions);
 

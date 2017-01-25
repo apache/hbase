@@ -127,10 +127,8 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
   // Here we maintain two static maps of classes to code and vice versa.
   // Add new classes+codes as wanted or figure way to auto-generate these
   // maps.
-  static final Map<Integer, Class<?>> CODE_TO_CLASS =
-    new HashMap<Integer, Class<?>>();
-  static final Map<Class<?>, Integer> CLASS_TO_CODE =
-    new HashMap<Class<?>, Integer>();
+  static final Map<Integer, Class<?>> CODE_TO_CLASS = new HashMap<>();
+  static final Map<Class<?>, Integer> CLASS_TO_CODE = new HashMap<>();
   // Special code that means 'not-encoded'; in this case we do old school
   // sending of the class name using reflection, etc.
   private static final byte NOT_ENCODED = 0;

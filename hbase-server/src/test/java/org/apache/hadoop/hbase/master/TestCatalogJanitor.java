@@ -340,8 +340,7 @@ public class TestCatalogJanitor {
 
     // First test that our Comparator works right up in CatalogJanitor.
     // Just fo kicks.
-    SortedMap<HRegionInfo, Result> regions =
-      new TreeMap<HRegionInfo, Result>(new CatalogJanitor.SplitParentFirstComparator());
+    SortedMap<HRegionInfo, Result> regions = new TreeMap<>(new CatalogJanitor.SplitParentFirstComparator());
     // Now make sure that this regions map sorts as we expect it to.
     regions.put(parent, createResult(parent, splita, splitb));
     regions.put(splitb, createResult(splitb, splitba, splitbb));
@@ -434,16 +433,14 @@ public class TestCatalogJanitor {
         new byte[0]);
     Thread.sleep(1001);
 
-    final Map<HRegionInfo, Result> splitParents =
-        new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
+    final Map<HRegionInfo, Result> splitParents = new TreeMap<>(new SplitParentFirstComparator());
     splitParents.put(parent, createResult(parent, splita, splitb));
     splita.setOffline(true); //simulate that splita goes offline when it is split
     splitParents.put(splita, createResult(splita, splitaa,splitab));
 
-    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
+    final Map<HRegionInfo, Result> mergedRegions = new TreeMap<>();
     CatalogJanitor janitor = spy(new CatalogJanitor(services));
-    doReturn(new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
-            10, mergedRegions, splitParents)).when(janitor)
+    doReturn(new Triple<>(10, mergedRegions, splitParents)).when(janitor)
         .getMergedRegionsAndSplitParents();
 
     //create ref from splita to parent

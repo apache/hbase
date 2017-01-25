@@ -462,7 +462,7 @@ public class MasterProcedureTestingUtility {
 
     public void addProcId(long procId) {
       if (procsToAbort == null) {
-        procsToAbort = new TreeSet<Long>();
+        procsToAbort = new TreeSet<>();
       }
       procsToAbort.add(procId);
     }

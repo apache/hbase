@@ -43,7 +43,7 @@ class SinusoidalFileListGenerator extends StoreFileListGenerator {
       @Override
       public List<StoreFile> next() {
         count += 1;
-        ArrayList<StoreFile> files = new ArrayList<StoreFile>(NUM_FILES_GEN);
+        ArrayList<StoreFile> files = new ArrayList<>(NUM_FILES_GEN);
         for (int x = 0; x < NUM_FILES_GEN; x++) {
           int fileSize = (int) Math.abs(64 * Math.sin((Math.PI * x) / 50.0)) + 1;
           files.add(createMockStoreFile(fileSize));

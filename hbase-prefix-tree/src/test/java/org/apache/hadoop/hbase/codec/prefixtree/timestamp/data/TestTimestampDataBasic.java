@@ -27,7 +27,7 @@ public class TestTimestampDataBasic implements TestTimestampData {
 
   @Override
   public List<Long> getInputs() {
-    List<Long> d = new ArrayList<Long>(5);
+    List<Long> d = new ArrayList<>(5);
     d.add(5L);
     d.add(3L);
     d.add(0L);
@@ -43,7 +43,7 @@ public class TestTimestampDataBasic implements TestTimestampData {
 
   @Override
   public List<Long> getOutputs() {
-    List<Long> d = new ArrayList<Long>(4);
+    List<Long> d = new ArrayList<>(4);
     d.add(0L);
     d.add(1L);
     d.add(3L);

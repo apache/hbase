@@ -74,7 +74,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
     TEST_UTIL.startMiniCluster(3);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("testhbck"));
+        new SynchronousQueue<>(), Threads.newDaemonThreadFactory("testhbck"));
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
@@ -255,7 +255,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
       }
       // get all the online regions in the regionservers
       Collection<ServerName> servers = admin.getClusterStatus().getServers();
-      Set<HRegionInfo> onlineRegions = new HashSet<HRegionInfo>();
+      Set<HRegionInfo> onlineRegions = new HashSet<>();
       for (ServerName s : servers) {
         List<HRegionInfo> list = admin.getOnlineRegions(s);
         onlineRegions.addAll(list);

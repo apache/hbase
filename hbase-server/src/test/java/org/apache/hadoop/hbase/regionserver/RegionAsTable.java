@@ -144,13 +144,13 @@ public class RegionAsTable implements Table {
 
     @Override
     public Result next() throws IOException {
-      List<Cell> cells = new ArrayList<Cell>();
+      List<Cell> cells = new ArrayList<>();
       return regionScanner.next(cells)? Result.create(cells): null;
     }
 
     @Override
     public Result[] next(int nbRows) throws IOException {
-      List<Result> results = new ArrayList<Result>(nbRows);
+      List<Result> results = new ArrayList<>(nbRows);
       for (int i = 0; i < nbRows; i++) {
         Result result = next();
         if (result == null) break;

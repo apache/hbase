@@ -41,7 +41,7 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
 
   private static final long serialVersionUID = 1L;
 
-  private List<TableModel> tables = new ArrayList<TableModel>();
+  private List<TableModel> tables = new ArrayList<>();
 
   /**
    * Default constructor

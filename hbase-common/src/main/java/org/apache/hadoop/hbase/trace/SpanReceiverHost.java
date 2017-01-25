@@ -63,7 +63,7 @@ public class SpanReceiverHost {
   }
 
   SpanReceiverHost(Configuration conf) {
-    receivers = new HashSet<SpanReceiver>();
+    receivers = new HashSet<>();
     this.conf = conf;
   }
 

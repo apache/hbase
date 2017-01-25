@@ -95,7 +95,7 @@ public abstract class TestRSGroupsBase {
     assertTrue(defaultInfo.getServers().size() >= serverCount);
     rsGroupAdmin.addRSGroup(groupName);
 
-    Set<Address> set = new HashSet<Address>();
+    Set<Address> set = new HashSet<>();
     for(Address server: defaultInfo.getServers()) {
       if(set.size() == serverCount) {
         break;

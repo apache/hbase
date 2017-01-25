@@ -547,7 +547,7 @@ public class SplitTableRegionProcedure
     }
     if (nbFiles == 0) {
       // no file needs to be splitted.
-      return new Pair<Integer, Integer>(0,0);
+      return new Pair<>(0,0);
     }
     // Default max #threads to use is the smaller of table's configured number of blocking store
     // files or the available number of logical cores.
@@ -561,7 +561,7 @@ public class SplitTableRegionProcedure
             " using " + maxThreads + " threads");
     ThreadPoolExecutor threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(
       maxThreads, Threads.getNamedThreadFactory("StoreFileSplitter-%1$d"));
-    List<Future<Pair<Path,Path>>> futures = new ArrayList<Future<Pair<Path,Path>>> (nbFiles);
+    List<Future<Pair<Path,Path>>> futures = new ArrayList<>(nbFiles);
 
     // Split each store file.
     final HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(getTableName());
@@ -617,7 +617,7 @@ public class SplitTableRegionProcedure
       LOG.debug("Split storefiles for region " + parentHRI + " Daughter A: " + daughterA
           + " storefiles, Daughter B: " + daughterB + " storefiles.");
     }
-    return new Pair<Integer, Integer>(daughterA, daughterB);
+    return new Pair<>(daughterA, daughterB);
   }
 
   private void assertReferenceFileCount(
@@ -646,7 +646,7 @@ public class SplitTableRegionProcedure
     if (LOG.isDebugEnabled()) {
       LOG.debug("Splitting complete for store file: " + sf.getPath() + " for region: " + parentHRI);
     }
-    return new Pair<Path,Path>(path_first, path_second);
+    return new Pair<>(path_first, path_second);
   }
 
   /**
@@ -684,7 +684,7 @@ public class SplitTableRegionProcedure
    **/
   private void preSplitRegionBeforePONR(final MasterProcedureEnv env)
     throws IOException, InterruptedException {
-    final List<Mutation> metaEntries = new ArrayList<Mutation>();
+    final List<Mutation> metaEntries = new ArrayList<>();
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       if (cpHost.preSplitBeforePONRAction(getSplitRow(), metaEntries, getUser())) {

@@ -79,12 +79,12 @@ public class TestRegionPlacement2 {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     balancer.initialize();
-    List<ServerName> servers = new ArrayList<ServerName>();
+    List<ServerName> servers = new ArrayList<>();
     for (int i = 0; i < SLAVES; i++) {
       ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
       servers.add(server);
     }
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
+    List<HRegionInfo> regions = new ArrayList<>(1);
     HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     regions.add(region);
     Map<ServerName,List<HRegionInfo>> assignmentMap = balancer.roundRobinAssignment(regions,
@@ -140,12 +140,12 @@ public class TestRegionPlacement2 {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     balancer.initialize();
-    List<ServerName> servers = new ArrayList<ServerName>();
+    List<ServerName> servers = new ArrayList<>();
     for (int i = 0; i < SLAVES; i++) {
       ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
       servers.add(server);
     }
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
+    List<HRegionInfo> regions = new ArrayList<>(1);
     HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     regions.add(region);
     ServerName serverBefore = balancer.randomAssignment(region, servers);
@@ -183,7 +183,7 @@ public class TestRegionPlacement2 {
 
   private List<ServerName> removeMatchingServers(Collection<ServerName> serversWithoutStartCode,
       List<ServerName> servers) {
-    List<ServerName> serversToRemove = new ArrayList<ServerName>();
+    List<ServerName> serversToRemove = new ArrayList<>();
     for (ServerName s : serversWithoutStartCode) {
       serversToRemove.addAll(removeMatchingServers(s, servers));
     }
@@ -192,7 +192,7 @@ public class TestRegionPlacement2 {
 
   private List<ServerName> removeMatchingServers(ServerName serverWithoutStartCode,
       List<ServerName> servers) {
-    List<ServerName> serversToRemove = new ArrayList<ServerName>();
+    List<ServerName> serversToRemove = new ArrayList<>();
     for (ServerName s : servers) {
       if (ServerName.isSameHostnameAndPort(s, serverWithoutStartCode)) {
         serversToRemove.add(s);

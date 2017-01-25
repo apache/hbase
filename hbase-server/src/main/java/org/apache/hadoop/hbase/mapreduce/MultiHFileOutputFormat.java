@@ -65,8 +65,7 @@ public class MultiHFileOutputFormat extends FileOutputFormat<ImmutableBytesWrita
     final FileSystem fs = outputDir.getFileSystem(conf);
 
     // Map of tables to writers
-    final Map<ImmutableBytesWritable, RecordWriter<ImmutableBytesWritable, V>> tableWriters =
-        new HashMap<ImmutableBytesWritable, RecordWriter<ImmutableBytesWritable, V>>();
+    final Map<ImmutableBytesWritable, RecordWriter<ImmutableBytesWritable, V>> tableWriters = new HashMap<>();
 
     return new RecordWriter<ImmutableBytesWritable, V>() {
       @Override
@@ -82,7 +81,7 @@ public class MultiHFileOutputFormat extends FileOutputFormat<ImmutableBytesWrita
               + tableOutputDir.toString());
 
           // Create writer for one specific table
-          tableWriter = new HFileOutputFormat2.HFileRecordWriter<V>(context, tableOutputDir);
+          tableWriter = new HFileOutputFormat2.HFileRecordWriter<>(context, tableOutputDir);
           // Put table into map
           tableWriters.put(tableName, tableWriter);
         }

@@ -45,7 +45,7 @@ public class RegionServerAccounting {
   // Store the edits size during replaying WAL. Use this to roll back the
   // global memstore size once a region opening failed.
   private final ConcurrentMap<byte[], MemstoreSize> replayEditsPerRegion =
-    new ConcurrentSkipListMap<byte[], MemstoreSize>(Bytes.BYTES_COMPARATOR);
+    new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
 
   private final Configuration conf;
 

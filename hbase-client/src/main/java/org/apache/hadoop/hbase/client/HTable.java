@@ -143,7 +143,7 @@ public class HTable implements Table {
     // we only create as many Runnables as there are region servers. It means
     // it also scales when new region servers are added.
     ThreadPoolExecutor pool = new ThreadPoolExecutor(corePoolSize, maxThreads, keepAliveTime,
-      TimeUnit.SECONDS, new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("htable"));
+      TimeUnit.SECONDS, new SynchronousQueue<>(), Threads.newDaemonThreadFactory("htable"));
     pool.allowCoreThreadTimeOut(true);
     return pool;
   }
@@ -309,8 +309,8 @@ public class HTable implements Table {
         "Invalid range: " + Bytes.toStringBinary(startKey) +
         " > " + Bytes.toStringBinary(endKey));
     }
-    List<byte[]> keysInRange = new ArrayList<byte[]>();
-    List<HRegionLocation> regionsInRange = new ArrayList<HRegionLocation>();
+    List<byte[]> keysInRange = new ArrayList<>();
+    List<HRegionLocation> regionsInRange = new ArrayList<>();
     byte[] currentKey = startKey;
     do {
       HRegionLocation regionLocation = getRegionLocator().getRegionLocation(currentKey, reload);
@@ -320,8 +320,7 @@ public class HTable implements Table {
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
         && (endKeyIsEndOfTable || Bytes.compareTo(currentKey, endKey) < 0
             || (includeEndKey && Bytes.compareTo(currentKey, endKey) == 0)));
-    return new Pair<List<byte[]>, List<HRegionLocation>>(keysInRange,
-        regionsInRange);
+    return new Pair<>(keysInRange, regionsInRange);
   }
 
   /**
@@ -915,7 +914,7 @@ public class HTable implements Table {
     if (gets.isEmpty()) return new boolean[]{};
     if (gets.size() == 1) return new boolean[]{exists(gets.get(0))};
 
-    ArrayList<Get> exists = new ArrayList<Get>(gets.size());
+    ArrayList<Get> exists = new ArrayList<>(gets.size());
     for (Get g: gets){
       Get ge = new Get(g);
       ge.setCheckExistenceOnly(true);
@@ -1099,8 +1098,7 @@ public class HTable implements Table {
       final Batch.Callback<R> callback) throws ServiceException, Throwable {
     // get regions covered by the row range
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
-    Map<byte[],Future<R>> futures =
-        new TreeMap<byte[],Future<R>>(Bytes.BYTES_COMPARATOR);
+    Map<byte[],Future<R>> futures = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (final byte[] r : keys) {
       final RegionCoprocessorRpcChannel channel =
           new RegionCoprocessorRpcChannel(connection, tableName, r);
@@ -1245,10 +1243,8 @@ public class HTable implements Table {
       return;
     }
 
-    List<RegionCoprocessorServiceExec> execs =
-        new ArrayList<RegionCoprocessorServiceExec>(keys.size());
-    final Map<byte[], RegionCoprocessorServiceExec> execsByRow =
-        new TreeMap<byte[], RegionCoprocessorServiceExec>(Bytes.BYTES_COMPARATOR);
+    List<RegionCoprocessorServiceExec> execs = new ArrayList<>(keys.size());
+    final Map<byte[], RegionCoprocessorServiceExec> execsByRow = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < keys.size(); i++) {
       final byte[] rowKey = keys.get(i);
       final byte[] region = regions.get(i).getRegionInfo().getRegionName();
@@ -1260,9 +1256,9 @@ public class HTable implements Table {
 
     // tracking for any possible deserialization errors on success callback
     // TODO: it would be better to be able to reuse AsyncProcess.BatchErrors here
-    final List<Throwable> callbackErrorExceptions = new ArrayList<Throwable>();
-    final List<Row> callbackErrorActions = new ArrayList<Row>();
-    final List<String> callbackErrorServers = new ArrayList<String>();
+    final List<Throwable> callbackErrorExceptions = new ArrayList<>();
+    final List<Row> callbackErrorActions = new ArrayList<>();
+    final List<String> callbackErrorServers = new ArrayList<>();
     Object[] results = new Object[execs.size()];
 
     AsyncProcess asyncProcess =

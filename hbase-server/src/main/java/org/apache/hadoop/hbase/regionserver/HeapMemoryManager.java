@@ -106,7 +106,7 @@ public class HeapMemoryManager {
 
   private MetricsHeapMemoryManager metricsHeapMemoryManager;
 
-  private List<HeapMemoryTuneObserver> tuneObservers = new ArrayList<HeapMemoryTuneObserver>();
+  private List<HeapMemoryTuneObserver> tuneObservers = new ArrayList<>();
 
   public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
       Server server, RegionServerAccounting regionServerAccounting) {

@@ -197,7 +197,7 @@ public class TestMemStoreLAB {
     MemStoreChunkPool.clearDisableFlag();
     mslab = new MemStoreLABImpl(conf);
     // launch multiple threads to trigger frequent chunk retirement
-    List<Thread> threads = new ArrayList<Thread>();
+    List<Thread> threads = new ArrayList<>();
     final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
         new byte[MemStoreLABImpl.MAX_ALLOC_DEFAULT - 24]);
     for (int i = 0; i < 10; i++) {

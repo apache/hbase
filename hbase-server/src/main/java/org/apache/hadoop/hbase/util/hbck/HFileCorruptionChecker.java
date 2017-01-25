@@ -66,14 +66,14 @@ public class HFileCorruptionChecker {
   final FileSystem fs;
   final CacheConfig cacheConf;
   final ExecutorService executor;
-  final Set<Path> corrupted = new ConcurrentSkipListSet<Path>();
-  final Set<Path> failures = new ConcurrentSkipListSet<Path>();
-  final Set<Path> quarantined = new ConcurrentSkipListSet<Path>();
-  final Set<Path> missing = new ConcurrentSkipListSet<Path>();
-  final Set<Path> corruptedMobFiles = new ConcurrentSkipListSet<Path>();
-  final Set<Path> failureMobFiles = new ConcurrentSkipListSet<Path>();
-  final Set<Path> missedMobFiles = new ConcurrentSkipListSet<Path>();
-  final Set<Path> quarantinedMobFiles = new ConcurrentSkipListSet<Path>();
+  final Set<Path> corrupted = new ConcurrentSkipListSet<>();
+  final Set<Path> failures = new ConcurrentSkipListSet<>();
+  final Set<Path> quarantined = new ConcurrentSkipListSet<>();
+  final Set<Path> missing = new ConcurrentSkipListSet<>();
+  final Set<Path> corruptedMobFiles = new ConcurrentSkipListSet<>();
+  final Set<Path> failureMobFiles = new ConcurrentSkipListSet<>();
+  final Set<Path> missedMobFiles = new ConcurrentSkipListSet<>();
+  final Set<Path> quarantinedMobFiles = new ConcurrentSkipListSet<>();
   final boolean inQuarantineMode;
   final AtomicInteger hfilesChecked = new AtomicInteger();
   final AtomicInteger mobFilesChecked = new AtomicInteger();
@@ -343,7 +343,7 @@ public class HFileCorruptionChecker {
     }
 
     // Parallelize check at the region dir level
-    List<RegionDirChecker> rdcs = new ArrayList<RegionDirChecker>(rds.size() + 1);
+    List<RegionDirChecker> rdcs = new ArrayList<>(rds.size() + 1);
     List<Future<Void>> rdFutures;
 
     for (FileStatus rdFs : rds) {
@@ -451,14 +451,14 @@ public class HFileCorruptionChecker {
    * @return the set of check failure file paths after checkTables is called.
    */
   public Collection<Path> getFailures() {
-    return new HashSet<Path>(failures);
+    return new HashSet<>(failures);
   }
 
   /**
    * @return the set of corrupted file paths after checkTables is called.
    */
   public Collection<Path> getCorrupted() {
-    return new HashSet<Path>(corrupted);
+    return new HashSet<>(corrupted);
   }
 
   /**
@@ -472,7 +472,7 @@ public class HFileCorruptionChecker {
    * @return the set of successfully quarantined paths after checkTables is called.
    */
   public Collection<Path> getQuarantined() {
-    return new HashSet<Path>(quarantined);
+    return new HashSet<>(quarantined);
   }
 
   /**
@@ -480,21 +480,21 @@ public class HFileCorruptionChecker {
    *  compaction or flushes.
    */
   public Collection<Path> getMissing() {
-    return new HashSet<Path>(missing);
+    return new HashSet<>(missing);
   }
 
   /**
    * @return the set of check failure mob file paths after checkTables is called.
    */
   public Collection<Path> getFailureMobFiles() {
-    return new HashSet<Path>(failureMobFiles);
+    return new HashSet<>(failureMobFiles);
   }
 
   /**
    * @return the set of corrupted mob file paths after checkTables is called.
    */
   public Collection<Path> getCorruptedMobFiles() {
-    return new HashSet<Path>(corruptedMobFiles);
+    return new HashSet<>(corruptedMobFiles);
   }
 
   /**
@@ -508,7 +508,7 @@ public class HFileCorruptionChecker {
    * @return the set of successfully quarantined paths after checkTables is called.
    */
   public Collection<Path> getQuarantinedMobFiles() {
-    return new HashSet<Path>(quarantinedMobFiles);
+    return new HashSet<>(quarantinedMobFiles);
   }
 
   /**
@@ -516,7 +516,7 @@ public class HFileCorruptionChecker {
    *  deletion/moves from compaction.
    */
   public Collection<Path> getMissedMobFiles() {
-    return new HashSet<Path>(missedMobFiles);
+    return new HashSet<>(missedMobFiles);
   }
 
   /**

@@ -183,7 +183,7 @@ public class ProcedureTestingUtility {
   public static <TEnv> long submitAndWait(Configuration conf, TEnv env, Procedure<TEnv> proc)
       throws IOException {
     NoopProcedureStore procStore = new NoopProcedureStore();
-    ProcedureExecutor<TEnv> procExecutor = new ProcedureExecutor<TEnv>(conf, env, procStore);
+    ProcedureExecutor<TEnv> procExecutor = new ProcedureExecutor<>(conf, env, procStore);
     procStore.start(1);
     procExecutor.start(1, false);
     try {
@@ -446,9 +446,9 @@ public class ProcedureTestingUtility {
   }
 
   public static class LoadCounter implements ProcedureStore.ProcedureLoader {
-    private final ArrayList<Procedure> corrupted = new ArrayList<Procedure>();
-    private final ArrayList<ProcedureInfo> completed = new ArrayList<ProcedureInfo>();
-    private final ArrayList<Procedure> runnable = new ArrayList<Procedure>();
+    private final ArrayList<Procedure> corrupted = new ArrayList<>();
+    private final ArrayList<ProcedureInfo> completed = new ArrayList<>();
+    private final ArrayList<Procedure> runnable = new ArrayList<>();
 
     private Set<Long> procIds;
     private long maxProcId = 0;

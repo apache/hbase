@@ -372,11 +372,11 @@ if ( fqtn != null ) {
   long totalStoreFileCount = 0;
   long totalMemSize = 0;
   String urlRegionServer = null;
-  Map<ServerName, Integer> regDistribution = new TreeMap<ServerName, Integer>();
-  Map<ServerName, Integer> primaryRegDistribution = new TreeMap<ServerName, Integer>();
+  Map<ServerName, Integer> regDistribution = new TreeMap<>();
+  Map<ServerName, Integer> primaryRegDistribution = new TreeMap<>();
   List<HRegionLocation> regions = r.getAllRegionLocations();
-  Map<HRegionInfo, RegionLoad> regionsToLoad = new LinkedHashMap<HRegionInfo, RegionLoad>();
-  Map<HRegionInfo, ServerName> regionsToServer = new LinkedHashMap<HRegionInfo, ServerName>();
+  Map<HRegionInfo, RegionLoad> regionsToLoad = new LinkedHashMap<>();
+  Map<HRegionInfo, ServerName> regionsToServer = new LinkedHashMap<>();
   for (HRegionLocation hriEntry : regions) {
     HRegionInfo regionInfo = hriEntry.getRegionInfo();
     ServerName addr = hriEntry.getServerName();
@@ -448,7 +448,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 </tr>
 
 <%
-  List<Map.Entry<HRegionInfo, RegionLoad>> entryList = new ArrayList<Map.Entry<HRegionInfo, RegionLoad>>(regionsToLoad.entrySet());
+  List<Map.Entry<HRegionInfo, RegionLoad>> entryList = new ArrayList<>(regionsToLoad.entrySet());
   if(sortKey != null) {
     if (sortKey.equals("readrequest")) {
       Collections.sort(entryList,

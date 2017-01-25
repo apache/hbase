@@ -132,7 +132,7 @@ public class TestScanner {
     try {
       this.region = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
       HBaseTestCase.addContent(this.region, HConstants.CATALOG_FAMILY);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       // Do simple test of getting one row only first.
       Scan scan = new Scan(Bytes.toBytes("abc"), Bytes.toBytes("abd"));
       scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -151,7 +151,7 @@ public class TestScanner {
       s = region.getScanner(scan);
       count = 0;
       Cell kv = null;
-      results = new ArrayList<Cell>();
+      results = new ArrayList<>();
       for (boolean first = true; s.next(results);) {
         kv = results.get(0);
         if (first) {
@@ -170,7 +170,7 @@ public class TestScanner {
   }
 
   void rowPrefixFilter(Scan scan) throws IOException {
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scan.addFamily(HConstants.CATALOG_FAMILY);
     InternalScanner s = region.getScanner(scan);
     boolean hasMore = true;
@@ -186,7 +186,7 @@ public class TestScanner {
   }
 
   void rowInclusiveStopFilter(Scan scan, byte[] stopRow) throws IOException {
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scan.addFamily(HConstants.CATALOG_FAMILY);
     InternalScanner s = region.getScanner(scan);
     boolean hasMore = true;
@@ -234,7 +234,7 @@ public class TestScanner {
       HBaseTestCase.addContent(this.region, HConstants.CATALOG_FAMILY);
       Scan scan = new Scan();
       InternalScanner s = region.getScanner(scan);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       try {
         s.next(results);
         s.close();
@@ -376,7 +376,7 @@ public class TestScanner {
   throws IOException {
     InternalScanner scanner = null;
     Scan scan = null;
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     byte [][][] scanColumns = {
         COLS,
         EXPLICIT_COLS
@@ -540,7 +540,7 @@ public class TestScanner {
       // run a major compact, column1 of firstRow will be cleaned.
       region.compact(true);
 
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       s.next(results);
 
       // make sure returns column2 of firstRow
@@ -549,7 +549,7 @@ public class TestScanner {
       assertTrue(CellUtil.matchingRow(results.get(0), firstRowBytes)); 
       assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
-      results = new ArrayList<Cell>();
+      results = new ArrayList<>();
       s.next(results);
 
       // get secondRow

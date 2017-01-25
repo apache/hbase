@@ -119,7 +119,7 @@ abstract class StoreFlusher {
     ScannerContext scannerContext =
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
 
-    List<Cell> kvs = new ArrayList<Cell>();
+    List<Cell> kvs = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     // no control on system table (such as meta, namespace, etc) flush

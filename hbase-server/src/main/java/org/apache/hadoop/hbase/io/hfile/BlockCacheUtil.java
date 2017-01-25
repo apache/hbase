@@ -205,8 +205,7 @@ public class BlockCacheUtil {
     /**
      * Map by filename. use concurent utils because we want our Map and contained blocks sorted.
      */
-    private NavigableMap<String, NavigableSet<CachedBlock>> cachedBlockByFile =
-      new ConcurrentSkipListMap<String, NavigableSet<CachedBlock>>();
+    private NavigableMap<String, NavigableSet<CachedBlock>> cachedBlockByFile = new ConcurrentSkipListMap<>();
     FastLongHistogram hist = new FastLongHistogram();
 
     /**
@@ -217,7 +216,7 @@ public class BlockCacheUtil {
       if (isFull()) return true;
       NavigableSet<CachedBlock> set = this.cachedBlockByFile.get(cb.getFilename());
       if (set == null) {
-        set = new ConcurrentSkipListSet<CachedBlock>();
+        set = new ConcurrentSkipListSet<>();
         this.cachedBlockByFile.put(cb.getFilename(), set);
       }
       set.add(cb);

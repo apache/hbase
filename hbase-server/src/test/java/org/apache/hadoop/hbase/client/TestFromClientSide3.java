@@ -338,7 +338,7 @@ public class TestFromClientSide3 {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
-    List<Get> gets = new ArrayList<Get>();
+    List<Get> gets = new ArrayList<>();
     gets.add(new Get(ROW));
     gets.add(null);
     gets.add(new Get(ANOTHERROW));
@@ -432,7 +432,7 @@ public class TestFromClientSide3 {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put (put);
 
-    List<Get> gets = new ArrayList<Get>();
+    List<Get> gets = new ArrayList<>();
     gets.add(new Get(ANOTHERROW));
     gets.add(new Get(Bytes.add(ROW, new byte[] { 0x00 })));
     gets.add(new Get(ROW));
@@ -450,7 +450,7 @@ public class TestFromClientSide3 {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
-    gets = new ArrayList<Get>();
+    gets = new ArrayList<>();
     gets.add(new Get(new byte[] { 0x00 }));
     gets.add(new Get(new byte[] { 0x00, 0x00 }));
     results = table.existsAll(gets);
@@ -462,7 +462,7 @@ public class TestFromClientSide3 {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
-    gets = new ArrayList<Get>();
+    gets = new ArrayList<>();
     gets.add(new Get(new byte[] { (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff }));

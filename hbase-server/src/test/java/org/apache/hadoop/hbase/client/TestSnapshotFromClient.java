@@ -337,7 +337,7 @@ public class TestSnapshotFromClient {
       LOG.debug(table2Snapshot1 + " completed.");
 
       List<SnapshotDescription> listTableSnapshots = admin.listTableSnapshots("test.*", ".*");
-      List<String> listTableSnapshotNames = new ArrayList<String>();
+      List<String> listTableSnapshotNames = new ArrayList<>();
       assertEquals(3, listTableSnapshots.size());
       for (SnapshotDescription s : listTableSnapshots) {
         listTableSnapshotNames.add(s.getName());
@@ -379,7 +379,7 @@ public class TestSnapshotFromClient {
 
       List<SnapshotDescription> listTableSnapshots =
           admin.listTableSnapshots("test.*", "Table1.*");
-      List<String> listTableSnapshotNames = new ArrayList<String>();
+      List<String> listTableSnapshotNames = new ArrayList<>();
       assertEquals(2, listTableSnapshots.size());
       for (SnapshotDescription s : listTableSnapshots) {
         listTableSnapshotNames.add(s.getName());

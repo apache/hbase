@@ -424,7 +424,7 @@ public class TestRegionObserverInterface {
 
         @Override
         public boolean next(List<Cell> results, ScannerContext scannerContext) throws IOException {
-          List<Cell> internalResults = new ArrayList<Cell>();
+          List<Cell> internalResults = new ArrayList<>();
           boolean hasMore;
           do {
             hasMore = scanner.next(internalResults, scannerContext);

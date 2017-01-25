@@ -1406,8 +1406,7 @@ public class HFileBlock implements Cacheable {
      * next blocks header seems unnecessary given we usually get the block size
      * from the hfile index. Review!
      */
-    private AtomicReference<PrefetchedHeader> prefetchedHeader =
-        new AtomicReference<PrefetchedHeader>(new PrefetchedHeader());
+    private AtomicReference<PrefetchedHeader> prefetchedHeader = new AtomicReference<>(new PrefetchedHeader());
 
     /** The size of the file we are reading from, or -1 if unknown. */
     protected long fileSize;

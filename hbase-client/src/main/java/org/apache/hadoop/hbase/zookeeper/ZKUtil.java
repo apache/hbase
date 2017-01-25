@@ -235,8 +235,7 @@ public class ZKUtil {
     private static final String CLIENT_KEYTAB_KERBEROS_CONFIG_NAME =
       "zookeeper-client-keytab-kerberos";
 
-    private static final Map<String, String> BASIC_JAAS_OPTIONS =
-      new HashMap<String,String>();
+    private static final Map<String, String> BASIC_JAAS_OPTIONS = new HashMap<>();
     static {
       String jaasEnvVar = System.getenv("HBASE_JAAS_DEBUG");
       if (jaasEnvVar != null && "true".equalsIgnoreCase(jaasEnvVar)) {
@@ -244,8 +243,7 @@ public class ZKUtil {
       }
     }
 
-    private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS =
-      new HashMap<String,String>();
+    private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS = new HashMap<>();
     static {
       KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
       KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
@@ -746,7 +744,7 @@ public class ZKUtil {
     List<String> nodes =
       ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
     if (nodes != null) {
-      List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
+      List<NodeAndData> newNodes = new ArrayList<>();
       for (String node : nodes) {
         String nodePath = ZKUtil.joinZNode(baseNode, node);
         byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
@@ -905,11 +903,11 @@ public class ZKUtil {
       return Ids.OPEN_ACL_UNSAFE;
     }
     if (isSecureZooKeeper) {
-      ArrayList<ACL> acls = new ArrayList<ACL>();
+      ArrayList<ACL> acls = new ArrayList<>();
       // add permission to hbase supper user
       String[] superUsers = zkw.getConfiguration().getStrings(Superusers.SUPERUSER_CONF_KEY);
       if (superUsers != null) {
-        List<String> groups = new ArrayList<String>();
+        List<String> groups = new ArrayList<>();
         for (String user : superUsers) {
           if (AuthUtil.isGroupPrincipal(user)) {
             // TODO: Set node ACL for groups when ZK supports this feature
@@ -1327,7 +1325,7 @@ public class ZKUtil {
       LOG.warn("Given path is not valid!");
       return;
     }
-    List<ZKUtilOp> ops = new ArrayList<ZKUtil.ZKUtilOp>();
+    List<ZKUtilOp> ops = new ArrayList<>();
     for (String eachRoot : pathRoots) {
       List<String> children = listChildrenBFSNoWatch(zkw, eachRoot);
       // Delete the leaves first and eventually get rid of the root
@@ -1377,7 +1375,7 @@ public class ZKUtil {
       LOG.warn("Given path is not valid!");
       return;
     }
-    List<ZKUtilOp> ops = new ArrayList<ZKUtil.ZKUtilOp>();
+    List<ZKUtilOp> ops = new ArrayList<>();
     for (String eachRoot : pathRoots) {
       // ZooKeeper Watches are one time triggers; When children of parent nodes are deleted
       // recursively, must set another watch, get notified of delete node
@@ -1415,8 +1413,8 @@ public class ZKUtil {
    */
   private static List<String> listChildrenBFSNoWatch(ZooKeeperWatcher zkw,
       final String znode) throws KeeperException {
-    Deque<String> queue = new LinkedList<String>();
-    List<String> tree = new ArrayList<String>();
+    Deque<String> queue = new LinkedList<>();
+    List<String> tree = new ArrayList<>();
     queue.add(znode);
     while (true) {
       String node = queue.pollFirst();
@@ -1451,8 +1449,8 @@ public class ZKUtil {
    */
   private static List<String> listChildrenBFSAndWatchThem(ZooKeeperWatcher zkw, final String znode)
       throws KeeperException {
-    Deque<String> queue = new LinkedList<String>();
-    List<String> tree = new ArrayList<String>();
+    Deque<String> queue = new LinkedList<>();
+    List<String> tree = new ArrayList<>();
     queue.add(znode);
     while (true) {
       String node = queue.pollFirst();
@@ -1648,7 +1646,7 @@ public class ZKUtil {
     }
     if (ops == null) return;
 
-    List<Op> zkOps = new LinkedList<Op>();
+    List<Op> zkOps = new LinkedList<>();
     for (ZKUtilOp op : ops) {
       zkOps.add(toZooKeeperOp(zkw, op));
     }
@@ -1816,7 +1814,7 @@ public class ZKUtil {
 
   private static void appendRSZnodes(ZooKeeperWatcher zkw, String znode, StringBuilder sb)
       throws KeeperException {
-    List<String> stack = new LinkedList<String>();
+    List<String> stack = new LinkedList<>();
     stack.add(znode);
     do {
       String znodeToProcess = stack.remove(stack.size() - 1);
@@ -1927,7 +1925,7 @@ public class ZKUtil {
         socket.getInputStream()));
       out.println("stat");
       out.flush();
-      ArrayList<String> res = new ArrayList<String>();
+      ArrayList<String> res = new ArrayList<>();
       while (true) {
         String line = in.readLine();
         if (line != null) {

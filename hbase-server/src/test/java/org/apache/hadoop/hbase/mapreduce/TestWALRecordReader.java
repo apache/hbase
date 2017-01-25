@@ -81,8 +81,7 @@ public class TestWALRecordReader {
   private static HTableDescriptor htd;
   private static Path logDir;
   protected MultiVersionConcurrencyControl mvcc;
-  protected static NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-      Bytes.BYTES_COMPARATOR);
+  protected static NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   private static String getName() {
     return "TestWALRecordReader";

@@ -80,8 +80,8 @@ public class DumpReplicationQueues extends Configured implements Tool {
   private long numWalsNotFound;
 
   public DumpReplicationQueues() {
-    deadRegionServers = new ArrayList<String>();
-    deletedQueues = new ArrayList<String>();
+    deadRegionServers = new ArrayList<>();
+    deletedQueues = new ArrayList<>();
     peersQueueSize = AtomicLongMap.create();
     totalSizeOfWALs = 0;
     numWalsNotFound = 0;
@@ -162,7 +162,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
   public int run(String[] args) throws Exception {
 
     int errCode = -1;
-    LinkedList<String> argv = new LinkedList<String>();
+    LinkedList<String> argv = new LinkedList<>();
     argv.addAll(Arrays.asList(args));
     DumpOptions opts = parseOpts(argv);
 

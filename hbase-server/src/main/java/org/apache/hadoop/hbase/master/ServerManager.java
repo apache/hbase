@@ -131,29 +131,25 @@ public class ServerManager {
    * The last flushed sequence id for a region.
    */
   private final ConcurrentNavigableMap<byte[], Long> flushedSequenceIdByRegion =
-    new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+    new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
    * The last flushed sequence id for a store in a region.
    */
   private final ConcurrentNavigableMap<byte[], ConcurrentNavigableMap<byte[], Long>>
-    storeFlushedSequenceIdsByRegion =
-    new ConcurrentSkipListMap<byte[], ConcurrentNavigableMap<byte[], Long>>(Bytes.BYTES_COMPARATOR);
+    storeFlushedSequenceIdsByRegion = new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
 
   /** Map of registered servers to their current load */
-  private final ConcurrentNavigableMap<ServerName, ServerLoad> onlineServers =
-    new ConcurrentSkipListMap<ServerName, ServerLoad>();
+  private final ConcurrentNavigableMap<ServerName, ServerLoad> onlineServers = new ConcurrentSkipListMap<>();
 
   /**
    * Map of admin interfaces per registered regionserver; these interfaces we use to control
    * regionservers out on the cluster
    */
-  private final Map<ServerName, AdminService.BlockingInterface> rsAdmins =
-    new HashMap<ServerName, AdminService.BlockingInterface>();
+  private final Map<ServerName, AdminService.BlockingInterface> rsAdmins = new HashMap<>();
 
   /** List of region servers that should not get any more new regions. */
-  private final ArrayList<ServerName> drainingServers =
-    new ArrayList<ServerName>();
+  private final ArrayList<ServerName> drainingServers = new ArrayList<>();
 
   private final MasterServices master;
   private final ClusterConnection connection;
@@ -182,7 +178,7 @@ public class ServerManager {
    * So this is a set of region servers known to be dead but not submitted to
    * ServerShutdownHandler for processing yet.
    */
-  private Set<ServerName> queuedDeadServers = new HashSet<ServerName>();
+  private Set<ServerName> queuedDeadServers = new HashSet<>();
 
   /**
    * Set of region servers which are dead and submitted to ServerShutdownHandler to process but not
@@ -199,11 +195,10 @@ public class ServerManager {
    * is currently in startup mode. In this case, the dead server will be parked in this set
    * temporarily.
    */
-  private Map<ServerName, Boolean> requeuedDeadServers
-    = new ConcurrentHashMap<ServerName, Boolean>();
+  private Map<ServerName, Boolean> requeuedDeadServers = new ConcurrentHashMap<>();
 
   /** Listeners that are called on server events. */
-  private List<ServerListener> listeners = new CopyOnWriteArrayList<ServerListener>();
+  private List<ServerListener> listeners = new CopyOnWriteArrayList<>();
 
   /**
    * Constructor.
@@ -1111,7 +1106,7 @@ public class ServerManager {
   public List<ServerName> getOnlineServersList() {
     // TODO: optimize the load balancer call so we don't need to make a new list
     // TODO: FIX. THIS IS POPULAR CALL.
-    return new ArrayList<ServerName>(this.onlineServers.keySet());
+    return new ArrayList<>(this.onlineServers.keySet());
   }
 
   /**
@@ -1139,14 +1134,14 @@ public class ServerManager {
    * @return A copy of the internal list of draining servers.
    */
   public List<ServerName> getDrainingServersList() {
-    return new ArrayList<ServerName>(this.drainingServers);
+    return new ArrayList<>(this.drainingServers);
   }
 
   /**
    * @return A copy of the internal set of deadNotExpired servers.
    */
   Set<ServerName> getDeadNotExpiredServers() {
-    return new HashSet<ServerName>(this.queuedDeadServers);
+    return new HashSet<>(this.queuedDeadServers);
   }
 
   /**
@@ -1287,11 +1282,9 @@ public class ServerManager {
       LOG.warn("Attempting to send favored nodes update rpc to server " + server.toString()
           + " failed because no RPC connection found to this server");
     } else {
-      List<Pair<HRegionInfo, List<ServerName>>> regionUpdateInfos =
-          new ArrayList<Pair<HRegionInfo, List<ServerName>>>();
+      List<Pair<HRegionInfo, List<ServerName>>> regionUpdateInfos = new ArrayList<>();
       for (Entry<HRegionInfo, List<ServerName>> entry : favoredNodes.entrySet()) {
-        regionUpdateInfos.add(new Pair<HRegionInfo, List<ServerName>>(entry.getKey(),
-          entry.getValue()));
+        regionUpdateInfos.add(new Pair<>(entry.getKey(), entry.getValue()));
       }
       UpdateFavoredNodesRequest request =
         RequestConverter.buildUpdateFavoredNodesRequest(regionUpdateInfos);

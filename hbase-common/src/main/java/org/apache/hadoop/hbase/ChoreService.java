@@ -134,8 +134,8 @@ public class ChoreService implements ChoreServicer {
     }
 
     scheduler.setRemoveOnCancelPolicy(true);
-    scheduledChores = new HashMap<ScheduledChore, ScheduledFuture<?>>();
-    choresMissingStartTime = new HashMap<ScheduledChore, Boolean>();
+    scheduledChores = new HashMap<>();
+    choresMissingStartTime = new HashMap<>();
   }
 
   /**
@@ -348,7 +348,7 @@ public class ChoreService implements ChoreServicer {
   }
 
   private void cancelAllChores(final boolean mayInterruptIfRunning) {
-    ArrayList<ScheduledChore> choresToCancel = new ArrayList<ScheduledChore>(scheduledChores.keySet().size());
+    ArrayList<ScheduledChore> choresToCancel = new ArrayList<>(scheduledChores.keySet().size());
     // Build list of chores to cancel so we can iterate through a set that won't change
     // as chores are cancelled. If we tried to cancel each chore while iterating through
     // keySet the results would be undefined because the keySet would be changing
@@ -365,7 +365,7 @@ public class ChoreService implements ChoreServicer {
    * Prints a summary of important details about the chore. Used for debugging purposes
    */
   private void printChoreDetails(final String header, ScheduledChore chore) {
-    LinkedHashMap<String, String> output = new LinkedHashMap<String, String>();
+    LinkedHashMap<String, String> output = new LinkedHashMap<>();
     output.put(header, "");
     output.put("Chore name: ", chore.getName());
     output.put("Chore period: ", Integer.toString(chore.getPeriod()));
@@ -380,7 +380,7 @@ public class ChoreService implements ChoreServicer {
    * Prints a summary of important details about the service. Used for debugging purposes
    */
   private void printChoreServiceDetails(final String header) {
-    LinkedHashMap<String, String> output = new LinkedHashMap<String, String>();
+    LinkedHashMap<String, String> output = new LinkedHashMap<>();
     output.put(header, "");
     output.put("ChoreService corePoolSize: ", Integer.toString(getCorePoolSize()));
     output.put("ChoreService scheduledChores: ", Integer.toString(getNumberOfScheduledChores()));

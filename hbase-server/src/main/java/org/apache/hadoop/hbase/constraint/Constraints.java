@@ -120,7 +120,7 @@ public final class Constraints {
     disable(desc);
 
     // remove all the constraint settings
-    List<Bytes> keys = new ArrayList<Bytes>();
+    List<Bytes> keys = new ArrayList<>();
     // loop through all the key, values looking for constraints
     for (Map.Entry<Bytes, Bytes> e : desc
         .getValues().entrySet()) {
@@ -165,7 +165,7 @@ public final class Constraints {
     String key = serializeConstraintClass(clazz);
     String value = desc.getValue(key);
 
-    return value == null ? null : new Pair<String, String>(key, value);
+    return value == null ? null : new Pair<>(key, value);
   }
 
   /**
@@ -557,7 +557,7 @@ public final class Constraints {
    */
   static List<? extends Constraint> getConstraints(HTableDescriptor desc,
       ClassLoader classloader) throws IOException {
-    List<Constraint> constraints = new ArrayList<Constraint>();
+    List<Constraint> constraints = new ArrayList<>();
     // loop through all the key, values looking for constraints
     for (Map.Entry<Bytes, Bytes> e : desc
         .getValues().entrySet()) {

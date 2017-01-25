@@ -195,7 +195,7 @@ public class ThriftServer extends Configured implements Tool {
     } else if (qop == null) {
       return new TTransportFactory();
     } else {
-      Map<String, String> saslProperties = new HashMap<String, String>();
+      Map<String, String> saslProperties = new HashMap<>();
       saslProperties.put(Sasl.QOP, qop.getSaslQop());
       TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
       saslFactory.addServerDefinition("GSSAPI", name, host, saslProperties,
@@ -306,9 +306,9 @@ public class ThriftServer extends Configured implements Tool {
       int workerThreads, int maxCallQueueSize, ThriftMetrics metrics) {
     CallQueue callQueue;
     if (maxCallQueueSize > 0) {
-      callQueue = new CallQueue(new LinkedBlockingQueue<Call>(maxCallQueueSize), metrics);
+      callQueue = new CallQueue(new LinkedBlockingQueue<>(maxCallQueueSize), metrics);
     } else {
-      callQueue = new CallQueue(new LinkedBlockingQueue<Call>(), metrics);
+      callQueue = new CallQueue(new LinkedBlockingQueue<>(), metrics);
     }
 
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();

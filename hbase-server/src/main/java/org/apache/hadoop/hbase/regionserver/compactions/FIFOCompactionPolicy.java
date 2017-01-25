@@ -117,7 +117,7 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   private  Collection<StoreFile> getExpiredStores(Collection<StoreFile> files,
     Collection<StoreFile> filesCompacting) {
     long currentTime = EnvironmentEdgeManager.currentTime();
-    Collection<StoreFile> expiredStores = new ArrayList<StoreFile>();    
+    Collection<StoreFile> expiredStores = new ArrayList<>();
     for(StoreFile sf: files){
       // Check MIN_VERSIONS is in HStore removeUnneededFiles
       Long maxTs = sf.getReader().getMaxTimestamp();

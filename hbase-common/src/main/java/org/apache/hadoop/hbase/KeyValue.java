@@ -81,7 +81,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class KeyValue implements ExtendedCell {
-  private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<Tag>();
+  private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<>();
 
   private static final Log LOG = LogFactory.getLog(KeyValue.class);
 
@@ -1174,7 +1174,7 @@ public class KeyValue implements ExtendedCell {
    * @return the Map&lt;String,?&gt; containing data from this key
    */
   public Map<String, Object> toStringMap() {
-    Map<String, Object> stringMap = new HashMap<String, Object>();
+    Map<String, Object> stringMap = new HashMap<>();
     stringMap.put("row", Bytes.toStringBinary(getRowArray(), getRowOffset(), getRowLength()));
     stringMap.put("family",
       Bytes.toStringBinary(getFamilyArray(), getFamilyOffset(), getFamilyLength()));
@@ -1184,7 +1184,7 @@ public class KeyValue implements ExtendedCell {
     stringMap.put("vlen", getValueLength());
     List<Tag> tags = getTags();
     if (tags != null) {
-      List<String> tagsString = new ArrayList<String>(tags.size());
+      List<String> tagsString = new ArrayList<>(tags.size());
       for (Tag t : tags) {
         tagsString.add(t.toString());
       }

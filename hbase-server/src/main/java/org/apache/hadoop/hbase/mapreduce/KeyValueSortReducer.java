@@ -40,7 +40,7 @@ public class KeyValueSortReducer extends Reducer<ImmutableBytesWritable, KeyValu
   protected void reduce(ImmutableBytesWritable row, java.lang.Iterable<KeyValue> kvs,
       org.apache.hadoop.mapreduce.Reducer<ImmutableBytesWritable, KeyValue, ImmutableBytesWritable, KeyValue>.Context context)
   throws java.io.IOException, InterruptedException {
-    TreeSet<KeyValue> map = new TreeSet<KeyValue>(CellComparator.COMPARATOR);
+    TreeSet<KeyValue> map = new TreeSet<>(CellComparator.COMPARATOR);
     for (KeyValue kv: kvs) {
       try {
         map.add(kv.clone());

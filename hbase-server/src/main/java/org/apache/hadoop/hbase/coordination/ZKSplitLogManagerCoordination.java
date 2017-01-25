@@ -761,7 +761,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     if (taskOrRescanList == null || taskOrRescanList.isEmpty()) {
       return Collections.<String> emptyList();
     }
-    List<String> taskList = new ArrayList<String>();
+    List<String> taskList = new ArrayList<>();
     for (String taskOrRescan : taskOrRescanList) {
       // Remove rescan nodes
       if (!ZKSplitLog.isRescanNode(taskOrRescan)) {

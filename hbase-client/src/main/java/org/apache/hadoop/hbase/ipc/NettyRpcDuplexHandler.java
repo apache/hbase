@@ -62,7 +62,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
 
   private final CompressionCodec compressor;
 
-  private final Map<Integer, Call> id2Call = new HashMap<Integer, Call>();
+  private final Map<Integer, Call> id2Call = new HashMap<>();
 
   public NettyRpcDuplexHandler(NettyRpcConnection conn, CellBlockBuilder cellBlockBuilder,
       Codec codec, CompressionCodec compressor) {

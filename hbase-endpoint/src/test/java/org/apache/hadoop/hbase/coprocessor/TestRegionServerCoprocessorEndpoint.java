@@ -73,8 +73,7 @@ public class TestRegionServerCoprocessorEndpoint {
     final ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     final ServerRpcController controller = new ServerRpcController();
     final CoprocessorRpcUtils.BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse>
-        rpcCallback =
-      new CoprocessorRpcUtils.BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse>();
+        rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
     DummyRegionServerEndpointProtos.DummyService service =
         ProtobufUtil.newServiceStub(DummyRegionServerEndpointProtos.DummyService.class,
           TEST_UTIL.getAdmin().coprocessorService(serverName));
@@ -91,8 +90,7 @@ public class TestRegionServerCoprocessorEndpoint {
     final ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     final ServerRpcController controller = new ServerRpcController();
     final CoprocessorRpcUtils.BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse>
-        rpcCallback =
-      new CoprocessorRpcUtils.BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse>();
+        rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
     DummyRegionServerEndpointProtos.DummyService service =
         ProtobufUtil.newServiceStub(DummyRegionServerEndpointProtos.DummyService.class,
             TEST_UTIL.getAdmin().coprocessorService(serverName));

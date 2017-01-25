@@ -98,7 +98,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
   @Override
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
       MonitoredTask status, ThroughputController throughputController) throws IOException {
-    ArrayList<Path> result = new ArrayList<Path>();
+    ArrayList<Path> result = new ArrayList<>();
     long cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
@@ -179,7 +179,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     byte[] fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
     ScannerContext scannerContext =
         ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
-    List<Cell> cells = new ArrayList<Cell>();
+    List<Cell> cells = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     boolean control = throughputController != null && !store.getRegionInfo().isSystemTable();

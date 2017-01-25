@@ -193,7 +193,7 @@ public class TestRegionIncrement {
         threads[i].join();
       }
       RegionScanner regionScanner = region.getScanner(new Scan());
-      List<Cell> cells = new ArrayList<Cell>(THREAD_COUNT);
+      List<Cell> cells = new ArrayList<>(THREAD_COUNT);
       while(regionScanner.next(cells)) continue;
       assertEquals(THREAD_COUNT, cells.size());
       long total = 0;
@@ -230,7 +230,7 @@ public class TestRegionIncrement {
         threads[i].join();
       }
       RegionScanner regionScanner = region.getScanner(new Scan());
-      List<Cell> cells = new ArrayList<Cell>(100);
+      List<Cell> cells = new ArrayList<>(100);
       while(regionScanner.next(cells)) continue;
       assertEquals(THREAD_COUNT, cells.size());
       long total = 0;

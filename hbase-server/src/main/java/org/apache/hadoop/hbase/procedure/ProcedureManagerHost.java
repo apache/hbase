@@ -46,7 +46,7 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
 
   private static final Log LOG = LogFactory.getLog(ProcedureManagerHost.class);
 
-  protected Set<E> procedures = new HashSet<E>();
+  protected Set<E> procedures = new HashSet<>();
 
   /**
    * Load system procedures. Read the class names from configuration.
@@ -60,7 +60,7 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
     if (defaultProcClasses == null || defaultProcClasses.length == 0)
       return;
 
-    List<E> configured = new ArrayList<E>();
+    List<E> configured = new ArrayList<>();
     for (String className : defaultProcClasses) {
       className = className.trim();
       ClassLoader cl = this.getClass().getClassLoader();
@@ -105,7 +105,7 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
   }
 
   public Set<E> getProcedureManagers() {
-    Set<E> returnValue = new HashSet<E>();
+    Set<E> returnValue = new HashSet<>();
     for (E e: procedures) {
       returnValue.add(e);
     }

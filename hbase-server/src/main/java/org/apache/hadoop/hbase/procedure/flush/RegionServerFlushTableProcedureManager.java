@@ -201,7 +201,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     private final ExecutorCompletionService<Void> taskPool;
     private final ThreadPoolExecutor executor;
     private volatile boolean stopped;
-    private final List<Future<Void>> futures = new ArrayList<Future<Void>>();
+    private final List<Future<Void>> futures = new ArrayList<>();
     private final String name;
 
     FlushTableSubprocedurePool(String name, Configuration conf, Abortable abortable) {
@@ -213,10 +213,10 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
       int threads = conf.getInt(CONCURENT_FLUSH_TASKS_KEY, DEFAULT_CONCURRENT_FLUSH_TASKS);
       this.name = name;
       executor = new ThreadPoolExecutor(threads, threads, keepAlive, TimeUnit.MILLISECONDS,
-          new LinkedBlockingQueue<Runnable>(), new DaemonThreadFactory("rs("
+          new LinkedBlockingQueue<>(), new DaemonThreadFactory("rs("
               + name + ")-flush-proc-pool"));
       executor.allowCoreThreadTimeOut(true);
-      taskPool = new ExecutorCompletionService<Void>(executor);
+      taskPool = new ExecutorCompletionService<>(executor);
     }
 
     boolean hasTasks() {

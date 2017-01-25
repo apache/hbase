@@ -864,7 +864,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     }
 
     // starting to load multiple tables
-    List<WorkerThread> workers = new ArrayList<WorkerThread>();
+    List<WorkerThread> workers = new ArrayList<>();
     for (int i = 0; i < numTables; i++) {
       String[] workerArgs = newArgs.clone();
       workerArgs[tableNameValueIndex] = tableName + "_" + (i+1);
@@ -892,7 +892,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   // If an exception is thrown by one of worker threads, it will be
   // stored here.
-  protected AtomicReference<Throwable> thrown = new AtomicReference<Throwable>();
+  protected AtomicReference<Throwable> thrown = new AtomicReference<>();
 
   private void workerThreadError(Throwable t) {
     thrown.compareAndSet(null, t);

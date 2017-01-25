@@ -29,8 +29,8 @@ import org.junit.experimental.categories.Category;
 public class TestInstancePending {
   @Test(timeout = 1000)
   public void test() throws Exception {
-    final InstancePending<String> pending = new InstancePending<String>();
-    final AtomicReference<String> getResultRef = new AtomicReference<String>();
+    final InstancePending<String> pending = new InstancePending<>();
+    final AtomicReference<String> getResultRef = new AtomicReference<>();
 
     new Thread() {
       @Override

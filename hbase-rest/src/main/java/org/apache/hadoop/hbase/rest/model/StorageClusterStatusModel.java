@@ -373,7 +373,7 @@ public class StorageClusterStatusModel
     private long requests;
     private int heapSizeMB;
     private int maxHeapSizeMB;
-    private List<Region> regions = new ArrayList<Region>();
+    private List<Region> regions = new ArrayList<>();
 
     /**
      * Add a region name to the list
@@ -505,8 +505,8 @@ public class StorageClusterStatusModel
     }
   }
 
-  private List<Node> liveNodes = new ArrayList<Node>();
-  private List<String> deadNodes = new ArrayList<String>();
+  private List<Node> liveNodes = new ArrayList<>();
+  private List<String> deadNodes = new ArrayList<>();
   private int regions;
   private long requests;
   private double averageLoad;

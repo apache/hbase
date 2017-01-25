@@ -248,7 +248,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       this.abortable.abort("Failed to get a list of queues for region server: "
           + this.myQueuesZnode, e);
     }
-    return listOfQueues == null ? new ArrayList<String>() : listOfQueues;
+    return listOfQueues == null ? new ArrayList<>() : listOfQueues;
   }
 
   /**
@@ -329,7 +329,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     }
 
     int size = pairs.size();
-    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>(size);
+    List<ZKUtilOp> listOfOps = new ArrayList<>(size);
 
     for (int i = 0; i < size; i++) {
       listOfOps.add(ZKUtilOp.createAndFailSilent(
@@ -356,7 +356,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     }
 
     int size = files.size();
-    List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>(size);
+    List<ZKUtilOp> listOfOps = new ArrayList<>(size);
 
     for (int i = 0; i < size; i++) {
       listOfOps.add(ZKUtilOp.deleteNodeFailSilent(ZKUtil.joinZNode(peerZnode, files.get(i))));

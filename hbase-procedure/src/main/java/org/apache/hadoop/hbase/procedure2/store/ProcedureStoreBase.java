@@ -25,8 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Base class for {@link ProcedureStore}s.
  */
 public abstract class ProcedureStoreBase implements ProcedureStore {
-  private final CopyOnWriteArrayList<ProcedureStoreListener> listeners =
-      new CopyOnWriteArrayList<ProcedureStoreListener>();
+  private final CopyOnWriteArrayList<ProcedureStoreListener> listeners = new CopyOnWriteArrayList<>();
 
   private final AtomicBoolean running = new AtomicBoolean(false);
 

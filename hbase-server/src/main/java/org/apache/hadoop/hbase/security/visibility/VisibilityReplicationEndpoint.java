@@ -69,9 +69,9 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
       // string based tags. But for intra cluster replication like region
       // replicas it is not needed.
       List<Entry> entries = replicateContext.getEntries();
-      List<Tag> visTags = new ArrayList<Tag>();
-      List<Tag> nonVisTags = new ArrayList<Tag>();
-      List<Entry> newEntries = new ArrayList<Entry>(entries.size());
+      List<Tag> visTags = new ArrayList<>();
+      List<Tag> nonVisTags = new ArrayList<>();
+      List<Entry> newEntries = new ArrayList<>(entries.size());
       for (Entry entry : entries) {
         WALEdit newEdit = new WALEdit();
         ArrayList<Cell> cells = entry.getEdit().getCells();

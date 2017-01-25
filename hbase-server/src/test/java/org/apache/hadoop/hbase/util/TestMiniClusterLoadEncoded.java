@@ -40,7 +40,7 @@ public class TestMiniClusterLoadEncoded extends TestMiniClusterLoadParallel {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> parameters = new ArrayList<Object[]>();
+    List<Object[]> parameters = new ArrayList<>();
     for (DataBlockEncoding dataBlockEncoding : DataBlockEncoding.values() ) {
       parameters.add(new Object[]{dataBlockEncoding});
     }

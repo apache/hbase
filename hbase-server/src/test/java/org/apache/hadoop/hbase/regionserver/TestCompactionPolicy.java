@@ -136,7 +136,7 @@ public class TestCompactionPolicy {
   }
 
   ArrayList<Long> toArrayList(long... numbers) {
-    ArrayList<Long> result = new ArrayList<Long>();
+    ArrayList<Long> result = new ArrayList<>();
     for (long i : numbers) {
       result.add(i);
     }
@@ -144,7 +144,7 @@ public class TestCompactionPolicy {
   }
 
   List<StoreFile> sfCreate(long... sizes) throws IOException {
-    ArrayList<Long> ageInDisk = new ArrayList<Long>();
+    ArrayList<Long> ageInDisk = new ArrayList<>();
     for (int i = 0; i < sizes.length; i++) {
       ageInDisk.add(0L);
     }
@@ -156,7 +156,7 @@ public class TestCompactionPolicy {
   }
 
   List<StoreFile> sfCreate(boolean isReference, long... sizes) throws IOException {
-    ArrayList<Long> ageInDisk = new ArrayList<Long>(sizes.length);
+    ArrayList<Long> ageInDisk = new ArrayList<>(sizes.length);
     for (int i = 0; i < sizes.length; i++) {
       ageInDisk.add(0L);
     }
@@ -196,8 +196,8 @@ public class TestCompactionPolicy {
     // Test Default compactions
     CompactionRequest result =
         ((RatioBasedCompactionPolicy) store.storeEngine.getCompactionPolicy()).selectCompaction(
-          candidates, new ArrayList<StoreFile>(), false, isOffPeak, forcemajor);
-    List<StoreFile> actual = new ArrayList<StoreFile>(result.getFiles());
+          candidates, new ArrayList<>(), false, isOffPeak, forcemajor);
+    List<StoreFile> actual = new ArrayList<>(result.getFiles());
     if (isOffPeak && !forcemajor) {
       Assert.assertTrue(result.isOffPeak());
     }

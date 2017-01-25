@@ -56,7 +56,7 @@ public class MasterMobCompactionThread {
     final String n = Thread.currentThread().getName();
     // this pool is used to run the mob compaction
     this.masterMobPool = new ThreadPoolExecutor(1, 2, 60, TimeUnit.SECONDS,
-      new SynchronousQueue<Runnable>(), new ThreadFactory() {
+      new SynchronousQueue<>(), new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
           String name = n + "-MasterMobCompaction-" + EnvironmentEdgeManager.currentTime();

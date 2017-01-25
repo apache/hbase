@@ -627,7 +627,7 @@ implements HeapSize, Map<K,V> {
   */
   private long addEntry(int hash, K key, V value, int bucketIndex) {
     Entry<K,V> e = entries[bucketIndex];
-    Entry<K,V> newE = new Entry<K,V>(hash, key, value, e, tailPtr);
+    Entry<K,V> newE = new Entry<>(hash, key, value, e, tailPtr);
     entries[bucketIndex] = newE;
     // add as most recently used in lru
     if (size == 0) {
@@ -810,7 +810,7 @@ implements HeapSize, Map<K,V> {
    * @return Sorted list of entries
    */
   public List<Entry<K,V>> entryLruList() {
-    List<Entry<K,V>> entryList = new ArrayList<Entry<K,V>>();
+    List<Entry<K,V>> entryList = new ArrayList<>();
     Entry<K,V> entry = headPtr;
     while(entry != null) {
       entryList.add(entry);
@@ -827,7 +827,7 @@ implements HeapSize, Map<K,V> {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
       justification="Unused debugging function that reads only")
   public Set<Entry<K,V>> entryTableSet() {
-    Set<Entry<K,V>> entrySet = new HashSet<Entry<K,V>>();
+    Set<Entry<K,V>> entrySet = new HashSet<>();
     Entry [] table = entries; // FindBugs IS2_INCONSISTENT_SYNC
     for(int i=0;i<table.length;i++) {
       for(Entry e = table[i]; e != null; e = e.next) {

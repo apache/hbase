@@ -86,7 +86,7 @@ public class ProcedureMember implements Closeable {
   public static ThreadPoolExecutor defaultPool(String memberName, int procThreads,
       long keepAliveMillis) {
     return new ThreadPoolExecutor(1, procThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
-        new SynchronousQueue<Runnable>(),
+        new SynchronousQueue<>(),
         new DaemonThreadFactory("member: '" + memberName + "' subprocedure-pool"));
   }
 

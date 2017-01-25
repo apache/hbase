@@ -68,7 +68,7 @@ public class Writables {
    * @throws IOException e
    */
   public static byte [] getBytes(final Writable... ws) throws IOException {
-    List<byte []> bytes = new ArrayList<byte []>(ws.length);
+    List<byte []> bytes = new ArrayList<>(ws.length);
     int size = 0;
     for (Writable w: ws) {
       byte [] b = getBytes(w);

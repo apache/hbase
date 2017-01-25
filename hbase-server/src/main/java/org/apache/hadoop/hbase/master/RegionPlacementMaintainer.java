@@ -106,7 +106,7 @@ public class RegionPlacementMaintainer {
     this.conf = conf;
     this.enforceLocality = enforceLocality;
     this.enforceMinAssignmentMove = enforceMinAssignmentMove;
-    this.targetTableSet = new HashSet<TableName>();
+    this.targetTableSet = new HashSet<>();
     this.rackManager = new RackManager(conf);
     try {
       this.connection = ConnectionFactory.createConnection(this.conf);
@@ -163,7 +163,7 @@ public class RegionPlacementMaintainer {
     if (this.enforceLocality == true) {
       regionLocalityMap = FSUtils.getRegionDegreeLocalityMappingFromFS(conf);
     }
-    List<AssignmentVerificationReport> reports = new ArrayList<AssignmentVerificationReport>();
+    List<AssignmentVerificationReport> reports = new ArrayList<>();
     // Iterate all the tables to fill up the verification report
     for (TableName table : tables) {
       if (!this.targetTableSet.isEmpty() &&
@@ -204,7 +204,7 @@ public class RegionPlacementMaintainer {
         assignmentSnapshot.getRegionToRegionServerMap();
 
       // Get the all the region servers
-      List<ServerName> servers = new ArrayList<ServerName>();
+      List<ServerName> servers = new ArrayList<>();
       try (Admin admin = this.connection.getAdmin()) {
         servers.addAll(admin.getClusterStatus().getServers());
       }
@@ -255,15 +255,14 @@ public class RegionPlacementMaintainer {
         // Compute the total rack locality for each region in each rack. The total
         // rack locality is the sum of the localities of a region on all servers in
         // a rack.
-        Map<String, Map<HRegionInfo, Float>> rackRegionLocality =
-            new HashMap<String, Map<HRegionInfo, Float>>();
+        Map<String, Map<HRegionInfo, Float>> rackRegionLocality = new HashMap<>();
         for (int i = 0; i < numRegions; i++) {
           HRegionInfo region = regions.get(i);
           for (int j = 0; j < regionSlots; j += slotsPerServer) {
             String rack = rackManager.getRack(servers.get(j / slotsPerServer));
             Map<HRegionInfo, Float> rackLocality = rackRegionLocality.get(rack);
             if (rackLocality == null) {
-              rackLocality = new HashMap<HRegionInfo, Float>();
+              rackLocality = new HashMap<>();
               rackRegionLocality.put(rack, rackLocality);
             }
             Float localityObj = rackLocality.get(region);
@@ -395,8 +394,7 @@ public class RegionPlacementMaintainer {
         tertiaryAssignment = randomizedMatrix.invertIndices(tertiaryAssignment);
 
         for (int i = 0; i < numRegions; i++) {
-          List<ServerName> favoredServers =
-            new ArrayList<ServerName>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
+          List<ServerName> favoredServers = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
           ServerName s = servers.get(primaryAssignment[i] / slotsPerServer);
           favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
               ServerName.NON_STARTCODE));
@@ -417,7 +415,7 @@ public class RegionPlacementMaintainer {
         LOG.info("Assignment plan for secondary and tertiary generated " +
             "using MunkresAssignment");
       } else {
-        Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<HRegionInfo, ServerName>();
+        Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<>();
         for (int i = 0; i < numRegions; i++) {
           primaryRSMap.put(regions.get(i), servers.get(primaryAssignment[i] / slotsPerServer));
         }
@@ -427,8 +425,7 @@ public class RegionPlacementMaintainer {
         Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap =
             favoredNodeHelper.placeSecondaryAndTertiaryWithRestrictions(primaryRSMap);
         for (int i = 0; i < numRegions; i++) {
-          List<ServerName> favoredServers =
-            new ArrayList<ServerName>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
+          List<ServerName> favoredServers = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
           HRegionInfo currentRegion = regions.get(i);
           ServerName s = primaryRSMap.get(currentRegion);
           favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
@@ -614,8 +611,7 @@ public class RegionPlacementMaintainer {
     if (plan == null) return;
     LOG.info("========== Start to print the assignment plan ================");
     // sort the map based on region info
-    Map<String, List<ServerName>> assignmentMap =
-      new TreeMap<String, List<ServerName>>(plan.getAssignmentMap());
+    Map<String, List<ServerName>> assignmentMap = new TreeMap<>(plan.getAssignmentMap());
 
     for (Map.Entry<String, List<ServerName>> entry : assignmentMap.entrySet()) {
 
@@ -666,13 +662,11 @@ public class RegionPlacementMaintainer {
 
     // track of the failed and succeeded updates
     int succeededNum = 0;
-    Map<ServerName, Exception> failedUpdateMap =
-      new HashMap<ServerName, Exception>();
+    Map<ServerName, Exception> failedUpdateMap = new HashMap<>();
 
     for (Map.Entry<ServerName, List<HRegionInfo>> entry :
       currentAssignment.entrySet()) {
-      List<Pair<HRegionInfo, List<ServerName>>> regionUpdateInfos =
-          new ArrayList<Pair<HRegionInfo, List<ServerName>>>();
+      List<Pair<HRegionInfo, List<ServerName>>> regionUpdateInfos = new ArrayList<>();
       try {
         // Keep track of the favored updates for the current region server
         FavoredNodesPlan singleServerPlan = null;
@@ -687,8 +681,7 @@ public class RegionPlacementMaintainer {
             }
             // Update the single server update
             singleServerPlan.updateFavoredNodesMap(region, favoredServerList);
-            regionUpdateInfos.add(
-              new Pair<HRegionInfo, List<ServerName>>(region, favoredServerList));
+            regionUpdateInfos.add(new Pair<>(region, favoredServerList));
           }
         }
         if (singleServerPlan != null) {
@@ -749,7 +742,7 @@ public class RegionPlacementMaintainer {
    */
   public Map<TableName, Integer> getRegionsMovement(FavoredNodesPlan newPlan)
       throws IOException {
-    Map<TableName, Integer> movesPerTable = new HashMap<TableName, Integer>();
+    Map<TableName, Integer> movesPerTable = new HashMap<>();
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
     Map<TableName, List<HRegionInfo>> tableToRegions = snapshot
         .getTableToRegionMap();
@@ -944,7 +937,7 @@ public class RegionPlacementMaintainer {
     if (favoredNodesArray == null)
       return null;
 
-    List<ServerName> serverList = new ArrayList<ServerName>();
+    List<ServerName> serverList = new ArrayList<>();
     for (String hostNameAndPort : favoredNodesArray) {
       serverList.add(ServerName.valueOf(hostNameAndPort, ServerName.NON_STARTCODE));
     }

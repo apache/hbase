@@ -640,7 +640,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction listProceduresAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        List<ProcedureInfo> procInfoListClone = new ArrayList<ProcedureInfo>(procInfoList.size());
+        List<ProcedureInfo> procInfoListClone = new ArrayList<>(procInfoList.size());
         for(ProcedureInfo pi : procInfoList) {
           procInfoListClone.add(pi.clone());
         }
@@ -1763,7 +1763,7 @@ public class TestAccessController extends SecureTestUtil {
     }
 
     List<String> superUsers = Superusers.getSuperUsers();
-    List<UserPermission> adminPerms = new ArrayList<UserPermission>(superUsers.size() + 1);
+    List<UserPermission> adminPerms = new ArrayList<>(superUsers.size() + 1);
     adminPerms.add(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
       AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW")));
 

@@ -77,7 +77,7 @@ public class TestByteBufferUtils {
   }
 
   static {
-    SortedSet<Long> a = new TreeSet<Long>();
+    SortedSet<Long> a = new TreeSet<>();
     for (int i = 0; i <= 63; ++i) {
       long v = (-1L) << i;
       assertTrue(v < 0);

@@ -63,9 +63,9 @@ import com.google.protobuf.Service;
  */
 public class MockRegionServerServices implements RegionServerServices {
   protected static final Log LOG = LogFactory.getLog(MockRegionServerServices.class);
-  private final Map<String, Region> regions = new HashMap<String, Region>();
+  private final Map<String, Region> regions = new HashMap<>();
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
-    new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
+    new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
   private final Configuration conf;
   private ZooKeeperWatcher zkw = null;

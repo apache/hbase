@@ -61,7 +61,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
 
     // create an internal region scanner
     this.scanner = region.getScanner(scan);
-    values = new ArrayList<Cell>();
+    values = new ArrayList<>();
 
     if (scanMetrics == null) {
       initScanMetrics(scan);

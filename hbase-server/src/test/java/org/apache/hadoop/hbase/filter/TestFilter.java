@@ -275,7 +275,7 @@ public class TestFilter {
 
     // reseek to row three.
     scanner.reseek(ROWS_THREE[1]);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
 
     // the results should belong to ROWS_THREE[1]
     scanner.next(results);
@@ -285,7 +285,7 @@ public class TestFilter {
     }
     // again try to reseek to a value before ROWS_THREE[1]
     scanner.reseek(ROWS_ONE[1]);
-    results = new ArrayList<Cell>();
+    results = new ArrayList<>();
     // This time no seek would have been done to ROWS_ONE[1]
     scanner.next(results);
     for (Cell keyValue : results) {
@@ -511,7 +511,7 @@ public class TestFilter {
     InternalScanner scanner = this.region.getScanner(s);
     int scannerCounter = 0;
     while (true) {
-      boolean isMoreResults = scanner.next(new ArrayList<Cell>());
+      boolean isMoreResults = scanner.next(new ArrayList<>());
       scannerCounter++;
 
       if (scannerCounter >= pageSize) {
@@ -540,7 +540,7 @@ public class TestFilter {
 
     InternalScanner scanner = this.region.getScanner(s);
     while (true) {
-      ArrayList<Cell> values = new ArrayList<Cell>();
+      ArrayList<Cell> values = new ArrayList<>();
       boolean isMoreResults = scanner.next(values);
       if (!isMoreResults
           || !Bytes.toString(CellUtil.cloneRow(values.get(0))).startsWith(prefix)) {
@@ -575,7 +575,7 @@ public class TestFilter {
     InternalScanner scanner = this.region.getScanner(s);
     int scannerCounter = 0;
     while (true) {
-      boolean isMoreResults = scanner.next(new ArrayList<Cell>());
+      boolean isMoreResults = scanner.next(new ArrayList<>());
       scannerCounter++;
 
       if (scannerCounter >= pageSize) {
@@ -629,7 +629,7 @@ public class TestFilter {
     s.setFilter(filter);
 
     InternalScanner scanner = this.region.getScanner(s);
-    ArrayList<Cell> values = new ArrayList<Cell>();
+    ArrayList<Cell> values = new ArrayList<>();
     scanner.next(values);
     assertTrue("All rows should be filtered out", values.isEmpty());
   }
@@ -652,7 +652,7 @@ public class TestFilter {
 
     InternalScanner scanner = this.region.getScanner(s);
     while (true) {
-      ArrayList<Cell> values = new ArrayList<Cell>();
+      ArrayList<Cell> values = new ArrayList<>();
       boolean isMoreResults = scanner.next(values);
       if (!isMoreResults || !Bytes.toString(CellUtil.cloneRow(values.get(0))).startsWith(prefix)) {
         assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
@@ -681,7 +681,7 @@ public class TestFilter {
 
     InternalScanner scanner = this.region.getScanner(s);
     while (true) {
-      ArrayList<Cell> values = new ArrayList<Cell>();
+      ArrayList<Cell> values = new ArrayList<>();
       boolean isMoreResults = scanner.next(values);
       assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
       if (!isMoreResults) {
@@ -1370,7 +1370,7 @@ public class TestFilter {
     // Test getting a single row, single key using Row, Qualifier, and Value
     // regular expression and substring filters
     // Use must pass all
-    List<Filter> filters = new ArrayList<Filter>();
+    List<Filter> filters = new ArrayList<>();
     filters.add(new RowFilter(CompareOp.EQUAL, new RegexStringComparator(".+-2")));
     filters.add(new QualifierFilter(CompareOp.EQUAL, new RegexStringComparator(".+-2")));
     filters.add(new ValueFilter(CompareOp.EQUAL, new SubstringComparator("One")));
@@ -1520,7 +1520,7 @@ public class TestFilter {
     Scan s1 = new Scan();
     s1.setFilter(filterList);
     InternalScanner scanner = testRegion.getScanner(s1);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     int resultCount = 0;
     while (scanner.next(results)) {
       resultCount++;
@@ -1553,7 +1553,7 @@ public class TestFilter {
     // Now let's grab rows that have Q_ONE[0](VALUES[0]) and Q_ONE[2](VALUES[1])
     // Since group two rows don't have these qualifiers, they will pass
     // so limiting scan to group one
-    List<Filter> filters = new ArrayList<Filter>();
+    List<Filter> filters = new ArrayList<>();
     filters.add(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0],
         CompareOp.EQUAL, VALUES[0]));
     filters.add(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[2],
@@ -1573,7 +1573,7 @@ public class TestFilter {
 
     // In order to get expected behavior without limiting to group one
     // need to wrap SCVFs in SkipFilters
-    filters = new ArrayList<Filter>();
+    filters = new ArrayList<>();
     filters.add(new SkipFilter(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[0],
         CompareOp.EQUAL, VALUES[0])));
     filters.add(new SkipFilter(new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS_ONE[2],
@@ -1661,7 +1661,7 @@ public class TestFilter {
   private void verifyScan(Scan s, long expectedRows, long expectedKeys)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     int i = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
@@ -1683,7 +1683,7 @@ public class TestFilter {
       long expectedKeys)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     int i = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
@@ -1704,7 +1704,7 @@ public class TestFilter {
   private void verifyScanFull(Scan s, KeyValue [] kvs)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     int row = 0;
     int idx = 0;
     for (boolean done = true; done; row++) {
@@ -1735,7 +1735,7 @@ public class TestFilter {
   private void verifyScanFullNoValues(Scan s, KeyValue [] kvs, boolean useLen)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     int row = 0;
     int idx = 0;
     for (boolean more = true; more; row++) {
@@ -2073,7 +2073,7 @@ public class TestFilter {
     Scan s1 = new Scan();
     s1.setFilter(rowFilter);
     InternalScanner scanner = testRegion.getScanner(s1);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     int i = 5;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
@@ -2092,7 +2092,7 @@ public class TestFilter {
     s1 = new Scan();
     s1.setFilter(subFilterList);
     scanner = testRegion.getScanner(s1);
-    results = new ArrayList<Cell>();
+    results = new ArrayList<>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
       assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
@@ -2108,7 +2108,7 @@ public class TestFilter {
     s1 = new Scan();
     s1.setFilter(filterList);
     scanner = testRegion.getScanner(s1);
-    results = new ArrayList<Cell>();
+    results = new ArrayList<>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
       assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
@@ -2129,7 +2129,7 @@ public class TestFilter {
     s1 = new Scan();
     s1.setFilter(filterList);
     scanner = testRegion.getScanner(s1);
-    results = new ArrayList<Cell>();
+    results = new ArrayList<>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
       assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));

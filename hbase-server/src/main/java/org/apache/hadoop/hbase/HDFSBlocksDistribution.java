@@ -104,8 +104,7 @@ public class HDFSBlocksDistribution {
    * Constructor
    */
   public HDFSBlocksDistribution() {
-    this.hostAndWeights =
-      new TreeMap<String,HostAndWeight>();
+    this.hostAndWeights = new TreeMap<>();
   }
 
   /**
@@ -229,7 +228,7 @@ public class HDFSBlocksDistribution {
    */
   public List<String> getTopHosts() {
     HostAndWeight[] hostAndWeights = getTopHostsWithWeights();
-    List<String> topHosts = new ArrayList<String>(hostAndWeights.length);
+    List<String> topHosts = new ArrayList<>(hostAndWeights.length);
     for(HostAndWeight haw : hostAndWeights) {
       topHosts.add(haw.getHost());
     }
@@ -240,8 +239,7 @@ public class HDFSBlocksDistribution {
    * return the sorted list of hosts in terms of their weights
    */
   public HostAndWeight[] getTopHostsWithWeights() {
-    NavigableSet<HostAndWeight> orderedHosts = new TreeSet<HostAndWeight>(
-      new HostAndWeight.WeightComparator());
+    NavigableSet<HostAndWeight> orderedHosts = new TreeSet<>(new HostAndWeight.WeightComparator());
     orderedHosts.addAll(this.hostAndWeights.values());
     return orderedHosts.descendingSet().toArray(new HostAndWeight[orderedHosts.size()]);
   }

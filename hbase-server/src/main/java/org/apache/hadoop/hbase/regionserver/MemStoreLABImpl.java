@@ -65,7 +65,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
 
   static final Log LOG = LogFactory.getLog(MemStoreLABImpl.class);
 
-  private AtomicReference<Chunk> curChunk = new AtomicReference<Chunk>();
+  private AtomicReference<Chunk> curChunk = new AtomicReference<>();
   // A queue of chunks from pool contained by this memstore LAB
   // TODO: in the future, it would be better to have List implementation instead of Queue,
   // as FIFO order is not so important here

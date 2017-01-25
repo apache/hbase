@@ -53,7 +53,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
 
   private String name;
-  private List<TableRegionModel> regions = new ArrayList<TableRegionModel>();
+  private List<TableRegionModel> regions = new ArrayList<>();
 
   /**
    * Default constructor

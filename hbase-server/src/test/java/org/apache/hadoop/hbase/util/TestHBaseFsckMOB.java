@@ -62,7 +62,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     TEST_UTIL.startMiniCluster(1);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("testhbck"));
+        new SynchronousQueue<>(), Threads.newDaemonThreadFactory("testhbck"));
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 

@@ -180,7 +180,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private final Deque<FSWALEntry> unackedAppends = new ArrayDeque<>();
 
-  private final SortedSet<SyncFuture> syncFutures = new TreeSet<SyncFuture>(SEQ_COMPARATOR);
+  private final SortedSet<SyncFuture> syncFutures = new TreeSet<>(SEQ_COMPARATOR);
 
   // the highest txid of WAL entries being processed
   private long highestProcessedAppendTxid;

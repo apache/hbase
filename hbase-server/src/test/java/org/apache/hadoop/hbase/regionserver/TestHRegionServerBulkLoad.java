@@ -108,7 +108,7 @@ public class TestHRegionServerBulkLoad {
   @Parameters
   public static final Collection<Object[]> parameters() {
     int[] sleepDurations = new int[] { 0, 30000 };
-    List<Object[]> configurations = new ArrayList<Object[]>();
+    List<Object[]> configurations = new ArrayList<>();
     for (int i : sleepDurations) {
       configurations.add(new Object[] { i });
     }
@@ -189,8 +189,7 @@ public class TestHRegionServerBulkLoad {
       // create HFiles for different column families
       FileSystem fs = UTIL.getTestFileSystem();
       byte[] val = Bytes.toBytes(String.format("%010d", iteration));
-      final List<Pair<byte[], String>> famPaths = new ArrayList<Pair<byte[], String>>(
-          NUM_CFS);
+      final List<Pair<byte[], String>> famPaths = new ArrayList<>(NUM_CFS);
       for (int i = 0; i < NUM_CFS; i++) {
         Path hfile = new Path(dir, family(i));
         byte[] fam = Bytes.toBytes(family(i));

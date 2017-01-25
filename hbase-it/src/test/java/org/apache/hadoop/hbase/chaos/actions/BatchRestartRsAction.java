@@ -43,7 +43,7 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
     List<ServerName> selectedServers = PolicyBasedChaosMonkey.selectRandomItems(getCurrentServers(),
         ratio);
 
-    Set<ServerName> killedServers = new HashSet<ServerName>();
+    Set<ServerName> killedServers = new HashSet<>();
 
     for (ServerName server : selectedServers) {
       // Don't keep killing servers if we're

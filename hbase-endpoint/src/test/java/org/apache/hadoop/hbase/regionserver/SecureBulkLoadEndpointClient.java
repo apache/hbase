@@ -64,7 +64,7 @@ public class SecureBulkLoadEndpointClient {
       ServerRpcController controller = new ServerRpcController();
 
       CoprocessorRpcUtils.BlockingRpcCallback<PrepareBulkLoadResponse> rpcCallback =
-          new CoprocessorRpcUtils.BlockingRpcCallback<PrepareBulkLoadResponse>();
+          new CoprocessorRpcUtils.BlockingRpcCallback<>();
 
       PrepareBulkLoadRequest request =
           PrepareBulkLoadRequest.newBuilder()
@@ -92,7 +92,7 @@ public class SecureBulkLoadEndpointClient {
       ServerRpcController controller = new ServerRpcController();
 
       CoprocessorRpcUtils.BlockingRpcCallback<CleanupBulkLoadResponse> rpcCallback =
-          new CoprocessorRpcUtils.BlockingRpcCallback<CleanupBulkLoadResponse>();
+          new CoprocessorRpcUtils.BlockingRpcCallback<>();
 
       CleanupBulkLoadRequest request =
           CleanupBulkLoadRequest.newBuilder()
@@ -133,7 +133,7 @@ public class SecureBulkLoadEndpointClient {
       }
 
       List<ClientProtos.BulkLoadHFileRequest.FamilyPath> protoFamilyPaths =
-          new ArrayList<ClientProtos.BulkLoadHFileRequest.FamilyPath>(familyPaths.size());
+          new ArrayList<>(familyPaths.size());
       for(Pair<byte[], String> el: familyPaths) {
         protoFamilyPaths.add(ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder()
           .setFamily(ByteStringer.wrap(el.getFirst()))
@@ -148,8 +148,7 @@ public class SecureBulkLoadEndpointClient {
 
       ServerRpcController controller = new ServerRpcController();
       CoprocessorRpcUtils.BlockingRpcCallback<SecureBulkLoadProtos.SecureBulkLoadHFilesResponse>
-            rpcCallback =
-          new CoprocessorRpcUtils.BlockingRpcCallback<SecureBulkLoadProtos.SecureBulkLoadHFilesResponse>();
+            rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
       instance.secureBulkLoadHFiles(controller,
         request,
         rpcCallback);

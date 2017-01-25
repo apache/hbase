@@ -273,7 +273,7 @@ public class ReplicationAdmin implements Closeable {
   @Deprecated
   public Map<String, ReplicationPeerConfig> listPeerConfigs() throws IOException {
     List<ReplicationPeerDescription> peers = this.admin.listReplicationPeers();
-    Map<String, ReplicationPeerConfig> result = new TreeMap<String, ReplicationPeerConfig>();
+    Map<String, ReplicationPeerConfig> result = new TreeMap<>();
     for (ReplicationPeerDescription peer : peers) {
       result.put(peer.getPeerId(), peer.getPeerConfig());
     }
@@ -343,7 +343,7 @@ public class ReplicationAdmin implements Closeable {
         if (cfs == null || appendCfs == null || appendCfs.isEmpty()) {
           preTableCfs.put(table, null);
         } else {
-          Set<String> cfSet = new HashSet<String>(cfs);
+          Set<String> cfSet = new HashSet<>(cfs);
           cfSet.addAll(appendCfs);
           preTableCfs.put(table, Lists.newArrayList(cfSet));
         }
@@ -400,7 +400,7 @@ public class ReplicationAdmin implements Closeable {
         if (cfs == null && (removeCfs == null || removeCfs.isEmpty())) {
           preTableCfs.remove(table);
         } else if (cfs != null && (removeCfs != null && !removeCfs.isEmpty())) {
-          Set<String> cfSet = new HashSet<String>(cfs);
+          Set<String> cfSet = new HashSet<>(cfs);
           cfSet.removeAll(removeCfs);
           if (cfSet.isEmpty()) {
             preTableCfs.remove(table);
@@ -484,7 +484,7 @@ public class ReplicationAdmin implements Closeable {
         tableCFs.getColumnFamilyMap()
             .forEach(
               (cf, scope) -> {
-                HashMap<String, String> replicationEntry = new HashMap<String, String>();
+                HashMap<String, String> replicationEntry = new HashMap<>();
                 replicationEntry.put(TNAME, table);
                 replicationEntry.put(CFNAME, cf);
                 replicationEntry.put(REPLICATIONTYPE,
@@ -531,7 +531,7 @@ public class ReplicationAdmin implements Closeable {
     if (peers == null || peers.size() <= 0) {
       return null;
     }
-    List<ReplicationPeer> listOfPeers = new ArrayList<ReplicationPeer>(peers.size());
+    List<ReplicationPeer> listOfPeers = new ArrayList<>(peers.size());
     for (Entry<String, ReplicationPeerConfig> peerEntry : peers.entrySet()) {
       String peerId = peerEntry.getKey();
       try {

@@ -46,8 +46,8 @@ public class ReplicationPeerConfig {
   private long bandwidth = 0;
 
   public ReplicationPeerConfig() {
-    this.peerData = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
-    this.configuration = new HashMap<String, String>(0);
+    this.peerData = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    this.configuration = new HashMap<>(0);
   }
 
   /**

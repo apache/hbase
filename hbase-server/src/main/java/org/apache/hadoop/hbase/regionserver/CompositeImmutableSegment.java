@@ -65,7 +65,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
 
   @VisibleForTesting
   public List<Segment> getAllSegments() {
-    return new LinkedList<Segment>(segments);
+    return new LinkedList<>(segments);
   }
 
   public int getNumOfSegments() {
@@ -150,7 +150,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    */
   public KeyValueScanner getScanner(long readPoint, long order) {
     KeyValueScanner resultScanner;
-    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(segments.size());
+    List<KeyValueScanner> list = new ArrayList<>(segments.size());
     for (ImmutableSegment s : segments) {
       list.add(s.getScanner(readPoint, order));
     }

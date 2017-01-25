@@ -146,7 +146,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private static final BigDecimal BYTES_PER_MB = BigDecimal.valueOf(1024 * 1024);
   private static final TestOptions DEFAULT_OPTS = new TestOptions();
 
-  private static Map<String, CmdDescriptor> COMMANDS = new TreeMap<String, CmdDescriptor>();
+  private static Map<String, CmdDescriptor> COMMANDS = new TreeMap<>();
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
 
   static {
@@ -536,7 +536,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Path inputFile = new Path(inputDir, JOB_INPUT_FILENAME);
     PrintStream out = new PrintStream(fs.create(inputFile));
     // Make input random.
-    Map<Integer, String> m = new TreeMap<Integer, String>();
+    Map<Integer, String> m = new TreeMap<>();
     Hash h = MurmurHash.getInstance();
     int perClientRows = (opts.totalRows / opts.numClientThreads);
     try {
@@ -1311,7 +1311,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected Pair<byte[], byte[]> generateStartAndStopRows(int maxRange) {
       int start = this.rand.nextInt(Integer.MAX_VALUE) % opts.totalRows;
       int stop = start + maxRange;
-      return new Pair<byte[],byte[]>(format(start), format(stop));
+      return new Pair<>(format(start), format(stop));
     }
 
     @Override
@@ -1375,7 +1375,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       consistency = options.replicas == DEFAULT_OPTS.replicas ? null : Consistency.TIMELINE;
       if (opts.multiGet > 0) {
         LOG.info("MultiGet enabled. Sending GETs in batches of " + opts.multiGet + ".");
-        this.gets = new ArrayList<Get>(opts.multiGet);
+        this.gets = new ArrayList<>(opts.multiGet);
       }
     }
 
@@ -2207,7 +2207,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     try {
-      LinkedList<String> argv = new LinkedList<String>();
+      LinkedList<String> argv = new LinkedList<>();
       argv.addAll(Arrays.asList(args));
       TestOptions opts = parseOpts(argv);
 

@@ -84,7 +84,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
    * Constructor
    */
   public CellSetModel() {
-    this.rows = new ArrayList<RowModel>();
+    this.rows = new ArrayList<>();
   }
 
   /**

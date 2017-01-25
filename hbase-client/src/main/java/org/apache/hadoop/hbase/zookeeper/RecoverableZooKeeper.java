@@ -637,7 +637,7 @@ public class RecoverableZooKeeper {
   throws UnsupportedOperationException {
     if(ops == null) return null;
 
-    List<Op> preparedOps = new LinkedList<Op>();
+    List<Op> preparedOps = new LinkedList<>();
     for (Op op : ops) {
       if (op.getType() == ZooDefs.OpCode.create) {
         CreateRequest create = (CreateRequest)op.toRequestRecord();
@@ -777,7 +777,7 @@ public class RecoverableZooKeeper {
    */
   private static List<String> filterByPrefix(List<String> nodes,
       String... prefixes) {
-    List<String> lockChildren = new ArrayList<String>();
+    List<String> lockChildren = new ArrayList<>();
     for (String child : nodes){
       for (String prefix : prefixes){
         if (child.startsWith(prefix)){

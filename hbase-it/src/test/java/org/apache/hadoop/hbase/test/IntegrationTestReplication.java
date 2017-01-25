@@ -234,7 +234,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
 
         // set the test table to be the table to replicate
         HashMap<TableName, ArrayList<String>> toReplicate = new HashMap<>();
-        toReplicate.put(tableName, new ArrayList<String>(0));
+        toReplicate.put(tableName, new ArrayList<>(0));
 
         replicationAdmin.addPeer("TestPeer", peerConfig, toReplicate);
 

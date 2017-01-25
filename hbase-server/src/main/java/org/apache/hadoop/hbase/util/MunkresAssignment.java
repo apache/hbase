@@ -111,7 +111,7 @@ public class MunkresAssignment {
     mask = new byte[rows][cols];
     rowsCovered = new boolean[rows];
     colsCovered = new boolean[cols];
-    path = new LinkedList<Pair<Integer, Integer>>();
+    path = new LinkedList<>();
 
     leastInRow = new float[rows];
     leastInRowIndex = new int[rows];
@@ -330,8 +330,7 @@ public class MunkresAssignment {
           // starting from the uncovered primed zero (there is only one). Since
           // we have already found it, save it as the first node in the path.
           path.clear();
-          path.offerLast(new Pair<Integer, Integer>(zero.getFirst(),
-              zero.getSecond()));
+          path.offerLast(new Pair<>(zero.getFirst(), zero.getSecond()));
           return true;
         }
       }
@@ -439,7 +438,7 @@ public class MunkresAssignment {
   private Pair<Integer, Integer> findUncoveredZero() {
     for (int r = 0; r < rows; r++) {
       if (leastInRow[r] == 0) {
-        return new Pair<Integer, Integer>(r, leastInRowIndex[r]);
+        return new Pair<>(r, leastInRowIndex[r]);
       }
     }
     return null;
@@ -476,7 +475,7 @@ public class MunkresAssignment {
   private Pair<Integer, Integer> starInRow(int r) {
     for (int c = 0; c < cols; c++) {
       if (mask[r][c] == STAR) {
-        return new Pair<Integer, Integer>(r, c);
+        return new Pair<>(r, c);
       }
     }
     return null;
@@ -491,7 +490,7 @@ public class MunkresAssignment {
   private Pair<Integer, Integer> starInCol(int c) {
     for (int r = 0; r < rows; r++) {
       if (mask[r][c] == STAR) {
-        return new Pair<Integer, Integer>(r, c);
+        return new Pair<>(r, c);
       }
     }
     return null;
@@ -506,7 +505,7 @@ public class MunkresAssignment {
   private Pair<Integer, Integer> primeInRow(int r) {
     for (int c = 0; c < cols; c++) {
       if (mask[r][c] == PRIME) {
-        return new Pair<Integer, Integer>(r, c);
+        return new Pair<>(r, c);
       }
     }
     return null;

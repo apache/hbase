@@ -183,7 +183,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
 
   @Override
   public List<InputSplit> getSplits(JobContext job) throws IOException, InterruptedException {
-    List<InputSplit> results = new ArrayList<InputSplit>();
+    List<InputSplit> results = new ArrayList<>();
     for (TableSnapshotInputFormatImpl.InputSplit split :
         TableSnapshotInputFormatImpl.getSplits(job.getConfiguration())) {
       results.add(new TableSnapshotRegionSplit(split));

@@ -715,7 +715,7 @@ public class TestPartitionedMobCompactor {
       @Override
       protected List<Path> performCompaction(PartitionedMobCompactionRequest request)
           throws IOException {
-        List<Path> delFilePaths = new ArrayList<Path>();
+        List<Path> delFilePaths = new ArrayList<>();
         for (CompactionDelPartition delPartition: request.getDelPartitions()) {
           for (Path p : delPartition.listDelFiles()) {
             delFilePaths.add(p);
@@ -848,7 +848,7 @@ public class TestPartitionedMobCompactor {
    * @return the cell size
    */
   private int countDelCellsInDelFiles(List<Path> paths) throws IOException {
-    List<StoreFile> sfs = new ArrayList<StoreFile>();
+    List<StoreFile> sfs = new ArrayList<>();
     int size = 0;
     for(Path path : paths) {
       StoreFile sf = new StoreFile(fs, path, conf, cacheConf, BloomType.NONE);
@@ -878,7 +878,7 @@ public class TestPartitionedMobCompactor {
   private static ExecutorService createThreadPool() {
     int maxThreads = 10;
     long keepAliveTime = 60;
-    final SynchronousQueue<Runnable> queue = new SynchronousQueue<Runnable>();
+    final SynchronousQueue<Runnable> queue = new SynchronousQueue<>();
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime,
       TimeUnit.SECONDS, queue, Threads.newDaemonThreadFactory("MobFileCompactionChore"),
       new RejectedExecutionHandler() {

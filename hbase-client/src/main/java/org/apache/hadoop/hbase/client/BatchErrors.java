@@ -28,9 +28,9 @@ import java.util.List;
 
 class BatchErrors {
   private static final Log LOG = LogFactory.getLog(BatchErrors.class);
-  final List<Throwable> throwables = new ArrayList<Throwable>();
-  final List<Row> actions = new ArrayList<Row>();
-  final List<String> addresses = new ArrayList<String>();
+  final List<Throwable> throwables = new ArrayList<>();
+  final List<Row> actions = new ArrayList<>();
+  final List<String> addresses = new ArrayList<>();
 
   public synchronized void add(Throwable ex, Row row, ServerName serverName) {
     if (row == null){
@@ -51,8 +51,8 @@ class BatchErrors {
       LOG.error("Exception occurred! Exception details: " + throwables + ";\nActions: "
               + actions);
     }
-    return new RetriesExhaustedWithDetailsException(new ArrayList<Throwable>(throwables),
-            new ArrayList<Row>(actions), new ArrayList<String>(addresses));
+    return new RetriesExhaustedWithDetailsException(new ArrayList<>(throwables),
+            new ArrayList<>(actions), new ArrayList<>(addresses));
   }
 
   public synchronized void clear() {

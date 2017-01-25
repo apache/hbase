@@ -255,7 +255,7 @@ public class TestReplicationAdmin {
 
     // append table column family: f1 of t3 to replication
     tableCFs.clear();
-    tableCFs.put(tableName3, new ArrayList<String>());
+    tableCFs.put(tableName3, new ArrayList<>());
     tableCFs.get(tableName3).add("f1");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
@@ -269,7 +269,7 @@ public class TestReplicationAdmin {
     assertEquals("f1", result.get(tableName3).get(0));
 
     tableCFs.clear();
-    tableCFs.put(tableName4, new ArrayList<String>());
+    tableCFs.put(tableName4, new ArrayList<>());
     tableCFs.get(tableName4).add("f1");
     tableCFs.get(tableName4).add("f2");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
@@ -289,10 +289,10 @@ public class TestReplicationAdmin {
 
     // append "table5" => [], then append "table5" => ["f1"]
     tableCFs.clear();
-    tableCFs.put(tableName5, new ArrayList<String>());
+    tableCFs.put(tableName5, new ArrayList<>());
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     tableCFs.clear();
-    tableCFs.put(tableName5, new ArrayList<String>());
+    tableCFs.put(tableName5, new ArrayList<>());
     tableCFs.get(tableName5).add("f1");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
@@ -303,11 +303,11 @@ public class TestReplicationAdmin {
 
     // append "table6" => ["f1"], then append "table6" => []
     tableCFs.clear();
-    tableCFs.put(tableName6, new ArrayList<String>());
+    tableCFs.put(tableName6, new ArrayList<>());
     tableCFs.get(tableName6).add("f1");
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     tableCFs.clear();
-    tableCFs.put(tableName6, new ArrayList<String>());
+    tableCFs.put(tableName6, new ArrayList<>());
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationSerDeHelper.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(6, result.size());
@@ -339,7 +339,7 @@ public class TestReplicationAdmin {
 
     tableCFs.clear();
     tableCFs.put(tableName1, null);
-    tableCFs.put(tableName2, new ArrayList<String>());
+    tableCFs.put(tableName2, new ArrayList<>());
     tableCFs.get(tableName2).add("cf1");
     admin.setPeerTableCFs(ID_ONE, tableCFs);
     try {
@@ -360,7 +360,7 @@ public class TestReplicationAdmin {
 
     try {
       tableCFs.clear();
-      tableCFs.put(tableName1, new ArrayList<String>());
+      tableCFs.put(tableName1, new ArrayList<>());
       tableCFs.get(tableName1).add("f1");
       admin.removePeerTableCFs(ID_ONE, tableCFs);
       assertTrue(false);
@@ -382,13 +382,13 @@ public class TestReplicationAdmin {
     } catch (ReplicationException e) {
     }
     tableCFs.clear();
-    tableCFs.put(tableName2, new ArrayList<String>());
+    tableCFs.put(tableName2, new ArrayList<>());
     tableCFs.get(tableName2).add("cf1");
     admin.removePeerTableCFs(ID_ONE, tableCFs);
     assertNull(admin.getPeerTableCFs(ID_ONE));
 
     tableCFs.clear();
-    tableCFs.put(tableName4, new ArrayList<String>());
+    tableCFs.put(tableName4, new ArrayList<>());
     admin.setPeerTableCFs(ID_ONE, tableCFs);
     admin.removePeerTableCFs(ID_ONE, tableCFs);
     assertNull(admin.getPeerTableCFs(ID_ONE));
@@ -407,7 +407,7 @@ public class TestReplicationAdmin {
     admin.peerAdded(ID_ONE);
 
     rpc = admin.getPeerConfig(ID_ONE);
-    Set<String> namespaces = new HashSet<String>();
+    Set<String> namespaces = new HashSet<>();
     namespaces.add(ns1);
     namespaces.add(ns2);
     rpc.setNamespaces(namespaces);
@@ -448,7 +448,7 @@ public class TestReplicationAdmin {
     admin.updatePeerConfig(ID_ONE, rpc);
     rpc = admin.getPeerConfig(ID_ONE);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
-    tableCfs.put(tableName1, new ArrayList<String>());
+    tableCfs.put(tableName1, new ArrayList<>());
     rpc.setTableCFsMap(tableCfs);
     try {
       admin.updatePeerConfig(ID_ONE, rpc);
@@ -460,7 +460,7 @@ public class TestReplicationAdmin {
 
     rpc = admin.getPeerConfig(ID_ONE);
     tableCfs.clear();
-    tableCfs.put(tableName2, new ArrayList<String>());
+    tableCfs.put(tableName2, new ArrayList<>());
     rpc.setTableCFsMap(tableCfs);
     admin.updatePeerConfig(ID_ONE, rpc);
     rpc = admin.getPeerConfig(ID_ONE);

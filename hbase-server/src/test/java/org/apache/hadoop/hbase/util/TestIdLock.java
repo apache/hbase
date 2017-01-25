@@ -50,7 +50,7 @@ public class TestIdLock {
 
   private IdLock idLock = new IdLock();
 
-  private Map<Long, String> idOwner = new ConcurrentHashMap<Long, String>();
+  private Map<Long, String> idOwner = new ConcurrentHashMap<>();
 
   private class IdLockTestThread implements Callable<Boolean> {
 
@@ -95,8 +95,7 @@ public class TestIdLock {
   public void testMultipleClients() throws Exception {
     ExecutorService exec = Executors.newFixedThreadPool(NUM_THREADS);
     try {
-      ExecutorCompletionService<Boolean> ecs =
-          new ExecutorCompletionService<Boolean>(exec);
+      ExecutorCompletionService<Boolean> ecs = new ExecutorCompletionService<>(exec);
       for (int i = 0; i < NUM_THREADS; ++i)
         ecs.submit(new IdLockTestThread("client_" + i));
       for (int i = 0; i < NUM_THREADS; ++i) {

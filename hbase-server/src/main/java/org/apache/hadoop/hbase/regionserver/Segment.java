@@ -55,7 +55,7 @@ public abstract class Segment {
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD + ClassSize.ATOMIC_REFERENCE
       + ClassSize.CELL_SET + ClassSize.ATOMIC_LONG + ClassSize.TIMERANGE_TRACKER;
 
-  private AtomicReference<CellSet> cellSet= new AtomicReference<CellSet>();
+  private AtomicReference<CellSet> cellSet= new AtomicReference<>();
   private final CellComparator comparator;
   protected long minSequenceId;
   private MemStoreLAB memStoreLAB;
@@ -115,7 +115,7 @@ public abstract class Segment {
   }
 
   public List<KeyValueScanner> getScanners(long readPoint, long order) {
-    List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>(1);
+    List<KeyValueScanner> scanners = new ArrayList<>(1);
     scanners.add(getScanner(readPoint, order));
     return scanners;
   }

@@ -86,7 +86,7 @@ public class LRUDictionary implements Dictionary {
     private Node head;
     private Node tail;
 
-    private HashMap<Node, Short> nodeToIndex = new HashMap<Node, Short>();
+    private HashMap<Node, Short> nodeToIndex = new HashMap<>();
     private Node[] indexToNode;
     private int initSize = 0;
 

@@ -378,7 +378,7 @@ public class TestVisibilityLabelsReplication {
   static Table writeData(TableName tableName, String... labelExps) throws Exception {
     Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
     int i = 1;
-    List<Put> puts = new ArrayList<Put>(labelExps.length);
+    List<Put> puts = new ArrayList<>(labelExps.length);
     for (String labelExp : labelExps) {
       Put put = new Put(Bytes.toBytes("row" + i));
       put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
@@ -399,7 +399,7 @@ public class TestVisibilityLabelsReplication {
         Durability durability) throws IOException {
       byte[] attribute = m.getAttribute(NON_VISIBILITY);
       byte[] cf = null;
-      List<Cell> updatedCells = new ArrayList<Cell>();
+      List<Cell> updatedCells = new ArrayList<>();
       if (attribute != null) {
         for (List<? extends Cell> edits : m.getFamilyCellMap().values()) {
           for (Cell cell : edits) {
@@ -408,7 +408,7 @@ public class TestVisibilityLabelsReplication {
               cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new ArrayBackedTag((byte) NON_VIS_TAG_TYPE, attribute);
-            List<Tag> tagList = new ArrayList<Tag>(kv.getTags().size() + 1);
+            List<Tag> tagList = new ArrayList<>(kv.getTags().size() + 1);
             tagList.add(tag);
             tagList.addAll(kv.getTags());
             Cell newcell = CellUtil.createCell(kv, tagList);

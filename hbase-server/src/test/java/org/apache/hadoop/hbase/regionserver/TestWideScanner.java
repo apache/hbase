@@ -94,7 +94,7 @@ public class TestWideScanner extends HBaseTestCase {
     try {
       this.r = createNewHRegion(TESTTABLEDESC, null, null);
       int inserted = addWideContent(this.r);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       Scan scan = new Scan();
       scan.addFamily(A);
       scan.addFamily(B);
@@ -130,7 +130,7 @@ public class TestWideScanner extends HBaseTestCase {
           ((HRegion.RegionScannerImpl)s).storeHeap.getHeap().iterator();
         while (scanners.hasNext()) {
           StoreScanner ss = (StoreScanner)scanners.next();
-          ss.updateReaders(new ArrayList<StoreFile>());
+          ss.updateReaders(new ArrayList<>());
         }
       } while (more);
 

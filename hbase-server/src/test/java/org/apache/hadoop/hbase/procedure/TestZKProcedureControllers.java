@@ -180,7 +180,7 @@ public class TestZKProcedureControllers {
 
     CountDownLatch prepared = new CountDownLatch(expected.size());
     CountDownLatch committed = new CountDownLatch(expected.size());
-    ArrayList<byte[]> dataFromMembers = new ArrayList<byte[]>();
+    ArrayList<byte[]> dataFromMembers = new ArrayList<>();
 
     // mock out coordinator so we can keep track of zk progress
     ProcedureCoordinator coordinator = setupMockCoordinator(operationName,
@@ -256,7 +256,7 @@ public class TestZKProcedureControllers {
 
     final CountDownLatch prepared = new CountDownLatch(expected.size());
     final CountDownLatch committed = new CountDownLatch(expected.size());
-    ArrayList<byte[]> dataFromMembers = new ArrayList<byte[]>();
+    ArrayList<byte[]> dataFromMembers = new ArrayList<>();
 
     // mock out coordinator so we can keep track of zk progress
     ProcedureCoordinator coordinator = setupMockCoordinator(operationName,
@@ -403,14 +403,13 @@ public class TestZKProcedureControllers {
 
       // make a cohort controller for each expected node
 
-      List<ZKProcedureMemberRpcs> cohortControllers = new ArrayList<ZKProcedureMemberRpcs>();
+      List<ZKProcedureMemberRpcs> cohortControllers = new ArrayList<>();
       for (String nodeName : expected) {
         ZKProcedureMemberRpcs cc = new ZKProcedureMemberRpcs(watcher, operationName);
         cc.start(nodeName, member);
         cohortControllers.add(cc);
       }
-      return new Pair<ZKProcedureCoordinatorRpcs, List<ZKProcedureMemberRpcs>>(
-          controller, cohortControllers);
+      return new Pair<>(controller, cohortControllers);
     }
   };
 
@@ -427,7 +426,7 @@ public class TestZKProcedureControllers {
         ProcedureMember member, List<String> expected) throws Exception {
 
       // make a cohort controller for each expected node
-      List<ZKProcedureMemberRpcs> cohortControllers = new ArrayList<ZKProcedureMemberRpcs>();
+      List<ZKProcedureMemberRpcs> cohortControllers = new ArrayList<>();
       for (String nodeName : expected) {
         ZKProcedureMemberRpcs cc = new ZKProcedureMemberRpcs(watcher, operationName);
         cc.start(nodeName, member);
@@ -439,8 +438,7 @@ public class TestZKProcedureControllers {
           watcher, operationName, CONTROLLER_NODE_NAME);
       controller.start(coordinator);
 
-      return new Pair<ZKProcedureCoordinatorRpcs, List<ZKProcedureMemberRpcs>>(
-          controller, cohortControllers);
+      return new Pair<>(controller, cohortControllers);
     }
   };
 }

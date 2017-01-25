@@ -142,7 +142,7 @@ public class HRegionLocator implements RegionLocator {
 
   @VisibleForTesting
   List<RegionLocations> listRegionLocations() throws IOException {
-    final List<RegionLocations> regions = new ArrayList<RegionLocations>();
+    final List<RegionLocations> regions = new ArrayList<>();
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
       @Override
       public boolean visitInternal(Result result) throws IOException {

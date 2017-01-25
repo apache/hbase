@@ -129,7 +129,7 @@ public class DefaultMemStore extends AbstractMemStore {
    * Scanners are ordered from 0 (oldest) to newest in increasing order.
    */
   public List<KeyValueScanner> getScanners(long readPt) throws IOException {
-    List<KeyValueScanner> list = new ArrayList<KeyValueScanner>(2);
+    List<KeyValueScanner> list = new ArrayList<>(2);
     list.add(this.active.getScanner(readPt, 1));
     list.add(this.snapshot.getScanner(readPt, 0));
     return Collections.<KeyValueScanner> singletonList(
@@ -138,7 +138,7 @@ public class DefaultMemStore extends AbstractMemStore {
 
   @Override
   protected List<Segment> getSegments() throws IOException {
-    List<Segment> list = new ArrayList<Segment>(2);
+    List<Segment> list = new ArrayList<>(2);
     list.add(this.active);
     list.add(this.snapshot);
     return list;

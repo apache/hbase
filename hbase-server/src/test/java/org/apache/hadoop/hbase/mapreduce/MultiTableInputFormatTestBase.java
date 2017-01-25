@@ -234,7 +234,7 @@ public abstract class MultiTableInputFormatTestBase {
     c.set(KEY_STARTROW, start != null ? start : "");
     c.set(KEY_LASTROW, last != null ? last : "");
 
-    List<Scan> scans = new ArrayList<Scan>();
+    List<Scan> scans = new ArrayList<>();
 
     for (String tableName : TABLES) {
       Scan scan = new Scan();

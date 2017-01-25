@@ -86,9 +86,9 @@ CoprocessorService, Coprocessor {
     MutateRowsResponse response = MutateRowsResponse.getDefaultInstance();
     try {
       // set of rows to lock, sorted to avoid deadlocks
-      SortedSet<byte[]> rowsToLock = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+      SortedSet<byte[]> rowsToLock = new TreeSet<>(Bytes.BYTES_COMPARATOR);
       List<MutationProto> mutateRequestList = request.getMutationRequestList();
-      List<Mutation> mutations = new ArrayList<Mutation>(mutateRequestList.size());
+      List<Mutation> mutations = new ArrayList<>(mutateRequestList.size());
       for (MutationProto m : mutateRequestList) {
         mutations.add(ProtobufUtil.toMutation(m));
       }

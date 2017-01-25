@@ -49,7 +49,7 @@ public class ByteRangeUtils {
 
   public static ArrayList<byte[]> copyToNewArrays(Collection<ByteRange> ranges) {
     if (ranges == null) {
-      return new ArrayList<byte[]>(0);
+      return new ArrayList<>(0);
     }
     ArrayList<byte[]> arrays = Lists.newArrayListWithCapacity(ranges.size());
     for (ByteRange range : ranges) {
@@ -60,7 +60,7 @@ public class ByteRangeUtils {
 
   public static ArrayList<ByteRange> fromArrays(Collection<byte[]> arrays) {
     if (arrays == null) {
-      return new ArrayList<ByteRange>(0);
+      return new ArrayList<>(0);
     }
     ArrayList<ByteRange> ranges = Lists.newArrayListWithCapacity(arrays.size());
     for (byte[] array : arrays) {

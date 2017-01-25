@@ -76,9 +76,9 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   protected void initCache() {
     // concurrent cache
     cacheCapacity = calcCacheCapacity();
-    cache = new LinkedBlockingQueue<Result>();
+    cache = new LinkedBlockingQueue<>();
     cacheSizeInBytes = new AtomicLong(0);
-    exceptionsQueue = new ConcurrentLinkedQueue<Exception>();
+    exceptionsQueue = new ConcurrentLinkedQueue<>();
     prefetchRunnable = new PrefetchRunnable();
     prefetchRunning = new AtomicBoolean(false);
     closingThreadId = new AtomicLong(NO_THREAD);

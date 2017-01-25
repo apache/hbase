@@ -31,7 +31,7 @@ import org.junit.experimental.categories.Category;
 public class TestBoundedArrayQueue {
 
   private int qMaxElements = 5;
-  private BoundedArrayQueue<Integer> queue = new BoundedArrayQueue<Integer>(qMaxElements);
+  private BoundedArrayQueue<Integer> queue = new BoundedArrayQueue<>(qMaxElements);
 
   @Test
   public void testBoundedArrayQueueOperations() throws Exception {

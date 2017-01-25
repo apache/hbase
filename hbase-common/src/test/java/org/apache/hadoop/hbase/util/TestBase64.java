@@ -55,7 +55,7 @@ public class TestBase64 extends TestCase {
    * @throws UnsupportedEncodingException
    */
   public void testBase64() throws UnsupportedEncodingException {
-    TreeMap<String, String> sorted = new TreeMap<String, String>();
+    TreeMap<String, String> sorted = new TreeMap<>();
 
     for (int i = 0; i < uris.length; i++) {
       byte[] bytes = uris[i].getBytes("UTF-8");

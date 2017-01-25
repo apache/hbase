@@ -128,8 +128,8 @@ public class RandomDistribution {
         throw new IllegalArgumentException("Invalid arguments");
       }
       random = r;
-      k = new ArrayList<Integer>();
-      v = new ArrayList<Double>();
+      k = new ArrayList<>();
+      v = new ArrayList<>();
 
       double sum = 0;
       int last = -1;

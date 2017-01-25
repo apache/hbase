@@ -209,33 +209,28 @@ public class ProcedureExecutor<TEnvironment> {
    * Once a Root-Procedure completes (success or failure), the result will be added to this map.
    * The user of ProcedureExecutor should call getResult(procId) to get the result.
    */
-  private final ConcurrentHashMap<Long, ProcedureInfo> completed =
-    new ConcurrentHashMap<Long, ProcedureInfo>();
+  private final ConcurrentHashMap<Long, ProcedureInfo> completed = new ConcurrentHashMap<>();
 
   /**
    * Map the the procId returned by submitProcedure(), the Root-ProcID, to the RootProcedureState.
    * The RootProcedureState contains the execution stack of the Root-Procedure,
    * It is added to the map by submitProcedure() and removed on procedure completion.
    */
-  private final ConcurrentHashMap<Long, RootProcedureState> rollbackStack =
-    new ConcurrentHashMap<Long, RootProcedureState>();
+  private final ConcurrentHashMap<Long, RootProcedureState> rollbackStack = new ConcurrentHashMap<>();
 
   /**
    * Helper map to lookup the live procedures by ID.
    * This map contains every procedure. root-procedures and subprocedures.
    */
-  private final ConcurrentHashMap<Long, Procedure> procedures =
-    new ConcurrentHashMap<Long, Procedure>();
+  private final ConcurrentHashMap<Long, Procedure> procedures = new ConcurrentHashMap<>();
 
   /**
    * Helper map to lookup whether the procedure already issued from the same client.
    * This map contains every root procedure.
    */
-  private final ConcurrentHashMap<NonceKey, Long> nonceKeysToProcIdsMap =
-      new ConcurrentHashMap<NonceKey, Long>();
+  private final ConcurrentHashMap<NonceKey, Long> nonceKeysToProcIdsMap = new ConcurrentHashMap<>();
 
-  private final CopyOnWriteArrayList<ProcedureExecutorListener> listeners =
-    new CopyOnWriteArrayList<ProcedureExecutorListener>();
+  private final CopyOnWriteArrayList<ProcedureExecutorListener> listeners = new CopyOnWriteArrayList<>();
 
   private Configuration conf;
   private ThreadGroup threadGroup;
@@ -399,7 +394,7 @@ public class ProcedureExecutor<TEnvironment> {
           break;
         case WAITING_TIMEOUT:
           if (waitingSet == null) {
-            waitingSet = new HashSet<Procedure>();
+            waitingSet = new HashSet<>();
           }
           waitingSet.add(proc);
           break;
@@ -498,7 +493,7 @@ public class ProcedureExecutor<TEnvironment> {
 
     // Create the workers
     workerId.set(0);
-    workerThreads = new CopyOnWriteArrayList<WorkerThread>();
+    workerThreads = new CopyOnWriteArrayList<>();
     for (int i = 0; i < corePoolSize; ++i) {
       workerThreads.add(new WorkerThread(threadGroup));
     }
@@ -979,8 +974,7 @@ public class ProcedureExecutor<TEnvironment> {
    * @return the procedures in a list
    */
   public List<ProcedureInfo> listProcedures() {
-    final List<ProcedureInfo> procedureLists =
-        new ArrayList<ProcedureInfo>(procedures.size() + completed.size());
+    final List<ProcedureInfo> procedureLists = new ArrayList<>(procedures.size() + completed.size());
     for (Map.Entry<Long, Procedure> p: procedures.entrySet()) {
       procedureLists.add(ProcedureUtil.convertToProcedureInfo(p.getValue()));
     }
@@ -1614,7 +1608,7 @@ public class ProcedureExecutor<TEnvironment> {
   //  Timeout Thread
   // ==========================================================================
   private final class TimeoutExecutorThread extends StoppableThread {
-    private final DelayQueue<DelayedWithTimeout> queue = new DelayQueue<DelayedWithTimeout>();
+    private final DelayQueue<DelayedWithTimeout> queue = new DelayQueue<>();
 
     public TimeoutExecutorThread(final ThreadGroup group) {
       super(group, "ProcedureTimeoutExecutor");

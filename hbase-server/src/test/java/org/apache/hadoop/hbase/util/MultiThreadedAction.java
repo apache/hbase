@@ -533,7 +533,7 @@ public abstract class MultiThreadedAction {
 
   // Parse mutate info into a map of <column name> => <update action>
   private Map<String, MutationType> parseMutateInfo(byte[] mutateInfo) {
-    Map<String, MutationType> mi = new HashMap<String, MutationType>();
+    Map<String, MutationType> mi = new HashMap<>();
     if (mutateInfo != null) {
       String mutateInfoStr = Bytes.toString(mutateInfo);
       String[] mutations = mutateInfoStr.split("#");

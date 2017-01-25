@@ -220,7 +220,7 @@ public class TestCompactionState {
 
   private static void loadData(final Table ht, final byte[][] families,
       final int rows, final int flushes) throws IOException {
-    List<Put> puts = new ArrayList<Put>(rows);
+    List<Put> puts = new ArrayList<>(rows);
     byte[] qualifier = Bytes.toBytes("val");
     for (int i = 0; i < flushes; i++) {
       for (int k = 0; k < rows; k++) {

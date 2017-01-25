@@ -50,7 +50,7 @@ public class DrainingServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(DrainingServerTracker.class);
 
   private ServerManager serverManager;
-  private final NavigableSet<ServerName> drainingServers = new TreeSet<ServerName>();
+  private final NavigableSet<ServerName> drainingServers = new TreeSet<>();
   private Abortable abortable;
 
   public DrainingServerTracker(ZooKeeperWatcher watcher,

@@ -148,8 +148,8 @@ public class ClassFinder {
     final Pattern jarResourceRe = Pattern.compile("^file:(.+\\.jar)!/" + path + "$");
 
     Enumeration<URL> resources = ClassLoader.getSystemClassLoader().getResources(path);
-    List<File> dirs = new ArrayList<File>();
-    List<String> jars = new ArrayList<String>();
+    List<File> dirs = new ArrayList<>();
+    List<String> jars = new ArrayList<>();
 
     while (resources.hasMoreElements()) {
       URL resource = resources.nextElement();
@@ -168,7 +168,7 @@ public class ClassFinder {
       }
     }
 
-    Set<Class<?>> classes = new HashSet<Class<?>>();
+    Set<Class<?>> classes = new HashSet<>();
     for (File directory : dirs) {
       classes.addAll(findClassesFromFiles(directory, packageName, proceedOnExceptions));
     }
@@ -189,7 +189,7 @@ public class ClassFinder {
       throw ioEx;
     }
 
-    Set<Class<?>> classes = new HashSet<Class<?>>();
+    Set<Class<?>> classes = new HashSet<>();
     JarEntry entry = null;
     try {
       while (true) {
@@ -236,7 +236,7 @@ public class ClassFinder {
 
   private Set<Class<?>> findClassesFromFiles(File baseDirectory, String packageName,
       boolean proceedOnExceptions) throws ClassNotFoundException, LinkageError {
-    Set<Class<?>> classes = new HashSet<Class<?>>();
+    Set<Class<?>> classes = new HashSet<>();
     if (!baseDirectory.exists()) {
       LOG.warn(baseDirectory.getAbsolutePath() + " does not exist");
       return classes;

@@ -39,7 +39,7 @@ public abstract class MultithreadedTestUtil {
     private Throwable err = null;
     private boolean stopped = false;
     private int threadDoneCount = 0;
-    private Set<TestThread> testThreads = new HashSet<TestThread>();
+    private Set<TestThread> testThreads = new HashSet<>();
 
     public TestContext(Configuration configuration) {
       this.conf = configuration;

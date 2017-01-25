@@ -233,7 +233,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   }
 
   private LinkedBlockingQueue<Long> insertData() throws IOException, InterruptedException {
-    LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<Long>(25000);
+    LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<>(25000);
     BufferedMutator ht = util.getConnection().getBufferedMutator(this.tableName);
     byte[] value = new byte[300];
     for (int x = 0; x < 5000; x++) {

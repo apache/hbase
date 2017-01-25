@@ -210,8 +210,7 @@ public final class SnapshotReferenceUtil {
       return;
     }
 
-    final ExecutorCompletionService<Void> completionService =
-      new ExecutorCompletionService<Void>(exec);
+    final ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<>(exec);
 
     for (final SnapshotRegionManifest regionManifest : regionManifests) {
       completionService.submit(new Callable<Void>() {
@@ -345,7 +344,7 @@ public final class SnapshotReferenceUtil {
   private static Set<String> getHFileNames(final Configuration conf, final FileSystem fs,
       final Path snapshotDir, final SnapshotDescription snapshotDesc)
       throws IOException {
-    final Set<String> names = new HashSet<String>();
+    final Set<String> names = new HashSet<>();
     visitTableStoreFiles(conf, fs, snapshotDir, snapshotDesc, new StoreFileVisitor() {
       @Override
       public void storeFile(final HRegionInfo regionInfo, final String family,

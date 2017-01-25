@@ -64,7 +64,7 @@ public class TestByteRangeWithKVSerialization {
     final byte[] QUALIFIER = Bytes.toBytes("q1");
     final byte[] VALUE = Bytes.toBytes("v");
     int kvCount = 1000000;
-    List<KeyValue> kvs = new ArrayList<KeyValue>(kvCount);
+    List<KeyValue> kvs = new ArrayList<>(kvCount);
     int totalSize = 0;
     Tag[] tags = new Tag[] { new ArrayBackedTag((byte) 1, "tag1") };
     for (int i = 0; i < kvCount; i++) {

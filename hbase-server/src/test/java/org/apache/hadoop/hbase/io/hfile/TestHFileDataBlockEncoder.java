@@ -243,8 +243,7 @@ public class TestHFileDataBlockEncoder {
    */
   @Parameters
   public static Collection<Object[]> getAllConfigurations() {
-    List<Object[]> configurations =
-        new ArrayList<Object[]>();
+    List<Object[]> configurations = new ArrayList<>();
 
     for (DataBlockEncoding diskAlgo : DataBlockEncoding.values()) {
       for (boolean includesMemstoreTS : new boolean[] { false, true }) {

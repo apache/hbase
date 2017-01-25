@@ -142,8 +142,7 @@ public class TestReplicationBase {
     table.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     table.addFamily(fam);
-    scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(HColumnDescriptor f : table.getColumnFamilies()) {
       scopes.put(f.getName(), f.getScope());
     }

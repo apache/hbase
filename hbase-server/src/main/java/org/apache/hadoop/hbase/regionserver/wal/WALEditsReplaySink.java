@@ -111,7 +111,7 @@ public class WALEditsReplaySink {
       if (entriesByRegion.containsKey(loc.getRegionInfo())) {
         regionEntries = entriesByRegion.get(loc.getRegionInfo());
       } else {
-        regionEntries = new ArrayList<Entry>();
+        regionEntries = new ArrayList<>();
         entriesByRegion.put(loc.getRegionInfo(), regionEntries);
       }
       regionEntries.add(entry);
@@ -160,7 +160,7 @@ public class WALEditsReplaySink {
     try {
       RpcRetryingCallerFactory factory = RpcRetryingCallerFactory.instantiate(conf, null);
       ReplayServerCallable<ReplicateWALEntryResponse> callable =
-          new ReplayServerCallable<ReplicateWALEntryResponse>(this.conn, this.rpcControllerFactory,
+          new ReplayServerCallable<>(this.conn, this.rpcControllerFactory,
               this.tableName, regionLoc, entries);
       factory.<ReplicateWALEntryResponse> newCaller().callWithRetries(callable, this.replayTimeout);
     } catch (IOException ie) {

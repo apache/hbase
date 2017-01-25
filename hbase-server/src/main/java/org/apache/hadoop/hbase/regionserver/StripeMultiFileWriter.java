@@ -143,7 +143,7 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
         byte[] majorRangeFrom, byte[] majorRangeTo) throws IOException {
       super(comparator);
       this.boundaries = targetBoundaries;
-      this.existingWriters = new ArrayList<StoreFileWriter>(this.boundaries.size() - 1);
+      this.existingWriters = new ArrayList<>(this.boundaries.size() - 1);
       // "major" range (range for which all files are included) boundaries, if any,
       // must match some target boundaries, let's find them.
       assert (majorRangeFrom == null) == (majorRangeTo == null);
@@ -283,8 +283,8 @@ public abstract class StripeMultiFileWriter extends AbstractMultiFileWriter {
       this.left = left;
       this.right = right;
       int preallocate = Math.min(this.targetCount, 64);
-      this.existingWriters = new ArrayList<StoreFileWriter>(preallocate);
-      this.boundaries = new ArrayList<byte[]>(preallocate + 1);
+      this.existingWriters = new ArrayList<>(preallocate);
+      this.boundaries = new ArrayList<>(preallocate + 1);
     }
 
     @Override

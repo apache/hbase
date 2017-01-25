@@ -125,7 +125,7 @@ public class TestFilterList {
   }
 
   private Filter getFilterMPONE() {
-    List<Filter> filters = new ArrayList<Filter>();
+    List<Filter> filters = new ArrayList<>();
     filters.add(new PageFilter(MAX_PAGES));
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPONE =
@@ -191,7 +191,7 @@ public class TestFilterList {
   }
 
   private Filter getMPALLFilter() {
-    List<Filter> filters = new ArrayList<Filter>();
+    List<Filter> filters = new ArrayList<>();
     filters.add(new PageFilter(MAX_PAGES));
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPALL =
@@ -239,7 +239,7 @@ public class TestFilterList {
   }
 
   public Filter getOrderingFilter() {
-    List<Filter> filters = new ArrayList<Filter>();
+    List<Filter> filters = new ArrayList<>();
     filters.add(new PrefixFilter(Bytes.toBytes("yyy")));
     filters.add(new PageFilter(MAX_PAGES));
     Filter filterMPONE =
@@ -370,7 +370,7 @@ public class TestFilterList {
    */
   @Test
   public void testSerialization() throws Exception {
-    List<Filter> filters = new ArrayList<Filter>();
+    List<Filter> filters = new ArrayList<>();
     filters.add(new PageFilter(MAX_PAGES));
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPALL =

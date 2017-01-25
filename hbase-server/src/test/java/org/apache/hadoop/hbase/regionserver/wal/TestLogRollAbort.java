@@ -199,8 +199,7 @@ public class TestLogRollAbort {
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
         HTableDescriptor htd = new HTableDescriptor(tableName);
         htd.addFamily(new HColumnDescriptor("column"));
-        NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-            Bytes.BYTES_COMPARATOR);
+        NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         for(byte[] fam : htd.getFamiliesKeys()) {
           scopes.put(fam, 0);
         }

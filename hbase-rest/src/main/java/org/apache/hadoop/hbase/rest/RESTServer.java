@@ -206,8 +206,7 @@ public class RESTServer implements Constants {
     }
 
     @SuppressWarnings("unchecked")
-    List<String> remainingArgs = commandLine != null ?
-        commandLine.getArgList() : new ArrayList<String>();
+    List<String> remainingArgs = commandLine != null ? commandLine.getArgList() : new ArrayList<>();
     if (remainingArgs.size() != 1) {
       printUsageAndExit(options, 1);
     }
@@ -256,7 +255,7 @@ public class RESTServer implements Constants {
     int queueSize = servlet.getConfiguration().getInt(REST_THREAD_POOL_TASK_QUEUE_SIZE, -1);
     int idleTimeout = servlet.getConfiguration().getInt(REST_THREAD_POOL_THREAD_IDLE_TIMEOUT, 60000);
     QueuedThreadPool threadPool = queueSize > 0 ?
-        new QueuedThreadPool(maxThreads, minThreads, idleTimeout, new ArrayBlockingQueue<Runnable>(queueSize)) :
+        new QueuedThreadPool(maxThreads, minThreads, idleTimeout, new ArrayBlockingQueue<>(queueSize)) :
         new QueuedThreadPool(maxThreads, minThreads, idleTimeout);
 
     Server server = new Server(threadPool);

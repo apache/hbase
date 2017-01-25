@@ -1063,7 +1063,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
-    Map<String, Object> params = new HashMap<String, Object>();
+    Map<String, Object> params = new HashMap<>();
     params.put(MASTER, this);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
         .getFileSystem(), archiveDir, params);
@@ -1327,7 +1327,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       Map<TableName, Map<ServerName, List<HRegionInfo>>> assignmentsByTable =
         this.assignmentManager.getRegionStates().getAssignmentsByTable();
 
-      List<RegionPlan> plans = new ArrayList<RegionPlan>();
+      List<RegionPlan> plans = new ArrayList<>();
 
       //Give the balancer the current cluster state.
       this.balancer.setClusterStatus(getClusterStatus());
@@ -2235,8 +2235,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   Pair<HRegionInfo, ServerName> getTableRegionForRow(
       final TableName tableName, final byte [] rowKey)
   throws IOException {
-    final AtomicReference<Pair<HRegionInfo, ServerName>> result =
-      new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
+    final AtomicReference<Pair<HRegionInfo, ServerName>> result = new AtomicReference<>(null);
 
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override
@@ -2345,7 +2344,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     List<ServerName> backupMasters = null;
     if (backupMasterStrings != null && !backupMasterStrings.isEmpty()) {
-      backupMasters = new ArrayList<ServerName>(backupMasterStrings.size());
+      backupMasters = new ArrayList<>(backupMasterStrings.size());
       for (String s: backupMasterStrings) {
         try {
           byte [] bytes;
@@ -2852,7 +2851,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   List<NamespaceDescriptor> getNamespaces() throws IOException {
     checkInitialized();
-    final List<NamespaceDescriptor> nsds = new ArrayList<NamespaceDescriptor>();
+    final List<NamespaceDescriptor> nsds = new ArrayList<>();
     boolean bypass = false;
     if (cpHost != null) {
       bypass = cpHost.preListNamespaceDescriptors(nsds);
@@ -2918,7 +2917,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   public List<HTableDescriptor> listTableDescriptors(final String namespace, final String regex,
       final List<TableName> tableNameList, final boolean includeSysTables)
   throws IOException {
-    List<HTableDescriptor> htds = new ArrayList<HTableDescriptor>();
+    List<HTableDescriptor> htds = new ArrayList<>();
     boolean bypass = cpHost != null?
         cpHost.preGetTableDescriptors(tableNameList, htds, regex): false;
     if (!bypass) {
@@ -2939,13 +2938,13 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public List<TableName> listTableNames(final String namespace, final String regex,
       final boolean includeSysTables) throws IOException {
-    List<HTableDescriptor> htds = new ArrayList<HTableDescriptor>();
+    List<HTableDescriptor> htds = new ArrayList<>();
     boolean bypass = cpHost != null? cpHost.preGetTableNames(htds, regex): false;
     if (!bypass) {
       htds = getTableDescriptors(htds, namespace, regex, null, includeSysTables);
       if (cpHost != null) cpHost.postGetTableNames(htds, regex);
     }
-    List<TableName> result = new ArrayList<TableName>(htds.size());
+    List<TableName> result = new ArrayList<>(htds.size());
     for (HTableDescriptor htd: htds) result.add(htd.getTableName());
     return result;
   }
@@ -3262,7 +3261,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public List<ServerName> listDrainingRegionServers() {
     String parentZnode = getZooKeeper().znodePaths.drainingZNode;
-    List<ServerName> serverNames = new ArrayList<ServerName>();
+    List<ServerName> serverNames = new ArrayList<>();
     List<String> serverStrs = null;
     try {
       serverStrs = ZKUtil.listChildrenNoWatch(getZooKeeper(), parentZnode);

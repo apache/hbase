@@ -496,7 +496,7 @@ public class KeyValueUtil {
         return KeyValueUtil.ensureKeyValue(arg0);
       }
     });
-    return new ArrayList<KeyValue>(lazyList);
+    return new ArrayList<>(lazyList);
   }
   /**
    * Write out a KeyValue in the manner in which we used to when KeyValue was a

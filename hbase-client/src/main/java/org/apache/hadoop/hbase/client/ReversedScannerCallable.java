@@ -139,7 +139,7 @@ public class ReversedScannerCallable extends ScannerCallable {
           + Bytes.toStringBinary(startKey) + " > "
           + Bytes.toStringBinary(endKey));
     }
-    List<HRegionLocation> regionList = new ArrayList<HRegionLocation>();
+    List<HRegionLocation> regionList = new ArrayList<>();
     byte[] currentKey = startKey;
     do {
       RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,

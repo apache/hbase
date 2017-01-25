@@ -52,7 +52,7 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
 
   @JsonProperty("Namespace")
   @XmlElement(name="Namespace")
-  private List<String> namespaces = new ArrayList<String>();
+  private List<String> namespaces = new ArrayList<>();
 
   /**
    * Default constructor. Do not use.
@@ -66,7 +66,7 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
    */
   public NamespacesModel(Admin admin) throws IOException {
     NamespaceDescriptor[] nds = admin.listNamespaceDescriptors();
-    namespaces = new ArrayList<String>(nds.length);
+    namespaces = new ArrayList<>(nds.length);
     for (NamespaceDescriptor nd : nds) {
       namespaces.add(nd.getName());
     }

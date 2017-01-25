@@ -143,14 +143,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
    * key, need to use TreeMap and provide a Comparator.  Use
    * {@link #setGetResult(byte[], byte[], Result)} filling this map.
    */
-  private final Map<byte [], Map<byte [], Result>> gets =
-    new TreeMap<byte [], Map<byte [], Result>>(Bytes.BYTES_COMPARATOR);
+  private final Map<byte [], Map<byte [], Result>> gets = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
    * Map of regions to results to return when scanning.
    */
-  private final Map<byte [], Result []> nexts =
-    new TreeMap<byte [], Result []>(Bytes.BYTES_COMPARATOR);
+  private final Map<byte [], Result []> nexts = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
    * Data structure that holds regionname and index used scanning.
@@ -177,8 +175,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   /**
    * Outstanding scanners and their offset into <code>nexts</code>
    */
-  private final Map<Long, RegionNameAndIndex> scannersAndOffsets =
-    new HashMap<Long, RegionNameAndIndex>();
+  private final Map<Long, RegionNameAndIndex> scannersAndOffsets = new HashMap<>();
 
   /**
    * @param sn Name of this mock regionserver
@@ -203,7 +200,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
     if (value == null) {
       // If no value already, create one.  Needs to be treemap because we are
       // using byte array as key.   Not thread safe.
-      value = new TreeMap<byte [], Result>(Bytes.BYTES_COMPARATOR);
+      value = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       this.gets.put(regionName, value);
     }
     value.put(row, r);
@@ -402,7 +399,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
         Result result = next(scannerId);
         if (result != null) {
           builder.addCellsPerResult(result.size());
-          List<CellScannable> results = new ArrayList<CellScannable>(1);
+          List<CellScannable> results = new ArrayList<>(1);
           results.add(result);
           ((HBaseRpcController) controller).setCellScanner(CellUtil
               .createCellScanner(results));

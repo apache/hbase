@@ -80,41 +80,35 @@ public class RegionStates {
   /**
    * Regions currently in transition.
    */
-  final HashMap<String, RegionState> regionsInTransition =
-    new HashMap<String, RegionState>();
+  final HashMap<String, RegionState> regionsInTransition = new HashMap<>();
 
   /**
    * Region encoded name to state map.
    * All the regions should be in this map.
    */
-  private final Map<String, RegionState> regionStates =
-    new HashMap<String, RegionState>();
+  private final Map<String, RegionState> regionStates = new HashMap<>();
 
   /**
    * Holds mapping of table -> region state
    */
-  private final Map<TableName, Map<String, RegionState>> regionStatesTableIndex =
-      new HashMap<TableName, Map<String, RegionState>>();
+  private final Map<TableName, Map<String, RegionState>> regionStatesTableIndex = new HashMap<>();
 
   /**
    * Server to regions assignment map.
    * Contains the set of regions currently assigned to a given server.
    */
-  private final Map<ServerName, Set<HRegionInfo>> serverHoldings =
-    new HashMap<ServerName, Set<HRegionInfo>>();
+  private final Map<ServerName, Set<HRegionInfo>> serverHoldings = new HashMap<>();
 
   /**
    * Maintains the mapping from the default region to the replica regions.
    */
-  private final Map<HRegionInfo, Set<HRegionInfo>> defaultReplicaToOtherReplicas =
-    new HashMap<HRegionInfo, Set<HRegionInfo>>();
+  private final Map<HRegionInfo, Set<HRegionInfo>> defaultReplicaToOtherReplicas = new HashMap<>();
 
   /**
    * Region to server assignment map.
    * Contains the server a given region is currently assigned to.
    */
-  private final TreeMap<HRegionInfo, ServerName> regionAssignments =
-    new TreeMap<HRegionInfo, ServerName>();
+  private final TreeMap<HRegionInfo, ServerName> regionAssignments = new TreeMap<>();
 
   /**
    * Encoded region name to server assignment map for re-assignment
@@ -126,8 +120,7 @@ public class RegionStates {
    * is offline while the info in lastAssignments is cleared when
    * the region is closed or the server is dead and processed.
    */
-  private final HashMap<String, ServerName> lastAssignments =
-    new HashMap<String, ServerName>();
+  private final HashMap<String, ServerName> lastAssignments = new HashMap<>();
 
   /**
    * Encoded region name to server assignment map for the
@@ -138,16 +131,14 @@ public class RegionStates {
    * to match the meta. We need this map to find out the old server
    * whose serverHoldings needs cleanup, given a moved region.
    */
-  private final HashMap<String, ServerName> oldAssignments =
-    new HashMap<String, ServerName>();
+  private final HashMap<String, ServerName> oldAssignments = new HashMap<>();
 
   /**
    * Map a host port pair string to the latest start code
    * of a region server which is known to be dead. It is dead
    * to us, but server manager may not know it yet.
    */
-  private final HashMap<String, Long> deadServers =
-    new HashMap<String, Long>();
+  private final HashMap<String, Long> deadServers = new HashMap<>();
 
   /**
    * Map a dead servers to the time when log split is done.
@@ -156,8 +147,7 @@ public class RegionStates {
    * on a configured time. By default, we assume a dead
    * server should be done with log splitting in two hours.
    */
-  private final HashMap<ServerName, Long> processedServers =
-    new HashMap<ServerName, Long>();
+  private final HashMap<ServerName, Long> processedServers = new HashMap<>();
   private long lastProcessedServerCleanTime;
 
   private final TableStateManager tableStateManager;
@@ -181,7 +171,7 @@ public class RegionStates {
    * @return a copy of the region assignment map
    */
   public synchronized Map<HRegionInfo, ServerName> getRegionAssignments() {
-    return new TreeMap<HRegionInfo, ServerName>(regionAssignments);
+    return new TreeMap<>(regionAssignments);
   }
 
   /**
@@ -191,7 +181,7 @@ public class RegionStates {
    */
   synchronized Map<ServerName, List<HRegionInfo>> getRegionAssignments(
     Collection<HRegionInfo> regions) {
-    Map<ServerName, List<HRegionInfo>> map = new HashMap<ServerName, List<HRegionInfo>>();
+    Map<ServerName, List<HRegionInfo>> map = new HashMap<>();
     for (HRegionInfo region : regions) {
       HRegionInfo defaultReplica = RegionReplicaUtil.getRegionInfoForDefaultReplica(region);
       Set<HRegionInfo> allReplicas = defaultReplicaToOtherReplicas.get(defaultReplica);
@@ -201,7 +191,7 @@ public class RegionStates {
           if (server != null) {
             List<HRegionInfo> regionsOnServer = map.get(server);
             if (regionsOnServer == null) {
-              regionsOnServer = new ArrayList<HRegionInfo>(1);
+              regionsOnServer = new ArrayList<>(1);
               map.put(server, regionsOnServer);
             }
             regionsOnServer.add(hri);
@@ -220,11 +210,11 @@ public class RegionStates {
    * Get regions in transition and their states
    */
   public synchronized Set<RegionState> getRegionsInTransition() {
-    return new HashSet<RegionState>(regionsInTransition.values());
+    return new HashSet<>(regionsInTransition.values());
   }
 
   public synchronized SortedSet<RegionState> getRegionsInTransitionOrderedByTimestamp() {
-    final TreeSet<RegionState> rit = new TreeSet<RegionState>(REGION_STATE_COMPARATOR);
+    final TreeSet<RegionState> rit = new TreeSet<>(REGION_STATE_COMPARATOR);
     for (RegionState rs: regionsInTransition.values()) {
       rit.add(rs);
     }
@@ -404,7 +394,7 @@ public class RegionStates {
     RegionState oldState = regionStates.put(encodedName, regionState);
     Map<String, RegionState> map = regionStatesTableIndex.get(table);
     if (map == null) {
-      map = new HashMap<String, RegionState>();
+      map = new HashMap<>();
       regionStatesTableIndex.put(table, map);
     }
     map.put(encodedName, regionState);
@@ -483,7 +473,7 @@ public class RegionStates {
   private void addToServerHoldings(ServerName serverName, HRegionInfo hri) {
     Set<HRegionInfo> regions = serverHoldings.get(serverName);
     if (regions == null) {
-      regions = new HashSet<HRegionInfo>();
+      regions = new HashSet<>();
       serverHoldings.put(serverName, regions);
     }
     regions.add(hri);
@@ -494,7 +484,7 @@ public class RegionStates {
     Set<HRegionInfo> replicas =
         defaultReplicaToOtherReplicas.get(defaultReplica);
     if (replicas == null) {
-      replicas = new HashSet<HRegionInfo>();
+      replicas = new HashSet<>();
       defaultReplicaToOtherReplicas.put(defaultReplica, replicas);
     }
     replicas.add(hri);
@@ -618,16 +608,16 @@ public class RegionStates {
    */
   public List<HRegionInfo> serverOffline(final ServerName sn) {
     // Offline all regions on this server not already in transition.
-    List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
-    Set<HRegionInfo> regionsToCleanIfNoMetaEntry = new HashSet<HRegionInfo>();
+    List<HRegionInfo> rits = new ArrayList<>();
+    Set<HRegionInfo> regionsToCleanIfNoMetaEntry = new HashSet<>();
     // Offline regions outside the loop and synchronized block to avoid
     // ConcurrentModificationException and deadlock in case of meta anassigned,
     // but RegionState a blocked.
-    Set<HRegionInfo> regionsToOffline = new HashSet<HRegionInfo>();
+    Set<HRegionInfo> regionsToOffline = new HashSet<>();
     synchronized (this) {
       Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
       if (assignedRegions == null) {
-        assignedRegions = new HashSet<HRegionInfo>();
+        assignedRegions = new HashSet<>();
       }
 
       for (HRegionInfo region : assignedRegions) {
@@ -711,7 +701,7 @@ public class RegionStates {
    * @return Online regions from <code>tableName</code>
    */
   public synchronized List<HRegionInfo> getRegionsOfTable(TableName tableName) {
-    List<HRegionInfo> tableRegions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> tableRegions = new ArrayList<>();
     // boundary needs to have table's name but regionID 0 so that it is sorted
     // before all table's regions.
     HRegionInfo boundary = new HRegionInfo(tableName, null, null, false, 0L);
@@ -733,10 +723,9 @@ public class RegionStates {
    */
   public synchronized Map<RegionState.State, List<HRegionInfo>>
   getRegionByStateOfTable(TableName tableName) {
-    Map<RegionState.State, List<HRegionInfo>> tableRegions =
-        new HashMap<State, List<HRegionInfo>>();
+    Map<RegionState.State, List<HRegionInfo>> tableRegions = new HashMap<>();
     for (State state : State.values()) {
-      tableRegions.put(state, new ArrayList<HRegionInfo>());
+      tableRegions.put(state, new ArrayList<>());
     }
     Map<String, RegionState> indexMap = regionStatesTableIndex.get(tableName);
     if (indexMap == null)
@@ -774,7 +763,7 @@ public class RegionStates {
    * We loop through all regions assuming we don't delete tables too much.
    */
   public void tableDeleted(final TableName tableName) {
-    Set<HRegionInfo> regionsToDelete = new HashSet<HRegionInfo>();
+    Set<HRegionInfo> regionsToDelete = new HashSet<>();
     synchronized (this) {
       for (RegionState state: regionStates.values()) {
         HRegionInfo region = state.getRegion();
@@ -794,7 +783,7 @@ public class RegionStates {
   public synchronized Set<HRegionInfo> getServerRegions(ServerName serverName) {
     Set<HRegionInfo> regions = serverHoldings.get(serverName);
     if (regions == null) return null;
-    return new HashSet<HRegionInfo>(regions);
+    return new HashSet<>(regions);
   }
 
   /**
@@ -954,7 +943,7 @@ public class RegionStates {
    */
   synchronized Map<HRegionInfo, ServerName> closeAllUserRegions(Set<TableName> excludedTables) {
     boolean noExcludeTables = excludedTables == null || excludedTables.isEmpty();
-    Set<HRegionInfo> toBeClosed = new HashSet<HRegionInfo>(regionStates.size());
+    Set<HRegionInfo> toBeClosed = new HashSet<>(regionStates.size());
     for(RegionState state: regionStates.values()) {
       HRegionInfo hri = state.getRegion();
       if (state.isSplit() || hri.isSplit()) {
@@ -966,8 +955,7 @@ public class RegionStates {
         toBeClosed.add(hri);
       }
     }
-    Map<HRegionInfo, ServerName> allUserRegions =
-      new HashMap<HRegionInfo, ServerName>(toBeClosed.size());
+    Map<HRegionInfo, ServerName> allUserRegions = new HashMap<>(toBeClosed.size());
     for (HRegionInfo hri: toBeClosed) {
       RegionState regionState = updateRegionState(hri, State.CLOSED);
       allUserRegions.put(hri, regionState.getServerName());
@@ -1032,7 +1020,7 @@ public class RegionStates {
     for (Map<ServerName, List<HRegionInfo>> map: result.values()) {
       for (ServerName svr: onlineSvrs.keySet()) {
         if (!map.containsKey(svr)) {
-          map.put(svr, new ArrayList<HRegionInfo>());
+          map.put(svr, new ArrayList<>());
         }
       }
       map.keySet().removeAll(drainingServers);
@@ -1041,20 +1029,19 @@ public class RegionStates {
   }
 
   private Map<TableName, Map<ServerName, List<HRegionInfo>>> getTableRSRegionMap(Boolean bytable){
-    Map<TableName, Map<ServerName, List<HRegionInfo>>> result =
-            new HashMap<TableName, Map<ServerName,List<HRegionInfo>>>();
+    Map<TableName, Map<ServerName, List<HRegionInfo>>> result = new HashMap<>();
     for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
       for (HRegionInfo hri: e.getValue()) {
         if (hri.isMetaRegion()) continue;
         TableName tablename = bytable ? hri.getTable() : TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME);
         Map<ServerName, List<HRegionInfo>> svrToRegions = result.get(tablename);
         if (svrToRegions == null) {
-          svrToRegions = new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());
+          svrToRegions = new HashMap<>(serverHoldings.size());
           result.put(tablename, svrToRegions);
         }
         List<HRegionInfo> regions = svrToRegions.get(e.getKey());
         if (regions == null) {
-          regions = new ArrayList<HRegionInfo>();
+          regions = new ArrayList<>();
           svrToRegions.put(e.getKey(), regions);
         }
         regions.add(hri);
@@ -1072,10 +1059,9 @@ public class RegionStates {
    * @return a Map of ServerName to a List of HRegionInfo's
    */
   protected synchronized Map<ServerName, List<HRegionInfo>> getRegionAssignmentsByServer() {
-    Map<ServerName, List<HRegionInfo>> regionsByServer =
-        new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());
+    Map<ServerName, List<HRegionInfo>> regionsByServer = new HashMap<>(serverHoldings.size());
     for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
-      regionsByServer.put(e.getKey(), new ArrayList<HRegionInfo>(e.getValue()));
+      regionsByServer.put(e.getKey(), new ArrayList<>(e.getValue()));
     }
     return regionsByServer;
   }

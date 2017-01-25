@@ -230,7 +230,7 @@ public class ServerLoad {
    */
   public Map<byte[], RegionLoad> getRegionsLoad() {
     Map<byte[], RegionLoad> regionLoads =
-      new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+      new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (ClusterStatusProtos.RegionLoad rl : serverLoad.getRegionLoadsList()) {
       RegionLoad regionLoad = new RegionLoad(rl);
       regionLoads.put(regionLoad.getName(), regionLoad);
@@ -261,7 +261,7 @@ public class ServerLoad {
   public String[] getRsCoprocessors() {
     // Need a set to remove duplicates, but since generated Coprocessor class
     // is not Comparable, make it a Set<String> instead of Set<Coprocessor>
-    TreeSet<String> coprocessSet = new TreeSet<String>();
+    TreeSet<String> coprocessSet = new TreeSet<>();
     for (Coprocessor coprocessor : obtainServerLoadPB().getCoprocessorsList()) {
       coprocessSet.add(coprocessor.getName());
     }

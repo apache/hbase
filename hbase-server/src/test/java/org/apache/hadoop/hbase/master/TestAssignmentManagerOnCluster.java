@@ -624,7 +624,7 @@ public class TestAssignmentManagerOnCluster {
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       AssignmentManager am = master.getAssignmentManager();
 
-      Map<HRegionInfo, ServerName> regions = new HashMap<HRegionInfo, ServerName>();
+      Map<HRegionInfo, ServerName> regions = new HashMap<>();
       ServerName dest = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
       regions.put(hri, dest);
       // retainAssignment but balancer cannot find a plan
@@ -838,7 +838,7 @@ public class TestAssignmentManagerOnCluster {
       assertNotNull(destServerName);
       assertFalse("Region should be assigned on a new region server",
         oldServerName.equals(destServerName));
-      List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+      List<HRegionInfo> regions = new ArrayList<>();
       regions.add(hri);
       am.assign(destServerName, regions);
 
@@ -1214,8 +1214,8 @@ public class TestAssignmentManagerOnCluster {
     rss.start();
     // Create 10 threads and make each do 10 puts related to region state update
     Thread[] th = new Thread[10];
-    List<String> nameList = new ArrayList<String>();
-    List<TableName> tableNameList = new ArrayList<TableName>();
+    List<String> nameList = new ArrayList<>();
+    List<TableName> tableNameList = new ArrayList<>();
     for (int i = 0; i < th.length; i++) {
       th[i] = new Thread() {
         @Override

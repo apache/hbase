@@ -83,7 +83,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
       byte[] qualifier = null;
@@ -138,7 +138,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
       byte[] qualifier = null;
@@ -198,7 +198,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
@@ -237,7 +237,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     long counter = 0l;
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     InternalScanner scanner = null;
     try {
       Scan scan = ProtobufUtil.toScan(request.getScan());
@@ -308,7 +308,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       boolean hasMoreRows = false;
     
       do {
@@ -368,7 +368,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
 
       boolean hasMoreRows = false;
     
@@ -434,7 +434,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
         // if weighted median is requested, get qualifier for the weight column
         weightQualifier = qualifiers.pollLast();
       }
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
 
       boolean hasMoreRows = false;
     

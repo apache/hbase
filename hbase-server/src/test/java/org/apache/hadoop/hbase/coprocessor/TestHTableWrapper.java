@@ -221,7 +221,7 @@ public class TestHTableWrapper {
 
     // multiple deletes:
     Delete[] deletes = new Delete[] { new Delete(ROW_D), new Delete(ROW_E) };
-    hTableInterface.delete(new ArrayList<Delete>(Arrays.asList(deletes)));
+    hTableInterface.delete(new ArrayList<>(Arrays.asList(deletes)));
     checkRowsValues(new byte[][] { ROW_D, ROW_E }, new byte[][] { null, null });
   }
 

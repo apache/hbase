@@ -66,7 +66,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
       Cell... array) {
     this.comparator = comparator;
 
-    List<Cell> tmp = new ArrayList<Cell>(array.length);
+    List<Cell> tmp = new ArrayList<>(array.length);
     Collections.addAll(tmp, array);
     Collections.sort(tmp, comparator);
     data = tmp;

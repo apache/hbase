@@ -127,7 +127,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     this.maxThreads = this.conf.getInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY,
       HConstants.REPLICATION_SOURCE_MAXTHREADS_DEFAULT);
     this.exec = new ThreadPoolExecutor(maxThreads, maxThreads, 60, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>());
+        new LinkedBlockingQueue<>());
     this.exec.allowCoreThreadTimeOut(true);
     this.abortable = ctx.getAbortable();
 
@@ -190,7 +190,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
    */
   @Override
   public boolean replicate(ReplicateContext replicateContext) {
-    CompletionService<Integer> pool = new ExecutorCompletionService<Integer>(this.exec);
+    CompletionService<Integer> pool = new ExecutorCompletionService<>(this.exec);
     List<Entry> entries = replicateContext.getEntries();
     String walGroupId = replicateContext.getWalGroupId();
     int sleepMultiplier = 1;
@@ -212,12 +212,12 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     //  and number of current sinks
     int n = Math.min(Math.min(this.maxThreads, entries.size()/100+1), numSinks);
 
-    List<List<Entry>> entryLists = new ArrayList<List<Entry>>(n);
+    List<List<Entry>> entryLists = new ArrayList<>(n);
     if (n == 1) {
       entryLists.add(entries);
     } else {
       for (int i=0; i<n; i++) {
-        entryLists.add(new ArrayList<Entry>(entries.size()/n+1));
+        entryLists.add(new ArrayList<>(entries.size()/n+1));
       }
       // now group by region
       for (Entry e : entries) {

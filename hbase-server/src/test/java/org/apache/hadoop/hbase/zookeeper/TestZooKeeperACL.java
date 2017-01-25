@@ -325,7 +325,7 @@ public class TestZooKeeperACL {
     if (!secureZKAvailable) {
       return;
     }
-    List<ServerName> drainingServers = new ArrayList<ServerName>(1);
+    List<ServerName> drainingServers = new ArrayList<>(1);
     drainingServers.add(ServerName.parseServerName("ZZZ,123,123"));
 
     // If unable to connect to secure ZK cluster then this operation would fail.

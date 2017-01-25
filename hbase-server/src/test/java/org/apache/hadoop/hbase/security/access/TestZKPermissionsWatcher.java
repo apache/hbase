@@ -111,7 +111,7 @@ public class TestZKPermissionsWatcher {
       TablePermission.Action.WRITE));
 
     // update ACL: george RW
-    List<TablePermission> acl = new ArrayList<TablePermission>(1);
+    List<TablePermission> acl = new ArrayList<>(1);
     acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ,
       TablePermission.Action.WRITE));
     final long mtimeB = AUTH_B.getMTime();
@@ -144,7 +144,7 @@ public class TestZKPermissionsWatcher {
       TablePermission.Action.WRITE));
 
     // update ACL: hubert R
-    acl = new ArrayList<TablePermission>(1);
+    acl = new ArrayList<>(1);
     acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ));
     final long mtimeA = AUTH_A.getMTime();
     AUTH_B.setTableUserPermissions("hubert", TEST_TABLE, acl);

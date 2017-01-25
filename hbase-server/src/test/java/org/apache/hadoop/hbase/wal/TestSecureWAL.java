@@ -116,8 +116,7 @@ public class TestSecureWAL {
     TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(tableName.getName()));
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }

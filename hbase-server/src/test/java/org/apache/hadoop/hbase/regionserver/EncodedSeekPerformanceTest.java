@@ -56,7 +56,7 @@ public class EncodedSeekPerformanceTest {
   }
 
   private List<Cell> prepareListOfTestSeeks(Path path) throws IOException {
-    List<Cell> allKeyValues = new ArrayList<Cell>();
+    List<Cell> allKeyValues = new ArrayList<>();
 
     // read all of the key values
     StoreFile storeFile = new StoreFile(testingUtility.getTestFileSystem(),
@@ -74,7 +74,7 @@ public class EncodedSeekPerformanceTest {
     storeFile.closeReader(cacheConf.shouldEvictOnClose());
 
     // pick seeks by random
-    List<Cell> seeks = new ArrayList<Cell>();
+    List<Cell> seeks = new ArrayList<>();
     for (int i = 0; i < numberOfSeeks; ++i) {
       Cell keyValue = allKeyValues.get(
           randomizer.nextInt(allKeyValues.size()));

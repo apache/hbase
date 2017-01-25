@@ -185,7 +185,7 @@ public class RowResource extends ResourceBase {
     Table table = null;
     try {
       List<RowModel> rows = model.getRows();
-      List<Put> puts = new ArrayList<Put>();
+      List<Put> puts = new ArrayList<>();
       for (RowModel row: rows) {
         byte[] key = row.getKey();
         if (key == null) {

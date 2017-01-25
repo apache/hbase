@@ -72,7 +72,7 @@ class FSRegionScanner implements Runnable {
   public void run() {
     try {
       // empty the map for each region
-      Map<String, AtomicInteger> blockCountMap = new HashMap<String, AtomicInteger>();
+      Map<String, AtomicInteger> blockCountMap = new HashMap<>();
 
       //get table name
       String tableName = regionPath.getParent().getName();
@@ -145,7 +145,7 @@ class FSRegionScanner implements Runnable {
       }
 
       if (regionDegreeLocalityMapping != null && totalBlkCount > 0) {
-        Map<String, Float> hostLocalityMap = new HashMap<String, Float>();
+        Map<String, Float> hostLocalityMap = new HashMap<>();
         for (Map.Entry<String, AtomicInteger> entry : blockCountMap.entrySet()) {
           String host = entry.getKey();
           if (host.endsWith(".")) {

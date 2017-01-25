@@ -254,10 +254,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public static final boolean DEFAULT_PREFETCH_BLOCKS_ON_OPEN = false;
 
-  private final static Map<String, String> DEFAULT_VALUES
-    = new HashMap<String, String>();
-  private final static Set<Bytes> RESERVED_KEYWORDS
-      = new HashSet<Bytes>();
+  private final static Map<String, String> DEFAULT_VALUES = new HashMap<>();
+  private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
 
   static {
     DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER);
@@ -293,15 +291,14 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   private byte [] name;
 
   // Column metadata
-  private final Map<Bytes, Bytes> values =
-      new HashMap<Bytes, Bytes>();
+  private final Map<Bytes, Bytes> values = new HashMap<>();
 
   /**
    * A map which holds the configuration specific to the column family.
    * The keys of the map have the same names as config keys and override the defaults with
    * cf-specific settings. Example usage may be for compactions, etc.
    */
-  private final Map<String, String> configuration = new HashMap<String, String>();
+  private final Map<String, String> configuration = new HashMap<>();
 
   /*
    * Cache the max versions rather than calculate it every time.

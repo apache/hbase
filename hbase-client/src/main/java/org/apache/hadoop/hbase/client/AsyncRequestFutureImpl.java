@@ -103,9 +103,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         }
       }
       if (done) return; // Done within primary timeout
-      Map<ServerName, MultiAction> actionsByServer =
-          new HashMap<ServerName, MultiAction>();
-      List<Action> unknownLocActions = new ArrayList<Action>();
+      Map<ServerName, MultiAction> actionsByServer = new HashMap<>();
+      List<Action> unknownLocActions = new ArrayList<>();
       if (replicaGetIndices == null) {
         for (int i = 0; i < results.length; ++i) {
           addReplicaActions(i, actionsByServer, unknownLocActions);
@@ -119,7 +118,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         sendMultiAction(actionsByServer, 1, null, unknownLocActions.isEmpty());
       }
       if (!unknownLocActions.isEmpty()) {
-        actionsByServer = new HashMap<ServerName, MultiAction>();
+        actionsByServer = new HashMap<>();
         for (Action action : unknownLocActions) {
           addReplicaActionsAgain(action, actionsByServer);
         }
@@ -374,7 +373,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           hasAnyReplicaGets = true;
           if (hasAnyNonReplicaReqs) { // Mixed case
             if (replicaGetIndices == null) {
-              replicaGetIndices = new ArrayList<Integer>(actions.size() - 1);
+              replicaGetIndices = new ArrayList<>(actions.size() - 1);
             }
             replicaGetIndices.add(posInList);
           }
@@ -384,7 +383,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           if (posInList > 0) {
             // Add all the previous requests to the index lists. We know they are all
             // replica-gets because this is the first non-multi-replica request in the list.
-            replicaGetIndices = new ArrayList<Integer>(actions.size() - 1);
+            replicaGetIndices = new ArrayList<>(actions.size() - 1);
             for (int i = 0; i < posInList; ++i) {
               replicaGetIndices.add(i);
             }
@@ -445,8 +444,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * @param numAttempt - the current numAttempt (first attempt is 1)
    */
   void groupAndSendMultiAction(List<Action> currentActions, int numAttempt) {
-    Map<ServerName, MultiAction> actionsByServer =
-        new HashMap<ServerName, MultiAction>();
+    Map<ServerName, MultiAction> actionsByServer = new HashMap<>();
 
     boolean isReplica = false;
     List<Action> unknownReplicaActions = null;
@@ -463,7 +461,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       if (loc == null || loc.getServerName() == null) {
         if (isReplica) {
           if (unknownReplicaActions == null) {
-            unknownReplicaActions = new ArrayList<Action>(1);
+            unknownReplicaActions = new ArrayList<>(1);
           }
           unknownReplicaActions.add(action);
         } else {
@@ -485,7 +483,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
 
     if (hasUnknown) {
-      actionsByServer = new HashMap<ServerName, MultiAction>();
+      actionsByServer = new HashMap<>();
       for (Action action : unknownReplicaActions) {
         HRegionLocation loc = getReplicaLocationOrFail(action);
         if (loc == null) continue;
@@ -616,8 +614,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
 
     // group the actions by the amount of delay
-    Map<Long, DelayingRunner> actions = new HashMap<Long, DelayingRunner>(multiAction
-        .size());
+    Map<Long, DelayingRunner> actions = new HashMap<>(multiAction.size());
 
     // split up the actions
     for (Map.Entry<byte[], List<Action>> e : multiAction.actions.entrySet()) {
@@ -630,7 +627,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       }
     }
 
-    List<Runnable> toReturn = new ArrayList<Runnable>(actions.size());
+    List<Runnable> toReturn = new ArrayList<>(actions.size());
     for (DelayingRunner runner : actions.values()) {
       asyncProcess.incTaskCounters(runner.getActions().getRegions(), server);
       String traceText = "AsyncProcess.sendMultiAction";
@@ -736,7 +733,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       asyncProcess.connection.clearCaches(server);
     }
     int failed = 0, stopped = 0;
-    List<Action> toReplay = new ArrayList<Action>();
+    List<Action> toReplay = new ArrayList<>();
     for (Map.Entry<byte[], List<Action>> e : rsActions.actions.entrySet()) {
       byte[] regionName = e.getKey();
       byte[] row = e.getValue().iterator().next().getAction().getRow();
@@ -850,7 +847,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     //  - DoNotRetryIOException: we continue to retry for other actions
     //  - RegionMovedException: we update the cache with the new region location
 
-    List<Action> toReplay = new ArrayList<Action>();
+    List<Action> toReplay = new ArrayList<>();
     Throwable throwable = null;
     int failureCount = 0;
     boolean canRetry = true;

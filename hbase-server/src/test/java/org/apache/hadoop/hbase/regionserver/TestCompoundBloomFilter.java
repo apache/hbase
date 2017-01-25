@@ -142,7 +142,7 @@ public class TestCompoundBloomFilter {
   }
 
   private List<KeyValue> createSortedKeyValues(Random rand, int n) {
-    List<KeyValue> kvList = new ArrayList<KeyValue>(n);
+    List<KeyValue> kvList = new ArrayList<>(n);
     for (int i = 0; i < n; ++i)
       kvList.add(RandomKeyValueUtil.randomKeyValue(rand));
     Collections.sort(kvList, CellComparator.COMPARATOR);

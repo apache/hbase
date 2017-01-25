@@ -169,7 +169,7 @@ public class HTableMultiplexer {
 
         // Create the failed puts list if necessary
         if (failedPuts == null) {
-          failedPuts = new ArrayList<Put>();
+          failedPuts = new ArrayList<>();
         }
         // Add the put to the failed puts list
         failedPuts.add(put);
@@ -288,10 +288,10 @@ public class HTableMultiplexer {
       this.totalFailedPutCounter = 0;
       this.maxLatency = 0;
       this.overallAverageLatency = 0;
-      this.serverToBufferedCounterMap = new HashMap<String, Long>();
-      this.serverToFailedCounterMap = new HashMap<String, Long>();
-      this.serverToAverageLatencyMap = new HashMap<String, Long>();
-      this.serverToMaxLatencyMap = new HashMap<String, Long>();
+      this.serverToBufferedCounterMap = new HashMap<>();
+      this.serverToFailedCounterMap = new HashMap<>();
+      this.serverToAverageLatencyMap = new HashMap<>();
+      this.serverToMaxLatencyMap = new HashMap<>();
       this.initialize(serverToFlushWorkerMap);
     }
 
@@ -412,7 +412,7 @@ public class HTableMultiplexer {
     }
 
     public synchronized SimpleEntry<Long, Integer> getComponents() {
-      return new SimpleEntry<Long, Integer>(sum, count);
+      return new SimpleEntry<>(sum, count);
     }
 
     public synchronized void reset() {
@@ -614,7 +614,7 @@ public class HTableMultiplexer {
               failedCount--;
             } else {
               if (failed == null) {
-                failed = new ArrayList<PutStatus>();
+                failed = new ArrayList<>();
               }
               failed.add(processingList.get(i));
             }

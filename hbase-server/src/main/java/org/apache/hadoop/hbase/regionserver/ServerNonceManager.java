@@ -121,8 +121,7 @@ public class ServerNonceManager {
    * which is a realistic worst case. If it's much worse, we could use some sort of memory
    * limit and cleanup.
    */
-  private ConcurrentHashMap<NonceKey, OperationContext> nonces =
-      new ConcurrentHashMap<NonceKey, OperationContext>();
+  private ConcurrentHashMap<NonceKey, OperationContext> nonces = new ConcurrentHashMap<>();
 
   private int deleteNonceGracePeriod;
 

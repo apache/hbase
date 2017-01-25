@@ -77,7 +77,7 @@ public class TimestampsFilter extends FilterBase {
       Preconditions.checkArgument(timestamp >= 0, "must be positive %s", timestamp);
     }
     this.canHint = canHint;
-    this.timestamps = new TreeSet<Long>(timestamps);
+    this.timestamps = new TreeSet<>(timestamps);
     init();
   }
 
@@ -85,7 +85,7 @@ public class TimestampsFilter extends FilterBase {
    * @return the list of timestamps
    */
   public List<Long> getTimestamps() {
-    List<Long> list = new ArrayList<Long>(timestamps.size());
+    List<Long> list = new ArrayList<>(timestamps.size());
     list.addAll(timestamps);
     return list;
   }
@@ -157,7 +157,7 @@ public class TimestampsFilter extends FilterBase {
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    ArrayList<Long> timestamps = new ArrayList<Long>(filterArguments.size());
+    ArrayList<Long> timestamps = new ArrayList<>(filterArguments.size());
     for (int i = 0; i<filterArguments.size(); i++) {
       long timestamp = ParseFilter.convertByteArrayToLong(filterArguments.get(i));
       timestamps.add(timestamp);

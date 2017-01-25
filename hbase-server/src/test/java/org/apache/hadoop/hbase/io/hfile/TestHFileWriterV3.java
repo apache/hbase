@@ -128,7 +128,7 @@ public class TestHFileWriterV3 {
             .create();
 
     Random rand = new Random(9713312); // Just a fixed seed.
-    List<KeyValue> keyValues = new ArrayList<KeyValue>(entryCount);
+    List<KeyValue> keyValues = new ArrayList<>(entryCount);
 
     for (int i = 0; i < entryCount; ++i) {
       byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(rand, i);
@@ -137,7 +137,7 @@ public class TestHFileWriterV3 {
       byte[] valueBytes = RandomKeyValueUtil.randomValue(rand);
       KeyValue keyValue = null;
       if (useTags) {
-        ArrayList<Tag> tags = new ArrayList<Tag>();
+        ArrayList<Tag> tags = new ArrayList<>();
         for (int j = 0; j < 1 + rand.nextInt(4); j++) {
           byte[] tagBytes = new byte[16];
           rand.nextBytes(tagBytes);

@@ -92,7 +92,7 @@ public class ResultSerialization extends Configured implements Serialization<Res
       }
       byte[] buf = new byte[totalBuffer];
       readChunked(in, buf, 0, totalBuffer);
-      List<Cell> kvs = new ArrayList<Cell>();
+      List<Cell> kvs = new ArrayList<>();
       int offset = 0;
       while (offset < totalBuffer) {
         int keyLength = Bytes.toInt(buf, offset);

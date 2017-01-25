@@ -131,7 +131,7 @@ MultiRowMutationProcessorResponse> {
     Arrays.fill(opStatus, OperationStatus.NOT_RUN);
     WALEdit[] walEditsFromCP = new WALEdit[mutations.size()];
     if (coprocessorHost != null) {
-      miniBatch = new MiniBatchOperationInProgress<Mutation>(
+      miniBatch = new MiniBatchOperationInProgress<>(
           mutations.toArray(new Mutation[mutations.size()]), opStatus, walEditsFromCP, 0,
           mutations.size());
       coprocessorHost.preBatchMutate(miniBatch);

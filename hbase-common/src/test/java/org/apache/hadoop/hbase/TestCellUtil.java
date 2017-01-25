@@ -215,13 +215,13 @@ public class TestCellUtil {
     consume(doCreateCellArray(1), 1);
     consume(doCreateCellArray(0), 0);
     consume(doCreateCellArray(3), 3);
-    List<CellScannable> cells = new ArrayList<CellScannable>(hundredK);
+    List<CellScannable> cells = new ArrayList<>(hundredK);
     for (int i = 0; i < hundredK; i++) {
       cells.add(new TestCellScannable(1));
     }
     consume(CellUtil.createCellScanner(cells), hundredK * 1);
-    NavigableMap<byte [], List<Cell>> m = new TreeMap<byte [], List<Cell>>(Bytes.BYTES_COMPARATOR);
-    List<Cell> cellArray = new ArrayList<Cell>(hundredK);
+    NavigableMap<byte [], List<Cell>> m = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    List<Cell> cellArray = new ArrayList<>(hundredK);
     for (int i = 0; i < hundredK; i++) cellArray.add(new TestCell(i));
     m.put(new byte [] {'f'}, cellArray);
     consume(CellUtil.createCellScanner(m), hundredK * 1);
@@ -237,7 +237,7 @@ public class TestCellUtil {
 
   private CellScanner doCreateCellScanner(final int listsCount, final int itemsPerList)
   throws IOException {
-    List<CellScannable> cells = new ArrayList<CellScannable>(listsCount);
+    List<CellScannable> cells = new ArrayList<>(listsCount);
     for (int i = 0; i < listsCount; i++) {
       CellScannable cs = new CellScannable() {
         @Override

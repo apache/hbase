@@ -183,7 +183,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       monitor.rethrowException();
 
       // extract each pair to separate lists
-      Set<String> serverNames = new HashSet<String>();
+      Set<String> serverNames = new HashSet<>();
       for (Pair<HRegionInfo, ServerName> p : regionsAndLocations) {
         if (p != null && p.getFirst() != null && p.getSecond() != null) {
           HRegionInfo hri = p.getFirst();

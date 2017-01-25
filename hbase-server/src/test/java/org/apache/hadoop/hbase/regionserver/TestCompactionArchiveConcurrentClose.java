@@ -91,7 +91,7 @@ public class TestCompactionArchiveConcurrentClose {
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Region region = initHRegion(htd, info);
     RegionServerServices rss = mock(RegionServerServices.class);
-    List<Region> regions = new ArrayList<Region>();
+    List<Region> regions = new ArrayList<>();
     regions.add(region);
     when(rss.getOnlineRegions()).thenReturn(regions);
 

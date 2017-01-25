@@ -233,8 +233,7 @@ public class TestFSErrorsExposed {
   }
 
   static class FaultyFileSystem extends FilterFileSystem {
-    List<SoftReference<FaultyInputStream>> inStreams =
-      new ArrayList<SoftReference<FaultyInputStream>>();
+    List<SoftReference<FaultyInputStream>> inStreams = new ArrayList<>();
 
     public FaultyFileSystem(FileSystem testFileSystem) {
       super(testFileSystem);
@@ -244,7 +243,7 @@ public class TestFSErrorsExposed {
     public FSDataInputStream open(Path p, int bufferSize) throws IOException  {
       FSDataInputStream orig = fs.open(p, bufferSize);
       FaultyInputStream faulty = new FaultyInputStream(orig);
-      inStreams.add(new SoftReference<FaultyInputStream>(faulty));
+      inStreams.add(new SoftReference<>(faulty));
       return faulty;
     }
 

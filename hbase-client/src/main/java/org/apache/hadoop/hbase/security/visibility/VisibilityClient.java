@@ -130,7 +130,7 @@ public class VisibilityClient {
           new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
             ServerRpcController controller = new ServerRpcController();
             CoprocessorRpcUtils.BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<VisibilityLabelsResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
 
             public VisibilityLabelsResponse call(VisibilityLabelsService service)
                 throws IOException {
@@ -215,7 +215,7 @@ public class VisibilityClient {
             new Batch.Call<VisibilityLabelsService, GetAuthsResponse>() {
           ServerRpcController controller = new ServerRpcController();
           CoprocessorRpcUtils.BlockingRpcCallback<GetAuthsResponse> rpcCallback =
-              new CoprocessorRpcUtils.BlockingRpcCallback<GetAuthsResponse>();
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
 
           public GetAuthsResponse call(VisibilityLabelsService service) throws IOException {
             GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
@@ -268,7 +268,7 @@ public class VisibilityClient {
           new Batch.Call<VisibilityLabelsService, ListLabelsResponse>() {
             ServerRpcController controller = new ServerRpcController();
             CoprocessorRpcUtils.BlockingRpcCallback<ListLabelsResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<ListLabelsResponse>();
+                new CoprocessorRpcUtils.BlockingRpcCallback<>();
 
             public ListLabelsResponse call(VisibilityLabelsService service) throws IOException {
               ListLabelsRequest.Builder listAuthLabelsReqBuilder = ListLabelsRequest.newBuilder();
@@ -340,7 +340,7 @@ public class VisibilityClient {
             new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
           ServerRpcController controller = new ServerRpcController();
           CoprocessorRpcUtils.BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback =
-              new CoprocessorRpcUtils.BlockingRpcCallback<VisibilityLabelsResponse>();
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
 
           public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
             SetAuthsRequest.Builder setAuthReqBuilder = SetAuthsRequest.newBuilder();

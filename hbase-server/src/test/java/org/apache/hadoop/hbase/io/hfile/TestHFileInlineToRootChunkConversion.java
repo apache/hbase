@@ -58,7 +58,7 @@ public class TestHFileInlineToRootChunkConversion {
     HFile.Writer hfw = new HFile.WriterFactory(conf, cacheConf)
             .withFileContext(context)
             .withPath(fs, hfPath).create();
-    List<byte[]> keys = new ArrayList<byte[]>();
+    List<byte[]> keys = new ArrayList<>();
     StringBuilder sb = new StringBuilder();
 
     for (int i = 0; i < 4; ++i) {

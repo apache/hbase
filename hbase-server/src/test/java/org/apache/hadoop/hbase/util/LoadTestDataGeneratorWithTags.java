@@ -64,7 +64,7 @@ public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
   @Override
   public Mutation beforeMutate(long rowkeyBase, Mutation m) throws IOException {
     if (m instanceof Put) {
-      List<Cell> updatedCells = new ArrayList<Cell>();
+      List<Cell> updatedCells = new ArrayList<>();
       int numTags;
       if (minNumTags == maxNumTags) {
         numTags = minNumTags;
@@ -76,7 +76,7 @@ public class LoadTestDataGeneratorWithTags extends DefaultDataGenerator {
         Cell cell = cellScanner.current();
         byte[] tag = LoadTestTool.generateData(random,
             minTagLength + random.nextInt(maxTagLength - minTagLength));
-        tags = new ArrayList<Tag>();
+        tags = new ArrayList<>();
         for (int n = 0; n < numTags; n++) {
           tags.add(new ArrayBackedTag((byte) 127, tag));
         }

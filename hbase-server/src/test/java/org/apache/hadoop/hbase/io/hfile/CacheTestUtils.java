@@ -77,7 +77,7 @@ public class CacheTestUtils {
         conf);
 
     final AtomicInteger totalQueries = new AtomicInteger();
-    final ConcurrentLinkedQueue<HFileBlockPair> blocksToTest = new ConcurrentLinkedQueue<HFileBlockPair>();
+    final ConcurrentLinkedQueue<HFileBlockPair> blocksToTest = new ConcurrentLinkedQueue<>();
     final AtomicInteger hits = new AtomicInteger();
     final AtomicInteger miss = new AtomicInteger();
 
@@ -344,7 +344,7 @@ public class CacheTestUtils {
   public static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
     HFileBlockPair[] returnedBlocks = new HFileBlockPair[numBlocks];
     Random rand = new Random();
-    HashSet<String> usedStrings = new HashSet<String>();
+    HashSet<String> usedStrings = new HashSet<>();
     for (int i = 0; i < numBlocks; i++) {
       ByteBuffer cachedBuffer = ByteBuffer.allocate(blockSize);
       rand.nextBytes(cachedBuffer.array());

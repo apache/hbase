@@ -135,7 +135,7 @@ public class TestRegionSizeCalculator {
   */
   private Admin mockAdmin(RegionLoad... regionLoadArray) throws Exception {
     Admin mockAdmin = Mockito.mock(Admin.class);
-    Map<byte[], RegionLoad> regionLoads = new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+    Map<byte[], RegionLoad> regionLoads = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (RegionLoad regionLoad : regionLoadArray) {
       regionLoads.put(regionLoad.getName(), regionLoad);
     }

@@ -139,7 +139,7 @@ public class TestHBaseFsckEncryption {
   }
 
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {
-    List<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<>();
     for (Region region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {
       for (Store store: region.getStores()) {

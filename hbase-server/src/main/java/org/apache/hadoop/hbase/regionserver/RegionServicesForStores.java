@@ -40,7 +40,7 @@ public class RegionServicesForStores {
   private static final int POOL_SIZE = 10;
   private static final ThreadPoolExecutor INMEMORY_COMPACTION_POOL =
       new ThreadPoolExecutor(POOL_SIZE, POOL_SIZE, 60, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>(),
+          new LinkedBlockingQueue<>(),
           new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {

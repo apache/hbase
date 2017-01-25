@@ -144,7 +144,7 @@ public abstract class TestReplicationSourceManager {
 
   protected static CountDownLatch latch;
 
-  protected static List<String> files = new ArrayList<String>();
+  protected static List<String> files = new ArrayList<>();
   protected static NavigableMap<byte[], Integer> scopes;
 
   protected static void setupZkAndReplication() throws Exception {
@@ -182,8 +182,7 @@ public abstract class TestReplicationSourceManager {
     col.setScope(HConstants.REPLICATION_SCOPE_LOCAL);
     htd.addFamily(col);
 
-    scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
@@ -225,7 +224,7 @@ public abstract class TestReplicationSourceManager {
     WALEdit edit = new WALEdit();
     edit.add(kv);
 
-    List<WALActionsListener> listeners = new ArrayList<WALActionsListener>(1);
+    List<WALActionsListener> listeners = new ArrayList<>(1);
     listeners.add(replication);
     final WALFactory wals = new WALFactory(utility.getConfiguration(), listeners,
         URLEncoder.encode("regionserver:60020", "UTF8"));
@@ -233,8 +232,7 @@ public abstract class TestReplicationSourceManager {
     manager.init();
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("tableame"));
     htd.addFamily(new HColumnDescriptor(f1));
-    NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
-        Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
@@ -341,7 +339,7 @@ public abstract class TestReplicationSourceManager {
           server.getZooKeeper()));
     rq.init(server.getServerName().toString());
     // populate some znodes in the peer znode
-    SortedSet<String> files = new TreeSet<String>();
+    SortedSet<String> files = new TreeSet<>();
     String group = "testgroup";
     String file1 = group + ".log1";
     String file2 = group + ".log2";
@@ -393,7 +391,7 @@ public abstract class TestReplicationSourceManager {
 
   @Test
   public void testBulkLoadWALEditsWithoutBulkLoadReplicationEnabled() throws Exception {
-    NavigableMap<byte[], Integer> scope = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     // 1. Get the bulk load wal edit event
     WALEdit logEdit = getBulkLoadWALEdit(scope);
     // 2. Create wal key
@@ -410,7 +408,7 @@ public abstract class TestReplicationSourceManager {
   @Test
   public void testBulkLoadWALEdits() throws Exception {
     // 1. Get the bulk load wal edit event
-    NavigableMap<byte[], Integer> scope = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+    NavigableMap<byte[], Integer> scope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     WALEdit logEdit = getBulkLoadWALEdit(scope);
     // 2. Create wal key
     WALKey logKey = new WALKey(scope);

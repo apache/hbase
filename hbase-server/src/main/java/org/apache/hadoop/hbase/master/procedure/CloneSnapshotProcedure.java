@@ -70,8 +70,7 @@ public class CloneSnapshotProcedure
   private HTableDescriptor hTableDescriptor;
   private SnapshotDescription snapshot;
   private List<HRegionInfo> newRegions = null;
-  private Map<String, Pair<String, String> > parentsToChildrenPairMap =
-    new HashMap<String, Pair<String, String>>();
+  private Map<String, Pair<String, String> > parentsToChildrenPairMap = new HashMap<>();
 
   // Monitor
   private MonitoredTask monitorStatus = null;
@@ -264,18 +263,18 @@ public class CloneSnapshotProcedure
     if (cloneSnapshotMsg.getRegionInfoCount() == 0) {
       newRegions = null;
     } else {
-      newRegions = new ArrayList<HRegionInfo>(cloneSnapshotMsg.getRegionInfoCount());
+      newRegions = new ArrayList<>(cloneSnapshotMsg.getRegionInfoCount());
       for (HBaseProtos.RegionInfo hri: cloneSnapshotMsg.getRegionInfoList()) {
         newRegions.add(HRegionInfo.convert(hri));
       }
     }
     if (cloneSnapshotMsg.getParentToChildRegionsPairListCount() > 0) {
-      parentsToChildrenPairMap = new HashMap<String, Pair<String, String>>();
+      parentsToChildrenPairMap = new HashMap<>();
       for (MasterProcedureProtos.RestoreParentToChildRegionsPair parentToChildrenPair:
         cloneSnapshotMsg.getParentToChildRegionsPairListList()) {
         parentsToChildrenPairMap.put(
           parentToChildrenPair.getParentRegionName(),
-          new Pair<String, String>(
+          new Pair<>(
             parentToChildrenPair.getChild1RegionName(),
             parentToChildrenPair.getChild2RegionName()));
       }

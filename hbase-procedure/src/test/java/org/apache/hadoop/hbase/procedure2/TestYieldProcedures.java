@@ -204,7 +204,7 @@ public class TestYieldProcedures {
       public boolean isRollback() { return rollback; }
     }
 
-    private final ArrayList<ExecutionInfo> executionInfo = new ArrayList<ExecutionInfo>();
+    private final ArrayList<ExecutionInfo> executionInfo = new ArrayList<>();
     private final AtomicBoolean aborted = new AtomicBoolean(false);
     private final boolean throwInterruptOnceOnEachStep;
     private final boolean abortOnFinalStep;

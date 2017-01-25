@@ -314,7 +314,7 @@ public class TokenUtil {
    * @return the Token instance
    */
   public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
-    return new Token<AuthenticationTokenIdentifier>(
+    return new Token<>(
         proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
         proto.hasPassword() ? proto.getPassword().toByteArray() : null,
         AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,

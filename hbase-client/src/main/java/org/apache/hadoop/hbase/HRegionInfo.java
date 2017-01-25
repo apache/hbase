@@ -1167,7 +1167,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
       throw new IllegalArgumentException("Can't build an object with empty bytes array");
     }
     DataInputBuffer in = new DataInputBuffer();
-    List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> hris = new ArrayList<>();
     try {
       in.reset(bytes, offset, length);
       while (in.available() > 0) {

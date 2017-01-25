@@ -256,7 +256,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
   // hbase:meta are always checked
-  private Set<TableName> tablesIncluded = new HashSet<TableName>();
+  private Set<TableName> tablesIncluded = new HashSet<>();
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
   // maximum number of overlapping regions to sideline
   private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE;
@@ -280,9 +280,9 @@ public class HBaseFsck extends Configured implements Closeable {
    * name to HbckInfo structure.  The information contained in HbckInfo is used
    * to detect and correct consistency (hdfs/meta/deployment) problems.
    */
-  private TreeMap<String, HbckInfo> regionInfoMap = new TreeMap<String, HbckInfo>();
+  private TreeMap<String, HbckInfo> regionInfoMap = new TreeMap<>();
   // Empty regioninfo qualifiers in hbase:meta
-  private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
+  private Set<Result> emptyRegionInfoQualifiers = new HashSet<>();
 
   /**
    * This map from Tablename -> TableInfo contains the structures necessary to
@@ -294,22 +294,19 @@ public class HBaseFsck extends Configured implements Closeable {
    * unless checkMetaOnly is specified, in which case, it contains only
    * the meta table
    */
-  private SortedMap<TableName, TableInfo> tablesInfo =
-      new ConcurrentSkipListMap<TableName, TableInfo>();
+  private SortedMap<TableName, TableInfo> tablesInfo = new ConcurrentSkipListMap<>();
 
   /**
    * When initially looking at HDFS, we attempt to find any orphaned data.
    */
   private List<HbckInfo> orphanHdfsDirs = Collections.synchronizedList(new ArrayList<HbckInfo>());
 
-  private Map<TableName, Set<String>> orphanTableDirs =
-      new HashMap<TableName, Set<String>>();
-  private Map<TableName, TableState> tableStates =
-      new HashMap<TableName, TableState>();
+  private Map<TableName, Set<String>> orphanTableDirs = new HashMap<>();
+  private Map<TableName, TableState> tableStates = new HashMap<>();
   private final RetryCounterFactory lockFileRetryCounterFactory;
   private final RetryCounterFactory createZNodeRetryCounterFactory;
 
-  private Map<TableName, Set<String>> skippedRegions = new HashMap<TableName, Set<String>>();
+  private Map<TableName, Set<String>> skippedRegions = new HashMap<>();
 
   private ZooKeeperWatcher zkw = null;
   private String hbckEphemeralNodePath = null;
@@ -431,7 +428,7 @@ public class HBaseFsck extends Configured implements Closeable {
     RetryCounter retryCounter = lockFileRetryCounterFactory.create();
     FileLockCallable callable = new FileLockCallable(retryCounter);
     ExecutorService executor = Executors.newFixedThreadPool(1);
-    FutureTask<FSDataOutputStream> futureTask = new FutureTask<FSDataOutputStream>(callable);
+    FutureTask<FSDataOutputStream> futureTask = new FutureTask<>(callable);
     executor.execute(futureTask);
     final int timeoutInSeconds = getConf().getInt(
       "hbase.hbck.lockfile.maxwaittime", DEFAULT_WAIT_FOR_LOCK_TIMEOUT);
@@ -977,7 +974,7 @@ public class HBaseFsck extends Configured implements Closeable {
         // expand the range to include the range of all hfiles
         if (orphanRegionRange == null) {
           // first range
-          orphanRegionRange = new Pair<byte[], byte[]>(start, end);
+          orphanRegionRange = new Pair<>(start, end);
         } else {
           // TODO add test
 
@@ -1267,7 +1264,7 @@ public class HBaseFsck extends Configured implements Closeable {
     Collection<HbckInfo> hbckInfos = regionInfoMap.values();
 
     // Parallelized read of .regioninfo files.
-    List<WorkItemHdfsRegionInfo> hbis = new ArrayList<WorkItemHdfsRegionInfo>(hbckInfos.size());
+    List<WorkItemHdfsRegionInfo> hbis = new ArrayList<>(hbckInfos.size());
     List<Future<Void>> hbiFutures;
 
     for (HbckInfo hbi : hbckInfos) {
@@ -1323,7 +1320,7 @@ public class HBaseFsck extends Configured implements Closeable {
             //should only report once for each table
             errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE,
                 "Unable to read .tableinfo from " + hbaseRoot + "/" + tableName);
-            Set<String> columns = new HashSet<String>();
+            Set<String> columns = new HashSet<>();
             orphanTableDirs.put(tableName, getColumnFamilyList(columns, hbi));
           }
         }
@@ -1402,7 +1399,7 @@ public class HBaseFsck extends Configured implements Closeable {
   public void fixOrphanTables() throws IOException {
     if (shouldFixTableOrphans() && !orphanTableDirs.isEmpty()) {
 
-      List<TableName> tmpList = new ArrayList<TableName>(orphanTableDirs.keySet().size());
+      List<TableName> tmpList = new ArrayList<>(orphanTableDirs.keySet().size());
       tmpList.addAll(orphanTableDirs.keySet());
       HTableDescriptor[] htds = getHTableDescriptors(tmpList);
       Iterator<Entry<TableName, Set<String>>> iter =
@@ -1485,7 +1482,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private ArrayList<Put> generatePuts(
       SortedMap<TableName, TableInfo> tablesInfo) throws IOException {
-    ArrayList<Put> puts = new ArrayList<Put>();
+    ArrayList<Put> puts = new ArrayList<>();
     boolean hasProblems = false;
     for (Entry<TableName, TableInfo> e : tablesInfo.entrySet()) {
       TableName name = e.getKey();
@@ -1936,7 +1933,7 @@ public class HBaseFsck extends Configured implements Closeable {
   void processRegionServers(Collection<ServerName> regionServerList)
     throws IOException, InterruptedException {
 
-    List<WorkItemRegion> workItems = new ArrayList<WorkItemRegion>(regionServerList.size());
+    List<WorkItemRegion> workItems = new ArrayList<>(regionServerList.size());
     List<Future<Void>> workFutures;
 
     // loop to contact each region server in parallel
@@ -1966,8 +1963,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // Divide the checks in two phases. One for default/primary replicas and another
     // for the non-primary ones. Keeps code cleaner this way.
 
-    List<CheckRegionConsistencyWorkItem> workItems =
-        new ArrayList<CheckRegionConsistencyWorkItem>(regionInfoMap.size());
+    List<CheckRegionConsistencyWorkItem> workItems = new ArrayList<>(regionInfoMap.size());
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
       if (e.getValue().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
         workItems.add(new CheckRegionConsistencyWorkItem(e.getKey(), e.getValue()));
@@ -1979,8 +1975,7 @@ public class HBaseFsck extends Configured implements Closeable {
     setCheckHdfs(false); //replicas don't have any hdfs data
     // Run a pass over the replicas and fix any assignment issues that exist on the currently
     // deployed/undeployed replicas.
-    List<CheckRegionConsistencyWorkItem> replicaWorkItems =
-        new ArrayList<CheckRegionConsistencyWorkItem>(regionInfoMap.size());
+    List<CheckRegionConsistencyWorkItem> replicaWorkItems = new ArrayList<>(regionInfoMap.size());
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
       if (e.getValue().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
         replicaWorkItems.add(new CheckRegionConsistencyWorkItem(e.getKey(), e.getValue()));
@@ -2065,7 +2060,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private void addSkippedRegion(final HbckInfo hbi) {
     Set<String> skippedRegionNames = skippedRegions.get(hbi.getTableName());
     if (skippedRegionNames == null) {
-      skippedRegionNames = new HashSet<String>();
+      skippedRegionNames = new HashSet<>();
     }
     skippedRegionNames.add(hbi.getRegionNameAsString());
     skippedRegions.put(hbi.getTableName(), skippedRegionNames);
@@ -2570,7 +2565,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @throws IOException
    */
   SortedMap<TableName, TableInfo> checkIntegrity() throws IOException {
-    tablesInfo = new TreeMap<TableName,TableInfo> ();
+    tablesInfo = new TreeMap<>();
     LOG.debug("There are " + regionInfoMap.size() + " region info entries");
     for (HbckInfo hbi : regionInfoMap.values()) {
       // Check only valid, working regions
@@ -2753,16 +2748,16 @@ public class HBaseFsck extends Configured implements Closeable {
     TreeSet <ServerName> deployedOn;
 
     // backwards regions
-    final List<HbckInfo> backwards = new ArrayList<HbckInfo>();
+    final List<HbckInfo> backwards = new ArrayList<>();
 
     // sidelined big overlapped regions
-    final Map<Path, HbckInfo> sidelinedRegions = new HashMap<Path, HbckInfo>();
+    final Map<Path, HbckInfo> sidelinedRegions = new HashMap<>();
 
     // region split calculator
-    final RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<HbckInfo>(cmp);
+    final RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<>(cmp);
 
     // Histogram of different HTableDescriptors found.  Ideally there is only one!
-    final Set<HTableDescriptor> htds = new HashSet<HTableDescriptor>();
+    final Set<HTableDescriptor> htds = new HashSet<>();
 
     // key = start split, values = set of splits in problem group
     final Multimap<byte[], HbckInfo> overlapGroups =
@@ -2773,7 +2768,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     TableInfo(TableName name) {
       this.tableName = name;
-      deployedOn = new TreeSet <ServerName>();
+      deployedOn = new TreeSet <>();
     }
 
     /**
@@ -2829,7 +2824,7 @@ public class HBaseFsck extends Configured implements Closeable {
     public synchronized ImmutableList<HRegionInfo> getRegionsFromMeta() {
       // lazy loaded, synchronized to ensure a single load
       if (regionsFromMeta == null) {
-        List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+        List<HRegionInfo> regions = new ArrayList<>();
         for (HbckInfo h : HBaseFsck.this.regionInfoMap.values()) {
           if (tableName.equals(h.getTableName())) {
             if (h.metaEntry != null) {
@@ -3031,7 +3026,7 @@ public class HBaseFsck extends Configured implements Closeable {
         Pair<byte[], byte[]> range = null;
         for (HbckInfo hi : overlap) {
           if (range == null) {
-            range = new Pair<byte[], byte[]>(hi.getStartKey(), hi.getEndKey());
+            range = new Pair<>(hi.getStartKey(), hi.getEndKey());
           } else {
             if (RegionSplitCalculator.BYTES_COMPARATOR
                 .compare(hi.getStartKey(), range.getFirst()) < 0) {
@@ -3200,7 +3195,7 @@ public class HBaseFsck extends Configured implements Closeable {
           overlapGroups.putAll(problemKey, ranges);
 
           // record errors
-          ArrayList<HbckInfo> subRange = new ArrayList<HbckInfo>(ranges);
+          ArrayList<HbckInfo> subRange = new ArrayList<>(ranges);
           //  this dumb and n^2 but this shouldn't happen often
           for (HbckInfo r1 : ranges) {
             if (r1.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) continue;
@@ -3275,7 +3270,7 @@ public class HBaseFsck extends Configured implements Closeable {
         throws IOException {
       // we parallelize overlap handler for the case we have lots of groups to fix.  We can
       // safely assume each group is independent.
-      List<WorkItemOverlapMerge> merges = new ArrayList<WorkItemOverlapMerge>(overlapGroups.size());
+      List<WorkItemOverlapMerge> merges = new ArrayList<>(overlapGroups.size());
       List<Future<Void>> rets;
       for (Collection<HbckInfo> overlap : overlapGroups.asMap().values()) {
         //
@@ -3364,7 +3359,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @throws IOException if an error is encountered
    */
   HTableDescriptor[] getTables(AtomicInteger numSkipped) {
-    List<TableName> tableNames = new ArrayList<TableName>();
+    List<TableName> tableNames = new ArrayList<>();
     long now = EnvironmentEdgeManager.currentTime();
 
     for (HbckInfo hbi : regionInfoMap.values()) {
@@ -3429,7 +3424,7 @@ public class HBaseFsck extends Configured implements Closeable {
     * @throws InterruptedException
     */
   boolean checkMetaRegion() throws IOException, KeeperException, InterruptedException {
-    Map<Integer, HbckInfo> metaRegions = new HashMap<Integer, HbckInfo>();
+    Map<Integer, HbckInfo> metaRegions = new HashMap<>();
     for (HbckInfo value : regionInfoMap.values()) {
       if (value.metaEntry != null && value.metaEntry.isMetaRegion()) {
         metaRegions.put(value.getReplicaId(), value);
@@ -3442,7 +3437,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // Check the deployed servers. It should be exactly one server for each replica.
     for (int i = 0; i < metaReplication; i++) {
       HbckInfo metaHbckInfo = metaRegions.remove(i);
-      List<ServerName> servers = new ArrayList<ServerName>();
+      List<ServerName> servers = new ArrayList<>();
       if (metaHbckInfo != null) {
         servers = metaHbckInfo.deployedOn;
       }
@@ -3979,10 +3974,10 @@ public class HBaseFsck extends Configured implements Closeable {
     // How frequently calls to progress() will create output
     private static final int progressThreshold = 100;
 
-    Set<TableInfo> errorTables = new HashSet<TableInfo>();
+    Set<TableInfo> errorTables = new HashSet<>();
 
     // for use by unit tests to verify which errors were discovered
-    private ArrayList<ERROR_CODE> errorList = new ArrayList<ERROR_CODE>();
+    private ArrayList<ERROR_CODE> errorList = new ArrayList<>();
 
     @Override
     public void clear() {
@@ -4183,11 +4178,11 @@ public class HBaseFsck extends Configured implements Closeable {
 
     @Override
     public synchronized Void call() throws InterruptedException, ExecutionException {
-      final Vector<Exception> exceptions = new Vector<Exception>();
+      final Vector<Exception> exceptions = new Vector<>();
 
       try {
         final FileStatus[] regionDirs = fs.listStatus(tableDir.getPath());
-        final List<Future<?>> futures = new ArrayList<Future<?>>(regionDirs.length);
+        final List<Future<?>> futures = new ArrayList<>(regionDirs.length);
 
         for (final FileStatus regionDir : regionDirs) {
           errors.progress();
@@ -4554,7 +4549,7 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   Set<TableName> getIncludedTables() {
-    return new HashSet<TableName>(tablesIncluded);
+    return new HashSet<>(tablesIncluded);
   }
 
   /**
@@ -4865,7 +4860,7 @@ public class HBaseFsck extends Configured implements Closeable {
         HFileCorruptionChecker hfcc = createHFileCorruptionChecker(sidelineCorruptHFiles);
         setHFileCorruptionChecker(hfcc); // so we can get result
         Collection<TableName> tables = getIncludedTables();
-        Collection<Path> tableDirs = new ArrayList<Path>();
+        Collection<Path> tableDirs = new ArrayList<>();
         Path rootdir = FSUtils.getRootDir(getConf());
         if (tables.size() > 0) {
           for (TableName t : tables) {

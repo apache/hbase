@@ -426,7 +426,7 @@ public class FileLink {
   protected void setLocations(Path originPath, Path... alternativePaths) {
     assert this.locations == null : "Link locations already set";
 
-    List<Path> paths = new ArrayList<Path>(alternativePaths.length +1);
+    List<Path> paths = new ArrayList<>(alternativePaths.length +1);
     if (originPath != null) {
       paths.add(originPath);
     }

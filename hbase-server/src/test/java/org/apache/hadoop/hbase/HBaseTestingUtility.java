@@ -2287,7 +2287,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public int countRows(final InternalScanner scanner) throws IOException {
     int scannedCount = 0;
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     boolean hasMore = true;
     while (hasMore) {
       hasMore = scanner.next(results);
@@ -2367,7 +2367,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   throws IOException {
     Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
-    List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
+    List<HRegionInfo> newRegions = new ArrayList<>(startKeys.length);
     MetaTableAccessor
         .updateTableState(getConnection(), htd.getTableName(), TableState.State.ENABLED);
     // add custom ones
@@ -2426,7 +2426,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public List<byte[]> getMetaTableRows() throws IOException {
     // TODO: Redo using MetaTableAccessor class
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
-    List<byte[]> rows = new ArrayList<byte[]>();
+    List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
       LOG.info("getMetaTableRows: row -> " +
@@ -2446,7 +2446,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public List<byte[]> getMetaTableRows(TableName tableName) throws IOException {
     // TODO: Redo using MetaTableAccessor.
     Table t = getConnection().getTable(TableName.META_TABLE_NAME);
-    List<byte[]> rows = new ArrayList<byte[]>();
+    List<byte[]> rows = new ArrayList<>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
       HRegionInfo info = MetaTableAccessor.getHRegionInfo(result);
@@ -3219,7 +3219,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public static NavigableSet<String> getAllOnlineRegions(MiniHBaseCluster cluster)
       throws IOException {
-    NavigableSet<String> online = new TreeSet<String>();
+    NavigableSet<String> online = new TreeSet<>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       try {
         for (HRegionInfo region :
@@ -3391,7 +3391,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         // readpoint 0.
         0);
 
-    List<Cell> result = new ArrayList<Cell>();
+    List<Cell> result = new ArrayList<>();
     scanner.next(result);
     if (!result.isEmpty()) {
       // verify that we are on the row we want:
@@ -3601,7 +3601,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     private static final int MAX_RANDOM_PORT = 0xfffe;
 
     /** A set of ports that have been claimed using {@link #randomFreePort()}. */
-    private final Set<Integer> takenRandomPorts = new HashSet<Integer>();
+    private final Set<Integer> takenRandomPorts = new HashSet<>();
 
     private final Random random;
     private final AvailablePortChecker portChecker;

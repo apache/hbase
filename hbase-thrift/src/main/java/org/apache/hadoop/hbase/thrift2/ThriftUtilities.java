@@ -139,7 +139,7 @@ public class ThriftUtilities {
    * @see #getFromThrift(TGet)
    */
   public static List<Get> getsFromThrift(List<TGet> in) throws IOException {
-    List<Get> out = new ArrayList<Get>(in.size());
+    List<Get> out = new ArrayList<>(in.size());
     for (TGet get : in) {
       out.add(getFromThrift(get));
     }
@@ -160,7 +160,7 @@ public class ThriftUtilities {
     if (row != null) {
       out.setRow(in.getRow());
     }
-    List<TColumnValue> columnValues = new ArrayList<TColumnValue>(raw.length);
+    List<TColumnValue> columnValues = new ArrayList<>(raw.length);
     for (Cell kv : raw) {
       TColumnValue col = new TColumnValue();
       col.setFamily(CellUtil.cloneFamily(kv));
@@ -186,7 +186,7 @@ public class ThriftUtilities {
    * @see #resultFromHBase(Result)
    */
   public static List<TResult> resultsFromHBase(Result[] in) {
-    List<TResult> out = new ArrayList<TResult>(in.length);
+    List<TResult> out = new ArrayList<>(in.length);
     for (Result result : in) {
       out.add(resultFromHBase(result));
     }
@@ -245,7 +245,7 @@ public class ThriftUtilities {
    * @see #putFromThrift(TPut)
    */
   public static List<Put> putsFromThrift(List<TPut> in) {
-    List<Put> out = new ArrayList<Put>(in.size());
+    List<Put> out = new ArrayList<>(in.size());
     for (TPut put : in) {
       out.add(putFromThrift(put));
     }
@@ -318,7 +318,7 @@ public class ThriftUtilities {
    */
 
   public static List<Delete> deletesFromThrift(List<TDelete> in) {
-    List<Delete> out = new ArrayList<Delete>(in.size());
+    List<Delete> out = new ArrayList<>(in.size());
     for (TDelete delete : in) {
       out.add(deleteFromThrift(delete));
     }
@@ -328,7 +328,7 @@ public class ThriftUtilities {
   public static TDelete deleteFromHBase(Delete in) {
     TDelete out = new TDelete(ByteBuffer.wrap(in.getRow()));
 
-    List<TColumn> columns = new ArrayList<TColumn>(in.getFamilyCellMap().entrySet().size());
+    List<TColumn> columns = new ArrayList<>(in.getFamilyCellMap().entrySet().size());
     long rowTimestamp = in.getTimeStamp();
     if (rowTimestamp != HConstants.LATEST_TIMESTAMP) {
       out.setTimestamp(rowTimestamp);
@@ -505,7 +505,7 @@ public class ThriftUtilities {
   }
 
   public static List<THRegionLocation> regionLocationsFromHBase(List<HRegionLocation> locations) {
-    List<THRegionLocation> tlocations = new ArrayList<THRegionLocation>(locations.size());
+    List<THRegionLocation> tlocations = new ArrayList<>(locations.size());
     for (HRegionLocation hrl:locations) {
       tlocations.add(regionLocationFromHBase(hrl));
     }

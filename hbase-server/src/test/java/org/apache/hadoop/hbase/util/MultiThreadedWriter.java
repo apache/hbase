@@ -43,7 +43,7 @@ import org.apache.hadoop.util.StringUtils;
 public class MultiThreadedWriter extends MultiThreadedWriterBase {
   private static final Log LOG = LogFactory.getLog(MultiThreadedWriter.class);
 
-  protected Set<HBaseWriterThread> writers = new HashSet<HBaseWriterThread>();
+  protected Set<HBaseWriterThread> writers = new HashSet<>();
 
   protected boolean isMultiPut = false;
 

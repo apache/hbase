@@ -261,7 +261,7 @@ public final class AvlUtil {
         final AvlNodeVisitor<TNode> visitor) {
       if (root == null) return;
 
-      final AvlTreeIterator<TNode> iterator = new AvlTreeIterator<TNode>(root);
+      final AvlTreeIterator<TNode> iterator = new AvlTreeIterator<>(root);
       boolean visitNext = true;
       while (visitNext && iterator.hasNext()) {
         visitNext = visitor.visitNode(iterator.next());

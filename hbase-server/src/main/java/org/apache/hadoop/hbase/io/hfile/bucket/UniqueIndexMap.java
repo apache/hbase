@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public final class UniqueIndexMap<T> implements Serializable {
   private static final long serialVersionUID = -1145635738654002342L;
 
-  ConcurrentHashMap<T, Integer> mForwardMap = new ConcurrentHashMap<T, Integer>();
-  ConcurrentHashMap<Integer, T> mReverseMap = new ConcurrentHashMap<Integer, T>();
+  ConcurrentHashMap<T, Integer> mForwardMap = new ConcurrentHashMap<>();
+  ConcurrentHashMap<Integer, T> mReverseMap = new ConcurrentHashMap<>();
   AtomicInteger mIndex = new AtomicInteger(0);
 
   // Map a length to an index. If we can't, allocate a new mapping. We might

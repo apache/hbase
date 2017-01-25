@@ -251,9 +251,8 @@ class AsyncProcess {
     boolean atLeastOne) throws InterruptedIOException {
     TableName tableName = task.getTableName();
     RowAccess<? extends Row> rows = task.getRowAccess();
-    Map<ServerName, MultiAction> actionsByServer =
-        new HashMap<ServerName, MultiAction>();
-    List<Action> retainedActions = new ArrayList<Action>(rows.size());
+    Map<ServerName, MultiAction> actionsByServer = new HashMap<>();
+    List<Action> retainedActions = new ArrayList<>(rows.size());
 
     NonceGenerator ng = this.connection.getNonceGenerator();
     long nonceGroup = ng.getNonceGroup(); // Currently, nonce group is per entire client.
@@ -287,8 +286,8 @@ class AsyncProcess {
           }
           loc = locs.getDefaultRegionLocation();
         } catch (IOException ex) {
-          locationErrors = new ArrayList<Exception>(1);
-          locationErrorRows = new ArrayList<Integer>(1);
+          locationErrors = new ArrayList<>(1);
+          locationErrorRows = new ArrayList<>(1);
           LOG.error("Failed to get region location ", ex);
           // This action failed before creating ars. Retain it, but do not add to submit list.
           // We will then add it to ars in an already-failed state.
@@ -368,7 +367,7 @@ class AsyncProcess {
    */
   private <CResult> AsyncRequestFuture submitAll(AsyncProcessTask task) {
     RowAccess<? extends Row> rows = task.getRowAccess();
-    List<Action> actions = new ArrayList<Action>(rows.size());
+    List<Action> actions = new ArrayList<>(rows.size());
 
     // The position will be used by the processBatch to match the object array returned.
     int posInList = -1;

@@ -92,7 +92,7 @@ public class MultiTableInputFormat extends MultiTableInputFormatBase implements
       throw new IllegalArgumentException("There must be at least 1 scan configuration set to : "
           + SCANS);
     }
-    List<Scan> scans = new ArrayList<Scan>();
+    List<Scan> scans = new ArrayList<>();
 
     for (int i = 0; i < rawScans.length; i++) {
       try {

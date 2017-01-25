@@ -45,7 +45,7 @@ public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
    * @throws Exception
    */
   public void testFirstKeyMatchingQualifierFilter() throws Exception {
-    Set<byte[]> quals = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    Set<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     quals.add(COLUMN_QUALIFIER_1);
     quals.add(COLUMN_QUALIFIER_2);
     Filter filter = new FirstKeyValueMatchingQualifiersFilter(quals);

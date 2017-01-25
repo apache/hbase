@@ -274,7 +274,7 @@ public class TestPartialResultsFromClientSide {
     int iterationCount = 0;
 
     while (oneShotResult != null && oneShotResult.rawCells() != null) {
-      List<Cell> aggregatePartialCells = new ArrayList<Cell>();
+      List<Cell> aggregatePartialCells = new ArrayList<>();
       do {
         partialResult = partialScanner.next();
         assertTrue("Partial Result is null. iteration: " + iterationCount, partialResult != null);

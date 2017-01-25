@@ -157,7 +157,7 @@ public class ImmutableSegment extends Segment {
   }
 
   public List<Segment> getAllSegments() {
-    List<Segment> res = new ArrayList<Segment>(Arrays.asList(this));
+    List<Segment> res = new ArrayList<>(Arrays.asList(this));
     return res;
   }
 

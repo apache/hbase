@@ -140,8 +140,7 @@ public class SecureBulkLoadManager {
     List<BulkLoadObserver> bulkLoadObservers = getBulkLoadObservers(region);
 
     if (bulkLoadObservers != null && bulkLoadObservers.size() != 0) {
-      ObserverContext<RegionCoprocessorEnvironment> ctx =
-          new ObserverContext<RegionCoprocessorEnvironment>(getActiveUser());
+      ObserverContext<RegionCoprocessorEnvironment> ctx = new ObserverContext<>(getActiveUser());
       ctx.prepare((RegionCoprocessorEnvironment) region.getCoprocessorHost()
           .findCoprocessorEnvironment(BulkLoadObserver.class).get(0));
 
@@ -162,8 +161,7 @@ public class SecureBulkLoadManager {
     List<BulkLoadObserver> bulkLoadObservers = getBulkLoadObservers(region);
 
     if (bulkLoadObservers != null && bulkLoadObservers.size() != 0) {
-      ObserverContext<RegionCoprocessorEnvironment> ctx =
-          new ObserverContext<RegionCoprocessorEnvironment>(getActiveUser());
+      ObserverContext<RegionCoprocessorEnvironment> ctx = new ObserverContext<>(getActiveUser());
       ctx.prepare((RegionCoprocessorEnvironment) region.getCoprocessorHost()
         .findCoprocessorEnvironment(BulkLoadObserver.class).get(0));
 
@@ -177,9 +175,9 @@ public class SecureBulkLoadManager {
 
   public Map<byte[], List<Path>> secureBulkLoadHFiles(final Region region,
       final BulkLoadHFileRequest request) throws IOException {
-    final List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>(request.getFamilyPathCount());
+    final List<Pair<byte[], String>> familyPaths = new ArrayList<>(request.getFamilyPathCount());
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
-      familyPaths.add(new Pair<byte[], String>(el.getFamily().toByteArray(), el.getPath()));
+      familyPaths.add(new Pair<>(el.getFamily().toByteArray(), el.getPath()));
     }
 
     Token userToken = null;
@@ -324,7 +322,7 @@ public class SecureBulkLoadManager {
       this.fs = fs;
       this.stagingDir = stagingDir;
       this.conf = conf;
-      this.origPermissions = new HashMap<String, FsPermission>();
+      this.origPermissions = new HashMap<>();
     }
 
     @Override

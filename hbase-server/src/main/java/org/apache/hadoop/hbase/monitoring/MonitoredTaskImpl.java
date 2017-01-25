@@ -148,7 +148,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public Map<String, Object> toMap() {
-    Map<String, Object> map = new HashMap<String, Object>();
+    Map<String, Object> map = new HashMap<>();
     map.put("description", getDescription());
     map.put("status", getStatus());
     map.put("state", getState());

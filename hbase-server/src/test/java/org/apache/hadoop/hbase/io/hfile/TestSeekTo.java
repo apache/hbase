@@ -65,7 +65,7 @@ public class TestSeekTo {
   private final DataBlockEncoding encoding;
   @Parameters
   public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<Object[]>();
+    List<Object[]> paramList = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       paramList.add(new Object[] { encoding });
     }

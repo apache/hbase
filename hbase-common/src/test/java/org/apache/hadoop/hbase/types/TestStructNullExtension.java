@@ -58,7 +58,7 @@ public class TestStructNullExtension {
     Struct shorter = builder.toStruct();
     Struct longer = builder
         // intentionally include a wrapped instance to test wrapper behavior.
-        .add(new TerminatedWrapper<String>(OrderedString.ASCENDING, "/"))
+        .add(new TerminatedWrapper<>(OrderedString.ASCENDING, "/"))
         .add(OrderedNumeric.ASCENDING)
         .toStruct();
 

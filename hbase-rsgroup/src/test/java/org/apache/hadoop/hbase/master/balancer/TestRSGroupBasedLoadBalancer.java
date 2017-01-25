@@ -89,7 +89,7 @@ public class TestRSGroupBasedLoadBalancer {
     rand = new SecureRandom();
     servers = generateServers(7);
     groupMap = constructGroupInfo(servers, groups);
-    tableMap = new HashMap<TableName, String>();
+    tableMap = new HashMap<>();
     tableDescs = constructTableDesc();
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.regions.slop", "0");
@@ -231,7 +231,7 @@ public class TestRSGroupBasedLoadBalancer {
   public void testRetainAssignment() throws Exception {
     // Test simple case where all same servers are there
     Map<ServerName, List<HRegionInfo>> currentAssignments = mockClusterServers();
-    Map<HRegionInfo, ServerName> inputForTest = new HashMap<HRegionInfo, ServerName>();
+    Map<HRegionInfo, ServerName> inputForTest = new HashMap<>();
     for (ServerName sn : currentAssignments.keySet()) {
       for (HRegionInfo region : currentAssignments.get(sn)) {
         inputForTest.put(region, sn);
@@ -264,8 +264,8 @@ public class TestRSGroupBasedLoadBalancer {
       Map<ServerName, List<HRegionInfo>> assignment)
       throws FileNotFoundException, IOException {
     // Verify condition 1, every region assigned, and to online server
-    Set<ServerName> onlineServerSet = new TreeSet<ServerName>(servers);
-    Set<HRegionInfo> assignedRegions = new TreeSet<HRegionInfo>();
+    Set<ServerName> onlineServerSet = new TreeSet<>(servers);
+    Set<HRegionInfo> assignedRegions = new TreeSet<>();
     for (Map.Entry<ServerName, List<HRegionInfo>> a : assignment.entrySet()) {
       assertTrue(
           "Region assigned to server that was not listed as online",
@@ -276,7 +276,7 @@ public class TestRSGroupBasedLoadBalancer {
     assertEquals(existing.size(), assignedRegions.size());
 
     // Verify condition 2, every region must be assigned to correct server.
-    Set<String> onlineHostNames = new TreeSet<String>();
+    Set<String> onlineHostNames = new TreeSet<>();
     for (ServerName s : servers) {
       onlineHostNames.add(s.getHostname());
     }
@@ -402,7 +402,7 @@ public class TestRSGroupBasedLoadBalancer {
 
   private Map<ServerName, List<HRegionInfo>> mockClusterServers() throws IOException {
     assertTrue(servers.size() == regionAssignment.length);
-    Map<ServerName, List<HRegionInfo>> assignment = new TreeMap<ServerName, List<HRegionInfo>>();
+    Map<ServerName, List<HRegionInfo>> assignment = new TreeMap<>();
     for (int i = 0; i < servers.size(); i++) {
       int numRegions = regionAssignment[i];
       List<HRegionInfo> regions = assignedRegions(numRegions, servers.get(i));
@@ -418,7 +418,7 @@ public class TestRSGroupBasedLoadBalancer {
    * @return List of HRegionInfo.
    */
   private List<HRegionInfo> randomRegions(int numRegions) {
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(numRegions);
+    List<HRegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
     byte[] end = new byte[16];
     rand.nextBytes(start);
@@ -444,7 +444,7 @@ public class TestRSGroupBasedLoadBalancer {
    * @throws java.io.IOException Signals that an I/O exception has occurred.
    */
   private List<HRegionInfo> assignedRegions(int numRegions, ServerName sn) throws IOException {
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(numRegions);
+    List<HRegionInfo> regions = new ArrayList<>(numRegions);
     byte[] start = new byte[16];
     byte[] end = new byte[16];
     Bytes.putInt(start, 0, numRegions << 1);
@@ -460,7 +460,7 @@ public class TestRSGroupBasedLoadBalancer {
   }
 
   private static List<ServerName> generateServers(int numServers) {
-    List<ServerName> servers = new ArrayList<ServerName>(numServers);
+    List<ServerName> servers = new ArrayList<>(numServers);
     for (int i = 0; i < numServers; i++) {
       String host = "server" + rand.nextInt(100000);
       int port = rand.nextInt(60000);
@@ -481,7 +481,7 @@ public class TestRSGroupBasedLoadBalancer {
     assertTrue(servers != null);
     assertTrue(servers.size() >= groups.length);
     int index = 0;
-    Map<String, RSGroupInfo> groupMap = new HashMap<String, RSGroupInfo>();
+    Map<String, RSGroupInfo> groupMap = new HashMap<>();
     for (String grpName : groups) {
       RSGroupInfo RSGroupInfo = new RSGroupInfo(grpName);
       RSGroupInfo.addServer(servers.get(index).getAddress());

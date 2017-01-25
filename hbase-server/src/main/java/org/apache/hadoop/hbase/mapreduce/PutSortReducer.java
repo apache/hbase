@@ -79,10 +79,10 @@ public class PutSortReducer extends
         "putsortreducer.row.threshold", 1L * (1<<30));
     Iterator<Put> iter = puts.iterator();
     while (iter.hasNext()) {
-      TreeSet<KeyValue> map = new TreeSet<KeyValue>(CellComparator.COMPARATOR);
+      TreeSet<KeyValue> map = new TreeSet<>(CellComparator.COMPARATOR);
       long curSize = 0;
       // stop at the end or the RAM threshold
-      List<Tag> tags = new ArrayList<Tag>();
+      List<Tag> tags = new ArrayList<>();
       while (iter.hasNext() && curSize < threshold) {
         // clear the tags
         tags.clear();

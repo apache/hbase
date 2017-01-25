@@ -598,8 +598,7 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     FileStatus[] snapshots = fs.listStatus(snapshotDir,
         new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
-    List<SnapshotDescription> snapshotLists =
-      new ArrayList<SnapshotDescription>(snapshots.length);
+    List<SnapshotDescription> snapshotLists = new ArrayList<>(snapshots.length);
     for (FileStatus snapshotDirStat: snapshots) {
       HBaseProtos.SnapshotDescription snapshotDesc =
           SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath());

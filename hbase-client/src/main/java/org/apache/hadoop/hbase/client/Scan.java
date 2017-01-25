@@ -143,8 +143,7 @@ public class Scan extends Query {
   private long maxResultSize = -1;
   private boolean cacheBlocks = true;
   private boolean reversed = false;
-  private Map<byte[], NavigableSet<byte[]>> familyMap =
-      new TreeMap<byte[], NavigableSet<byte[]>>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], NavigableSet<byte[]>> familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
   private Boolean asyncPrefetch = null;
 
   /**
@@ -339,7 +338,7 @@ public class Scan extends Query {
   public Scan addColumn(byte [] family, byte [] qualifier) {
     NavigableSet<byte []> set = familyMap.get(family);
     if(set == null) {
-      set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+      set = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     }
     if (qualifier == null) {
       qualifier = HConstants.EMPTY_BYTE_ARRAY;
@@ -889,8 +888,8 @@ public class Scan extends Query {
    */
   @Override
   public Map<String, Object> getFingerprint() {
-    Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>();
+    Map<String, Object> map = new HashMap<>();
+    List<String> families = new ArrayList<>();
     if(this.familyMap.isEmpty()) {
       map.put("families", "ALL");
       return map;
@@ -916,8 +915,7 @@ public class Scan extends Query {
     // start with the fingerpring map and build on top of it
     Map<String, Object> map = getFingerprint();
     // map from families to column list replaces fingerprint's list of families
-    Map<String, List<String>> familyColumns =
-      new HashMap<String, List<String>>();
+    Map<String, List<String>> familyColumns = new HashMap<>();
     map.put("families", familyColumns);
     // add scalar information first
     map.put("startRow", Bytes.toStringBinary(this.startRow));
@@ -928,7 +926,7 @@ public class Scan extends Query {
     map.put("maxResultSize", this.maxResultSize);
     map.put("cacheBlocks", this.cacheBlocks);
     map.put("loadColumnFamiliesOnDemand", this.loadColumnFamiliesOnDemand);
-    List<Long> timeRange = new ArrayList<Long>(2);
+    List<Long> timeRange = new ArrayList<>(2);
     timeRange.add(this.tr.getMin());
     timeRange.add(this.tr.getMax());
     map.put("timeRange", timeRange);
@@ -936,7 +934,7 @@ public class Scan extends Query {
     // iterate through affected families and list out up to maxCols columns
     for (Map.Entry<byte [], NavigableSet<byte[]>> entry :
       this.familyMap.entrySet()) {
-      List<String> columns = new ArrayList<String>();
+      List<String> columns = new ArrayList<>();
       familyColumns.put(Bytes.toStringBinary(entry.getKey()), columns);
       if(entry.getValue() == null) {
         colCount++;

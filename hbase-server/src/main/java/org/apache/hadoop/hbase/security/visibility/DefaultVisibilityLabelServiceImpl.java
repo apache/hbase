@@ -151,10 +151,10 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   protected List<List<Cell>> getExistingLabelsWithAuths() throws IOException {
     Scan scan = new Scan();
     RegionScanner scanner = labelsRegion.getScanner(scan);
-    List<List<Cell>> existingLabels = new ArrayList<List<Cell>>();
+    List<List<Cell>> existingLabels = new ArrayList<>();
     try {
       while (true) {
-        List<Cell> cells = new ArrayList<Cell>();
+        List<Cell> cells = new ArrayList<>();
         scanner.next(cells);
         if (cells.isEmpty()) {
           break;
@@ -169,8 +169,8 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
 
   protected Pair<Map<String, Integer>, Map<String, List<Integer>>> extractLabelsAndAuths(
       List<List<Cell>> labelDetails) {
-    Map<String, Integer> labels = new HashMap<String, Integer>();
-    Map<String, List<Integer>> userAuths = new HashMap<String, List<Integer>>();
+    Map<String, Integer> labels = new HashMap<>();
+    Map<String, List<Integer>> userAuths = new HashMap<>();
     for (List<Cell> cells : labelDetails) {
       for (Cell cell : cells) {
         if (CellUtil.matchingQualifier(cell, LABEL_QUALIFIER)) {
@@ -183,14 +183,14 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
               cell.getQualifierLength());
           List<Integer> auths = userAuths.get(user);
           if (auths == null) {
-            auths = new ArrayList<Integer>();
+            auths = new ArrayList<>();
             userAuths.put(user, auths);
           }
           auths.add(CellUtil.getRowAsInt(cell));
         }
       }
     }
-    return new Pair<Map<String, Integer>, Map<String, List<Integer>>>(labels, userAuths);
+    return new Pair<>(labels, userAuths);
   }
 
   protected void addSystemLabel(Region region, Map<String, Integer> labels,
@@ -207,7 +207,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   public OperationStatus[] addLabels(List<byte[]> labels) throws IOException {
     assert labelsRegion != null;
     OperationStatus[] finalOpStatus = new OperationStatus[labels.size()];
-    List<Mutation> puts = new ArrayList<Mutation>(labels.size());
+    List<Mutation> puts = new ArrayList<>(labels.size());
     int i = 0;
     for (byte[] label : labels) {
       String labelStr = Bytes.toString(label);
@@ -235,7 +235,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   public OperationStatus[] setAuths(byte[] user, List<byte[]> authLabels) throws IOException {
     assert labelsRegion != null;
     OperationStatus[] finalOpStatus = new OperationStatus[authLabels.size()];
-    List<Mutation> puts = new ArrayList<Mutation>(authLabels.size());
+    List<Mutation> puts = new ArrayList<>(authLabels.size());
     int i = 0;
     for (byte[] auth : authLabels) {
       String authStr = Bytes.toString(auth);
@@ -269,7 +269,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     else {
       currentAuths = this.getUserAuths(user, true);
     }
-    List<Mutation> deletes = new ArrayList<Mutation>(authLabels.size());
+    List<Mutation> deletes = new ArrayList<>(authLabels.size());
     int i = 0;
     for (byte[] authLabel : authLabels) {
       String authLabelStr = Bytes.toString(authLabel);
@@ -334,10 +334,10 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     Filter filter = VisibilityUtils.createVisibilityLabelFilter(this.labelsRegion,
         new Authorizations(SYSTEM_LABEL));
     s.setFilter(filter);
-    ArrayList<String> auths = new ArrayList<String>();
+    ArrayList<String> auths = new ArrayList<>();
     RegionScanner scanner = this.labelsRegion.getScanner(s);
     try {
-      List<Cell> results = new ArrayList<Cell>(1);
+      List<Cell> results = new ArrayList<>(1);
       while (true) {
         scanner.next(results);
         if (results.isEmpty()) break;
@@ -371,10 +371,10 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     Filter filter = VisibilityUtils.createVisibilityLabelFilter(this.labelsRegion,
         new Authorizations(SYSTEM_LABEL));
     s.setFilter(filter);
-    Set<String> auths = new HashSet<String>();
+    Set<String> auths = new HashSet<>();
     RegionScanner scanner = this.labelsRegion.getScanner(s);
     try {
-      List<Cell> results = new ArrayList<Cell>(1);
+      List<Cell> results = new ArrayList<>(1);
       while (true) {
         scanner.next(results);
         if (results.isEmpty()) break;
@@ -389,7 +389,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     } finally {
       scanner.close();
     }
-    return new ArrayList<String>(auths);
+    return new ArrayList<>(auths);
   }
 
   @Override
@@ -401,7 +401,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     labels.remove(SYSTEM_LABEL);
     if (regex != null) {
       Pattern pattern = Pattern.compile(regex);
-      ArrayList<String> matchedLabels = new ArrayList<String>();
+      ArrayList<String> matchedLabels = new ArrayList<>();
       for (String label : labels.keySet()) {
         if (pattern.matcher(label).matches()) {
           matchedLabels.add(label);
@@ -409,13 +409,13 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       }
       return matchedLabels;
     }
-    return new ArrayList<String>(labels.keySet());
+    return new ArrayList<>(labels.keySet());
   }
 
   @Override
   public List<Tag> createVisibilityExpTags(String visExpression, boolean withSerializationFormat,
       boolean checkAuths) throws IOException {
-    Set<Integer> auths = new HashSet<Integer>();
+    Set<Integer> auths = new HashSet<>();
     if (checkAuths) {
       User user = VisibilityUtils.getActiveUser();
       auths.addAll(this.labelsCache.getUserAuthsAsOrdinals(user.getShortName()));
@@ -461,7 +461,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       try {
         // null authorizations to be handled inside SLG impl.
         authLabels = scanLabelGenerator.getLabels(VisibilityUtils.getActiveUser(), authorizations);
-        authLabels = (authLabels == null) ? new ArrayList<String>() : authLabels;
+        authLabels = (authLabels == null) ? new ArrayList<>() : authLabels;
         authorizations = new Authorizations(authLabels);
       } catch (Throwable t) {
         LOG.error(t);
@@ -605,7 +605,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   }
 
   private static List<List<Integer>> sortTagsBasedOnOrdinal(List<Tag> tags) throws IOException {
-    List<List<Integer>> fullTagsList = new ArrayList<List<Integer>>();
+    List<List<Integer>> fullTagsList = new ArrayList<>();
     for (Tag tag : tags) {
       if (tag.getType() == VISIBILITY_TAG_TYPE) {
         getSortedTagOrdinals(fullTagsList, tag);
@@ -616,7 +616,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
 
   private static void getSortedTagOrdinals(List<List<Integer>> fullTagsList, Tag tag)
       throws IOException {
-    List<Integer> tagsOrdinalInSortedOrder = new ArrayList<Integer>();
+    List<Integer> tagsOrdinalInSortedOrder = new ArrayList<>();
     int offset = tag.getValueOffset();
     int endOffset = offset + tag.getValueLength();
     while (offset < endOffset) {

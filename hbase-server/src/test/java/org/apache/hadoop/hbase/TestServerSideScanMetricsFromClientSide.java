@@ -280,7 +280,7 @@ public class TestServerSideScanMetricsFromClientSide {
     filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.NOT_EQUAL, VALUE);
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
-    List<Filter> filters = new ArrayList<Filter>();
+    List<Filter> filters = new ArrayList<>();
     filters.add(new RowFilter(CompareOp.EQUAL, new BinaryComparator(ROWS[0])));
     filters.add(new RowFilter(CompareOp.EQUAL, new BinaryComparator(ROWS[3])));
     int numberOfMatchingRowFilters = filters.size();

@@ -60,7 +60,7 @@ public class FifoRpcScheduler extends RpcScheduler {
         handlerCount,
         60,
         TimeUnit.SECONDS,
-        new ArrayBlockingQueue<Runnable>(maxQueueLength),
+        new ArrayBlockingQueue<>(maxQueueLength),
         new DaemonThreadFactory("FifoRpcScheduler.handler"),
         new ThreadPoolExecutor.CallerRunsPolicy());
   }

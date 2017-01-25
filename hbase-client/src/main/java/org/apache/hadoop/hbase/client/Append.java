@@ -123,7 +123,7 @@ public class Append extends Mutation {
     byte [] family = CellUtil.cloneFamily(cell);
     List<Cell> list = this.familyMap.get(family);
     if (list == null) {
-      list  = new ArrayList<Cell>(1);
+      list  = new ArrayList<>(1);
     }
     // find where the new entry should be placed in the List
     list.add(cell);

@@ -89,8 +89,7 @@ public class FSTableDescriptors implements TableDescriptors {
   // This cache does not age out the old stuff.  Thinking is that the amount
   // of data we keep up in here is so small, no need to do occasional purge.
   // TODO.
-  private final Map<TableName, HTableDescriptor> cache =
-    new ConcurrentHashMap<TableName, HTableDescriptor>();
+  private final Map<TableName, HTableDescriptor> cache = new ConcurrentHashMap<>();
 
   /**
    * Table descriptor for <code>hbase:meta</code> catalog table
@@ -271,7 +270,7 @@ public class FSTableDescriptors implements TableDescriptors {
   @Override
   public Map<String, HTableDescriptor> getAllDescriptors()
   throws IOException {
-    Map<String, HTableDescriptor> tds = new TreeMap<String, HTableDescriptor>();
+    Map<String, HTableDescriptor> tds = new TreeMap<>();
 
     if (fsvisited && usecache) {
       for (Map.Entry<TableName, HTableDescriptor> entry: this.cache.entrySet()) {
@@ -307,7 +306,7 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   @Override
   public Map<String, HTableDescriptor> getAll() throws IOException {
-    Map<String, HTableDescriptor> htds = new TreeMap<String, HTableDescriptor>();
+    Map<String, HTableDescriptor> htds = new TreeMap<>();
     Map<String, HTableDescriptor> allDescriptors = getAllDescriptors();
     for (Map.Entry<String, HTableDescriptor> entry : allDescriptors
         .entrySet()) {
@@ -323,7 +322,7 @@ public class FSTableDescriptors implements TableDescriptors {
   @Override
   public Map<String, HTableDescriptor> getByNamespace(String name)
   throws IOException {
-    Map<String, HTableDescriptor> htds = new TreeMap<String, HTableDescriptor>();
+    Map<String, HTableDescriptor> htds = new TreeMap<>();
     List<Path> tableDirs =
         FSUtils.getLocalTableDirs(fs, FSUtils.getNamespaceDir(rootdir, name));
     for (Path d: tableDirs) {

@@ -117,8 +117,7 @@ public class TestRegionFavoredNodes {
       List<Region> regions = server.getOnlineRegions(TABLE_NAME);
       for (Region region : regions) {
         List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName>favoredNodes =
-            new ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.
-            ServerName>(3);
+            new ArrayList<>(3);
         String encodedRegionName = region.getRegionInfo().getEncodedName();
         for (int j = 0; j < FAVORED_NODES_NUM; j++) {
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName.Builder b =

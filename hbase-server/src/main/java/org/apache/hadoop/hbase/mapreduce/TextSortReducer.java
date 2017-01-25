@@ -146,7 +146,7 @@ public class TextSortReducer extends
         "reducer.row.threshold", 1L * (1<<30));
     Iterator<Text> iter = lines.iterator();
     while (iter.hasNext()) {
-      Set<KeyValue> kvs = new TreeSet<KeyValue>(CellComparator.COMPARATOR);
+      Set<KeyValue> kvs = new TreeSet<>(CellComparator.COMPARATOR);
       long curSize = 0;
       // stop at the end or the RAM threshold
       while (iter.hasNext() && curSize < threshold) {
@@ -160,7 +160,7 @@ public class TextSortReducer extends
           ttl = parsed.getCellTTL();
           
           // create tags for the parsed line
-          List<Tag> tags = new ArrayList<Tag>();
+          List<Tag> tags = new ArrayList<>();
           if (cellVisibilityExpr != null) {
             tags.addAll(kvCreator.getVisibilityExpressionResolver().createVisibilityExpTags(
               cellVisibilityExpr));

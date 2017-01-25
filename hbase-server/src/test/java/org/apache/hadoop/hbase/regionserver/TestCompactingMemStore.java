@@ -191,7 +191,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       InternalScanner scanner = new StoreScanner(new Scan(
           Bytes.toBytes(startRowId)), scanInfo, scanType, null,
           memstore.getScanners(0));
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;
         Cell left = results.get(0);
@@ -199,7 +199,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
         assertTrue("Row name",
             CellComparator.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0);
         assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
-        List<Cell> row = new ArrayList<Cell>();
+        List<Cell> row = new ArrayList<>();
         for (Cell kv : results) {
           row.add(kv);
         }
@@ -255,7 +255,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   public void testUpsertMemstoreSize() throws Exception {
     MemstoreSize oldSize = memstore.size();
 
-    List<Cell> l = new ArrayList<Cell>();
+    List<Cell> l = new ArrayList<>();
     KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
     KeyValue kv2 = KeyValueTestUtil.create("r", "f", "q", 101, "v");
     KeyValue kv3 = KeyValueTestUtil.create("r", "f", "q", 102, "v");
@@ -313,7 +313,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
      t = runSnapshot(memstore, true);
 
       // test the case that the timeOfOldestEdit is updated after a KV upsert
-      List<Cell> l = new ArrayList<Cell>();
+      List<Cell> l = new ArrayList<>();
       KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
       kv1.setSequenceId(100);
       l.add(kv1);

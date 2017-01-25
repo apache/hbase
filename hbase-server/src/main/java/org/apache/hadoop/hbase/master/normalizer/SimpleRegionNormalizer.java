@@ -118,7 +118,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       return null;
     }
 
-    List<NormalizationPlan> plans = new ArrayList<NormalizationPlan>();
+    List<NormalizationPlan> plans = new ArrayList<>();
     List<HRegionInfo> tableRegions = masterServices.getAssignmentManager().getRegionStates().
       getRegionsOfTable(table);
 

@@ -337,7 +337,7 @@ public class ModifyTableProcedure
     final int newReplicaCount = newHTableDescriptor.getRegionReplication();
 
     if (newReplicaCount < oldReplicaCount) {
-      Set<byte[]> tableRows = new HashSet<byte[]>();
+      Set<byte[]> tableRows = new HashSet<>();
       Connection connection = env.getMasterServices().getConnection();
       Scan scan = MetaTableAccessor.getScanForTableName(connection, getTableName());
       scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);

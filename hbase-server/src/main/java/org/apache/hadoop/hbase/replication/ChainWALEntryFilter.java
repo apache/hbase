@@ -43,7 +43,7 @@ public class ChainWALEntryFilter implements WALEntryFilter {
   }
 
   public ChainWALEntryFilter(List<WALEntryFilter> filters) {
-    ArrayList<WALEntryFilter> rawFilters = new ArrayList<WALEntryFilter>(filters.size());
+    ArrayList<WALEntryFilter> rawFilters = new ArrayList<>(filters.size());
     // flatten the chains
     for (WALEntryFilter filter : filters) {
       if (filter instanceof ChainWALEntryFilter) {

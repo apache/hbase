@@ -115,7 +115,7 @@ public class AssignmentManager {
 
   private AtomicInteger numRegionsOpened = new AtomicInteger(0);
 
-  final private KeyLocker<String> locker = new KeyLocker<String>();
+  final private KeyLocker<String> locker = new KeyLocker<>();
 
   Set<HRegionInfo> replicasToClose = Collections.synchronizedSet(new HashSet<HRegionInfo>());
 
@@ -141,8 +141,7 @@ public class AssignmentManager {
   // TODO: When do plans get cleaned out?  Ever? In server open and in server
   // shutdown processing -- St.Ack
   // All access to this Map must be synchronized.
-  final NavigableMap<String, RegionPlan> regionPlans =
-    new TreeMap<String, RegionPlan>();
+  final NavigableMap<String, RegionPlan> regionPlans = new TreeMap<>();
 
   private final TableStateManager tableStateManager;
 
@@ -183,8 +182,7 @@ public class AssignmentManager {
    * because we don't expect this to happen frequently; we don't
    * want to copy this information over during each state transition either.
    */
-  private final ConcurrentHashMap<String, AtomicInteger>
-    failedOpenTracker = new ConcurrentHashMap<String, AtomicInteger>();
+  private final ConcurrentHashMap<String, AtomicInteger> failedOpenTracker = new ConcurrentHashMap<>();
 
   // In case not using ZK for region assignment, region states
   // are persisted in meta with a state store
@@ -197,7 +195,7 @@ public class AssignmentManager {
   public static boolean TEST_SKIP_SPLIT_HANDLING = false;
 
   /** Listeners that are called on assignment events. */
-  private List<AssignmentListener> listeners = new CopyOnWriteArrayList<AssignmentListener>();
+  private List<AssignmentListener> listeners = new CopyOnWriteArrayList<>();
 
   private RegionStateListener regionStateListener;
 
@@ -382,7 +380,7 @@ public class AssignmentManager {
         pending++;
       }
     }
-    return new Pair<Integer, Integer>(pending, hris.size());
+    return new Pair<>(pending, hris.size());
   }
 
   /**
@@ -748,16 +746,16 @@ public class AssignmentManager {
         return true;
       }
       LOG.info("Assigning " + regionCount + " region(s) to " + destination.toString());
-      Set<String> encodedNames = new HashSet<String>(regionCount);
+      Set<String> encodedNames = new HashSet<>(regionCount);
       for (HRegionInfo region : regions) {
         encodedNames.add(region.getEncodedName());
       }
 
-      List<HRegionInfo> failedToOpenRegions = new ArrayList<HRegionInfo>();
+      List<HRegionInfo> failedToOpenRegions = new ArrayList<>();
       Map<String, Lock> locks = locker.acquireLocks(encodedNames);
       try {
-        Map<String, RegionPlan> plans = new HashMap<String, RegionPlan>(regionCount);
-        List<RegionState> states = new ArrayList<RegionState>(regionCount);
+        Map<String, RegionPlan> plans = new HashMap<>(regionCount);
+        List<RegionState> states = new ArrayList<>(regionCount);
         for (HRegionInfo region : regions) {
           String encodedName = region.getEncodedName();
           if (!isDisabledorDisablingRegionInRIT(region)) {
@@ -797,8 +795,7 @@ public class AssignmentManager {
         // that unnecessary timeout on RIT is reduced.
         this.addPlans(plans);
 
-        List<Pair<HRegionInfo, List<ServerName>>> regionOpenInfos =
-          new ArrayList<Pair<HRegionInfo, List<ServerName>>>(states.size());
+        List<Pair<HRegionInfo, List<ServerName>>> regionOpenInfos = new ArrayList<>(states.size());
         for (RegionState state: states) {
           HRegionInfo region = state.getRegion();
           regionStates.updateRegionState(
@@ -807,8 +804,7 @@ public class AssignmentManager {
           if (shouldAssignFavoredNodes(region)) {
             favoredNodes = server.getFavoredNodesManager().getFavoredNodesWithDNPort(region);
           }
-          regionOpenInfos.add(new Pair<HRegionInfo, List<ServerName>>(
-            region, favoredNodes));
+          regionOpenInfos.add(new Pair<>(region, favoredNodes));
         }
 
         // Move on to open regions.
@@ -908,7 +904,7 @@ public class AssignmentManager {
       }
 
       // wait for assignment completion
-      ArrayList<HRegionInfo> userRegionSet = new ArrayList<HRegionInfo>(regions.size());
+      ArrayList<HRegionInfo> userRegionSet = new ArrayList<>(regions.size());
       for (HRegionInfo region: regions) {
         if (!region.getTable().isSystemTable()) {
           userRegionSet.add(region);
@@ -1443,7 +1439,7 @@ public class AssignmentManager {
    */
   public boolean waitForAssignment(HRegionInfo regionInfo)
       throws InterruptedException {
-    ArrayList<HRegionInfo> regionSet = new ArrayList<HRegionInfo>(1);
+    ArrayList<HRegionInfo> regionSet = new ArrayList<>(1);
     regionSet.add(regionInfo);
     return waitForAssignment(regionSet, true, Long.MAX_VALUE);
   }
@@ -1588,7 +1584,7 @@ public class AssignmentManager {
       }
 
       // invoke assignment (async)
-      ArrayList<HRegionInfo> userRegionSet = new ArrayList<HRegionInfo>(regions);
+      ArrayList<HRegionInfo> userRegionSet = new ArrayList<>(regions);
       for (Map.Entry<ServerName, List<HRegionInfo>> plan: bulkPlan.entrySet()) {
         if (!assign(plan.getKey(), plan.getValue()) && !server.isStopped()) {
           for (HRegionInfo region: plan.getValue()) {
@@ -1640,7 +1636,7 @@ public class AssignmentManager {
     if (retainAssignment) {
       assign(allRegions);
     } else {
-      List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionsFromMetaScan);
+      List<HRegionInfo> regions = new ArrayList<>(regionsFromMetaScan);
       assign(regions);
     }
 
@@ -1687,7 +1683,7 @@ public class AssignmentManager {
    */
   public static List<HRegionInfo> replicaRegionsNotRecordedInMeta(
       Set<HRegionInfo> regionsRecordedInMeta, MasterServices master)throws IOException {
-    List<HRegionInfo> regionsNotRecordedInMeta = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> regionsNotRecordedInMeta = new ArrayList<>();
     for (HRegionInfo hri : regionsRecordedInMeta) {
       TableName table = hri.getTable();
       if(master.getTableDescriptors().get(table) == null)
@@ -1723,7 +1719,7 @@ public class AssignmentManager {
     // Get any new but slow to checkin region server that joined the cluster
     Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
     // Set of offline servers to be returned
-    Set<ServerName> offlineServers = new HashSet<ServerName>();
+    Set<ServerName> offlineServers = new HashSet<>();
     // Iterate regions in META
     for (Result result : results) {
       if (result == null && LOG.isDebugEnabled()){
@@ -2446,7 +2442,7 @@ public class AssignmentManager {
     threadPoolExecutorService.submit(splitReplicasCallable);
 
     // wait for assignment completion
-    ArrayList<HRegionInfo> regionAssignSet = new ArrayList<HRegionInfo>(2);
+    ArrayList<HRegionInfo> regionAssignSet = new ArrayList<>(2);
     regionAssignSet.add(daughterAHRI);
     regionAssignSet.add(daughterBHRI);
     while (!waitForAssignment(regionAssignSet, true, regionAssignSet.size(),
@@ -2558,7 +2554,7 @@ public class AssignmentManager {
 
     final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
     final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
-    Set<String> encodedNames = new HashSet<String>(2);
+    Set<String> encodedNames = new HashSet<>(2);
     encodedNames.add(a.getEncodedName());
     encodedNames.add(b.getEncodedName());
     Map<String, Lock> locks = locker.acquireLocks(encodedNames);
@@ -2645,7 +2641,7 @@ public class AssignmentManager {
     threadPoolExecutorService.submit(mergeReplicasCallable);
 
     // wait for assignment completion
-    ArrayList<HRegionInfo> regionAssignSet = new ArrayList<HRegionInfo>(1);
+    ArrayList<HRegionInfo> regionAssignSet = new ArrayList<>(1);
     regionAssignSet.add(mergedRegion);
     while (!waitForAssignment(regionAssignSet, true, regionAssignSet.size(), Long.MAX_VALUE)) {
       LOG.debug("The merged region " + mergedRegion + " is still in transition. ");
@@ -2754,7 +2750,7 @@ public class AssignmentManager {
       final HRegionInfo hri_b) {
     // Close replicas for the original unmerged regions. create/assign new replicas
     // for the merged parent.
-    List<HRegionInfo> unmergedRegions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> unmergedRegions = new ArrayList<>();
     unmergedRegions.add(hri_a);
     unmergedRegions.add(hri_b);
     Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(unmergedRegions);
@@ -2768,7 +2764,7 @@ public class AssignmentManager {
       }
     }
     int numReplicas = getNumReplicas(server, mergedHri.getTable());
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> regions = new ArrayList<>();
     for (int i = 1; i < numReplicas; i++) {
       regions.add(RegionReplicaUtil.getRegionInfoForReplica(mergedHri, i));
     }
@@ -2790,7 +2786,7 @@ public class AssignmentManager {
     // the replica1s of daughters will be on the same machine
     int numReplicas = getNumReplicas(server, parentHri.getTable());
     // unassign the old replicas
-    List<HRegionInfo> parentRegion = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> parentRegion = new ArrayList<>();
     parentRegion.add(parentHri);
     Map<ServerName, List<HRegionInfo>> currentAssign =
         regionStates.getRegionAssignments(parentRegion);
@@ -2804,7 +2800,7 @@ public class AssignmentManager {
       }
     }
     // assign daughter replicas
-    Map<HRegionInfo, ServerName> map = new HashMap<HRegionInfo, ServerName>();
+    Map<HRegionInfo, ServerName> map = new HashMap<>();
     for (int i = 1; i < numReplicas; i++) {
       prepareDaughterReplicaForAssignment(hri_a, parentHri, i, map);
       prepareDaughterReplicaForAssignment(hri_b, parentHri, i, map);
@@ -2856,7 +2852,7 @@ public class AssignmentManager {
     sendRegionClosedNotification(regionInfo);
     // also note that all the replicas of the primary should be closed
     if (state != null && state.equals(State.SPLIT)) {
-      Collection<HRegionInfo> c = new ArrayList<HRegionInfo>(1);
+      Collection<HRegionInfo> c = new ArrayList<>(1);
       c.add(regionInfo);
       Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(c);
       Collection<List<HRegionInfo>> allReplicas = map.values();
@@ -2865,7 +2861,7 @@ public class AssignmentManager {
       }
     }
     else if (state != null && state.equals(State.MERGED)) {
-      Collection<HRegionInfo> c = new ArrayList<HRegionInfo>(1);
+      Collection<HRegionInfo> c = new ArrayList<>(1);
       c.add(regionInfo);
       Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(c);
       Collection<List<HRegionInfo>> allReplicas = map.values();

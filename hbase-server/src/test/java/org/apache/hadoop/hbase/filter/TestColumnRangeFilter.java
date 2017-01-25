@@ -171,18 +171,18 @@ public class TestColumnRangeFilter {
     long maxTimestamp = 2;
     List<String> columns = generateRandomWords(20000, 8);
 
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<KeyValue> kvList = new ArrayList<>();
 
-    Map<StringRange, List<KeyValue>> rangeMap = new HashMap<StringRange, List<KeyValue>>();
+    Map<StringRange, List<KeyValue>> rangeMap = new HashMap<>();
 
     rangeMap.put(new StringRange(null, true, "b", false),
-        new ArrayList<KeyValue>());
+        new ArrayList<>());
     rangeMap.put(new StringRange("p", true, "q", false),
-        new ArrayList<KeyValue>());
+        new ArrayList<>());
     rangeMap.put(new StringRange("r", false, "s", true),
-        new ArrayList<KeyValue>());
+        new ArrayList<>());
     rangeMap.put(new StringRange("z", false, null, false),
-        new ArrayList<KeyValue>());
+        new ArrayList<>());
     String valueString = "ValueString";
 
     for (String row : rows) {
@@ -216,7 +216,7 @@ public class TestColumnRangeFilter {
           s.isEndInclusive());
       scan.setFilter(filter);
       ResultScanner scanner = ht.getScanner(scan);
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<>();
       LOG.info("scan column range: " + s.toString());
       long timeBeforeScan = System.currentTimeMillis();
 
@@ -245,7 +245,7 @@ public class TestColumnRangeFilter {
   }
 
   List<String> generateRandomWords(int numberOfWords, int maxLengthOfWords) {
-    Set<String> wordSet = new HashSet<String>();
+    Set<String> wordSet = new HashSet<>();
     for (int i = 0; i < numberOfWords; i++) {
       int lengthOfWords = (int) (Math.random() * maxLengthOfWords) + 1;
       char[] wordChar = new char[lengthOfWords];
@@ -255,7 +255,7 @@ public class TestColumnRangeFilter {
       String word = new String(wordChar);
       wordSet.add(word);
     }
-    List<String> wordList = new ArrayList<String>(wordSet);
+    List<String> wordList = new ArrayList<>(wordSet);
     return wordList;
   }
 

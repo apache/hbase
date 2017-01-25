@@ -238,7 +238,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     }
     long keepAliveTime = conf.getLong("hbase.region.replica.replication.threads.keepalivetime", 60);
     LinkedBlockingQueue<Runnable> workQueue =
-        new LinkedBlockingQueue<Runnable>(maxThreads *
+        new LinkedBlockingQueue<>(maxThreads *
             conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
               HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
     ThreadPoolExecutor tpe = new ThreadPoolExecutor(
@@ -527,8 +527,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         return;
       }
 
-      ArrayList<Future<ReplicateWALEntryResponse>> tasks
-        = new ArrayList<Future<ReplicateWALEntryResponse>>(locations.size() - 1);
+      ArrayList<Future<ReplicateWALEntryResponse>> tasks = new ArrayList<>(locations.size() - 1);
 
       // All passed entries should belong to one region because it is coming from the EntryBuffers
       // split per region. But the regions might split and merge (unlike log recovery case).
@@ -543,8 +542,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
             rpcControllerFactory, tableName, location, regionInfo, row, entries,
             sink.getSkippedEditsCounter());
            Future<ReplicateWALEntryResponse> task = pool.submit(
-             new RetryingRpcCallable<ReplicateWALEntryResponse>(rpcRetryingCallerFactory,
-                 callable, operationTimeout));
+             new RetryingRpcCallable<>(rpcRetryingCallerFactory, callable, operationTimeout));
            tasks.add(task);
         }
       }

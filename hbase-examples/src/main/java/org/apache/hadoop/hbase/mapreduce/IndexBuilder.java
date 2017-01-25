@@ -103,7 +103,7 @@ public class IndexBuilder extends Configured implements Tool {
       String[] fields = configuration.getStrings("index.fields");
       String familyName = configuration.get("index.familyname");
       family = Bytes.toBytes(familyName);
-      indexes = new TreeMap<byte[], ImmutableBytesWritable>(Bytes.BYTES_COMPARATOR);
+      indexes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for(String field : fields) {
         // if the table is "people" and the field to index is "email", then the
         // index table will be called "people-email"

@@ -368,8 +368,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     throws IOException {
       super(conf, pool, user);
       int serverCount = conf.getInt("hbase.test.servers", 10);
-      this.serversByClient =
-        new HashMap<ServerName, ClientService.BlockingInterface>(serverCount);
+      this.serversByClient = new HashMap<>(serverCount);
       this.meta = makeMeta(Bytes.toBytes(
         conf.get("hbase.test.tablename", Bytes.toString(BIG_USER_TABLE))),
         conf.getInt("hbase.test.regions", 100),
@@ -694,14 +693,13 @@ public class TestClientNoCluster extends Configured implements Tool {
       final int regionCount, final long namespaceSpan, final int serverCount) {
     // I need a comparator for meta rows so we sort properly.
     SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta =
-      new ConcurrentSkipListMap<byte[], Pair<HRegionInfo,ServerName>>(new MetaRowsComparator());
+      new ConcurrentSkipListMap<>(new MetaRowsComparator());
     HRegionInfo [] hris = makeHRegionInfos(tableName, regionCount, namespaceSpan);
     ServerName [] serverNames = makeServerNames(serverCount);
     int per = regionCount / serverCount;
     int count = 0;
     for (HRegionInfo hri: hris) {
-      Pair<HRegionInfo, ServerName> p =
-        new Pair<HRegionInfo, ServerName>(hri, serverNames[count++ / per]);
+      Pair<HRegionInfo, ServerName> p = new Pair<>(hri, serverNames[count++ / per]);
       meta.put(hri.getRegionName(), p);
     }
     return meta;

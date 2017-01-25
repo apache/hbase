@@ -342,7 +342,7 @@ public class TestInterfaceAudienceAnnotations {
   @Test
   public void testProtosInReturnTypes() throws ClassNotFoundException, IOException, LinkageError {
     Set<Class<?>> classes = findPublicClasses();
-    List<Pair<Class<?>, Method>> protosReturnType = new ArrayList<Pair<Class<?>, Method>>();
+    List<Pair<Class<?>, Method>> protosReturnType = new ArrayList<>();
     for (Class<?> clazz : classes) {
       findProtoInReturnType(clazz, protosReturnType);
     }
@@ -374,8 +374,7 @@ public class TestInterfaceAudienceAnnotations {
   @Test
   public void testProtosInParamTypes() throws ClassNotFoundException, IOException, LinkageError {
     Set<Class<?>> classes = findPublicClasses();
-    List<Triple<Class<?>, Method, Class<?>>> protosParamType =
-        new ArrayList<Triple<Class<?>, Method, Class<?>>>();
+    List<Triple<Class<?>, Method, Class<?>>> protosParamType = new ArrayList<>();
     for (Class<?> clazz : classes) {
       findProtoInParamType(clazz, protosParamType);
     }
@@ -395,7 +394,7 @@ public class TestInterfaceAudienceAnnotations {
   @Test
   public void testProtosInConstructors() throws ClassNotFoundException, IOException, LinkageError {
     Set<Class<?>> classes = findPublicClasses();
-    List<Class<?>> classList = new ArrayList<Class<?>>();
+    List<Class<?>> classList = new ArrayList<>();
     for (Class<?> clazz : classes) {
       Constructor<?>[] constructors = clazz.getConstructors();
       for (Constructor<?> cons : constructors) {
@@ -424,7 +423,7 @@ public class TestInterfaceAudienceAnnotations {
 
   private void findProtoInReturnType(Class<?> clazz,
       List<Pair<Class<?>, Method>> protosReturnType) {
-    Pair<Class<?>, Method> returnTypePair = new Pair<Class<?>, Method>();
+    Pair<Class<?>, Method> returnTypePair = new Pair<>();
     Method[] methods = clazz.getMethods();
     returnTypePair.setFirst(clazz);
     for (Method method : methods) {
@@ -443,7 +442,7 @@ public class TestInterfaceAudienceAnnotations {
 
   private void findProtoInParamType(Class<?> clazz,
       List<Triple<Class<?>, Method, Class<?>>> protosParamType) {
-    Triple<Class<?>, Method, Class<?>> paramType = new Triple<Class<?>, Method, Class<?>>();
+    Triple<Class<?>, Method, Class<?>> paramType = new Triple<>();
     Method[] methods = clazz.getMethods();
     paramType.setFirst(clazz);
     for (Method method : methods) {

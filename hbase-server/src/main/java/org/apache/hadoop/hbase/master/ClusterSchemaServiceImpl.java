@@ -122,7 +122,7 @@ class ClusterSchemaServiceImpl implements ClusterSchemaService {
     checkIsRunning();
     Set<NamespaceDescriptor> set = getTableNamespaceManager().list();
     if (set == null || set.isEmpty()) return EMPTY_NAMESPACE_LIST;
-    List<NamespaceDescriptor> list = new ArrayList<NamespaceDescriptor>(set.size());
+    List<NamespaceDescriptor> list = new ArrayList<>(set.size());
     list.addAll(set);
     return Collections.unmodifiableList(list);
   }

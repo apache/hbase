@@ -564,7 +564,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       final FileSystem fs, final Path snapshotDir) throws IOException {
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
-    final List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>();
+    final List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<>();
     final TableName table = TableName.valueOf(snapshotDesc.getTable());
 
     // Get snapshot files
@@ -591,7 +591,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
             } else {
               size = HFileLink.buildFromHFileLinkPattern(conf, path).getFileStatus(fs).getLen();
             }
-            files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
+            files.add(new Pair<>(fileInfo, size));
           }
         }
     });
@@ -618,8 +618,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     });
 
     // create balanced groups
-    List<List<Pair<SnapshotFileInfo, Long>>> fileGroups =
-      new LinkedList<List<Pair<SnapshotFileInfo, Long>>>();
+    List<List<Pair<SnapshotFileInfo, Long>>> fileGroups = new LinkedList<>();
     long[] sizeGroups = new long[ngroups];
     int hi = files.size() - 1;
     int lo = 0;
@@ -630,7 +629,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
 
     while (hi >= lo) {
       if (g == fileGroups.size()) {
-        group = new LinkedList<Pair<SnapshotFileInfo, Long>>();
+        group = new LinkedList<>();
         fileGroups.add(group);
       } else {
         group = fileGroups.get(g);
@@ -703,7 +702,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       public ExportSnapshotInputSplit(final List<Pair<SnapshotFileInfo, Long>> snapshotFiles) {
         this.files = new ArrayList(snapshotFiles.size());
         for (Pair<SnapshotFileInfo, Long> fileInfo: snapshotFiles) {
-          this.files.add(new Pair<BytesWritable, Long>(
+          this.files.add(new Pair<>(
             new BytesWritable(fileInfo.getFirst().toByteArray()), fileInfo.getSecond()));
           this.length += fileInfo.getSecond();
         }
@@ -726,13 +725,13 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       @Override
       public void readFields(DataInput in) throws IOException {
         int count = in.readInt();
-        files = new ArrayList<Pair<BytesWritable, Long>>(count);
+        files = new ArrayList<>(count);
         length = 0;
         for (int i = 0; i < count; ++i) {
           BytesWritable fileInfo = new BytesWritable();
           fileInfo.readFields(in);
           long size = in.readLong();
-          files.add(new Pair<BytesWritable, Long>(fileInfo, size));
+          files.add(new Pair<>(fileInfo, size));
           length += size;
         }
       }

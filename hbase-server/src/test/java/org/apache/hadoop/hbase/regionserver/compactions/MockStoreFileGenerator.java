@@ -46,7 +46,7 @@ class MockStoreFileGenerator {
   }
 
   protected List<StoreFile> createStoreFileList(final int[] fs) {
-    List<StoreFile> storeFiles = new LinkedList<StoreFile>();
+    List<StoreFile> storeFiles = new LinkedList<>();
     for (int fileSize : fs) {
       storeFiles.add(createMockStoreFile(fileSize));
     }

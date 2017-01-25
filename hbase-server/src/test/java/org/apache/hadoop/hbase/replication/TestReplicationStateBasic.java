@@ -205,9 +205,9 @@ public abstract class TestReplicationStateBasic {
     rqc.init();
 
     List<Pair<Path, Path>> files1 = new ArrayList<>(3);
-    files1.add(new Pair<Path, Path>(null, new Path("file_1")));
-    files1.add(new Pair<Path, Path>(null, new Path("file_2")));
-    files1.add(new Pair<Path, Path>(null, new Path("file_3")));
+    files1.add(new Pair<>(null, new Path("file_1")));
+    files1.add(new Pair<>(null, new Path("file_2")));
+    files1.add(new Pair<>(null, new Path("file_3")));
     assertNull(rqc.getReplicableHFiles(ID_ONE));
     assertEquals(0, rqc.getAllPeersFromHFileRefsQueue().size());
     rp.registerPeer(ID_ONE, new ReplicationPeerConfig().setClusterKey(KEY_ONE));
@@ -241,9 +241,9 @@ public abstract class TestReplicationStateBasic {
     rq1.addPeerToHFileRefs(ID_TWO);
 
     List<Pair<Path, Path>> files1 = new ArrayList<>(3);
-    files1.add(new Pair<Path, Path>(null, new Path("file_1")));
-    files1.add(new Pair<Path, Path>(null, new Path("file_2")));
-    files1.add(new Pair<Path, Path>(null, new Path("file_3")));
+    files1.add(new Pair<>(null, new Path("file_1")));
+    files1.add(new Pair<>(null, new Path("file_2")));
+    files1.add(new Pair<>(null, new Path("file_3")));
     rq1.addHFileRefs(ID_ONE, files1);
     rq1.addHFileRefs(ID_TWO, files1);
     assertEquals(2, rqc.getAllPeersFromHFileRefsQueue().size());

@@ -132,7 +132,7 @@ public class WALPlayer extends Configured implements Tool {
    */
   protected static class WALMapper
   extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation> {
-    private Map<TableName, TableName> tables = new TreeMap<TableName, TableName>();
+    private Map<TableName, TableName> tables = new TreeMap<>();
 
     @Override
     public void map(WALKey key, WALEdit value, Context context)

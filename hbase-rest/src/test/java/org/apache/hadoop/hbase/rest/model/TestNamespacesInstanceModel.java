@@ -30,7 +30,7 @@ import org.junit.experimental.categories.Category;
 @Category({RestTests.class, SmallTests.class})
 public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanceModel> {
 
-  public static final Map<String,String> NAMESPACE_PROPERTIES = new HashMap<String, String>();
+  public static final Map<String,String> NAMESPACE_PROPERTIES = new HashMap<>();
   public static final String NAMESPACE_NAME = "namespaceName";
 
   public TestNamespacesInstanceModel() throws Exception {

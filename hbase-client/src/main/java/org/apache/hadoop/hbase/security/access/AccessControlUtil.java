@@ -367,7 +367,7 @@ public class AccessControlUtil {
    */
   public static List<Permission.Action> toPermissionActions(
       List<AccessControlProtos.Permission.Action> protoActions) {
-    List<Permission.Action> actions = new ArrayList<Permission.Action>(protoActions.size());
+    List<Permission.Action> actions = new ArrayList<>(protoActions.size());
     for (AccessControlProtos.Permission.Action a : protoActions) {
       actions.add(toPermissionAction(a));
     }
@@ -644,7 +644,7 @@ public class AccessControlUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
         protocol.getUserPermissions(controller, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
+    List<UserPermission> perms = new ArrayList<>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(toUserPermission(perm));
     }
@@ -672,7 +672,7 @@ public class AccessControlUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
         protocol.getUserPermissions(controller, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
+    List<UserPermission> perms = new ArrayList<>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(toUserPermission(perm));
     }
@@ -700,7 +700,7 @@ public class AccessControlUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
         protocol.getUserPermissions(controller, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
+    List<UserPermission> perms = new ArrayList<>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(toUserPermission(perm));
     }

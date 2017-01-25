@@ -80,7 +80,7 @@ public class BuilderStyleTest {
           }
           Set<Method> sigMethods = methodsBySignature.get(sig);
           if (sigMethods == null) {
-            sigMethods = new HashSet<Method>();
+            sigMethods = new HashSet<>();
             methodsBySignature.put(sig, sigMethods);
           }
           sigMethods.add(method);

@@ -354,8 +354,7 @@ public abstract class User {
   }
 
   static class TestingGroups extends Groups {
-    private final Map<String, List<String>> userToGroupsMapping =
-        new HashMap<String,List<String>>();
+    private final Map<String, List<String>> userToGroupsMapping = new HashMap<>();
     private Groups underlyingImplementation;
 
     TestingGroups(Groups underlyingImplementation) {

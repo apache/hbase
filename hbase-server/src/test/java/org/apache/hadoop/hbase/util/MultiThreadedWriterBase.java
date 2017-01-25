@@ -60,7 +60,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   protected AtomicLong wroteUpToKey = new AtomicLong();
 
   /** The sorted set of keys NOT inserted/updated by the writers */
-  protected Set<Long> failedKeySet = new ConcurrentSkipListSet<Long>();
+  protected Set<Long> failedKeySet = new ConcurrentSkipListSet<>();
 
   /**
    * The total size of the temporary inserted/updated key set that have not yet lined
@@ -79,7 +79,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   }
 
   protected BlockingQueue<Long> createWriteKeysQueue(Configuration conf) {
-    return new ArrayBlockingQueue<Long>(10000);
+    return new ArrayBlockingQueue<>(10000);
   }
 
   @Override
@@ -129,7 +129,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
       Thread.currentThread().setName(getClass().getSimpleName());
       try {
         long expectedKey = startKey;
-        Queue<Long> sortedKeys = new PriorityQueue<Long>();
+        Queue<Long> sortedKeys = new PriorityQueue<>();
         while (expectedKey < endKey) {
           // Block until a new element is available.
           Long k;

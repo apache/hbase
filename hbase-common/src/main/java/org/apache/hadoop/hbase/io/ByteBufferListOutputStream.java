@@ -44,8 +44,8 @@ public class ByteBufferListOutputStream extends ByteBufferOutputStream {
   // it is not available will make a new one our own and keep writing to that. We keep track of all
   // the BBs that we got from pool, separately so that on closeAndPutbackBuffers, we can make sure
   // to return back all of them to pool
-  protected List<ByteBuffer> allBufs = new ArrayList<ByteBuffer>();
-  protected List<ByteBuffer> bufsFromPool = new ArrayList<ByteBuffer>();
+  protected List<ByteBuffer> allBufs = new ArrayList<>();
+  protected List<ByteBuffer> bufsFromPool = new ArrayList<>();
 
   private boolean lastBufFlipped = false;// Indicate whether the curBuf/lastBuf is flipped already
 

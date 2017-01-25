@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class IterableUtils {
 
   private static final List<Object> EMPTY_LIST = Collections
-      .unmodifiableList(new ArrayList<Object>(0));
+      .unmodifiableList(new ArrayList<>(0));
 
   @SuppressWarnings("unchecked")
   public static <T> Iterable<T> nullSafe(Iterable<T> in) {

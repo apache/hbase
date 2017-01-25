@@ -92,10 +92,8 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
   };
 
   // Some caches for helping performance
-  private final Map<String, Class<? extends Message>> argumentToClassMap =
-    new HashMap<String, Class<? extends Message>>();
-  private final Map<String, Map<Class<? extends Message>, Method>> methodMap =
-    new HashMap<String, Map<Class<? extends Message>, Method>>();
+  private final Map<String, Class<? extends Message>> argumentToClassMap = new HashMap<>();
+  private final Map<String, Map<Class<? extends Message>, Method>> methodMap = new HashMap<>();
 
   private final float scanVirtualTimeWeight;
 
@@ -121,7 +119,7 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
    */
   public AnnotationReadingPriorityFunction(final RSRpcServices rpcServices,
       Class<? extends RSRpcServices> clz) {
-    Map<String,Integer> qosMap = new HashMap<String,Integer>();
+    Map<String,Integer> qosMap = new HashMap<>();
     for (Method m : clz.getMethods()) {
       QosPriority p = m.getAnnotation(QosPriority.class);
       if (p != null) {
@@ -137,8 +135,8 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
     this.rpcServices = rpcServices;
     this.annotatedQos = qosMap;
     if (methodMap.get("getRegion") == null) {
-      methodMap.put("hasRegion", new HashMap<Class<? extends Message>, Method>());
-      methodMap.put("getRegion", new HashMap<Class<? extends Message>, Method>());
+      methodMap.put("hasRegion", new HashMap<>());
+      methodMap.put("getRegion", new HashMap<>());
     }
     for (Class<? extends Message> cls : knownArgumentClasses) {
       argumentToClassMap.put(cls.getName(), cls);

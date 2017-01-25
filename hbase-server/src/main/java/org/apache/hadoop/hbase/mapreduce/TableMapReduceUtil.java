@@ -451,7 +451,7 @@ public class TableMapReduceUtil {
     job.setMapperClass(mapper);
     Configuration conf = job.getConfiguration();
     HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
-    List<String> scanStrings = new ArrayList<String>();
+    List<String> scanStrings = new ArrayList<>();
 
     for (Scan scan : scans) {
       scanStrings.add(convertScanToString(scan));
@@ -807,7 +807,7 @@ public class TableMapReduceUtil {
     if (conf == null) {
       throw new IllegalArgumentException("Must provide a configuration object.");
     }
-    Set<String> paths = new HashSet<String>(conf.getStringCollection("tmpjars"));
+    Set<String> paths = new HashSet<>(conf.getStringCollection("tmpjars"));
     if (paths.isEmpty()) {
       throw new IllegalArgumentException("Configuration contains no tmpjars.");
     }
@@ -879,13 +879,13 @@ public class TableMapReduceUtil {
       Class<?>... classes) throws IOException {
 
     FileSystem localFs = FileSystem.getLocal(conf);
-    Set<String> jars = new HashSet<String>();
+    Set<String> jars = new HashSet<>();
     // Add jars that are already in the tmpjars variable
     jars.addAll(conf.getStringCollection("tmpjars"));
 
     // add jars as we find them to a map of contents jar name so that we can avoid
     // creating new jars for classes that have already been packaged.
-    Map<String, String> packagedClasses = new HashMap<String, String>();
+    Map<String, String> packagedClasses = new HashMap<>();
 
     // Add jars containing the specified classes
     for (Class<?> clazz : classes) {

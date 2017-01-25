@@ -91,7 +91,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public void insertNewFiles(Collection<StoreFile> sfs) throws IOException {
-    ArrayList<StoreFile> newFiles = new ArrayList<StoreFile>(storefiles);
+    ArrayList<StoreFile> newFiles = new ArrayList<>(storefiles);
     newFiles.addAll(sfs);
     sortAndSetStoreFiles(newFiles);
   }
@@ -106,7 +106,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   @Override
   public Collection<StoreFile> clearCompactedFiles() {
     List<StoreFile> result = compactedfiles;
-    compactedfiles = new ArrayList<StoreFile>();
+    compactedfiles = new ArrayList<>();
     return result;
   }
 
@@ -126,10 +126,10 @@ class DefaultStoreFileManager implements StoreFileManager {
     sortAndSetStoreFiles(newStoreFiles);
     ArrayList<StoreFile> updatedCompactedfiles = null;
     if (this.compactedfiles != null) {
-      updatedCompactedfiles = new ArrayList<StoreFile>(this.compactedfiles);
+      updatedCompactedfiles = new ArrayList<>(this.compactedfiles);
       updatedCompactedfiles.addAll(newCompactedfiles);
     } else {
-      updatedCompactedfiles = new ArrayList<StoreFile>(newCompactedfiles);
+      updatedCompactedfiles = new ArrayList<>(newCompactedfiles);
     }
     markCompactedAway(newCompactedfiles);
     this.compactedfiles = sortCompactedfiles(updatedCompactedfiles);
@@ -149,7 +149,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   public void removeCompactedFiles(Collection<StoreFile> removedCompactedfiles) throws IOException {
     ArrayList<StoreFile> updatedCompactedfiles = null;
     if (this.compactedfiles != null) {
-      updatedCompactedfiles = new ArrayList<StoreFile>(this.compactedfiles);
+      updatedCompactedfiles = new ArrayList<>(this.compactedfiles);
       updatedCompactedfiles.removeAll(removedCompactedfiles);
       this.compactedfiles = sortCompactedfiles(updatedCompactedfiles);
     }
@@ -157,7 +157,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public final Iterator<StoreFile> getCandidateFilesForRowKeyBefore(final KeyValue targetKey) {
-    return new ArrayList<StoreFile>(Lists.reverse(this.storefiles)).iterator();
+    return new ArrayList<>(Lists.reverse(this.storefiles)).iterator();
   }
 
   @Override
@@ -204,7 +204,7 @@ class DefaultStoreFileManager implements StoreFileManager {
         LOG.info("Found an expired store file: " + sf.getPath()
             + " whose maxTimeStamp is " + fileTs + ", which is below " + maxTs);
         if (expiredStoreFiles == null) {
-          expiredStoreFiles = new ArrayList<StoreFile>();
+          expiredStoreFiles = new ArrayList<>();
         }
         expiredStoreFiles.add(sf);
       }
@@ -220,7 +220,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   private List<StoreFile> sortCompactedfiles(List<StoreFile> storefiles) {
     // Sorting may not be really needed here for the compacted files?
     Collections.sort(storefiles, storeFileComparator);
-    return new ArrayList<StoreFile>(storefiles);
+    return new ArrayList<>(storefiles);
   }
 
   @Override

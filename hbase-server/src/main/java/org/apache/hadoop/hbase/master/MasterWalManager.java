@@ -155,7 +155,7 @@ public class MasterWalManager {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         WALSplitter.SPLIT_SKIP_ERRORS_DEFAULT);
 
-    Set<ServerName> serverNames = new HashSet<ServerName>();
+    Set<ServerName> serverNames = new HashSet<>();
     Path logsDirPath = new Path(this.rootDir, HConstants.HREGION_LOGDIR_NAME);
 
     do {
@@ -218,7 +218,7 @@ public class MasterWalManager {
   }
 
   public void splitLog(final ServerName serverName) throws IOException {
-    Set<ServerName> serverNames = new HashSet<ServerName>();
+    Set<ServerName> serverNames = new HashSet<>();
     serverNames.add(serverName);
     splitLog(serverNames);
   }
@@ -228,7 +228,7 @@ public class MasterWalManager {
    * @param serverName logs belonging to this server will be split
    */
   public void splitMetaLog(final ServerName serverName) throws IOException {
-    Set<ServerName> serverNames = new HashSet<ServerName>();
+    Set<ServerName> serverNames = new HashSet<>();
     serverNames.add(serverName);
     splitMetaLog(serverNames);
   }
@@ -245,7 +245,7 @@ public class MasterWalManager {
       "We only release this lock when we set it. Updates to code that uses it should verify use " +
       "of the guard boolean.")
   private List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
-    List<Path> logDirs = new ArrayList<Path>();
+    List<Path> logDirs = new ArrayList<>();
     boolean needReleaseLock = false;
     if (!this.services.isInitialized()) {
       // during master initialization, we could have multiple places splitting a same wal

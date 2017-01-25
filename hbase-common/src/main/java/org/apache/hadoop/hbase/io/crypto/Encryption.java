@@ -533,15 +533,14 @@ public final class Encryption {
     }
   }
 
-  static final Map<Pair<String,String>,KeyProvider> keyProviderCache =
-      new ConcurrentHashMap<Pair<String,String>,KeyProvider>();
+  static final Map<Pair<String,String>,KeyProvider> keyProviderCache = new ConcurrentHashMap<>();
 
   public static KeyProvider getKeyProvider(Configuration conf) {
     String providerClassName = conf.get(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
       KeyStoreKeyProvider.class.getName());
     String providerParameters = conf.get(HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, "");
     try {
-      Pair<String,String> providerCacheKey = new Pair<String,String>(providerClassName,
+      Pair<String,String> providerCacheKey = new Pair<>(providerClassName,
         providerParameters);
       KeyProvider provider = keyProviderCache.get(providerCacheKey);
       if (provider != null) {

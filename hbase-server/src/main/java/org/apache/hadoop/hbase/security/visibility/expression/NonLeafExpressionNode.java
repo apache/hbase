@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class NonLeafExpressionNode implements ExpressionNode {
   private Operator op;
-  private List<ExpressionNode> childExps = new ArrayList<ExpressionNode>(2);
+  private List<ExpressionNode> childExps = new ArrayList<>(2);
 
   public NonLeafExpressionNode() {
 
@@ -46,7 +46,7 @@ public class NonLeafExpressionNode implements ExpressionNode {
 
   public NonLeafExpressionNode(Operator op, ExpressionNode... exps) {
     this.op = op;
-    List<ExpressionNode> expLst = new ArrayList<ExpressionNode>();
+    List<ExpressionNode> expLst = new ArrayList<>();
     Collections.addAll(expLst, exps);
     this.childExps = expLst;
   }

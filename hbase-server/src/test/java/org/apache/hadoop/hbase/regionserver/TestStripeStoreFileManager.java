@@ -115,7 +115,7 @@ public class TestStripeStoreFileManager {
   }
 
   private static ArrayList<StoreFile> dumpIterator(Iterator<StoreFile> iter) {
-    ArrayList<StoreFile> result = new ArrayList<StoreFile>();
+    ArrayList<StoreFile> result = new ArrayList<>();
     for (; iter.hasNext(); result.add(iter.next()));
     return result;
   }
@@ -233,7 +233,7 @@ public class TestStripeStoreFileManager {
   private void verifySplitPointScenario(int splitPointAfter, boolean shouldSplitStripe,
       float splitRatioToVerify, int... sizes) throws Exception {
     assertTrue(sizes.length > 1);
-    ArrayList<StoreFile> sfs = new ArrayList<StoreFile>();
+    ArrayList<StoreFile> sfs = new ArrayList<>();
     for (int sizeIx = 0; sizeIx < sizes.length; ++sizeIx) {
       byte[] startKey = (sizeIx == 0) ? OPEN_KEY : Bytes.toBytes(sizeIx - 1);
       byte[] endKey = (sizeIx == sizes.length - 1) ? OPEN_KEY : Bytes.toBytes(sizeIx);
@@ -525,7 +525,7 @@ public class TestStripeStoreFileManager {
       sfm.insertNewFiles(al(createFile()));
     }
     for (int i = 0; i < filesInStripe; ++i) {
-      ArrayList<StoreFile> stripe = new ArrayList<StoreFile>();
+      ArrayList<StoreFile> stripe = new ArrayList<>();
       for (int j = 0; j < stripes; ++j) {
         stripe.add(createFile(
             (j == 0) ? OPEN_KEY : keys[j - 1], (j == stripes - 1) ? OPEN_KEY : keys[j]));
@@ -597,7 +597,7 @@ public class TestStripeStoreFileManager {
   }
 
   private static StripeStoreFileManager createManager() throws Exception {
-    return createManager(new ArrayList<StoreFile>());
+    return createManager(new ArrayList<>());
   }
 
   private static StripeStoreFileManager createManager(ArrayList<StoreFile> sfs) throws Exception {
@@ -615,11 +615,11 @@ public class TestStripeStoreFileManager {
   }
 
   private static ArrayList<StoreFile> al(StoreFile... sfs) {
-    return new ArrayList<StoreFile>(Arrays.asList(sfs));
+    return new ArrayList<>(Arrays.asList(sfs));
   }
 
   private static ArrayList<StoreFile> flattenLists(ArrayList<StoreFile>... sfls) {
-    ArrayList<StoreFile> result = new ArrayList<StoreFile>();
+    ArrayList<StoreFile> result = new ArrayList<>();
     for (ArrayList<StoreFile> sfl : sfls) {
       result.addAll(sfl);
     }

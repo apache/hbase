@@ -146,10 +146,10 @@ public class TBoundedThreadPoolServer extends TServer {
     int maxWorkerThreads = options.maxWorkerThreads;
     if (options.maxQueuedRequests > 0) {
       this.callQueue = new CallQueue(
-          new LinkedBlockingQueue<Call>(options.maxQueuedRequests), metrics);
+          new LinkedBlockingQueue<>(options.maxQueuedRequests), metrics);
       minWorkerThreads = maxWorkerThreads;
     } else {
-      this.callQueue = new CallQueue(new SynchronousQueue<Call>(), metrics);
+      this.callQueue = new CallQueue(new SynchronousQueue<>(), metrics);
     }
 
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();

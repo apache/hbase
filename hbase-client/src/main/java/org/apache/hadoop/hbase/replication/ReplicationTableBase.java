@@ -142,7 +142,7 @@ abstract class ReplicationTableBase {
    */
   private Executor setUpExecutor() {
     ThreadPoolExecutor tempExecutor = new ThreadPoolExecutor(NUM_INITIALIZE_WORKERS,
-        NUM_INITIALIZE_WORKERS, 100, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+        NUM_INITIALIZE_WORKERS, 100, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setNameFormat("ReplicationTableExecutor-%d");
     tfb.setDaemon(true);
@@ -223,7 +223,7 @@ abstract class ReplicationTableBase {
    */
   protected List<String> getListOfReplicators() {
     // scan all of the queues and return a list of all unique OWNER values
-    Set<String> peerServers = new HashSet<String>();
+    Set<String> peerServers = new HashSet<>();
     ResultScanner allQueuesInCluster = null;
     try (Table replicationTable = getOrBlockOnReplicationTable()){
       Scan scan = new Scan();
@@ -240,11 +240,11 @@ abstract class ReplicationTableBase {
         allQueuesInCluster.close();
       }
     }
-    return new ArrayList<String>(peerServers);
+    return new ArrayList<>(peerServers);
   }
 
   protected List<String> getAllQueues(String serverName) {
-    List<String> allQueues = new ArrayList<String>();
+    List<String> allQueues = new ArrayList<>();
     ResultScanner queueScanner = null;
     try {
       queueScanner = getQueuesBelongingToServer(serverName);

@@ -147,7 +147,7 @@ class RootProcedureState {
       state = State.FAILED;
     }
     if (subprocStack == null) {
-      subprocStack = new ArrayList<Procedure>();
+      subprocStack = new ArrayList<>();
     }
     proc.addStackIndex(subprocStack.size());
     subprocStack.add(proc);
@@ -156,7 +156,7 @@ class RootProcedureState {
   protected synchronized void addSubProcedure(final Procedure proc) {
     if (!proc.hasParent()) return;
     if (subprocs == null) {
-      subprocs = new HashSet<Procedure>();
+      subprocs = new HashSet<>();
     }
     subprocs.add(proc);
   }
@@ -173,7 +173,7 @@ class RootProcedureState {
     int[] stackIndexes = proc.getStackIndexes();
     if (stackIndexes != null) {
       if (subprocStack == null) {
-        subprocStack = new ArrayList<Procedure>();
+        subprocStack = new ArrayList<>();
       }
       int diff = (1 + stackIndexes[stackIndexes.length - 1]) - subprocStack.size();
       if (diff > 0) {

@@ -202,7 +202,7 @@ public class SingleByteBuff extends ByteBuff {
     } else {
       // TODO we can do some optimization here? Call to asSubByteBuffer might
       // create a copy.
-      ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
+      ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<>();
       src.asSubByteBuffer(srcOffset, length, pair);
       if (pair.getFirst() != null) {
         ByteBufferUtils.copyFromBufferToBuffer(pair.getFirst(), this.buf, pair.getSecond(), offset,

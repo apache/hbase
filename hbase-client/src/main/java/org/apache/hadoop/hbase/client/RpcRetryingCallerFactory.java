@@ -84,7 +84,7 @@ public class RpcRetryingCallerFactory {
   public <T> RpcRetryingCaller<T> newCaller(int rpcTimeout) {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
-    RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<T>(pause, pauseForCQTBE, retries,
+    RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<>(pause, pauseForCQTBE, retries,
         interceptor, startLogErrorsCnt, rpcTimeout);
     return caller;
   }
@@ -95,7 +95,7 @@ public class RpcRetryingCallerFactory {
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
-    RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<T>(pause, pauseForCQTBE, retries,
+    RpcRetryingCaller<T> caller = new RpcRetryingCallerImpl<>(pause, pauseForCQTBE, retries,
         interceptor, startLogErrorsCnt, rpcTimeout);
     return caller;
   }

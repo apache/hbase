@@ -68,8 +68,7 @@ public class TestTimeRangeMapRed {
   private Admin admin;
 
   private static final byte [] KEY = Bytes.toBytes("row1");
-  private static final NavigableMap<Long, Boolean> TIMESTAMP =
-    new TreeMap<Long, Boolean>();
+  private static final NavigableMap<Long, Boolean> TIMESTAMP = new TreeMap<>();
   static {
     TIMESTAMP.put((long)1245620000, false);
     TIMESTAMP.put((long)1245620005, true); // include
@@ -112,7 +111,7 @@ public class TestTimeRangeMapRed {
     public void map(ImmutableBytesWritable key, Result result,
         Context context)
     throws IOException {
-      List<Long> tsList = new ArrayList<Long>();
+      List<Long> tsList = new ArrayList<>();
       for (Cell kv : result.listCells()) {
         tsList.add(kv.getTimestamp());
       }
@@ -152,7 +151,7 @@ public class TestTimeRangeMapRed {
     col.setMaxVersions(Integer.MAX_VALUE);
     desc.addFamily(col);
     admin.createTable(desc);
-    List<Put> puts = new ArrayList<Put>();
+    List<Put> puts = new ArrayList<>();
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
       put.setDurability(Durability.SKIP_WAL);

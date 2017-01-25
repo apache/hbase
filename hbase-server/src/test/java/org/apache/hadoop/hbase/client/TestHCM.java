@@ -244,7 +244,7 @@ public class TestHCM {
   public void testClusterConnection() throws IOException {
     ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1,
         5, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(),
+        new SynchronousQueue<>(),
         Threads.newDaemonThreadFactory("test-hcm"));
 
     Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
@@ -748,7 +748,7 @@ public class TestHCM {
     // 4 steps: ready=0; doGets=1; mustStop=2; stopped=3
     final AtomicInteger step = new AtomicInteger(0);
 
-    final AtomicReference<Throwable> failed = new AtomicReference<Throwable>(null);
+    final AtomicReference<Throwable> failed = new AtomicReference<>(null);
     Thread t = new Thread("testConnectionCloseThread") {
       @Override
       public void run() {

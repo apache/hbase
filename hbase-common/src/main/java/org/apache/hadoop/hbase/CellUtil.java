@@ -1597,7 +1597,7 @@ public final class CellUtil {
    * @return Tags in the given Cell as a List
    */
   public static List<Tag> getTags(Cell cell) {
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
     Iterator<Tag> tagsItr = tagsIterator(cell);
     while (tagsItr.hasNext()) {
       tags.add(tagsItr.next());

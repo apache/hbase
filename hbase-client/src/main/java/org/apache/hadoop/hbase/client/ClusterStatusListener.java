@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.util.Threads;
 @InterfaceAudience.Private
 class ClusterStatusListener implements Closeable {
   private static final Log LOG = LogFactory.getLog(ClusterStatusListener.class);
-  private final List<ServerName> deadServers = new ArrayList<ServerName>();
+  private final List<ServerName> deadServers = new ArrayList<>();
   protected final DeadServerHandler deadServerHandler;
   private final Listener listener;
 

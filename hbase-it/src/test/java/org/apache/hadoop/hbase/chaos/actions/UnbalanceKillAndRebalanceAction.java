@@ -52,13 +52,13 @@ public class UnbalanceKillAndRebalanceAction extends Action {
   @Override
   public void perform() throws Exception {
     ClusterStatus status = this.cluster.getClusterStatus();
-    List<ServerName> victimServers = new LinkedList<ServerName>(status.getServers());
-    Set<ServerName> killedServers = new HashSet<ServerName>();
+    List<ServerName> victimServers = new LinkedList<>(status.getServers());
+    Set<ServerName> killedServers = new HashSet<>();
 
     int liveCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_LIVE * victimServers.size());
     int deadCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_DIE * victimServers.size());
     Assert.assertTrue((liveCount + deadCount) < victimServers.size());
-    List<ServerName> targetServers = new ArrayList<ServerName>(liveCount);
+    List<ServerName> targetServers = new ArrayList<>(liveCount);
     for (int i = 0; i < liveCount + deadCount; ++i) {
       int victimIx = RandomUtils.nextInt(victimServers.size());
       targetServers.add(victimServers.remove(victimIx));

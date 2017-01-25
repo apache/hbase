@@ -53,7 +53,7 @@ public class RegionSizeCalculator {
   /**
    * Maps each region to its size in bytes.
    * */
-  private final Map<byte[], Long> sizeMap = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+  private final Map<byte[], Long> sizeMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   static final String ENABLE_REGIONSIZECALCULATOR = "hbase.regionsizecalculator.enable";
   private static final long MEGABYTE = 1024L * 1024L;

@@ -68,7 +68,7 @@ public class TestIntraRowPagination {
       Result result;
       boolean toLog = true;
 
-      List<Cell> kvListExp = new ArrayList<Cell>();
+      List<Cell> kvListExp = new ArrayList<>();
 
       int storeOffset = 1;
       int storeLimit = 3;
@@ -91,8 +91,8 @@ public class TestIntraRowPagination {
       scan.setRowOffsetPerColumnFamily(storeOffset);
       scan.setMaxResultsPerColumnFamily(storeLimit);
       RegionScanner scanner = region.getScanner(scan);
-      List<Cell> kvListScan = new ArrayList<Cell>();
-      List<Cell> results = new ArrayList<Cell>();
+      List<Cell> kvListScan = new ArrayList<>();
+      List<Cell> results = new ArrayList<>();
       while (scanner.next(results) || !results.isEmpty()) {
         kvListScan.addAll(results);
         results.clear();

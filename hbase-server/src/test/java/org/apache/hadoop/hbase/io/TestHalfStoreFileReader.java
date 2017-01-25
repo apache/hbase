@@ -241,7 +241,7 @@ public class TestHalfStoreFileReader {
   }
 
   List<KeyValue> genSomeKeys() {
-    List<KeyValue> ret = new ArrayList<KeyValue>(SIZE);
+    List<KeyValue> ret = new ArrayList<>(SIZE);
     for (int i = 0; i < SIZE; i++) {
       KeyValue kv =
           new KeyValue(
