@@ -804,7 +804,3 @@ class MemStoreFlusher implements FlushRequester {
     }
   }
 }
-
-enum FlushType {
-  NORMAL, ABOVE_LOWER_MARK, ABOVE_HIGHER_MARK;
-}
