@@ -359,7 +359,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          AccessControlUtil.grant(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+          AccessControlUtil.grant(null, protocol, testUser, TEST_NAMESPACE, false, Action.WRITE);
         } finally {
           acl.close();
           connection.close();
@@ -377,7 +377,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           AccessControlUtil.grant(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
-            TEST_NAMESPACE, Action.READ);
+            TEST_NAMESPACE, false, Action.READ);
         }
         return null;
       }

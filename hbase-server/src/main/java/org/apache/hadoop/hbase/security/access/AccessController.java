@@ -2246,7 +2246,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           @Override
           public Void run() throws Exception {
             AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm,
-                regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME));
+              regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME), request.getMergeExistingPermissions());
             return null;
           }
         });

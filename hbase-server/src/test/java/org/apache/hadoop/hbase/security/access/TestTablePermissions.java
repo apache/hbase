@@ -458,7 +458,7 @@ public class TestTablePermissions {
     assertEquals("Should have 1 permission for user3", 1, user3Perms.size());
     assertEquals("user3 should have ADMIN, READ, CREATE permission",
                  new Permission.Action[] {
-                    Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.CREATE
+                    Permission.Action.READ, Permission.Action.CREATE, Permission.Action.ADMIN
                  },
                  user3Perms.get(0).getActions());
   }

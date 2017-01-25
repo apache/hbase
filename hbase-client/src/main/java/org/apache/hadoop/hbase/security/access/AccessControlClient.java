@@ -85,56 +85,104 @@ public class AccessControlClient {
    * @param userName
    * @param family
    * @param qual
+   * @param mergeExistingPermissions If set to false, later granted permissions will override
+   *          previous granted permissions. otherwise, it'll merge with previous granted
+   *          permissions.
    * @param actions
    * @throws Throwable
    */
-  public static void grant(Connection connection, final TableName tableName,
-      final String userName, final byte[] family, final byte[] qual,
+  private static void grant(Connection connection, final TableName tableName,
+      final String userName, final byte[] family, final byte[] qual, boolean mergeExistingPermissions,
       final Permission.Action... actions) throws Throwable {
-    /* TODO: Priority is not used.
-    HBaseRpcController controller
-      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
-    controller.setPriority(tableName);
-    */
+    // TODO: Priority is not used.
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
       AccessControlUtil.grant(null, getAccessControlServiceStub(table), userName, tableName,
-        family, qual, actions);
+        family, qual, mergeExistingPermissions, actions);
+    }
+  }
+
+  /**
+   * Grants permission on the specified table for the specified user.
+   * If permissions for a specified user exists, later granted permissions will override previous granted permissions.
+   * @param connection The Connection instance to use
+   * @param tableName
+   * @param userName
+   * @param family
+   * @param qual
+   * @param actions
+   * @throws Throwable
+   */
+  public static void grant(Connection connection, final TableName tableName, final String userName,
+      final byte[] family, final byte[] qual, final Permission.Action... actions) throws Throwable {
+    grant(connection, tableName, userName, family, qual, true, actions);
+  }
+
+  /**
+   * Grants permission on the specified namespace for the specified user.
+   * @param connection
+   * @param namespace
+   * @param userName
+   * @param mergeExistingPermissions If set to false, later granted permissions will override
+   *          previous granted permissions. otherwise, it'll merge with previous granted
+   *          permissions.
+   * @param actions
+   * @throws Throwable
+   */
+  private static void grant(Connection connection, final String namespace, final String userName,
+      boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
+    // TODO: Pass an rpcController.
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      AccessControlUtil.grant(null, getAccessControlServiceStub(table), userName, namespace,
+        mergeExistingPermissions, actions);
     }
   }
 
   /**
    * Grants permission on the specified namespace for the specified user.
+   * If permissions on the specified namespace exists, later granted permissions will override previous granted
+   * permissions.
    * @param connection The Connection instance to use
    * @param namespace
    * @param userName
    * @param actions
    * @throws Throwable
    */
-  public static void grant(Connection connection, final String namespace,
-      final String userName, final Permission.Action... actions) throws Throwable {
-    /* TODO: Pass an rpcController.
-    HBaseRpcController controller
-      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
-    */
+  public static void grant(Connection connection, final String namespace, final String userName,
+      final Permission.Action... actions) throws Throwable {
+    grant(connection, namespace, userName, true, actions);
+  }
+
+  /**
+   * Grants permission on the specified namespace for the specified user.
+   * @param connection
+   * @param userName
+   * @param mergeExistingPermissions If set to false, later granted permissions will override
+   *          previous granted permissions. otherwise, it'll merge with previous granted
+   *          permissions.
+   * @param actions
+   * @throws Throwable
+   */
+  private static void grant(Connection connection, final String userName,
+      boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
+    // TODO: Pass an rpcController
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      AccessControlUtil.grant(null, getAccessControlServiceStub(table), userName, namespace,
-        actions);
+      AccessControlUtil.grant(null, getAccessControlServiceStub(table), userName,
+              mergeExistingPermissions, actions);
     }
   }
 
   /**
-   * @param connection The Connection instance to use
    * Grant global permissions for the specified user.
+   * If permissions for the specified user exists, later granted permissions will override previous granted
+   * permissions.
+   * @param connection
+   * @param userName
+   * @param actions
+   * @throws Throwable
    */
   public static void grant(Connection connection, final String userName,
-       final Permission.Action... actions) throws Throwable {
-    /* TODO: Pass an rpcController
-    HBaseRpcController controller
-      = ((ClusterConnection) connection).getRpcControllerFactory().newController();
-    */
-    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-      AccessControlUtil.grant(null, getAccessControlServiceStub(table), userName, actions);
-    }
+      final Permission.Action... actions) throws Throwable {
+    grant(connection, userName, true, actions);
   }
 
   public static boolean isAccessControllerRunning(Connection connection)

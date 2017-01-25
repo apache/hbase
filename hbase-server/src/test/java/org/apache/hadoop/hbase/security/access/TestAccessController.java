@@ -1191,7 +1191,7 @@ public class TestAccessController extends SecureTestUtil {
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           AccessControlUtil.grant(null, protocol, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY,
-              null, Action.READ);
+              null, false, Action.READ);
         }
         return null;
       }
@@ -2402,6 +2402,129 @@ public class TestAccessController extends SecureTestUtil {
     } finally {
       revokeGlobal(TEST_UTIL, userName, Permission.Action.READ);
     }
+  }
+
+  @Test(timeout = 180000)
+  public void testAccessControlClientMultiGrantRevoke() throws Exception {
+    User testGrantRevoke =
+        User.createUserForTesting(conf, "testGrantRevoke", new String[0]);
+    AccessTestAction getAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table t = conn.getTable(TEST_TABLE)) {
+          return t.get(new Get(TEST_ROW));
+        }
+      }
+    };
+
+    AccessTestAction putAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        Put p = new Put(TEST_ROW);
+        p.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table t = conn.getTable(TEST_TABLE)) {
+          t.put(p);
+          return null;
+        }
+      }
+    };
+
+    verifyDenied(getAction, testGrantRevoke);
+    verifyDenied(putAction, testGrantRevoke);
+
+    // Grant global READ permissions to testGrantRevoke.
+    String userName = testGrantRevoke.getShortName();
+    try {
+      grantGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+        Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. ", e);
+    }
+    verifyAllowed(getAction, testGrantRevoke);
+    verifyDenied(putAction, testGrantRevoke);
+
+    // Grant global READ permissions to testGrantRevoke.
+    try {
+      grantGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+              Permission.Action.WRITE);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. ", e);
+    }
+    verifyAllowed(getAction, testGrantRevoke);
+    verifyAllowed(putAction, testGrantRevoke);
+
+    // Revoke global READ permission to testGrantRevoke.
+    try {
+      revokeGlobalUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+              Permission.Action.READ, Permission.Action.WRITE);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke ", e);
+    }
+    verifyDenied(getAction, testGrantRevoke);
+    verifyDenied(putAction, testGrantRevoke);
+
+    // Grant table READ & WRITE permissions to testGrantRevoke
+    try {
+      grantOnTableUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName, TEST_TABLE,
+        null, null, Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. ", e);
+    }
+    verifyAllowed(getAction, testGrantRevoke);
+    verifyDenied(putAction, testGrantRevoke);
+
+    // Grant table WRITE permissions to testGrantRevoke
+    try {
+      grantOnTableUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName, TEST_TABLE,
+        null, null, Action.WRITE);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. ", e);
+    }
+    verifyAllowed(getAction, testGrantRevoke);
+    verifyAllowed(putAction, testGrantRevoke);
+
+    // Revoke table READ & WRITE permission to testGrantRevoke.
+    try {
+      revokeFromTableUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName, TEST_TABLE, null, null,
+              Permission.Action.READ, Permission.Action.WRITE);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke ", e);
+    }
+    verifyDenied(getAction, testGrantRevoke);
+    verifyDenied(putAction, testGrantRevoke);
+
+    // Grant Namespace READ permissions to testGrantRevoke
+    String namespace = TEST_TABLE.getNamespaceAsString();
+    try {
+      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+        namespace, Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. ", e);
+    }
+    verifyAllowed(getAction, testGrantRevoke);
+    verifyDenied(putAction, testGrantRevoke);
+
+    // Grant Namespace WRITE permissions to testGrantRevoke
+    try {
+      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+              namespace, Permission.Action.WRITE);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. ", e);
+    }
+    verifyAllowed(getAction, testGrantRevoke);
+    verifyAllowed(putAction, testGrantRevoke);
+
+    // Revoke table READ & WRITE permission to testGrantRevoke.
+    try {
+      revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, systemUserConnection, userName,
+              TEST_TABLE.getNamespaceAsString(), Permission.Action.READ, Permission.Action.WRITE);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke ", e);
+    }
+    verifyDenied(getAction, testGrantRevoke);
+    verifyDenied(putAction, testGrantRevoke);
   }
 
   @Test (timeout=180000)

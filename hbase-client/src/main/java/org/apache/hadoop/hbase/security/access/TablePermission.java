@@ -305,6 +305,21 @@ public class TablePermission extends Permission {
     return super.implies(action);
   }
 
+  public boolean tableFieldsEqual(TablePermission other){
+    if (!(((table == null && other.getTableName() == null) ||
+           (table != null && table.equals(other.getTableName()))) &&
+         ((family == null && other.getFamily() == null) ||
+           Bytes.equals(family, other.getFamily())) &&
+         ((qualifier == null && other.getQualifier() == null) ||
+          Bytes.equals(qualifier, other.getQualifier())) &&
+         ((namespace == null && other.getNamespace() == null) ||
+          (namespace != null && namespace.equals(other.getNamespace())))
+    )) {
+      return false;
+    }
+    return true;
+  }
+
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
     justification="Passed on construction except on constructor not to be used")
@@ -314,15 +329,7 @@ public class TablePermission extends Permission {
     }
     TablePermission other = (TablePermission)obj;
 
-    if (!(((table == null && other.getTableName() == null) ||
-           (table != null && table.equals(other.getTableName()))) &&
-        ((family == null && other.getFamily() == null) ||
-         Bytes.equals(family, other.getFamily())) &&
-        ((qualifier == null && other.getQualifier() == null) ||
-         Bytes.equals(qualifier, other.getQualifier())) &&
-        ((namespace == null && other.getNamespace() == null) ||
-         (namespace != null && namespace.equals(other.getNamespace())))
-       )) {
+    if(!this.tableFieldsEqual(other)){
       return false;
     }
 
