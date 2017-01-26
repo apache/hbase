@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -148,20 +149,14 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Set the source path (directory/file) to the specified storage policy. <br>
-   * <i>"LAZY_PERSIST"</i>, <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>,
-   * <i>"COLD"</i> <br>
-   * <br>
-   * See {@link org.apache.hadoop.hdfs.protocol.HdfsConstants} for more details.
+   * Set the source path (directory/file) to the specified storage policy.
    * @param path The source path (directory/file).
-   * @param policyName The name of the storage policy.
+   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc.
+   * See see hadoop 2.6+ org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g
+   * 'COLD', 'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
    */
   public void setStoragePolicy(Path path, String policyName) {
-    try {
-      ReflectionUtils.invokeMethod(this.fs, "setStoragePolicy", path, policyName);
-    } catch (Exception e) {
-      LOG.warn("Failed to set storage policy of [" + path + "] to [" + policyName + "]", e);
-    }
+    FSUtils.setStoragePolicy(this.fs, path, policyName);
   }
 
   /**

@@ -228,14 +228,7 @@ public class HStore implements Store {
     if (null == policyName) {
       policyName = this.conf.get(BLOCK_STORAGE_POLICY_KEY, DEFAULT_BLOCK_STORAGE_POLICY);
     }
-    if (null != policyName && !policyName.trim().isEmpty()) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("set block storage policy of [" + family.getNameAsString() + "] to ["
-            + policyName + "]");
-      }
-
-      this.fs.setStoragePolicy(family.getNameAsString(), policyName.trim());
-    }
+    this.fs.setStoragePolicy(family.getNameAsString(), policyName.trim());
 
     this.dataBlockEncoder =
         new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());

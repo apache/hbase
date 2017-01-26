@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -38,7 +36,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -56,7 +53,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 import com.google.common.collect.Lists;
@@ -190,17 +186,12 @@ public class HRegionFileSystem {
    * <br>
    * See {@link org.apache.hadoop.hdfs.protocol.HdfsConstants} for more details.
    * @param familyName The name of column family.
-   * @param policyName The name of the storage policy.
+   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc.
+   * See see hadoop 2.6+ org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g
+   * 'COLD', 'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
    */
   public void setStoragePolicy(String familyName, String policyName) {
-    Path storeDir = getStoreDir(familyName);
-    try {
-      ReflectionUtils.invokeMethod(this.fs, "setStoragePolicy", storeDir, policyName);
-    } catch (Exception e) {
-      if (!(this.fs instanceof LocalFileSystem)) {
-        LOG.warn("Failed to set storage policy of [" + storeDir + "] to [" + policyName + "]", e);
-      }
-    }
+    FSUtils.setStoragePolicy(this.fs, getStoreDir(familyName), policyName);
   }
 
   /**
