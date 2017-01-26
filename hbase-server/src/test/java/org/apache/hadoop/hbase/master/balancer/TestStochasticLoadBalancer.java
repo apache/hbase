@@ -69,7 +69,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       ServerLoad sl = mock(ServerLoad.class);
 
       RegionLoad rl = mock(RegionLoad.class);
-      when(rl.getStorefileSizeMB()).thenReturn(i);
+      when(rl.getStores()).thenReturn(i);
 
       Map<byte[], RegionLoad> regionLoadMap =
           new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
@@ -85,11 +85,11 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertTrue(loadBalancer.loads.get(REGION_KEY) != null);
     assertTrue(loadBalancer.loads.get(REGION_KEY).size() == 15);
 
-    Queue<BalancerRegionLoad> loads = loadBalancer.loads.get(REGION_KEY);
+    Queue<RegionLoad> loads = loadBalancer.loads.get(REGION_KEY);
     int i = 0;
     while(loads.size() > 0) {
-      BalancerRegionLoad rl = loads.remove();
-      assertEquals(i + (numClusterStatusToAdd - 15), rl.getStorefileSizeMB());
+      RegionLoad rl = loads.remove();
+      assertEquals(i + (numClusterStatusToAdd - 15), rl.getStores());
       i ++;
     }
   }
@@ -232,9 +232,9 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
   @Test
   public void testRegionLoadCost() {
-    List<BalancerRegionLoad> regionLoads = new ArrayList<>();
+    List<RegionLoad> regionLoads = new ArrayList<>();
     for (int i = 1; i < 5; i++) {
-      BalancerRegionLoad regionLoad = mock(BalancerRegionLoad.class);
+      RegionLoad regionLoad = mock(RegionLoad.class);
       when(regionLoad.getReadRequestsCount()).thenReturn(new Long(i));
       when(regionLoad.getStorefileSizeMB()).thenReturn(i);
       regionLoads.add(regionLoad);
