@@ -119,14 +119,14 @@ object AvroSource {
       .save()
 
     val df = withCatalog(catalog)
-    df.show
+    df.show()
     df.printSchema()
     df.registerTempTable("ExampleAvrotable")
     val c = sqlContext.sql("select count(1) from ExampleAvrotable")
-    c.show
+    c.show()
 
     val filtered = df.select($"col0", $"col1.favorite_array").where($"col0" === "name001")
-    filtered.show
+    filtered.show()
     val collected = filtered.collect()
     if (collected(0).getSeq[String](1)(0) != "number1") {
       throw new UserCustomizedSampleException("value invalid")
@@ -141,7 +141,7 @@ object AvroSource {
       .format("org.apache.hadoop.hbase.spark")
       .save()
     val newDF = withCatalog(avroCatalogInsert)
-    newDF.show
+    newDF.show()
     newDF.printSchema()
     if(newDF.count() != 256) {
       throw new UserCustomizedSampleException("value invalid")
@@ -149,10 +149,10 @@ object AvroSource {
 
     df.filter($"col1.name" === "name005" || $"col1.name" <= "name005")
       .select("col0", "col1.favorite_color", "col1.favorite_number")
-      .show
+      .show()
 
     df.filter($"col1.name" <= "name005" || $"col1.name".contains("name007"))
       .select("col0", "col1.favorite_color", "col1.favorite_number")
-      .show
+      .show()
   }
 }
