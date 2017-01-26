@@ -113,7 +113,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     ArrayList<String> tables;
     HRegionInfo[] regions;
-    Deque<BalancerRegionLoad>[] regionLoads;
+    Deque<RegionLoad>[] regionLoads;
     private RegionLocationFinder regionFinder;
 
     int[][] regionLocations; //regionIndex -> list of serverIndex sorted by locality
@@ -161,7 +161,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     protected Cluster(
         Map<ServerName, List<HRegionInfo>> clusterState,
-        Map<String, Deque<BalancerRegionLoad>> loads,
+        Map<String, Deque<RegionLoad>> loads,
         RegionLocationFinder regionFinder,
         RackManager rackManager) {
       this(null, clusterState, loads, regionFinder, rackManager);
@@ -171,7 +171,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     protected Cluster(
         Collection<HRegionInfo> unassignedRegions,
         Map<ServerName, List<HRegionInfo>> clusterState,
-        Map<String, Deque<BalancerRegionLoad>> loads,
+        Map<String, Deque<RegionLoad>> loads,
         RegionLocationFinder regionFinder,
         RackManager rackManager) {
 
@@ -426,7 +426,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     /** Helper for Cluster constructor to handle a region */
     private void registerRegion(HRegionInfo region, int regionIndex,
-        int serverIndex, Map<String, Deque<BalancerRegionLoad>> loads,
+        int serverIndex, Map<String, Deque<RegionLoad>> loads,
         RegionLocationFinder regionFinder) {
       String tableName = region.getTable().getNameAsString();
       if (!tablesToIndex.containsKey(tableName)) {
@@ -443,7 +443,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       // region load
       if (loads != null) {
-        Deque<BalancerRegionLoad> rl = loads.get(region.getRegionNameAsString());
+        Deque<RegionLoad> rl = loads.get(region.getRegionNameAsString());
         // That could have failed if the RegionLoad is using the other regionName
         if (rl == null) {
           // Try getting the region load using encoded name.
