@@ -113,7 +113,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(StochasticLoadBalancer.class);
 
-  Map<String, Deque<RegionLoad>> loads = new HashMap<String, Deque<RegionLoad>>();
+  Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<String, Deque<BalancerRegionLoad>>();
 
   // values are defaults
   private int maxSteps = 1000000;
@@ -498,8 +498,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private synchronized void updateRegionLoad() {
     // We create a new hashmap so that regions that are no longer there are removed.
     // However we temporarily need the old loads so we can use them to keep the rolling average.
-    Map<String, Deque<RegionLoad>> oldLoads = loads;
-    loads = new HashMap<String, Deque<RegionLoad>>();
+    Map<String, Deque<BalancerRegionLoad>> oldLoads = loads;
+    loads = new HashMap<String, Deque<BalancerRegionLoad>>();
 
     for (ServerName sn : clusterStatus.getServers()) {
       ServerLoad sl = clusterStatus.getLoad(sn);
@@ -507,16 +507,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         continue;
       }
       for (Entry<byte[], RegionLoad> entry : sl.getRegionsLoad().entrySet()) {
-        Deque<RegionLoad> rLoads = oldLoads.get(Bytes.toString(entry.getKey()));
+        Deque<BalancerRegionLoad> rLoads = oldLoads.get(Bytes.toString(entry.getKey()));
         if (rLoads == null) {
           // There was nothing there
-          rLoads = new ArrayDeque<RegionLoad>();
+          rLoads = new ArrayDeque<BalancerRegionLoad>();
         } else if (rLoads.size() >= numRegionLoadsToRemember) {
           rLoads.remove();
         }
-        rLoads.add(entry.getValue());
+        rLoads.add(new BalancerRegionLoad(entry.getValue()));
         loads.put(Bytes.toString(entry.getKey()), rLoads);
-
       }
     }
 
@@ -1251,7 +1250,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   abstract static class CostFromRegionLoadFunction extends CostFunction {
 
     private ClusterStatus clusterStatus = null;
-    private Map<String, Deque<RegionLoad>> loads = null;
+    private Map<String, Deque<BalancerRegionLoad>> loads = null;
     private double[] stats = null;
     CostFromRegionLoadFunction(Configuration conf) {
       super(conf);
@@ -1261,7 +1260,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       this.clusterStatus = status;
     }
 
-    void setLoads(Map<String, Deque<RegionLoad>> l) {
+    void setLoads(Map<String, Deque<BalancerRegionLoad>> l) {
       this.loads = l;
     }
 
@@ -1281,7 +1280,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
         // for every region on this server get the rl
         for(int regionIndex:cluster.regionsPerServer[i]) {
-          Collection<RegionLoad> regionLoadList =  cluster.regionLoads[regionIndex];
+          Collection<BalancerRegionLoad> regionLoadList =  cluster.regionLoads[regionIndex];
 
           // Now if we found a region load get the type of cost that was requested.
           if (regionLoadList != null) {
@@ -1297,15 +1296,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return costFromArray(stats);
     }
 
-    protected double getRegionLoadCost(Collection<RegionLoad> regionLoadList) {
+    protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList) {
       double cost = 0;
-      for (RegionLoad rl : regionLoadList) {
+      for (BalancerRegionLoad rl : regionLoadList) {
         cost += getCostFromRl(rl);
       }
       return cost / regionLoadList.size();
     }
 
-    protected abstract double getCostFromRl(RegionLoad rl);
+    protected abstract double getCostFromRl(BalancerRegionLoad rl);
   }
 
   /**
@@ -1320,11 +1319,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getRegionLoadCost(Collection<RegionLoad> regionLoadList) {
+    protected double getRegionLoadCost(Collection<BalancerRegionLoad> regionLoadList) {
       double cost = 0;
       double previous = 0;
       boolean isFirst = true;
-      for (RegionLoad rl : regionLoadList) {
+      for (BalancerRegionLoad rl : regionLoadList) {
         double current = getCostFromRl(rl);
         if (isFirst) {
           isFirst = false;
@@ -1354,7 +1353,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(RegionLoad rl) {
+    protected double getCostFromRl(BalancerRegionLoad rl) {
       return rl.getReadRequestsCount();
     }
   }
@@ -1375,7 +1374,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(RegionLoad rl) {
+    protected double getCostFromRl(BalancerRegionLoad rl) {
       return rl.getWriteRequestsCount();
     }
   }
@@ -1553,7 +1552,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(RegionLoad rl) {
+    protected double getCostFromRl(BalancerRegionLoad rl) {
       return rl.getMemStoreSizeMB();
     }
   }
@@ -1573,7 +1572,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     @Override
-    protected double getCostFromRl(RegionLoad rl) {
+    protected double getCostFromRl(BalancerRegionLoad rl) {
       return rl.getStorefileSizeMB();
     }
   }
