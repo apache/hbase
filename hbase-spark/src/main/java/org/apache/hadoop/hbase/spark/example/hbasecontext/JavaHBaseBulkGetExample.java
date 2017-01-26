@@ -66,7 +66,7 @@ final public class JavaHBaseBulkGetExample {
 
       JavaHBaseContext hbaseContext = new JavaHBaseContext(jsc, conf);
 
-      hbaseContext.bulkGet(TableName.valueOf(tableName), 2, rdd, new GetFunction(),
+      hbaseContext.bulkGet(tableName, 2, rdd, new GetFunction(),
               new ResultFunction());
     } finally {
       jsc.stop();
