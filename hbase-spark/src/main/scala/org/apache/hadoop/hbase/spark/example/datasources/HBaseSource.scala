@@ -89,7 +89,7 @@ object HBaseSource {
       .save()
 
     val df = withCatalog(cat)
-    df.show
+    df.show()
     df.filter($"col0" <= "row005")
       .select($"col0", $"col1").show
     df.filter($"col0" === "row005" || $"col0" <= "row005")
