@@ -31,6 +31,7 @@ limitations under the License.
         Interfaces to be implemented in order to smooth
         over hadoop version differences
     </description>
+<!--REMOVE-->
 
   <build>
     <plugins>

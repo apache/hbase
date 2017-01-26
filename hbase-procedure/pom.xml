@@ -30,6 +30,7 @@
   <artifactId>hbase-procedure</artifactId>
   <name>Apache HBase - Procedure</name>
   <description>Procedure Framework</description>
+<!--REMOVE-->
 
   <build>
     <plugins>

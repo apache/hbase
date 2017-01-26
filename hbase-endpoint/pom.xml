@@ -30,6 +30,7 @@
     <artifactId>hbase-endpoint</artifactId>
     <name>Apache HBase - Coprocessor Endpoint</name>
     <description>HBase Coprocessor Endpoint implementations</description>
+<!--REMOVE-->
 
     <properties>
       <maven.javadoc.skip>true</maven.javadoc.skip>

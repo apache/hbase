@@ -31,6 +31,7 @@
   <artifactId>hbase-rsgroup</artifactId>
   <name>Apache HBase - RSGroup</name>
   <description>Regionserver Groups for HBase</description>
+<!--REMOVE-->
 
   <build>
     <plugins>

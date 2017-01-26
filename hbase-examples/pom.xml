@@ -29,6 +29,7 @@
   <artifactId>hbase-examples</artifactId>
   <name>Apache HBase - Examples</name>
   <description>Examples of HBase usage</description>
+<!--REMOVE-->
   <build>
     <plugins>
       <plugin>

@@ -38,6 +38,7 @@
     longer than the HBase regionserver process and are not necessarily tied to a single computer
     life time. However external block caches add in extra operational overhead.
   </description>
+<!--REMOVE-->
 
   <build>
     <plugins>

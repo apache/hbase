@@ -30,6 +30,7 @@
   <artifactId>hbase-common</artifactId>
   <name>Apache HBase - Common</name>
   <description>Common functionality for HBase</description>
+<!--REMOVE-->
 
   <build>
     <resources>
