@@ -812,9 +812,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
                     |"columns":{
                     |"col0":{"cf":"rowkey", "col":"key", "type":"string"},
                     |"col1":{"cf":"cf1", "col":"col1", "type":"boolean"},
-                    |"col2":{"cf":"cf2", "col":"col2", "type":"double"},
+                    |"col2":{"cf":"cf1", "col":"col2", "type":"double"},
                     |"col3":{"cf":"cf3", "col":"col3", "type":"float"},
-                    |"col4":{"cf":"cf4", "col":"col4", "type":"int"},
+                    |"col4":{"cf":"cf3", "col":"col4", "type":"int"},
                     |"col5":{"cf":"cf5", "col":"col5", "type":"bigint"},
                     |"col6":{"cf":"cf6", "col":"col6", "type":"smallint"},
                     |"col7":{"cf":"cf7", "col":"col7", "type":"string"},
@@ -851,7 +851,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("full query") {
     val df = withCatalog(writeCatalog)
-    df.show
+    df.show()
     assert(df.count() == 256)
   }
 
@@ -861,7 +861,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     val df = withCatalog(writeCatalog)
     val s = df.filter($"col0" <= "row005")
       .select("col0", "col1")
-    s.show
+    s.show()
     assert(s.count() == 6)
   }
 
@@ -999,7 +999,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
   test("avro full query") {
     val df = withAvroCatalog(avroCatalog)
-    df.show
+    df.show()
     df.printSchema()
     assert(df.count() == 256)
   }
@@ -1013,7 +1013,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
       .format("org.apache.hadoop.hbase.spark")
       .save()
     val newDF = withAvroCatalog(avroCatalogInsert)
-    newDF.show
+    newDF.show()
     newDF.printSchema()
     assert(newDF.count() == 256)
   }
@@ -1024,7 +1024,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     val df = withAvroCatalog(avroCatalog)
     val r = df.filter($"col1.name" === "name005" || $"col1.name" <= "name005")
       .select("col0", "col1.favorite_color", "col1.favorite_number")
-    r.show
+    r.show()
     assert(r.count() == 6)
   }
 
@@ -1034,7 +1034,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     val df = withAvroCatalog(avroCatalog)
     val s = df.filter($"col1.name" <= "name005" || $"col1.name".contains("name007"))
       .select("col0", "col1.favorite_color", "col1.favorite_number")
-    s.show
+    s.show()
     assert(s.count() == 7)
   }
 }

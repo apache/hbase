@@ -150,7 +150,7 @@ case class HBaseTableCatalog(
   def getRowKey: Seq[Field] = row.fields
   def getPrimaryKey= row.keys(0)
   def getColumnFamilies = {
-    sMap.fields.map(_.cf).filter(_ != HBaseTableCatalog.rowKey)
+    sMap.fields.map(_.cf).filter(_ != HBaseTableCatalog.rowKey).toSeq.distinct
   }
 
   def get(key: String) = params.get(key)
