@@ -45,10 +45,10 @@ import org.apache.hadoop.hbase.rest.model.NamespacesInstanceModel;
 import org.apache.hadoop.hbase.rest.model.TableListModel;
 import org.apache.hadoop.hbase.rest.model.TableModel;
 import org.apache.hadoop.hbase.rest.model.TestNamespacesInstanceModel;
+import org.apache.hadoop.hbase.rest.provider.JacksonProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import static org.junit.Assert.*;
@@ -87,8 +87,8 @@ public class TestNamespacesInstanceResource {
       REST_TEST_UTIL.getServletPort()));
     testNamespacesInstanceModel = new TestNamespacesInstanceModel();
     context = JAXBContext.newInstance(NamespacesInstanceModel.class, TableListModel.class);
-    jsonMapper = new JacksonJaxbJsonProvider()
-      .locateMapper(NamespacesInstanceModel.class, MediaType.APPLICATION_JSON_TYPE);
+    jsonMapper = new JacksonProvider()
+    .locateMapper(NamespacesInstanceModel.class, MediaType.APPLICATION_JSON_TYPE);
     NAMESPACE1_PROPS.put("key1", "value1");
     NAMESPACE2_PROPS.put("key2a", "value2a");
     NAMESPACE2_PROPS.put("key2b", "value2b");
@@ -265,7 +265,7 @@ public class TestNamespacesInstanceResource {
 
     // Try REST post and puts with invalid content.
     response = client.post(namespacePath1, Constants.MIMETYPE_JSON, toXML(model1));
-    assertEquals(400, response.getCode());
+    assertEquals(500, response.getCode());
     String jsonString = jsonMapper.writeValueAsString(model2);
     response = client.put(namespacePath2, Constants.MIMETYPE_XML, Bytes.toBytes(jsonString));
     assertEquals(400, response.getCode());

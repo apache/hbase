@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.hadoop.hbase.rest.provider.JacksonProvider;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -93,7 +93,7 @@ public class RowResourceBase {
         RowModel.class);
     xmlMarshaller = context.createMarshaller();
     xmlUnmarshaller = context.createUnmarshaller();
-    jsonMapper = new JacksonJaxbJsonProvider()
+    jsonMapper = new JacksonProvider()
     .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
     client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
@@ -511,7 +511,7 @@ public class RowResourceBase {
     Response response = getValueJson(table, row, column);
     assertEquals(response.getCode(), 200);
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
+    ObjectMapper mapper = new JacksonProvider()
     .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
     CellSetModel cellSet = mapper.readValue(response.getBody(), CellSetModel.class);
     RowModel rowModel = cellSet.getRows().get(0);

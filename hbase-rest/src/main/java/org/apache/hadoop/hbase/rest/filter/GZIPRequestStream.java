@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.rest.filter;
 import java.io.IOException;
 import java.util.zip.GZIPInputStream;
 
-import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 
@@ -55,20 +54,5 @@ public class GZIPRequestStream extends ServletInputStream
   @Override
   public void close() throws IOException {
     in.close();
-  }
-
-  @Override
-  public boolean isFinished() {
-    throw new UnsupportedOperationException("Asynchonous operation is not supported.");
-  }
-
-  @Override
-  public boolean isReady() {
-    throw new UnsupportedOperationException("Asynchonous operation is not supported.");
-  }
-
-  @Override
-  public void setReadListener(ReadListener listener) {
-    throw new UnsupportedOperationException("Asynchonous operation is not supported.");
   }
 }

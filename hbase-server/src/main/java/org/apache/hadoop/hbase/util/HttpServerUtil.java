@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.eclipse.jetty.security.ConstraintSecurityHandler;
-import org.eclipse.jetty.util.security.Constraint;
-import org.eclipse.jetty.security.ConstraintMapping;
-import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.mortbay.jetty.security.Constraint;
+import org.mortbay.jetty.security.ConstraintMapping;
+import org.mortbay.jetty.security.SecurityHandler;
+import org.mortbay.jetty.servlet.Context;
 
 /**
  * HttpServer utility.
@@ -28,9 +28,9 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 public class HttpServerUtil {
   /**
    * Add constraints to a Jetty Context to disallow undesirable Http methods.
-   * @param ctxHandler The context to modify
+   * @param context The context to modify
    */
-  public static void constrainHttpMethods(ServletContextHandler ctxHandler) {
+  public static void constrainHttpMethods(Context context) {
     Constraint c = new Constraint();
     c.setAuthenticate(true);
 
@@ -44,9 +44,9 @@ public class HttpServerUtil {
     cmo.setMethod("OPTIONS");
     cmo.setPathSpec("/*");
 
-    ConstraintSecurityHandler securityHandler = new ConstraintSecurityHandler();
-    securityHandler.setConstraintMappings(new ConstraintMapping[]{ cmt, cmo });
+    SecurityHandler sh = new SecurityHandler();
+    sh.setConstraintMappings(new ConstraintMapping[]{ cmt, cmo });
 
-    ctxHandler.setSecurityHandler(securityHandler);
+    context.addHandler(sh);
   }
 }

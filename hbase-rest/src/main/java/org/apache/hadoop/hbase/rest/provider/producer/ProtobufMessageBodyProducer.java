@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 public class ProtobufMessageBodyProducer
   implements MessageBodyWriter<ProtobufMessageHandler> {
 
+  private ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>();
+
   @Override
   public boolean isWriteable(Class<?> type, Type genericType, 
       Annotation[] annotations, MediaType mediaType) {
@@ -57,14 +59,23 @@ public class ProtobufMessageBodyProducer
   @Override
   public long getSize(ProtobufMessageHandler m, Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType) {
-    // deprecated by JAX-RS 2.0 and ignored by Jersey runtime
-    return -1;
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try {
+      baos.write(m.createProtobufOutput());
+    } catch (IOException e) {
+      return -1;
+    }
+    byte[] bytes = baos.toByteArray();
+    buffer.set(bytes);
+    return bytes.length;
   }
 
   public void writeTo(ProtobufMessageHandler m, Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType, 
       MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) 
       throws IOException, WebApplicationException {
-    entityStream.write(m.createProtobufOutput());
+    byte[] bytes = buffer.get();
+    entityStream.write(bytes);
+    buffer.remove();
   }
 }

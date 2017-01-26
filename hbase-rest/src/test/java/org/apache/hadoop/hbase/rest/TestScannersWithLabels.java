@@ -207,7 +207,7 @@ public class TestScannersWithLabels {
     response = client.get(scannerURI, Constants.MIMETYPE_XML);
     // Respond with 204 as there are no cells to be retrieved
     assertEquals(response.getCode(), 204);
-    // With no content in the payload, the 'Content-Type' header is not echo back
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
   }
 
   @Test
