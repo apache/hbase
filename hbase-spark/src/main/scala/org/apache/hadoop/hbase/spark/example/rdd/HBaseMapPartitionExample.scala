@@ -31,7 +31,7 @@ import org.apache.spark.{SparkContext, SparkConf}
 object HBaseMapPartitionExample {
   def main(args: Array[String]) {
     if (args.length < 1) {
-      println("HBaseBulkGetExample {tableName}")
+      println("HBaseMapPartitionExample - {tableName} missing at arguments")
       return
     }
 

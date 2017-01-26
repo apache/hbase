@@ -26,13 +26,13 @@ import org.apache.hadoop.hbase.client.Result
 import org.apache.spark.SparkConf
 
 /**
- * This is a simple example of getting records in HBase
+ * This is a simple example of getting records from HBase
  * with the bulkGet function.
  */
 object HBaseBulkGetExample {
   def main(args: Array[String]) {
     if (args.length < 1) {
-      println("HBaseBulkGetExample {tableName}")
+      println("HBaseBulkGetExample - {tableName} missing at argument")
       return
     }
 
@@ -58,7 +58,7 @@ object HBaseBulkGetExample {
       val hbaseContext = new HBaseContext(sc, conf)
 
       val getRdd = hbaseContext.bulkGet[Array[Byte], String](
-        TableName.valueOf(tableName),
+        tableName,
         2,
         rdd,
         record => {
