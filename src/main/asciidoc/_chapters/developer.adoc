@@ -110,27 +110,12 @@ See link:http://hbase.apache.org/source-repository.html[Source Code
 Under the _dev-support/_ folder, you will find _hbase_eclipse_formatter.xml_.
 We encourage you to have this formatter in place in eclipse when editing HBase code.
 
-.Procedure: Load the HBase Formatter Into Eclipse
-. Open the  menu item.
-. In Preferences, Go to `Java->Code Style->Formatter`.
-. Click btn:[Import] and browse to the location of the _hbase_eclipse_formatter.xml_ file, which is in the _dev-support/_ directory.
-  Click btn:[Apply].
-. Still in Preferences, click `Java->Editor->Save Actions`.
-  Be sure the following options are selected:
-+
-* Perform the selected actions on save
-* Format source code
-* Format edited lines
-+
-Click btn:[Apply].
-Close all dialog boxes and return to the main window.
+Go to `Preferences->Java->Code Style->Formatter->Import` to load the xml file.
+Go to `Preferences->Java->Editor->Save Actions`, and make sure 'Format source code' and 'Format
+edited lines' is selected.
 
-
-In addition to the automatic formatting, make sure you follow the style guidelines explained in <<common.patch.feedback,common.patch.feedback>>
-
-Also, no `@author` tags - that's a rule.
-Quality Javadoc comments are appreciated.
-And include the Apache license.
+In addition to the automatic formatting, make sure you follow the style guidelines explained in
+<<common.patch.feedback,common.patch.feedback>>.
 
 [[eclipse.git.plugin]]
 ==== Eclipse Git Plugin
@@ -1397,11 +1382,11 @@ properties file, which may be `hbase-site.xml` or a different properties file.
 [[developing]]
 == Developer Guidelines
 
-=== Codelines
+=== Branches
 
-Most development is done on the master branch, which is named `master` in the Git repository.
-Previously, HBase used Subversion, in which the master branch was called `TRUNK`.
-Branches exist for minor releases, and important features and bug fixes are often back-ported.
+We use Git for source code management and latest development happens on `master` branch. There are
+branches for past major/minor/maintenance releases and important features and bug fixes are often
+ back-ported to them.
 
 === Release Managers
 
@@ -1418,15 +1403,6 @@ NOTE: End-of-life releases are not included in this list.
 | Release
 | Release Manager
 
-| 0.94
-| Lars Hofhansl
-
-| 0.98
-| Andrew Purtell
-
-| 1.0
-| Enis Soztutar
-
 | 1.1
 | Nick Dimiduk
 
@@ -1441,7 +1417,6 @@ NOTE: End-of-life releases are not included in this list.
 [[code.standards]]
 === Code Standards
 
-See <<eclipse.code.formatting,eclipse.code.formatting>> and <<common.patch.feedback,common.patch.feedback>>.
 
 ==== Interface Classifications
 
@@ -1501,6 +1476,8 @@ These guidelines have been developed based upon common feedback on patches from 
 
 See the link:http://www.oracle.com/technetwork/java/index-135089.html[Code
                     Conventions for the Java Programming Language] for more information on coding conventions in Java.
+See <<eclipse.code.formatting,eclipse.code.formatting>> to setup Eclipse to check for some of
+these guidelines automatically.
 
 [[common.patch.feedback.space.invaders]]
 ===== Space Invaders
@@ -1575,7 +1552,6 @@ Bar bar = foo.veryLongMethodWithManyArguments(
 [[common.patch.feedback.trailingspaces]]
 ===== Trailing Spaces
 
-Trailing spaces are a common problem.
 Be sure there is a line break after the end of your code, and avoid lines with nothing but whitespace.
 This makes diffs more meaningful.
 You can configure your IDE to help with this.
@@ -1589,21 +1565,22 @@ Bar bar = foo.getBar();     <--- imagine there is an extra space(s) after the se
 [[common.patch.feedback.javadoc]]
 ===== API Documentation (Javadoc)
 
-This is also a very common feedback item.
 Don't forget Javadoc!
 
 Javadoc warnings are checked during precommit.
 If the precommit tool gives you a '-1', please fix the javadoc issue.
 Your patch won't be committed if it adds such warnings.
 
+Also, no `@author` tags - that's a rule.
+
 [[common.patch.feedback.findbugs]]
 ===== Findbugs
 
 `Findbugs` is used to detect common bugs pattern.
-It is checked during the precommit build by Apache's Jenkins.
+It is checked during the precommit build.
 If errors are found, please fix them.
-You can run findbugs locally with +mvn
-                            findbugs:findbugs+, which will generate the `findbugs` files locally.
+You can run findbugs locally with `mvn
+                            findbugs:findbugs`, which will generate the `findbugs` files locally.
 Sometimes, you may have to write code smarter than `findbugs`.
 You can annotate your code to tell `findbugs` you know what you're doing, by annotating your class with the following annotation:
 
@@ -1621,20 +1598,22 @@ reimplementation rather than annotations in the `javax.annotations` package.
 [[common.patch.feedback.javadoc.defaults]]
 ===== Javadoc - Useless Defaults
 
-Don't just leave the @param arguments the way your IDE generated them.:
+Don't just leave javadoc tags the way IDE generates them, or fill redundant information in them.
 
 [source,java]
 ----
 
   /**
-   *
-   * @param bar             <---- don't do this!!!!
-   * @return                <---- or this!!!!
+   * @param table                              <---- don't leave them empty!
+   * @param region An HRegion object.          <---- don't fill redundant information!
+   * @return Foo Object foo just created.      <---- Not useful information
+   * @throws SomeException                     <---- Not useful. Function declarations already tell that!
+   * @throws BarException when something went wrong  <---- really?
    */
-  public Foo getFoo(Bar bar);
+  public Foo createFoo(Bar bar);
 ----
 
-Either add something descriptive to the @`param` and @`return` lines, or just remove them.
+Either add something descriptive to the tags, or just remove them.
 The preference is to add something descriptive and useful.
 
 [[common.patch.feedback.onething]]
@@ -1747,8 +1726,6 @@ For this the MetricsAssertHelper is provided.
 [[git.best.practices]]
 === Git Best Practices
 
-Use the correct method to create patches.::
-  See <<submitting.patches,submitting.patches>>.
 Avoid git merges.::
   Use `git pull --rebase` or `git fetch` followed by `git rebase`.
 Do not use `git push --force`.::
@@ -1769,98 +1746,96 @@ The script checks the directory for sub-directory called _.git/_, before proceed
 [[submitting.patches]]
 === Submitting Patches
 
-HBase moved to GIT from SVN.
-Until we develop our own documentation for how to contribute patches in our new GIT context, caveat the fact that we have a different branching model and that we don't currently do the merge practice described in the following, the link:http://accumulo.apache.org/git.html[accumulo doc
-                    on how to contribute and develop] after our move to GIT is worth a read.
-See also <<git.best.practices,git.best.practices>>.
-
-If you are new to submitting patches to open source or new to submitting patches to Apache, start by reading the link:http://commons.apache.org/patches.html[On Contributing
-                    Patches] page from link:http://commons.apache.org/[Apache
-                    Commons Project].
+If you are new to submitting patches to open source or new to submitting patches to Apache, start by
+ reading the link:http://commons.apache.org/patches.html[On Contributing Patches] page from
+ link:http://commons.apache.org/[Apache Commons Project].
 It provides a nice overview that applies equally to the Apache HBase Project.
+link:http://accumulo.apache.org/git.html[Accumulo doc on how to contribute and develop] is also
+good read to understand development workflow.
 
 [[submitting.patches.create]]
 ==== Create Patch
 
-Use _dev-support/submit-patch.py_ to create patches and optionally, upload to jira and update
-reviews on Review Board. Patch name is formatted as (JIRA).(branch name).(patch number).patch to
-follow Yetus' naming rules. Use `-h` flag to know detailed usage information. Most useful options
+Make sure you review <<common.patch.feedback,common.patch.feedback>> for code style. If your
+patch
+was generated incorrectly or your code does not adhere to the code formatting guidelines, you may
+be asked to redo some work.
+
+
+.Using submit-patch.py (recommended)
+
+[source,bourne]
+----
+$ dev-support/submit-patch.py -jid HBASE-xxxxx
+----
+
+Use this script to create patches, upload to jira and optionally create/update reviews on
+Review Board. Patch name is automatically formatted as _(JIRA).(branch name).(patch number).patch_
+ to follow Yetus' naming rules. Use `-h` flag to know detailed usage information. Most useful options
 are:
 
-. `-b BRANCH, --branch BRANCH` : Specify base branch for generating the diff. If not specified, tracking branch is used. If there is no tracking branch, error will be thrown.
-. `-jid JIRA_ID, --jira-id JIRA_ID` : Jira id of the issue. If set, we deduce next patch version from attachments in the jira and also upload the new patch. Script will ask for jira username/password for authentication. If not set, patch is named <branch>.patch.
+* `-b BRANCH, --branch BRANCH` : Specify base branch for generating the diff. If not specified,
+tracking branch is used. If there is no tracking branch, error will be thrown.
+* `-jid JIRA_ID, --jira-id JIRA_ID` : If used, deduces next patch version from attachments in the
+jira and uploads the new patch. Script will ask for jira username/password for authentication.
+If not set, patch is named <branch>.patch.
 
-The script builds a new patch, and uses REST API to upload it to the jira (if --jira-id is
-specified) and update the review on ReviewBoard (if --skip-review-board not specified).
-Remote links in the jira are used to figure out if a review request already exists. If no review
+By default, it'll also create/update review board. To skip that action, use `-srb` option. It uses
+'Issue Links' in the jira to figure out if a review request already exists. If no review
 request is present, then creates a new one and populates all required fields using jira summary,
 patch description, etc. Also adds this review's link to the jira.
 
-Authentication::
-Since attaching patches on JIRA and creating/changing review request on ReviewBoard requires a
-logged in user, the script will prompt you for username and password. To avoid the hassle every
+Save authentication credentials (optional)::
+Since attaching patches on JIRA and creating/changing review request on ReviewBoard requires
+valid user authentication, the script will prompt you for username and password. To avoid the hassle every
 time, set up `~/.apache-creds` with login details and encrypt it by following the steps in footer
 of script's help message.
 
-Python dependencies::
-To install required python dependencies, execute
+Python dependencies:: To install required python dependencies, execute
 `pip install -r dev-support/python-requirements.txt` from the master branch.
 
-.Patching Workflow
+.Manually
 
+  . Use `git rebase -i` first, to combine (squash) smaller commits into a single larger one.
+  . Create patch using IDE or Git commands. `git format-patch` is preferred since it preserves patch
+    author's name and commit message. Also, it handles binary files by default, whereas `git diff`
+    ignores them unless you use the `--binary` option.
+  . Patch name should be as follows to adhere to Yetus' naming convention: +
+    `(JIRA).(branch name).(patch number).patch` +
+    For eg. HBASE-11625.master.001.patch, HBASE-XXXXX.branch-1.2.0005.patch, etc.
+  . Attach the patch to the JIRA using `More->Attach Files` then click on btn:[Submit Patch]
+    button, which'll trigger Hudson job to check patch for validity.
+  . If your patch is longer than a single screen, also create a review on Review Board  and
+    add the link to JIRA. See <<reviewboard,reviewboard>>.
+
+
+
+.Few general guidelines
 * Always patch against the master branch first, even if you want to patch in another branch.
   HBase committers always apply patches first to the master branch, and backport if necessary.
-* Submit one single patch for a fix.
-  If necessary, squash local commits to merge local commits into a single one first.
-  See this link:http://stackoverflow.com/questions/5308816/how-to-use-git-merge-squash[Stack Overflow question] for more information about squashing commits.
-* Patch name should be as follows to adhere to Yetus' naming convention.
-+
-----
-(JIRA).(branch name).(patch number).patch
-----
-For eg. HBASE-11625.master.001.patch, HBASE-XXXXX.branch-1.2.0005.patch, etc.
-
-* To submit a patch, first create it using one of the methods in <<patching.methods,patching.methods>>.
-  Next, attach the patch to the JIRA (one patch for the whole fix), using the  dialog.
-  Next, click the btn:[Patch
-  Available] button, which triggers the Hudson job which checks the patch for validity.
-+
-Please understand that not every patch may get committed, and that feedback will likely be provided on the patch.
-
-* If your patch is longer than a single screen, also attach a Review Board to the case.
-  See <<reviewboard,reviewboard>>.
-* If you need to revise your patch, leave the previous patch file(s) attached to the JIRA, and upload the new one, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
-  Cancel the Patch Available flag and then re-trigger it, by toggling the btn:[Patch Available] button in JIRA.
-  JIRA sorts attached files by the time they were attached, and has no problem with multiple attachments with the same name.
-  However, at times it is easier to increment patch number in the patch name.
-
-[[patching.methods]]
-.Methods to Create Patches
-Eclipse::
-  Select the  menu item.
-
-Git::
-  `git format-patch` is preferred:
-     - It preserves the committer and commit message.
-     - It handles binary files by default, whereas `git diff` ignores them unless
-     you use the `--binary` option.
-  Use `git rebase -i` first, to combine (squash) smaller commits into a single larger one.
-
-Subversion::
-  Make sure you review <<eclipse.code.formatting,eclipse.code.formatting>> and <<common.patch.feedback,common.patch.feedback>> for code style.
-  If your patch was generated incorrectly or your code does not adhere to the code formatting guidelines, you may be asked to redo some work.
+* Submit one single patch for a fix. If necessary, squash local commits to merge local commits into
+  a single one first. See this
+  link:http://stackoverflow.com/questions/5308816/how-to-use-git-merge-squash[Stack Overflow
+  question] for more information about squashing commits.
+* Please understand that not every patch may get committed, and that feedback will likely be
+  provided on the patch.
+* If you need to revise your patch, leave the previous patch file(s) attached to the JIRA, and
+  upload a new one with incremented patch number. +
+  Click on btn:[Cancel Patch] and then on btn:[Submit Patch] to trigger the presubmit run.
 
 [[submitting.patches.tests]]
 ==== Unit Tests
+Always add and/or update relevant unit tests when making the changes.
+Make sure that new/changed unit tests pass locally before submitting the patch because it is faster
+than waiting for presubmit result which runs full test suite. This will save your own time and
+effort.
+Use <<mockito,mockito>> to make mocks which are very useful for testing failure scenarios by
+injecting appropriate failures.
 
-Yes, please.
-Please try to include unit tests with every code patch (and especially new classes and large changes). Make sure unit tests pass locally before submitting the patch.
-
-Also, see <<mockito,mockito>>.
-
-If you are creating a new unit test class, notice how other unit test classes have classification/sizing annotations at the top and a static method on the end.
-Be sure to include these in any new unit test files you generate.
-See <<hbase.tests,hbase.tests>> for more on how the annotations work.
+If you are creating a new unit test class, notice how other unit test classes have
+classification/sizing annotations before class name and a static methods for setup/teardown of
+testing environment. Be sure to include annotations in any new unit test files.
+See <<hbase.tests,hbase.tests>> for more information on tests.
 
 ==== Integration Tests
 
@@ -1936,8 +1911,11 @@ See this GitHub article, link:https://help.github.com/articles/set-up-git[Set Up
 
 When you commit a patch, please:
 
-. Include the Jira issue id in the commit message, along with a short description of the change and the name of the contributor if it is not you.
-  Be sure to get the issue ID right, as this causes Jira to link to the change in Git (use the issue's "All" tab to see these).
+. Include the Jira issue id in the commit message along with a short description of the change. Try
+  to add something more than just the Jira title so that someone looking at git log doesn't
+  have to go to Jira to discern what the change is about.
+  Be sure to get the issue ID right, as this causes Jira to link to the change in Git (use the
+  issue's "All" tab to see these).
 . Commit the patch to a new branch based off master or other intended branch.
   It's a good idea to call this branch by the JIRA ID.
   Then check out the relevant target branch where you want to commit, make sure your local branch has all remote changes, by doing a +git pull --rebase+ or another similar command, cherry-pick the change into each relevant branch (such as master), and do +git push <remote-server>
@@ -1950,10 +1928,11 @@ Do not do a +git push --force+.
 Before you can commit a patch, you need to determine how the patch was created.
 The instructions and preferences around the way to create patches have changed, and there will be a transition period.
 +
-* .Determine How a Patch Was Created: If the first few lines of the patch look like the headers of an email, with a From, Date, and Subject, it was created using +git format-patch+.
-  This is the preference, because you can reuse the submitter's commit message.
-  If the commit message is not appropriate, you can still use the commit, then run the command +git
-  rebase -i origin/master+, and squash and reword as appropriate.
+.Determine How a Patch Was Created
+* If the first few lines of the patch look like the headers of an email, with a From, Date, and
+  Subject, it was created using +git format-patch+. This is the preferred way, because you can
+  reuse the submitter's commit message. If the commit message is not appropriate, you can still use
+  the commit, then run `git commit --amend` and reword as appropriate.
 * If the first line of the patch looks similar to the following, it was created using +git diff+                                        without `--no-prefix`.
   This is acceptable too.
   Notice the `a` and `b` in front of the file names.
@@ -1963,14 +1942,16 @@ The instructions and preferences around the way to create patches have changed, 
 diff --git a/src/main/asciidoc/_chapters/developer.adoc b/src/main/asciidoc/_chapters/developer.adoc
 ----
 
-* If the first line of the patch looks similar to the following (without the `a` and `b`), the patch was created with +git diff --no-prefix+ and you need to add `-p0` to the +git apply+                                        command below.
+* If the first line of the patch looks similar to the following (without the `a` and `b`), the
+patch was created with +git diff --no-prefix+ and you need to add `-p0` to the +git apply+ command
+below.
 +
 ----
 diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapters/developer.adoc
 ----
 
 +
-.Example of Committing a Patch
+.Example of committing a Patch
 ====
 One thing you will notice with these examples is that there are a lot of +git pull+ commands.
 The only command that actually writes anything to the remote repository is +git push+, and you need to make absolutely sure you have the correct versions of everything and don't have any conflicts before pushing.
@@ -1985,13 +1966,15 @@ See the second example for how to apply a patch created with +git
 
 ----
 $ git checkout -b HBASE-XXXX
-$ git am ~/Downloads/HBASE-XXXX-v2.patch
+$ git am ~/Downloads/HBASE-XXXX-v2.patch --signoff  # If you are committing someone else's patch.
 $ git checkout master
 $ git pull --rebase
 $ git cherry-pick <sha-from-commit>
 # Resolve conflicts if necessary or ask the submitter to do it
 $ git pull --rebase          # Better safe than sorry
 $ git push origin master
+
+# Backport to branch-1
 $ git checkout branch-1
 $ git pull --rebase
 $ git cherry-pick <sha-from-commit>
@@ -2006,13 +1989,17 @@ If the patch was created with `--no-prefix`, add `-p0` to the +git apply+ comman
 
 ----
 $ git apply ~/Downloads/HBASE-XXXX-v2.patch
-$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" -a # This extra step is needed for patches created with 'git diff'
+$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" --author=<contributor> -a  # This
+and next command is needed for patches created with 'git diff'
+$ git commit --amend --signoff
 $ git checkout master
 $ git pull --rebase
 $ git cherry-pick <sha-from-commit>
 # Resolve conflicts if necessary or ask the submitter to do it
 $ git pull --rebase          # Better safe than sorry
 $ git push origin master
+
+# Backport to branch-1
 $ git checkout branch-1
 $ git pull --rebase
 $ git cherry-pick <sha-from-commit>
