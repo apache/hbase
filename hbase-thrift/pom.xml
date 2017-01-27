@@ -78,32 +78,6 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <!-- Always skip the second part executions, since we only run
-          simple unit tests in this module -->
-        <executions>
-          <execution>
-            <id>secondPartTestsExecution</id>
-            <phase>test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
-            <configuration>
-              <skip>true</skip>
-             <properties>
-               <property>
-                 <name>listener</name>
-                 <value>org.apache.hadoop.hbase.ServerResourceCheckerJUnitListener</value>
-               </property>
-             </properties>
-             <systemPropertyVariables>
-               <test.build.webapps>target/test-classes/webapps</test.build.webapps>
-             </systemPropertyVariables>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <!-- General ant tasks, bound to different build phases -->
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
