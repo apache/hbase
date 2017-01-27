@@ -39,6 +39,8 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   implements ReplicationEndpoint {
 
   private static final Log LOG = LogFactory.getLog(BaseReplicationEndpoint.class);
+  public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY
+      = "hbase.replication.source.custom.walentryfilters";
   protected Context ctx;
 
   @Override
@@ -75,6 +77,20 @@ public abstract class BaseReplicationEndpoint extends AbstractService
     WALEntryFilter tableCfFilter = getNamespaceTableCfWALEntryFilter();
     if (tableCfFilter != null) {
       filters.add(tableCfFilter);
+    }
+    if (ctx != null && ctx.getPeerConfig() != null) {
+      String filterNameCSV = ctx.getPeerConfig().getConfiguration().get(REPLICATION_WALENTRYFILTER_CONFIG_KEY);
+      if (filterNameCSV != null && !filterNameCSV.isEmpty()) {
+        String[] filterNames = filterNameCSV.split(",");
+        for (String filterName : filterNames) {
+          try {
+            Class<?> clazz = Class.forName(filterName);
+            filters.add((WALEntryFilter) clazz.newInstance());
+          } catch (Exception e) {
+            LOG.error("Unable to create WALEntryFilter " + filterName, e);
+          }
+        }
+      }
     }
     return filters.isEmpty() ? null : new ChainWALEntryFilter(filters);
   }

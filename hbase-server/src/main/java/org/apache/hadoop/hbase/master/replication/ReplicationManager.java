@@ -27,9 +27,11 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -68,9 +70,10 @@ public class ReplicationManager {
   }
 
   public void addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig)
-      throws ReplicationException {
+      throws ReplicationException, IOException {
     checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
       peerConfig.getTableCFsMap());
+    checkConfiguredWALEntryFilters(peerConfig);
     replicationPeers.registerPeer(peerId, peerConfig);
     replicationPeers.peerConnected(peerId);
   }
@@ -98,9 +101,10 @@ public class ReplicationManager {
   }
 
   public void updatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
-      throws ReplicationException {
+      throws ReplicationException, IOException {
     checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
       peerConfig.getTableCFsMap());
+    checkConfiguredWALEntryFilters(peerConfig);
     this.replicationPeers.updatePeerConfig(peerId, peerConfig);
   }
 
@@ -144,6 +148,26 @@ public class ReplicationManager {
       if (namespaces.contains(table.getNamespaceAsString())) {
         throw new ReplicationException(
             "Table-cfs config conflict with namespaces config in peer");
+      }
+    }
+
+
+  }
+
+  private void checkConfiguredWALEntryFilters(ReplicationPeerConfig peerConfig)
+      throws IOException {
+    String filterCSV = peerConfig.getConfiguration().
+        get(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY);
+    if (filterCSV != null && !filterCSV.isEmpty()){
+      String [] filters = filterCSV.split(",");
+      for (String filter : filters) {
+        try {
+          Class clazz = Class.forName(filter);
+          Object o = clazz.newInstance();
+        } catch (Exception e) {
+          throw new DoNotRetryIOException("Configured WALEntryFilter " + filter +
+              " could not be created. Failing add/update " + "peer operation.", e);
+        }
       }
     }
   }

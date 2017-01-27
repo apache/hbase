@@ -225,6 +225,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       public boolean evaluate() throws Exception {
         return InterClusterReplicationEndpointForTest.replicateCount.get() == numEdits;
       }
+
       @Override
       public String explainFailure() throws Exception {
         String failure = "Failed to replicate all edits, expected = " + numEdits
@@ -239,9 +240,13 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
   @Test (timeout=120000)
   public void testWALEntryFilterFromReplicationEndpoint() throws Exception {
-    admin.addPeer("testWALEntryFilterFromReplicationEndpoint",
-      new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
-        .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName()), null);
+    ReplicationPeerConfig rpc =  new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
+        .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());
+    //test that we can create mutliple WALFilters reflectively
+    rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
+        EverythingPassesWALEntryFilter.class.getName() +
+            "," + EverythingPassesWALEntryFilterSubclass.class.getName());
+    admin.addPeer("testWALEntryFilterFromReplicationEndpoint", rpc);
     // now replicate some data.
     try (Connection connection = ConnectionFactory.createConnection(conf1)) {
       doPut(connection, Bytes.toBytes("row1"));
@@ -257,7 +262,29 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     });
 
     Assert.assertNull(ReplicationEndpointWithWALEntryFilter.ex.get());
+    //make sure our reflectively created filter is in the filter chain
+    Assert.assertTrue(EverythingPassesWALEntryFilter.hasPassedAnEntry());
     admin.removePeer("testWALEntryFilterFromReplicationEndpoint");
+  }
+
+  @Test (timeout=120000, expected=IOException.class)
+  public void testWALEntryFilterAddValidation() throws Exception {
+    ReplicationPeerConfig rpc =  new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
+        .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());
+    //test that we can create mutliple WALFilters reflectively
+    rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
+        "IAmNotARealWalEntryFilter");
+    admin.addPeer("testWALEntryFilterAddValidation", rpc);
+  }
+
+  @Test (timeout=120000, expected=IOException.class)
+  public void testWALEntryFilterUpdateValidation() throws Exception {
+    ReplicationPeerConfig rpc =  new ReplicationPeerConfig().setClusterKey(ZKConfig.getZooKeeperClusterKey(conf1))
+        .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName());
+    //test that we can create mutliple WALFilters reflectively
+    rpc.getConfiguration().put(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY,
+        "IAmNotARealWalEntryFilter");
+    admin.updatePeerConfig("testWALEntryFilterUpdateValidation", rpc);
   }
 
 
@@ -487,5 +514,22 @@ public class TestReplicationEndpoint extends TestReplicationBase {
         }
       });
     }
+  }
+
+  public static class EverythingPassesWALEntryFilter implements WALEntryFilter {
+    private static boolean passedEntry = false;
+    @Override
+    public Entry filter(Entry entry) {
+      passedEntry = true;
+      return entry;
+    }
+
+    public static boolean hasPassedAnEntry(){
+      return passedEntry;
+    }
+  }
+
+  public static class EverythingPassesWALEntryFilterSubclass extends EverythingPassesWALEntryFilter {
+
   }
 }
