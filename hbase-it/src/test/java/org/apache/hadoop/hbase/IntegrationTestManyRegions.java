@@ -85,7 +85,7 @@ public class IntegrationTestManyRegions {
     UTIL.initializeCluster(REGION_SERVER_COUNT);
     LOG.info("Cluster initialized");
 
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
     if (admin.tableExists(TABLE_NAME)) {
       LOG.info(String.format("Deleting existing table %s.", TABLE_NAME));
       if (admin.isTableEnabled(TABLE_NAME)) admin.disableTable(TABLE_NAME);

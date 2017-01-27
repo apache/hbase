@@ -98,7 +98,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
 
   @Test
   public void deleteColumnFamilyWithMultipleRegions() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     HTableDescriptor beforehtd = admin.getTableDescriptor(TABLENAME);
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
@@ -176,7 +176,7 @@ public class TestDeleteColumnFamilyProcedureFromClient {
 
   @Test
   public void deleteColumnFamilyTwice() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     HTableDescriptor beforehtd = admin.getTableDescriptor(TABLENAME);
     String cfToDelete = "cf1";
 

@@ -146,7 +146,7 @@ public abstract class TableSnapshotInputFormatTestBase {
         }
       }
     } finally {
-      UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
       tearDownCluster();
     }
@@ -201,7 +201,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     } else {
       util.createTable(tableName, FAMILIES);
     }
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
 
     // put some stuff in the table
     Table table = util.getConnection().getTable(tableName);

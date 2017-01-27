@@ -189,7 +189,7 @@ public class TestFSErrorsExposed {
       TableName tableName = TableName.valueOf("table");
       byte[] fam = Bytes.toBytes("fam");
 
-      Admin admin = util.getHBaseAdmin();
+      Admin admin = util.getAdmin();
       HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(fam)
           .setMaxVersions(1)

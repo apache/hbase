@@ -139,7 +139,7 @@ public static void beforeClass() throws Exception {
   // Wait for the labels table to become available
   UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
   createLabels();
-  Admin admin = UTIL.getHBaseAdmin();
+  Admin admin = UTIL.getAdmin();
   HTableDescriptor tableDescriptor = new HTableDescriptor(
       TableName.valueOf(tableAname));
   for (HColumnDescriptor family : families) {

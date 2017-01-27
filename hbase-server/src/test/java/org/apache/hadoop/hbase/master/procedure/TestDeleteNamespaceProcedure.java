@@ -79,7 +79,7 @@ public class TestDeleteNamespaceProcedure {
   @After
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    for (HTableDescriptor htd: UTIL.getHBaseAdmin().listTables()) {
+    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
@@ -197,7 +197,7 @@ public class TestDeleteNamespaceProcedure {
 
     // Validate the namespace still exists
     NamespaceDescriptor createdNsDescriptor=
-        UTIL.getHBaseAdmin().getNamespaceDescriptor(namespaceName);
+        UTIL.getAdmin().getNamespaceDescriptor(namespaceName);
     assertNotNull(createdNsDescriptor);
   }
 
@@ -218,7 +218,7 @@ public class TestDeleteNamespaceProcedure {
 
   public static void validateNamespaceNotExist(final String nsName) throws IOException {
     try {
-      NamespaceDescriptor nsDescriptor = UTIL.getHBaseAdmin().getNamespaceDescriptor(nsName);
+      NamespaceDescriptor nsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(nsName);
       assertNull(nsDescriptor);
     } catch (NamespaceNotFoundException nsnfe) {
       // Expected

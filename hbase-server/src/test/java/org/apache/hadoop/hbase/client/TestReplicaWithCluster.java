@@ -217,7 +217,7 @@ public class TestReplicaWithCluster {
       SlowMeCopro.sleepTime.set(0);
     }
 
-    HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+    HTU.getAdmin().disableTable(hdt.getTableName());
     HTU.deleteTable(hdt.getTableName());
   }
 
@@ -238,13 +238,13 @@ public class TestReplicaWithCluster {
     Assert.assertFalse(r.isStale());
 
     // Add a CF, it should work.
-    HTableDescriptor bHdt = HTU.getHBaseAdmin().getTableDescriptor(hdt.getTableName());
+    HTableDescriptor bHdt = HTU.getAdmin().getTableDescriptor(hdt.getTableName());
     HColumnDescriptor hcd = new HColumnDescriptor(row);
     hdt.addFamily(hcd);
-    HTU.getHBaseAdmin().disableTable(hdt.getTableName());
-    HTU.getHBaseAdmin().modifyTable(hdt.getTableName(), hdt);
-    HTU.getHBaseAdmin().enableTable(hdt.getTableName());
-    HTableDescriptor nHdt = HTU.getHBaseAdmin().getTableDescriptor(hdt.getTableName());
+    HTU.getAdmin().disableTable(hdt.getTableName());
+    HTU.getAdmin().modifyTable(hdt.getTableName(), hdt);
+    HTU.getAdmin().enableTable(hdt.getTableName());
+    HTableDescriptor nHdt = HTU.getAdmin().getTableDescriptor(hdt.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
 
@@ -267,7 +267,7 @@ public class TestReplicaWithCluster {
       SlowMeCopro.sleepTime.set(0);
     }
 
-    Admin admin = HTU.getHBaseAdmin();
+    Admin admin = HTU.getAdmin();
     nHdt =admin.getTableDescriptor(hdt.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
@@ -288,7 +288,7 @@ public class TestReplicaWithCluster {
     hdt.addFamily(fam);
 
     hdt.addCoprocessor(SlowMeCopro.class.getName());
-    HTU.getHBaseAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    HTU.getAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
     Configuration conf2 = HBaseConfiguration.create(HTU.getConfiguration());
     conf2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
@@ -299,7 +299,7 @@ public class TestReplicaWithCluster {
     HTU2.setZkCluster(miniZK);
     HTU2.startMiniCluster(NB_SERVERS);
     LOG.info("Setup second Zk");
-    HTU2.getHBaseAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    HTU2.getAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
     ReplicationAdmin admin = new ReplicationAdmin(HTU.getConfiguration());
 
@@ -313,7 +313,7 @@ public class TestReplicaWithCluster {
     final Table table = HTU.getConnection().getTable(hdt.getTableName());
     table.put(p);
 
-    HTU.getHBaseAdmin().flush(table.getName());
+    HTU.getAdmin().flush(table.getName());
     LOG.info("Put & flush done on the first cluster. Now doing a get on the same cluster.");
 
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
@@ -352,10 +352,10 @@ public class TestReplicaWithCluster {
     });
     table2.close();
 
-    HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+    HTU.getAdmin().disableTable(hdt.getTableName());
     HTU.deleteTable(hdt.getTableName());
 
-    HTU2.getHBaseAdmin().disableTable(hdt.getTableName());
+    HTU2.getAdmin().disableTable(hdt.getTableName());
     HTU2.deleteTable(hdt.getTableName());
 
     // We shutdown HTU2 minicluster later, in afterClass(), as shutting down
@@ -438,7 +438,7 @@ public class TestReplicaWithCluster {
       SlowMeCopro.sleepTime.set(0);
     }
 
-    HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+    HTU.getAdmin().disableTable(hdt.getTableName());
     HTU.deleteTable(hdt.getTableName());
   }
 
@@ -471,7 +471,7 @@ public class TestReplicaWithCluster {
       Result r = table.get(g);
       Assert.assertTrue(r.isStale());
     } finally {
-      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.getAdmin().disableTable(hdt.getTableName());
       HTU.deleteTable(hdt.getTableName());
     }
   }
@@ -516,7 +516,7 @@ public class TestReplicaWithCluster {
       Assert.assertTrue(r.isStale());
     } finally {
 
-      HTU.getHBaseAdmin().disableTable(hdt.getTableName());
+      HTU.getAdmin().disableTable(hdt.getTableName());
       HTU.deleteTable(hdt.getTableName());
     }
   }

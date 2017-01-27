@@ -97,7 +97,7 @@ public class TestRestoreFlushSnapshotFromClient {
    */
   @Before
   public void setup() throws Exception {
-    this.admin = UTIL.getHBaseAdmin();
+    this.admin = UTIL.getAdmin();
 
     long tid = System.currentTimeMillis();
     tableName = TableName.valueOf("testtb-" + tid);
@@ -134,7 +134,7 @@ public class TestRestoreFlushSnapshotFromClient {
 
   @After
   public void tearDown() throws Exception {
-    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 

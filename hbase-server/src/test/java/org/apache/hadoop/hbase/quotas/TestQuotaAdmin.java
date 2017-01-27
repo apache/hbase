@@ -67,7 +67,7 @@ public class TestQuotaAdmin {
 
   @Test
   public void testThrottleType() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     String userName = User.getCurrent().getShortName();
 
     admin.setQuota(QuotaSettingsFactory
@@ -115,7 +115,7 @@ public class TestQuotaAdmin {
 
   @Test
   public void testSimpleScan() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     String userName = User.getCurrent().getShortName();
 
     admin.setQuota(QuotaSettingsFactory
@@ -156,7 +156,7 @@ public class TestQuotaAdmin {
 
   @Test
   public void testQuotaRetrieverFilter() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     TableName[] tables = new TableName[] {
       TableName.valueOf("T0"), TableName.valueOf("T01"), TableName.valueOf("NS0:T2"),
     };

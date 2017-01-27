@@ -103,7 +103,7 @@ public class TestRestoreSnapshotFromClient {
    */
   @Before
   public void setup() throws Exception {
-    this.admin = TEST_UTIL.getHBaseAdmin();
+    this.admin = TEST_UTIL.getAdmin();
 
     long tid = System.currentTimeMillis();
     tableName =
@@ -146,7 +146,7 @@ public class TestRestoreSnapshotFromClient {
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.deleteTable(tableName);
-    SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
   }
 

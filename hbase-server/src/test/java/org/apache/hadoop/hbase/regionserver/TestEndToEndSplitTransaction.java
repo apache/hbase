@@ -140,7 +140,7 @@ public class TestEndToEndSplitTransaction {
       this.table = table;
       this.tableName = table.getName();
       this.family = table.getTableDescriptor().getFamiliesKeys().iterator().next();
-      admin = TEST_UTIL.getHBaseAdmin();
+      admin = TEST_UTIL.getAdmin();
       rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
       connection = TEST_UTIL.getConnection();
     }

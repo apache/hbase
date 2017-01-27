@@ -73,7 +73,7 @@ public class TestMasterProcedureEvents {
 
   @After
   public void tearDown() throws Exception {
-    for (HTableDescriptor htd: UTIL.getHBaseAdmin().listTables()) {
+    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }

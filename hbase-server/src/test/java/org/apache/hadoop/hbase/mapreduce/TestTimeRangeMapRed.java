@@ -98,7 +98,7 @@ public class TestTimeRangeMapRed {
 
   @Before
   public void before() throws Exception {
-    this.admin = UTIL.getHBaseAdmin();
+    this.admin = UTIL.getAdmin();
   }
 
   private static class ProcessTimeRangeMapper

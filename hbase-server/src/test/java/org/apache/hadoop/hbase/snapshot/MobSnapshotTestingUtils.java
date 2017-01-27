@@ -60,10 +60,10 @@ public class MobSnapshotTestingUtils {
       hcd.setMobThreshold(0L);
       htd.addFamily(hcd);
     }
-    util.getHBaseAdmin().createTable(htd, splitKeys);
+    util.getAdmin().createTable(htd, splitKeys);
     SnapshotTestingUtils.waitForTableToBeOnline(util, tableName);
     assertEquals((splitKeys.length + 1) * regionReplication, util
-        .getHBaseAdmin().getTableRegions(tableName).size());
+        .getAdmin().getTableRegions(tableName).size());
   }
 
   /**
@@ -90,7 +90,7 @@ public class MobSnapshotTestingUtils {
       hcd.setMobThreshold(0L);
       htd.addFamily(hcd);
     }
-    util.getHBaseAdmin().createTable(htd);
+    util.getAdmin().createTable(htd);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait
     // until they are assigned
     util.waitUntilAllRegionsAssigned(htd.getTableName());

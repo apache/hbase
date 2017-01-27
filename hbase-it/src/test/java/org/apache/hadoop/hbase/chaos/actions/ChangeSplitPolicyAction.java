@@ -46,7 +46,7 @@ public class ChangeSplitPolicyAction extends Action {
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
 
     LOG.info("Performing action: Change split policy of table " + tableName);
     HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);

@@ -126,7 +126,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
     HTableDescriptor htd = HTU.createTableDescriptor(
       "testReplicationPeerIsCreated_no_region_replicas");
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
     try {
       peerConfig = admin.getPeerConfig(peerId);
       fail("Should throw ReplicationException, because replication peer id=" + peerId
@@ -137,7 +137,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
     htd = HTU.createTableDescriptor("testReplicationPeerIsCreated");
     htd.setRegionReplication(2);
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
 
     // assert peer configuration is correct
     peerConfig = admin.getPeerConfig(peerId);
@@ -170,7 +170,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
     HTableDescriptor htd
       = HTU.createTableDescriptor("testRegionReplicaReplicationPeerIsCreatedForModifyTable");
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
 
     // assert that replication peer is not created yet
     try {
@@ -181,10 +181,10 @@ public class TestRegionReplicaReplicationEndpoint {
     }
     assertNull(peerConfig);
 
-    HTU.getHBaseAdmin().disableTable(htd.getTableName());
+    HTU.getAdmin().disableTable(htd.getTableName());
     htd.setRegionReplication(2);
-    HTU.getHBaseAdmin().modifyTable(htd.getTableName(), htd);
-    HTU.getHBaseAdmin().enableTable(htd.getTableName());
+    HTU.getAdmin().modifyTable(htd.getTableName(), htd);
+    HTU.getAdmin().enableTable(htd.getTableName());
 
     // assert peer configuration is correct
     peerConfig = admin.getPeerConfig(peerId);
@@ -203,7 +203,7 @@ public class TestRegionReplicaReplicationEndpoint {
         + regionReplication);
     HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
     htd.setRegionReplication(regionReplication);
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
     TableName tableNameNoReplicas =
         TableName.valueOf("testRegionReplicaReplicationWithReplicas_NO_REPLICAS");
     HTU.deleteTableIfAny(tableNameNoReplicas);
@@ -294,7 +294,7 @@ public class TestRegionReplicaReplicationEndpoint {
     HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
     htd.setRegionReplication(regionReplication);
     htd.setRegionMemstoreReplication(false);
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
 
     Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
     Table table = connection.getTable(tableName);
@@ -329,7 +329,7 @@ public class TestRegionReplicaReplicationEndpoint {
     TableName tableName = TableName.valueOf("testRegionReplicaReplicationForFlushAndCompaction");
     HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
     htd.setRegionReplication(regionReplication);
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
 
 
     Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
@@ -375,12 +375,12 @@ public class TestRegionReplicaReplicationEndpoint {
     int regionReplication = 3;
     htd.setRegionReplication(regionReplication);
     HTU.deleteTableIfAny(tableName);
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
     TableName toBeDisabledTable = TableName.valueOf(dropTable ? "droppedTable" : "disabledTable");
     HTU.deleteTableIfAny(toBeDisabledTable);
     htd = HTU.createTableDescriptor(toBeDisabledTable.toString());
     htd.setRegionReplication(regionReplication);
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
 
     // both tables are created, now pause replication
     ReplicationAdmin admin = new ReplicationAdmin(HTU.getConfiguration());
@@ -410,9 +410,9 @@ public class TestRegionReplicaReplicationEndpoint {
       new WALKey(encodedRegionName, toBeDisabledTable, 1),
       new WALEdit());
 
-    HTU.getHBaseAdmin().disableTable(toBeDisabledTable); // disable the table
+    HTU.getAdmin().disableTable(toBeDisabledTable); // disable the table
     if (dropTable) {
-      HTU.getHBaseAdmin().deleteTable(toBeDisabledTable);
+      HTU.getAdmin().deleteTable(toBeDisabledTable);
     }
 
     sinkWriter.append(toBeDisabledTable, encodedRegionName,

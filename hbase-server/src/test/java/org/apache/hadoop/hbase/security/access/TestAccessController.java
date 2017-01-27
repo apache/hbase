@@ -1066,8 +1066,8 @@ public class TestAccessController extends SecureTestUtil {
         USER_GROUP_ADMIN);
     } finally {
       // Reinit after the bulk upload
-      TEST_UTIL.getHBaseAdmin().disableTable(TEST_TABLE);
-      TEST_UTIL.getHBaseAdmin().enableTable(TEST_TABLE);
+      TEST_UTIL.getAdmin().disableTable(TEST_TABLE);
+      TEST_UTIL.getAdmin().enableTable(TEST_TABLE);
     }
   }
 
@@ -1267,7 +1267,7 @@ public class TestAccessController extends SecureTestUtil {
     final byte[] qualifier = Bytes.toBytes("q");
 
     // create table
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       deleteTable(TEST_UTIL, tableName);
     }
@@ -1521,7 +1521,7 @@ public class TestAccessController extends SecureTestUtil {
     final byte[] qualifier = Bytes.toBytes("q");
 
     // create table
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       deleteTable(TEST_UTIL, tableName);
     }
@@ -1625,7 +1625,7 @@ public class TestAccessController extends SecureTestUtil {
     final byte[] qualifier = Bytes.toBytes("q");
 
     // create table
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       deleteTable(TEST_UTIL, tableName);
     }
@@ -2010,7 +2010,7 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test (timeout=180000)
   public void testSnapshot() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     builder.setName(TEST_TABLE.getNameAsString() + "-snapshot");
@@ -2071,7 +2071,7 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test (timeout=180000)
   public void testSnapshotWithOwner() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE);
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     builder.setName(TEST_TABLE.getNameAsString() + "-snapshot");
@@ -2132,7 +2132,7 @@ public class TestAccessController extends SecureTestUtil {
     LOG.debug("Test for global authorization for a new registered RegionServer.");
     MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
 
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE2);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     createTable(TEST_UTIL, htd);
@@ -2660,7 +2660,7 @@ public class TestAccessController extends SecureTestUtil {
           systemUserConnection, TEST_TABLE.getNameAsString());
       assertTrue(existingPerms != null);
       assertTrue(existingPerms.size() > 1);
-      TEST_UTIL.getHBaseAdmin().disableTable(TEST_TABLE);
+      TEST_UTIL.getAdmin().disableTable(TEST_TABLE);
       TEST_UTIL.truncateTable(TEST_TABLE);
       TEST_UTIL.waitTableAvailable(TEST_TABLE);
       List<UserPermission> perms = AccessControlClient.getUserPermissions(
@@ -2715,7 +2715,7 @@ public class TestAccessController extends SecureTestUtil {
     final byte[] family = Bytes.toBytes("f1");
 
     // create table in default ns
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     HTableDescriptor htd = new HTableDescriptor(table1);
     htd.addFamily(new HColumnDescriptor(family));
     createTable(TEST_UTIL, htd);

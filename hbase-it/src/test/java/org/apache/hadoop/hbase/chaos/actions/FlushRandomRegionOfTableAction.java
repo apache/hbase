@@ -45,7 +45,7 @@ public class FlushRandomRegionOfTableAction extends Action {
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
 
     LOG.info("Performing action: Flush random region of table " + tableName);
     List<HRegionInfo> regions = admin.getTableRegions(tableName);

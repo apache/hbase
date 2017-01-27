@@ -84,7 +84,7 @@ public class TestCompactionWithThroughputController {
   }
 
   private Store prepareData() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
@@ -124,7 +124,7 @@ public class TestCompactionWithThroughputController {
       Store store = prepareData();
       assertEquals(10, store.getStorefilesCount());
       long startTime = System.currentTimeMillis();
-      TEST_UTIL.getHBaseAdmin().majorCompact(tableName);
+      TEST_UTIL.getAdmin().majorCompact(tableName);
       while (store.getStorefilesCount() != 1) {
         Thread.sleep(20);
       }
@@ -153,7 +153,7 @@ public class TestCompactionWithThroughputController {
       Store store = prepareData();
       assertEquals(10, store.getStorefilesCount());
       long startTime = System.currentTimeMillis();
-      TEST_UTIL.getHBaseAdmin().majorCompact(tableName);
+      TEST_UTIL.getAdmin().majorCompact(tableName);
       while (store.getStorefilesCount() != 1) {
         Thread.sleep(20);
       }
@@ -202,7 +202,7 @@ public class TestCompactionWithThroughputController {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor(family));
       htd.setCompactionEnabled(false);
-      TEST_UTIL.getHBaseAdmin().createTable(htd);
+      TEST_UTIL.getAdmin().createTable(htd);
       TEST_UTIL.waitTableAvailable(tableName);
       HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       PressureAwareCompactionThroughputController throughputController =
@@ -259,7 +259,7 @@ public class TestCompactionWithThroughputController {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor(family));
       htd.setCompactionEnabled(false);
-      TEST_UTIL.getHBaseAdmin().createTable(htd);
+      TEST_UTIL.getAdmin().createTable(htd);
       TEST_UTIL.waitTableAvailable(tableName);
       HStore store = (HStore) getStoreWithName(tableName);
       assertEquals(0, store.getStorefilesCount());

@@ -35,8 +35,8 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -68,7 +68,7 @@ public abstract class TestRSGroupsBase {
 
   //shared, cluster type specific
   protected static HBaseTestingUtility TEST_UTIL;
-  protected static HBaseAdmin admin;
+  protected static Admin admin;
   protected static HBaseCluster cluster;
   protected static RSGroupAdmin rsGroupAdmin;
 
@@ -106,13 +106,13 @@ public abstract class TestRSGroupsBase {
   }
 
   protected void deleteTableIfNecessary() throws IOException {
-    for (HTableDescriptor desc : TEST_UTIL.getHBaseAdmin().listTables(tablePrefix+".*")) {
+    for (HTableDescriptor desc : TEST_UTIL.getAdmin().listTables(tablePrefix+".*")) {
       TEST_UTIL.deleteTable(desc.getTableName());
     }
   }
 
   protected void deleteNamespaceIfNecessary() throws IOException {
-    for (NamespaceDescriptor desc : TEST_UTIL.getHBaseAdmin().listNamespaceDescriptors()) {
+    for (NamespaceDescriptor desc : TEST_UTIL.getAdmin().listNamespaceDescriptors()) {
       if(desc.getName().startsWith(tablePrefix)) {
         admin.deleteNamespace(desc.getName());
       }
@@ -496,7 +496,7 @@ public abstract class TestRSGroupsBase {
     });
 
     // Lets move this region to the new group.
-    TEST_UTIL.getHBaseAdmin().move(Bytes.toBytes(HRegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))),
+    TEST_UTIL.getAdmin().move(Bytes.toBytes(HRegionInfo.encodeRegionName(Bytes.toBytes(targetRegion))),
         Bytes.toBytes(targetServer.getServerName()));
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override

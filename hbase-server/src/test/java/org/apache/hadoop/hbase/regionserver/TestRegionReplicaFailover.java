@@ -118,7 +118,7 @@ public class TestRegionReplicaFailover {
     htd = HTU.createTableDescriptor(
       name.getMethodName().substring(0, name.getMethodName().length()-3));
     htd.setRegionReplication(3);
-    HTU.getHBaseAdmin().createTable(htd);
+    HTU.getAdmin().createTable(htd);
   }
 
   @After
@@ -159,8 +159,8 @@ public class TestRegionReplicaFailover {
 
       HTU.loadNumericRows(table, fam, 0, 1000);
 
-      HTU.getHBaseAdmin().disableTable(htd.getTableName());
-      HTU.getHBaseAdmin().enableTable(htd.getTableName());
+      HTU.getAdmin().disableTable(htd.getTableName());
+      HTU.getAdmin().enableTable(htd.getTableName());
 
       HTU.verifyNumericRows(table, fam, 0, 1000, 1);
     }
@@ -357,7 +357,7 @@ public class TestRegionReplicaFailover {
     byte[] startKey = Bytes.toBytes("aaa");
     byte[] endKey = Bytes.toBytes("zzz");
     byte[][] splits = HTU.getRegionSplitStartKeys(startKey, endKey, numRegions);
-    HTU.getHBaseAdmin().createTable(htd, startKey, endKey, numRegions);
+    HTU.getAdmin().createTable(htd, startKey, endKey, numRegions);
 
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
         Table table = connection.getTable(htd.getTableName())) {

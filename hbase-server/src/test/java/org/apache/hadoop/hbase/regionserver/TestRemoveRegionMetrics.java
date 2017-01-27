@@ -76,7 +76,7 @@ public class TestRemoveRegionMetrics {
     TableName tableName = TableName.valueOf(tableNameString);
     Table t = TEST_UTIL.createTable(tableName, Bytes.toBytes("D"));
     TEST_UTIL.waitUntilAllRegionsAssigned(t.getName());
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     HRegionInfo regionInfo;
     byte[] row =  Bytes.toBytes("r1");
 

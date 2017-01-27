@@ -56,7 +56,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getAdmin());
     snapshot = null;
   }
 
@@ -66,7 +66,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
       long tid = System.currentTimeMillis();
       final byte[] snapshotName = Bytes.toBytes("snapshot-" + tid);
 
-      Admin admin = UTIL.getHBaseAdmin();
+      Admin admin = UTIL.getAdmin();
       // create Table
       SnapshotTestingUtils.createTable(UTIL, snapshotTableName, getNumReplicas(), CF);
       // Load data

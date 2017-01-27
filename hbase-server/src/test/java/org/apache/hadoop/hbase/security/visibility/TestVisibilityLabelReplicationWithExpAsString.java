@@ -142,10 +142,10 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     HColumnDescriptor desc = new HColumnDescriptor(fam);
     desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(desc);
-    try (Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin()) {
+    try (Admin hBaseAdmin = TEST_UTIL.getAdmin()) {
       hBaseAdmin.createTable(table);
     }
-    try (Admin hBaseAdmin1 = TEST_UTIL1.getHBaseAdmin()){
+    try (Admin hBaseAdmin1 = TEST_UTIL1.getAdmin()){
       hBaseAdmin1.createTable(table);
     }
     addLabels();

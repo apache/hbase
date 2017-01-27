@@ -115,7 +115,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testUserGlobalThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
 
     // Add 6req/min limit
@@ -139,7 +139,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testUserGlobalReadAndWriteThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
 
     // Add 6req/min limit for read request
@@ -171,7 +171,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testUserTableThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
 
     // Add 6req/min limit
@@ -196,7 +196,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testUserTableReadAndWriteThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
 
     // Add 6req/min limit for write request on tables[0]
@@ -237,7 +237,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testUserNamespaceThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
     final String NAMESPACE = "default";
 
@@ -262,7 +262,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testUserNamespaceReadAndWriteThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
     final String NAMESPACE = "default";
 
@@ -295,7 +295,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testTableGlobalThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
 
     // Add 6req/min limit
     admin.setQuota(QuotaSettingsFactory
@@ -319,7 +319,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testTableGlobalReadAndWriteThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
 
     // Add 6req/min limit for read request
     admin.setQuota(QuotaSettingsFactory
@@ -356,7 +356,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testNamespaceGlobalThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String NAMESPACE = "default";
 
     // Add 6req/min limit
@@ -378,7 +378,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testNamespaceGlobalReadAndWriteThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String NAMESPACE = "default";
 
     // Add 6req/min limit for write request
@@ -409,7 +409,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testUserAndTableThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
 
     // Add 6req/min limit for the user on tables[0]
@@ -458,7 +458,7 @@ public class TestQuotaThrottle {
 
   @Test(timeout=60000)
   public void testUserGlobalBypassThrottle() throws Exception {
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final String userName = User.getCurrent().getShortName();
     final String NAMESPACE = "default";
 

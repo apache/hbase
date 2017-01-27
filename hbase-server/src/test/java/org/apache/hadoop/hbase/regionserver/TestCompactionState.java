@@ -89,7 +89,7 @@ public class TestCompactionState {
     Table ht = null;
     try {
       ht = TEST_UTIL.createTable(table, family);
-      Admin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getAdmin();
       try {
         admin.compact(table, fakecf);
       } catch (IOException ioe) {
@@ -137,7 +137,7 @@ public class TestCompactionState {
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countBefore > 0); // there should be some data files
-      Admin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getAdmin();
       if (expectedState == CompactionState.MINOR) {
         if (singleFamily) {
           admin.compact(table, family);

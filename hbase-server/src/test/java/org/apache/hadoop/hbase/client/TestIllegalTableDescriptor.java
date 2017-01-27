@@ -177,14 +177,14 @@ public class TestIllegalTableDescriptor {
   }
 
   private void checkTableIsLegal(HTableDescriptor htd) throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.createTable(htd);
     assertTrue(admin.tableExists(htd.getTableName()));
     TEST_UTIL.deleteTable(htd.getTableName());
   }
 
   private void checkTableIsIllegal(HTableDescriptor htd) throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     try {
       admin.createTable(htd);
       fail();

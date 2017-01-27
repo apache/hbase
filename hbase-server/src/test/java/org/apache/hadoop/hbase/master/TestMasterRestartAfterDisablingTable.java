@@ -76,7 +76,7 @@ public class TestMasterRestartAfterDisablingTable {
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Disabling table\n");
-    TEST_UTIL.getHBaseAdmin().disableTable(table);
+    TEST_UTIL.getAdmin().disableTable(table);
 
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     assertEquals(
@@ -101,7 +101,7 @@ public class TestMasterRestartAfterDisablingTable {
         TableState.State.DISABLING));
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.enableTable(table);
     admin.close();
     log("Waiting for no more RIT\n");

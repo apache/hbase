@@ -651,7 +651,7 @@ public abstract class TestVisibilityLabels {
 
   @Test
   public void testUserShouldNotDoDDLOpOnLabelsTable() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     try {
       admin.disableTable(LABELS_TABLE_NAME);
       fail("Lables table should not get disabled by user.");
@@ -705,7 +705,7 @@ public abstract class TestVisibilityLabels {
     col = new HColumnDescriptor(fam2);
     col.setMaxVersions(5);
     desc.addFamily(col);
-    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    TEST_UTIL.getAdmin().createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(r1);
       put.addColumn(fam, qual, 3l, v1);
@@ -789,7 +789,7 @@ public abstract class TestVisibilityLabels {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor col = new HColumnDescriptor(fam);
     desc.addFamily(col);
-    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    TEST_UTIL.getAdmin().createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)){
       Put p1 = new Put(row1);
       p1.addColumn(fam, qual, value);
@@ -825,7 +825,7 @@ public abstract class TestVisibilityLabels {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor col = new HColumnDescriptor(fam);
     desc.addFamily(col);
-    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    TEST_UTIL.getAdmin().createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put p1 = new Put(row1);
       p1.addColumn(fam, qual, value);
@@ -841,7 +841,7 @@ public abstract class TestVisibilityLabels {
 
       table.mutateRow(rm);
     }
-    TEST_UTIL.getHBaseAdmin().flush(tableName);
+    TEST_UTIL.getAdmin().flush(tableName);
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
     Store store = regions.get(0).getStore(fam);
     Collection<StoreFile> storefiles = store.getStorefiles();

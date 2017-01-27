@@ -95,7 +95,7 @@ public class TestJoinedScanners {
         hcd.setDataBlockEncoding(blockEncoding);
         desc.addFamily(hcd);
       }
-      htu.getHBaseAdmin().createTable(desc);
+      htu.getAdmin().createTable(desc);
       Table ht = htu.getConnection().getTable(tableName);
 
       long rows_to_insert = 1000;

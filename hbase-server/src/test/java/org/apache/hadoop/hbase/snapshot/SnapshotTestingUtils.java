@@ -163,7 +163,7 @@ public final class SnapshotTestingUtils {
       throws IOException {
     MasterFileSystem mfs = testUtil.getHBaseCluster().getMaster().getMasterFileSystem();
     confirmSnapshotValid(snapshotDescriptor, tableName, family,
-        mfs.getRootDir(), testUtil.getHBaseAdmin(), mfs.getFileSystem());
+        mfs.getRootDir(), testUtil.getAdmin(), mfs.getFileSystem());
   }
 
   /**
@@ -760,7 +760,7 @@ public final class SnapshotTestingUtils {
     byte[][] splitKeys = getSplitKeys(nRegions);
     util.createTable(htd, splitKeys);
     assertEquals((splitKeys.length + 1) * regionReplication,
-        util.getHBaseAdmin().getTableRegions(tableName).size());
+        util.getAdmin().getTableRegions(tableName).size());
   }
 
   public static byte[][] getSplitKeys() {

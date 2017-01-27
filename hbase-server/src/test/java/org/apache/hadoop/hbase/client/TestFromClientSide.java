@@ -237,7 +237,7 @@ public class TestFromClientSide {
 
      HTableDescriptor desc = new HTableDescriptor(TABLENAME);
      desc.addFamily(hcd);
-     TEST_UTIL.getHBaseAdmin().createTable(desc);
+     TEST_UTIL.getAdmin().createTable(desc);
      Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
 
      long ts = System.currentTimeMillis();
@@ -319,14 +319,14 @@ public class TestFromClientSide {
      assertNull(result.getValue(FAMILY, COLUMN));
 
      // major compaction, purged future deletes
-     TEST_UTIL.getHBaseAdmin().flush(TABLENAME);
-     TEST_UTIL.getHBaseAdmin().majorCompact(TABLENAME);
+     TEST_UTIL.getAdmin().flush(TABLENAME);
+     TEST_UTIL.getAdmin().majorCompact(TABLENAME);
 
      // waiting for the major compaction to complete
      TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
        @Override
        public boolean evaluate() throws IOException {
-         return TEST_UTIL.getHBaseAdmin().getCompactionState(TABLENAME) ==
+         return TEST_UTIL.getAdmin().getCompactionState(TABLENAME) ==
              CompactionState.NONE;
        }
      });
@@ -646,7 +646,7 @@ public class TestFromClientSide {
   private List<HRegionLocation> splitTable(final Table t)
   throws IOException, InterruptedException {
     // Split this table in two.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.split(t.getName());
     admin.close();
     List<HRegionLocation> regions = waitOnSplit(t);
@@ -1756,7 +1756,7 @@ public class TestFromClientSide {
 
   @Test
   public void testDeleteFamilyVersion() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     TableName TABLE = TableName.valueOf("testDeleteFamilyVersion");
 
     byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 1);
@@ -1801,7 +1801,7 @@ public class TestFromClientSide {
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 5);
     Put put = null;
     Result result = null;
@@ -3668,7 +3668,7 @@ public class TestFromClientSide {
 
     TableName TABLE = TableName.valueOf("testUpdatesWithMajorCompaction");
     Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     // Write a column with values at timestamp 1, 2 and 3
     byte[] row = Bytes.toBytes("row2");
@@ -3729,7 +3729,7 @@ public class TestFromClientSide {
 
     TableName tableName = TableName.valueOf("testMajorCompactionBetweenTwoUpdates");
     Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     // Write a column with values at timestamp 1, 2 and 3
     byte[] row = Bytes.toBytes("row3");
@@ -4094,7 +4094,7 @@ public class TestFromClientSide {
     for (int i = 0; i < tables.length; i++) {
       TEST_UTIL.createTable(tables[i], FAMILY);
     }
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     HTableDescriptor[] ts = admin.listTables();
     HashSet<HTableDescriptor> result = new HashSet<HTableDescriptor>(ts.length);
     Collections.addAll(result, ts);
@@ -4209,7 +4209,7 @@ public class TestFromClientSide {
     // to be reloaded.
 
     // Test user metadata
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // make a modifiable descriptor
     HTableDescriptor desc = new HTableDescriptor(a.getTableDescriptor());
     // offline the table
@@ -5143,7 +5143,7 @@ public class TestFromClientSide {
     byte [] family1 = Bytes.toBytes("f1");
     byte [] family2 = Bytes.toBytes("f2");
     try (Table table = TEST_UTIL.createTable(TABLE, new byte[][] {family1, family2}, 10);
-        Admin admin = TEST_UTIL.getHBaseAdmin();
+        Admin admin = TEST_UTIL.getAdmin();
         RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
       List<HRegionLocation> allRegionLocations = locator.getAllRegionLocations();
       assertEquals(1, allRegionLocations.size());
@@ -6159,7 +6159,7 @@ public class TestFromClientSide {
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
     byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.createTable(htd, KEYS);
     List<HRegionInfo> regions = admin.getTableRegions(htd.getTableName());
 
@@ -6210,7 +6210,7 @@ public class TestFromClientSide {
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
     byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.createTable(htd, KEYS);
     HRegionLocator locator =
       (HRegionLocator) admin.getConnection().getRegionLocator(htd.getTableName());

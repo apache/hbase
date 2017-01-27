@@ -83,7 +83,7 @@ public class TestExpiredMobFileCleaner {
     hcd.setMaxVersions(4);
     desc.addFamily(hcd);
 
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
     admin.createTable(desc);
     table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
             .getBufferedMutator(tableName);

@@ -61,7 +61,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
         .getMaster(), tableName, cf1, columnDescriptor);
 
     // Test 2: modify the column family offline
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     columnDescriptor.setBlocksize(newBlockSize * 2);
     long procId2 = procExec.submitProcedure(
       new ModifyColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
@@ -110,7 +110,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // create the table
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2", cf3);
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 

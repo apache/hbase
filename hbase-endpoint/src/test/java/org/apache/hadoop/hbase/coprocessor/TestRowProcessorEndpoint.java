@@ -132,8 +132,8 @@ public class TestRowProcessorEndpoint {
 
   public void prepareTestData() throws Exception {
     try {
-      util.getHBaseAdmin().disableTable(TABLE);
-      util.getHBaseAdmin().deleteTable(TABLE);
+      util.getAdmin().disableTable(TABLE);
+      util.getAdmin().deleteTable(TABLE);
     } catch (Exception e) {
       // ignore table not found
     }

@@ -153,8 +153,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
       .getRegionServerCoprocessorHost()
         .findCoprocessor(AccessController.class.getName());
 
-    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE).build());
-    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE2).build());
+    UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE).build());
+    UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE2).build());
 
     // grants on global
     grantGlobal(UTIL, USER_GLOBAL_ADMIN.getShortName(),  Permission.Action.ADMIN);
@@ -181,8 +181,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.getHBaseAdmin().deleteNamespace(TEST_NAMESPACE);
-    UTIL.getHBaseAdmin().deleteNamespace(TEST_NAMESPACE2);
+    UTIL.getAdmin().deleteNamespace(TEST_NAMESPACE);
+    UTIL.getAdmin().deleteNamespace(TEST_NAMESPACE2);
     UTIL.shutdownMiniCluster();
   }
 

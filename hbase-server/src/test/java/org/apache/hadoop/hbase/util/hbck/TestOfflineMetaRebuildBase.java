@@ -89,11 +89,11 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
 
       // everything is good again.
       assertEquals(5, scanMeta()); // including table state rows
-      TableName[] tableNames = TEST_UTIL.getHBaseAdmin().listTableNames();
+      TableName[] tableNames = TEST_UTIL.getAdmin().listTableNames();
       for (TableName tableName : tableNames) {
-        HTableDescriptor tableDescriptor = TEST_UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+        HTableDescriptor tableDescriptor = TEST_UTIL.getAdmin().getTableDescriptor(tableName);
         assertNotNull(tableDescriptor);
-        assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(tableName));
+        assertTrue(TEST_UTIL.getAdmin().isTableEnabled(tableName));
       }
       HTableDescriptor[] htbls = admin.listTables();
       LOG.info("Tables present after restart: " + Arrays.toString(htbls));

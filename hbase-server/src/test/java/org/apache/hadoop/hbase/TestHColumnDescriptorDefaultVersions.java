@@ -74,7 +74,7 @@ public class TestHColumnDescriptorDefaultVersions {
 
   @Test
   public void testCreateTableWithDefault() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
@@ -95,7 +95,7 @@ public class TestHColumnDescriptorDefaultVersions {
     TEST_UTIL.getConfiguration().setInt("hbase.column.max.version", 3);
     TEST_UTIL.startMiniCluster(1);
 
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
@@ -117,7 +117,7 @@ public class TestHColumnDescriptorDefaultVersions {
     TEST_UTIL.getConfiguration().setInt("hbase.column.max.version", 3);
     TEST_UTIL.startMiniCluster(1);
 
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
@@ -149,7 +149,7 @@ public class TestHColumnDescriptorDefaultVersions {
 
   private void verifyHColumnDescriptor(int expected, final TableName tableName,
       final byte[]... families) throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
     HTableDescriptor htd = admin.getTableDescriptor(tableName);

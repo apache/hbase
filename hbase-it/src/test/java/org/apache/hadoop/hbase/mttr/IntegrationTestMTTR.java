@@ -223,11 +223,11 @@ public class IntegrationTestMTTR {
     loadTableName = TableName.valueOf(util.getConfiguration()
         .get("hbase.IntegrationTestMTTR.loadTableName", "IntegrationTestMTTRLoadTestTool"));
 
-    if (util.getHBaseAdmin().tableExists(tableName)) {
+    if (util.getAdmin().tableExists(tableName)) {
       util.deleteTable(tableName);
     }
 
-    if (util.getHBaseAdmin().tableExists(loadTableName)) {
+    if (util.getAdmin().tableExists(loadTableName)) {
       util.deleteTable(loadTableName);
     }
 
@@ -240,7 +240,7 @@ public class IntegrationTestMTTR {
     HColumnDescriptor descriptor = new HColumnDescriptor(FAMILY);
     descriptor.setMaxVersions(1);
     tableDescriptor.addFamily(descriptor);
-    util.getHBaseAdmin().createTable(tableDescriptor);
+    util.getAdmin().createTable(tableDescriptor);
 
     // Setup the table for LoadTestTool
     int ret = loadTool.run(new String[]{"-tn", loadTableName.getNameAsString(), "-init_only"});
@@ -557,7 +557,7 @@ public class IntegrationTestMTTR {
     protected boolean doAction() throws Exception {
       Admin admin = null;
       try {
-        admin = util.getHBaseAdmin();
+        admin = util.getAdmin();
         ClusterStatus status = admin.getClusterStatus();
         return status != null;
       } finally {

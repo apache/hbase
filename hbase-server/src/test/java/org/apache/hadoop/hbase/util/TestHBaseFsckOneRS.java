@@ -743,7 +743,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       doFsck(conf, true);
 
       assertNoErrors(doFsck(conf, false));
-      assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(table));
+      assertTrue(TEST_UTIL.getAdmin().isTableEnabled(table));
     } finally {
       cleanupTable(table);
     }

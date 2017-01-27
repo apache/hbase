@@ -128,7 +128,7 @@ public class TestSplitTransactionOnCluster {
 
   @Before public void setup() throws IOException {
     TESTING_UTIL.ensureSomeNonStoppedRegionServersAvailable(NB_SERVERS);
-    this.admin = TESTING_UTIL.getHBaseAdmin();
+    this.admin = TESTING_UTIL.getAdmin();
     this.cluster = TESTING_UTIL.getMiniHBaseCluster();
   }
 
@@ -517,7 +517,7 @@ public class TestSplitTransactionOnCluster {
 
       HMaster master = abortAndWaitForMaster();
 
-      this.admin = TESTING_UTIL.getHBaseAdmin();
+      this.admin = TESTING_UTIL.getAdmin();
 
       // Update the region to be offline and split, so that HRegionInfo#equals
       // returns true in checking rebuilt region states map.

@@ -87,7 +87,7 @@ public class TestLeaseRenewal {
    */
   @After
   public void tearDown() throws Exception {
-    for (HTableDescriptor htd : TEST_UTIL.getHBaseAdmin().listTables()) {
+    for (HTableDescriptor htd : TEST_UTIL.getAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       TEST_UTIL.deleteTable(htd.getTableName());
     }

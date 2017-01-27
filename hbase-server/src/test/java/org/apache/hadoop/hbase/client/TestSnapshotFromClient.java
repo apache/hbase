@@ -116,7 +116,7 @@ public class TestSnapshotFromClient {
   @After
   public void tearDown() throws Exception {
     UTIL.deleteTable(TABLE_NAME);
-    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
@@ -135,7 +135,7 @@ public class TestSnapshotFromClient {
    */
   @Test (timeout=300000)
   public void testMetaTablesSnapshot() throws Exception {
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     byte[] snapshotName = Bytes.toBytes("metaSnapshot");
 
     try {
@@ -153,7 +153,7 @@ public class TestSnapshotFromClient {
    */
   @Test (timeout=300000)
   public void testSnapshotDeletionWithRegex() throws Exception {
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
@@ -189,7 +189,7 @@ public class TestSnapshotFromClient {
    */
   @Test (timeout=300000)
   public void testOfflineTableSnapshot() throws Exception {
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
@@ -237,7 +237,7 @@ public class TestSnapshotFromClient {
 
   @Test (timeout=300000)
   public void testSnapshotFailsOnNonExistantTable() throws Exception {
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
     String tableName = "_not_a_table";
@@ -268,7 +268,7 @@ public class TestSnapshotFromClient {
   public void testOfflineTableSnapshotWithEmptyRegions() throws Exception {
     // test with an empty table with one region
 
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
@@ -313,7 +313,7 @@ public class TestSnapshotFromClient {
     Admin admin = null;
     TableName tableName2 = TableName.valueOf("testListTableSnapshots");
     try {
-      admin = UTIL.getHBaseAdmin();
+      admin = UTIL.getAdmin();
 
       HTableDescriptor htd = new HTableDescriptor(tableName2);
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
@@ -357,7 +357,7 @@ public class TestSnapshotFromClient {
   public void testListTableSnapshotsWithRegex() throws Exception {
     Admin admin = null;
     try {
-      admin = UTIL.getHBaseAdmin();
+      admin = UTIL.getAdmin();
 
       String table1Snapshot1 = "Table1Snapshot1";
       admin.snapshot(table1Snapshot1, TABLE_NAME);
@@ -397,7 +397,7 @@ public class TestSnapshotFromClient {
     Admin admin = null;
     TableName tableName2 = TableName.valueOf("testListTableSnapshots");
     try {
-      admin = UTIL.getHBaseAdmin();
+      admin = UTIL.getAdmin();
 
       HTableDescriptor htd = new HTableDescriptor(tableName2);
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
@@ -430,7 +430,7 @@ public class TestSnapshotFromClient {
   public void testDeleteTableSnapshotsWithRegex() throws Exception {
     Admin admin = null;
     try {
-      admin = UTIL.getHBaseAdmin();
+      admin = UTIL.getAdmin();
 
       String table1Snapshot1 = "Table1Snapshot1";
       admin.snapshot(table1Snapshot1, TABLE_NAME);

@@ -246,7 +246,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * @throws IOException
    */
   void assertExpectedTable(TableName table, int count, int value) throws IOException {
-    HTableDescriptor [] htds = util.getHBaseAdmin().listTables(table.getNameAsString());
+    HTableDescriptor [] htds = util.getAdmin().listTables(table.getNameAsString());
     assertEquals(htds.length, 1);
     Table t = null;
     try {
@@ -637,7 +637,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   void assertExpectedTable(final Connection connection, TableName table, int count, int value)
   throws IOException {
-    HTableDescriptor [] htds = util.getHBaseAdmin().listTables(table.getNameAsString());
+    HTableDescriptor [] htds = util.getAdmin().listTables(table.getNameAsString());
     assertEquals(htds.length, 1);
     Table t = null;
     try {

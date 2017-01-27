@@ -91,7 +91,7 @@ public class TestTableResource {
         TableInfoModel.class,
         TableListModel.class,
         TableRegionModel.class);
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE)) {
       return;
     }

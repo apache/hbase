@@ -94,7 +94,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   @Test
   public void internalDoWork() throws Exception {
     util = createUtil();
-    admin = util.getHBaseAdmin();
+    admin = util.getAdmin();
     setupReceiver();
 
     deleteTable();

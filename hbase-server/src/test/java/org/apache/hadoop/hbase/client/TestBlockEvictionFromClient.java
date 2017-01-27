@@ -155,11 +155,11 @@ public class TestBlockEvictionFromClient {
     exceptionLatch = null;
     CustomInnerRegionObserver.throwException.set(false);
     // Clean up the tables for every test case
-    TableName[] listTableNames = TEST_UTIL.getHBaseAdmin().listTableNames();
+    TableName[] listTableNames = TEST_UTIL.getAdmin().listTableNames();
     for (TableName tableName : listTableNames) {
       if (!tableName.isSystemTable()) {
-        TEST_UTIL.getHBaseAdmin().disableTable(tableName);
-        TEST_UTIL.getHBaseAdmin().deleteTable(tableName);
+        TEST_UTIL.getAdmin().disableTable(tableName);
+        TEST_UTIL.getAdmin().deleteTable(tableName);
       }
     }
   }

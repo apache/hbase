@@ -84,12 +84,12 @@ public class TestAcidGuarantees implements Tool {
     }
 
     if (useMob) {
-      HTableDescriptor htd = util.getHBaseAdmin().getTableDescriptor(TABLE_NAME);
+      HTableDescriptor htd = util.getAdmin().getTableDescriptor(TABLE_NAME);
       HColumnDescriptor hcd =  htd.getColumnFamilies()[0];
       // force mob enabled such that all data is mob data
       hcd.setMobEnabled(true);
       hcd.setMobThreshold(4);
-      util.getHBaseAdmin().modifyColumnFamily(TABLE_NAME, hcd);
+      util.getAdmin().modifyColumnFamily(TABLE_NAME, hcd);
     }
   }
 
@@ -337,7 +337,7 @@ public class TestAcidGuarantees implements Tool {
     }
     // Add a flusher
     ctx.addThread(new RepeatingTestThread(ctx) {
-      Admin admin = util.getHBaseAdmin();
+      Admin admin = util.getAdmin();
       public void doAnAction() throws Exception {
         try {
           admin.flush(TABLE_NAME);

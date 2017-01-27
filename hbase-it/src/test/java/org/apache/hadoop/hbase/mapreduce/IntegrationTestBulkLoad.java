@@ -201,7 +201,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     if (replicaCount == NUM_REPLICA_COUNT_DEFAULT) return;
 
     TableName t = getTablename();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     HTableDescriptor desc = admin.getTableDescriptor(t);
     desc.addCoprocessor(SlowMeCoproScanOperations.class.getName());
     HBaseTestingUtility.modifyTableSync(admin, desc);
@@ -231,7 +231,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   }
 
   private void setupTable() throws IOException, InterruptedException {
-    if (util.getHBaseAdmin().tableExists(getTablename())) {
+    if (util.getAdmin().tableExists(getTablename())) {
       util.deleteTable(getTablename());
     }
 
@@ -245,7 +245,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     if (replicaCount == NUM_REPLICA_COUNT_DEFAULT) return;
 
     TableName t = getTablename();
-    HBaseTestingUtility.setReplicas(util.getHBaseAdmin(), t, replicaCount);
+    HBaseTestingUtility.setReplicas(util.getAdmin(), t, replicaCount);
   }
 
   private void runLinkedListMRJob(int iteration) throws Exception {
@@ -746,7 +746,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     // Scale this up on a real cluster
     if (util.isDistributedCluster()) {
       util.getConfiguration().setIfUnset(NUM_MAPS_KEY,
-          Integer.toString(util.getHBaseAdmin().getClusterStatus().getServersSize() * 10)
+          Integer.toString(util.getAdmin().getClusterStatus().getServersSize() * 10)
       );
       util.getConfiguration().setIfUnset(NUM_IMPORT_ROUNDS_KEY, "5");
     } else {

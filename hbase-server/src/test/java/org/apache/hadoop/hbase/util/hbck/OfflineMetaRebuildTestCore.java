@@ -96,7 +96,7 @@ public class OfflineMetaRebuildTestCore {
     TEST_UTIL.startMiniCluster(3);
     conf = TEST_UTIL.getConfiguration();
     this.connection = ConnectionFactory.createConnection(conf);
-    assertEquals(0, TEST_UTIL.getHBaseAdmin().listTables().length);
+    assertEquals(0, TEST_UTIL.getAdmin().listTables().length);
 
     // setup the table
     table = TableName.valueOf(TABLE_BASE + "-" + tableIdx);
@@ -107,8 +107,8 @@ public class OfflineMetaRebuildTestCore {
     LOG.info("Table " + table + " has " + tableRowCount(conf, table)
         + " entries.");
     assertEquals(16, tableRowCount(conf, table));
-    TEST_UTIL.getHBaseAdmin().disableTable(table);
-    assertEquals(1, TEST_UTIL.getHBaseAdmin().listTables().length);
+    TEST_UTIL.getAdmin().disableTable(table);
+    assertEquals(1, TEST_UTIL.getAdmin().listTables().length);
   }
 
   @After
@@ -132,7 +132,7 @@ public class OfflineMetaRebuildTestCore {
     HTableDescriptor desc = new HTableDescriptor(tablename);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    TEST_UTIL.getHBaseAdmin().createTable(desc, splits);
+    TEST_UTIL.getAdmin().createTable(desc, splits);
     return this.connection.getTable(tablename);
   }
 
@@ -177,7 +177,7 @@ public class OfflineMetaRebuildTestCore {
 
         LOG.info("RegionName: " + hri.getRegionNameAsString());
         byte[] deleteRow = hri.getRegionName();
-        TEST_UTIL.getHBaseAdmin().unassign(deleteRow, true);
+        TEST_UTIL.getAdmin().unassign(deleteRow, true);
 
         LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
         Path rootDir = FSUtils.getRootDir(conf);
@@ -224,7 +224,7 @@ public class OfflineMetaRebuildTestCore {
 
   protected void wipeOutMeta() throws IOException {
     // Mess it up by blowing up meta.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     Scan s = new Scan();
     Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = meta.getScanner(s);

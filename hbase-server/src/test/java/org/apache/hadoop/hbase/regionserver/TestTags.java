@@ -117,7 +117,7 @@ public class TestTags {
       // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
       colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
       desc.addFamily(colDesc);
-      Admin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(desc);
       byte[] value = Bytes.toBytes("value");
       table = TEST_UTIL.getConnection().getTable(tableName);
@@ -183,7 +183,7 @@ public class TestTags {
       // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
       colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
       desc.addFamily(colDesc);
-      Admin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(desc);
 
       table = TEST_UTIL.getConnection().getTable(tableName);
@@ -275,7 +275,7 @@ public class TestTags {
       colDesc.setBlockCacheEnabled(true);
       colDesc.setDataBlockEncoding(encoding);
       desc.addFamily(colDesc);
-      Admin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getAdmin();
       admin.createTable(desc);
       try {
         table = TEST_UTIL.getConnection().getTable(tableName);
@@ -387,7 +387,7 @@ public class TestTags {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor colDesc = new HColumnDescriptor(f);
     desc.addFamily(colDesc);
-    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    TEST_UTIL.getAdmin().createTable(desc);
 
     Table table = null;
     try {

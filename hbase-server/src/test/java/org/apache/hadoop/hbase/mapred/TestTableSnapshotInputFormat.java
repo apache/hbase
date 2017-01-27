@@ -120,7 +120,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         "Snapshot job should not use BucketCache.",
         0, job.getFloat("hbase.bucketcache.size", -1), 0.01);
     } finally {
-      UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
       tearDownCluster();
     }
@@ -177,7 +177,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       verifyWithMockedMapReduce(job, numRegions, expectedNumSplits, getStartRow(), getEndRow());
 
     } finally {
-      util.getHBaseAdmin().deleteSnapshot(snapshotName);
+      util.getAdmin().deleteSnapshot(snapshotName);
       util.deleteTable(tableName);
       tearDownCluster();
     }
@@ -258,7 +258,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       Assert.assertTrue(job.isSuccessful());
     } finally {
       if (!shutdownCluster) {
-        util.getHBaseAdmin().deleteSnapshot(snapshotName);
+        util.getAdmin().deleteSnapshot(snapshotName);
         util.deleteTable(tableName);
       }
     }

@@ -78,7 +78,7 @@ public class TestSCVFWithMiniCluster {
 
     util.startMiniCluster(1);
 
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     destroy(admin, HBASE_TABLE_NAME);
     create(admin, HBASE_TABLE_NAME, FAMILY_A, FAMILY_B);
     admin.close();

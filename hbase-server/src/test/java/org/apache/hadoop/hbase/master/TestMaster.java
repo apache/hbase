@@ -69,7 +69,7 @@ public class TestMaster {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
   }
 
   @AfterClass
@@ -99,7 +99,7 @@ public class TestMaster {
 
     // Now trigger a split and stop when the split is in progress
     LOG.info("Splitting table");
-    TEST_UTIL.getHBaseAdmin().split(TABLENAME);
+    TEST_UTIL.getAdmin().split(TABLENAME);
     LOG.info("Waiting for split result to be about to open");
     RegionStates regionStates = m.getAssignmentManager().getRegionStates();
     while (regionStates.getRegionsOfTable(TABLENAME).size() <= 1) {

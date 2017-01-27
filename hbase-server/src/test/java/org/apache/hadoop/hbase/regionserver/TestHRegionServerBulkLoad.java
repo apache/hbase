@@ -338,7 +338,7 @@ public class TestHRegionServerBulkLoad {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
 
-      UTIL.getHBaseAdmin().createTable(htd);
+      UTIL.getAdmin().createTable(htd);
     } catch (TableExistsException tee) {
       LOG.info("Table " + table + " already exists");
     }

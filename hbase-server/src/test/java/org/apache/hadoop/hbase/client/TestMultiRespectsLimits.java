@@ -117,7 +117,7 @@ public class TestMultiRespectsLimits {
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
     hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
     desc.addFamily(hcd);
-    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    TEST_UTIL.getAdmin().createTable(desc);
     Table t = TEST_UTIL.getConnection().getTable(name);
 
     final HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);

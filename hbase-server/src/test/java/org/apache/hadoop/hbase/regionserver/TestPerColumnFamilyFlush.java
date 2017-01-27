@@ -339,7 +339,7 @@ public class TestPerColumnFamilyFlush {
     final int numRegionServers = 4;
     try {
       TEST_UTIL.startMiniCluster(numRegionServers);
-      TEST_UTIL.getHBaseAdmin().createNamespace(
+      TEST_UTIL.getAdmin().createNamespace(
         NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
       Table table = TEST_UTIL.createTable(TABLENAME, FAMILIES);
       HTableDescriptor htd = table.getTableDescriptor();
@@ -581,9 +581,9 @@ public class TestPerColumnFamilyFlush {
     int cf3StoreFileCount1 = -1;
     try {
       TEST_UTIL.startMiniCluster(1);
-      TEST_UTIL.getHBaseAdmin().createNamespace(
+      TEST_UTIL.getAdmin().createNamespace(
         NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
-      TEST_UTIL.getHBaseAdmin().createTable(htd);
+      TEST_UTIL.getAdmin().createTable(htd);
       TEST_UTIL.waitTableAvailable(TABLENAME);
       Connection conn = ConnectionFactory.createConnection(conf);
       Table table = conn.getTable(TABLENAME);
@@ -605,9 +605,9 @@ public class TestPerColumnFamilyFlush {
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 0);
     try {
       TEST_UTIL.startMiniCluster(1);
-      TEST_UTIL.getHBaseAdmin().createNamespace(
+      TEST_UTIL.getAdmin().createNamespace(
         NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
-      TEST_UTIL.getHBaseAdmin().createTable(htd);
+      TEST_UTIL.getAdmin().createTable(htd);
       Connection conn = ConnectionFactory.createConnection(conf);
       Table table = conn.getTable(TABLENAME);
       doPut(table, memstoreFlushSize);

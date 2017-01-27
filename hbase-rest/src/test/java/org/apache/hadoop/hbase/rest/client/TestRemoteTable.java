@@ -108,7 +108,7 @@ public class TestRemoteTable {
 
   @Before
   public void before() throws Exception  {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE)) {
       if (admin.isTableEnabled(TABLE)) admin.disableTable(TABLE);
       admin.deleteTable(TABLE);

@@ -303,7 +303,7 @@ public class TestReplicasClient {
   public void testLocations() throws Exception {
     byte[] b1 = "testLocations".getBytes();
     openRegion(hriSecondary);
-    ClusterConnection hc = (ClusterConnection) HTU.getHBaseAdmin().getConnection();
+    ClusterConnection hc = (ClusterConnection) HTU.getAdmin().getConnection();
 
     try {
       hc.clearRegionCache();

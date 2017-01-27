@@ -116,7 +116,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
     htd.setOwner(USER_OWNER);
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);

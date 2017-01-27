@@ -114,7 +114,7 @@ public class TestNamespaceAuditor {
       RegionServerObserver.class);
     UTIL.startMiniCluster(1, 1);
     waitForQuotaEnabled(UTIL);
-    ADMIN = UTIL.getHBaseAdmin();
+    ADMIN = UTIL.getAdmin();
   }
 
   @AfterClass

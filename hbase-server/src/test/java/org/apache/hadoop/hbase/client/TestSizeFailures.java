@@ -77,7 +77,7 @@ public class TestSizeFailures {
       splits[i - 1][0] = (byte) (split >>> 8);
       splits[i - 1][0] = (byte) (split);
     }
-    TEST_UTIL.getHBaseAdmin().createTable(desc, splits);
+    TEST_UTIL.getAdmin().createTable(desc, splits);
     Connection conn = TEST_UTIL.getConnection();
 
     try (Table table = conn.getTable(TABLENAME)) {

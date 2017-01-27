@@ -104,7 +104,7 @@ public class TestLogRollAbort {
 
     cluster = TEST_UTIL.getHBaseCluster();
     dfsCluster = TEST_UTIL.getDFSCluster();
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
     conf = TEST_UTIL.getConfiguration();
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
 

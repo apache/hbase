@@ -75,7 +75,7 @@ public class TestModifyNamespaceProcedure {
   @After
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    for (HTableDescriptor htd: UTIL.getHBaseAdmin().listTables()) {
+    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
@@ -97,7 +97,7 @@ public class TestModifyNamespaceProcedure {
 
     // Before modify
     NamespaceDescriptor currentNsDescriptor =
-        UTIL.getHBaseAdmin().getNamespaceDescriptor(nsd.getName());
+        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertEquals(currentNsDescriptor.getConfigurationValue(nsKey1), nsValue1before);
     assertNull(currentNsDescriptor.getConfigurationValue(nsKey2));
 
@@ -113,7 +113,7 @@ public class TestModifyNamespaceProcedure {
 
     // Verify the namespace is updated.
     currentNsDescriptor =
-        UTIL.getHBaseAdmin().getNamespaceDescriptor(nsd.getName());
+        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertEquals(nsd.getConfigurationValue(nsKey1), nsValue1after);
     assertEquals(currentNsDescriptor.getConfigurationValue(nsKey2), nsValue2);
   }
@@ -124,7 +124,7 @@ public class TestModifyNamespaceProcedure {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     try {
-      NamespaceDescriptor nsDescriptor = UTIL.getHBaseAdmin().getNamespaceDescriptor(namespaceName);
+      NamespaceDescriptor nsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(namespaceName);
       assertNull(nsDescriptor);
     } catch (NamespaceNotFoundException nsnfe) {
       // Expected
@@ -218,7 +218,7 @@ public class TestModifyNamespaceProcedure {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     // Validate
     NamespaceDescriptor currentNsDescriptor =
-        UTIL.getHBaseAdmin().getNamespaceDescriptor(nsd.getName());
+        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertEquals(currentNsDescriptor.getConfigurationValue(nsKey), nsValue);
   }
 
@@ -246,7 +246,7 @@ public class TestModifyNamespaceProcedure {
 
     // Validate
     NamespaceDescriptor currentNsDescriptor =
-        UTIL.getHBaseAdmin().getNamespaceDescriptor(nsd.getName());
+        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertNull(currentNsDescriptor.getConfigurationValue(nsKey));
   }
 

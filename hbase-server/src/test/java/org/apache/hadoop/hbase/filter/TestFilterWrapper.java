@@ -176,7 +176,7 @@ public class TestFilterWrapper {
     TestFilterWrapper.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     try {
       connection = ConnectionFactory.createConnection(TestFilterWrapper.conf);
-      admin = TEST_UTIL.getHBaseAdmin();
+      admin = TEST_UTIL.getAdmin();
     } catch (MasterNotRunningException e) {
       assertNull("Master is not running", e);
     } catch (ZooKeeperConnectionException e) {

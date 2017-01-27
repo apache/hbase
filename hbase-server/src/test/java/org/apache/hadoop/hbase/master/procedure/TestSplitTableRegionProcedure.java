@@ -94,7 +94,7 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    UTIL.getHBaseAdmin().setBalancerRunning(false, true);
+    UTIL.getAdmin().setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
   }
@@ -102,7 +102,7 @@ public class TestSplitTableRegionProcedure {
   @After
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    for (HTableDescriptor htd: UTIL.getHBaseAdmin().listTables()) {
+    for (HTableDescriptor htd: UTIL.getAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
@@ -233,12 +233,12 @@ public class TestSplitTableRegionProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    UTIL.getHBaseAdmin().majorCompact(tableName);
+    UTIL.getAdmin().majorCompact(tableName);
     // waiting for the major compaction to complete
     UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
       @Override
       public boolean evaluate() throws IOException {
-        return UTIL.getHBaseAdmin().getCompactionState(tableName) == CompactionState.NONE;
+        return UTIL.getAdmin().getCompactionState(tableName) == CompactionState.NONE;
       }
     });
 
@@ -345,7 +345,7 @@ public class TestSplitTableRegionProcedure {
       p.addColumn(Bytes.toBytes(ColumnFamilyName2), Bytes.toBytes("q2"), Bytes.toBytes(i));
       t.put(p);
       if (i % 5 == 0) {
-        UTIL.getHBaseAdmin().flush(tableName);
+        UTIL.getAdmin().flush(tableName);
       }
     }
   }
@@ -360,7 +360,7 @@ public class TestSplitTableRegionProcedure {
       d = new Delete(Bytes.toBytes("" + i));
       t.delete(d);
       if (i % 5 == 0) {
-        UTIL.getHBaseAdmin().flush(tableName);
+        UTIL.getAdmin().flush(tableName);
       }
     }
   }

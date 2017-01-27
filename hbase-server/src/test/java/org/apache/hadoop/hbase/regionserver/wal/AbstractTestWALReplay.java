@@ -257,7 +257,7 @@ public abstract class AbstractTestWALReplay {
       throws InterruptedException, MasterNotRunningException,
       ZooKeeperConnectionException, IOException {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    TEST_UTIL.getHBaseAdmin().move(
+    TEST_UTIL.getAdmin().move(
         destRegion.getRegionInfo().getEncodedNameAsBytes(),
         Bytes.toBytes(destServer.getServerName().getServerName()));
     while (true) {

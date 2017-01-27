@@ -112,7 +112,7 @@ public class TestMetaWithReplicas {
 
   @Test
   public void testMetaHTDReplicaCount() throws Exception {
-    assertTrue(TEST_UTIL.getHBaseAdmin().getTableDescriptor(TableName.META_TABLE_NAME)
+    assertTrue(TEST_UTIL.getAdmin().getTableDescriptor(TableName.META_TABLE_NAME)
         .getRegionReplication() == 3);
   }
 
@@ -166,14 +166,14 @@ public class TestMetaWithReplicas {
 
     TableName TABLE = TableName.valueOf("testShutdownHandling");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
-    if (util.getHBaseAdmin().tableExists(TABLE)) {
-      util.getHBaseAdmin().disableTable(TABLE);
-      util.getHBaseAdmin().deleteTable(TABLE);
+    if (util.getAdmin().tableExists(TABLE)) {
+      util.getAdmin().disableTable(TABLE);
+      util.getAdmin().deleteTable(TABLE);
     }
     ServerName master = null;
     try (Connection c = ConnectionFactory.createConnection(util.getConfiguration());) {
       try (Table htable = util.createTable(TABLE, FAMILIES);) {
-        util.getHBaseAdmin().flush(TableName.META_TABLE_NAME);
+        util.getAdmin().flush(TableName.META_TABLE_NAME);
         Thread.sleep(conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
             30000) * 6);
         List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(c, TABLE);
@@ -184,13 +184,13 @@ public class TestMetaWithReplicas {
         // If the servers are the same, then move the test table's region out of the server
         // to another random server
         if (hrl.getServerName().equals(primary)) {
-          util.getHBaseAdmin().move(hrl.getRegionInfo().getEncodedNameAsBytes(), null);
+          util.getAdmin().move(hrl.getRegionInfo().getEncodedNameAsBytes(), null);
           // wait for the move to complete
           do {
             Thread.sleep(10);
             hrl = MetaTableAccessor.getRegionLocation(c, regions.get(0));
           } while (primary.equals(hrl.getServerName()));
-          util.getHBaseAdmin().flush(TableName.META_TABLE_NAME);
+          util.getAdmin().flush(TableName.META_TABLE_NAME);
           Thread.sleep(conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
               30000) * 3);
         }
@@ -237,9 +237,9 @@ public class TestMetaWithReplicas {
   public void testMetaLookupThreadPoolCreated() throws Exception {
     TableName TABLE = TableName.valueOf("testMetaLookupThreadPoolCreated");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
-    if (TEST_UTIL.getHBaseAdmin().tableExists(TABLE)) {
-      TEST_UTIL.getHBaseAdmin().disableTable(TABLE);
-      TEST_UTIL.getHBaseAdmin().deleteTable(TABLE);
+    if (TEST_UTIL.getAdmin().tableExists(TABLE)) {
+      TEST_UTIL.getAdmin().disableTable(TABLE);
+      TEST_UTIL.getAdmin().deleteTable(TABLE);
     }
     try (Table htable = TEST_UTIL.createTable(TABLE, FAMILIES);) {
       byte[] row = "test".getBytes();
@@ -392,7 +392,7 @@ public class TestMetaWithReplicas {
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ServerName currentServer = ProtobufUtil.toServerName(data);
-    Collection<ServerName> liveServers = TEST_UTIL.getHBaseAdmin().getClusterStatus().getServers();
+    Collection<ServerName> liveServers = TEST_UTIL.getAdmin().getClusterStatus().getServers();
     ServerName moveToServer = null;
     for (ServerName s : liveServers) {
       if (!currentServer.equals(s)) {
@@ -402,8 +402,8 @@ public class TestMetaWithReplicas {
     assert(moveToServer != null);
     TableName tableName = TableName.valueOf("randomTable5678");
     TEST_UTIL.createTable(tableName, "f");
-    assertTrue(TEST_UTIL.getHBaseAdmin().tableExists(tableName));
-    TEST_UTIL.getHBaseAdmin().move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+    assertTrue(TEST_UTIL.getAdmin().tableExists(tableName));
+    TEST_UTIL.getAdmin().move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
         Bytes.toBytes(moveToServer.getServerName()));
     int i = 0;
     do {
@@ -413,8 +413,8 @@ public class TestMetaWithReplicas {
       i++;
     } while (!moveToServer.equals(currentServer) && i < 1000); //wait for 10 seconds overall
     assert(i != 1000);
-    TEST_UTIL.getHBaseAdmin().disableTable(tableName);
-    assertTrue(TEST_UTIL.getHBaseAdmin().isTableDisabled(tableName));
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    assertTrue(TEST_UTIL.getAdmin().isTableDisabled(tableName));
   }
 
   @Test
@@ -449,7 +449,7 @@ public class TestMetaWithReplicas {
     TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
              .getRegionStates().createRegionState(h);
     TEST_UTIL.assignRegion(h);
-    HBaseFsckRepair.waitUntilAssigned(TEST_UTIL.getHBaseAdmin(), h);
+    HBaseFsckRepair.waitUntilAssigned(TEST_UTIL.getAdmin(), h);
     // check that problem exists
     HBaseFsck hbck = doFsck(TEST_UTIL.getConfiguration(), false);
     assertErrors(hbck, new ERROR_CODE[]{ERROR_CODE.UNKNOWN, ERROR_CODE.SHOULD_NOT_BE_DEPLOYED});

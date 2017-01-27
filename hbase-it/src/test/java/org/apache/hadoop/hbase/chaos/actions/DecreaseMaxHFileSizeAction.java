@@ -43,7 +43,7 @@ public class DecreaseMaxHFileSizeAction extends Action {
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     HTableDescriptor htd = admin.getTableDescriptor(tableName);
 
     // Try and get the current value.

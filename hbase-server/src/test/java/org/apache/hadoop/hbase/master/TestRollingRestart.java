@@ -85,7 +85,7 @@ public class  TestRollingRestart {
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Disabling table\n");
-    TEST_UTIL.getHBaseAdmin().disableTable(table);
+    TEST_UTIL.getAdmin().disableTable(table);
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
@@ -95,7 +95,7 @@ public class  TestRollingRestart {
     }
     assertEquals(2, regions.size());
     log("Enabling table\n");
-    TEST_UTIL.getHBaseAdmin().enableTable(table);
+    TEST_UTIL.getAdmin().enableTable(table);
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Verifying there are " + numRegions + " assigned on cluster\n");

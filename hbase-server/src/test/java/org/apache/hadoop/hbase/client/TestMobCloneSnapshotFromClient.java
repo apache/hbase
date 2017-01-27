@@ -161,9 +161,9 @@ public class TestMobCloneSnapshotFromClient extends TestCloneSnapshotFromClient 
       hcd.setMobThreshold(0L);
       htd.addFamily(hcd);
     }
-    util.getHBaseAdmin().createTable(htd, splitKeys);
+    util.getAdmin().createTable(htd, splitKeys);
     SnapshotTestingUtils.waitForTableToBeOnline(util, tableName);
     assertEquals((splitKeys.length + 1) * regionReplication,
-      util.getHBaseAdmin().getTableRegions(tableName).size());
+      util.getAdmin().getTableRegions(tableName).size());
   }
 }

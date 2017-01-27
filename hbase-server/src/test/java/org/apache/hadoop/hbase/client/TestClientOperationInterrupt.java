@@ -75,7 +75,7 @@ public class TestClientOperationInterrupt {
     util = new HBaseTestingUtility(conf);
     util.startMiniCluster();
 
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);

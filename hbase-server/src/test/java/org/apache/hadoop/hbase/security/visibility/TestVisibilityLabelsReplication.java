@@ -187,7 +187,7 @@ public class TestVisibilityLabelsReplication {
     rpc.setClusterKey(TEST_UTIL1.getClusterKey());
     replicationAdmin.addPeer("2", rpc, null);
 
-    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    Admin hBaseAdmin = TEST_UTIL.getAdmin();
     HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor desc = new HColumnDescriptor(fam);
     desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
@@ -199,7 +199,7 @@ public class TestVisibilityLabelsReplication {
         hBaseAdmin.close();
       }
     }
-    Admin hBaseAdmin1 = TEST_UTIL1.getHBaseAdmin();
+    Admin hBaseAdmin1 = TEST_UTIL1.getAdmin();
     try {
       hBaseAdmin1.createTable(table);
     } finally {

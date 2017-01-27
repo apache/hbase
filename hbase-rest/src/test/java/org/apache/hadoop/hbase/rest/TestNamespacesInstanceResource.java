@@ -152,7 +152,7 @@ public class TestNamespacesInstanceResource {
     Response response;
 
     // Check that doesn't exist via non-REST call.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     assertNotNull(findNamespace(admin, "default"));
     assertNotNull(findNamespace(admin, "hbase"));
 
@@ -168,7 +168,7 @@ public class TestNamespacesInstanceResource {
 
   @Test
   public void testGetNamespaceTablesAndCannotDeleteNamespace() throws IOException, JAXBException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     String nsName = "TestNamespacesInstanceResource5";
     Response response;
 
@@ -251,7 +251,7 @@ public class TestNamespacesInstanceResource {
     Response response;
 
     // Check that namespaces don't exist via non-REST call.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     assertNull(findNamespace(admin, NAMESPACE1));
     assertNull(findNamespace(admin, NAMESPACE2));
     assertNull(findNamespace(admin, NAMESPACE3));
@@ -289,7 +289,7 @@ public class TestNamespacesInstanceResource {
     Response response;
 
     // Check that namespaces don't exist via non-REST call.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     assertNull(findNamespace(admin, NAMESPACE1));
     assertNull(findNamespace(admin, NAMESPACE2));
 
@@ -365,7 +365,7 @@ public class TestNamespacesInstanceResource {
     Response response;
 
     // Check that namespaces don't exist via non-REST call.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     assertNull(findNamespace(admin, NAMESPACE3));
     assertNull(findNamespace(admin, NAMESPACE4));
 

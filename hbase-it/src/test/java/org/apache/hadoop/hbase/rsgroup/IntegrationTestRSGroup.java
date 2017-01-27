@@ -47,7 +47,7 @@ public class IntegrationTestRSGroup extends TestRSGroupsBase {
       TEST_UTIL = new IntegrationTestingUtility();
       ((IntegrationTestingUtility)TEST_UTIL).initializeCluster(NUM_SLAVES_BASE);
       //set shared configs
-      admin = TEST_UTIL.getHBaseAdmin();
+      admin = TEST_UTIL.getAdmin();
       cluster = TEST_UTIL.getHBaseClusterInterface();
       rsGroupAdmin = new VerifyingRSGroupAdminClient(rsGroupAdmin.newClient(TEST_UTIL.getConnection()),
           TEST_UTIL.getConfiguration());

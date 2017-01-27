@@ -89,7 +89,7 @@ public class TestTableSnapshotScanner {
     } else {
       util.createTable(tableName, FAMILIES);
     }
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
 
     // put some stuff in the table
     Table table = util.getConnection().getTable(tableName);
@@ -146,7 +146,7 @@ public class TestTableSnapshotScanner {
       scanner.close();
     } finally {
       if (!shutdownCluster) {
-        util.getHBaseAdmin().deleteSnapshot(snapshotName);
+        util.getAdmin().deleteSnapshot(snapshotName);
         util.deleteTable(tableName);
         tearDownCluster();
       }

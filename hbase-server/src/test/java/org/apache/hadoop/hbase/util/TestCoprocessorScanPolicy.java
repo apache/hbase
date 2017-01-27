@@ -103,7 +103,7 @@ public class TestCoprocessorScanPolicy {
   public void testBaseCases() throws Exception {
     TableName tableName =
         TableName.valueOf("baseCases");
-    if (TEST_UTIL.getHBaseAdmin().tableExists(tableName)) {
+    if (TEST_UTIL.getAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
     Table t = TEST_UTIL.createTable(tableName, F, 1);
@@ -153,7 +153,7 @@ public class TestCoprocessorScanPolicy {
   public void testTTL() throws Exception {
     TableName tableName =
         TableName.valueOf("testTTL");
-    if (TEST_UTIL.getHBaseAdmin().tableExists(tableName)) {
+    if (TEST_UTIL.getAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -161,7 +161,7 @@ public class TestCoprocessorScanPolicy {
     .setMaxVersions(10)
     .setTimeToLive(1);
     desc.addFamily(hcd);
-    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    TEST_UTIL.getAdmin().createTable(desc);
     Table t = TEST_UTIL.getConnection().getTable(tableName);
     long now = EnvironmentEdgeManager.currentTime();
     ManualEnvironmentEdge me = new ManualEnvironmentEdge();

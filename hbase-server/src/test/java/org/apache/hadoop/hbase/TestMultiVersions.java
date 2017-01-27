@@ -73,7 +73,7 @@ public class TestMultiVersions {
   @Before
   public void before()
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    this.admin = UTIL.getHBaseAdmin();
+    this.admin = UTIL.getAdmin();
   }
 
   /**

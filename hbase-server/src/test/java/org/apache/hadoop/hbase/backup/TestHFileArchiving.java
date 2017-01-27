@@ -119,7 +119,7 @@ public class TestHFileArchiving {
         TableName.valueOf("testRemovesRegionDirOnArchive");
     UTIL.createTable(TABLE_NAME, TEST_FAM);
 
-    final Admin admin = UTIL.getHBaseAdmin();
+    final Admin admin = UTIL.getAdmin();
 
     // get the current store files for the region
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
@@ -250,7 +250,7 @@ public class TestHFileArchiving {
     region.waitForFlushesAndCompactions();
 
     // disable table to prevent new updates
-    UTIL.getHBaseAdmin().disableTable(TABLE_NAME);
+    UTIL.getAdmin().disableTable(TABLE_NAME);
     LOG.debug("Disabled table");
 
     // remove all the files from the archive to get a fair comparison
@@ -330,7 +330,7 @@ public class TestHFileArchiving {
     region.waitForFlushesAndCompactions();
 
     // disable table to prevent new updates
-    UTIL.getHBaseAdmin().disableTable(TABLE_NAME);
+    UTIL.getAdmin().disableTable(TABLE_NAME);
     LOG.debug("Disabled table");
 
     // remove all the files from the archive to get a fair comparison
@@ -341,7 +341,7 @@ public class TestHFileArchiving {
     List<String> storeFiles = region.getStoreFileList(columns);
 
     // then delete the table so the hfiles get archived
-    UTIL.getHBaseAdmin().deleteColumnFamily(TABLE_NAME, TEST_FAM);
+    UTIL.getAdmin().deleteColumnFamily(TABLE_NAME, TEST_FAM);
 
     assertArchiveFiles(fs, storeFiles, 30000);
 

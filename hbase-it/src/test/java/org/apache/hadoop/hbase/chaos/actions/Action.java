@@ -208,7 +208,7 @@ public class Action {
 
     LOG.info("Moving " + victimRegions.size() + " regions from " + fromServers.size()
         + " servers to " + toServers.size() + " different servers");
-    Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
     for (byte[] victimRegion : victimRegions) {
       // Don't keep moving regions if we're
       // trying to stop the monkey.
@@ -221,7 +221,7 @@ public class Action {
   }
 
   protected void forceBalancer() throws Exception {
-    Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
     boolean result = false;
     try {
       result = admin.balancer();

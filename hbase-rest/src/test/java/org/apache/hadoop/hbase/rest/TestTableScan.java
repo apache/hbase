@@ -99,7 +99,7 @@ public class TestTableScan {
     REST_TEST_UTIL.startServletContainer(conf);
     client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (!admin.tableExists(TABLE)) {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(CFA));
@@ -112,8 +112,8 @@ public class TestTableScan {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.getHBaseAdmin().disableTable(TABLE);
-    TEST_UTIL.getHBaseAdmin().deleteTable(TABLE);
+    TEST_UTIL.getAdmin().disableTable(TABLE);
+    TEST_UTIL.getAdmin().deleteTable(TABLE);
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
   }

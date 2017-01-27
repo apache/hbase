@@ -87,7 +87,7 @@ public class TestCloneSnapshotFromClient {
    */
   @Before
   public void setup() throws Exception {
-    this.admin = TEST_UTIL.getHBaseAdmin();
+    this.admin = TEST_UTIL.getAdmin();
 
     long tid = System.currentTimeMillis();
     tableName = TableName.valueOf("testtb-" + tid);

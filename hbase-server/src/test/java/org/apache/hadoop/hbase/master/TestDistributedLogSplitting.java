@@ -836,7 +836,7 @@ public class TestDistributedLogSplitting {
       makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
 
       LOG.info("Disabling table\n");
-      TEST_UTIL.getHBaseAdmin().disableTable(TableName.valueOf("disableTable"));
+      TEST_UTIL.getAdmin().disableTable(TableName.valueOf("disableTable"));
       TEST_UTIL.waitTableDisabled(TableName.valueOf("disableTable").getName());
 
       // abort RS
@@ -955,7 +955,7 @@ public class TestDistributedLogSplitting {
       // move region in order for the region opened in recovering state
       final HRegionInfo hri = region;
       final HRegionServer tmpRS = dstRS;
-      TEST_UTIL.getHBaseAdmin().move(region.getEncodedNameAsBytes(),
+      TEST_UTIL.getAdmin().move(region.getEncodedNameAsBytes(),
           Bytes.toBytes(dstRS.getServerName().getServerName()));
       // wait for region move completes
       final RegionStates regionStates =
@@ -1325,7 +1325,7 @@ public class TestDistributedLogSplitting {
 
       // after flush
       LOG.info("Verification after flush...");
-      TEST_UTIL.getHBaseAdmin().flush(tableName);
+      TEST_UTIL.getAdmin().flush(tableName);
       r = ht.get(g);
       theStoredVal = Bytes.toLong(r.getValue(family, qualifier));
       assertEquals(value, theStoredVal);
@@ -1420,14 +1420,14 @@ public class TestDistributedLogSplitting {
 
       // after flush & compaction
       LOG.info("Verification after flush...");
-      TEST_UTIL.getHBaseAdmin().flush(tableName);
-      TEST_UTIL.getHBaseAdmin().compact(tableName);
+      TEST_UTIL.getAdmin().flush(tableName);
+      TEST_UTIL.getAdmin().compact(tableName);
 
       // wait for compaction completes
       TEST_UTIL.waitFor(30000, 200, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return (TEST_UTIL.getHBaseAdmin()
+          return (TEST_UTIL.getAdmin()
               .getCompactionState(tableName) == CompactionState.NONE);
         }
       });
@@ -1497,7 +1497,7 @@ public class TestDistributedLogSplitting {
     // disable-enable cycle to get rid of table's dead regions left behind
     // by createMultiRegions
     LOG.debug("Disabling table\n");
-    TEST_UTIL.getHBaseAdmin().disableTable(table);
+    TEST_UTIL.getAdmin().disableTable(table);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
@@ -1508,7 +1508,7 @@ public class TestDistributedLogSplitting {
     }
     assertEquals(2 + existingRegions, regions.size());
     LOG.debug("Enabling table\n");
-    TEST_UTIL.getHBaseAdmin().enableTable(table);
+    TEST_UTIL.getAdmin().enableTable(table);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     LOG.debug("Verifying there are " + numRegions + " assigned on cluster\n");
@@ -1778,9 +1778,9 @@ public class TestDistributedLogSplitting {
           final HRegionServer destRS = hrs;
           // the RS doesn't have regions of the specified table so we need move one to this RS
           List<HRegionInfo> tableRegions =
-              TEST_UTIL.getHBaseAdmin().getTableRegions(TableName.valueOf(tableName));
+              TEST_UTIL.getAdmin().getTableRegions(TableName.valueOf(tableName));
           final HRegionInfo hri = tableRegions.get(0);
-          TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
+          TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(),
               Bytes.toBytes(destRS.getServerName().getServerName()));
           // wait for region move completes
           final RegionStates regionStates =

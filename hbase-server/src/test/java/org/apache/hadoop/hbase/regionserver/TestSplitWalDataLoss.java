@@ -81,7 +81,7 @@ public class TestSplitWalDataLoss {
     testUtil.getConfiguration().setInt("hbase.regionserver.msginterval", 30000);
     testUtil.getConfiguration().setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     testUtil.startMiniCluster(2);
-    Admin admin = testUtil.getHBaseAdmin();
+    Admin admin = testUtil.getAdmin();
     admin.createNamespace(namespace);
     admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(family)));
     testUtil.waitTableAvailable(tableName);

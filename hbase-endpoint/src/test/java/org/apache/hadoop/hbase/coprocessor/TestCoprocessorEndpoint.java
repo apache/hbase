@@ -94,7 +94,7 @@ public class TestCoprocessorEndpoint {
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         ProtobufCoprocessorService.class.getName());
     util.startMiniCluster(2);
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     HTableDescriptor desc = new HTableDescriptor(TEST_TABLE);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
@@ -296,7 +296,7 @@ public class TestCoprocessorEndpoint {
 
   @Test
   public void testMasterCoprocessorService() throws Throwable {
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     final TestProtos.EchoRequestProto request =
         TestProtos.EchoRequestProto.newBuilder().setMessage("hello").build();
     TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
@@ -327,7 +327,7 @@ public class TestCoprocessorEndpoint {
 
   @Test
   public void testMasterCoprocessorError() throws Throwable {
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
         TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
     try {

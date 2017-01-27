@@ -104,7 +104,7 @@ public class TestAssignmentManagerOnCluster {
     conf.setInt("hbase.master.ping.server.retry.sleep.interval", 1);
 
     TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, MyRegionServer.class);
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
   }
 
   @AfterClass
@@ -200,7 +200,7 @@ public class TestAssignmentManagerOnCluster {
 
       // Region is assigned now. Let's assign it again.
       // Master should not abort, and region should be assigned.
-      TEST_UTIL.getHBaseAdmin().assign(hri.getRegionName());
+      TEST_UTIL.getAdmin().assign(hri.getRegionName());
       master.getAssignmentManager().waitForAssignment(hri);
       RegionState newState = regionStates.getRegionState(hri);
       assertTrue(newState.isOpened());
@@ -334,7 +334,7 @@ public class TestAssignmentManagerOnCluster {
       }
       assertTrue(destServerName != null
         && !destServerName.equals(serverName));
-      TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
+      TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(),
         Bytes.toBytes(destServerName.getServerName()));
 
       long timeoutTime = System.currentTimeMillis() + 30000;
@@ -366,7 +366,7 @@ public class TestAssignmentManagerOnCluster {
   public void testMoveRegionOfDeletedTable() throws Exception {
     TableName table =
         TableName.valueOf("testMoveRegionOfDeletedTable");
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     try {
       HRegionInfo hri = createTableAndGetOneRegion(table);
 
@@ -736,7 +736,7 @@ public class TestAssignmentManagerOnCluster {
         am.regionOnline(hri, serverName);
       }
       am.getTableStateManager().setTableState(table, TableState.State.ENABLED);
-      TEST_UTIL.getHBaseAdmin().disableTable(table);
+      TEST_UTIL.getAdmin().disableTable(table);
       TEST_UTIL.deleteTable(table);
     }
   }
@@ -1195,7 +1195,7 @@ public class TestAssignmentManagerOnCluster {
       // Closing region should just work fine
       admin.disableTable(table);
       assertTrue(regionStates.isRegionOffline(hri));
-      List<HRegionInfo> regions = TEST_UTIL.getHBaseAdmin().getOnlineRegions(serverName);
+      List<HRegionInfo> regions = TEST_UTIL.getAdmin().getOnlineRegions(serverName);
       assertTrue(!regions.contains(hri));
     } finally {
       MyRegionServer.simulateRetry = false;

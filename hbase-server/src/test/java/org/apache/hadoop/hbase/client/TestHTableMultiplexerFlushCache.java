@@ -162,7 +162,7 @@ public class TestHTableMultiplexerFlushCache {
     // Move the region
     LOG.info("Moving " + loc.getRegionInfo().getEncodedName() + " from " + originalServer
         +  " to " + newServer);
-    TEST_UTIL.getHBaseAdmin().move(loc.getRegionInfo().getEncodedNameAsBytes(),
+    TEST_UTIL.getAdmin().move(loc.getRegionInfo().getEncodedNameAsBytes(),
         Bytes.toBytes(newServer.getServerName()));
 
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE);

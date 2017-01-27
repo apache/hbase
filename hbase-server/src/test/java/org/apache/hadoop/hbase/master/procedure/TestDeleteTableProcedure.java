@@ -70,7 +70,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "f");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
 
     // delete the table (that exists)
     long procId1 = procExec.submitProcedure(
@@ -114,7 +114,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
   private void testSimpleDelete(final TableName tableName, byte[][] splitKeys) throws Exception {
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
 
     // delete the table
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -133,7 +133,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     byte[][] splitKeys = null;
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);

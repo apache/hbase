@@ -72,7 +72,7 @@ public class TestScannerWithBulkload {
   public void testBulkLoad() throws Exception {
     TableName tableName = TableName.valueOf("testBulkLoad");
     long l = System.currentTimeMillis();
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
     final Table table = init(admin, l, scan, tableName);
@@ -210,7 +210,7 @@ public class TestScannerWithBulkload {
   public void testBulkLoadWithParallelScan() throws Exception {
     final TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
       final long l = System.currentTimeMillis();
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
     final Table table = init(admin, l, scan, tableName);
@@ -252,7 +252,7 @@ public class TestScannerWithBulkload {
   public void testBulkLoadNativeHFile() throws Exception {
     TableName tableName = TableName.valueOf("testBulkLoadNativeHFile");
     long l = System.currentTimeMillis();
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
     final Table table = init(admin, l, scan, tableName);

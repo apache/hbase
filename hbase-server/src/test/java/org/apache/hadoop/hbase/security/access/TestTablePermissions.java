@@ -315,7 +315,7 @@ public class TestTablePermissions {
             .addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v1")));
     table.put(new Put(Bytes.toBytes("row2"))
             .addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v2")));
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     admin.split(TEST_TABLE);
 
     // wait for split

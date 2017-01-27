@@ -90,7 +90,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     final List<RegionServerThread> rsThreads =
         utility1.getMiniHBaseCluster().getRegionServerThreads();
     for (RegionServerThread rs : rsThreads) {
-      utility1.getHBaseAdmin().rollWALWriter(rs.getRegionServer().getServerName());
+      utility1.getAdmin().rollWALWriter(rs.getRegionServer().getServerName());
     }
     // Wait for  all log roll to finish
     utility1.waitFor(3000, new Waiter.ExplainingPredicate<Exception>() {

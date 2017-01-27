@@ -137,7 +137,7 @@ public class TestScannersWithFilters {
     unmarshaller = context.createUnmarshaller();
     client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (!admin.tableExists(TABLE)) {
       HTableDescriptor htd = new HTableDescriptor(TABLE);
       htd.addFamily(new HColumnDescriptor(FAMILIES[0]));

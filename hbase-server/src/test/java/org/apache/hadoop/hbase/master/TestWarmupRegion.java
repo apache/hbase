@@ -99,14 +99,14 @@ public class TestWarmupRegion {
     }
 
     // major compaction, purged future deletes
-    TEST_UTIL.getHBaseAdmin().flush(TABLENAME);
-    TEST_UTIL.getHBaseAdmin().majorCompact(TABLENAME);
+    TEST_UTIL.getAdmin().flush(TABLENAME);
+    TEST_UTIL.getAdmin().majorCompact(TABLENAME);
 
     // waiting for the major compaction to complete
     TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
       @Override
       public boolean evaluate() throws IOException {
-        return TEST_UTIL.getHBaseAdmin().getCompactionState(TABLENAME) ==
+        return TEST_UTIL.getAdmin().getCompactionState(TABLENAME) ==
             CompactionState.NONE;
       }
     });

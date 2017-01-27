@@ -270,7 +270,7 @@ public class TestRegionObserverScannerOpenHook {
     desc.addCoprocessor(NoDataFromCompaction.class.getName(), null, Coprocessor.PRIORITY_HIGHEST,
       null);
 
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     admin.createTable(desc);
 
     Table table = UTIL.getConnection().getTable(desc.getTableName());

@@ -45,7 +45,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
 
     // Enable the table
     long procId = procExec.submitProcedure(
@@ -99,7 +99,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
     MasterProcedureTestingUtility.createTable(procExec, tableName, splitKeys, "f1", "f2");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
@@ -123,7 +123,7 @@ public class TestEnableTableProcedure extends TestTableDDLProcedureBase {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
     MasterProcedureTestingUtility.createTable(procExec, tableName, splitKeys, "f1", "f2");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 

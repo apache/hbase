@@ -208,7 +208,7 @@ public class TestAssignmentListener {
   @Test(timeout=60000)
   public void testAssignmentListener() throws IOException, InterruptedException {
     AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     DummyAssignmentListener listener = new DummyAssignmentListener();
     am.registerListener(listener);

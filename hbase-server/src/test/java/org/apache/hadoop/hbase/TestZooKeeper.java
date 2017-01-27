@@ -251,7 +251,7 @@ public class TestZooKeeper {
     HColumnDescriptor family = new HColumnDescriptor("fam");
     desc.addFamily(family);
     LOG.info("Creating table " + tableName);
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     try {
       admin.createTable(desc);
     } finally {
@@ -463,7 +463,7 @@ public class TestZooKeeper {
     HMaster m = cluster.getMaster();
     final ZooKeeperWatcher zkw = m.getZooKeeper();
     // now the cluster is up. So assign some regions.
-    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+    try (Admin admin = TEST_UTIL.getAdmin()) {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
           Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
           Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
@@ -527,7 +527,7 @@ public class TestZooKeeper {
     cluster.startRegionServer();
     HMaster m = cluster.getMaster();
     // now the cluster is up. So assign some regions.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     Table table = null;
     try {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),

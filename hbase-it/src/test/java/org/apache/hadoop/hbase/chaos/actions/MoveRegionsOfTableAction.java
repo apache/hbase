@@ -54,7 +54,7 @@ public class MoveRegionsOfTableAction extends Action {
       Thread.sleep(sleepTime);
     }
 
-    Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getAdmin();
     Collection<ServerName> serversList = admin.getClusterStatus().getServers();
     ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
 

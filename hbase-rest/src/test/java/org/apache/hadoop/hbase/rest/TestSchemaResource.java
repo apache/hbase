@@ -122,7 +122,7 @@ public class TestSchemaResource {
     TableSchemaModel model;
     Response response;
 
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     assertFalse(admin.tableExists(TableName.valueOf(TABLE1)));
 
     // create the table
@@ -181,7 +181,7 @@ public class TestSchemaResource {
     TableSchemaModel model;
     Response response;
 
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     assertFalse(admin.tableExists(TableName.valueOf(TABLE2)));
 
     // create the table

@@ -80,7 +80,7 @@ public class TestRSGroups extends TestRSGroupsBase {
         ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
         ""+NUM_SLAVES_BASE);
 
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((MiniHBaseCluster)cluster).getMaster();
 

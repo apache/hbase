@@ -172,12 +172,12 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
   }
 
   protected void deleteTable() throws Exception {
-    if (util.getHBaseAdmin().tableExists(TABLE_NAME)) {
+    if (util.getAdmin().tableExists(TABLE_NAME)) {
       LOG.info("Deleting table");
-      if (!util.getHBaseAdmin().isTableDisabled(TABLE_NAME)) {
-        util.getHBaseAdmin().disableTable(TABLE_NAME);
+      if (!util.getAdmin().isTableDisabled(TABLE_NAME)) {
+        util.getAdmin().disableTable(TABLE_NAME);
       }
-      util.getHBaseAdmin().deleteTable(TABLE_NAME);
+      util.getAdmin().deleteTable(TABLE_NAME);
       LOG.info("Deleted table");
     }
   }
@@ -297,7 +297,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     }
     byte[][] splits = new RegionSplitter.HexStringSplit().split(
         util.getHBaseClusterInterface().getClusterStatus().getServersSize());
-    util.getHBaseAdmin().createTable(htd, splits);
+    util.getAdmin().createTable(htd, splits);
   }
 
   public static class SeqShardedDataGenerator extends LoadTestDataGenerator {

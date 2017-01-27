@@ -101,7 +101,7 @@ public class TestNamespacesResource {
     Response response;
 
     // Check that namespace does not yet exist via non-REST call.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     assertFalse(doesNamespaceExist(admin, NAMESPACE1));
     model = testNamespacesModel.buildTestModel();
     testNamespacesModel.checkModel(model);
@@ -159,7 +159,7 @@ public class TestNamespacesResource {
     Response response;
 
     // Check that namespace does not yet exist via non-REST call.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     assertFalse(doesNamespaceExist(admin, NAMESPACE1));
     model = testNamespacesModel.buildTestModel();
     testNamespacesModel.checkModel(model);

@@ -93,7 +93,7 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
 
     // Update the test table schema so HFiles from this point will be written with
     // encryption features enabled.
-    final Admin admin = util.getHBaseAdmin();
+    final Admin admin = util.getAdmin();
     HTableDescriptor tableDescriptor =
         new HTableDescriptor(admin.getTableDescriptor(getTablename()));
     for (HColumnDescriptor columnDescriptor: tableDescriptor.getColumnFamilies()) {

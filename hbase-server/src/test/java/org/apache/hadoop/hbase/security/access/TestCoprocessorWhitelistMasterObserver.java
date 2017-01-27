@@ -60,7 +60,7 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   @After
   public void tearDownTestCoprocessorWhitelistMasterObserver() throws Exception {
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     try {
       try {
         admin.disableTable(TEST_TABLE);

@@ -83,7 +83,7 @@ public class TestTableDescriptorModificationFromClient {
 
   @Test
   public void testModifyTable() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
@@ -106,7 +106,7 @@ public class TestTableDescriptorModificationFromClient {
 
   @Test
   public void testAddColumn() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // Create a table with two families
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
@@ -126,7 +126,7 @@ public class TestTableDescriptorModificationFromClient {
 
   @Test
   public void testAddSameColumnFamilyTwice() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // Create a table with one families
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
@@ -155,7 +155,7 @@ public class TestTableDescriptorModificationFromClient {
 
   @Test
   public void testModifyColumnFamily() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_0);
     int blockSize = cfDescriptor.getBlocksize();
@@ -184,7 +184,7 @@ public class TestTableDescriptorModificationFromClient {
 
   @Test
   public void testModifyNonExistingColumnFamily() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_1);
     int blockSize = cfDescriptor.getBlocksize();
@@ -215,7 +215,7 @@ public class TestTableDescriptorModificationFromClient {
 
   @Test
   public void testDeleteColumn() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // Create a table with two families
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
@@ -236,7 +236,7 @@ public class TestTableDescriptorModificationFromClient {
 
   @Test
   public void testDeleteSameColumnFamilyTwice() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     // Create a table with two families
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
@@ -265,7 +265,7 @@ public class TestTableDescriptorModificationFromClient {
 
   private void verifyTableDescriptor(final TableName tableName,
                                      final byte[]... families) throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
     HTableDescriptor htd = admin.getTableDescriptor(tableName);

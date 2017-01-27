@@ -104,7 +104,7 @@ public class TestLoadIncrementalHFiles {
   }
 
   protected static void setupNamespace() throws Exception {
-    util.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(NAMESPACE).build());
+    util.getAdmin().createNamespace(NamespaceDescriptor.create(NAMESPACE).build());
   }
 
   @AfterClass
@@ -340,7 +340,7 @@ public class TestLoadIncrementalHFiles {
     int expectedRows = hfileIdx * 1000;
 
     if (preCreateTable || map != null) {
-      util.getHBaseAdmin().createTable(htd, tableSplitKeys);
+      util.getAdmin().createTable(htd, tableSplitKeys);
     }
 
     final TableName tableName = htd.getTableName();

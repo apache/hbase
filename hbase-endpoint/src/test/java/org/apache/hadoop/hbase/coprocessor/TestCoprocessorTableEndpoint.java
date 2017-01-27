@@ -126,7 +126,7 @@ public class TestCoprocessorTableEndpoint {
   }
 
   private static final void createTable(HTableDescriptor desc) throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
     TEST_UTIL.waitUntilAllRegionsAssigned(desc.getTableName());
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
@@ -142,7 +142,7 @@ public class TestCoprocessorTableEndpoint {
   }
 
   private static void updateTable(HTableDescriptor desc) throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.disableTable(desc.getTableName());
     admin.modifyTable(desc.getTableName(), desc);
     admin.enableTable(desc.getTableName());

@@ -133,7 +133,7 @@ public class TestMobCompactor {
     conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), pool);
     fs = TEST_UTIL.getTestFileSystem();
     conf = TEST_UTIL.getConfiguration();
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
   }
 
   @AfterClass

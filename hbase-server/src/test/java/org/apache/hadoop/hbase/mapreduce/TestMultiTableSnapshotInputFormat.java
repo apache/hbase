@@ -55,7 +55,7 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
     // take a snapshot of every table we have.
     for (String tableName : TABLES) {
       SnapshotTestingUtils
-          .createSnapshotAndValidate(TEST_UTIL.getHBaseAdmin(), TableName.valueOf(tableName),
+          .createSnapshotAndValidate(TEST_UTIL.getAdmin(), TableName.valueOf(tableName),
               ImmutableList.of(MultiTableInputFormatTestBase.INPUT_FAMILY), null,
               snapshotNameForTable(tableName), FSUtils.getRootDir(TEST_UTIL.getConfiguration()),
               TEST_UTIL.getTestFileSystem(), true);

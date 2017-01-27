@@ -94,7 +94,7 @@ public class TestRegionServerMetrics {
     TEST_UTIL.startMiniCluster(1, 1);
     cluster = TEST_UTIL.getHBaseCluster();
     cluster.waitForActiveAndReadyMaster();
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
     connection = TEST_UTIL.getConnection();
 
     while (cluster.getLiveRegionServerThreads().isEmpty() &&
@@ -276,7 +276,7 @@ public class TestRegionServerMetrics {
   public void testStoreCount() throws Exception {
     //Force a hfile.
     doNPuts(1, false);
-    TEST_UTIL.getHBaseAdmin().flush(tableName);
+    TEST_UTIL.getAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertGauge("storeCount", 1);
@@ -287,7 +287,7 @@ public class TestRegionServerMetrics {
   public void testStoreFileAge() throws Exception {
     //Force a hfile.
     doNPuts(1, false);
-    TEST_UTIL.getHBaseAdmin().flush(tableName);
+    TEST_UTIL.getAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertTrue(metricsHelper.getGaugeLong("maxStoreFileAge", serverSource) > 0);
@@ -525,7 +525,7 @@ public class TestRegionServerMetrics {
   public void testAverageRegionSize() throws Exception {
     //Force a hfile.
     doNPuts(1, false);
-    TEST_UTIL.getHBaseAdmin().flush(tableName);
+    TEST_UTIL.getAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     assertTrue(metricsHelper.getGaugeDouble("averageRegionSize", serverSource) > 0.0);

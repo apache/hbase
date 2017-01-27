@@ -271,18 +271,18 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
     // create/populate the table, replicas disabled
     LOG.debug("Populating table.");
-    new PerfEvalCallable(util.getHBaseAdmin(), writeOpts).call();
+    new PerfEvalCallable(util.getAdmin(), writeOpts).call();
 
     // one last sanity check, then send in the clowns!
     assertEquals("Table must be created with DisabledRegionSplitPolicy. Broken test.",
         DisabledRegionSplitPolicy.class.getName(),
-        util.getHBaseAdmin().getTableDescriptor(tableName).getRegionSplitPolicyClassName());
+        util.getAdmin().getTableDescriptor(tableName).getRegionSplitPolicyClassName());
     startMonkey();
 
     // collect a baseline without region replicas.
     for (int i = 0; i < maxIters; i++) {
       LOG.debug("Launching non-replica job " + (i + 1) + "/" + maxIters);
-      resultsWithoutReplicas.add(new PerfEvalCallable(util.getHBaseAdmin(), readOpts).call());
+      resultsWithoutReplicas.add(new PerfEvalCallable(util.getAdmin(), readOpts).call());
       // TODO: sleep to let cluster stabilize, though monkey continues. is it necessary?
       Thread.sleep(5000l);
     }
@@ -290,14 +290,14 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     // disable monkey, enable region replicas, enable monkey
     cleanUpMonkey("Altering table.");
     LOG.debug("Altering " + tableName + " replica count to " + replicaCount);
-    IntegrationTestingUtility.setReplicas(util.getHBaseAdmin(), tableName, replicaCount);
+    IntegrationTestingUtility.setReplicas(util.getAdmin(), tableName, replicaCount);
     setUpMonkey();
     startMonkey();
 
     // run test with region replicas.
     for (int i = 0; i < maxIters; i++) {
       LOG.debug("Launching replica job " + (i + 1) + "/" + maxIters);
-      resultsWithReplicas.add(new PerfEvalCallable(util.getHBaseAdmin(), replicaReadOpts).call());
+      resultsWithReplicas.add(new PerfEvalCallable(util.getAdmin(), replicaReadOpts).call());
       // TODO: sleep to let cluster stabilize, though monkey continues. is it necessary?
       Thread.sleep(5000l);
     }

@@ -42,7 +42,7 @@ public class SnapshotTableAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     String snapshotName = tableName + "-it-" + System.currentTimeMillis();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
 
     // Don't try the snapshot if we're stopping
     if (context.isStopping()) {

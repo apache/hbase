@@ -45,10 +45,10 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
 
     // Modify the table descriptor
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
 
     // Test 1: Modify 1 property
     long newMaxFileSize = htd.getMaxFileSize() * 2;
@@ -59,7 +59,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
         procExec, new ModifyTableProcedure(procExec.getEnvironment(), htd));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
 
-    HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(newMaxFileSize, currentHtd.getMaxFileSize());
 
     // Test 2: Modify multiple properties
@@ -72,7 +72,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
         procExec, new ModifyTableProcedure(procExec.getEnvironment(), htd));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
 
-    currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(newReadOnlyOption, currentHtd.isReadOnly());
     assertEquals(newMemStoreFlushSize, currentHtd.getMemStoreFlushSize());
   }
@@ -83,28 +83,28 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1");
-    HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(1, currentHtd.getFamiliesKeys().size());
 
     // Test 1: Modify the table descriptor online
     String cf2 = "cf2";
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     htd.addFamily(new HColumnDescriptor(cf2));
 
     long procId = ProcedureTestingUtility.submitAndWait(
         procExec, new ModifyTableProcedure(procExec.getEnvironment(), htd));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
 
-    currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(2, currentHtd.getFamiliesKeys().size());
     assertTrue(currentHtd.hasFamily(cf2.getBytes()));
 
     // Test 2: Modify the table descriptor offline
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     String cf3 = "cf3";
     HTableDescriptor htd2 =
-        new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+        new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     htd2.addFamily(new HColumnDescriptor(cf3));
 
     long procId2 =
@@ -112,7 +112,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
           new ModifyTableProcedure(procExec.getEnvironment(), htd2));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
 
-    currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertTrue(currentHtd.hasFamily(cf3.getBytes()));
     assertEquals(3, currentHtd.getFamiliesKeys().size());
   }
@@ -126,27 +126,27 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, cf1, cf2, cf3);
-    HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(3, currentHtd.getFamiliesKeys().size());
 
     // Test 1: Modify the table descriptor
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     htd.removeFamily(cf2.getBytes());
 
     long procId = ProcedureTestingUtility.submitAndWait(
         procExec, new ModifyTableProcedure(procExec.getEnvironment(), htd));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
 
-    currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(2, currentHtd.getFamiliesKeys().size());
     assertFalse(currentHtd.hasFamily(cf2.getBytes()));
 
     // Test 2: Modify the table descriptor offline
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
 
     HTableDescriptor htd2 =
-        new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+        new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     htd2.removeFamily(cf3.getBytes());
     // Disable Sanity check
     htd2.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
@@ -156,13 +156,13 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
           new ModifyTableProcedure(procExec.getEnvironment(), htd2));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
 
-    currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(1, currentHtd.getFamiliesKeys().size());
     assertFalse(currentHtd.hasFamily(cf3.getBytes()));
 
     //Removing the last family will fail
     HTableDescriptor htd3 =
-        new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+        new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     htd3.removeFamily(cf1.getBytes());
     long procId3 =
         ProcedureTestingUtility.submitAndWait(procExec,
@@ -186,13 +186,13 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     // create the table
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "cf1", cf3);
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Modify multiple properties of the table.
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
     htd.setCompactionEnabled(newCompactionEnableOption);
     htd.addFamily(new HColumnDescriptor(cf2));
@@ -208,7 +208,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate descriptor
-    HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(newCompactionEnableOption, currentHtd.isCompactionEnabled());
     assertEquals(2, currentHtd.getFamiliesKeys().size());
 
@@ -231,7 +231,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Modify multiple properties of the table.
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
     htd.setCompactionEnabled(newCompactionEnableOption);
     htd.addFamily(new HColumnDescriptor(cf2));
@@ -246,7 +246,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // Validate descriptor
-    HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
+    HTableDescriptor currentHtd = UTIL.getAdmin().getTableDescriptor(tableName);
     assertEquals(newCompactionEnableOption, currentHtd.isCompactionEnabled());
     assertEquals(2, currentHtd.getFamiliesKeys().size());
     assertTrue(currentHtd.hasFamily(cf2.getBytes()));
@@ -269,7 +269,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
     htd.setCompactionEnabled(newCompactionEnableOption);
     htd.addFamily(new HColumnDescriptor(familyName));
@@ -295,12 +295,12 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     // create the table
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "cf1");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
+    HTableDescriptor htd = new HTableDescriptor(UTIL.getAdmin().getTableDescriptor(tableName));
     boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
     htd.setCompactionEnabled(newCompactionEnableOption);
     htd.addFamily(new HColumnDescriptor(familyName));

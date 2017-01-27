@@ -91,7 +91,7 @@ public class TestHBaseFsckEncryption {
       conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
       cfKey));
     htd.addFamily(hcd);
-    TEST_UTIL.getHBaseAdmin().createTable(htd);
+    TEST_UTIL.getAdmin().createTable(htd);
     TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
   }
 
@@ -118,7 +118,7 @@ public class TestHBaseFsckEncryption {
       table.close();
     }
     // Flush it
-    TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
+    TEST_UTIL.getAdmin().flush(htd.getTableName());
 
     // Verify we have encrypted store files on disk
     final List<Path> paths = findStorefilePaths(htd.getTableName());

@@ -110,7 +110,7 @@ public class TestFlushWithThroughputController {
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       long startTime = System.nanoTime();
-      hbtu.getHBaseAdmin().flush(tableName);
+      hbtu.getAdmin().flush(tableName);
       duration += System.nanoTime() - startTime;
     }
     Store store = getStoreWithName(tableName);
@@ -159,7 +159,7 @@ public class TestFlushWithThroughputController {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(family));
     htd.setCompactionEnabled(false);
-    hbtu.getHBaseAdmin().createTable(htd);
+    hbtu.getAdmin().createTable(htd);
     hbtu.waitTableAvailable(tableName);
     HRegionServer regionServer = hbtu.getRSForFirstRegionInTable(tableName);
     PressureAwareFlushThroughputController throughputController =

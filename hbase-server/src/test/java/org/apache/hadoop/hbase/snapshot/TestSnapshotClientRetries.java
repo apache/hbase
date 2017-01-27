@@ -64,7 +64,7 @@ public class TestSnapshotClientRetries {
   public void testSnapshotAlreadyExist() throws Exception {
     final String snapshotName = "testSnapshotAlreadyExist";
     TEST_UTIL.createTable(TEST_TABLE.getTableName(), "f");
-    TEST_UTIL.getHBaseAdmin().snapshot(snapshotName, TEST_TABLE.getTableName());
+    TEST_UTIL.getAdmin().snapshot(snapshotName, TEST_TABLE.getTableName());
     snapshotAndAssertOneRetry(snapshotName, TEST_TABLE.getTableName());
   }
 
@@ -101,7 +101,7 @@ public class TestSnapshotClientRetries {
       throws Exception {
     MasterSyncObserver observer = getMasterSyncObserver();
     observer.snapshotCount = new AtomicInteger(0);
-    TEST_UTIL.getHBaseAdmin().snapshot(snapshotName, tableName);
+    TEST_UTIL.getAdmin().snapshot(snapshotName, tableName);
     assertEquals(1, observer.snapshotCount.get());
   }
 
@@ -109,7 +109,7 @@ public class TestSnapshotClientRetries {
       throws Exception {
     MasterSyncObserver observer = getMasterSyncObserver();
     observer.cloneCount = new AtomicInteger(0);
-    TEST_UTIL.getHBaseAdmin().cloneSnapshot(snapshotName, tableName);
+    TEST_UTIL.getAdmin().cloneSnapshot(snapshotName, tableName);
     assertEquals(1, observer.cloneCount.get());
   }
 

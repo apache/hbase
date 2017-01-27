@@ -151,7 +151,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   private void deleteTableIfNecessary() throws IOException {
-    if (util.getHBaseAdmin().tableExists(getTablename())) {
+    if (util.getAdmin().tableExists(getTablename())) {
       util.deleteTable(getTablename());
     }
   }

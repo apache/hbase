@@ -67,7 +67,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends
 
   @Test(timeout=TIMEOUT_MS)
   public void loadTest() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     compression = Compression.Algorithm.GZ; // used for table setup
     super.loadTest();

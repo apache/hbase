@@ -66,7 +66,7 @@ public class TestRegionMover {
   public void setUp() throws Exception {
     // Create a pre-split table just to populate some regions
     TableName tableName = TableName.valueOf("testRegionMover");
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }

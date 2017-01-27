@@ -183,12 +183,12 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
     ReplicationAdmin admin2 = new ReplicationAdmin(conf2);
 
-    Admin ha = utility1.getHBaseAdmin();
+    Admin ha = utility1.getAdmin();
     ha.createTable(t1_syncupSource);
     ha.createTable(t2_syncupSource);
     ha.close();
 
-    ha = utility2.getHBaseAdmin();
+    ha = utility2.getAdmin();
     ha.createTable(t1_syncupTarget);
     ha.createTable(t2_syncupTarget);
     ha.close();

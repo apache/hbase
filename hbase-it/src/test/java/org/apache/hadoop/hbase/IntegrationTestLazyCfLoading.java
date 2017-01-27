@@ -198,12 +198,12 @@ public class IntegrationTestLazyCfLoading {
     }
     int serverCount = util.getHBaseClusterInterface().getClusterStatus().getServersSize();
     byte[][] splits = new RegionSplitter.HexStringSplit().split(serverCount * REGIONS_PER_SERVER);
-    util.getHBaseAdmin().createTable(htd, splits);
+    util.getAdmin().createTable(htd, splits);
     LOG.info("Created table");
   }
 
   private void deleteTable() throws Exception {
-    if (util.getHBaseAdmin().tableExists(TABLE_NAME)) {
+    if (util.getAdmin().tableExists(TABLE_NAME)) {
       LOG.info("Deleting table");
       util.deleteTable(TABLE_NAME);
       LOG.info("Deleted table");

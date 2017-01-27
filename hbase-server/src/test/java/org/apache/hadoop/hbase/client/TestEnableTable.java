@@ -82,7 +82,7 @@ public class TestEnableTable {
     final TableName tableName = TableName.valueOf("testEnableTableWithNoRegionServers");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     admin.createTable(desc);
@@ -109,10 +109,10 @@ public class TestEnableTable {
     cluster.waitForRegionServerToStart(rs2.getRegionServer().getServerName().getHostname(),
         rs2.getRegionServer().getServerName().getPort(), 60000);
 
-    List<HRegionInfo> regions = TEST_UTIL.getHBaseAdmin().getTableRegions(tableName);
+    List<HRegionInfo> regions = TEST_UTIL.getAdmin().getTableRegions(tableName);
     assertEquals(1, regions.size());
     for (HRegionInfo region : regions) {
-      TEST_UTIL.getHBaseAdmin().assign(region.getEncodedNameAsBytes());
+      TEST_UTIL.getAdmin().assign(region.getEncodedNameAsBytes());
     }
     LOG.debug("Waiting for table assigned " + tableName);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
@@ -143,7 +143,7 @@ public class TestEnableTable {
   public void testDeleteForSureClearsAllTableRowsFromMeta()
   throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf("testDeleteForSureClearsAllTableRowsFromMeta");
-    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     try {
@@ -223,7 +223,7 @@ public class TestEnableTable {
     MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
       .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
     observer.tableCreationLatch = new CountDownLatch(1);
-    Admin admin = testUtil.getHBaseAdmin();
+    Admin admin = testUtil.getAdmin();
     if (splitKeys != null) {
       admin.createTable(htd, splitKeys);
     } else {
@@ -241,7 +241,7 @@ public class TestEnableTable {
     MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
       .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
     observer.tableDeletionLatch = new CountDownLatch(1);
-    Admin admin = testUtil.getHBaseAdmin();
+    Admin admin = testUtil.getAdmin();
     try {
       admin.disableTable(tableName);
     } catch (Exception e) {

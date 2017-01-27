@@ -93,7 +93,7 @@ public class TestDeleteMobTable {
       table.put(put);
 
       // create an hfile
-      TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
+      TEST_UTIL.getAdmin().flush(htd.getTableName());
     } catch (IOException e) {
       table.close();
       throw e;
@@ -121,7 +121,7 @@ public class TestDeleteMobTable {
       TEST_UTIL.deleteTable(tn);
     }
 
-    Assert.assertFalse(TEST_UTIL.getHBaseAdmin().tableExists(tn));
+    Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tn));
     Assert.assertEquals(0, countMobFiles(tn, hcd.getNameAsString()));
     Assert.assertEquals(1, countArchiveMobFiles(tn, hcd.getNameAsString()));
     Assert.assertTrue(mobArchiveExist(tn, hcd.getNameAsString(), fileName));
@@ -145,7 +145,7 @@ public class TestDeleteMobTable {
       TEST_UTIL.deleteTable(tn);
     }
 
-    Assert.assertFalse(TEST_UTIL.getHBaseAdmin().tableExists(tn));
+    Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tn));
     Assert.assertEquals(0, countMobFiles(tn, hcd.getNameAsString()));
     Assert.assertEquals(0, countArchiveMobFiles(tn, hcd.getNameAsString()));
     Assert.assertFalse(mobTableDirExist(tn));
@@ -167,7 +167,7 @@ public class TestDeleteMobTable {
       Assert.assertFalse(mobArchiveExist(tn, hcd.getNameAsString(), fileName));
       Assert.assertTrue(mobTableDirExist(tn));
 
-      TEST_UTIL.getHBaseAdmin().deleteColumnFamily(tn, FAMILY);
+      TEST_UTIL.getAdmin().deleteColumnFamily(tn, FAMILY);
 
       Assert.assertEquals(0, countMobFiles(tn, hcd.getNameAsString()));
       Assert.assertEquals(1, countArchiveMobFiles(tn, hcd.getNameAsString()));

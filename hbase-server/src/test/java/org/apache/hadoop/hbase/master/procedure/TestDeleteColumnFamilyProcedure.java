@@ -58,7 +58,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
       tableName, cf1);
 
     // Test 2: delete the column family that exists offline
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     long procId2 = procExec.submitProcedure(
       new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()));
     // Wait the completion
@@ -101,7 +101,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
       ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
 
     // Try again, this time with table disabled.
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     long procId3 = procExec.submitProcedure(
       new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf2.getBytes()));
     // Wait the completion
@@ -145,7 +145,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
     // create the table
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2", "f3", cf4);
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 

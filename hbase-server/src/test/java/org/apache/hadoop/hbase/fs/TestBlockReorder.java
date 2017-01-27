@@ -298,7 +298,7 @@ public class TestBlockReorder {
         ((HRegion)region).getWAL().registerWALActionsListener(listener);
       }
 
-      htu.getHBaseAdmin().rollWALWriter(targetRs.getServerName());
+      htu.getAdmin().rollWALWriter(targetRs.getServerName());
 
       // wait
       try {

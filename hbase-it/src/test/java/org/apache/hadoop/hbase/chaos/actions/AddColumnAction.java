@@ -40,7 +40,7 @@ public class AddColumnAction extends Action {
   @Override
   public void init(ActionContext context) throws IOException {
     super.init(context);
-    this.admin = context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
+    this.admin = context.getHBaseIntegrationTestingUtility().getAdmin();
   }
 
   @Override

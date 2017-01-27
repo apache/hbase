@@ -46,7 +46,7 @@ public class SplitAllRegionOfTableAction extends Action {
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     // Don't try the split if we're stopping
     if (context.isStopping()) {
       return;

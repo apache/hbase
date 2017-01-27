@@ -118,8 +118,8 @@ public class TestGlobalThrottler {
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
     table.addFamily(fam);
-    utility1.getHBaseAdmin().createTable(table);
-    utility2.getHBaseAdmin().createTable(table);
+    utility1.getAdmin().createTable(table);
+    utility2.getAdmin().createTable(table);
 
     Thread watcher = new Thread(()->{
       Replication replication = (Replication)utility1.getMiniHBaseCluster()

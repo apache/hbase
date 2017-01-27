@@ -192,7 +192,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
 
     boolean threwDNRE = false;
     try {
-      Admin admin = UTIL.getHBaseAdmin();
+      Admin admin = UTIL.getAdmin();
       admin.createTable(htd1);
     } catch (IOException e) {
       if (e.getClass().getName().equals("org.apache.hadoop.hbase.DoNotRetryIOException")) {
@@ -219,7 +219,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     // by creating another table: should not have a problem this time.
     HTableDescriptor htd2 = new HTableDescriptor(TableName.valueOf(TEST_TABLE2));
     htd2.addFamily(new HColumnDescriptor(TEST_FAMILY2));
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     try {
       admin.createTable(htd2);
     } catch (IOException e) {

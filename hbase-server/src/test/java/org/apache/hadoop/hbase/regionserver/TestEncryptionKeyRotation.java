@@ -118,11 +118,11 @@ public class TestEncryptionKeyRotation {
     hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf,
       conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
       secondCFKey));
-    TEST_UTIL.getHBaseAdmin().modifyColumnFamily(htd.getTableName(), hcd);
+    TEST_UTIL.getAdmin().modifyColumnFamily(htd.getTableName(), hcd);
     Thread.sleep(5000); // Need a predicate for online schema change
 
     // And major compact
-    TEST_UTIL.getHBaseAdmin().majorCompact(htd.getTableName());
+    TEST_UTIL.getAdmin().majorCompact(htd.getTableName());
     final List<Path> updatePaths = findCompactedStorefilePaths(htd.getTableName());
     TEST_UTIL.waitFor(30000, 1000, true, new Predicate<Exception>() {
       @Override
@@ -261,7 +261,7 @@ public class TestEncryptionKeyRotation {
   private void createTableAndFlush(HTableDescriptor htd) throws Exception {
     HColumnDescriptor hcd = htd.getFamilies().iterator().next();
     // Create the test table
-    TEST_UTIL.getHBaseAdmin().createTable(htd);
+    TEST_UTIL.getAdmin().createTable(htd);
     TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
     // Create a store file
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
@@ -271,7 +271,7 @@ public class TestEncryptionKeyRotation {
     } finally {
       table.close();
     }
-    TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
+    TEST_UTIL.getAdmin().flush(htd.getTableName());
   }
 
   private static byte[] extractHFileKey(Path path) throws Exception {

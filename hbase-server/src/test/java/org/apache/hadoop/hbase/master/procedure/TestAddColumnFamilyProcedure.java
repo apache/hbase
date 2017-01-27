@@ -60,7 +60,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
       tableName, cf1);
 
     // Test 2: Add a column family offline
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     long procId2 = procExec.submitProcedure(
       new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor2));
     // Wait the completion
@@ -103,7 +103,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
       ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
 
     // Do the same add the existing column family - this time offline
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
     long procId3 = procExec.submitProcedure(
       new AddColumnFamilyProcedure(procExec.getEnvironment(), tableName, columnDescriptor));
     // Wait the completion
@@ -125,7 +125,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     // create the table
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2", "f3");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    UTIL.getAdmin().disableTable(tableName);
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);

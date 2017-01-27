@@ -58,7 +58,7 @@ public class TestHelloHBase {
     final String NONEXISTENT_NAMESPACE = "xyzpdq_nonexistent";
     final String EXISTING_NAMESPACE = "pdqxyz_myExistingNamespace";
     boolean exists;
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     exists = HelloHBase.namespaceExists(admin, NONEXISTENT_NAMESPACE);
     assertEquals("#namespaceExists failed: found nonexistent namespace.",
@@ -74,7 +74,7 @@ public class TestHelloHBase {
 
   @Test
   public void testCreateNamespaceAndTable() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     HelloHBase.createNamespaceAndTable(admin);
 
     boolean namespaceExists
@@ -93,7 +93,7 @@ public class TestHelloHBase {
 
   @Test
   public void testPutRowToTable() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.createNamespace
         (NamespaceDescriptor.create(HelloHBase.MY_NAMESPACE_NAME).build());
     Table table
@@ -110,7 +110,7 @@ public class TestHelloHBase {
 
   @Test
   public void testDeleteRow() throws IOException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.createNamespace
         (NamespaceDescriptor.create(HelloHBase.MY_NAMESPACE_NAME).build());
     Table table

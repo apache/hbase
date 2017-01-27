@@ -80,7 +80,7 @@ public class TestConstraint {
     // add a constraint
     Constraints.add(desc, CheckWasRunConstraint.class);
 
-    util.getHBaseAdmin().createTable(desc);
+    util.getAdmin().createTable(desc);
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail on a valid put
@@ -113,7 +113,7 @@ public class TestConstraint {
     // add a constraint that is sure to fail
     Constraints.add(desc, AllFailConstraint.class);
 
-    util.getHBaseAdmin().createTable(desc);
+    util.getAdmin().createTable(desc);
     Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
@@ -157,7 +157,7 @@ public class TestConstraint {
     // and then disable the failing constraint
     Constraints.disableConstraint(desc, AllFailConstraint.class);
 
-    util.getHBaseAdmin().createTable(desc);
+    util.getAdmin().createTable(desc);
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail because its disabled
@@ -190,7 +190,7 @@ public class TestConstraint {
     // then disable all the constraints
     Constraints.disable(desc);
 
-    util.getHBaseAdmin().createTable(desc);
+    util.getAdmin().createTable(desc);
     Table table = util.getConnection().getTable(tableName);
     try {
       // test that we do fail on violation
@@ -223,7 +223,7 @@ public class TestConstraint {
     Constraints.add(desc, CheckWasRunConstraint.class);
     CheckWasRunConstraint.wasRun = false;
 
-    util.getHBaseAdmin().createTable(desc);
+    util.getAdmin().createTable(desc);
     Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
@@ -248,8 +248,8 @@ public class TestConstraint {
   public void cleanup() throws Exception {
     // cleanup
     CheckWasRunConstraint.wasRun = false;
-    util.getHBaseAdmin().disableTable(tableName);
-    util.getHBaseAdmin().deleteTable(tableName);
+    util.getAdmin().disableTable(tableName);
+    util.getAdmin().deleteTable(tableName);
   }
 
   @AfterClass

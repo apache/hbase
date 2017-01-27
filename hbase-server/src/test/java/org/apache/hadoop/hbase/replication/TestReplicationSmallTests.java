@@ -86,7 +86,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     // rolling like this makes sure the most recent one gets added to the queue
     for ( JVMClusterUtil.RegionServerThread r :
         utility1.getHBaseCluster().getRegionServerThreads()) {
-      utility1.getHBaseAdmin().rollWALWriter(r.getRegionServer().getServerName());
+      utility1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     int rowCount = utility1.countRows(tableName);
     utility1.deleteTableData(tableName);
@@ -765,7 +765,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final String colFam = "cf1";
     final int numOfTables = 3;
 
-    Admin hadmin = utility1.getHBaseAdmin();
+    Admin hadmin = utility1.getAdmin();
 
     // Create Tables
     for (int i = 0; i < numOfTables; i++) {

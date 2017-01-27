@@ -128,7 +128,7 @@ public class TestAssignmentManagerMetrics {
       htd.addCoprocessorWithSpec(spec);
 
       try {
-        TEST_UTIL.getHBaseAdmin().modifyTable(TABLENAME, htd);
+        TEST_UTIL.getAdmin().modifyTable(TABLENAME, htd);
         fail("Expected region failed to open");
       } catch (IOException e) {
         // expected, the RS will crash and the assignment will spin forever waiting for a RS

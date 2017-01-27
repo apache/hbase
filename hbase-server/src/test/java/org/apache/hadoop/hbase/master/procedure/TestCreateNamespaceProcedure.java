@@ -123,7 +123,7 @@ public class TestCreateNamespaceProcedure {
   @Test(timeout=60000)
   public void testCreateSystemNamespace() throws Exception {
     final NamespaceDescriptor nsd =
-        UTIL.getHBaseAdmin().getNamespaceDescriptor(NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
+        UTIL.getAdmin().getNamespaceDescriptor(NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     long procId = procExec.submitProcedure(
@@ -217,7 +217,7 @@ public class TestCreateNamespaceProcedure {
 
     // Validate the non-existence of namespace
     try {
-      NamespaceDescriptor nsDescriptor = UTIL.getHBaseAdmin().getNamespaceDescriptor(nsd.getName());
+      NamespaceDescriptor nsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
       assertNull(nsDescriptor);
     } catch (NamespaceNotFoundException nsnfe) {
       // Expected
@@ -231,7 +231,7 @@ public class TestCreateNamespaceProcedure {
 
   private void validateNamespaceCreated(NamespaceDescriptor nsd) throws IOException {
     NamespaceDescriptor createdNsDescriptor =
-        UTIL.getHBaseAdmin().getNamespaceDescriptor(nsd.getName());
+        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertNotNull(createdNsDescriptor);
   }
 }

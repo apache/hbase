@@ -105,7 +105,7 @@ public class TestCompactSplitThread {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor(family));
       htd.setCompactionEnabled(false);
-      TEST_UTIL.getHBaseAdmin().createTable(htd);
+      TEST_UTIL.getAdmin().createTable(htd);
       TEST_UTIL.waitTableAvailable(tableName);
       HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
 
@@ -155,8 +155,6 @@ public class TestCompactSplitThread {
 
   @Test(timeout = 60000)
   public void testFlushWithTableCompactionDisabled() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
-
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setCompactionEnabled(false);
     TEST_UTIL.createTable(htd, new byte[][] { family }, null);

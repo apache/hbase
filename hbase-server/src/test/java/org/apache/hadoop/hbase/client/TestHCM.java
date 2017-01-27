@@ -340,7 +340,7 @@ public class TestHCM {
     final ConnectionImplementation hci =  (ConnectionImplementation)TEST_UTIL.getConnection();
     try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tn)) {
       while (l.getRegionLocation(rk).getPort() != sn.getPort()) {
-        TEST_UTIL.getHBaseAdmin().move(l.getRegionLocation(rk).getRegionInfo().
+        TEST_UTIL.getAdmin().move(l.getRegionLocation(rk).getRegionInfo().
             getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
         TEST_UTIL.waitUntilNoRegionsInTransition();
         hci.clearRegionCache(tn);
@@ -804,7 +804,7 @@ public class TestHCM {
     table.close();
     connection.close();
     Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
-    TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
+    TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
   }
 
   /**
@@ -815,7 +815,7 @@ public class TestHCM {
     TableName tableName = TableName.valueOf("HCM-testConnectionIdle");
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     int idleTime =  20000;
-    boolean previousBalance = TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -863,7 +863,7 @@ public class TestHCM {
 
     connection.close();
     EnvironmentEdgeManager.reset();
-    TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
+    TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
   }
 
     /**
@@ -877,7 +877,7 @@ public class TestHCM {
     TableName tableName = TableName.valueOf("HCM-testConnectionCut");
 
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
-    boolean previousBalance = TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
+    boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());
     // We want to work on a separate connection.
@@ -932,7 +932,7 @@ public class TestHCM {
     } finally {
       syncBlockingFilter.set(true);
       t.join();
-      TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
+      TEST_UTIL.getAdmin().setBalancerRunning(previousBalance, true);
     }
 
     table.close();
@@ -1008,7 +1008,7 @@ public class TestHCM {
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     assertNotNull(conn.getCachedLocation(TableName.valueOf(TABLE_NAME.getName()), ROW.clone()));
 
-    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
+    TEST_UTIL.getAdmin().setBalancerRunning(false, false);
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
     // We can wait for all regions to be online, that makes log reading easier when debugging
@@ -1040,7 +1040,7 @@ public class TestHCM {
     // Moving. It's possible that we don't have all the regions online at this point, so
     //  the test must depends only on the region we're looking at.
     LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
-    TEST_UTIL.getHBaseAdmin().move(
+    TEST_UTIL.getAdmin().move(
       toMove.getRegionInfo().getEncodedNameAsBytes(),
       destServerName.getServerName().getBytes()
     );
@@ -1099,7 +1099,7 @@ public class TestHCM {
 
     // We move it back to do another test with a scan
     LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
-    TEST_UTIL.getHBaseAdmin().move(
+    TEST_UTIL.getAdmin().move(
       toMove.getRegionInfo().getEncodedNameAsBytes(),
       curServer.getServerName().getServerName().getBytes()
     );
@@ -1304,7 +1304,7 @@ public class TestHCM {
       conn.clearRegionCache(TABLE_NAME3);
       Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME3));
 
-      TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
+      TEST_UTIL.getAdmin().setBalancerRunning(false, false);
       HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
       // We can wait for all regions to be online, that makes log reading easier when debugging
@@ -1357,7 +1357,7 @@ public class TestHCM {
        // Moving. It's possible that we don't have all the regions online at this point, so
       //  the test must depends only on the region we're looking at.
       LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
-      TEST_UTIL.getHBaseAdmin().move(
+      TEST_UTIL.getAdmin().move(
           toMove.getRegionInfo().getEncodedNameAsBytes(),
           destServerName.getServerName().getBytes()
       );

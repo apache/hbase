@@ -508,7 +508,7 @@ public class TestMasterReplication {
 
   private void createTableOnClusters(HTableDescriptor table) throws Exception {
     for (HBaseTestingUtility utility : utilities) {
-      utility.getHBaseAdmin().createTable(table);
+      utility.getAdmin().createTable(table);
     }
   }
 
@@ -691,7 +691,7 @@ public class TestMasterReplication {
 
   private void rollWALAndWait(final HBaseTestingUtility utility, final TableName table,
       final byte[] row) throws IOException {
-    final Admin admin = utility.getHBaseAdmin();
+    final Admin admin = utility.getAdmin();
     final MiniHBaseCluster cluster = utility.getMiniHBaseCluster();
 
     // find the region that corresponds to the given row.

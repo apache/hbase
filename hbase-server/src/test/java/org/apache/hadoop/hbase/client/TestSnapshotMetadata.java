@@ -133,7 +133,7 @@ public class TestSnapshotMetadata {
 
   @Before
   public void setup() throws Exception {
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
     createTableWithNonDefaultProperties();
   }
 

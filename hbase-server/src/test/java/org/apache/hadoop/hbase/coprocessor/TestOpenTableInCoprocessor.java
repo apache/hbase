@@ -122,11 +122,11 @@ public class TestOpenTableInCoprocessor {
 
   @After
   public void cleanupTestTable() throws Exception {
-    UTIL.getHBaseAdmin().disableTable(primaryTable);
-    UTIL.getHBaseAdmin().deleteTable(primaryTable);
+    UTIL.getAdmin().disableTable(primaryTable);
+    UTIL.getAdmin().deleteTable(primaryTable);
 
-    UTIL.getHBaseAdmin().disableTable(otherTable);
-    UTIL.getHBaseAdmin().deleteTable(otherTable);
+    UTIL.getAdmin().disableTable(otherTable);
+    UTIL.getAdmin().deleteTable(otherTable);
 
   }
 
@@ -156,7 +156,7 @@ public class TestOpenTableInCoprocessor {
     other.addFamily(new HColumnDescriptor(family));
 
 
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     admin.createTable(primary);
     admin.createTable(other);
 

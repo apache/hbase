@@ -86,7 +86,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_TABLE));
       htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
       try {
-        Admin admin = UTIL.getHBaseAdmin();
+        Admin admin = UTIL.getAdmin();
         admin.createTable(htd);
         fail("BuggyMasterObserver failed to throw an exception.");
       } catch (IOException e) {

@@ -656,18 +656,18 @@ public class SecureTestUtil {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
     }
-    createTable(testUtil, testUtil.getHBaseAdmin(), htd);
+    createTable(testUtil, testUtil.getAdmin(), htd);
     return testUtil.getConnection().getTable(htd.getTableName());
   }
 
   public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd)
       throws Exception {
-    createTable(testUtil, testUtil.getHBaseAdmin(), htd);
+    createTable(testUtil, testUtil.getAdmin(), htd);
   }
 
   public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
       byte[][] splitKeys) throws Exception {
-    createTable(testUtil, testUtil.getHBaseAdmin(), htd, splitKeys);
+    createTable(testUtil, testUtil.getAdmin(), htd, splitKeys);
   }
 
   public static void createTable(HBaseTestingUtility testUtil, Admin admin, HTableDescriptor htd)
@@ -694,17 +694,17 @@ public class SecureTestUtil {
 
   public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
       throws Exception {
-    deleteTable(testUtil, testUtil.getHBaseAdmin(), tableName);
+    deleteTable(testUtil, testUtil.getAdmin(), tableName);
   }
 
   public static void createNamespace(HBaseTestingUtility testUtil, NamespaceDescriptor nsDesc)
       throws Exception {
-    testUtil.getHBaseAdmin().createNamespace(nsDesc);
+    testUtil.getAdmin().createNamespace(nsDesc);
   }
 
   public static void deleteNamespace(HBaseTestingUtility testUtil, String namespace)
       throws Exception {
-    testUtil.getHBaseAdmin().deleteNamespace(namespace);
+    testUtil.getAdmin().deleteNamespace(namespace);
   }
 
   public static void deleteTable(HBaseTestingUtility testUtil, Admin admin, TableName tableName)

@@ -121,7 +121,7 @@ public class TestSnapshotCloneIndependence {
     fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
 
-    admin = UTIL.getHBaseAdmin();
+    admin = UTIL.getAdmin();
     originalTableName = TableName.valueOf("test" + testName.getMethodName());
     cloneTableName = TableName.valueOf("test-clone-" + originalTableName);
     snapshotNameAsString = "snapshot_" + originalTableName;
@@ -137,7 +137,7 @@ public class TestSnapshotCloneIndependence {
   public void tearDown() throws Exception {
     UTIL.deleteTable(originalTableName);
     UTIL.deleteTable(cloneTableName);
-    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 

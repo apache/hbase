@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
@@ -78,7 +78,7 @@ public class TestFIFOCompactionPolicy {
   }
 
   private Store prepareData() throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
@@ -131,7 +131,7 @@ public class TestFIFOCompactionPolicy {
     try {
       Store store = prepareData();
       assertEquals(10, store.getStorefilesCount());
-      TEST_UTIL.getHBaseAdmin().majorCompact(tableName);
+      TEST_UTIL.getAdmin().majorCompact(tableName);
       while (store.getStorefilesCount() > 1) {
         Thread.sleep(100);
       }
@@ -148,7 +148,7 @@ public class TestFIFOCompactionPolicy {
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
     TEST_UTIL.startMiniCluster(1);
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-TTL");
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
@@ -177,7 +177,7 @@ public class TestFIFOCompactionPolicy {
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
     TEST_UTIL.startMiniCluster(1);
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-MinVersion");
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
@@ -208,7 +208,7 @@ public class TestFIFOCompactionPolicy {
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10);
     TEST_UTIL.startMiniCluster(1);
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-BlockingStoreFiles");
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);

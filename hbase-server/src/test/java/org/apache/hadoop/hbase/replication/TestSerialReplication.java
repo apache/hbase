@@ -114,7 +114,7 @@ public class TestSerialReplication {
     rpc.setClusterKey(utility2.getClusterKey());
     admin1.addPeer("1", rpc, null);
 
-    utility1.getHBaseAdmin().setBalancerRunning(false, true);
+    utility1.getAdmin().setBalancerRunning(false, true);
   }
 
   @Test
@@ -124,8 +124,8 @@ public class TestSerialReplication {
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
     table.addFamily(fam);
-    utility1.getHBaseAdmin().createTable(table);
-    utility2.getHBaseAdmin().createTable(table);
+    utility1.getAdmin().createTable(table);
+    utility2.getAdmin().createTable(table);
     try(Table t1 = utility1.getConnection().getTable(tableName);
         Table t2 = utility2.getConnection().getTable(tableName)) {
       LOG.info("move to 1");
@@ -183,8 +183,8 @@ public class TestSerialReplication {
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
     table.addFamily(fam);
-    utility1.getHBaseAdmin().createTable(table);
-    utility2.getHBaseAdmin().createTable(table);
+    utility1.getAdmin().createTable(table);
+    utility2.getAdmin().createTable(table);
     try(Table t1 = utility1.getConnection().getTable(tableName);
         Table t2 = utility2.getConnection().getTable(tableName)) {
 
@@ -193,7 +193,7 @@ public class TestSerialReplication {
         put.addColumn(famName, VALUE, VALUE);
         t1.put(put);
       }
-      utility1.getHBaseAdmin().split(tableName, ROWS[50]);
+      utility1.getAdmin().split(tableName, ROWS[50]);
       waitTableHasRightNumberOfRegions(tableName, 2);
       for (int i = 11; i < 100; i += 10) {
         Put put = new Put(ROWS[i]);
@@ -253,10 +253,10 @@ public class TestSerialReplication {
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
     table.addFamily(fam);
-    utility1.getHBaseAdmin().createTable(table);
-    utility2.getHBaseAdmin().createTable(table);
+    utility1.getAdmin().createTable(table);
+    utility2.getAdmin().createTable(table);
     Threads.sleep(5000);
-    utility1.getHBaseAdmin().split(tableName, ROWS[50]);
+    utility1.getAdmin().split(tableName, ROWS[50]);
     waitTableHasRightNumberOfRegions(tableName, 2);
 
     try(Table t1 = utility1.getConnection().getTable(tableName);
@@ -268,7 +268,7 @@ public class TestSerialReplication {
       }
       List<Pair<HRegionInfo, ServerName>> regions =
           MetaTableAccessor.getTableRegionsAndLocations(utility1.getConnection(), tableName);
-      utility1.getHBaseAdmin().mergeRegionsAsync(regions.get(0).getFirst().getRegionName(),
+      utility1.getAdmin().mergeRegionsAsync(regions.get(0).getFirst().getRegionName(),
           regions.get(1).getFirst().getRegionName(), true);
       waitTableHasRightNumberOfRegions(tableName, 1);
       for (int i = 11; i < 100; i += 10) {

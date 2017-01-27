@@ -138,7 +138,7 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
     ClusterManager clusterManager = ReflectionUtils.newInstance(
       clusterManagerClass, conf);
     setHBaseCluster(new DistributedHBaseCluster(conf, clusterManager));
-    getHBaseAdmin();
+    getAdmin();
   }
 
 }

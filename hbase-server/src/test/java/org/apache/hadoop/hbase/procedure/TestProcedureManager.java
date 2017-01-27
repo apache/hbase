@@ -61,7 +61,7 @@ public class TestProcedureManager {
 
   @Test
   public void testSimpleProcedureManager() throws IOException {
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
 
     byte[] result = admin.execProcedureWithRet(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
         "mytest", new HashMap<String, String>());

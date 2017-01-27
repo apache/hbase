@@ -49,7 +49,7 @@ public class MoveRandomRegionOfTableAction extends Action {
     }
 
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
 
     LOG.info("Performing action: Move random region of table " + tableName);
     List<HRegionInfo> regions = admin.getTableRegions(tableName);

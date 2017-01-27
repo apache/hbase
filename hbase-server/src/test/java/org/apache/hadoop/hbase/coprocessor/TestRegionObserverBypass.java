@@ -76,7 +76,7 @@ public class TestRegionObserverBypass {
 
   @Before
   public void setUp() throws Exception {
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);

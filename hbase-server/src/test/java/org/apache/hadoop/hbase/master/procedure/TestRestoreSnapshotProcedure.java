@@ -79,7 +79,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
@@ -90,7 +90,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
   private void setupSnapshotAndUpdateTable() throws Exception {
     long tid = System.currentTimeMillis();
     final byte[] snapshotName = Bytes.toBytes("snapshot-" + tid);
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     // create Table
     SnapshotTestingUtils.createTable(UTIL, snapshotTableName, getNumReplicas(), CF1, CF2);
     // Load data
@@ -170,7 +170,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     try {
-      UTIL.getHBaseAdmin().enableTable(snapshotTableName);
+      UTIL.getAdmin().enableTable(snapshotTableName);
 
       long procId = ProcedureTestingUtility.submitAndWait(
         procExec,
@@ -181,7 +181,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
       assertTrue(
         ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotDisabledException);
     } finally {
-      UTIL.getHBaseAdmin().disableTable(snapshotTableName);
+      UTIL.getAdmin().disableTable(snapshotTableName);
     }
   }
 
@@ -205,9 +205,9 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
 
   private void validateSnapshotRestore() throws IOException {
     try {
-      UTIL.getHBaseAdmin().enableTable(snapshotTableName);
+      UTIL.getAdmin().enableTable(snapshotTableName);
 
-      HTableDescriptor currentHTD = UTIL.getHBaseAdmin().getTableDescriptor(snapshotTableName);
+      HTableDescriptor currentHTD = UTIL.getAdmin().getTableDescriptor(snapshotTableName);
       assertTrue(currentHTD.hasFamily(CF1));
       assertTrue(currentHTD.hasFamily(CF2));
       assertFalse(currentHTD.hasFamily(CF3));
@@ -215,7 +215,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
       assertEquals(currentHTD.getFamiliesKeys().size(), snapshotHTD.getFamiliesKeys().size());
       SnapshotTestingUtils.verifyRowCount(UTIL, snapshotTableName, rowCountCF1 + rowCountCF2);
     } finally {
-      UTIL.getHBaseAdmin().disableTable(snapshotTableName);
+      UTIL.getAdmin().disableTable(snapshotTableName);
     }
   }
 }

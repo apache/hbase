@@ -159,7 +159,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
 
     // flush the table
     LOG.info("Flushing the table");
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     admin.flush(getTablename());
 
     // re-open the regions to make sure that the replicas are up to date

@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -54,7 +54,7 @@ public class TestRSGroupsOfflineMode {
   private static final org.apache.commons.logging.Log LOG =
       LogFactory.getLog(TestRSGroupsOfflineMode.class);
   private static HMaster master;
-  private static HBaseAdmin hbaseAdmin;
+  private static Admin hbaseAdmin;
   private static HBaseTestingUtility TEST_UTIL;
   private static HBaseCluster cluster;
   private static RSGroupAdminEndpoint RSGroupAdminEndpoint;
@@ -75,7 +75,7 @@ public class TestRSGroupsOfflineMode {
     cluster = TEST_UTIL.getHBaseCluster();
     master = ((MiniHBaseCluster)cluster).getMaster();
     master.balanceSwitch(false);
-    hbaseAdmin = TEST_UTIL.getHBaseAdmin();
+    hbaseAdmin = TEST_UTIL.getAdmin();
     //wait till the balancer is in online mode
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override

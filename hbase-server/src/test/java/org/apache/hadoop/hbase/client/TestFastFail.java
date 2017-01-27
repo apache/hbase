@@ -105,7 +105,7 @@ public class TestFastFail {
 
   @Ignore ("Can go zombie -- see HBASE-14421; FIX") @Test
   public void testFastFail() throws IOException, InterruptedException {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     final String tableName = "testClientRelearningExperiment";
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes
@@ -295,7 +295,7 @@ public class TestFastFail {
 
   @Test
   public void testCallQueueTooBigExceptionDoesntTriggerPffe() throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
 
     final String tableName = "testCallQueueTooBigException";
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes

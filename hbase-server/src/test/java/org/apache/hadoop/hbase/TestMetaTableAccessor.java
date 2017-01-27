@@ -236,7 +236,7 @@ public class TestMetaTableAccessor {
     assertFalse(MetaTableAccessor.tableExists(connection, name));
     UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     assertTrue(MetaTableAccessor.tableExists(connection, name));
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     admin.disableTable(name);
     admin.deleteTable(name);
     assertFalse(MetaTableAccessor.tableExists(connection, name));

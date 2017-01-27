@@ -46,7 +46,7 @@ public class CompactMobAction extends Action {
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
     boolean major = RandomUtils.nextInt(100) < majorRatio;
 
     // Don't try the modify if we're stopping

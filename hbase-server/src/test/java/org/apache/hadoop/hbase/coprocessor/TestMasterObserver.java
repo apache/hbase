@@ -1844,7 +1844,7 @@ public class TestMasterObserver {
     // create a table
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
 
     tableCreationLatch = new CountDownLatch(1);
     admin.createTable(htd);
@@ -1907,7 +1907,7 @@ public class TestMasterObserver {
 
 
     // create a table
-    Admin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getAdmin();
     admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
     assertTrue("Test namespace should be created", cp.wasCreateNamespaceCalled());
 
@@ -2082,7 +2082,7 @@ public class TestMasterObserver {
       assertTrue("Coprocessor should be called on region rebalancing",
           cp.wasBalanceCalled());
     } finally {
-      Admin admin = UTIL.getHBaseAdmin();
+      Admin admin = UTIL.getAdmin();
       admin.disableTable(tableName);
       deleteTable(admin, tableName);
     }

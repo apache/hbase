@@ -100,7 +100,7 @@ public class TestEncryptionRandomKeying {
     TEST_UTIL.startMiniCluster(1);
 
     // Create the test table
-    TEST_UTIL.getHBaseAdmin().createTable(htd);
+    TEST_UTIL.getAdmin().createTable(htd);
     TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
 
     // Create a store file
@@ -111,7 +111,7 @@ public class TestEncryptionRandomKeying {
     } finally {
       table.close();
     }
-    TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
+    TEST_UTIL.getAdmin().flush(htd.getTableName());
   }
 
   @AfterClass

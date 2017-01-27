@@ -281,7 +281,7 @@ public class TestImportExport {
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(1)
     );
-    UTIL.getHBaseAdmin().createTable(desc);
+    UTIL.getAdmin().createTable(desc);
     try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
 
       Put p = new Put(ROW1);
@@ -312,7 +312,7 @@ public class TestImportExport {
         .setMaxVersions(5)
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
-    UTIL.getHBaseAdmin().createTable(desc);
+    UTIL.getAdmin().createTable(desc);
     try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
 
       Put p = new Put(ROW1);
@@ -344,7 +344,7 @@ public class TestImportExport {
         .setMaxVersions(5)
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
-    UTIL.getHBaseAdmin().createTable(desc);
+    UTIL.getAdmin().createTable(desc);
     try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
       args = new String[] {
           IMPORT_TABLE,
@@ -378,7 +378,7 @@ public class TestImportExport {
         .setMaxVersions(5)
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
-    UTIL.getHBaseAdmin().createTable(desc);
+    UTIL.getAdmin().createTable(desc);
 
     Table exportT = UTIL.getConnection().getTable(EXPORT_TABLE);
 
@@ -414,7 +414,7 @@ public class TestImportExport {
         .setMaxVersions(5)
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
-    UTIL.getHBaseAdmin().createTable(desc);
+    UTIL.getAdmin().createTable(desc);
 
     Table importT = UTIL.getConnection().getTable(TableName.valueOf(IMPORT_TABLE));
     args = new String[] {
@@ -452,7 +452,7 @@ public class TestImportExport {
     String EXPORT_TABLE = "exportSimpleCase_ImportWithFilter";
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(EXPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
-    UTIL.getHBaseAdmin().createTable(desc);
+    UTIL.getAdmin().createTable(desc);
     Table exportTable = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p1 = new Put(ROW1);
@@ -476,7 +476,7 @@ public class TestImportExport {
     String IMPORT_TABLE = "importWithFilter";
     desc = new HTableDescriptor(TableName.valueOf(IMPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
-    UTIL.getHBaseAdmin().createTable(desc);
+    UTIL.getAdmin().createTable(desc);
 
     Table importTable = UTIL.getConnection().getTable(desc.getTableName());
     args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + PrefixFilter.class.getName(),

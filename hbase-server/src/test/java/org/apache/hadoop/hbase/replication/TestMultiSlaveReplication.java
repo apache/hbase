@@ -136,9 +136,9 @@ public class TestMultiSlaveReplication {
     utility3.startMiniCluster();
     ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
 
-    utility1.getHBaseAdmin().createTable(table);
-    utility2.getHBaseAdmin().createTable(table);
-    utility3.getHBaseAdmin().createTable(table);
+    utility1.getAdmin().createTable(table);
+    utility2.getAdmin().createTable(table);
+    utility3.getAdmin().createTable(table);
     Table htable1 = utility1.getConnection().getTable(tableName);
     htable1.setWriteBufferSize(1024);
     Table htable2 = utility2.getConnection().getTable(tableName);
@@ -208,7 +208,7 @@ public class TestMultiSlaveReplication {
 
   private void rollWALAndWait(final HBaseTestingUtility utility, final TableName table,
       final byte[] row) throws IOException {
-    final Admin admin = utility.getHBaseAdmin();
+    final Admin admin = utility.getAdmin();
     final MiniHBaseCluster cluster = utility.getMiniHBaseCluster();
 
     // find the region that corresponds to the given row.

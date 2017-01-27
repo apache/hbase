@@ -119,7 +119,7 @@ public abstract class AbstractTestLogRolling  {
     cluster = TEST_UTIL.getHBaseCluster();
     dfsCluster = TEST_UTIL.getDFSCluster();
     fs = TEST_UTIL.getTestFileSystem();
-    admin = TEST_UTIL.getHBaseAdmin();
+    admin = TEST_UTIL.getAdmin();
 
     // disable region rebalancing (interferes with log watching)
     cluster.getMaster().balanceSwitch(false);

@@ -117,7 +117,7 @@ public class TestFromClientSide3 {
    */
   @After
   public void tearDown() throws Exception {
-    for (HTableDescriptor htd: TEST_UTIL.getHBaseAdmin().listTables()) {
+    for (HTableDescriptor htd: TEST_UTIL.getAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       TEST_UTIL.deleteTable(htd.getTableName());
   }
@@ -171,7 +171,7 @@ public class TestFromClientSide3 {
 
     TableName tableName = TableName.valueOf("testAdvancedConfigOverride");
     Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
 
     // Create 3 store files.
@@ -471,7 +471,7 @@ public class TestFromClientSide3 {
   @Test
   public void testGetEmptyRow() throws Exception {
     //Create a table and put in 1 row
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc);
@@ -713,7 +713,7 @@ public class TestFromClientSide3 {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getAdmin();
     admin.createTable(htd);
     Table table = admin.getConnection().getTable(TableName.valueOf("testMVCCUsingMVCCPreAssign"));
     //put two row first to init the scanner

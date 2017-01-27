@@ -48,7 +48,7 @@ public class ChangeBloomFilterAction extends Action {
   public void perform() throws Exception {
     Random random = new Random();
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    Admin admin = util.getHBaseAdmin();
+    Admin admin = util.getAdmin();
 
     LOG.info("Performing action: Change bloom filter on all columns of table "
         + tableName);
