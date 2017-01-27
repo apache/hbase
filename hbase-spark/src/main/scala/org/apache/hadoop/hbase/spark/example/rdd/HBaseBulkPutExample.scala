@@ -31,7 +31,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 object HBaseBulkPutExample {
    def main(args: Array[String]) {
      if (args.length < 2) {
-       println("HBaseBulkPutExample {tableName} {columnFamily}")
+       println("HBaseBulkPutExample {tableName} {columnFamily} are missing an arguments")
        return
      }
 

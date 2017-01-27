@@ -24,13 +24,13 @@ import org.apache.hadoop.hbase.spark.HBaseRDDFunctions._
 import org.apache.spark.{SparkContext, SparkConf}
 
 /**
- * This is a simple example of getting records in HBase
+ * This is a simple example of getting records from HBase
  * with the bulkGet function.
  */
 object HBaseBulkGetExample {
   def main(args: Array[String]) {
     if (args.length < 1) {
-      println("HBaseBulkGetExample {tableName}")
+      println("HBaseBulkGetExample {tableName} is missing an argument")
       return
     }
 

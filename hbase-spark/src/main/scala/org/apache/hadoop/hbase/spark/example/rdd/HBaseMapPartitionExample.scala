@@ -31,13 +31,13 @@ import org.apache.spark.{SparkContext, SparkConf}
 object HBaseMapPartitionExample {
   def main(args: Array[String]) {
     if (args.length < 1) {
-      println("HBaseBulkGetExample {tableName}")
+      println("HBaseMapPartitionExample {tableName} is missing an argument")
       return
     }
 
     val tableName = args(0)
 
-    val sparkConf = new SparkConf().setAppName("HBaseBulkGetExample " + tableName)
+    val sparkConf = new SparkConf().setAppName("HBaseMapPartitionExample " + tableName)
     val sc = new SparkContext(sparkConf)
 
     try {

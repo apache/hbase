@@ -32,7 +32,7 @@ import org.apache.spark.SparkConf
 object HBaseBulkPutTimestampExample {
   def main(args: Array[String]) {
     if (args.length < 2) {
-      System.out.println("HBaseBulkPutTimestampExample {tableName} {columnFamily}")
+      System.out.println("HBaseBulkPutTimestampExample {tableName} {columnFamily} are missing an argument")
       return
     }
 

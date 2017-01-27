@@ -35,7 +35,7 @@ import org.apache.spark.SparkConf
 object HBaseBulkPutExampleFromFile {
   def main(args: Array[String]) {
     if (args.length < 3) {
-      println("HBaseBulkPutExampleFromFile {tableName} {columnFamily} {inputFile}")
+      println("HBaseBulkPutExampleFromFile {tableName} {columnFamily} {inputFile} are missing an argument")
       return
     }
 

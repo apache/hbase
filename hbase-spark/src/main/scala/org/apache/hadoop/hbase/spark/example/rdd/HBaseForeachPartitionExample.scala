@@ -31,14 +31,14 @@ import org.apache.spark.{SparkContext, SparkConf}
 object HBaseForeachPartitionExample {
   def main(args: Array[String]) {
     if (args.length < 2) {
-      println("HBaseBulkPutExample {tableName} {columnFamily}")
+      println("HBaseForeachPartitionExample {tableName} {columnFamily} are missing an arguments")
       return
     }
 
     val tableName = args(0)
     val columnFamily = args(1)
 
-    val sparkConf = new SparkConf().setAppName("HBaseBulkPutExample " +
+    val sparkConf = new SparkConf().setAppName("HBaseForeachPartitionExample " +
       tableName + " " + columnFamily)
     val sc = new SparkContext(sparkConf)
 

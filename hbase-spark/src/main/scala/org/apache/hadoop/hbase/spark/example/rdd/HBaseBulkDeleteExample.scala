@@ -31,7 +31,7 @@ import org.apache.spark.{SparkContext, SparkConf}
 object HBaseBulkDeleteExample {
   def main(args: Array[String]) {
     if (args.length < 1) {
-      println("HBaseBulkDeletesExample {tableName} ")
+      println("HBaseBulkDeleteExample {tableName} are missing an argument")
       return
     }
 
