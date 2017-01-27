@@ -107,44 +107,47 @@ final class RootDocProcessor {
           return !exclude(doc) && doc.isIncluded();
         }
         if (target instanceof RootDoc) {
-          if (methodName.equals("classes")) {
-            return filter(((RootDoc) target).classes(), ClassDoc.class);
-          } else if (methodName.equals("specifiedClasses")) {
-            return filter(((RootDoc) target).specifiedClasses(), ClassDoc.class);
-          } else if (methodName.equals("specifiedPackages")) {
-            return filter(((RootDoc) target).specifiedPackages(), PackageDoc.class);
+          switch (methodName) {
+            case "classes":
+              return filter(((RootDoc) target).classes(), ClassDoc.class);
+            case "specifiedClasses":
+              return filter(((RootDoc) target).specifiedClasses(), ClassDoc.class);
+            case "specifiedPackages":
+              return filter(((RootDoc) target).specifiedPackages(), PackageDoc.class);
           }
         } else if (target instanceof ClassDoc) {
           if (isFiltered(args)) {
-            if (methodName.equals("methods")) {
-              return filter(((ClassDoc) target).methods(true), MethodDoc.class);
-            } else if (methodName.equals("fields")) {
-              return filter(((ClassDoc) target).fields(true), FieldDoc.class);
-            } else if (methodName.equals("innerClasses")) {
-              return filter(((ClassDoc) target).innerClasses(true), ClassDoc.class);
-            } else if (methodName.equals("constructors")) {
-              return filter(((ClassDoc) target).constructors(true), ConstructorDoc.class);
+            switch (methodName) {
+              case "methods":
+                return filter(((ClassDoc) target).methods(true), MethodDoc.class);
+              case "fields":
+                return filter(((ClassDoc) target).fields(true), FieldDoc.class);
+              case "innerClasses":
+                return filter(((ClassDoc) target).innerClasses(true), ClassDoc.class);
+              case "constructors":
+                return filter(((ClassDoc) target).constructors(true), ConstructorDoc.class);
             }
           }
         } else if (target instanceof PackageDoc) {
-          if (methodName.equals("allClasses")) {
-            if (isFiltered(args)) {
-              return filter(((PackageDoc) target).allClasses(true), ClassDoc.class);
-            } else {
-              return filter(((PackageDoc) target).allClasses(), ClassDoc.class);
-            }
-          } else if (methodName.equals("annotationTypes")) {
-            return filter(((PackageDoc) target).annotationTypes(), AnnotationTypeDoc.class);
-          } else if (methodName.equals("enums")) {
-            return filter(((PackageDoc) target).enums(), ClassDoc.class);
-          } else if (methodName.equals("errors")) {
-            return filter(((PackageDoc) target).errors(), ClassDoc.class);
-          } else if (methodName.equals("exceptions")) {
-            return filter(((PackageDoc) target).exceptions(), ClassDoc.class);
-          } else if (methodName.equals("interfaces")) {
-            return filter(((PackageDoc) target).interfaces(), ClassDoc.class);
-          } else if (methodName.equals("ordinaryClasses")) {
-            return filter(((PackageDoc) target).ordinaryClasses(), ClassDoc.class);
+          switch (methodName) {
+            case "allClasses":
+              if (isFiltered(args)) {
+                return filter(((PackageDoc) target).allClasses(true), ClassDoc.class);
+              } else {
+                return filter(((PackageDoc) target).allClasses(), ClassDoc.class);
+              }
+            case "annotationTypes":
+              return filter(((PackageDoc) target).annotationTypes(), AnnotationTypeDoc.class);
+            case "enums":
+              return filter(((PackageDoc) target).enums(), ClassDoc.class);
+            case "errors":
+              return filter(((PackageDoc) target).errors(), ClassDoc.class);
+            case "exceptions":
+              return filter(((PackageDoc) target).exceptions(), ClassDoc.class);
+            case "interfaces":
+              return filter(((PackageDoc) target).interfaces(), ClassDoc.class);
+            case "ordinaryClasses":
+              return filter(((PackageDoc) target).ordinaryClasses(), ClassDoc.class);
           }
         }
       }
