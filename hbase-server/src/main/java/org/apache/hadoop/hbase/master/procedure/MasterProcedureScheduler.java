@@ -967,7 +967,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private static abstract class Queue<TKey extends Comparable<TKey>>
       extends AvlLinkedNode<Queue<TKey>> implements QueueInterface {
     private final ProcedureEventQueue event;
-    private boolean suspended = false;
 
     private long exclusiveLockProcIdOwner = Long.MIN_VALUE;
     private int sharedLock = 0;
