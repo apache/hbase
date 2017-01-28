@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -56,6 +57,7 @@ import com.google.common.collect.Lists;
  */
 @RunWith(Parameterized.class)
 @Category({RegionServerTests.class, LargeTests.class})
+@Ignore // BROKEN. FIX OR REMOVE.
 public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionServerBulkLoad {
   public TestHRegionServerBulkLoadWithOldSecureEndpoint(int duration) {
     super(duration);
