@@ -53,6 +53,9 @@ public class FileSystemUtilizationChore extends ScheduledChore {
   static final String FS_UTILIZATION_MAX_ITERATION_DURATION_KEY = "hbase.regionserver.quotas.fs.utilization.chore.max.iteration.millis";
   static final long FS_UTILIZATION_MAX_ITERATION_DURATION_DEFAULT = 5000L;
 
+  private int numberOfCyclesToSkip = 0, prevNumberOfCyclesToSkip = 0;
+  private static final int CYCLE_UPPER_BOUND = 32;
+
   private final HRegionServer rs;
   private final long maxIterationMillis;
   private Iterator<Region> leftoverRegions;
@@ -67,6 +70,10 @@ public class FileSystemUtilizationChore extends ScheduledChore {
 
   @Override
   protected void chore() {
+    if (numberOfCyclesToSkip > 0) {
+      numberOfCyclesToSkip--;
+      return;
+    }
     final Map<HRegionInfo,Long> onlineRegionSizes = new HashMap<>();
     final Set<Region> onlineRegions = new HashSet<>(rs.getOnlineRegions());
     // Process the regions from the last run if we have any. If we are somehow having difficulty
@@ -126,7 +133,14 @@ public class FileSystemUtilizationChore extends ScheduledChore {
           + skippedSplitParents + " regions due to being the parent of a split, and"
           + skippedRegionReplicas + " regions due to being region replicas.");
     }
-    reportRegionSizesToMaster(onlineRegionSizes);
+    if (!reportRegionSizesToMaster(onlineRegionSizes)) {
+      // backoff reporting
+      numberOfCyclesToSkip = prevNumberOfCyclesToSkip > 0 ? 2 * prevNumberOfCyclesToSkip : 1;
+      if (numberOfCyclesToSkip > CYCLE_UPPER_BOUND) {
+        numberOfCyclesToSkip = CYCLE_UPPER_BOUND;
+      }
+      prevNumberOfCyclesToSkip = numberOfCyclesToSkip;
+    }
   }
 
   /**
@@ -166,8 +180,8 @@ public class FileSystemUtilizationChore extends ScheduledChore {
    *
    * @param onlineRegionSizes The computed region sizes to report.
    */
-  void reportRegionSizesToMaster(Map<HRegionInfo,Long> onlineRegionSizes) {
-    this.rs.reportRegionSizesForQuotas(onlineRegionSizes);
+  boolean reportRegionSizesToMaster(Map<HRegionInfo,Long> onlineRegionSizes) {
+    return this.rs.reportRegionSizesForQuotas(onlineRegionSizes);
   }
 
   /**

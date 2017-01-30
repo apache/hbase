@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -1248,13 +1249,14 @@ public class HRegionServer extends HasThread implements
    * Reports the given map of Regions and their size on the filesystem to the active Master.
    *
    * @param onlineRegionSizes A map of region info to size in bytes
+   * @return false if FileSystemUtilizationChore should pause reporting to master. true otherwise
    */
-  public void reportRegionSizesForQuotas(final Map<HRegionInfo, Long> onlineRegionSizes) {
+  public boolean reportRegionSizesForQuotas(final Map<HRegionInfo, Long> onlineRegionSizes) {
     RegionServerStatusService.BlockingInterface rss = rssStub;
     if (rss == null) {
       // the current server could be stopping.
       LOG.trace("Skipping Region size report to HMaster as stub is null");
-      return;
+      return true;
     }
     try {
       RegionSpaceUseReportRequest request = buildRegionSpaceUseReportRequest(
@@ -1263,16 +1265,28 @@ public class HRegionServer extends HasThread implements
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof PleaseHoldException) {
-        LOG.trace("Failed to report region sizes to Master because it is initializing. This will be retried.", ioe);
+        LOG.trace("Failed to report region sizes to Master because it is initializing."
+            + " This will be retried.", ioe);
         // The Master is coming up. Will retry the report later. Avoid re-creating the stub.
-        return;
+        return true;
       }
-      LOG.debug("Failed to report region sizes to Master. This will be retried.", ioe);
       if (rssStub == rss) {
         rssStub = null;
       }
       createRegionServerStatusStub(true);
+      if (ioe instanceof DoNotRetryIOException) {
+        DoNotRetryIOException doNotRetryEx = (DoNotRetryIOException) ioe;
+        if (doNotRetryEx.getCause() != null) {
+          Throwable t = doNotRetryEx.getCause();
+          if (t instanceof UnsupportedOperationException) {
+            LOG.debug("master doesn't support ReportRegionSpaceUse, pause before retrying");
+            return false;
+          }
+        }
+      }
+      LOG.debug("Failed to report region sizes to Master. This will be retried.", ioe);
     }
+    return true;
   }
 
   /**
