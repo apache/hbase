@@ -46,8 +46,6 @@ import org.apache.hadoop.hbase.rest.Constants;
 public class PlainTextMessageBodyProducer 
   implements MessageBodyWriter<Object> {
 
-  private ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>();
-
   @Override
   public boolean isWriteable(Class<?> arg0, Type arg1, Annotation[] arg2,
       MediaType arg3) {
@@ -57,9 +55,8 @@ public class PlainTextMessageBodyProducer
   @Override
   public long getSize(Object object, Class<?> type, Type genericType,
       Annotation[] annotations, MediaType mediaType) {
-    byte[] bytes = object.toString().getBytes(); 
-    buffer.set(bytes);
-    return bytes.length;
+    // deprecated by JAX-RS 2.0 and ignored by Jersey runtime
+    return -1;
   }
 
   @Override
@@ -67,8 +64,6 @@ public class PlainTextMessageBodyProducer
       Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, Object> httpHeaders, OutputStream outStream)
       throws IOException, WebApplicationException {
-    byte[] bytes = buffer.get();
-    outStream.write(bytes);
-    buffer.remove();
+    outStream.write(object.toString().getBytes());
   }
 }

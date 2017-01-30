@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.EnumSet;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -37,9 +39,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.InfoServer;
-import org.apache.hadoop.hbase.jetty.SslSelectChannelConnectorSecure;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.RestCsrfPreventionFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -49,17 +49,28 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.util.StringUtils;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.thread.QueuedThreadPool;
 
 import com.google.common.base.Preconditions;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
+
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.eclipse.jetty.jmx.MBeanContainer;
+import org.eclipse.jetty.servlet.FilterHolder;
+
+import org.glassfish.jersey.jackson1.Jackson1Feature;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
+
+import javax.servlet.DispatcherType;
 
 /**
  * Main class for launching REST gateway as a servlet hosted by Jetty.
@@ -81,6 +92,8 @@ public class RESTServer implements Constants {
   static String REST_CSRF_CUSTOM_HEADER_DEFAULT = "X-XSRF-HEADER";
   static String REST_CSRF_METHODS_TO_IGNORE_KEY = "hbase.rest.csrf.methods.to.ignore";
   static String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
+
+  private static final String PATH_SPEC_ANY = "/*";
 
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
@@ -109,17 +122,19 @@ public class RESTServer implements Constants {
   }
 
   static String REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY = "hbase.rest-csrf.browser-useragents-regex";
-  static void addCSRFFilter(Context context, Configuration conf) {
+  static void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
     restCSRFEnabled = conf.getBoolean(REST_CSRF_ENABLED_KEY, REST_CSRF_ENABLED_DEFAULT);
     if (restCSRFEnabled) {
-      String[] urls = { "/*" };
       Set<String> restCsrfMethodsToIgnore = new HashSet<>();
       restCsrfMethodsToIgnore.addAll(getTrimmedStringList(conf,
-        REST_CSRF_METHODS_TO_IGNORE_KEY, REST_CSRF_METHODS_TO_IGNORE_DEFAULT));
+          REST_CSRF_METHODS_TO_IGNORE_KEY, REST_CSRF_METHODS_TO_IGNORE_DEFAULT));
       Map<String, String> restCsrfParams = RestCsrfPreventionFilter
           .getFilterParams(conf, "hbase.rest-csrf.");
-      HttpServer.defineFilter(context, "csrf", RestCsrfPreventionFilter.class.getName(),
-        restCsrfParams, urls);
+      FilterHolder holder = new FilterHolder();
+      holder.setName("csrf");
+      holder.setClassName(RestCsrfPreventionFilter.class.getName());
+      holder.setInitParameters(restCsrfParams);
+      ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
     }
   }
 
@@ -143,10 +158,10 @@ public class RESTServer implements Constants {
         FilterHolder authFilter = new FilterHolder();
         authFilter.setClassName(AuthFilter.class.getName());
         authFilter.setName("AuthenticationFilter");
-        return new Pair<FilterHolder, Class<? extends ServletContainer>>(authFilter,containerClass);
+        return new Pair<>(authFilter,containerClass);
       }
     }
-    return new Pair<FilterHolder, Class<? extends ServletContainer>>(null, containerClass);
+    return new Pair<>(null, containerClass);
   }
 
   private static void parseCommandLine(String[] args, RESTServlet servlet) {
@@ -220,76 +235,106 @@ public class RESTServer implements Constants {
     Pair<FilterHolder, Class<? extends ServletContainer>> pair = loginServerPrincipal(
       userProvider, conf);
     FilterHolder authFilter = pair.getFirst();
-    Class<? extends ServletContainer> containerClass = pair.getSecond();
     RESTServlet servlet = RESTServlet.getInstance(conf, userProvider);
 
     parseCommandLine(args, servlet);
 
     // set up the Jersey servlet container for Jetty
-    ServletHolder sh = new ServletHolder(containerClass);
-    sh.setInitParameter(
-      "com.sun.jersey.config.property.resourceConfigClass",
-      ResourceConfig.class.getCanonicalName());
-    sh.setInitParameter("com.sun.jersey.config.property.packages",
-      "jetty");
-    // The servlet holder below is instantiated to only handle the case
-    // of the /status/cluster returning arrays of nodes (live/dead). Without
-    // this servlet holder, the problem is that the node arrays in the response
-    // are collapsed to single nodes. We want to be able to treat the
-    // node lists as POJO in the response to /status/cluster servlet call,
-    // but not change the behavior for any of the other servlets
-    // Hence we don't use the servlet holder for all servlets / paths
-    ServletHolder shPojoMap = new ServletHolder(containerClass);
-    @SuppressWarnings("unchecked")
-    Map<String, String> shInitMap = sh.getInitParameters();
-    for (Entry<String, String> e : shInitMap.entrySet()) {
-      shPojoMap.setInitParameter(e.getKey(), e.getValue());
-    }
-    shPojoMap.setInitParameter(JSONConfiguration.FEATURE_POJO_MAPPING, "true");
-
-    // set up Jetty and run the embedded server
-
-    Server server = new Server();
-
-    Connector connector = new SelectChannelConnector();
-    if(conf.getBoolean(REST_SSL_ENABLED, false)) {
-      SslSelectChannelConnectorSecure sslConnector = new SslSelectChannelConnectorSecure();
-      String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
-      String password = HBaseConfiguration.getPassword(conf,
-        REST_SSL_KEYSTORE_PASSWORD, null);
-      String keyPassword = HBaseConfiguration.getPassword(conf,
-        REST_SSL_KEYSTORE_KEYPASSWORD, password);
-      sslConnector.setKeystore(keystore);
-      sslConnector.setPassword(password);
-      sslConnector.setKeyPassword(keyPassword);
-      connector = sslConnector;
-    }
-    connector.setPort(servlet.getConfiguration().getInt("hbase.rest.port", DEFAULT_LISTEN_PORT));
-    connector.setHost(servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0"));
-    connector.setHeaderBufferSize(65536);
-
-    server.addConnector(connector);
+    ResourceConfig application = new ResourceConfig().
+        packages("org.apache.hadoop.hbase.rest").register(Jackson1Feature.class);
+    ServletHolder sh = new ServletHolder(new ServletContainer(application));
 
     // Set the default max thread number to 100 to limit
     // the number of concurrent requests so that REST server doesn't OOM easily.
     // Jetty set the default max thread number to 250, if we don't set it.
     //
     // Our default min thread number 2 is the same as that used by Jetty.
-    int maxThreads = servlet.getConfiguration().getInt("hbase.rest.threads.max", 100);
-    int minThreads = servlet.getConfiguration().getInt("hbase.rest.threads.min", 2);
-    QueuedThreadPool threadPool = new QueuedThreadPool(maxThreads);
-    threadPool.setMinThreads(minThreads);
-    server.setThreadPool(threadPool);
+    int maxThreads = servlet.getConfiguration().getInt(REST_THREAD_POOL_THREADS_MAX, 100);
+    int minThreads = servlet.getConfiguration().getInt(REST_THREAD_POOL_THREADS_MIN, 2);
+    // Use the default queue (unbounded with Jetty 9.3) if the queue size is negative, otherwise use
+    // bounded {@link ArrayBlockingQueue} with the given size
+    int queueSize = servlet.getConfiguration().getInt(REST_THREAD_POOL_TASK_QUEUE_SIZE, -1);
+    int idleTimeout = servlet.getConfiguration().getInt(REST_THREAD_POOL_THREAD_IDLE_TIMEOUT, 60000);
+    QueuedThreadPool threadPool = queueSize > 0 ?
+        new QueuedThreadPool(maxThreads, minThreads, idleTimeout, new ArrayBlockingQueue<Runnable>(queueSize)) :
+        new QueuedThreadPool(maxThreads, minThreads, idleTimeout);
 
-    server.setSendServerVersion(false);
-    server.setSendDateHeader(false);
+    Server server = new Server(threadPool);
+
+    // Setup JMX
+    MBeanContainer mbContainer=new MBeanContainer(ManagementFactory.getPlatformMBeanServer());
+    server.addEventListener(mbContainer);
+    server.addBean(mbContainer);
+
+
+    String host = servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0");
+    int servicePort = servlet.getConfiguration().getInt("hbase.rest.port", 8080);
+    HttpConfiguration httpConfig = new HttpConfiguration();
+    httpConfig.setSecureScheme("https");
+    httpConfig.setSecurePort(servicePort);
+    httpConfig.setSendServerVersion(false);
+    httpConfig.setSendDateHeader(false);
+
+    ServerConnector serverConnector;
+    if (conf.getBoolean(REST_SSL_ENABLED, false)) {
+      HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
+      httpsConfig.addCustomizer(new SecureRequestCustomizer());
+
+      SslContextFactory sslCtxFactory = new SslContextFactory();
+      String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
+      String password = HBaseConfiguration.getPassword(conf,
+          REST_SSL_KEYSTORE_PASSWORD, null);
+      String keyPassword = HBaseConfiguration.getPassword(conf,
+          REST_SSL_KEYSTORE_KEYPASSWORD, password);
+      sslCtxFactory.setKeyStorePath(keystore);
+      sslCtxFactory.setKeyStorePassword(password);
+      sslCtxFactory.setKeyManagerPassword(keyPassword);
+
+      String[] excludeCiphers = servlet.getConfiguration().getStrings(
+          REST_SSL_EXCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
+      if (excludeCiphers.length != 0) {
+        sslCtxFactory.setExcludeCipherSuites(excludeCiphers);
+      }
+      String[] includeCiphers = servlet.getConfiguration().getStrings(
+          REST_SSL_INCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
+      if (includeCiphers.length != 0) {
+        sslCtxFactory.setIncludeCipherSuites(includeCiphers);
+      }
+
+      String[] excludeProtocols = servlet.getConfiguration().getStrings(
+          REST_SSL_EXCLUDE_PROTOCOLS, ArrayUtils.EMPTY_STRING_ARRAY);
+      if (excludeProtocols.length != 0) {
+        sslCtxFactory.setExcludeProtocols(excludeProtocols);
+      }
+      String[] includeProtocols = servlet.getConfiguration().getStrings(
+          REST_SSL_INCLUDE_PROTOCOLS, ArrayUtils.EMPTY_STRING_ARRAY);
+      if (includeProtocols.length != 0) {
+        sslCtxFactory.setIncludeProtocols(includeProtocols);
+      }
+
+      serverConnector = new ServerConnector(server,
+          new SslConnectionFactory(sslCtxFactory, HttpVersion.HTTP_1_1.toString()),
+          new HttpConnectionFactory(httpsConfig));
+    } else {
+      serverConnector = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
+    }
+
+    int acceptQueueSize = servlet.getConfiguration().getInt(REST_CONNECTOR_ACCEPT_QUEUE_SIZE, -1);
+    if (acceptQueueSize >= 0) {
+      serverConnector.setAcceptQueueSize(acceptQueueSize);
+    }
+
+    serverConnector.setPort(servicePort);
+    serverConnector.setHost(host);
+
+    server.addConnector(serverConnector);
     server.setStopAtShutdown(true);
-      // set up context
-    Context context = new Context(server, "/", Context.SESSIONS);
-    context.addServlet(shPojoMap, "/status/cluster");
-    context.addServlet(sh, "/*");
+
+    // set up context
+    ServletContextHandler ctxHandler = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
+    ctxHandler.addServlet(sh, PATH_SPEC_ANY);
     if (authFilter != null) {
-      context.addFilter(authFilter, "/*", 1);
+      ctxHandler.addFilter(authFilter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
 
     // Load filters from configuration.
@@ -297,10 +342,10 @@ public class RESTServer implements Constants {
       ArrayUtils.EMPTY_STRING_ARRAY);
     for (String filter : filterClasses) {
       filter = filter.trim();
-      context.addFilter(Class.forName(filter), "/*", 0);
+      ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
-    addCSRFFilter(context, conf);
-    HttpServerUtil.constrainHttpMethods(context);
+    addCSRFFilter(ctxHandler, conf);
+    HttpServerUtil.constrainHttpMethods(ctxHandler);
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);

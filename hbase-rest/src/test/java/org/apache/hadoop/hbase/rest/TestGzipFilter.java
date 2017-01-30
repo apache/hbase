@@ -126,21 +126,6 @@ public class TestGzipFilter {
     testScannerResultCodes();
   }
 
-  @Test
-  public void testErrorNotGzipped() throws Exception {
-    Header[] headers = new Header[2];
-    headers[0] = new BasicHeader("Accept", Constants.MIMETYPE_BINARY);
-    headers[1] = new BasicHeader("Accept-Encoding", "gzip");
-    Response response = client.get("/" + TABLE + "/" + ROW_1 + "/" + COLUMN_2, headers);
-    assertEquals(response.getCode(), 404);
-    String contentEncoding = response.getHeader("Content-Encoding");
-    assertTrue(contentEncoding == null || !contentEncoding.contains("gzip"));
-    response = client.get("/" + TABLE, headers);
-    assertEquals(response.getCode(), 405);
-    contentEncoding = response.getHeader("Content-Encoding");
-    assertTrue(contentEncoding == null || !contentEncoding.contains("gzip"));
-  }
-
   void testScannerResultCodes() throws Exception {
     Header[] headers = new Header[3];
     headers[0] = new BasicHeader("Content-Type", Constants.MIMETYPE_XML);

@@ -29,10 +29,10 @@ import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
-import org.apache.hadoop.hbase.rest.provider.JacksonProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -204,7 +204,7 @@ public class TestMultiRowResource {
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
     ObjectMapper mapper =
-        new JacksonProvider().locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+        new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
     CellSetModel cellSet = (CellSetModel) mapper.readValue(response.getBody(), CellSetModel.class);
     assertEquals(2, cellSet.getRows().size());
     assertEquals(ROW_1, Bytes.toString(cellSet.getRows().get(0).getKey()));
@@ -232,7 +232,7 @@ public class TestMultiRowResource {
     client.post(row_5_url, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1), extraHdr);
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
-    ObjectMapper mapper = new JacksonProvider().locateMapper(CellSetModel.class,
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
       MediaType.APPLICATION_JSON_TYPE);
     CellSetModel cellSet = (CellSetModel) mapper.readValue(response.getBody(), CellSetModel.class);
     assertEquals(1, cellSet.getRows().size());
