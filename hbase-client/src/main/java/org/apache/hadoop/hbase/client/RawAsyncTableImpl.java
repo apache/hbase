@@ -18,17 +18,26 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
+import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.checkHasFamilies;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
+
+import com.google.protobuf.RpcChannel;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -436,4 +445,90 @@ class RawAsyncTableImpl implements RawAsyncTable {
     return unit.convert(scanTimeoutNs, TimeUnit.NANOSECONDS);
   }
 
+  private <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
+      CoprocessorCallable<S, R> callable, HRegionInfo region, byte[] row) {
+    RegionCoprocessorRpcChannelImpl channel = new RegionCoprocessorRpcChannelImpl(conn, tableName,
+        region, row, rpcTimeoutNs, operationTimeoutNs);
+    S stub = stubMaker.apply(channel);
+    CompletableFuture<R> future = new CompletableFuture<>();
+    ClientCoprocessorRpcController controller = new ClientCoprocessorRpcController();
+    callable.call(stub, controller, resp -> {
+      if (controller.failed()) {
+        future.completeExceptionally(controller.getFailed());
+      } else {
+        future.complete(resp);
+      }
+    });
+    return future;
+  }
+
+  @Override
+  public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
+      CoprocessorCallable<S, R> callable, byte[] row) {
+    return coprocessorService(stubMaker, callable, null, row);
+  }
+
+  private boolean locateFinished(HRegionInfo region, byte[] endKey, boolean endKeyInclusive) {
+    if (isEmptyStopRow(endKey)) {
+      if (isEmptyStopRow(region.getEndKey())) {
+        return true;
+      }
+      return false;
+    } else {
+      if (isEmptyStopRow(region.getEndKey())) {
+        return true;
+      }
+      int c = Bytes.compareTo(endKey, region.getEndKey());
+      // 1. if the region contains endKey
+      // 2. endKey is equal to the region's endKey and we do not want to include endKey.
+      return c < 0 || c == 0 && !endKeyInclusive;
+    }
+  }
+
+  private <S, R> void onLocateComplete(Function<RpcChannel, S> stubMaker,
+      CoprocessorCallable<S, R> callable, CoprocessorCallback<R> callback,
+      List<HRegionLocation> locs, byte[] endKey, boolean endKeyInclusive,
+      AtomicBoolean locateFinished, AtomicInteger unfinishedRequest, HRegionLocation loc,
+      Throwable error) {
+    if (error != null) {
+      callback.onError(error);
+      return;
+    }
+    unfinishedRequest.incrementAndGet();
+    HRegionInfo region = loc.getRegionInfo();
+    if (locateFinished(region, endKey, endKeyInclusive)) {
+      locateFinished.set(true);
+    } else {
+      conn.getLocator()
+          .getRegionLocation(tableName, region.getEndKey(), RegionLocateType.CURRENT,
+            operationTimeoutNs)
+          .whenComplete((l, e) -> onLocateComplete(stubMaker, callable, callback, locs, endKey,
+            endKeyInclusive, locateFinished, unfinishedRequest, l, e));
+    }
+    coprocessorService(stubMaker, callable, region, region.getStartKey()).whenComplete((r, e) -> {
+      if (e != null) {
+        callback.onRegionError(region, e);
+      } else {
+        callback.onRegionComplete(region, r);
+      }
+      if (unfinishedRequest.decrementAndGet() == 0 && locateFinished.get()) {
+        callback.onComplete();
+      }
+    });
+  }
+
+  @Override
+  public <S, R> void coprocessorService(Function<RpcChannel, S> stubMaker,
+      CoprocessorCallable<S, R> callable, byte[] startKey, boolean startKeyInclusive, byte[] endKey,
+      boolean endKeyInclusive, CoprocessorCallback<R> callback) {
+    byte[] nonNullStartKey = Optional.ofNullable(startKey).orElse(EMPTY_START_ROW);
+    byte[] nonNullEndKey = Optional.ofNullable(endKey).orElse(EMPTY_END_ROW);
+    List<HRegionLocation> locs = new ArrayList<>();
+    conn.getLocator()
+        .getRegionLocation(tableName, nonNullStartKey,
+          startKeyInclusive ? RegionLocateType.CURRENT : RegionLocateType.AFTER, operationTimeoutNs)
+        .whenComplete(
+          (loc, error) -> onLocateComplete(stubMaker, callable, callback, locs, nonNullEndKey,
+            endKeyInclusive, new AtomicBoolean(false), new AtomicInteger(0), loc, error));
+  }
 }

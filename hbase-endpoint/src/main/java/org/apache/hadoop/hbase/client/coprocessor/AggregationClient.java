@@ -19,12 +19,16 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
+import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.validateArgAndGetPB;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,17 +53,11 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
 
 /**
  * This client class is for invoking the aggregate functions deployed on the
@@ -227,23 +225,7 @@ public class AggregationClient implements Closeable {
     return aMaxCallBack.getMax();
   }
 
-  /*
-   * @param scan
-   * @param canFamilyBeAbsent whether column family can be absent in familyMap of scan
-   */
-  private void validateParameters(Scan scan, boolean canFamilyBeAbsent) throws IOException {
-    if (scan == null
-        || (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes.equals(
-          scan.getStartRow(), HConstants.EMPTY_START_ROW))
-        || ((Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) > 0) && !Bytes.equals(
-          scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
-      throw new IOException("Agg client Exception: Startrow should be smaller than Stoprow");
-    } else if (!canFamilyBeAbsent) {
-      if (scan.getFamilyMap().size() != 1) {
-        throw new IOException("There must be only one family.");
-      }
-    }
-  }
+
 
   /**
    * It gives the minimum value of a column for a given column family for the
@@ -846,22 +828,6 @@ public class AggregationClient implements Closeable {
     return null;
   }
 
-  <R, S, P extends Message, Q extends Message, T extends Message> AggregateRequest
-  validateArgAndGetPB(Scan scan, ColumnInterpreter<R,S,P,Q,T> ci, boolean canFamilyBeAbsent)
-      throws IOException {
-    validateParameters(scan, canFamilyBeAbsent);
-    final AggregateRequest.Builder requestBuilder =
-        AggregateRequest.newBuilder();
-    requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
-    P columnInterpreterSpecificData = null;
-    if ((columnInterpreterSpecificData = ci.getRequestData())
-       != null) {
-      requestBuilder.setInterpreterSpecificBytes(columnInterpreterSpecificData.toByteString());
-    }
-    requestBuilder.setScan(ProtobufUtil.toScan(scan));
-    return requestBuilder.build();
-  }
-
   byte[] getBytesFromResponse(ByteString response) {
     ByteBuffer bb = response.asReadOnlyByteBuffer();
     bb.rewind();
@@ -872,41 +838,5 @@ public class AggregationClient implements Closeable {
       bytes = response.toByteArray();
     }
     return bytes;
-  }
-
-  /**
-   * Get an instance of the argument type declared in a class's signature. The
-   * argument type is assumed to be a PB Message subclass, and the instance is
-   * created using parseFrom method on the passed ByteString.
-   * @param runtimeClass the runtime type of the class
-   * @param position the position of the argument in the class declaration
-   * @param b the ByteString which should be parsed to get the instance created
-   * @return the instance
-   * @throws IOException
-   */
-  @SuppressWarnings("unchecked")
-  // Used server-side too by Aggregation Coprocesor Endpoint. Undo this interdependence. TODO.
-  public static <T extends Message>
-  T getParsedGenericInstance(Class<?> runtimeClass, int position, ByteString b)
-      throws IOException {
-    Type type = runtimeClass.getGenericSuperclass();
-    Type argType = ((ParameterizedType)type).getActualTypeArguments()[position];
-    Class<T> classType = (Class<T>)argType;
-    T inst;
-    try {
-      Method m = classType.getMethod("parseFrom", ByteString.class);
-      inst = (T)m.invoke(null, b);
-      return inst;
-    } catch (SecurityException e) {
-      throw new IOException(e);
-    } catch (NoSuchMethodException e) {
-      throw new IOException(e);
-    } catch (IllegalArgumentException e) {
-      throw new IOException(e);
-    } catch (InvocationTargetException e) {
-      throw new IOException(e);
-    } catch (IllegalAccessException e) {
-      throw new IOException(e);
-    }
   }
 }

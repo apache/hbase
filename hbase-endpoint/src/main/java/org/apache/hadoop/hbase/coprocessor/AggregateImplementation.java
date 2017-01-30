@@ -18,6 +18,14 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.apache.hadoop.hbase.client.coprocessor.AggregationHelper.getParsedGenericInstance;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -31,7 +39,6 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -39,12 +46,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateReque
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 
 /**
  * A concrete AggregateProtocol implementation. Its system level coprocessor
@@ -485,7 +486,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       ColumnInterpreter<T,S,P,Q,R> ci = (ColumnInterpreter<T, S, P, Q, R>) cls.newInstance();
       if (request.hasInterpreterSpecificBytes()) {
         ByteString b = request.getInterpreterSpecificBytes();
-        P initMsg = AggregationClient.getParsedGenericInstance(ci.getClass(), 2, b);
+        P initMsg = getParsedGenericInstance(ci.getClass(), 2, b);
         ci.initialize(initMsg);
       }
       return ci;
