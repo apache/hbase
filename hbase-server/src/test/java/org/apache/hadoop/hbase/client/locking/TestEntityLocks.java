@@ -19,13 +19,34 @@
 
 package org.apache.hadoop.hbase.client.locking;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.*;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -34,16 +55,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.mortbay.log.Log;
-
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
-
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 @Category({ClientTests.class, SmallTests.class})
 public class TestEntityLocks {
+  private static final Log LOG = LogFactory.getLog(TestEntityLocks.class);
+	
   private final Configuration conf = HBaseConfiguration.create();
 
   private final LockService.BlockingInterface master =
@@ -80,13 +96,13 @@ public class TestEntityLocks {
   private boolean waitLockTimeOut(EntityLock lock, long maxWaitTimeMillis) {
     long startMillis = System.currentTimeMillis();
     while (lock.isLocked()) {
-      Log.info("Sleeping...");
+      LOG.info("Sleeping...");
       Threads.sleepWithoutInterrupt(100);
       if (!lock.isLocked()) {
         return true;
       }
       if (System.currentTimeMillis() - startMillis > maxWaitTimeMillis) {
-        Log.info("Timedout...");
+        LOG.info("Timedout...");
         return false;
       }
     }

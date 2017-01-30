@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
@@ -48,31 +45,29 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.HttpServer.QuotingInputFilter.RequestQuoter;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
-
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.util.ajax.JSON;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHttpServer extends HttpServerFunctionalTest {
@@ -83,7 +78,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   
   @SuppressWarnings("serial")
   public static class EchoMapServlet extends HttpServlet {
-    @SuppressWarnings("unchecked")
     @Override
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
@@ -110,7 +104,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @SuppressWarnings("serial")
   public static class EchoServlet extends HttpServlet {
-    @SuppressWarnings("unchecked")
     @Override
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
@@ -238,7 +231,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @Test
-  @Ignore
   public void testContentTypes() throws Exception {
     // Static CSS files should have text/css
     URL cssUrl = new URL(baseUrl, "/static/test.css");
@@ -252,7 +244,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals("text/plain; charset=utf-8", conn.getContentType());
+    assertEquals("text/plain;charset=utf-8", conn.getContentType());
 
     // We should ignore parameters for mime types - ie a parameter
     // ending in .css should not change mime type
@@ -260,21 +252,22 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals("text/plain; charset=utf-8", conn.getContentType());
+    assertEquals("text/plain;charset=utf-8", conn.getContentType());
 
     // Servlets that specify text/html should get that content type
     servletUrl = new URL(baseUrl, "/htmlcontent");
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals("text/html; charset=utf-8", conn.getContentType());
+    assertEquals("text/html;charset=utf-8", conn.getContentType());
 
     // JSPs should default to text/html with utf8
-    servletUrl = new URL(baseUrl, "/testjsp.jsp");
-    conn = (HttpURLConnection)servletUrl.openConnection();
-    conn.connect();
-    assertEquals(200, conn.getResponseCode());
-    assertEquals("text/html; charset=utf-8", conn.getContentType());
+    // JSPs do not work from unit tests
+    // servletUrl = new URL(baseUrl, "/testjsp.jsp");
+    // conn = (HttpURLConnection)servletUrl.openConnection();
+    // conn.connect();
+    // assertEquals(200, conn.getResponseCode());
+    // assertEquals("text/html; charset=utf-8", conn.getContentType());
   }
 
   /**

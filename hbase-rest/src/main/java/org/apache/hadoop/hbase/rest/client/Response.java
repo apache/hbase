@@ -22,11 +22,12 @@ package org.apache.hadoop.hbase.rest.client;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.mortbay.log.Log;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
 
 /**
  * The HTTP result code, response headers, and body of a HTTP response.
@@ -34,6 +35,8 @@ import org.mortbay.log.Log;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Response {
+  private static final Log LOG = LogFactory.getLog(Response.class);
+
   private int code;
   private Header[] headers;
   private byte[] body;
@@ -139,7 +142,7 @@ public class Response {
       try {
         body = Client.getResponseBody(resp);
       } catch (IOException ioe) {
-        Log.debug("encountered ioe when obtaining body", ioe);
+        LOG.debug("encountered ioe when obtaining body", ioe);
       }
     }
     return body;

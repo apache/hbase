@@ -183,7 +183,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
       http.start();
       fail("expecting exception");
     } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains("Unable to initialize WebAppContext", e);
+      GenericTestUtils.assertExceptionContains("Problem starting http server", e);
     }
   }
   

@@ -534,22 +534,23 @@ public class HttpServer implements FilterContainer {
 
     Preconditions.checkNotNull(webAppContext);
 
+    HandlerCollection handlerCollection = new HandlerCollection();
+
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     RequestLog requestLog = HttpRequestLog.getRequestLog(name);
 
     if (requestLog != null) {
       RequestLogHandler requestLogHandler = new RequestLogHandler();
       requestLogHandler.setRequestLog(requestLog);
-      HandlerCollection handlers = new HandlerCollection();
-      handlers.setHandlers(new Handler[] { requestLogHandler, contexts });
-      webServer.setHandler(handlers);
-    } else {
-      webServer.setHandler(contexts);
+      handlerCollection.addHandler(requestLogHandler);
     }
 
     final String appDir = getWebAppsPath(name);
 
-    webServer.setHandler(webAppContext);
+    handlerCollection.addHandler(contexts);
+    handlerCollection.addHandler(webAppContext);
+
+    webServer.setHandler(handlerCollection);
 
     addDefaultApps(contexts, appDir, conf);
 
@@ -629,14 +630,13 @@ public class HttpServer implements FilterContainer {
         logDir = System.getProperty("hadoop.log.dir");
     }
     if (logDir != null) {
-      ServletContextHandler logContext = new ServletContextHandler(parent, "/*");
+      ServletContextHandler logContext = new ServletContextHandler(parent, "/logs");
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
       logContext.setResourceBase(logDir);
 
       if (conf.getBoolean(
           ServerConfigurationKeys.HBASE_JETTY_LOGS_SERVE_ALIASES,
           ServerConfigurationKeys.DEFAULT_HBASE_JETTY_LOGS_SERVE_ALIASES)) {
-        @SuppressWarnings("unchecked")
         Map<String, String> params = logContext.getInitParams();
         params.put(
             "org.mortbay.jetty.servlet.Default.aliases", "true");
@@ -1260,7 +1260,6 @@ public class HttpServer implements FilterContainer {
       /**
        * Return the set of parameter names, quoting each name.
        */
-      @SuppressWarnings("unchecked")
       @Override
       public Enumeration<String> getParameterNames() {
         return new Enumeration<String>() {
@@ -1301,7 +1300,6 @@ public class HttpServer implements FilterContainer {
         return result;
       }
 
-      @SuppressWarnings("unchecked")
       @Override
       public Map<String, String[]> getParameterMap() {
         Map<String, String[]> result = new HashMap<String,String[]>();

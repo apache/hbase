@@ -175,9 +175,10 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.servlet.Context;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -385,7 +386,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private FavoredNodesManager favoredNodesManager;
 
   /** jetty server for master to redirect requests to regionserver infoServer */
-  private org.mortbay.jetty.Server masterJettyServer;
+  private Server masterJettyServer;
 
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302472L;
@@ -517,14 +518,17 @@ public class HMaster extends HRegionServer implements MasterServices {
     if(RedirectServlet.regionServerInfoPort == infoPort) {
       return infoPort;
     }
-    masterJettyServer = new org.mortbay.jetty.Server();
-    Connector connector = new SelectChannelConnector();
+    masterJettyServer = new Server();
+    ServerConnector connector = new ServerConnector(masterJettyServer);
     connector.setHost(addr);
     connector.setPort(infoPort);
     masterJettyServer.addConnector(connector);
     masterJettyServer.setStopAtShutdown(true);
-    Context context = new Context(masterJettyServer, "/", Context.NO_SESSIONS);
+
+    WebAppContext context = new WebAppContext(null, "/", null, null, null, null, WebAppContext.NO_SESSIONS);
     context.addServlet(RedirectServlet.class, "/*");
+    context.setServer(masterJettyServer);
+
     try {
       masterJettyServer.start();
     } catch (Exception e) {
