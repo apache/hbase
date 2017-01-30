@@ -18,12 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
+
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.annotations.VisibleForTesting;
-
-import com.google.common.base.Objects;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -110,20 +110,30 @@ public class MultiVersionConcurrencyControl {
   }
 
   /**
+   * Call {@link #begin(Runnable)} with an empty {@link Runnable}.
+   */
+  public WriteEntry begin() {
+    return begin(() -> {});
+  }
+
+  /**
    * Start a write transaction. Create a new {@link WriteEntry} with a new write number and add it
-   * to our queue of ongoing writes. Return this WriteEntry instance.
-   * To complete the write transaction and wait for it to be visible, call
-   * {@link #completeAndWait(WriteEntry)}. If the write failed, call
-   * {@link #complete(WriteEntry)} so we can clean up AFTER removing ALL trace of the failed write
-   * transaction.
+   * to our queue of ongoing writes. Return this WriteEntry instance. To complete the write
+   * transaction and wait for it to be visible, call {@link #completeAndWait(WriteEntry)}. If the
+   * write failed, call {@link #complete(WriteEntry)} so we can clean up AFTER removing ALL trace of
+   * the failed write transaction.
+   * <p>
+   * The {@code action} will be executed under the lock which means it can keep the same order with
+   * mvcc.
    * @see #complete(WriteEntry)
    * @see #completeAndWait(WriteEntry)
    */
-  public WriteEntry begin() {
+  public WriteEntry begin(Runnable action) {
     synchronized (writeQueue) {
       long nextWriteNumber = writePoint.incrementAndGet();
       WriteEntry e = new WriteEntry(nextWriteNumber);
       writeQueue.add(e);
+      action.run();
       return e;
     }
   }

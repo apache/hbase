@@ -382,12 +382,13 @@ public class TestWALFactory {
     for(byte[] fam : htd.getFamiliesKeys()) {
       scopes.put(fam, 0);
     }
-
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
       wal.append(regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis(), scopes), kvs,  true);
+          System.currentTimeMillis(), mvcc, scopes),
+        kvs, true);
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync();

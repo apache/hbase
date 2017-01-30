@@ -1178,7 +1178,7 @@ public abstract class AbstractTestWALReplay {
     FSWALEntry entry =
         new FSWALEntry(sequence, createWALKey(htd.getTableName(), hri, mvcc, scopes), createWALEdit(
           rowName, family, ee, index), hri, true);
-    entry.stampRegionSequenceId();
+    entry.stampRegionSequenceId(mvcc.begin());
     return entry;
   }
 

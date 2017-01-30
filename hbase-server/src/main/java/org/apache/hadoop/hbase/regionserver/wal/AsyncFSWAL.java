@@ -544,17 +544,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   @Override
   public long append(HRegionInfo hri, WALKey key, WALEdit edits, boolean inMemstore)
       throws IOException {
-    if (closed) {
-      throw new IOException("Cannot append; log is closed");
-    }
-    TraceScope scope = Trace.startSpan("AsyncFSWAL.append");
-    long txid = waitingConsumePayloads.next();
-    try {
-      RingBufferTruck truck = waitingConsumePayloads.get(txid);
-      truck.load(new FSWALEntry(txid, key, edits, hri, inMemstore), scope.detach());
-    } finally {
-      waitingConsumePayloads.publish(txid);
-    }
+    long txid =
+        stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore, waitingConsumePayloads);
     if (shouldScheduleConsumer()) {
       eventLoop.execute(consumer);
     }

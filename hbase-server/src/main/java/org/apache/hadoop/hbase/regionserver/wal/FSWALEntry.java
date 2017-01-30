@@ -52,9 +52,6 @@ class FSWALEntry extends Entry {
   private final transient boolean inMemstore;
   private final transient HRegionInfo hri;
   private final transient Set<byte[]> familyNames;
-  // In the new WAL logic, we will rewrite failed WAL entries to new WAL file, so we need to avoid
-  // calling stampRegionSequenceId again.
-  private transient boolean stamped = false;
 
   // The tracing span for this entry when writing WAL.
   private transient Span span;
@@ -105,38 +102,18 @@ class FSWALEntry extends Entry {
   }
 
   /**
-   * Here is where a WAL edit gets its sequenceid.
-   * SIDE-EFFECT is our stamping the sequenceid into every Cell AND setting the sequenceid into the
-   * MVCC WriteEntry!!!!
+   * Here is where a WAL edit gets its sequenceid. SIDE-EFFECT is our stamping the sequenceid into
+   * every Cell AND setting the sequenceid into the MVCC WriteEntry!!!!
    * @return The sequenceid we stamped on this edit.
    */
-  long stampRegionSequenceId() throws IOException {
-    if (stamped) {
-      return getKey().getSequenceId();
-    }
-    stamped = true;
-    long regionSequenceId = WALKey.NO_SEQUENCE_ID;
-    WALKey key = getKey();
-    MultiVersionConcurrencyControl.WriteEntry we = key.getPreAssignedWriteEntry();
-    boolean preAssigned = (we != null);
-    if (!preAssigned) {
-      MultiVersionConcurrencyControl mvcc = key.getMvcc();
-      if (mvcc != null) {
-        we = mvcc.begin();
-      }
-    }
-    if (we != null) {
-      regionSequenceId = we.getWriteNumber();
-    }
-
+  long stampRegionSequenceId(MultiVersionConcurrencyControl.WriteEntry we) throws IOException {
+    long regionSequenceId = we.getWriteNumber();
     if (!this.getEdit().isReplay() && inMemstore) {
-      for (Cell c:getEdit().getCells()) {
+      for (Cell c : getEdit().getCells()) {
         CellUtil.setSequenceId(c, regionSequenceId);
       }
     }
-    if (!preAssigned) {
-      key.setWriteEntry(we);
-    }
+    getKey().setWriteEntry(we);
     return regionSequenceId;
   }
 

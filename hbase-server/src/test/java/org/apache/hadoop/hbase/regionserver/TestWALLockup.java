@@ -221,6 +221,7 @@ public class TestWALLockup {
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
         Bytes.BYTES_COMPARATOR);
     scopes.put(COLUMN_FAMILY_BYTES, 0);
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     try {
       // First get something into memstore. Make a Put and then pull the Cell out of it. Will
       // manage append and sync carefully in below to manufacture hang. We keep adding same
@@ -228,7 +229,7 @@ public class TestWALLockup {
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
       WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName(),
-          System.currentTimeMillis(), scopes);
+          System.currentTimeMillis(), mvcc, scopes);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -400,11 +401,12 @@ public class TestWALLockup {
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
         Bytes.BYTES_COMPARATOR);
     scopes.put(COLUMN_FAMILY_BYTES, 0);
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     try {
       Put put = new Put(bytes);
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
       WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName(),
-          System.currentTimeMillis(), scopes);
+          System.currentTimeMillis(), mvcc, scopes);
       WALEdit edit = new WALEdit();
       CellScanner CellScanner = put.cellScanner();
       assertTrue(CellScanner.advance());
@@ -436,7 +438,7 @@ public class TestWALLockup {
       // make RingBufferEventHandler sleep 1s, so the following sync
       // endOfBatch=false
       key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), TableName.valueOf("sleep"),
-          System.currentTimeMillis(), scopes);
+          System.currentTimeMillis(), mvcc, scopes);
       dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
 
       Thread t = new Thread("Sync") {
@@ -460,7 +462,7 @@ public class TestWALLockup {
       }
       // make append throw DamagedWALException
       key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(),
-          TableName.valueOf("DamagedWALException"), System.currentTimeMillis(), scopes);
+          TableName.valueOf("DamagedWALException"), System.currentTimeMillis(), mvcc, scopes);
       dodgyWAL2.append(region.getRegionInfo(), key, edit, true);
 
       while (latch.getCount() > 0) {

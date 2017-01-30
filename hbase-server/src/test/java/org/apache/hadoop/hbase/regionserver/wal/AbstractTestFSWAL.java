@@ -408,6 +408,7 @@ public abstract class AbstractTestFSWAL {
         final WALKey logkey = new WALKey(info.getEncodedNameAsBytes(), tableName,
             System.currentTimeMillis(), clusterIds, -1, -1, region.getMVCC(), scopes);
         wal.append(info, logkey, edits, true);
+        region.getMVCC().completeAndWait(logkey.getWriteEntry());
       }
       region.flush(true);
       // FlushResult.flushSequenceId is not visible here so go get the current sequence id.

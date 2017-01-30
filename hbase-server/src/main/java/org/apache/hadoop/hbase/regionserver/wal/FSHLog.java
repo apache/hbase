@@ -435,31 +435,10 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification = "Will never be null")
   @Override
-  public long append(final HRegionInfo hri,
-      final WALKey key, final WALEdit edits, final boolean inMemstore) throws IOException {
-    if (this.closed) {
-      throw new IOException("Cannot append; log is closed");
-    }
-    // Make a trace scope for the append. It is closed on other side of the ring buffer by the
-    // single consuming thread. Don't have to worry about it.
-    TraceScope scope = Trace.startSpan("FSHLog.append");
-
-    // This is crazy how much it takes to make an edit. Do we need all this stuff!!!!???? We need
-    // all this to make a key and then below to append the edit, we need to carry htd, info,
-    // etc. all over the ring buffer.
-    FSWALEntry entry = null;
-    long sequence = this.disruptor.getRingBuffer().next();
-    try {
-      RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
-      // Construction of FSWALEntry sets a latch. The latch is thrown just after we stamp the
-      // edit with its edit/sequence id.
-      // TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
-      entry = new FSWALEntry(sequence, key, edits, hri, inMemstore);
-      truck.load(entry, scope.detach());
-    } finally {
-      this.disruptor.getRingBuffer().publish(sequence);
-    }
-    return sequence;
+  public long append(final HRegionInfo hri, final WALKey key, final WALEdit edits,
+      final boolean inMemstore) throws IOException {
+    return stampSequenceIdAndPublishToRingBuffer(hri, key, edits, inMemstore,
+      disruptor.getRingBuffer());
   }
 
   /**
@@ -1009,12 +988,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           try {
 
             if (this.exception != null) {
-              // We got an exception on an earlier attempt at append. Do not let this append
-              // go through. Fail it but stamp the sequenceid into this append though failed.
-              // We need to do this to close the latch held down deep in WALKey...that is waiting
-              // on sequenceid assignment otherwise it will just hang out (The #append method
-              // called below does this also internally).
-              entry.stampRegionSequenceId();
               // Return to keep processing events coming off the ringbuffer
               return;
             }

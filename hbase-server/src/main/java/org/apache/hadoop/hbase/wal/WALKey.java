@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -29,30 +31,24 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FamilyScope;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.ScopeType;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.SequenceId;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FamilyScope;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.ScopeType;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * A Key for an entry in the WAL.
@@ -70,8 +66,7 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 //       purposes. They need to be merged into WALEntry.
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class WALKey implements SequenceId, Comparable<WALKey> {
-  private static final Log LOG = LogFactory.getLog(WALKey.class);
-  private final CountDownLatch sequenceIdAssignedLatch = new CountDownLatch(1);
+
   /**
    * Used to represent when a particular wal key doesn't know/care about the sequence ordering.
    */
@@ -93,35 +88,16 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    */
   @InterfaceAudience.Private // For internal use only.
   public MultiVersionConcurrencyControl.WriteEntry getWriteEntry() throws InterruptedIOException {
-    if (this.preAssignedWriteEntry != null) {
-      // don't wait for seqNumAssignedLatch if writeEntry is preassigned
-      return this.preAssignedWriteEntry;
-    }
-    try {
-      this.sequenceIdAssignedLatch.await();
-    } catch (InterruptedException ie) {
-      MultiVersionConcurrencyControl mvcc = getMvcc();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("mvcc=" + mvcc + ", writeEntry=" + this.writeEntry);
-      }
-      InterruptedIOException iie = new InterruptedIOException();
-      iie.initCause(ie);
-      throw iie;
-    }
+    assert this.writeEntry != null;
     return this.writeEntry;
   }
 
   @InterfaceAudience.Private // For internal use only.
   public void setWriteEntry(MultiVersionConcurrencyControl.WriteEntry writeEntry) {
-    if (this.writeEntry != null) {
-      throw new RuntimeException("Non-null!!!");
-    }
+    assert this.writeEntry == null;
     this.writeEntry = writeEntry;
     // Set our sequenceid now using WriteEntry.
-    if (this.writeEntry != null) {
-      this.sequenceId = this.writeEntry.getWriteNumber();
-    }
-    this.sequenceIdAssignedLatch.countDown();
+    this.sequenceId = writeEntry.getWriteNumber();
   }
 
   // REMOVE!!!! No more Writables!!!!
@@ -208,7 +184,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    * Set in a way visible to multiple threads; e.g. synchronized getter/setters.
    */
   private MultiVersionConcurrencyControl.WriteEntry writeEntry;
-  private MultiVersionConcurrencyControl.WriteEntry preAssignedWriteEntry = null;
   public static final List<UUID> EMPTY_UUIDS = Collections.unmodifiableList(new ArrayList<UUID>());
 
   // visible for deprecated HLogKey
@@ -720,26 +695,6 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     this.writeTime = walKey.getWriteTime();
     if(walKey.hasOrigSequenceNumber()) {
       this.origLogSeqNum = walKey.getOrigSequenceNumber();
-    }
-  }
-
-  /**
-   * @return The preassigned writeEntry, if any
-   */
-  @InterfaceAudience.Private // For internal use only.
-  public MultiVersionConcurrencyControl.WriteEntry getPreAssignedWriteEntry() {
-    return this.preAssignedWriteEntry;
-  }
-
-  /**
-   * Preassign writeEntry
-   * @param writeEntry the entry to assign
-   */
-  @InterfaceAudience.Private // For internal use only.
-  public void setPreAssignedWriteEntry(WriteEntry writeEntry) {
-    if (writeEntry != null) {
-      this.preAssignedWriteEntry = writeEntry;
-      this.sequenceId = writeEntry.getWriteNumber();
     }
   }
 }

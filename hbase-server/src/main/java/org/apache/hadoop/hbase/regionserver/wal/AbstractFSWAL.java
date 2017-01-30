@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -73,6 +75,7 @@ import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.lmax.disruptor.RingBuffer;
 
 /**
  * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS. Only one
@@ -881,11 +884,8 @@ public abstract class AbstractFSWAL<W> implements WAL {
     atHeadOfRingBufferEventHandlerAppend();
     long start = EnvironmentEdgeManager.currentTime();
     byte[] encodedRegionName = entry.getKey().getEncodedRegionName();
-    long regionSequenceId = WALKey.NO_SEQUENCE_ID;
-    // We are about to append this edit; update the region-scoped sequence number. Do it
-    // here inside this single appending/writing thread. Events are ordered on the ringbuffer
-    // so region sequenceids will also be in order.
-    regionSequenceId = entry.stampRegionSequenceId();
+    long regionSequenceId = entry.getKey().getSequenceId();
+
     // Edits are empty, there is nothing to append. Maybe empty when we are looking for a
     // region sequence id only, a region edit/sequence id that is not associated with an actual
     // edit. It has to go through all the rigmarole to be sure we have the right ordering.
@@ -942,6 +942,28 @@ public abstract class AbstractFSWAL<W> implements WAL {
         listener.postSync(timeInNanos, handlerSyncs);
       }
     }
+  }
+
+  protected long stampSequenceIdAndPublishToRingBuffer(HRegionInfo hri, WALKey key, WALEdit edits,
+      boolean inMemstore, RingBuffer<RingBufferTruck> ringBuffer)
+      throws IOException {
+    if (this.closed) {
+      throw new IOException("Cannot append; log is closed, regionName = " + hri.getRegionNameAsString());
+    }
+    TraceScope scope = Trace.startSpan(getClass().getSimpleName() + ".append");
+    MutableLong txidHolder = new MutableLong();
+    MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin(() -> {
+      txidHolder.setValue(ringBuffer.next());
+    });
+    long txid = txidHolder.longValue();
+    try {
+      FSWALEntry entry = new FSWALEntry(txid, key, edits, hri, inMemstore);
+      entry.stampRegionSequenceId(we);
+      ringBuffer.get(txid).load(entry, scope.detach());
+    } finally {
+      ringBuffer.publish(txid);
+    }
+    return txid;
   }
 
   @Override

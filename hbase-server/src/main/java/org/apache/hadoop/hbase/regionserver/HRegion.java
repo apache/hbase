@@ -104,7 +104,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -644,9 +643,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // that has non-default scope
   private final NavigableMap<byte[], Integer> replicationScope = new TreeMap<byte[], Integer>(
       Bytes.BYTES_COMPARATOR);
-  // flag and lock for MVCC preassign
-  private final boolean mvccPreAssign;
-  private final ReentrantLock preAssignMvccLock;
 
   /**
    * HRegion constructor. This constructor should only be used for testing and
@@ -806,14 +802,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           false :
           conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
               HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
-
-    // get mvcc pre-assign flag and lock
-    this.mvccPreAssign = conf.getBoolean(HREGION_MVCC_PRE_ASSIGN, DEFAULT_HREGION_MVCC_PRE_ASSIGN);
-    if (this.mvccPreAssign) {
-      this.preAssignMvccLock = new ReentrantLock();
-    } else {
-      this.preAssignMvccLock = null;
-    }
   }
 
   void setHTableSpecificConf() {
@@ -3349,26 +3337,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } else {
         try {
           if (!walEdit.isEmpty()) {
-            try {
-              if (this.mvccPreAssign) {
-                preAssignMvccLock.lock();
-                writeEntry = mvcc.begin();
-              }
-              // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-              walKey = new WALKey(this.getRegionInfo().getEncodedNameAsBytes(),
-                  this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
-                  mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc,
-                  this.getReplicationScope());
-              if (this.mvccPreAssign) {
-                walKey.setPreAssignedWriteEntry(writeEntry);
-              }
-              // TODO: Use the doAppend methods below... complicated by the replay stuff above.
-              txid = this.wal.append(this.getRegionInfo(), walKey, walEdit, true);
-            } finally {
-              if (mvccPreAssign) {
-                preAssignMvccLock.unlock();
-              }
-            }
+            // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
+            walKey = new WALKey(this.getRegionInfo().getEncodedNameAsBytes(),
+                this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
+                mutation.getClusterIds(), currentNonceGroup, currentNonce, mvcc,
+                this.getReplicationScope());
+            // TODO: Use the doAppend methods below... complicated by the replay stuff above.
+            txid = this.wal.append(this.getRegionInfo(), walKey, walEdit, true);
             if (txid != 0) {
               sync(txid, durability);
             }
@@ -3400,7 +3375,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // 1) If the op is in replay mode, FSWALEntry#stampRegionSequenceId won't stamp sequence id.
         // 2) If no WAL, FSWALEntry won't be used
         // we use durability of the original mutation for the mutation passed by CP.
-        boolean updateSeqId = replay || batchOp.getMutation(i).getDurability() == Durability.SKIP_WAL || mvccPreAssign;
+        boolean updateSeqId = replay || batchOp.getMutation(i).getDurability() == Durability.SKIP_WAL;
         if (updateSeqId) {
           this.updateSequenceId(familyMaps[i].values(),
             replay? batchOp.getReplaySequenceId(): writeEntry.getWriteNumber());
