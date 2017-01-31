@@ -234,6 +234,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
       mobFileLocations = new HashMap<String, List<Path>>();
     }
+
+    cmd.getArgList().forEach((file) -> files.add(new Path(file)));
+
     return true;
   }
 
