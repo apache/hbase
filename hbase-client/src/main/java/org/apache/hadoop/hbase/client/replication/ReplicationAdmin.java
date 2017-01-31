@@ -36,12 +36,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
@@ -89,7 +84,8 @@ public class ReplicationAdmin implements Closeable {
 
   public static final String TNAME = "tableName";
   public static final String CFNAME = "columnFamlyName";
-
+  public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY
+      = "hbase.replication.source.custom.walentryfilters";
   // only Global for now, can add other type
   // such as, 1) no global replication, or 2) the table is replicated to this cluster, etc.
   public static final String REPLICATIONTYPE = "replicationType";
@@ -203,6 +199,7 @@ public class ReplicationAdmin implements Closeable {
     if (tableCfs != null) {
       peerConfig.setTableCFsMap(tableCfs);
     }
+    checkConfiguredWALEntryFilters(peerConfig);
     this.replicationPeers.addPeer(id, peerConfig);
   }
 
@@ -212,11 +209,13 @@ public class ReplicationAdmin implements Closeable {
    * @param peerConfig configuration for the replication slave cluster
    */
   public void addPeer(String id, ReplicationPeerConfig peerConfig) throws ReplicationException {
+    checkConfiguredWALEntryFilters(peerConfig);
     this.replicationPeers.addPeer(id, peerConfig);
   }
 
   public void updatePeerConfig(String id, ReplicationPeerConfig peerConfig)
     throws ReplicationException {
+    checkConfiguredWALEntryFilters(peerConfig);
     this.replicationPeers.updatePeerConfig(id, peerConfig);
   }
 
@@ -691,5 +690,23 @@ public class ReplicationAdmin implements Closeable {
       }
     }
     return true;
+  }
+
+  private void checkConfiguredWALEntryFilters(ReplicationPeerConfig peerConfig)
+    throws ReplicationException {
+    String filterCSV = peerConfig.getConfiguration().
+        get(REPLICATION_WALENTRYFILTER_CONFIG_KEY);
+    if (filterCSV != null && !filterCSV.isEmpty()) {
+      String[] filters = filterCSV.split(",");
+      for (String filter : filters) {
+        try {
+          Class clazz = Class.forName(filter);
+          Object o = clazz.newInstance();
+        } catch (Exception e) {
+          throw new ReplicationException("Configured WALEntryFilter " + filter +
+              " could not be created. Failing add/update " + "peer operation.", e);
+        }
+      }
+    }
   }
 }

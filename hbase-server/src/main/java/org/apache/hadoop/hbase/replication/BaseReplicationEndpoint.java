@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractService;
 
+import static org.apache.hadoop.hbase.client.replication.ReplicationAdmin.REPLICATION_WALENTRYFILTER_CONFIG_KEY;
+
 /**
  * A Base implementation for {@link ReplicationEndpoint}s. Users should consider extending this
  * class rather than implementing {@link ReplicationEndpoint} directly for better backwards
@@ -74,6 +76,20 @@ public abstract class BaseReplicationEndpoint extends AbstractService
     WALEntryFilter tableCfFilter = getTableCfWALEntryFilter();
     if (tableCfFilter != null) {
       filters.add(tableCfFilter);
+    }
+    if (ctx != null && ctx.getPeerConfig() != null) {
+      String filterNameCSV = ctx.getPeerConfig().getConfiguration().get(REPLICATION_WALENTRYFILTER_CONFIG_KEY);
+      if (filterNameCSV != null && !filterNameCSV.isEmpty()) {
+          String[] filterNames = filterNameCSV.split(",");
+          for (String filterName : filterNames) {
+              try {
+                  Class<?> clazz = Class.forName(filterName);
+                  filters.add((WALEntryFilter) clazz.newInstance());
+                } catch (Exception e) {
+                  LOG.error("Unable to create WALEntryFilter " + filterName, e);
+                }
+            }
+        }
     }
     return filters.isEmpty() ? null : new ChainWALEntryFilter(filters);
   }
