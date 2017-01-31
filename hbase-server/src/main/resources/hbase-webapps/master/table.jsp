@@ -175,7 +175,7 @@ if ( fqtn != null ) {
   try (Admin admin = master.getConnection().getAdmin()) {
     if (action.equals("split")) {
       if (key != null && key.length() > 0) {
-        admin.splitRegion(Bytes.toBytes(key));
+        admin.split(TableName.valueOf(fqtn), Bytes.toBytes(key));
       } else {
         admin.split(TableName.valueOf(fqtn));
       }
@@ -183,7 +183,14 @@ if ( fqtn != null ) {
     %> Split request accepted. <%
     } else if (action.equals("compact")) {
       if (key != null && key.length() > 0) {
-        admin.compactRegion(Bytes.toBytes(key));
+        List<HRegionInfo> regions = admin.getTableRegions(TableName.valueOf(fqtn));
+        byte[] row = Bytes.toBytes(key);
+
+        for (HRegionInfo region : regions) {
+          if (region.containsRow(row)) {
+            admin.compactRegion(region.getRegionName());
+          }
+        }
       } else {
         admin.compact(TableName.valueOf(fqtn));
       }
@@ -718,7 +725,7 @@ Actions:
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">Region Key (optional):<input type="text" name="key" size="40"></td>
+  <td style="border-style: none">Row Key (optional):<input type="text" name="key" size="40"></td>
   <td style="border-style: none">This action will force a compaction of all
   regions of the table, or, if a key is supplied, only the region containing the
   given key.</td>
@@ -732,7 +739,7 @@ Actions:
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">Region Key (optional):<input type="text" name="key" size="40"></td>
+  <td style="border-style: none">Row Key (optional):<input type="text" name="key" size="40"></td>
   <td style="border-style: none">This action will force a split of all eligible
   regions of the table, or, if a key is supplied, only the region containing the
   given key. An eligible region is one that does not contain any references to
