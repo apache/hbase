@@ -912,10 +912,10 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
         // TODO: fixHdfsHoles does not work against splits, since the parent dir lingers on
         // for some time until children references are deleted. HBCK erroneously sees this as
         // overlapping regions
-        HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, false,
-            false, false, null);
+        HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, true,
+            false, false, false, null);
         // no LINGERING_SPLIT_PARENT reported
-        assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {});
+        assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {}); //no LINGERING_SPLIT_PARENT reported
 
         // assert that the split hbase:meta entry is still there.
         Get get = new Get(hri.getRegionName());
@@ -997,7 +997,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
 
         // now fix it. The fix should not revert the region split, but add daughters to META
         hbck = doFsck(conf, true, true, false, false, false, false, false, false, false,
-            false, false, null);
+            false, false, false, null);
         assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
             HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
@@ -1657,7 +1657,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       // fix hole
       assertErrors(
         doFsck(conf, false, true, false, false, false, false, false, false, false, false, false,
-          null),
+          false, null),
         new HBaseFsck.ErrorReporter.ERROR_CODE[] {
           HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
           HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED });

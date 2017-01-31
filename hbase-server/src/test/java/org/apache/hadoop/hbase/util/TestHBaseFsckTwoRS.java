@@ -44,6 +44,10 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -274,6 +278,97 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       doFsck(conf, true);
       // check that reference file fixed
       assertNoErrors(doFsck(conf, false));
+    } finally {
+      cleanupTable(table);
+    }
+  }
+
+  /**
+   * Test fixing lingering HFileLinks.
+   */
+  @Test(timeout = 180000)
+  public void testLingeringHFileLinks() throws Exception {
+    TableName table = TableName.valueOf("testLingeringHFileLinks");
+    try {
+      setupTable(table);
+
+      FileSystem fs = FileSystem.get(conf);
+      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+      Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
+      String regionName = regionDir.getName();
+      Path famDir = new Path(regionDir, FAM_STR);
+      String HFILE_NAME = "01234567abcd";
+      Path hFilePath = new Path(famDir, HFILE_NAME);
+
+      // creating HFile
+      HFileContext context = new HFileContextBuilder().withIncludesTags(false).build();
+      HFile.Writer w =
+          HFile.getWriterFactoryNoCache(conf).withPath(fs, hFilePath).withFileContext(context)
+              .create();
+      w.close();
+
+      HFileLink.create(conf, fs, famDir, table, regionName, HFILE_NAME);
+
+      // should report no error
+      HBaseFsck hbck = doFsck(conf, false);
+      assertNoErrors(hbck);
+
+      // Delete linked file
+      fs.delete(hFilePath, true);
+
+      // Check without fix should show the error
+      hbck = doFsck(conf, false);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_HFILELINK });
+
+      // Fixing the error
+      hbck = doFsck(conf, true);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_HFILELINK });
+
+      // Fix should sideline these files, thus preventing the error
+      hbck = doFsck(conf, false);
+      assertNoErrors(hbck);
+    } finally {
+      cleanupTable(table);
+    }
+  }
+
+  @Test(timeout = 180000)
+  public void testCorruptLinkDirectory() throws Exception {
+    TableName table = TableName.valueOf("testLingeringHFileLinks");
+    try {
+      setupTable(table);
+      FileSystem fs = FileSystem.get(conf);
+
+      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+      Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
+      Path famDir = new Path(regionDir, FAM_STR);
+      String regionName = regionDir.getName();
+      String HFILE_NAME = "01234567abcd";
+      String link = HFileLink.createHFileLinkName(table, regionName, HFILE_NAME);
+
+      // should report no error
+      HBaseFsck hbck = doFsck(conf, false);
+      assertNoErrors(hbck);
+
+      // creating a directory with file instead of the HFileLink file
+      fs.mkdirs(new Path(famDir, link));
+      fs.create(new Path(new Path(famDir, link), "somefile"));
+
+      // Check without fix should show the error
+      hbck = doFsck(conf, false);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_HFILELINK });
+
+      // Fixing the error
+      hbck = doFsck(conf, true);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_HFILELINK });
+
+      // Fix should sideline these files, thus preventing the error
+      hbck = doFsck(conf, false);
+      assertNoErrors(hbck);
     } finally {
       cleanupTable(table);
     }
