@@ -20,14 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,7 +37,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
@@ -48,7 +45,6 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -62,9 +58,6 @@ import org.apache.hadoop.hbase.mob.MobFile;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -457,66 +450,6 @@ public class HMobStore extends HStore {
    */
   public Path getPath() {
     return mobFamilyPath;
-  }
-
-  /**
-   * The compaction in the mob store.
-   * The cells in this store contains the path of the mob files. There might be race
-   * condition between the major compaction and the mob major compaction.
-   * In order to avoid this, we need mutually exclude the running of the major compaction
-   * and the mob major compaction.
-   * The minor compaction is not affected.
-   * The major compaction is marked as retainDeleteMarkers when a mob major
-   * compaction is in progress.
-   */
-  @Override
-  public List<StoreFile> compact(CompactionContext compaction,
-    ThroughputController throughputController, User user) throws IOException {
-    // If it's major compaction, try to find whether there's a mob major compaction is running
-    // If yes, mark the major compaction as retainDeleteMarkers
-    if (compaction.getRequest().isAllFiles()) {
-      // Acquire a table lock to coordinate.
-      // 1. If no, mark the major compaction as retainDeleteMarkers and continue the compaction.
-      // 2. If the lock is obtained, run the compaction directly.
-      EntityLock lock = null;
-      try {
-        if (region.getRegionServerServices() != null) {
-          List<HRegionInfo> regionInfos = Collections.singletonList(region.getRegionInfo());
-          // regionLock takes shared lock on table too.
-          lock = region.getRegionServerServices().regionLock(regionInfos, "MOB compaction", null);
-          int awaitTime = conf.getInt(HRegionServer.REGION_LOCK_AWAIT_TIME_SEC,
-              HRegionServer.DEFAULT_REGION_LOCK_AWAIT_TIME_SEC);
-          try {
-            LOG.info("Acquiring MOB major compaction lock " + lock);
-            lock.requestLock();
-            lock.await(awaitTime, TimeUnit.SECONDS);
-          } catch (InterruptedException e) {
-            LOG.error("Interrupted exception when waiting for lock: " + lock, e);
-          }
-          if (!lock.isLocked()) {
-            // Remove lock from queue on the master so that if it's granted in future, we don't
-            // keep holding it until compaction finishes
-            lock.unlock();
-            lock = null;
-            LOG.warn("Cannot obtain table lock, maybe a sweep tool is running on this " + "table["
-                + getTableName() + "], forcing the delete markers to be retained");
-          }
-        } else {
-          LOG.warn("Cannot obtain lock because RegionServices not available. Are we running as "
-              + "compaction tool?");
-        }
-        // If no lock, retain delete markers to be safe.
-        if (lock == null) compaction.getRequest().forceRetainDeleteMarkers();
-        return super.compact(compaction, throughputController, user);
-      } finally {
-        if (lock != null && lock.isLocked()) {
-          lock.unlock();
-        }
-      }
-    } else {
-      // If it's not a major compaction, continue the compaction.
-      return super.compact(compaction, throughputController, user);
-    }
   }
 
   public void updateCellsCountCompactedToMob(long count) {

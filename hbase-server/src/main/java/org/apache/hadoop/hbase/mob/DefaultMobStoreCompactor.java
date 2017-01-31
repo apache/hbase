@@ -36,12 +36,12 @@ import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MobCompactionStoreScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -62,8 +62,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
     @Override
     public ScanType getScanType(CompactionRequest request) {
-      return request.isRetainDeleteMarkers() ? ScanType.COMPACT_RETAIN_DELETES
-          : ScanType.COMPACT_DROP_DELETES;
+      // retain the delete markers until they are expired.
+      return ScanType.COMPACT_RETAIN_DELETES;
     }
 
     @Override
@@ -71,16 +71,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         ScanType scanType, FileDetails fd, long smallestReadPoint) throws IOException {
       Scan scan = new Scan();
       scan.setMaxVersions(store.getFamily().getMaxVersions());
-      if (scanType == ScanType.COMPACT_DROP_DELETES) {
-        // In major compaction, we need to write the delete markers to del files, so we have to
-        // retain the them in scanning.
-        scanType = ScanType.COMPACT_RETAIN_DELETES;
-        return new MobCompactionStoreScanner(store, store.getScanInfo(), scan, scanners,
-            scanType, smallestReadPoint, fd.earliestPutTs, true);
-      } else {
-        return new MobCompactionStoreScanner(store, store.getScanInfo(), scan, scanners,
-            scanType, smallestReadPoint, fd.earliestPutTs, false);
-      }
+      return new StoreScanner(store, store.getScanInfo(), scan, scanners, scanType,
+          smallestReadPoint, fd.earliestPutTs);
     }
   };
 
@@ -115,14 +107,12 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     return compact(request, scannerFactory, writerFactory, throughputController, user);
   }
 
-  // TODO refactor to take advantage of the throughput controller.
-
   /**
    * Performs compaction on a column family with the mob flag enabled.
    * This is for when the mob threshold size has changed or if the mob
    * column family mode has been toggled via an alter table statement.
    * Compacts the files by the following rules.
-   * 1. If the cell has a mob reference tag, the cell's value is the path of the mob file.
+   * 1. If the Put cell has a mob reference tag, the cell's value is the path of the mob file.
    * <ol>
    * <li>
    * If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
@@ -133,7 +123,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
    * the new store file.
    * </li>
    * </ol>
-   * 2. If the cell doesn't have a reference tag.
+   * 2. If the Put cell doesn't have a reference tag.
    * <ol>
    * <li>
    * If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
@@ -143,8 +133,17 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
    * Otherwise, directly write this cell into the store file.
    * </li>
    * </ol>
-   * In the mob compaction, the {@link MobCompactionStoreScanner} is used as a scanner
-   * which could output the normal cells and delete markers together when required.
+   * 3. Decide how to write a Delete cell.
+   * <ol>
+   * <li>
+   * If a Delete cell does not have a mob reference tag which means this delete marker have not
+   * been written to the mob del file, write this cell to the mob del file, and write this cell
+   * with a ref tag to a store file.
+   * </li>
+   * <li>
+   * Otherwise, directly write it to a store file.
+   * </li>
+   * </ol>
    * After the major compaction on the normal hfiles, we have a guarantee that we have purged all
    * deleted or old version mob refs, and the delete markers are written to a del file with the
    * suffix _del. Because of this, it is safe to use the del file in the mob compaction.
@@ -165,11 +164,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
       long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
       boolean major, int numofFilesToCompact) throws IOException {
-    if (!(scanner instanceof MobCompactionStoreScanner)) {
-      throw new IllegalArgumentException(
-        "The scanner should be an instance of MobCompactionStoreScanner");
-    }
-    MobCompactionStoreScanner compactionScanner = (MobCompactionStoreScanner) scanner;
     int bytesWritten = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
@@ -198,11 +192,19 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       ScannerContext scannerContext =
               ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
       do {
-        hasMore = compactionScanner.next(cells, scannerContext);
+        hasMore = scanner.next(cells, scannerContext);
         for (Cell c : cells) {
-          if (compactionScanner.isOutputDeleteMarkers() && CellUtil.isDelete(c)) {
-            delFileWriter.append(c);
-            deleteMarkersCount++;
+          if (major && CellUtil.isDelete(c)) {
+            if (MobUtils.isMobReferenceCell(c)) {
+              // Directly write it to a store file
+              writer.append(c);
+            } else {
+              // Add a ref tag to this cell and write it to a store file.
+              writer.append(MobUtils.createMobRefDeleteMarker(c));
+              // Write the cell to a del file
+              delFileWriter.append(c);
+              deleteMarkersCount++;
+            }
           } else if (mobFileWriter == null || c.getTypeByte() != KeyValue.Type.Put.getCode()) {
             // If the mob file writer is null or the kv type is not put, directly write the cell
             // to the store file.

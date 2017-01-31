@@ -50,8 +50,8 @@ public class TestMobFileName extends TestCase {
   public void testHashCode() {
     assertEquals(MobFileName.create(startKey, dateStr, uuid).hashCode(),
         MobFileName.create(startKey, dateStr, uuid).hashCode());
-    assertNotSame(MobFileName.create(startKey, dateStr, uuid).hashCode(),
-        MobFileName.create(startKey, dateStr, uuid).hashCode());
+    assertNotSame(MobFileName.create(startKey, dateStr, uuid),
+        MobFileName.create(startKey, dateStr, uuid));
   }
 
   @Test

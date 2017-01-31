@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.mob.compactions.MobCompactor;
 import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
@@ -91,6 +90,12 @@ public final class MobUtils {
     }
   };
 
+  private static final byte[] REF_DELETE_MARKER_TAG_BYTES;
+  static {
+    List<Tag> tags = new ArrayList<>();
+    tags.add(MobConstants.MOB_REF_TAG);
+    REF_DELETE_MARKER_TAG_BYTES = TagUtil.fromList(tags);
+  }
 
   /**
    * Private constructor to keep this class from being instantiated.
@@ -809,5 +814,44 @@ public final class MobUtils {
       storeFileList.add(new StoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE));
     }
     HFileArchiver.archiveStoreFiles(conf, fs, mobRegionInfo, mobFamilyDir, family, storeFileList);
+  }
+
+  /**
+   * Creates a mob ref delete marker.
+   * @param cell The current delete marker.
+   * @return A delete marker with the ref tag.
+   */
+  public static Cell createMobRefDeleteMarker(Cell cell) {
+    return CellUtil.createCell(cell, TagUtil.concatTags(REF_DELETE_MARKER_TAG_BYTES, cell));
+  }
+
+  /**
+   * Checks if the mob file is expired.
+   * @param column The descriptor of the current column family.
+   * @param current The current time.
+   * @param fileDate The date string parsed from the mob file name.
+   * @return True if the mob file is expired.
+   */
+  public static boolean isMobFileExpired(HColumnDescriptor column, long current, String fileDate) {
+    if (column.getMinVersions() > 0) {
+      return false;
+    }
+    long timeToLive = column.getTimeToLive();
+    if (Integer.MAX_VALUE == timeToLive) {
+      return false;
+    }
+
+    Date expireDate = new Date(current - timeToLive * 1000);
+    expireDate = new Date(expireDate.getYear(), expireDate.getMonth(), expireDate.getDate());
+    try {
+      Date date = parseDate(fileDate);
+      if (date.getTime() < expireDate.getTime()) {
+        return true;
+      }
+    } catch (ParseException e) {
+      LOG.warn("Failed to parse the date " + fileDate, e);
+      return false;
+    }
+    return false;
   }
 }

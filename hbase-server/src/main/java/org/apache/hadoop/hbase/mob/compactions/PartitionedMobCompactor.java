@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -327,8 +328,9 @@ public class PartitionedMobCompactor extends MobCompactor {
    * @param request The compaction request.
    * @param partition A compaction partition.
    * @param delFiles The del files.
-   * @param connection to use
-   * @param table The current table.  @return The paths of new mob files after compactions.
+   * @param connection The connection to use.
+   * @param table The current table.
+   * @return The paths of new mob files after compactions.
    * @throws IOException if IO failure is encountered
    */
   private List<Path> compactMobFilePartition(PartitionedMobCompactionRequest request,
@@ -336,6 +338,12 @@ public class PartitionedMobCompactor extends MobCompactor {
                                              List<StoreFile> delFiles,
                                              Connection connection,
                                              Table table) throws IOException {
+    if (MobUtils.isMobFileExpired(column, EnvironmentEdgeManager.currentTime(),
+      partition.getPartitionId().getDate())) {
+      // If the files in the partition are expired, do not compact them and directly
+      // return an empty list.
+      return Collections.emptyList();
+    }
     List<Path> newFiles = new ArrayList<>();
     List<FileStatus> files = partition.listFiles();
     int offset = 0;

@@ -245,13 +245,7 @@ public class TestMobStoreCompaction {
     region.compact(true);
     assertEquals("After compaction: store files", 1, countStoreFiles());
     // still have original mob hfiles and now added a mob del file
-    // CHANGED EXPECTATION WHEN LOCKING CHANGED. In this context, there is no locking because there
-    // is not regionserverservices provided on the region (it is null). In this case when
-    // no services and therefore no means of getting a lock, we will run the mob compaction
-    // with           compaction.getRequest().forceRetainDeleteMarkers();
-    // .. .this messes w/ expected number. It is one less than when we run
-    // with the locks.
-    assertEquals("After compaction: mob files", numHfiles, countMobFiles());
+    assertEquals("After compaction: mob files", numHfiles + 1, countMobFiles());
 
     Scan scan = new Scan();
     scan.setRaw(true);
@@ -269,16 +263,11 @@ public class TestMobStoreCompaction {
       results.clear();
       scanner.next(results);
     }
-    // Assert the delete mark is not retained after the major compaction
-    // See CHANGED EXPECTATION WHEN LOCKING CHANGED note above. Here too we have different
-    // expectation in the new locking regime.
-    // assertEquals(0, deleteCount);
+    // assert the delete mark is retained after the major compaction
+    assertEquals(1, deleteCount);
     scanner.close();
     // assert the deleted cell is not counted
-    // See CHANGED EXPECTATION WHEN LOCKING CHANGED note above. Here too we have different
-    // expectation in the new locking regime. We were passing '1' and we had numHFiles -1...
-    // but changed in below.
-    assertEquals("The cells in mob files", numHfiles, countMobCellsInMobFiles(0));
+    assertEquals("The cells in mob files", numHfiles - 1, countMobCellsInMobFiles(1));
   }
 
   private int countStoreFiles() throws IOException {

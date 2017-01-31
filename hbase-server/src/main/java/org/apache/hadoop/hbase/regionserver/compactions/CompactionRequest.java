@@ -59,8 +59,6 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
   private String storeName = "";
   private long totalSize = -1L;
 
-  private Boolean retainDeleteMarkers = null;
-
   /**
    * This ctor should be used by coprocessors that want to subclass CompactionRequest.
    */
@@ -205,23 +203,6 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
     assert isAllFiles || !isMajor;
     this.isMajor = !isAllFiles ? DisplayCompactionType.MINOR
         : (isMajor ? DisplayCompactionType.MAJOR : DisplayCompactionType.ALL_FILES);
-  }
-
-  /**
-   * Forcefully setting that this compaction has to retain the delete markers in the new compacted
-   * file, whatever be the type of the compaction.<br>
-   * Note : By default HBase drops delete markers when the compaction is on all files.
-   */
-  public void forceRetainDeleteMarkers() {
-    this.retainDeleteMarkers = Boolean.TRUE;
-  }
-
-  /**
-   * @return Whether the compaction has to retain the delete markers or not.
-   */
-  public boolean isRetainDeleteMarkers() {
-    return (this.retainDeleteMarkers != null) ? this.retainDeleteMarkers.booleanValue()
-        : !isAllFiles();
   }
 
   @Override
