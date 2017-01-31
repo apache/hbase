@@ -89,6 +89,19 @@
   </dependencies>
 
   <profiles>
+   <!-- Skip the tests in this module -->
+   <profile>
+      <id>skipProcedureTests</id>
+      <activation>
+        <property>
+          <name>skipProcedureTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
     <!-- Profiles for building against different hadoop versions -->
 
     <!-- profile for building against Hadoop 2.x.  This is the default -->
