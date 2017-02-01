@@ -348,6 +348,9 @@ Shell.load_command_group(
     catalogjanitor_run
     catalogjanitor_switch
     catalogjanitor_enabled
+    cleaner_chore_run
+    cleaner_chore_switch
+    cleaner_chore_enabled
     compact_rs
     compaction_state
     trace

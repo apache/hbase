@@ -356,6 +356,28 @@ message IsCatalogJanitorEnabledResponse {
   required bool value = 1;
 }
 
+message RunCleanerChoreRequest {
+}
+
+message RunCleanerChoreResponse {
+  required bool cleaner_chore_ran = 1;
+}
+
+message SetCleanerChoreRunningRequest {
+  required bool on = 1;
+}
+
+message SetCleanerChoreRunningResponse {
+  optional bool prev_value = 1;
+}
+
+message IsCleanerChoreEnabledRequest {
+}
+
+message IsCleanerChoreEnabledResponse {
+  required bool value = 1;
+}
+
 message SnapshotRequest {
   required SnapshotDescription snapshot = 1;
 }
@@ -741,6 +763,22 @@ service MasterService {
    */
   rpc IsCatalogJanitorEnabled(IsCatalogJanitorEnabledRequest)
      returns(IsCatalogJanitorEnabledResponse);
+
+  /** Get a run of the CleanerChore */
+  rpc RunCleanerChore(RunCleanerChoreRequest)
+     returns(RunCleanerChoreResponse);
+
+  /**
+   * Enable the CleanerChore on or off.
+   */
+  rpc SetCleanerChoreRunning(SetCleanerChoreRunningRequest)
+     returns(SetCleanerChoreRunningResponse);
+
+  /**
+   * Query whether the CleanerChore is enabled.
+   */
+  rpc IsCleanerChoreEnabled(IsCleanerChoreEnabledRequest)
+     returns(IsCleanerChoreEnabledResponse);
 
   /**
    * Call a master coprocessor endpoint
