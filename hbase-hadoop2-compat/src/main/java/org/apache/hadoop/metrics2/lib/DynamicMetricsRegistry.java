@@ -53,6 +53,7 @@ public class DynamicMetricsRegistry {
       Maps.newConcurrentMap();
   private final ConcurrentMap<String, MetricsTag> tagsMap =
       Maps.newConcurrentMap();
+  private CompatibilityRegistry compatibilityRegistry;
   private final MetricsInfo metricsInfo;
   private final DefaultMetricsSystemHelper helper = new DefaultMetricsSystemHelper();
   private final static String[] histogramSuffixes = new String[]{
@@ -79,6 +80,7 @@ public class DynamicMetricsRegistry {
    */
   public DynamicMetricsRegistry(MetricsInfo info) {
     metricsInfo = info;
+    compatibilityRegistry = new CompatibilityRegistry();
   }
 
   /**
@@ -391,6 +393,7 @@ public class DynamicMetricsRegistry {
     for (MutableMetric metric : metrics()) {
       metric.snapshot(builder, all);
     }
+    compatibilityRegistry.snapshot(builder, all);
   }
 
   @Override public String toString() {
@@ -529,5 +532,44 @@ public class DynamicMetricsRegistry {
       helper.removeObjectName(name);
     }
     metricsMap.clear();
+  }
+
+  public CompatibilityRegistry getCompatibilityRegistry() {
+    return this.compatibilityRegistry;
+  }
+
+  /**
+   * Provides compatibility interface for metrics type changes across HBase releases.
+   */
+  public class CompatibilityRegistry {
+
+    private ConcurrentMap<String, MutableGaugeLong> gaugesMap = Maps.newConcurrentMap();
+
+    public MutableGaugeLong getGauge(final String gaugeName, long potentialStartingValue) {
+      // Check if it's there already in the main registry
+      MutableMetric metric = metricsMap.get(gaugeName);
+      if (metric != null && metric instanceof MutableGaugeLong) {
+        return (MutableGaugeLong)metric;
+      } else {
+        // If it's not present in the main registry, reference the compatibility registry
+        MutableGaugeLong gauge = gaugesMap.get(gaugeName);
+        if (gauge == null) {
+          MutableGaugeLong newGauge =
+              new MutableGaugeLong(new MetricsInfoImpl(gaugeName, ""), potentialStartingValue);
+          gauge = gaugesMap.putIfAbsent(gaugeName, newGauge);
+
+          if (gauge == null) {
+            return newGauge;
+          }
+        }
+        return gauge;
+      }
+    }
+
+    public void snapshot(MetricsRecordBuilder builder, boolean all) {
+      for (MutableGaugeLong gauge: gaugesMap.values()) {
+        gauge.snapshot(builder, all);
+      }
+    }
   }
 }

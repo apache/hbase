@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
 public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSourceSource {
 
@@ -38,7 +39,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String shippedHFilesKey;
   private final String sizeOfHFileRefsQueueKey;
 
+  @Deprecated
   private final MutableGaugeLong ageOfLastShippedOpGauge;
+  private final MutableHistogram ageOfLastShippedOpHist;
   private final MutableGaugeLong sizeOfLogQueueGauge;
   private final MutableFastCounter logReadInEditsCounter;
   private final MutableFastCounter logEditsFilteredCounter;
@@ -71,7 +74,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     this.keyPrefix = "source." + this.id + ".";
 
     ageOfLastShippedOpKey = "source." + id + ".ageOfLastShippedOp";
-    ageOfLastShippedOpGauge = rms.getMetricsRegistry().getGauge(ageOfLastShippedOpKey, 0L);
+    ageOfLastShippedOpHist = rms.getMetricsRegistry().getHistogram(ageOfLastShippedOpKey);
+    ageOfLastShippedOpGauge = rms.getMetricsRegistry()
+        .getCompatibilityRegistry().getGauge(ageOfLastShippedOpKey, 0L);
 
     sizeOfLogQueueKey = "source." + id + ".sizeOfLogQueue";
     sizeOfLogQueueGauge = rms.getMetricsRegistry().getGauge(sizeOfLogQueueKey, 0L);
@@ -126,7 +131,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   }
 
   @Override public void setLastShippedAge(long age) {
-    ageOfLastShippedOpGauge.set(age);
+    ageOfLastShippedOpHist.add(age);
+    ageOfLastShippedOpGauge.set(getLastShippedAge());
   }
 
   @Override public void incrSizeOfLogQueue(int size) {
@@ -192,7 +198,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override
   public long getLastShippedAge() {
-    return ageOfLastShippedOpGauge.value();
+    return ageOfLastShippedOpHist.getMax();
   }
 
   @Override

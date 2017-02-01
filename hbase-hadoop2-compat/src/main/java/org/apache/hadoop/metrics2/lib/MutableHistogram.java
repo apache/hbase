@@ -76,6 +76,10 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
     histogram.add(val, 1);
   }
 
+  public long getMax() {
+    return histogram.getMax();
+  }
+
   @Override
   public synchronized void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
     // Get a reference to the old histogram.
