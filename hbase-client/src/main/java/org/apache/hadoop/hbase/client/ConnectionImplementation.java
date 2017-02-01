@@ -80,12 +80,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientServ
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.NormalizeResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest;
@@ -1441,6 +1441,27 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           RpcController controller, MasterProtos.IsCatalogJanitorEnabledRequest request)
           throws ServiceException {
         return stub.isCatalogJanitorEnabled(controller, request);
+      }
+
+      @Override
+      public MasterProtos.RunCleanerChoreResponse runCleanerChore(RpcController controller,
+          MasterProtos.RunCleanerChoreRequest request)
+          throws ServiceException {
+        return stub.runCleanerChore(controller, request);
+      }
+
+      @Override
+      public MasterProtos.SetCleanerChoreRunningResponse setCleanerChoreRunning(
+          RpcController controller, MasterProtos.SetCleanerChoreRunningRequest request)
+          throws ServiceException {
+        return stub.setCleanerChoreRunning(controller, request);
+      }
+
+      @Override
+      public MasterProtos.IsCleanerChoreEnabledResponse isCleanerChoreEnabled(
+          RpcController controller, MasterProtos.IsCleanerChoreEnabledRequest request)
+          throws ServiceException {
+        return stub.isCleanerChoreEnabled(controller, request);
       }
 
       @Override

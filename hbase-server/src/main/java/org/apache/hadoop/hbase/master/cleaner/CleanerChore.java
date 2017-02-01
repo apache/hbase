@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Abstract Cleaner that uses a chain of delegates to clean a directory of files
@@ -50,6 +51,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private final Configuration conf;
   protected List<T> cleanersChain;
   protected Map<String, Object> params;
+  private AtomicBoolean enabled = new AtomicBoolean(true);
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
                       FileSystem fs, Path oldFileDir, String confKey) {
@@ -128,6 +130,14 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
 
   @Override
   protected void chore() {
+    if (getEnabled()) {
+      runCleaner();
+    } else {
+      LOG.debug("Cleaner chore disabled! Not cleaning.");
+    }
+  }
+
+  public Boolean runCleaner() {
     try {
       FileStatus[] files = FSUtils.listStatus(this.fs, this.oldFileDir);
       checkAndDeleteEntries(files);
@@ -135,7 +145,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       e = e instanceof RemoteException ?
               ((RemoteException)e).unwrapRemoteException() : e;
       LOG.warn("Error while cleaning the logs", e);
+      return false;
     }
+    return true;
   }
 
   /**
@@ -290,5 +302,16 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         LOG.warn("Stopping", t);
       }
     }
+  }
+
+  /**
+   * @param enabled
+   */
+  public boolean setEnabled(final boolean enabled) {
+    return this.enabled.getAndSet(enabled);
+  }
+
+  public boolean getEnabled() {
+    return this.enabled.get();
   }
 }

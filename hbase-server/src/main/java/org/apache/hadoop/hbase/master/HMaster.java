@@ -97,9 +97,9 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationMetaCleaner;
-import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationZKNodeCleanerChore;
+import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan;
 import org.apache.hadoop.hbase.master.normalizer.NormalizationPlan.PlanType;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
@@ -113,9 +113,9 @@ import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.SplitTableRegionProcedure;
@@ -952,6 +952,20 @@ public class HMaster extends HRegionServer implements MasterServices {
   boolean isCatalogJanitorEnabled() {
     return catalogJanitorChore != null ?
       catalogJanitorChore.getEnabled() : false;
+  }
+
+  boolean isCleanerChoreEnabled() {
+    boolean hfileCleanerFlag = true, logCleanerFlag = true;
+
+    if (hfileCleaner != null) {
+      hfileCleanerFlag = hfileCleaner.getEnabled();
+    }
+
+    if (logCleaner != null) {
+      logCleanerFlag = logCleaner.getEnabled();
+    }
+
+    return (hfileCleanerFlag && logCleanerFlag);
   }
 
   @Override
@@ -2658,6 +2672,10 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public HFileCleaner getHFileCleaner() {
     return this.hfileCleaner;
+  }
+
+  public LogCleaner getLogCleaner() {
+    return this.logCleaner;
   }
 
   /**

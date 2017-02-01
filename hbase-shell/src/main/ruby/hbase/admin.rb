@@ -243,6 +243,26 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Request cleaner chore to run (for garbage collection of HFiles and WAL files)
+    def cleaner_chore_run()
+      @admin.runCleanerChore()
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Enable/disable the cleaner chore
+    # Returns previous cleaner switch setting.
+    def cleaner_chore_switch(enableDisable)
+      @admin.setCleanerChoreRunning(java.lang.Boolean::valueOf(enableDisable))
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Query on the cleaner chore state (enabled/disabled?)
+    # Returns cleaner state (true signifies enabled).
+    def cleaner_chore_enabled()
+      @admin.isCleanerChoreEnabled()
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Enables a table
     def enable(table_name)
       tableExists(table_name)

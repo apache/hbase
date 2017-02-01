@@ -58,8 +58,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -1455,6 +1455,40 @@ public class HBaseAdmin implements Admin {
       protected Boolean rpcCall() throws Exception {
         return master.isCatalogJanitorEnabled(getRpcController(),
           RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue();
+      }
+    });
+  }
+
+  @Override
+  public boolean setCleanerChoreRunning(final boolean on) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override public Boolean rpcCall() throws Exception {
+        return master.setCleanerChoreRunning(getRpcController(), RequestConverter
+                                                                   .buildSetCleanerChoreRunningRequest(
+                                                                     on)).getPrevValue();
+      }
+    });
+  }
+
+  @Override
+  public boolean runCleanerChore() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override public Boolean rpcCall() throws Exception {
+        return master
+                 .runCleanerChore(getRpcController(), RequestConverter
+                                                        .buildRunCleanerChoreRequest())
+                 .getCleanerChoreRan();
+      }
+    });
+  }
+
+  @Override
+  public boolean isCleanerChoreEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override public Boolean rpcCall() throws Exception {
+        return master.isCleanerChoreEnabled(getRpcController(),
+                                            RequestConverter.buildIsCleanerChoreEnabledRequest())
+                     .getValue();
       }
     });
   }
