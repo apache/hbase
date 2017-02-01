@@ -38,6 +38,7 @@ Create a table with namespace=default and table qualifier=t1
   hbase> create 't1', 'f1', 'f2', 'f3'
   hbase> create 't1', {NAME => 'f1', VERSIONS => 1, TTL => 2592000, BLOCKCACHE => true}
   hbase> create 't1', {NAME => 'f1', CONFIGURATION => {'hbase.hstore.blockingStoreFiles' => '10'}}
+  hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 1000000, MOB_COMPACT_PARTITION_POLICY => 'weekly'}
 
 Table configuration options can be put at the end.
 Examples:

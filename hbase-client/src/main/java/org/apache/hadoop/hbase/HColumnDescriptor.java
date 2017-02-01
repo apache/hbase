@@ -28,6 +28,7 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
 
 import com.google.common.base.Preconditions;
-
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -130,6 +130,11 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   public static final String MOB_THRESHOLD = "MOB_THRESHOLD";
   public static final byte[] MOB_THRESHOLD_BYTES = Bytes.toBytes(MOB_THRESHOLD);
   public static final long DEFAULT_MOB_THRESHOLD = 100 * 1024; // 100k
+  public static final String MOB_COMPACT_PARTITION_POLICY = "MOB_COMPACT_PARTITION_POLICY";
+  public static final byte[] MOB_COMPACT_PARTITION_POLICY_BYTES =
+      Bytes.toBytes(MOB_COMPACT_PARTITION_POLICY);
+  public static final MobCompactPartitionPolicy DEFAULT_MOB_COMPACT_PARTITION_POLICY =
+      MobCompactPartitionPolicy.DAILY;
 
   public static final String DFS_REPLICATION = "DFS_REPLICATION";
   public static final short DEFAULT_DFS_REPLICATION = 0;
@@ -276,6 +281,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
     RESERVED_KEYWORDS.add(new Bytes(IS_MOB_BYTES));
     RESERVED_KEYWORDS.add(new Bytes(MOB_THRESHOLD_BYTES));
+    RESERVED_KEYWORDS.add(new Bytes(MOB_COMPACT_PARTITION_POLICY_BYTES));
   }
 
   private static final int UNINITIALIZED = -1;
@@ -438,8 +444,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     if (Bytes.compareTo(Bytes.toBytes(HConstants.VERSIONS), key) == 0) {
       cachedMaxVersions = UNINITIALIZED;
     }
-    values.put(new Bytes(key),
-        new Bytes(value));
+    values.put(new Bytes(key), new Bytes(value));
     return this;
   }
 
@@ -1020,7 +1025,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   public static Unit getUnit(String key) {
     Unit unit;
-      /* TTL for now, we can add more as we neeed */
+      /* TTL for now, we can add more as we need */
     if (key.equals(HColumnDescriptor.TTL)) {
       unit = Unit.TIME_INTERVAL;
     } else if (key.equals(HColumnDescriptor.MOB_THRESHOLD)) {
@@ -1220,6 +1225,28 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   public HColumnDescriptor setMobEnabled(boolean isMobEnabled) {
     setValue(IS_MOB_BYTES, Bytes.toBytes(isMobEnabled));
     return this;
+  }
+
+  /**
+   * Get the mob compact partition policy for this family
+   * @return MobCompactPartitionPolicy
+   */
+  public MobCompactPartitionPolicy getMobCompactPartitionPolicy() {
+    String policy = getValue(MOB_COMPACT_PARTITION_POLICY);
+    if (policy == null) {
+      return DEFAULT_MOB_COMPACT_PARTITION_POLICY;
+    }
+
+    return MobCompactPartitionPolicy.valueOf(policy.toUpperCase(Locale.ROOT));
+  }
+
+  /**
+   * Set the mob compact partition policy for the family.
+   * @param policy policy type
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setMobCompactPartitionPolicy(MobCompactPartitionPolicy policy) {
+    return setValue(MOB_COMPACT_PARTITION_POLICY, policy.toString().toUpperCase(Locale.ROOT));
   }
 
   /**

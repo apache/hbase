@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mob.compactions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -151,6 +153,19 @@ public class PartitionedMobCompactor extends MobCompactor {
     final CompactionPartitionId id = new CompactionPartitionId();
     int selectedFileCount = 0;
     int irrelevantFileCount = 0;
+    MobCompactPartitionPolicy policy = column.getMobCompactPartitionPolicy();
+
+    Calendar calendar =  Calendar.getInstance();
+    Date currentDate = new Date();
+    Date firstDayOfCurrentMonth = null;
+    Date firstDayOfCurrentWeek = null;
+
+    if (policy == MobCompactPartitionPolicy.MONTHLY) {
+      firstDayOfCurrentMonth = MobUtils.getFirstDayOfMonth(calendar, currentDate);
+      firstDayOfCurrentWeek = MobUtils.getFirstDayOfWeek(calendar, currentDate);
+    } else if (policy == MobCompactPartitionPolicy.WEEKLY) {
+      firstDayOfCurrentWeek = MobUtils.getFirstDayOfWeek(calendar, currentDate);
+    }
 
     for (FileStatus file : candidates) {
       if (!file.isFile()) {
@@ -170,23 +185,32 @@ public class PartitionedMobCompactor extends MobCompactor {
       }
       if (StoreFileInfo.isDelFile(linkedFile.getPath())) {
         allDelFiles.add(file);
-      } else if (allFiles || (linkedFile.getLen() < mergeableSize)) {
-        // add all files if allFiles is true,
-        // otherwise add the small files to the merge pool
+      } else {
         String fileName = linkedFile.getPath().getName();
-        id.setStartKey(MobFileName.getStartKeyFromName(fileName));
-        id.setDate(MobFileName.getDateFromName(fileName));
-        CompactionPartition compactionPartition = filesToCompact.get(id);
-        if (compactionPartition == null) {
-          CompactionPartitionId newId = new CompactionPartitionId(id.getStartKey(), id.getDate());
-          compactionPartition = new CompactionPartition(newId);
+        String date = MobFileName.getDateFromName(fileName);
+        boolean skipCompaction = MobUtils.fillPartitionId(id, firstDayOfCurrentMonth,
+            firstDayOfCurrentWeek, date, policy, calendar, mergeableSize);
+        if (allFiles || (!skipCompaction && (linkedFile.getLen() < id.getThreshold()))) {
+          // add all files if allFiles is true,
+          // otherwise add the small files to the merge pool
+          // filter out files which are not supposed to be compacted with the
+          // current policy
 
-          compactionPartition.addFile(file);
-          filesToCompact.put(newId, compactionPartition);
-        } else {
-          compactionPartition.addFile(file);
+          id.setStartKey(MobFileName.getStartKeyFromName(fileName));
+          CompactionPartition compactionPartition = filesToCompact.get(id);
+          if (compactionPartition == null) {
+            CompactionPartitionId newId = new CompactionPartitionId(id.getStartKey(), id.getDate());
+            compactionPartition = new CompactionPartition(newId);
+            compactionPartition.addFile(file);
+            filesToCompact.put(newId, compactionPartition);
+            newId.updateLatestDate(date);
+          } else {
+            compactionPartition.addFile(file);
+            compactionPartition.getPartitionId().updateLatestDate(date);
+          }
+
+          selectedFileCount++;
         }
-        selectedFileCount++;
       }
     }
 
@@ -437,7 +461,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     try {
       try {
         writer = MobUtils
-            .createWriter(conf, fs, column, partition.getPartitionId().getDate(), tempPath,
+            .createWriter(conf, fs, column, partition.getPartitionId().getLatestDate(), tempPath,
                 Long.MAX_VALUE, column.getCompactionCompressionType(),
                 partition.getPartitionId().getStartKey(), compactionCacheConfig, cryptoContext);
         cleanupTmpMobFile = true;

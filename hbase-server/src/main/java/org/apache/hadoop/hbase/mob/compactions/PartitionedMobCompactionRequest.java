@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -98,11 +99,15 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
   public static class CompactionPartitionId {
     private String startKey;
     private String date;
+    private String latestDate;
+    private long threshold;
 
     public CompactionPartitionId() {
       // initialize these fields to empty string
       this.startKey = "";
       this.date = "";
+      this.latestDate = "";
+      this.threshold = 0;
     }
 
     public CompactionPartitionId(String startKey, String date) {
@@ -111,6 +116,16 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
       }
       this.startKey = startKey;
       this.date = date;
+      this.latestDate = "";
+      this.threshold = 0;
+    }
+
+    public void setThreshold (final long threshold) {
+      this.threshold = threshold;
+    }
+
+    public long getThreshold () {
+      return this.threshold;
     }
 
     public String getStartKey() {
@@ -127,6 +142,14 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
 
     public void setDate(final String date) {
       this.date = date;
+    }
+
+    public String getLatestDate () { return this.latestDate; }
+
+    public void updateLatestDate(final String latestDate) {
+      if (this.latestDate.compareTo(latestDate) < 0) {
+        this.latestDate = latestDate;
+      }
     }
 
     @Override

@@ -19,13 +19,8 @@
 package org.apache.hadoop.hbase.mob.compactions;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.text.ParseException;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -33,12 +28,15 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy;
 import org.apache.hadoop.hbase.regionserver.*;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.client.Scan;
@@ -63,9 +61,11 @@ import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestPartitionedMobCompactor {
+  private static final Log LOG = LogFactory.getLog(TestPartitionedMobCompactor.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String family = "family";
   private final static String qf = "qf";
+  private final long DAY_IN_MS = 1000 * 60 * 60 * 24;
   private HColumnDescriptor hcd = new HColumnDescriptor(family);
   private Configuration conf = TEST_UTIL.getConfiguration();
   private CacheConfig cacheConf = new CacheConfig(conf);
@@ -104,6 +104,109 @@ public class TestPartitionedMobCompactor {
   }
 
   @Test
+  public void testCompactionSelectAllFilesWeeklyPolicy() throws Exception {
+    String tableName = "testCompactionSelectAllFilesWeeklyPolicy";
+    testCompactionAtMergeSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD,
+        CompactionType.ALL_FILES, false, false, new Date(), MobCompactPartitionPolicy.WEEKLY, 1);
+  }
+
+  @Test
+  public void testCompactionSelectPartFilesWeeklyPolicy() throws Exception {
+    String tableName = "testCompactionSelectPartFilesWeeklyPolicy";
+    testCompactionAtMergeSize(tableName, 4000, CompactionType.PART_FILES, false, false,
+        new Date(), MobCompactPartitionPolicy.WEEKLY, 1);
+  }
+
+  @Test
+  public void testCompactionSelectPartFilesWeeklyPolicyWithPastWeek() throws Exception {
+    String tableName = "testCompactionSelectPartFilesWeeklyPolicyWithPastWeek";
+    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    testCompactionAtMergeSize(tableName, 700, CompactionType.PART_FILES, false, false, dateLastWeek,
+        MobCompactPartitionPolicy.WEEKLY, 7);
+  }
+
+  @Test
+  public void testCompactionSelectAllFilesWeeklyPolicyWithPastWeek() throws Exception {
+    String tableName = "testCompactionSelectAllFilesWeeklyPolicyWithPastWeek";
+    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    testCompactionAtMergeSize(tableName, 3000, CompactionType.ALL_FILES,
+        false, false, dateLastWeek, MobCompactPartitionPolicy.WEEKLY, 7);
+  }
+
+  @Test
+  public void testCompactionSelectAllFilesMonthlyPolicy() throws Exception {
+    String tableName = "testCompactionSelectAllFilesMonthlyPolicy";
+    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    testCompactionAtMergeSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD,
+        CompactionType.ALL_FILES, false, false, dateLastWeek,
+        MobCompactPartitionPolicy.MONTHLY, 7);
+  }
+
+  @Test
+  public void testCompactionSelectNoFilesWithinCurrentWeekMonthlyPolicy() throws Exception {
+    String tableName = "testCompactionSelectNoFilesWithinCurrentWeekMonthlyPolicy";
+    testCompactionAtMergeSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD,
+        CompactionType.PART_FILES, false, false, new Date(), MobCompactPartitionPolicy.MONTHLY, 1);
+  }
+
+  @Test
+  public void testCompactionSelectPartFilesMonthlyPolicy() throws Exception {
+    String tableName = "testCompactionSelectPartFilesMonthlyPolicy";
+    testCompactionAtMergeSize(tableName, 4000, CompactionType.PART_FILES, false, false,
+        new Date(), MobCompactPartitionPolicy.MONTHLY, 1);
+  }
+
+  @Test
+  public void testCompactionSelectPartFilesMonthlyPolicyWithPastWeek() throws Exception {
+    String tableName = "testCompactionSelectPartFilesMonthlyPolicyWithPastWeek";
+    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+    Calendar calendar =  Calendar.getInstance();
+    Date firstDayOfCurrentMonth = MobUtils.getFirstDayOfMonth(calendar, new Date());
+    CompactionType type = CompactionType.PART_FILES;
+    long mergeSizeMultiFactor = 7;
+
+
+    // The dateLastWeek may not really be last week, suppose that it runs at 2/1/2017, it is going
+    // to be last month and the monthly policy is going to be applied here.
+    if (dateLastWeek.before(firstDayOfCurrentMonth)) {
+      type = CompactionType.ALL_FILES;
+      mergeSizeMultiFactor *= 4;
+    }
+
+    testCompactionAtMergeSize(tableName, 700, type, false, false, dateLastWeek,
+        MobCompactPartitionPolicy.MONTHLY, mergeSizeMultiFactor);
+  }
+
+  @Test
+  public void testCompactionSelectAllFilesMonthlyPolicyWithPastWeek() throws Exception {
+    String tableName = "testCompactionSelectAllFilesMonthlyPolicyWithPastWeek";
+    Date dateLastWeek = new Date(System.currentTimeMillis() - (7 * DAY_IN_MS));
+
+    testCompactionAtMergeSize(tableName, 3000, CompactionType.ALL_FILES,
+        false, false, dateLastWeek, MobCompactPartitionPolicy.MONTHLY, 7);
+  }
+
+  @Test
+  public void testCompactionSelectPartFilesMonthlyPolicyWithPastMonth() throws Exception {
+    String tableName = "testCompactionSelectPartFilesMonthlyPolicyWithPastMonth";
+
+    // back 5 weeks, it is going to be a past month
+    Date dateLastMonth = new Date(System.currentTimeMillis() - (7 * 5 * DAY_IN_MS));
+    testCompactionAtMergeSize(tableName, 200, CompactionType.PART_FILES, false, false, dateLastMonth,
+        MobCompactPartitionPolicy.MONTHLY, 28);
+  }
+
+  @Test
+  public void testCompactionSelectAllFilesMonthlyPolicyWithPastMonth() throws Exception {
+    String tableName = "testCompactionSelectAllFilesMonthlyPolicyWithPastMonth";
+
+    // back 5 weeks, it is going to be a past month
+    Date dateLastMonth = new Date(System.currentTimeMillis() - (7 * 5 * DAY_IN_MS));
+    testCompactionAtMergeSize(tableName, 750, CompactionType.ALL_FILES,
+        false, false, dateLastMonth, MobCompactPartitionPolicy.MONTHLY, 28);
+  }
+
+  @Test
   public void testCompactionSelectWithAllFiles() throws Exception {
     String tableName = "testCompactionSelectWithAllFiles";
     // If there is only 1 file, it will not be compacted with _del files, so
@@ -120,7 +223,6 @@ public class TestPartitionedMobCompactor {
     testCompactionAtMergeSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD,
         CompactionType.PART_FILES, false);
   }
-
 
   @Test
   public void testCompactionSelectWithPartFiles() throws Exception {
@@ -144,34 +246,76 @@ public class TestPartitionedMobCompactor {
       final long mergeSize, final CompactionType type, final boolean isForceAllFiles,
       final boolean createDelFiles)
       throws Exception {
+    Date date = new Date();
+    testCompactionAtMergeSize(tableName, mergeSize, type, isForceAllFiles, createDelFiles, date);
+  }
+
+  private void testCompactionAtMergeSize(final String tableName,
+      final long mergeSize, final CompactionType type, final boolean isForceAllFiles,
+      final boolean createDelFiles, final Date date)
+      throws Exception {
+    testCompactionAtMergeSize(tableName, mergeSize, type, isForceAllFiles, createDelFiles, date,
+        MobCompactPartitionPolicy.DAILY, 1);
+  }
+
+  private void testCompactionAtMergeSize(final String tableName,
+      final long mergeSize, final CompactionType type, final boolean isForceAllFiles,
+      final boolean createDelFiles, final Date date, final MobCompactPartitionPolicy policy,
+      final long mergeSizeMultiFactor)
+      throws Exception {
     resetConf();
     init(tableName);
     int count = 10;
     // create 10 mob files.
-    createStoreFiles(basePath, family, qf, count, Type.Put);
+    createStoreFiles(basePath, family, qf, count, Type.Put, date);
 
     if (createDelFiles) {
       // create 10 del files
-      createStoreFiles(basePath, family, qf, count, Type.Delete);
+      createStoreFiles(basePath, family, qf, count, Type.Delete, date);
     }
+
+    Calendar calendar =  Calendar.getInstance();
+    Date firstDayOfCurrentWeek = MobUtils.getFirstDayOfWeek(calendar, new Date());
 
     listFiles();
     List<String> expectedStartKeys = new ArrayList<>();
     for(FileStatus file : mobFiles) {
-      if(file.getLen() < mergeSize) {
+      if(file.getLen() < mergeSize * mergeSizeMultiFactor) {
         String fileName = file.getPath().getName();
         String startKey = fileName.substring(0, 32);
 
+        // If the policy is monthly and files are in current week, they will be skipped
+        // in minor compcation.
+        boolean skipCompaction = false;
+        if (policy == MobCompactPartitionPolicy.MONTHLY) {
+          String fileDateStr = MobFileName.getDateFromName(fileName);
+          Date fileDate;
+          try {
+            fileDate = MobUtils.parseDate(fileDateStr);
+          } catch (ParseException e)  {
+            LOG.warn("Failed to parse date " + fileDateStr, e);
+            fileDate = new Date();
+          }
+          if (!fileDate.before(firstDayOfCurrentWeek)) {
+            skipCompaction = true;
+          }
+        }
+
         // If it is not an major mob compaction and del files are there,
         // these mob files wont be compacted.
-        if (isForceAllFiles || !createDelFiles) {
+        if (isForceAllFiles || (!createDelFiles && !skipCompaction)) {
           expectedStartKeys.add(startKey);
         }
       }
     }
+
+    // Set the policy
+    this.hcd.setMobCompactPartitionPolicy(policy);
     // set the mob compaction mergeable threshold
     conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
     testSelectFiles(tableName, type, isForceAllFiles, expectedStartKeys);
+    // go back to the default daily policy
+    this.hcd.setMobCompactPartitionPolicy(MobCompactPartitionPolicy.DAILY);
   }
 
   @Test
@@ -205,7 +349,7 @@ public class TestPartitionedMobCompactor {
     try {
       int count = 2;
       // create 2 mob files.
-      createStoreFiles(basePath, family, qf, count, Type.Put, true);
+      createStoreFiles(basePath, family, qf, count, Type.Put, true, new Date());
       listFiles();
 
       TableName tName = TableName.valueOf(tableName);
@@ -243,9 +387,9 @@ public class TestPartitionedMobCompactor {
     resetConf();
     init(tableName);
     // create 20 mob files.
-    createStoreFiles(basePath, family, qf, 20, Type.Put);
+    createStoreFiles(basePath, family, qf, 20, Type.Put, new Date());
     // create 13 del files
-    createStoreFiles(basePath, family, qf, 13, Type.Delete);
+    createStoreFiles(basePath, family, qf, 13, Type.Delete, new Date());
     listFiles();
 
     // set the max del file count
@@ -366,12 +510,12 @@ public class TestPartitionedMobCompactor {
    * @type the key type
    */
   private void createStoreFiles(Path basePath, String family, String qualifier, int count,
-      Type type) throws IOException {
-    createStoreFiles(basePath, family, qualifier, count, type, false);
+      Type type, final Date date) throws IOException {
+    createStoreFiles(basePath, family, qualifier, count, type, false, date);
   }
 
   private void createStoreFiles(Path basePath, String family, String qualifier, int count,
-      Type type, boolean sameStartKey) throws IOException {
+      Type type, boolean sameStartKey, final Date date) throws IOException {
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     String startKey = "row_";
     MobFileName mobFileName = null;
@@ -386,12 +530,10 @@ public class TestPartitionedMobCompactor {
         startRow = Bytes.toBytes(startKey + i);
       }
       if(type.equals(Type.Delete)) {
-        mobFileName = MobFileName.create(startRow, MobUtils.formatDate(
-            new Date()), delSuffix);
+        mobFileName = MobFileName.create(startRow, MobUtils.formatDate(date), delSuffix);
       }
       if(type.equals(Type.Put)){
-        mobFileName = MobFileName.create(startRow, MobUtils.formatDate(
-            new Date()), mobSuffix);
+        mobFileName = MobFileName.create(startRow, MobUtils.formatDate(date), mobSuffix);
       }
       StoreFileWriter mobFileWriter = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withFileContext(meta).withFilePath(new Path(basePath, mobFileName.getFileName())).build();

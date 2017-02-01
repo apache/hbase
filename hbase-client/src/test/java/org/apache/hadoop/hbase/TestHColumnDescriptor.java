@@ -114,12 +114,16 @@ public class TestHColumnDescriptor {
   public void testMobValuesInHColumnDescriptorShouldReadable() {
     boolean isMob = true;
     long threshold = 1000;
+    String policy = "weekly";
     String isMobString = PrettyPrinter.format(Bytes.toStringBinary(Bytes.toBytes(isMob)),
             HColumnDescriptor.getUnit(HColumnDescriptor.IS_MOB));
     String thresholdString = PrettyPrinter.format(Bytes.toStringBinary(Bytes.toBytes(threshold)),
             HColumnDescriptor.getUnit(HColumnDescriptor.MOB_THRESHOLD));
+    String policyString = PrettyPrinter.format(Bytes.toStringBinary(Bytes.toBytes(policy)),
+        HColumnDescriptor.getUnit(HColumnDescriptor.MOB_COMPACT_PARTITION_POLICY));
     assertEquals(String.valueOf(isMob), isMobString);
     assertEquals(String.valueOf(threshold), thresholdString);
+    assertEquals(String.valueOf(policy), policyString);
   }
 
   @Test
