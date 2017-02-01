@@ -124,6 +124,18 @@
   </dependencies>
 
   <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skipPrefixTreeTests</id>
+      <activation>
+        <property>
+          <name>skipPrefixTreeTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+      </properties>
+    </profile>
     <!-- Profiles for building against different hadoop versions -->
     <!--
       profile for building against Hadoop 2.0.0-alpha. Activate using:

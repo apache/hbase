@@ -122,10 +122,10 @@
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
-      <id>skip-metrics-tests</id>
+      <id>skipMetricsTests</id>
       <activation>
         <property>
-          <name>skip-metrics-tests</name>
+          <name>skipMetricsTests</name>
         </property>
       </activation>
       <properties>

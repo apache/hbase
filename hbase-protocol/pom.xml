@@ -131,10 +131,10 @@
     <profiles>
         <!-- Skip the tests in this module -->
         <profile>
-            <id>skip-rpc-tests</id>
+            <id>skipProtocolTests</id>
             <activation>
                 <property>
-                    <name>skip-rpc-tests</name>
+                    <name>skipProtocolTests</name>
                 </property>
             </activation>
             <properties>

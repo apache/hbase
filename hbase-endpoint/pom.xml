@@ -154,10 +154,10 @@
     <profiles>
         <!-- Skip the tests in this module -->
         <profile>
-            <id>skip-rpc-tests</id>
+            <id>skipRpcTests</id>
             <activation>
                 <property>
-                    <name>skip-rpc-tests</name>
+                    <name>skipRpcTests</name>
                 </property>
             </activation>
             <properties>

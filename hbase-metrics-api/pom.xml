@@ -98,10 +98,10 @@
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
-      <id>skip-metrics-api-tests</id>
+      <id>skipMetricsApiTests</id>
       <activation>
         <property>
-          <name>skip-metrics-api-tests</name>
+          <name>skipMetricsApiTests</name>
         </property>
       </activation>
       <properties>
