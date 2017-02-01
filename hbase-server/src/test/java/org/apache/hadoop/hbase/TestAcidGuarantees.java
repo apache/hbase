@@ -39,16 +39,21 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Test case that uses multiple threads to read and write multifamily rows
@@ -58,7 +63,12 @@ import com.google.common.collect.Lists;
  * a real cluster (eg for testing with failures, region movement, etc)
  */
 @Category({FlakeyTests.class, MediumTests.class})
+@RunWith(Parameterized.class)
 public class TestAcidGuarantees implements Tool {
+  @Parameterized.Parameters
+  public static Object[] data() {
+    return new Object[] { "NONE", "BASIC", "EAGER" };
+  }
   protected static final Log LOG = LogFactory.getLog(TestAcidGuarantees.class);
   public static final TableName TABLE_NAME = TableName.valueOf("TestAcidGuarantees");
   public static final byte [] FAMILY_A = Bytes.toBytes("A");
@@ -93,16 +103,19 @@ public class TestAcidGuarantees implements Tool {
     }
   }
 
-  public TestAcidGuarantees() {
+  public TestAcidGuarantees(String compType) {
     // Set small flush size for minicluster so we exercise reseeking scanners
     Configuration conf = HBaseConfiguration.create();
-    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(128*1024));
+    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(128 * 1024));
     // prevent aggressive region split
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-            ConstantSizeRegionSplitPolicy.class.getName());
+        ConstantSizeRegionSplitPolicy.class.getName());
     conf.setInt("hfile.format.version", 3); // for mob tests
-    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(MemoryCompactionPolicy.NONE));
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, compType);
+    if(MemoryCompactionPolicy.valueOf(compType) == MemoryCompactionPolicy.EAGER) {
+      conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
+      conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.9);
+    }
     util = new HBaseTestingUtility(conf);
   }
 
@@ -390,70 +403,50 @@ public class TestAcidGuarantees implements Tool {
     }
   }
 
+  @Before
+  public void setUp() throws Exception {
+    util.startMiniCluster(1);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    util.shutdownMiniCluster();
+  }
+
   @Test
   public void testGetAtomicity() throws Exception {
-    util.startMiniCluster(1);
-    try {
-      runTestAtomicity(20000, 5, 5, 0, 3);
-    } finally {
-      util.shutdownMiniCluster();
-    }
+    runTestAtomicity(20000, 5, 5, 0, 3);
   }
 
   @Test
   public void testScanAtomicity() throws Exception {
-    util.startMiniCluster(1);
-    try {
-      runTestAtomicity(20000, 5, 0, 5, 3);
-    } finally {
-      util.shutdownMiniCluster();
-    }
+    runTestAtomicity(20000, 5, 0, 5, 3);
   }
 
   @Test
   public void testMixedAtomicity() throws Exception {
-    util.startMiniCluster(1);
-    try {
-      runTestAtomicity(20000, 5, 2, 2, 3);
-    } finally {
-      util.shutdownMiniCluster();
-    }
+    runTestAtomicity(20000, 5, 2, 2, 3);
   }
 
   @Test
   public void testMobGetAtomicity() throws Exception {
-    util.startMiniCluster(1);
-    try {
-      boolean systemTest = false;
-      boolean useMob = true;
-      runTestAtomicity(20000, 5, 5, 0, 3, systemTest, useMob);
-    } finally {
-      util.shutdownMiniCluster();
-    }
+    boolean systemTest = false;
+    boolean useMob = true;
+    runTestAtomicity(20000, 5, 5, 0, 3, systemTest, useMob);
   }
 
   @Test
   public void testMobScanAtomicity() throws Exception {
-    util.startMiniCluster(1);
-    try {
-      boolean systemTest = false;
-      boolean useMob = true;
-      runTestAtomicity(20000, 5, 0, 5, 3, systemTest, useMob);
-    } finally {
-      util.shutdownMiniCluster();
-    }
+    boolean systemTest = false;
+    boolean useMob = true;
+    runTestAtomicity(20000, 5, 0, 5, 3, systemTest, useMob);
   }
 
   @Test
   public void testMobMixedAtomicity() throws Exception {
-    util.startMiniCluster(1);
-    try {
-      boolean systemTest = false;
-      boolean useMob = true;
-      runTestAtomicity(20000, 5, 2, 2, 3, systemTest, useMob);
-    } finally {
-      util.shutdownMiniCluster();
-    }
+    boolean systemTest = false;
+    boolean useMob = true;
+    runTestAtomicity(20000, 5, 2, 2, 3, systemTest, useMob);
   }
 
   ////////////////////////////////////////////////////////////////////////////
@@ -488,7 +481,8 @@ public class TestAcidGuarantees implements Tool {
     Configuration c = HBaseConfiguration.create();
     int status;
     try {
-      TestAcidGuarantees test = new TestAcidGuarantees();
+      TestAcidGuarantees test = new TestAcidGuarantees(CompactingMemStore
+          .COMPACTING_MEMSTORE_TYPE_DEFAULT);
       status = ToolRunner.run(c, test, args);
     } catch (Exception e) {
       LOG.error("Exiting due to error", e);

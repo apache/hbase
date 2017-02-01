@@ -28,7 +28,17 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -60,13 +70,20 @@ public class TestRecoveredEdits {
    * made it in.
    * @throws IOException
    */
-  @Test (timeout=60000)
-  public void testReplayWorksThoughLotsOfFlushing() throws IOException {
+  @Test (timeout=180000)
+  public void testReplayWorksThoughLotsOfFlushing() throws
+      IOException {
+    for(MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {
+      testReplayWorksWithMemoryCompactionPolicy(policy);
+    }
+  }
+
+  private void testReplayWorksWithMemoryCompactionPolicy(MemoryCompactionPolicy policy) throws
+    IOException {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     // Set it so we flush every 1M or so.  Thats a lot.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
-    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(MemoryCompactionPolicy.NONE));
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy));
     // The file of recovered edits has a column family of 'meta'. Also has an encoded regionname
     // of 4823016d8fca70b25503ee07f4c6d79f which needs to match on replay.
     final String encodedRegionName = "4823016d8fca70b25503ee07f4c6d79f";
@@ -122,7 +139,11 @@ public class TestRecoveredEdits {
     // Our 0000000000000016310 is 10MB. Most of the edits are for one region. Lets assume that if
     // we flush at 1MB, that there are at least 3 flushed files that are there because of the
     // replay of edits.
-    assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
+    if(policy == MemoryCompactionPolicy.EAGER) {
+      assertTrue("Files count=" + storeFiles.size(), storeFiles.size() >= 1);
+    } else {
+      assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
+    }
     // Now verify all edits made it into the region.
     int count = verifyAllEditsMadeItIn(fs, conf, recoveredEditsFile, region);
     LOG.info("Checked " + count + " edits made it in");

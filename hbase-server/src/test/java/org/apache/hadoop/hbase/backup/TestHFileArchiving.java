@@ -89,9 +89,6 @@ public class TestHFileArchiving {
     // prevent aggressive region split
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
-    // no memory compaction
-    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(MemoryCompactionPolicy.NONE));
   }
 
   @After

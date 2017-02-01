@@ -51,10 +51,10 @@ public abstract class MemStoreSegmentsIterator implements Iterator<Cell> {
     // list of Scanners of segments in the pipeline, when compaction starts
     List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
 
-    // create the list of scanners with the smallest read point, meaning that
-    // only relevant KVs are going to be returned by the pipeline traversing
-    for (Segment segment : segments) {
-      scanners.add(segment.getScanner(store.getSmallestReadPoint()));
+    // create the list of scanners to traverse over all the data
+    // no dirty reads here as these are immutable segments
+    for (ImmutableSegment segment : segments) {
+      scanners.add(segment.getScanner(Integer.MAX_VALUE));
     }
 
     scanner = new MemStoreScanner(comparator, scanners, true);

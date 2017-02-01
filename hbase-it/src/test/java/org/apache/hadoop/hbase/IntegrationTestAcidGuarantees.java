@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase;
 
 import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.MemStoreCompactor;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
@@ -74,7 +76,7 @@ public class IntegrationTestAcidGuarantees extends IntegrationTestBase {
 
     // replace the HBaseTestingUtility in the unit test with the integration test's
     // IntegrationTestingUtility
-    tag = new TestAcidGuarantees();
+    tag = new TestAcidGuarantees(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT);
     tag.setHBaseTestingUtil(util);
   }
 

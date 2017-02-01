@@ -223,7 +223,9 @@ public class TestIOFencing {
    */
   @Test
   public void testFencingAroundCompaction() throws Exception {
-    doTest(BlockCompactionsInPrepRegion.class);
+    for(MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {
+      doTest(BlockCompactionsInPrepRegion.class, policy);
+    }
   }
 
   /**
@@ -234,10 +236,12 @@ public class TestIOFencing {
    */
   @Test
   public void testFencingAroundCompactionAfterWALSync() throws Exception {
-    doTest(BlockCompactionsInCompletionRegion.class);
+    for(MemoryCompactionPolicy policy : MemoryCompactionPolicy.values()) {
+      doTest(BlockCompactionsInCompletionRegion.class, policy);
+    }
   }
 
-  public void doTest(Class<?> regionClass) throws Exception {
+  public void doTest(Class<?> regionClass, MemoryCompactionPolicy policy) throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
     // Insert our custom region
     c.setClass(HConstants.REGION_IMPL, regionClass, HRegion.class);
@@ -250,8 +254,7 @@ public class TestIOFencing {
     c.setLong("hbase.hstore.blockingStoreFiles", 1000);
     // Compact quickly after we tell it to!
     c.setInt("hbase.regionserver.thread.splitcompactcheckfrequency", 1000);
-    c.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(MemoryCompactionPolicy.NONE));
+    c.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy));
     LOG.info("Starting mini cluster");
     TEST_UTIL.startMiniCluster(1);
     CompactionBlockerRegion compactingRegion = null;
@@ -344,7 +347,11 @@ public class TestIOFencing {
         Thread.sleep(1000);
         assertTrue("New region never compacted", System.currentTimeMillis() - startWaitTime < 180000);
       }
-      assertEquals(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT, TEST_UTIL.countRows(table));
+      if(policy == MemoryCompactionPolicy.EAGER) {
+        assertTrue(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT >= TEST_UTIL.countRows(table));
+      } else {
+        assertEquals(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT, TEST_UTIL.countRows(table));
+      }
     } finally {
       if (compactingRegion != null) {
         compactingRegion.allowCompactions();

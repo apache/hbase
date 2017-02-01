@@ -37,7 +37,12 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -60,14 +65,20 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Test major compactions
  */
 @Category({RegionServerTests.class, MediumTests.class})
+@RunWith(Parameterized.class)
 public class TestMajorCompaction {
-  @Rule public TestName name = new TestName();
+  @Parameterized.Parameters
+  public static Object[] data() {
+    return new Object[] { "NONE", "BASIC", "EAGER" };
+  }
+  @Rule public TestName name;
   private static final Log LOG = LogFactory.getLog(TestMajorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
@@ -82,15 +93,14 @@ public class TestMajorCompaction {
   private static final long MAX_FILES_TO_COMPACT = 10;
 
   /** constructor */
-  public TestMajorCompaction() {
+  public TestMajorCompaction(String compType) {
     super();
-
+    name = new TestName();
     // Set cache flush size to 1MB
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
-    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-        String.valueOf(MemoryCompactionPolicy.NONE));
+    conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(compType));
 
     secondRowBytes = START_KEY_BYTES.clone();
     // Increment the least significant character so we get to next row.
@@ -101,7 +111,7 @@ public class TestMajorCompaction {
 
   @Before
   public void setUp() throws Exception {
-    this.htd = UTIL.createTableDescriptor(name.getMethodName());
+    this.htd = UTIL.createTableDescriptor(name.getMethodName().replace('[','i').replace(']','i'));
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 
