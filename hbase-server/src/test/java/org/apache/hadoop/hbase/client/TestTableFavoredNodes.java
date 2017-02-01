@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -86,6 +87,9 @@ public class TestTableFavoredNodes {
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         FavoredNodeLoadBalancer.class, LoadBalancer.class);
     conf.set(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, "" + SLAVES);
+
+    // This helps test if RS get the appropriate FN updates.
+    conf.set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
     TEST_UTIL.startMiniCluster(SLAVES);
     TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(WAIT_TIMEOUT);
   }
@@ -289,6 +293,7 @@ public class TestTableFavoredNodes {
       snRSMap.put(rst.getMaster().getServerName(), rst.getMaster());
     }
 
+    int dnPort = fnm.getDataNodePort();
     RegionLocator regionLocator = admin.getConnection().getRegionLocator(tableName);
     for (HRegionLocation regionLocation : regionLocator.getAllRegionLocations()) {
 
@@ -313,16 +318,15 @@ public class TestTableFavoredNodes {
         regionServer.getFavoredNodesForRegion(regionInfo.getEncodedName());
       assertNotNull("RS " + regionLocation.getServerName()
         + " does not have FN for region: " + regionInfo, rsFavNodes);
+      assertEquals("Incorrect FN for region:" + regionInfo.getEncodedName() + " on server:" +
+        regionLocation.getServerName(), FavoredNodeAssignmentHelper.FAVORED_NODES_NUM,
+        rsFavNodes.length);
 
-      List<ServerName> fnFromRS = Lists.newArrayList();
-      for (InetSocketAddress addr : rsFavNodes) {
-        fnFromRS.add(ServerName.valueOf(addr.getHostName(), addr.getPort(),
-          ServerName.NON_STARTCODE));
+      // 4. Does DN port match all FN node list?
+      for (ServerName sn : fnm.getFavoredNodesWithDNPort(regionInfo)) {
+        assertEquals("FN should not have startCode, fnlist:" + fnList, -1, sn.getStartcode());
+        assertEquals("FN port should belong to DN port, fnlist:" + fnList, dnPort, sn.getPort());
       }
-
-      fnFromRS.removeAll(fnList);
-      assertEquals("Inconsistent FN bet RS and Master, RS diff: " + fnFromRS
-        + " List on master: "  + fnList, 0, fnFromRS.size());
     }
   }
 

@@ -32,11 +32,15 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.net.NetUtils;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -63,6 +67,11 @@ public class FavoredNodesManager {
 
   private MasterServices masterServices;
 
+  /**
+   * Datanode port to be used for Favored Nodes.
+   */
+  private int datanodeDataTransferPort;
+
   public FavoredNodesManager(MasterServices masterServices) {
     this.masterServices = masterServices;
     this.globalFavoredNodesAssignmentPlan = new FavoredNodesPlan();
@@ -77,6 +86,19 @@ public class FavoredNodesManager {
     primaryRSToRegionMap = snapshotOfRegionAssignment.getPrimaryToRegionInfoMap();
     secondaryRSToRegionMap = snapshotOfRegionAssignment.getSecondaryToRegionInfoMap();
     teritiaryRSToRegionMap = snapshotOfRegionAssignment.getTertiaryToRegionInfoMap();
+    datanodeDataTransferPort = getDataNodePort();
+  }
+
+  public int getDataNodePort() {
+    HdfsConfiguration.init();
+
+    Configuration dnConf = new HdfsConfiguration(masterServices.getConfiguration());
+
+    int dnPort = NetUtils.createSocketAddr(
+        dnConf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+            DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT)).getPort();
+    LOG.debug("Loaded default datanode port for FN: " + datanodeDataTransferPort);
+    return dnPort;
   }
 
   public synchronized List<ServerName> getFavoredNodes(HRegionInfo regionInfo) {
@@ -89,6 +111,24 @@ public class FavoredNodesManager {
    */
   public static boolean isFavoredNodeApplicable(HRegionInfo regionInfo) {
     return !regionInfo.isSystemTable();
+  }
+
+  /*
+   * This should only be used when sending FN information to the region servers. Instead of
+   * sending the region server port, we use the datanode port. This helps in centralizing the DN
+   * port logic in Master. The RS uses the port from the favored node list as hints.
+   */
+  public synchronized List<ServerName> getFavoredNodesWithDNPort(HRegionInfo regionInfo) {
+    if (getFavoredNodes(regionInfo) == null) {
+      return null;
+    }
+
+    List<ServerName> fnWithDNPort = Lists.newArrayList();
+    for (ServerName sn : getFavoredNodes(regionInfo)) {
+      fnWithDNPort.add(ServerName.valueOf(sn.getHostname(), datanodeDataTransferPort,
+        ServerName.NON_STARTCODE));
+    }
+    return fnWithDNPort;
   }
 
   public synchronized void updateFavoredNodes(Map<HRegionInfo, List<ServerName>> regionFNMap)

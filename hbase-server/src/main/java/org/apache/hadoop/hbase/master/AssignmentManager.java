@@ -806,7 +806,7 @@ public class AssignmentManager {
             region, State.PENDING_OPEN, destination);
           List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
           if (shouldAssignFavoredNodes(region)) {
-            favoredNodes = server.getFavoredNodesManager().getFavoredNodes(region);
+            favoredNodes = server.getFavoredNodesManager().getFavoredNodesWithDNPort(region);
           }
           regionOpenInfos.add(new Pair<HRegionInfo, List<ServerName>>(
             region, favoredNodes));
@@ -1114,7 +1114,7 @@ public class AssignmentManager {
         try {
           List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
           if (shouldAssignFavoredNodes(region)) {
-            favoredNodes = server.getFavoredNodesManager().getFavoredNodes(region);
+            favoredNodes = server.getFavoredNodesManager().getFavoredNodesWithDNPort(region);
           }
           serverManager.sendRegionOpen(plan.getDestination(), region, favoredNodes);
           return; // we're done
@@ -1859,8 +1859,8 @@ public class AssignmentManager {
                 }
                 List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
                 if (shouldAssignFavoredNodes(hri)) {
-                  favoredNodes =
-                    ((MasterServices)server).getFavoredNodesManager().getFavoredNodes(hri);
+                  FavoredNodesManager fnm = ((MasterServices)server).getFavoredNodesManager();
+                  favoredNodes = fnm.getFavoredNodesWithDNPort(hri);
                 }
                 serverManager.sendRegionOpen(serverName, hri, favoredNodes);
                 return; // we're done
