@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.BindException;
@@ -2661,6 +2662,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // fail this RPC and close the scanner while opening up another one from the start of
           // row that the client has last seen.
           closeScanner(region, scanner, scannerName);
+
+          // rethrow DoNotRetryIOException. This can avoid the retry in ClientScanner.
+          if (e instanceof DoNotRetryIOException) {
+            throw e;
+          }
+
+          // If it is a FileNotFoundException, wrap as a
+          // DoNotRetryIOException. This can avoid the retry in ClientScanner.
+          if (e instanceof FileNotFoundException) {
+            throw new DoNotRetryIOException(e);
+          }
 
           // We closed the scanner already. Instead of throwing the IOException, and client
           // retrying with the same scannerId only to get USE on the next RPC, we directly throw
