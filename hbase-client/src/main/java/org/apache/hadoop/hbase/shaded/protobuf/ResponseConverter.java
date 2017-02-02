@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.ScanMetrics;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCatalogScanResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunCleanerChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
@@ -313,14 +312,6 @@ public final class ResponseConverter {
    */
   public static EnableCatalogJanitorResponse buildEnableCatalogJanitorResponse(boolean prevValue) {
     return EnableCatalogJanitorResponse.newBuilder().setPrevValue(prevValue).build();
-  }
-
-  /**
-   * Creates a response for the cleaner chore request
-   * @return A RunCleanerChoreResponse
-   */
-  public static RunCleanerChoreResponse buildRunCleanerChoreResponse(boolean ran) {
-    return RunCleanerChoreResponse.newBuilder().setCleanerChoreRan(ran).build();
   }
 
 // End utilities for Admin

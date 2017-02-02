@@ -521,22 +521,6 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public SetCleanerChoreRunningResponse setCleanerChoreRunning(RpcController c,
-                                                               SetCleanerChoreRunningRequest req)
-    throws ServiceException {
-    try {
-      master.checkInitialized();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
-    boolean prevValue =
-      master.getLogCleaner().getEnabled() && master.getHFileCleaner().getEnabled();
-    master.getLogCleaner().setEnabled(req.getOn());
-    master.getHFileCleaner().setEnabled(req.getOn());
-    return SetCleanerChoreRunningResponse.newBuilder().setPrevValue(prevValue).build();
-  }
-
-  @Override
   public EnableTableResponse enableTable(RpcController controller,
       EnableTableRequest request) throws ServiceException {
     try {
@@ -889,14 +873,6 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public IsCleanerChoreEnabledResponse isCleanerChoreEnabled(RpcController c,
-                                                             IsCleanerChoreEnabledRequest req)
-    throws ServiceException {
-    return IsCleanerChoreEnabledResponse.newBuilder().setValue(master.isCleanerChoreEnabled())
-                                        .build();
-  }
-
-  @Override
   public IsMasterRunningResponse isMasterRunning(RpcController c,
       IsMasterRunningRequest req) throws ServiceException {
     try {
@@ -1221,18 +1197,6 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       return ResponseConverter.buildRunCatalogScanResponse(master.catalogJanitorChore.scan());
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
-  }
-
-  @Override
-  public RunCleanerChoreResponse runCleanerChore(RpcController c, RunCleanerChoreRequest req)
-    throws ServiceException {
-    try {
-      master.checkInitialized();
-      Boolean result = master.getHFileCleaner().runCleaner() && master.getLogCleaner().runCleaner();
-      return ResponseConverter.buildRunCleanerChoreResponse(result);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

@@ -897,30 +897,6 @@ public interface Admin extends Abortable, Closeable {
   boolean isCatalogJanitorEnabled() throws IOException;
 
   /**
-   * Enable/Disable the cleaner chore
-   *
-   * @param on if true enables the cleaner chore
-   * @return the previous state
-   * @throws IOException
-   */
-  public boolean setCleanerChoreRunning(final boolean on) throws IOException;
-
-  /**
-   * Ask for cleaner chore to run
-   *
-   * @return True if cleaner chore ran, false otherwise
-   * @throws IOException
-   */
-  public boolean runCleanerChore() throws IOException;
-
-  /**
-   * Query on the cleaner chore state (Enabled/Disabled?)
-   *
-   * @throws IOException
-   */
-  public boolean isCleanerChoreEnabled() throws IOException;
-
-  /**
    * Merge two regions. Asynchronous operation.
    *
    * @param nameOfRegionA encoded or full name of region a
