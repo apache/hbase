@@ -111,9 +111,6 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_DIR;
 public abstract class FSUtils {
   private static final Log LOG = LogFactory.getLog(FSUtils.class);
 
-  /** Parameter name for HBase WAL directory */
-  public static final String HBASE_WAL_DIR = "hbase.wal.dir";
-
   /** Full access permissions (starting point for a umask) */
   public static final String FULL_RWX_PERMISSIONS = "777";
   private static final String THREAD_POOLSIZE = "hbase.client.localityCheck.threadPoolSize";
@@ -1108,12 +1105,12 @@ public abstract class FSUtils {
 
   /**
    * @param c configuration
-   * @return {@link Path} to hbase log root directory: i.e. {@value #HBASE_WAL_DIR} from
+   * @return {@link Path} to hbase log root directory: i.e. {@value org.apache.hadoop.hbase.fs.HFileSystem#HBASE_WAL_DIR} from
    * configuration as a qualified Path. Defaults to {@value org.apache.hadoop.hbase.HConstants#HBASE_DIR}
    * @throws IOException e
    */
   public static Path getWALRootDir(final Configuration c) throws IOException {
-    Path p = new Path(c.get(HBASE_WAL_DIR, c.get(HBASE_DIR)));
+    Path p = new Path(c.get(HFileSystem.HBASE_WAL_DIR, c.get(HBASE_DIR)));
     if (!isValidWALRootDir(p, c)) {
       return FSUtils.getRootDir(c);
     }
@@ -1123,7 +1120,7 @@ public abstract class FSUtils {
 
   @VisibleForTesting
   public static void setWALRootDir(final Configuration c, final Path root) throws IOException {
-    c.set(HBASE_WAL_DIR, root.toString());
+    c.set(HFileSystem.HBASE_WAL_DIR, root.toString());
   }
 
   public static FileSystem getWALFileSystem(final Configuration c) throws IOException {
