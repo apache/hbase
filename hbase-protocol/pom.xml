@@ -139,6 +139,7 @@
             </activation>
             <properties>
                 <surefire.skipFirstPart>true</surefire.skipFirstPart>
+                <surefire.skipSecondPart>true</surefire.skipSecondPart>
             </properties>
         </profile>
         <profile>
