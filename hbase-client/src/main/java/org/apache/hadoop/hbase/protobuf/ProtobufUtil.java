@@ -1985,26 +1985,26 @@ public final class ProtobufUtil {
       final boolean forcible, final User user) throws IOException {
     final MergeRegionsRequest request = RequestConverter.buildMergeRegionsRequest(
         region_a.getRegionName(), region_b.getRegionName(),forcible);
-    if (user != null) {
-      try {
-        user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            admin.mergeRegions(controller, request);
-            return null;
-          }
-        });
-      } catch (InterruptedException ie) {
-        InterruptedIOException iioe = new InterruptedIOException();
-        iioe.initCause(ie);
-        throw iioe;
-      }
-    } else {
-      try {
+    try {
+      if (user != null) {
+        try {
+          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              admin.mergeRegions(controller, request);
+              return null;
+            }
+          });
+        } catch (InterruptedException ie) {
+          InterruptedIOException iioe = new InterruptedIOException();
+          iioe.initCause(ie);
+          throw iioe;
+        }
+      } else {
         admin.mergeRegions(controller, request);
-      } catch (ServiceException se) {
-        throw ProtobufUtil.getRemoteException(se);
       }
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
     }
   }
 
