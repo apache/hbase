@@ -105,6 +105,8 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.FileLink;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -252,6 +254,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
   private boolean fixSplitParents = false; // fix lingering split parents
   private boolean fixReferenceFiles = false; // fix lingering reference store file
+  private boolean fixHFileLinks = false; // fix lingering HFileLinks
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
   private boolean fixTableLocks = false; // fix table locks which are expired
   private boolean fixTableZNodes = false; // fix table Znodes which are orphaned
@@ -762,6 +765,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // Do offline check and repair first
     offlineHdfsIntegrityRepair();
     offlineReferenceFileRepair();
+    offlineHLinkFileRepair();
     // If Master runs maintenance tasks (such as balancer, catalog janitor, etc) during online
     // hbck, it is likely that hbck would be misled and report transient errors.  Therefore, it
     // is better to set Master into maintenance mode during online hbck.
@@ -1125,6 +1129,73 @@ public class HBaseFsck extends Configured implements Closeable {
         LOG.error("Failed to sideline reference file " + path);
       }
     }
+  }
+
+  /**
+   * Scan all the store file names to find any lingering HFileLink files,
+   * which refer to some none-exiting files. If "fix" option is enabled,
+   * any lingering HFileLink file will be sidelined if found.
+   */
+  private void offlineHLinkFileRepair() throws IOException, InterruptedException {
+    Configuration conf = getConf();
+    Path hbaseRoot = FSUtils.getRootDir(conf);
+    FileSystem fs = hbaseRoot.getFileSystem(conf);
+    LOG.info("Computing mapping of all link files");
+    Map<String, Path> allFiles = FSUtils
+        .getTableStoreFilePathMap(fs, hbaseRoot, new FSUtils.HFileLinkFilter(), executor, errors);
+    errors.print("");
+
+    LOG.info("Validating mapping using HDFS state");
+    for (Path path : allFiles.values()) {
+      // building HFileLink object to gather locations
+      HFileLink actualLink = HFileLink.buildFromHFileLinkPattern(conf, path);
+      if (actualLink.exists(fs)) continue; // good, expected
+
+      // Found a lingering HFileLink
+      errors.reportError(ERROR_CODE.LINGERING_HFILELINK, "Found lingering HFileLink " + path);
+      if (!shouldFixHFileLinks()) continue;
+
+      // Now, trying to fix it since requested
+      setShouldRerun();
+
+      // An HFileLink path should be like
+      // ${hbase.rootdir}/data/namespace/table_name/region_id/family_name/linkedtable=linkedregionname-linkedhfilename
+      // sidelineing will happen in the ${hbase.rootdir}/${sidelinedir} directory with the same folder structure.
+      boolean success = sidelineFile(fs, hbaseRoot, path);
+
+      if (!success) {
+        LOG.error("Failed to sideline HFileLink file " + path);
+      }
+
+      // An HFileLink backreference path should be like
+      // ${hbase.rootdir}/archive/data/namespace/table_name/region_id/family_name/.links-linkedhfilename
+      // sidelineing will happen in the ${hbase.rootdir}/${sidelinedir} directory with the same folder structure.
+      Path backRefPath = FileLink.getBackReferencesDir(HFileArchiveUtil
+              .getStoreArchivePath(conf, HFileLink.getReferencedTableName(path.getName().toString()),
+                  HFileLink.getReferencedRegionName(path.getName().toString()),
+                  path.getParent().getName()),
+          HFileLink.getReferencedHFileName(path.getName().toString()));
+      success = sidelineFile(fs, hbaseRoot, backRefPath);
+
+      if (!success) {
+        LOG.error("Failed to sideline HFileLink backreference file " + path);
+      }
+    }
+  }
+
+  private boolean sidelineFile(FileSystem fs, Path hbaseRoot, Path path) throws IOException {
+    URI uri = hbaseRoot.toUri().relativize(path.toUri());
+    if (uri.isAbsolute()) return false;
+    String relativePath = uri.getPath();
+    Path rootDir = getSidelineDir();
+    Path dst = new Path(rootDir, relativePath);
+    boolean pathCreated = fs.mkdirs(dst.getParent());
+    if (!pathCreated) {
+      LOG.error("Failed to create path: " + dst.getParent());
+      return false;
+    }
+    LOG.info("Trying to sideline file " + path + " to " + dst);
+    return fs.rename(path, dst);
   }
 
   /**
@@ -3892,8 +3963,8 @@ public class HBaseFsck extends Configured implements Closeable {
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR,
-      UNDELETED_REPLICATION_QUEUE
+      LINGERING_HFILELINK, WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK,
+      ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR, UNDELETED_REPLICATION_QUEUE
     }
     void clear();
     void report(String message);
@@ -4471,6 +4542,15 @@ public class HBaseFsck extends Configured implements Closeable {
     return fixReferenceFiles;
   }
 
+  public void setFixHFileLinks(boolean shouldFix) {
+    fixHFileLinks = shouldFix;
+    fixAny |= shouldFix;
+  }
+
+  boolean shouldFixHFileLinks() {
+    return fixHFileLinks;
+  }
+
   public boolean shouldIgnorePreCheckPermission() {
     return !fixAny || ignorePreCheckPermission;
   }
@@ -4587,6 +4667,7 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("   -fixSplitParents  Try to force offline split parents to be online.");
     out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
     out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
+    out.println("   -fixHFileLinks  Try to offline lingering HFileLinks");
     out.println("   -fixEmptyMetaCells  Try to fix hbase:meta entries not referencing any region"
         + " (empty REGIONINFO_QUALIFIER rows)");
 
@@ -4599,7 +4680,8 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("  Metadata Repair shortcuts");
     out.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
         "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps " +
-        "-fixReferenceFiles -fixTableLocks -fixOrphanedTableZnodes");
+        "-fixReferenceFiles -fixHFileLinks -fixTableLocks -fixOrphanedTableZnodes");
+
     out.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
 
     out.println("");
@@ -4733,6 +4815,8 @@ public class HBaseFsck extends Configured implements Closeable {
         sidelineCorruptHFiles = true;
       } else if (cmd.equals("-fixReferenceFiles")) {
         setFixReferenceFiles(true);
+      } else if (cmd.equals("-fixHFileLinks")) {
+        setFixHFileLinks(true);
       } else if (cmd.equals("-fixEmptyMetaCells")) {
         setFixEmptyMetaCells(true);
       } else if (cmd.equals("-repair")) {
@@ -4748,6 +4832,7 @@ public class HBaseFsck extends Configured implements Closeable {
         setFixSplitParents(false);
         setCheckHdfs(true);
         setFixReferenceFiles(true);
+        setFixHFileLinks(true);
         setFixTableLocks(true);
         setFixTableZNodes(true);
       } else if (cmd.equals("-repairHoles")) {

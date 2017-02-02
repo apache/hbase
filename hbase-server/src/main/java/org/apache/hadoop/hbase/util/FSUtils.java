@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -1527,6 +1528,18 @@ public abstract class FSUtils {
         LOG.warn("Skipping file " + p +" due to IOException", ioe);
         return false;
       }
+    }
+  }
+
+  /**
+   * Filter for HFileLinks (StoreFiles and HFiles not included).
+   * the filter itself does not consider if a link is file or not.
+   */
+  public static class HFileLinkFilter implements PathFilter {
+
+    @Override
+    public boolean accept(Path p) {
+      return HFileLink.isHFileLink(p);
     }
   }
 

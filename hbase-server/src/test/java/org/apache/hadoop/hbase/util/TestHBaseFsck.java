@@ -65,6 +65,10 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -1736,7 +1740,7 @@ public class TestHBaseFsck {
       // for some time until children references are deleted. HBCK erroneously sees this as
       // overlapping regions
       HBaseFsck hbck = doFsck(
-        conf, true, true, false, false, false, true, true, true, false, false, false, false, null);
+        conf, true, true, false, false, false, true, true, true, false, false, false, false, false, null);
       assertErrors(hbck, new ERROR_CODE[] {}); //no LINGERING_SPLIT_PARENT reported
 
       // assert that the split hbase:meta entry is still there.
@@ -1809,7 +1813,7 @@ public class TestHBaseFsck {
 
       // now fix it. The fix should not revert the region split, but add daughters to META
       hbck = doFsck(
-        conf, true, true, false, false, false, false, false, false, false, false, false,false,null);
+        conf, true, true, false, false, false, false, false, false, false, false, false, false,false,null);
       assertErrors(hbck,
           new ERROR_CODE[] { ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
               ERROR_CODE.HOLE_IN_REGION_CHAIN });
@@ -2362,6 +2366,97 @@ public class TestHBaseFsck {
   }
 
   /**
+   * Test fixing lingering HFileLinks.
+   */
+  @Test(timeout = 180000)
+  public void testLingeringHFileLinks() throws Exception {
+    TableName table = TableName.valueOf("testLingeringHFileLinks");
+    try {
+      setupTable(table);
+
+      FileSystem fs = FileSystem.get(conf);
+      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+      Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
+      String regionName = regionDir.getName();
+      Path famDir = new Path(regionDir, FAM_STR);
+      String HFILE_NAME = "01234567abcd";
+      Path hFilePath = new Path(famDir, HFILE_NAME);
+
+      // creating HFile
+      HFileContext context = new HFileContextBuilder().withIncludesTags(false).build();
+      HFile.Writer w =
+          HFile.getWriterFactoryNoCache(conf).withPath(fs, hFilePath).withFileContext(context)
+              .create();
+      w.close();
+
+      HFileLink.create(conf, fs, famDir, table, regionName, HFILE_NAME);
+
+      // should report no error
+      HBaseFsck hbck = doFsck(conf, false);
+      assertNoErrors(hbck);
+
+      // Delete linked file
+      fs.delete(hFilePath, true);
+
+      // Check without fix should show the error
+      hbck = doFsck(conf, false);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_HFILELINK });
+
+      // Fixing the error
+      hbck = doFsck(conf, true);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_HFILELINK });
+
+      // Fix should sideline these files, thus preventing the error
+      hbck = doFsck(conf, false);
+      assertNoErrors(hbck);
+    } finally {
+      cleanupTable(table);
+    }
+  }
+
+  @Test(timeout = 180000)
+  public void testCorruptLinkDirectory() throws Exception {
+    TableName table = TableName.valueOf("testLingeringHFileLinks");
+    try {
+      setupTable(table);
+      FileSystem fs = FileSystem.get(conf);
+
+      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+      Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
+      Path famDir = new Path(regionDir, FAM_STR);
+      String regionName = regionDir.getName();
+      String HFILE_NAME = "01234567abcd";
+      String link = HFileLink.createHFileLinkName(table, regionName, HFILE_NAME);
+
+      // should report no error
+      HBaseFsck hbck = doFsck(conf, false);
+      assertNoErrors(hbck);
+
+      // creating a directory with file instead of the HFileLink file
+      fs.mkdirs(new Path(famDir, link));
+      fs.create(new Path(new Path(famDir, link), "somefile"));
+
+      // Check without fix should show the error
+      hbck = doFsck(conf, false);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_HFILELINK });
+
+      // Fixing the error
+      hbck = doFsck(conf, true);
+      assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {
+          HBaseFsck.ErrorReporter.ERROR_CODE.LINGERING_HFILELINK });
+
+      // Fix should sideline these files, thus preventing the error
+      hbck = doFsck(conf, false);
+      assertNoErrors(hbck);
+    } finally {
+      cleanupTable(table);
+    }
+  }
+
+  /**
    * Test mission REGIONINFO_QUALIFIER in hbase:meta
    */
   @Test (timeout=180000)
@@ -2843,7 +2938,7 @@ public class TestHBaseFsck {
       // fix hole
       assertErrors(
         doFsck(
-          conf, false, true, false, false, false, false, false, false, false, false, false,
+          conf, false, true, false, false, false, false, false, false, false, false, false, false,
           false, null),
         new ERROR_CODE[] { ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
           ERROR_CODE.NOT_IN_META_OR_DEPLOYED });
