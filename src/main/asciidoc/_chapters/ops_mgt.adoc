@@ -2349,3 +2349,151 @@ void rename(Admin admin, String oldTableName, TableName newTableName) {
   admin.deleteTable(oldTableName);
 }
 ----
+
+[[rsgroup]]
+== RegionServer Grouping
+RegionServer Grouping (A.K.A `rsgroup`) is an advanced feature for
+partitioning regionservers into distinctive groups for strict isolation. It
+should only be used by users who are sophisticated enough to understand the
+full implications and have a sufficient background in managing HBase clusters. 
+It was developed by Yahoo! and they run it at scale on their large grid cluster.
+See link:http://www.slideshare.net/HBaseCon/keynote-apache-hbase-at-yahoo-scale[HBase at Yahoo! Scale].
+
+RSGroups can be defined and managed with shell commands or corresponding Java
+APIs. A server can be added to a group with hostname and port pair and tables
+can be moved to this group so that only regionservers in the same rsgroup can
+host the regions of the table. RegionServers and tables can only belong to one
+rsgroup at a time. By default, all tables and regionservers belong to the
+`default` rsgroup. System tables can also be put into a rsgroup using the regular
+APIs. A custom balancer implementation tracks assignments per rsgroup and makes
+sure to move regions to the relevant regionservers in that rsgroup. The rsgroup
+information is stored in a regular HBase table, and a zookeeper-based read-only
+cache is used at cluster bootstrap time. 
+
+To enable, add the following to your hbase-site.xml and restart your Master: 
+
+[source,xml]
+----
+ <property> 
+   <name>hbase.coprocessor.master.classes</name> 
+   <value>org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint</value> 
+ </property> 
+ <property> 
+   <name>hbase.master.loadbalancer.class</name> 
+   <value>org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer</value> 
+ </property> 
+----
+
+Then use the shell _rsgroup_ commands to create and manipulate RegionServer
+groups: e.g. to add a rsgroup and then add a server to it. To see the list of
+rsgroup commands available in the hbase shell type:
+
+[source, bash]
+----
+ hbase(main):008:0> help ‘rsgroup’
+ Took 0.5610 seconds 
+----
+
+High level, you create a rsgroup that is other than the `default` group using
+_add_rsgroup_ command. You then add servers and tables to this group with the
+_move_servers_rsgroup_ and _move_tables_rsgroup_ commands. If necessary, run
+a balance for the group if tables are slow to migrate to the groups dedicated
+server with the _balance_rsgroup_ command (Usually this is not needed). To
+monitor effect of the commands, see the `Tables` tab toward the end of the
+Master UI home page. If you click on a table, you can see what servers it is
+deployed across. You should see here a reflection of the grouping done with
+your shell commands. View the master log if issues.
+
+Here is example using a few of the rsgroup  commands. To add a group, do as follows:
+
+[source, bash]
+----
+ hbase(main):008:0> add_rsgroup 'my_group' 
+ Took 0.5610 seconds 
+----
+
+
+.RegionServer Groups must be Enabled
+[NOTE]
+====
+If you have not enabled the rsgroup Coprocessor Endpoint in the master and
+you run the any of the rsgroup shell commands, you will see an error message
+like the below:
+
+[source,java]
+----
+ERROR: org.apache.hadoop.hbase.exceptions.UnknownProtocolException: No registered master coprocessor service found for name RSGroupAdminService
+    at org.apache.hadoop.hbase.master.MasterRpcServices.execMasterService(MasterRpcServices.java:604)
+    at org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos$MasterService$2.callBlockingMethod(MasterProtos.java)
+    at org.apache.hadoop.hbase.ipc.RpcServer.call(RpcServer.java:1140)
+    at org.apache.hadoop.hbase.ipc.CallRunner.run(CallRunner.java:133)
+    at org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:277)
+    at org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:257)
+----
+====
+
+Add a server (specified by hostname + port) to the just-made group using the
+_move_servers_rsgroup_ command as follows: 
+
+[source, bash]
+----
+ hbase(main):010:0> move_servers_rsgroup 'my_group',['k.att.net:51129'] 
+----
+
+.Hostname and Port vs ServerName
+[NOTE]
+====
+The rsgroup feature refers to servers in a cluster with hostname and port only.
+It does not make use of the HBase ServerName type identifying RegionServers;
+i.e. hostname + port + starttime to distinguish RegionServer instances. The
+rsgroup feature keeps working across RegionServer restarts so the starttime of
+ServerName -- and hence the ServerName type -- is not appropriate.
+Administration
+====
+
+Servers come and go over the lifetime of a Cluster. Currently, you must
+manually align the servers referenced in rsgroups with the actual state of
+nodes in the running cluster. What we mean by this is that if you decommission
+a server, then you must update rsgroups as part of your server decommission
+process removing references.
+
+But, there is no _remove_offline_servers_rsgroup_command you say!
+
+The way to remove a server is to move it to the `default` group. The `default`
+group is special. All rsgroups, but the `default` rsgroup, are static in that
+edits via the shell commands are persisted to the system `hbase:rsgroup` table.
+If they reference a decommissioned server, then they need to be updated to undo
+the reference.
+
+The `default` group is not like other rsgroups in that it is dynamic. Its server
+list mirrors the current state of the cluster; i.e. if you shutdown a server that
+was part of the `default` rsgroup, and then do a _get_rsgroup_ `default` to list
+its content in the shell, the server will no longer be listed. For non-`default`
+groups, though a mode may be offline, it will persist in the non-`default` group’s
+list of servers. But if you move the offline server from the non-default rsgroup
+to default, it  will not show in the `default` list. It will just be dropped.
+
+=== Best Practice
+The authors of the rsgroup feature, the Yahoo! HBase Engineering team, have been
+running it on their grid for a good while now and have come up with a few best
+practices informed by their experience.
+
+==== Isolate System Tables
+Either have a system rsgroup where all the system tables are or just leave the
+system tables in `default` rsgroup and have all user-space tables are in
+non-`default` rsgroups.
+
+==== Dead Nodes
+Yahoo! Have found it useful at their scale to keep a special rsgroup of dead or
+questionable nodes; this is one means of keeping them out of the running until repair.
+
+Be careful replacing dead nodes in an rsgroup. Ensure there are enough live nodes
+before you start moving out the dead. Move in good live nodes first if you have to.
+
+=== Troubleshooting
+Viewing the Master log will give you insight on rsgroup operation.
+
+If it appears stuck, restart the Master process.
+
+
+
