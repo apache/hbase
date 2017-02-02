@@ -23,9 +23,12 @@ module Shell
     class GetTableRsgroup < Command
       def help
         return <<-EOF
-Get the group name the given table is a member of.
+Get the RegionServer group name the given table is a member of.
+
+Example:
 
   hbase> get_table_rsgroup 'myTable'
+
 EOF
       end
 

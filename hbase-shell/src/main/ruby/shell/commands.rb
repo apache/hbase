@@ -47,7 +47,6 @@ module Shell
           puts "ERROR: #{rootCause}"
           puts "Backtrace: #{rootCause.backtrace.join("\n           ")}" if debug
           puts
-          puts "Here is some help for this command:"
           puts help
           puts
         else

@@ -24,9 +24,12 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.Comparator;
 import java.util.Enumeration;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import com.google.common.net.HostAndPort;
 
 /**
  * Utility for network addresses, resolving and naming.
@@ -35,6 +38,25 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class Addressing {
   public static final String VALID_PORT_REGEX = "[\\d]+";
   public static final String HOSTNAME_PORT_SEPARATOR = ":";
+
+  /**
+   * HostAndPort Comparator.
+   * Does compare on HostAndPort instances. This comparator says that instances that have same
+   * host and port are the same. This is a little different than HostAndPort#equals. It does
+   * NOT consider two ipv6 HostAndPort instances the same if they have the same hostname
+   * and port and they differ only in the fact that one provided brackets around the ipv6
+   * hostname while the other did not: i.e. HostAndPort does NOT equate
+   * {@code HostAndPort.fromParts("[2001:db8::1]", 888);} and
+   * {@code HostAndPort.fromParts("2001:db8::1", 888);}.
+   */
+  public static class HostAndPortComparable implements Comparator<HostAndPort> {
+    @Override
+    public int compare(HostAndPort left, HostAndPort right) {
+      int compare = left.getHostText().compareTo(right.getHostText());
+      if (compare != 0) return compare;
+      return left.getPort() - right.getPort();
+    }
+  }
 
   /**
    * @param hostAndPort Formatted as <code>&lt;hostname&gt; ':' &lt;port&gt;</code>

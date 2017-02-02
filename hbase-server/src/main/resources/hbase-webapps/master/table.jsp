@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 --%>
+<%@page import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType"%>
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString"
@@ -48,6 +49,18 @@
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.TableNotFoundException"%>
 <%@ page import="org.apache.hadoop.hbase.client.*" %>
+<%!
+  /**
+   * @return An empty region load stamped with the passed in <code>hri</code>
+   * region name.
+   */
+  private RegionLoad getEmptyRegionLoad(final HRegionInfo hri) {
+    return new RegionLoad(ClusterStatusProtos.RegionLoad.newBuilder().
+      setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().
+      setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME).
+      setValue(ByteString.copyFrom(hri.getRegionName())).build()).build());
+  }
+%>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -370,15 +383,15 @@ if ( fqtn != null ) {
           totalMemSize += regionload.getMemStoreSizeMB();
           totalStoreFileSizeMB += regionload.getStorefileSizeMB();
         } else {
-          RegionLoad load0 = new RegionLoad(ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
+          RegionLoad load0 = getEmptyRegionLoad(regionInfo);
           regionsToLoad.put(regionInfo, load0);
         }
-      }else{
-        RegionLoad load0 = new RegionLoad(ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
+      } else{
+        RegionLoad load0 = getEmptyRegionLoad(regionInfo);
         regionsToLoad.put(regionInfo, load0);
       }
-    }else{
-      RegionLoad load0 = new RegionLoad(ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder().setValue(ByteString.copyFrom(regionInfo.getRegionName())).build()).build());
+    } else {
+      RegionLoad load0 = getEmptyRegionLoad(regionInfo);
       regionsToLoad.put(regionInfo, load0);
     }
   }
@@ -650,7 +663,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   %>
 </tr>
 <% } %>
-+<% } %>
+<% } %>
 </table>
 <% if (numRegions > numRegionsRendered) {
      String allRegionsUrl = "?name=" + fqtn + "&numRegions=all";

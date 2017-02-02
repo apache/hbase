@@ -69,10 +69,10 @@ public interface RSGroupInfoManager {
    * @param hostPorts list of servers, must be part of the same group
    * @param srcGroup groupName being moved from
    * @param dstGroup groupName being moved to
-   * @return true if move was successful
+   * @return Set of servers moved (May be a subset of {@code hostPorts}).
    * @throws java.io.IOException on move failure
    */
-  boolean moveServers(Set<HostAndPort> hostPorts,
+  Set<HostAndPort> moveServers(Set<HostAndPort> hostPorts,
                       String srcGroup, String dstGroup) throws IOException;
 
   /**

@@ -23,13 +23,14 @@ module Shell
     class ListRsgroups < Command
       def help
         return <<-EOF
-List all region server groups. Optional regular expression parameter could
+List all RegionServer groups. Optional regular expression parameter can
 be used to filter the output.
 
 Example:
 
   hbase> list_rsgroups
   hbase> list_rsgroups 'abc.*'
+
 EOF
       end
 

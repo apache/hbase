@@ -23,9 +23,12 @@ module Shell
     class GetServerRsgroup < Command
       def help
         return <<-EOF
-Get the group name the given region server is a member of.
+Get the group name the given RegionServer is a member of.
+
+Example:
 
   hbase> get_server_rsgroup 'server1:port1'
+
 EOF
       end
 

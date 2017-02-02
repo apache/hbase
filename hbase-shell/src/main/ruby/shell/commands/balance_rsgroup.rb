@@ -23,9 +23,12 @@ module Shell
     class BalanceRsgroup < Command
       def help
         return <<-EOF
-Balance a region server group
+Balance a RegionServer group
+
+Example:
 
   hbase> balance_rsgroup 'my_group'
+
 EOF
       end
 

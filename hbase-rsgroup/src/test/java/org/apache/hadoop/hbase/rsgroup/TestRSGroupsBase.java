@@ -279,7 +279,7 @@ public abstract class TestRSGroupsBase {
       rsGroupAdmin.moveServers(Sets.newHashSet(HostAndPort.fromString("foo:9999")),"foo");
       fail("Bogus servers shouldn't have been successfully moved.");
     } catch(IOException ex) {
-      String exp = "Server foo:9999 does not have a group.";
+      String exp = "Server foo:9999 does not have a rsgroup";
       String msg = "Expected '"+exp+"' in exception message: ";
       assertTrue(msg+" "+ex.getMessage(), ex.getMessage().contains(exp));
     }

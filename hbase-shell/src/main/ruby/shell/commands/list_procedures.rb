@@ -22,7 +22,7 @@ module Shell
     class ListProcedures < Command
       def help
         return <<-EOF
-List all procedures in hbase. Examples:
+List all procedures in hbase. For example:
 
   hbase> list_procedures
 EOF

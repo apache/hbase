@@ -23,9 +23,10 @@ module Shell
     class RemoveRsgroup < Command
       def help
         return <<-EOF
-Remove a group.
+Remove a RegionServer group.
 
   hbase> remove_rsgroup 'my_group'
+
 EOF
       end
 

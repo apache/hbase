@@ -51,13 +51,13 @@ module Hbase
       @shell.command('get_rsgroup', 'default')
       hostPortStr = hostport.toString
       @shell.command('get_server_rsgroup', [hostPortStr])
-      @shell.command('move_rsgroup_servers',
+      @shell.command('move_servers_rsgroup',
                      group_name,
                      [hostPortStr])
       assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getServers.count)
       assert_equal(group_name, @rsgroup_admin.getRSGroupOfServer(hostport).getName)
 
-      @shell.command('move_rsgroup_tables',
+      @shell.command('move_tables_rsgroup',
                      group_name,
                      [table_name])
       assert_equal(1, @rsgroup_admin.getRSGroupInfo(group_name).getTables.count)

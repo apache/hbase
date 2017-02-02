@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import static org.apache.hadoop.hbase.rsgroup.Utility.getOnlineServers;
 
 /**
  * This is an implementation of {@link RSGroupInfoManager}. Which makes
@@ -166,29 +167,42 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   }
 
   @Override
-  public synchronized boolean moveServers(Set<HostAndPort> hostPorts, String srcGroup,
-                                          String dstGroup) throws IOException {
+  public synchronized Set<HostAndPort> moveServers(Set<HostAndPort> hostPorts,
+      String srcGroup, String dstGroup)
+  throws IOException {
     if (!rsGroupMap.containsKey(srcGroup)) {
-      throw new DoNotRetryIOException("Group "+srcGroup+" does not exist");
+      throw new DoNotRetryIOException("RSGroup " + srcGroup + " does not exist");
     }
     if (!rsGroupMap.containsKey(dstGroup)) {
-      throw new DoNotRetryIOException("Group "+dstGroup+" does not exist");
+      throw new DoNotRetryIOException("RSGroup " + dstGroup + " does not exist");
     }
-
     RSGroupInfo src = new RSGroupInfo(getRSGroup(srcGroup));
     RSGroupInfo dst = new RSGroupInfo(getRSGroup(dstGroup));
-    boolean foundOne = false;
-    for(HostAndPort el: hostPorts) {
-      foundOne = src.removeServer(el) || foundOne;
+    // If destination is 'default' rsgroup, make sure servers is online.
+    // If not, just drop it.
+    Set<HostAndPort> onlineServers = dst.getName().equals(RSGroupInfo.DEFAULT_GROUP)?
+        getOnlineServers(this.master): null;
+    Set<HostAndPort> result = new HashSet<>(hostPorts.size());
+    for (HostAndPort el: hostPorts) {
+      src.removeServer(el);
+      if (onlineServers != null) {
+        // onlineServers is non-null if 'default' rsgroup.
+        // If the server is not online, drop it.
+        if (!onlineServers.contains(el)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Dropping " + el + " during move-to-default rsgroup because it is not online");
+          }
+          continue;
+        }
+      }
       dst.addServer(el);
+      result.add(el);
     }
-
     Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.put(src.getName(), src);
     newGroupMap.put(dst.getName(), dst);
-
     flushConfig(newGroupMap);
-    return foundOne;
+    return result;
   }
 
   /**
@@ -369,9 +383,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     for(RSGroupInfo RSGroupInfo : newGroupMap.values()) {
       RSGroupProtos.RSGroupInfo proto = RSGroupSerDe.toProtoGroupInfo(RSGroupInfo);
       Put p = new Put(Bytes.toBytes(RSGroupInfo.getName()));
-      p.addColumn(META_FAMILY_BYTES,
-          META_QUALIFIER_BYTES,
-          proto.toByteArray());
+      p.addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES, proto.toByteArray());
       mutations.add(p);
       for(TableName entry: RSGroupInfo.getTables()) {
         newTableMap.put(entry, RSGroupInfo.getName());
@@ -423,7 +435,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       }
 
 
-      for(RSGroupInfo RSGroupInfo : newGroupMap.values()) {
+      for (RSGroupInfo RSGroupInfo : newGroupMap.values()) {
         String znode = ZKUtil.joinZNode(groupBasePath, RSGroupInfo.getName());
         RSGroupProtos.RSGroupInfo proto = RSGroupSerDe.toProtoGroupInfo(RSGroupInfo);
         LOG.debug("Updating znode: "+znode);

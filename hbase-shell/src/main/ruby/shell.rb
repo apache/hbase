@@ -460,15 +460,16 @@ Shell.load_command_group(
 Shell.load_command_group(
   'rsgroup',
   :full_name => 'RSGroups',
-  :comment => "NOTE: Above commands are only applicable if running with the Groups setup",
+  :comment => "NOTE: The rsgroup Coprocessor Endpoint must be enabled on the Master else commands fail with:
+  UnknownProtocolException: No registered Master Coprocessor Endpoint found for RSGroupAdminService",
   :commands => %w[
     list_rsgroups
     get_rsgroup
     add_rsgroup
     remove_rsgroup
     balance_rsgroup
-    move_rsgroup_servers
-    move_rsgroup_tables
+    move_servers_rsgroup
+    move_tables_rsgroup
     get_server_rsgroup
     get_table_rsgroup
   ]

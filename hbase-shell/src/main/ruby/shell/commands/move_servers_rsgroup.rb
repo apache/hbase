@@ -20,17 +20,20 @@
 
 module Shell
   module Commands
-    class MoveRsgroupTables < Command
+    class MoveServersRsgroup < Command
       def help
         return <<-EOF
-Reassign tables from one group to another.
+Reassign RegionServers from one group to another.
 
-  hbase> move_rsgroup_tables 'dest',['table1','table2']
+Example:
+
+  hbase> move_servers_rsgroup 'dest',['server1:port','server2:port']
+
 EOF
       end
 
-      def command(dest, tables)
-        rsgroup_admin.move_tables(dest, tables)
+      def command(dest, servers)
+        rsgroup_admin.move_servers(dest, servers)
       end
     end
   end
