@@ -54,7 +54,7 @@ function personality_globals
   # TODO use PATCH_BRANCH to select hadoop versions to use.
   # All supported Hadoop versions that we want to test the compilation with
   HBASE_MASTER_HADOOP2_VERSIONS="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
-  HBASE_MASTER_HADOOP3_VERSIONS="3.0.0-alpha1"
+  HBASE_MASTER_HADOOP3_VERSIONS="3.0.0-alpha2"
 
   HBASE_HADOOP2_VERSIONS="2.4.0 2.4.1 2.5.0 2.5.1 2.5.2 2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3"
   HBASE_HADOOP3_VERSIONS=""
