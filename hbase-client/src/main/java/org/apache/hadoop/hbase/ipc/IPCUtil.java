@@ -176,7 +176,7 @@ class IPCUtil {
 
   static void setCancelled(Call call) {
     call.setException(new CallCancelledException("Call id=" + call.id + ", waitTime="
-        + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimetout="
+        + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
         + call.timeout));
   }
 }
