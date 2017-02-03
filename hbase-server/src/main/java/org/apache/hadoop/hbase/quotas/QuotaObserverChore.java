@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
@@ -69,6 +70,11 @@ public class QuotaObserverChore extends ScheduledChore {
       "hbase.master.quotas.observer.report.percent";
   static final double QUOTA_OBSERVER_CHORE_REPORT_PERCENT_DEFAULT= 0.95;
 
+  static final String REGION_REPORT_RETENTION_DURATION_KEY =
+      "hbase.master.quotas.region.report.retention.millis";
+  static final long REGION_REPORT_RETENTION_DURATION_DEFAULT =
+      1000 * 60 * 10; // 10 minutes
+
   private final Connection conn;
   private final Configuration conf;
   private final MasterQuotaManager quotaManager;
@@ -82,6 +88,9 @@ public class QuotaObserverChore extends ScheduledChore {
    */
   private final Map<TableName,SpaceQuotaSnapshot> tableQuotaSnapshots;
   private final Map<String,SpaceQuotaSnapshot> namespaceQuotaSnapshots;
+
+  // The time, in millis, that region reports should be kept by the master
+  private final long regionReportLifetimeMillis;
 
   /*
    * Encapsulates logic for tracking the state of a table/namespace WRT space quotas
@@ -108,6 +117,8 @@ public class QuotaObserverChore extends ScheduledChore {
     this.snapshotNotifier = Objects.requireNonNull(snapshotNotifier);
     this.tableQuotaSnapshots = new HashMap<>();
     this.namespaceQuotaSnapshots = new HashMap<>();
+    this.regionReportLifetimeMillis = conf.getLong(
+        REGION_REPORT_RETENTION_DURATION_KEY, REGION_REPORT_RETENTION_DURATION_DEFAULT);
   }
 
   @Override
@@ -136,16 +147,38 @@ public class QuotaObserverChore extends ScheduledChore {
       LOG.trace("Using " + reportedRegionSpaceUse.size() + " region space use reports");
     }
 
+    // Remove the "old" region reports
+    pruneOldRegionReports();
+
     // Create the stores to track table and namespace snapshots
     initializeSnapshotStores(reportedRegionSpaceUse);
 
     // Filter out tables for which we don't have adequate regionspace reports yet.
     // Important that we do this after we instantiate the stores above
-    tablesWithQuotas.filterInsufficientlyReportedTables(tableSnapshotStore);
+    // This gives us a set of Tables which may or may not be violating their quota.
+    // To be safe, we want to make sure that these are not in violation.
+    Set<TableName> tablesInLimbo = tablesWithQuotas.filterInsufficientlyReportedTables(
+        tableSnapshotStore);
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("Filtered insufficiently reported tables, left with " +
           reportedRegionSpaceUse.size() + " regions reported");
+    }
+
+    for (TableName tableInLimbo : tablesInLimbo) {
+      final SpaceQuotaSnapshot currentSnapshot = tableSnapshotStore.getCurrentState(tableInLimbo);
+      if (currentSnapshot.getQuotaStatus().isInViolation()) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Moving " + tableInLimbo + " out of violation because fewer region sizes were"
+              + " reported than required.");
+        }
+        SpaceQuotaSnapshot targetSnapshot = new SpaceQuotaSnapshot(
+            SpaceQuotaStatus.notInViolation(), currentSnapshot.getUsage(),
+            currentSnapshot.getLimit());
+        this.snapshotNotifier.transitionTable(tableInLimbo, targetSnapshot);
+        // Update it in the Table QuotaStore so that memory is consistent with no violation.
+        tableSnapshotStore.setCurrentState(tableInLimbo, targetSnapshot);
+      }
     }
 
     // Transition each table to/from quota violation based on the current and target state.
@@ -343,6 +376,19 @@ public class QuotaObserverChore extends ScheduledChore {
           }
         }
       }
+    }
+  }
+
+  /**
+   * Removes region reports over a certain age.
+   */
+  void pruneOldRegionReports() {
+    final long now = EnvironmentEdgeManager.currentTime();
+    final long pruneTime = now - regionReportLifetimeMillis;
+    final int numRemoved = quotaManager.pruneEntriesOlderThan(pruneTime);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Removed " + numRemoved + " old region size reports that were older than "
+          + pruneTime + ".");
     }
   }
 
@@ -577,8 +623,8 @@ public class QuotaObserverChore extends ScheduledChore {
      * Filters out all tables for which the Master currently doesn't have enough region space
      * reports received from RegionServers yet.
      */
-    public void filterInsufficientlyReportedTables(QuotaSnapshotStore<TableName> tableStore)
-        throws IOException {
+    public Set<TableName> filterInsufficientlyReportedTables(
+        QuotaSnapshotStore<TableName> tableStore) throws IOException {
       final double percentRegionsReportedThreshold = getRegionReportPercent(getConfiguration());
       Set<TableName> tablesToRemove = new HashSet<>();
       for (TableName table : Iterables.concat(tablesWithTableQuotas, tablesWithNamespaceQuotas)) {
@@ -612,6 +658,7 @@ public class QuotaObserverChore extends ScheduledChore {
         tablesWithTableQuotas.remove(tableToRemove);
         tablesWithNamespaceQuotas.remove(tableToRemove);
       }
+      return tablesToRemove;
     }
 
     /**
