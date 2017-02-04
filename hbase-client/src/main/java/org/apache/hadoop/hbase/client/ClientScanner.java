@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.*;
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -57,9 +60,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class ClientScanner extends AbstractClientScanner {
   private static final Log LOG = LogFactory.getLog(ClientScanner.class);
-  // A byte array in which all elements are the max byte, and it is used to
-  // construct closest front row
-  static byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
+
   protected Scan scan;
   protected boolean closed = false;
   // Current region scanner is against. Gets cleared if current region goes
@@ -156,12 +157,6 @@ public class ClientScanner extends AbstractClientScanner {
     this.rpcControllerFactory = controllerFactory;
 
     this.conf = conf;
-    initializeScannerInConstruction();
-  }
-
-  protected void initializeScannerInConstruction() throws IOException {
-    // initialize the scanner
-    nextScanner(this.caching, false);
   }
 
   protected ClusterConnection getConnection() {
@@ -242,31 +237,30 @@ public class ClientScanner extends AbstractClientScanner {
       this.callable = null;
     }
   }
-  /*
+
+  /**
    * Gets a scanner for the next region. If this.currentRegion != null, then we will move to the
-   * endrow of this.currentRegion. Else we will get scanner at the scan.getStartRow(). We will go no
-   * further, just tidy up outstanding scanners, if <code>currentRegion != null</code> and
-   * <code>done</code> is true.
-   * @param nbRows
-   * @param done Server-side says we're done scanning.
+   * endrow of this.currentRegion. Else we will get scanner at the scan.getStartRow().
+   * @param nbRows the caching option of the scan
+   * @return the results fetched when open scanner, or null which means terminate the scan.
    */
-  protected boolean nextScanner(int nbRows, final boolean done) throws IOException {
+  protected Result[] nextScanner(int nbRows) throws IOException {
     // Close the previous scanner if it's open
     closeScanner();
 
     // Where to start the next scanner
     byte[] localStartKey;
 
-    // if we're at end of table, close and return false to stop iterating
+    // if we're at end of table, close and return null to stop iterating
     if (this.currentRegion != null) {
       byte[] endKey = this.currentRegion.getEndKey();
-      if (endKey == null || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)
-          || checkScanStopRow(endKey) || done) {
+      if (endKey == null || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY) ||
+          checkScanStopRow(endKey)) {
         close();
         if (LOG.isTraceEnabled()) {
           LOG.trace("Finished " + this.currentRegion);
         }
-        return false;
+        return null;
       }
       localStartKey = endKey;
       // clear mvcc read point if we are going to switch regions
@@ -287,16 +281,23 @@ public class ClientScanner extends AbstractClientScanner {
       callable = getScannerCallable(localStartKey, nbRows);
       // Open a scanner on the region server starting at the
       // beginning of the region
-      call(callable, caller, scannerTimeout);
+      Result[] rrs = call(callable, caller, scannerTimeout);
       this.currentRegion = callable.getHRegionInfo();
       if (this.scanMetrics != null) {
         this.scanMetrics.countOfRegions.incrementAndGet();
       }
+      if (rrs != null && rrs.length == 0 && callable.moreResultsForScan() == MoreResults.NO) {
+        // no results for the scan, return null to terminate the scan.
+        closed = true;
+        callable = null;
+        currentRegion = null;
+        return null;
+      }
+      return rrs;
     } catch (IOException e) {
-      close();
+      closeScanner();
       throw e;
     }
-    return true;
   }
 
   @VisibleForTesting
@@ -304,9 +305,8 @@ public class ClientScanner extends AbstractClientScanner {
     return callable.isAnyRPCcancelled();
   }
 
-  Result[] call(ScannerCallableWithReplicas callable,
-      RpcRetryingCaller<Result[]> caller, int scannerTimeout)
-      throws IOException, RuntimeException {
+  private Result[] call(ScannerCallableWithReplicas callable, RpcRetryingCaller<Result[]> caller,
+      int scannerTimeout) throws IOException {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
@@ -369,22 +369,19 @@ public class ClientScanner extends AbstractClientScanner {
     return cache != null ? cache.size() : 0;
   }
 
+  private boolean scanExhausted(Result[] values) {
+    // This means the server tells us the whole scan operation is done. Usually decided by filter or
+    // limit.
+    return values == null || callable.moreResultsForScan() == MoreResults.NO;
+  }
+
   private boolean regionExhausted(Result[] values) {
-    // This means the server tells us the whole scan operation is done. Usually decided by filter.
-    if (values == null) {
-      return true;
-    }
-    // Not a heartbeat message and we get nothing, this means the region is exhausted
-    if (values.length == 0 && !callable.isHeartbeatMessage()) {
-      return true;
-    }
-    // Server tells us that it has no more results for this region. Notice that this flag is get
-    // from the ScanResponse.getMoreResultsInRegion, not ScanResponse.getMoreResults. If the latter
-    // one is false then we will get a null values and quit in the first condition of this method.
-    if (callable.hasMoreResultsContext() && !callable.getServerHasMoreResults()) {
-      return true;
-    }
-    return false;
+    // 1. Not a heartbeat message and we get nothing, this means the region is exhausted. And in the
+    // old time we always return empty result for a open scanner operation so we add a check here to
+    // keep compatible with the old logic. Should remove the isOpenScanner in the future.
+    // 2. Server tells us that it has no more results for this region.
+    return (values.length == 0 && !callable.isHeartbeatMessage() && !callable.isOpenScanner())
+        || callable.moreResultsInRegion() == MoreResults.NO;
   }
 
   private void closeScannerIfExhausted(boolean exhausted) throws IOException {
@@ -400,16 +397,87 @@ public class ClientScanner extends AbstractClientScanner {
     }
   }
 
+  private Result[] nextScannerWithRetries(int nbRows) throws IOException {
+    for (;;) {
+      try {
+        return nextScanner(nbRows);
+      } catch (DoNotRetryIOException e) {
+        handleScanError(e, null);
+      }
+    }
+  }
+
+  private void handleScanError(DoNotRetryIOException e,
+      MutableBoolean retryAfterOutOfOrderException) throws DoNotRetryIOException {
+    // An exception was thrown which makes any partial results that we were collecting
+    // invalid. The scanner will need to be reset to the beginning of a row.
+    clearPartialResults();
+    // DNRIOEs are thrown to make us break out of retries. Some types of DNRIOEs want us
+    // to reset the scanner and come back in again.
+
+    // If exception is any but the list below throw it back to the client; else setup
+    // the scanner and retry.
+    Throwable cause = e.getCause();
+    if ((cause != null && cause instanceof NotServingRegionException) ||
+        (cause != null && cause instanceof RegionServerStoppedException) ||
+        e instanceof OutOfOrderScannerNextException || e instanceof UnknownScannerException ||
+        e instanceof ScannerResetException) {
+      // Pass. It is easier writing the if loop test as list of what is allowed rather than
+      // as a list of what is not allowed... so if in here, it means we do not throw.
+    } else {
+      throw e;
+    }
+
+    // Else, its signal from depths of ScannerCallable that we need to reset the scanner.
+    if (this.lastResult != null) {
+      // The region has moved. We need to open a brand new scanner at the new location.
+      // Reset the startRow to the row we've seen last so that the new scanner starts at
+      // the correct row. Otherwise we may see previously returned rows again.
+      // (ScannerCallable by now has "relocated" the correct region)
+      if (!this.lastResult.isPartial() && scan.getBatch() < 0) {
+        if (scan.isReversed()) {
+          scan.setStartRow(createClosestRowBefore(lastResult.getRow()));
+        } else {
+          scan.setStartRow(createClosestRowAfter(lastResult.getRow()));
+        }
+      } else {
+        // we need rescan this row because we only loaded partial row before
+        scan.setStartRow(lastResult.getRow());
+      }
+    }
+    if (e instanceof OutOfOrderScannerNextException) {
+      if (retryAfterOutOfOrderException != null) {
+        if (retryAfterOutOfOrderException.isTrue()) {
+          retryAfterOutOfOrderException.setValue(false);
+        } else {
+          // TODO: Why wrap this in a DNRIOE when it already is a DNRIOE?
+          throw new DoNotRetryIOException(
+              "Failed after retry of OutOfOrderScannerNextException: was there a rpc timeout?", e);
+        }
+      }
+    }
+    // Clear region.
+    this.currentRegion = null;
+    // Set this to zero so we don't try and do an rpc and close on remote server when
+    // the exception we got was UnknownScanner or the Server is going down.
+    callable = null;
+  }
+
   /**
    * Contact the servers to load more {@link Result}s in the cache.
    */
   protected void loadCache() throws IOException {
+    // check if scanner was closed during previous prefetch
+    if (closed) {
+      return;
+    }
     Result[] values = null;
     long remainingResultSize = maxScannerResultSize;
     int countdown = this.caching;
     // This is possible if we just stopped at the boundary of a region in the previous call.
     if (callable == null) {
-      if (!nextScanner(countdown, false)) {
+      values = nextScannerWithRetries(countdown);
+      if (values == null) {
         return;
       }
     }
@@ -417,80 +485,39 @@ public class ClientScanner extends AbstractClientScanner {
     callable.setCaching(this.caching);
     // This flag is set when we want to skip the result returned. We do
     // this when we reset scanner because it split under us.
-    boolean retryAfterOutOfOrderException = true;
+    MutableBoolean retryAfterOutOfOrderException = new MutableBoolean(true);
     for (;;) {
       try {
         // Server returns a null values if scanning is to stop. Else,
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
-        values = call(callable, caller, scannerTimeout);
+        // now we will also fetch data when openScanner, so do not make a next call again if values
+        // is already non-null.
+        if (values == null) {
+          values = call(callable, caller, scannerTimeout);
+        }
         // When the replica switch happens, we need to do certain operations again.
         // The callable will openScanner with the right startkey but we need to pick up
         // from there. Bypass the rest of the loop and let the catch-up happen in the beginning
         // of the loop as it happens for the cases where we see exceptions.
-        // Since only openScanner would have happened, values would be null
-        if (values == null && callable.switchedToADifferentReplica()) {
+        if (callable.switchedToADifferentReplica()) {
           // Any accumulated partial results are no longer valid since the callable will
           // openScanner with the correct startkey and we must pick up from there
           clearPartialResults();
           this.currentRegion = callable.getHRegionInfo();
-          continue;
-        }
-        retryAfterOutOfOrderException = true;
-      } catch (DoNotRetryIOException | NeedUnmanagedConnectionException e) {
-        // An exception was thrown which makes any partial results that we were collecting
-        // invalid. The scanner will need to be reset to the beginning of a row.
-        clearPartialResults();
-        // DNRIOEs are thrown to make us break out of retries. Some types of DNRIOEs want us
-        // to reset the scanner and come back in again.
-
-        // If exception is any but the list below throw it back to the client; else setup
-        // the scanner and retry.
-        Throwable cause = e.getCause();
-        if ((cause != null && cause instanceof NotServingRegionException) ||
-            (cause != null && cause instanceof RegionServerStoppedException) ||
-            e instanceof OutOfOrderScannerNextException ||
-            e instanceof UnknownScannerException ||
-            e instanceof ScannerResetException) {
-          // Pass. It is easier writing the if loop test as list of what is allowed rather than
-          // as a list of what is not allowed... so if in here, it means we do not throw.
-        } else {
-          throw e;
-        }
-
-        // Else, its signal from depths of ScannerCallable that we need to reset the scanner.
-        if (this.lastResult != null) {
-          // The region has moved. We need to open a brand new scanner at the new location.
-          // Reset the startRow to the row we've seen last so that the new scanner starts at
-          // the correct row. Otherwise we may see previously returned rows again.
-          // (ScannerCallable by now has "relocated" the correct region)
-          if (!this.lastResult.isPartial() && scan.getBatch() < 0) {
-            if (scan.isReversed()) {
-              scan.setStartRow(createClosestRowBefore(lastResult.getRow()));
-            } else {
-              scan.setStartRow(Bytes.add(lastResult.getRow(), new byte[1]));
-            }
-          } else {
-            // we need rescan this row because we only loaded partial row before
-            scan.setStartRow(lastResult.getRow());
+          // Now we will also fetch data when openScanner so usually we should not get a null
+          // result, but at some places we still use null to indicate the scan is terminated, so add
+          // a sanity check here. Should be removed later.
+          if (values == null) {
+            continue;
           }
         }
-        if (e instanceof OutOfOrderScannerNextException) {
-          if (retryAfterOutOfOrderException) {
-            retryAfterOutOfOrderException = false;
-          } else {
-            // TODO: Why wrap this in a DNRIOE when it already is a DNRIOE?
-            throw new DoNotRetryIOException("Failed after retry of " +
-                "OutOfOrderScannerNextException: was there a rpc timeout?", e);
-          }
-        }
-        // Clear region.
-        this.currentRegion = null;
-        // Set this to zero so we don't try and do an rpc and close on remote server when
-        // the exception we got was UnknownScanner or the Server is going down.
-        callable = null;
+        retryAfterOutOfOrderException.setValue(true);
+      } catch (DoNotRetryIOException e) {
+        handleScanError(e, retryAfterOutOfOrderException);
         // reopen the scanner
-        if (!nextScanner(countdown, false)) {
+        values = nextScannerWithRetries(countdown);
+        if (values == null) {
           break;
         }
         continue;
@@ -523,8 +550,18 @@ public class ClientScanner extends AbstractClientScanner {
             this.lastCellLoadedToCache = null;
           }
         }
+        if (scan.getLimit() > 0) {
+          int limit = scan.getLimit() - resultsToAddToCache.size();
+          assert limit >= 0;
+          scan.setLimit(limit);
+        }
       }
-      boolean exhausted = regionExhausted(values);
+      if (scanExhausted(values)) {
+        closeScanner();
+        closed = true;
+        break;
+      }
+      boolean regionExhausted = regionExhausted(values);
       if (callable.isHeartbeatMessage()) {
         if (!cache.isEmpty()) {
           // Caller of this method just wants a Result. If we see a heartbeat message, it means
@@ -542,12 +579,12 @@ public class ClientScanner extends AbstractClientScanner {
       }
       if (countdown <= 0) {
         // we have enough result.
-        closeScannerIfExhausted(exhausted);
+        closeScannerIfExhausted(regionExhausted);
         break;
       }
       if (remainingResultSize <= 0) {
         if (!cache.isEmpty()) {
-          closeScannerIfExhausted(exhausted);
+          closeScannerIfExhausted(regionExhausted);
           break;
         } else {
           // we have reached the max result size but we still can not find anything to return to the
@@ -556,17 +593,21 @@ public class ClientScanner extends AbstractClientScanner {
         }
       }
       // we are done with the current region
-      if (exhausted) {
+      if (regionExhausted) {
         if (!partialResults.isEmpty()) {
           // XXX: continue if there are partial results. But in fact server should not set
           // hasMoreResults to false if there are partial results.
           LOG.warn("Server tells us there is no more results for this region but we still have"
               + " partialResults, this should not happen, retry on the current scanner anyway");
+          values = null; // reset values for the next call
           continue;
         }
-        if (!nextScanner(countdown, values == null)) {
+        values = nextScannerWithRetries(countdown);
+        if (values == null) {
           break;
         }
+      } else {
+        values = null; // reset values for the next call
       }
     }
   }
@@ -738,46 +779,24 @@ public class ClientScanner extends AbstractClientScanner {
     }
   }
 
-    @Override
-    public void close() {
-      if (!scanMetricsPublished) writeScanMetrics();
-      if (callable != null) {
-        callable.setClose();
-        try {
-          call(callable, caller, scannerTimeout);
-        } catch (UnknownScannerException e) {
-           // We used to catch this error, interpret, and rethrow. However, we
-           // have since decided that it's not nice for a scanner's close to
-           // throw exceptions. Chances are it was just due to lease time out.
-        } catch (IOException e) {
-           /* An exception other than UnknownScanner is unexpected. */
-           LOG.warn("scanner failed to close. Exception follows: " + e);
-        }
-        callable = null;
+  @Override
+  public void close() {
+    if (!scanMetricsPublished) writeScanMetrics();
+    if (callable != null) {
+      callable.setClose();
+      try {
+        call(callable, caller, scannerTimeout);
+      } catch (UnknownScannerException e) {
+        // We used to catch this error, interpret, and rethrow. However, we
+        // have since decided that it's not nice for a scanner's close to
+        // throw exceptions. Chances are it was just due to lease time out.
+      } catch (IOException e) {
+        /* An exception other than UnknownScanner is unexpected. */
+        LOG.warn("scanner failed to close. Exception follows: " + e);
       }
-      closed = true;
+      callable = null;
     }
-
-  /**
-   * Create the closest row before the specified row
-   * @param row
-   * @return a new byte array which is the closest front row of the specified one
-   */
-  protected static byte[] createClosestRowBefore(byte[] row) {
-    if (row == null) {
-      throw new IllegalArgumentException("The passed row is empty");
-    }
-    if (Bytes.equals(row, HConstants.EMPTY_BYTE_ARRAY)) {
-      return MAX_BYTE_ARRAY;
-    }
-    if (row[row.length - 1] == 0) {
-      return Arrays.copyOf(row, row.length - 1);
-    } else {
-      byte[] closestFrontRow = Arrays.copyOf(row, row.length);
-      closestFrontRow[row.length - 1] = (byte) ((closestFrontRow[row.length - 1] & 0xff) - 1);
-      closestFrontRow = Bytes.add(closestFrontRow, MAX_BYTE_ARRAY);
-      return closestFrontRow;
-    }
+    closed = true;
   }
 
   @Override

@@ -1257,8 +1257,7 @@ class ConnectionManager {
       Scan s = new Scan();
       s.setReversed(true);
       s.setStartRow(metaKey);
-      s.setSmall(true);
-      s.setCaching(1);
+      s.setOneRowLimit();
       if (this.useMetaReplicas) {
         s.setConsistency(Consistency.TIMELINE);
       }
@@ -1286,15 +1285,11 @@ class ConnectionManager {
         long pauseBase = this.pause;
         try {
           Result regionInfoRow = null;
-          ReversedClientScanner rcs = null;
-          try {
-            rcs = new ClientSmallReversedScanner(conf, s, TableName.META_TABLE_NAME, this,
-              rpcCallerFactory, rpcControllerFactory, getMetaLookupPool(), 0);
+          s.resetMvccReadPoint();
+          try (ReversedClientScanner rcs =
+              new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
+                  rpcControllerFactory, getMetaLookupPool(), 0)) {
             regionInfoRow = rcs.next();
-          } finally {
-            if (rcs != null) {
-              rcs.close();
-            }
           }
 
           if (regionInfoRow == null) {

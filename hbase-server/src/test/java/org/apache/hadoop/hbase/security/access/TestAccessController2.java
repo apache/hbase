@@ -381,6 +381,7 @@ public class TestAccessController2 extends SecureTestUtil {
           Scan s1 = new Scan();
           s1.addFamily(TEST_FAMILY_2);
           try (ResultScanner scanner1 = table.getScanner(s1);) {
+            scanner1.next();
           }
         }
         return null;
@@ -411,6 +412,7 @@ public class TestAccessController2 extends SecureTestUtil {
           Scan s1 = new Scan();
           s1.addFamily(TEST_FAMILY_2);
           try (ResultScanner scanner1 = table.getScanner(s1);) {
+            scanner1.next();
           }
         }
         return null;
@@ -425,6 +427,7 @@ public class TestAccessController2 extends SecureTestUtil {
           Scan s1 = new Scan();
           s1.addColumn(TEST_FAMILY, Q2);
           try (ResultScanner scanner1 = table.getScanner(s1);) {
+            scanner1.next();
           }
         }
         return null;

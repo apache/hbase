@@ -274,11 +274,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private final String scannerName;
     private final RegionScanner s;
     private final Region r;
+    private final boolean allowPartial;
 
-    public RegionScannerHolder(String scannerName, RegionScanner s, Region r) {
+    public RegionScannerHolder(String scannerName, RegionScanner s, Region r, boolean allowPartial) {
       this.scannerName = scannerName;
       this.s = s;
       this.r = r;
+      this.allowPartial = allowPartial;
     }
 
     public long getNextCallSeq() {
@@ -1110,11 +1112,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return lastBlock;
   }
 
-  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r)
-      throws LeaseStillHeldException {
+  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r,
+      boolean allowPartial) throws LeaseStillHeldException {
     regionServer.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
       new ScannerListener(scannerName));
-    RegionScannerHolder rsh = new RegionScannerHolder(scannerName, s, r);
+    RegionScannerHolder rsh = new RegionScannerHolder(scannerName, s, r, allowPartial);
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
     assert existing == null : "scannerId must be unique within regionserver's whole lifecycle!";
     return rsh;
@@ -2460,8 +2462,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return rsh;
   }
 
-  private Pair<RegionScannerHolder, Boolean> newRegionScanner(ScanRequest request,
-      ScanResponse.Builder builder) throws IOException {
+  private RegionScannerHolder newRegionScanner(ScanRequest request, ScanResponse.Builder builder)
+      throws IOException {
     Region region = getRegion(request.getRegion());
     ClientProtos.Scan protoScan = request.getScan();
     boolean isLoadingCfsOnDemandSet = protoScan.hasLoadColumnFamiliesOnDemand();
@@ -2491,7 +2493,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.setMvccReadPoint(scanner.getMvccReadPoint());
     builder.setTtl(scannerLeaseTimeoutPeriod);
     String scannerName = String.valueOf(scannerId);
-    return Pair.newPair(addScanner(scannerName, scanner, region), scan.isSmall());
+    return addScanner(scannerName, scanner, region,
+      !scan.isSmall() && !(request.hasLimitOfRows() && request.getLimitOfRows() > 0));
   }
 
   private void checkScanNextCallSeq(ScanRequest request, RegionScannerHolder rsh)
@@ -2548,9 +2551,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   // return whether we have more results in region.
   private boolean scan(PayloadCarryingRpcController controller, ScanRequest request,
-      RegionScannerHolder rsh, boolean isSmallScan, long maxQuotaResultSize, int rows,
-      List<Result> results, ScanResponse.Builder builder, MutableObject lastBlock,
-      RpcCallContext context) throws IOException {
+      RegionScannerHolder rsh, long maxQuotaResultSize, int rows, List<Result> results,
+      ScanResponse.Builder builder, MutableObject lastBlock, RpcCallContext context)
+      throws IOException {
     Region region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
@@ -2581,7 +2584,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // formed.
         boolean serverGuaranteesOrderOfPartials = results.isEmpty();
         boolean allowPartialResults =
-            clientHandlesPartials && serverGuaranteesOrderOfPartials && !isSmallScan;
+            clientHandlesPartials && serverGuaranteesOrderOfPartials && rsh.allowPartial;
         boolean moreRows = false;
 
         // Heartbeat messages occur when the processing of the ScanRequest is exceeds a
@@ -2738,15 +2741,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     rpcScanRequestCount.increment();
     RegionScannerHolder rsh;
     ScanResponse.Builder builder = ScanResponse.newBuilder();
-    boolean isSmallScan;
     try {
       if (request.hasScannerId()) {
         rsh = getRegionScanner(request);
-        isSmallScan = false;
       } else {
-        Pair<RegionScannerHolder, Boolean> pair = newRegionScanner(request, builder);
-        rsh = pair.getFirst();
-        isSmallScan = pair.getSecond().booleanValue();
+        rsh = newRegionScanner(request, builder);
       }
     } catch (IOException e) {
       if (e == SCANNER_ALREADY_CLOSED) {
@@ -2805,6 +2804,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RegionScanner scanner = rsh.s;
     boolean moreResults = true;
     boolean moreResultsInRegion = true;
+    // this is the limit of rows for this scan, if we the number of rows reach this value, we will
+    // close the scanner.
+    int limitOfRows;
+    if (request.hasLimitOfRows()) {
+      limitOfRows = request.getLimitOfRows();
+      rows = Math.min(rows, limitOfRows);
+    } else {
+      limitOfRows = -1;
+    }
     MutableObject lastBlock = new MutableObject();
     boolean scannerClosed = false;
     try {
@@ -2825,7 +2833,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         if (!done) {
           moreResultsInRegion = scan((PayloadCarryingRpcController) controller, request, rsh,
-            isSmallScan, maxQuotaResultSize, rows, results, builder, lastBlock, context);
+            maxQuotaResultSize, rows, results, builder, lastBlock, context);
         }
       }
 
@@ -2836,6 +2844,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // only set moreResults to false if the results is empty. This is used to keep compatible
         // with the old scan implementation where we just ignore the returned results if moreResults
         // is false. Can remove the isEmpty check after we get rid of the old implementation.
+        moreResults = false;
+      } else if (limitOfRows > 0 && results.size() >= limitOfRows &&
+          !results.get(results.size() - 1).isPartial()) {
+        // if we have reached the limit of rows
         moreResults = false;
       }
       addResults(builder, results, (PayloadCarryingRpcController) controller,

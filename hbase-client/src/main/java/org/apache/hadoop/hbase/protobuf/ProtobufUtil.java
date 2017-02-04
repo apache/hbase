@@ -20,6 +20,20 @@ package org.apache.hadoop.hbase.protobuf;
 
 import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,6 +61,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -128,12 +143,12 @@ import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
@@ -157,20 +172,6 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.Parser;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
 
 /**
  * Protobufs utility.
@@ -322,17 +323,32 @@ public final class ProtobufUtil {
    *   a new IOException that wraps the unexpected ServiceException.
    */
   public static IOException getRemoteException(ServiceException se) {
-    Throwable e = se.getCause();
-    if (e == null) {
-      return new IOException(se);
+    return makeIOExceptionOfException(se);
+  }
+
+  /**
+   * Like {@link #getRemoteException(ServiceException)} but more generic, able to handle more than
+   * just {@link ServiceException}. Prefer this method to
+   * {@link #getRemoteException(ServiceException)} because trying to
+   * contain direct protobuf references.
+   * @param e
+   */
+  public static IOException handleRemoteException(Exception e) {
+    return makeIOExceptionOfException(e);
+  }
+
+  private static IOException makeIOExceptionOfException(Exception e) {
+    Throwable t = e;
+    if (e instanceof ServiceException) {
+      t = e.getCause();
     }
-    if (ExceptionUtil.isInterrupt(e)) {
-      return ExceptionUtil.asInterrupt(e);
+    if (ExceptionUtil.isInterrupt(t)) {
+      return ExceptionUtil.asInterrupt(t);
     }
-    if (e instanceof RemoteException) {
-      e = ((RemoteException) e).unwrapRemoteException();
+    if (t instanceof RemoteException) {
+      t = ((RemoteException) t).unwrapRemoteException();
     }
-    return e instanceof IOException ? (IOException) e : new IOException(se);
+    return t instanceof IOException ? (IOException) t : new HBaseIOException(t);
   }
 
   /**
@@ -908,6 +924,32 @@ public final class ProtobufUtil {
     return get;
   }
 
+  public static ClientProtos.Scan.ReadType toReadType(Scan.ReadType readType) {
+    switch (readType) {
+      case DEFAULT:
+        return ClientProtos.Scan.ReadType.DEFAULT;
+      case STREAM:
+        return ClientProtos.Scan.ReadType.STREAM;
+      case PREAD:
+        return ClientProtos.Scan.ReadType.PREAD;
+      default:
+        throw new IllegalArgumentException("Unknown ReadType: " + readType);
+    }
+  }
+
+  public static Scan.ReadType toReadType(ClientProtos.Scan.ReadType readType) {
+    switch (readType) {
+      case DEFAULT:
+        return Scan.ReadType.DEFAULT;
+      case STREAM:
+        return Scan.ReadType.STREAM;
+      case PREAD:
+        return Scan.ReadType.PREAD;
+      default:
+        throw new IllegalArgumentException("Unknown ReadType: " + readType);
+    }
+  }
+
   /**
    * Convert a client Scan to a protocol buffer Scan
    *
@@ -1005,6 +1047,9 @@ public final class ProtobufUtil {
     if (mvccReadPoint > 0) {
       scanBuilder.setMvccReadPoint(mvccReadPoint);
     }
+    if (scan.getReadType() != Scan.ReadType.DEFAULT) {
+      scanBuilder.setReadType(toReadType(scan.getReadType()));
+    }
     return scanBuilder.build();
   }
 
@@ -1094,6 +1139,11 @@ public final class ProtobufUtil {
     }
     if (proto.hasMvccReadPoint()) {
       PackagePrivateFieldAccessor.setMvccReadPoint(scan, proto.getMvccReadPoint());
+    }
+    if (scan.isSmall()) {
+      scan.setReadType(Scan.ReadType.PREAD);
+    } else if (proto.hasReadType()) {
+      scan.setReadType(toReadType(proto.getReadType()));
     }
     return scan;
   }

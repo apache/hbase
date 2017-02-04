@@ -498,6 +498,9 @@ public final class RequestConverter {
     builder.setClientHandlesPartials(true);
     builder.setClientHandlesHeartbeats(true);
     builder.setTrackScanMetrics(scan.isScanMetricsEnabled());
+    if (scan.getLimit() > 0) {
+      builder.setLimitOfRows(scan.getLimit());
+    }
     return builder.build();
   }
 
@@ -532,7 +535,7 @@ public final class RequestConverter {
    */
   public static ScanRequest buildScanRequest(final long scannerId, final int numberOfRows,
       final boolean closeScanner, final long nextCallSeq, final boolean trackMetrics,
-      final boolean renew) {
+      final boolean renew, int limitOfRows) {
     ScanRequest.Builder builder = ScanRequest.newBuilder();
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
@@ -542,6 +545,9 @@ public final class RequestConverter {
     builder.setClientHandlesHeartbeats(true);
     builder.setTrackScanMetrics(trackMetrics);
     builder.setRenew(renew);
+    if (limitOfRows > 0) {
+      builder.setLimitOfRows(limitOfRows);
+    }
     return builder.build();
   }
 

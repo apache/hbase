@@ -795,21 +795,9 @@ public class HTable implements HTableInterface, RegionLocator {
     }
 
     if (scan.isReversed()) {
-      if (scan.isSmall()) {
-        return new ClientSmallReversedScanner(getConfiguration(), scan, getName(),
-            this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-            pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
-      } else {
-        return new ReversedClientScanner(getConfiguration(), scan, getName(),
-            this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-            pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
-      }
-    }
-
-    if (scan.isSmall()) {
-      return new ClientSmallScanner(getConfiguration(), scan, getName(),
-          this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-          pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
+      return new ReversedClientScanner(getConfiguration(), scan, getName(),
+        this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
+        pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
     } else {
       return new ClientScanner(getConfiguration(), scan, getName(), this.connection,
           this.rpcCallerFactory, this.rpcControllerFactory,

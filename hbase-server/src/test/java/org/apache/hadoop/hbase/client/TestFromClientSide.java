@@ -6108,7 +6108,7 @@ public class TestFromClientSide {
   public void testReversedScanUnderMultiRegions() throws Exception {
     // Test Initialization.
     TableName TABLE = TableName.valueOf("testReversedScanUnderMultiRegions");
-    byte[] maxByteArray = ReversedClientScanner.MAX_BYTE_ARRAY;
+    byte[] maxByteArray = ConnectionUtils.MAX_BYTE_ARRAY;
     byte[][] splitRows = new byte[][] { Bytes.toBytes("005"),
         Bytes.add(Bytes.toBytes("005"), Bytes.multiple(maxByteArray, 16)),
         Bytes.toBytes("006"),

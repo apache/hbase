@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.tool.Canary.RegionTask.TaskType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -365,7 +366,7 @@ public final class Canary implements Tool {
           scan.setFilter(new FirstKeyOnlyFilter());
           scan.addFamily(column.getName());
           scan.setMaxResultSize(1L);
-          scan.setSmall(true);
+          scan.setOneRowLimit();
         }
 
         if (LOG.isDebugEnabled()) {
@@ -500,7 +501,7 @@ public final class Canary implements Tool {
           scan.setFilter(new FirstKeyOnlyFilter());
           scan.setCaching(1);
           scan.setMaxResultSize(1L);
-          scan.setSmall(true);
+          scan.setOneRowLimit();
           stopWatch.start();
           ResultScanner s = table.getScanner(scan);
           s.next();

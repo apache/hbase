@@ -106,8 +106,8 @@ public class TestLeaseRenewal {
     Scan s = new Scan();
     s.setCaching(1);
     ResultScanner rs = table.getScanner(s);
-    // make sure that calling renewLease does not impact the scan results
-    assertTrue(((AbstractClientScanner)rs).renewLease());
+    // we haven't open the scanner yet so nothing happens
+    assertFalse(((AbstractClientScanner) rs).renewLease());
     assertTrue(Arrays.equals(rs.next().getRow(), ANOTHERROW));
     // renew the lease a few times, long enough to be sure
     // the lease would have expired otherwise

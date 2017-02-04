@@ -607,7 +607,6 @@ public class TestPartialResultsFromClientSide {
     scan.setAllowPartialResults(true);
     scan.setSmall(true);
     scan.setMaxResultSize(1);
-
     ResultScanner scanner = TABLE.getScanner(scan);
     Result r = null;
 
@@ -731,11 +730,13 @@ public class TestPartialResultsFromClientSide {
     byte[] value = Bytes.createMaxByteArray(100);
 
     Table tmpTable = createTestTable(testName, rows, families, qualifiers, value);
-
     // Open scanner before deletes
     ResultScanner scanner =
         tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
-
+    // now the openScanner will also fetch data and will be executed lazily, i.e, only openScanner
+    // when you call next, so here we need to make a next call to open scanner. The maxResultSize
+    // limit can make sure that we will not fetch all the data at once, so the test sill works.
+    int scannerCount = scanner.next().rawCells().length;
     Delete delete1 = new Delete(rows[0]);
     delete1.addColumn(families[0], qualifiers[0], 0);
     tmpTable.delete(delete1);
@@ -745,7 +746,7 @@ public class TestPartialResultsFromClientSide {
     tmpTable.delete(delete2);
 
     // Should see all cells because scanner was opened prior to deletes
-    int scannerCount = countCellsFromScanner(scanner);
+    scannerCount += countCellsFromScanner(scanner);
     int expectedCount = numRows * numFamilies * numQualifiers;
     assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,
         scannerCount == expectedCount);
@@ -758,6 +759,7 @@ public class TestPartialResultsFromClientSide {
         scannerCount == expectedCount);
 
     scanner = tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
+    scannerCount = scanner.next().rawCells().length;
     // Put in 2 new rows. The timestamps differ from the deleted rows
     Put put1 = new Put(rows[0]);
     put1.add(new KeyValue(rows[0], families[0], qualifiers[0], 1, value));
@@ -768,7 +770,7 @@ public class TestPartialResultsFromClientSide {
     tmpTable.put(put2);
 
     // Scanner opened prior to puts. Cell count shouldn't have changed
-    scannerCount = countCellsFromScanner(scanner);
+    scannerCount += countCellsFromScanner(scanner);
     expectedCount = numRows * numFamilies * numQualifiers - 2;
     assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,
         scannerCount == expectedCount);

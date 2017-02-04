@@ -169,7 +169,7 @@ public class TestRegionServerMetrics {
 
     // By default, master doesn't host meta now.
     // Adding some meta related requests
-    requests += 3;
+    requests += 1;
     readRequests ++;
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();

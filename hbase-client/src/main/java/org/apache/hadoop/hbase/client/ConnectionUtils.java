@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -32,8 +34,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
-
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Utility used by client connections.
@@ -193,6 +194,38 @@ public class ConnectionUtils {
     public boolean isTableDisabled(TableName tableName) throws IOException {
       // treat all tables as enabled
       return false;
+    }
+  }
+
+  // A byte array in which all elements are the max byte, and it is used to
+  // construct closest front row
+  static final byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
+
+  /**
+   * Create the closest row after the specified row
+   */
+  static byte[] createClosestRowAfter(byte[] row) {
+    return Arrays.copyOf(row, row.length + 1);
+  }
+
+  /**
+   * Create the closest row before the specified row
+   * @deprecated in fact, we do not know the closest row before the given row, the result is only a
+   *             row very close to the current row. Avoid using this method in the future.
+   */
+  @Deprecated
+  static byte[] createClosestRowBefore(byte[] row) {
+    if (row.length == 0) {
+      return MAX_BYTE_ARRAY;
+    }
+    if (row[row.length - 1] == 0) {
+      return Arrays.copyOf(row, row.length - 1);
+    } else {
+      byte[] nextRow = new byte[row.length + MAX_BYTE_ARRAY.length];
+      System.arraycopy(row, 0, nextRow, 0, row.length - 1);
+      nextRow[row.length - 1] = (byte) ((row[row.length - 1] & 0xFF) - 1);
+      System.arraycopy(MAX_BYTE_ARRAY, 0, nextRow, row.length, MAX_BYTE_ARRAY.length);
+      return nextRow;
     }
   }
 }

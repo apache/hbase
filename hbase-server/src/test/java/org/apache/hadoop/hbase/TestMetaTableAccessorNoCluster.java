@@ -166,7 +166,7 @@ public class TestMetaTableAccessorNoCluster {
             public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
               ((PayloadCarryingRpcController) invocation.getArguments()[0]).setCellScanner(CellUtil
                   .createCellScanner(cellScannables));
-              return builder.build();
+              return builder.setScannerId(1234567890L).build();
             }
           }).thenReturn(ScanResponse.newBuilder().setMoreResults(false).build());
       // Associate a spied-upon HConnection with UTIL.getConfiguration.  Need

@@ -260,6 +260,15 @@ message Scan {
   optional bool allow_partial_results = 18;
   repeated ColumnFamilyTimeRange cf_time_range = 19;
   optional uint64 mvcc_read_point = 20 [default = 0];
+  optional bool include_start_row = 21 [default = true];
+  optional bool include_stop_row = 22 [default = false];
+
+  enum ReadType {
+    DEFAULT = 0;
+    STREAM = 1;
+    PREAD = 2;
+  }
+  optional ReadType readType = 23 [default = DEFAULT];
 }
 
 /**
@@ -284,6 +293,8 @@ message ScanRequest {
   optional bool client_handles_heartbeats = 8;
   optional bool track_scan_metrics = 9;
   optional bool renew = 10 [default = false];
+  // if we have returned limit_of_rows rows to client, then close the scanner.
+  optional uint32 limit_of_rows = 11 [default = 0];
 }
 
 /**

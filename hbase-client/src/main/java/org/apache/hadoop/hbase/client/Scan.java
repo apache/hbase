@@ -175,6 +175,17 @@ public class Scan extends Query {
   private long mvccReadPoint = -1L;
 
   /**
+   * The number of rows we want for this scan. We will terminate the scan if the number of return
+   * rows reaches this value.
+   */
+  private int limit = -1;
+
+  /**
+   * Control whether to use pread at server side.
+   */
+  private ReadType readType = ReadType.DEFAULT;
+
+  /**
    * Create a Scan operation across all rows.
    */
   public Scan() {}
@@ -253,6 +264,7 @@ public class Scan extends Query {
       setColumnFamilyTimeRange(entry.getKey(), tr.getMin(), tr.getMax());
     }
     this.mvccReadPoint = scan.getMvccReadPoint();
+    this.limit = scan.getLimit();
   }
 
   /**
@@ -1011,6 +1023,62 @@ public class Scan extends Query {
     byte [] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
     if (bytes == null) return null;
     return ProtobufUtil.toScanMetrics(bytes);
+  }
+
+  /**
+   * @return the limit of rows for this scan
+   */
+  public int getLimit() {
+    return limit;
+  }
+
+  /**
+   * Set the limit of rows for this scan. We will terminate the scan if the number of returned rows
+   * reaches this value.
+   * <p>
+   * This condition will be tested at last, after all other conditions such as stopRow, filter, etc.
+   * <p>
+   * Can not be used together with batch and allowPartial.
+   * @param limit the limit of rows for this scan
+   * @return this
+   */
+  public Scan setLimit(int limit) {
+    this.limit = limit;
+    return this;
+  }
+
+  /**
+   * Call this when you only want to get one row. It will set {@code limit} to {@code 1}, and also
+   * set {@code readType} to {@link ReadType#PREAD}.
+   * @return this
+   */
+  public Scan setOneRowLimit() {
+    return setLimit(1).setReadType(ReadType.PREAD);
+  }
+
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public enum ReadType {
+    DEFAULT, STREAM, PREAD
+  }
+
+  /**
+   * @return the read type for this scan
+   */
+  public ReadType getReadType() {
+    return readType;
+  }
+
+  /**
+   * Set the read type for this scan.
+   * <p>
+   * Notice that we may choose to use pread even if you specific {@link ReadType#STREAM} here. For
+   * example, we will always use pread if this is a get scan.
+   * @return this
+   */
+  public Scan setReadType(ReadType readType) {
+    this.readType = readType;
+    return this;
   }
 
   /**

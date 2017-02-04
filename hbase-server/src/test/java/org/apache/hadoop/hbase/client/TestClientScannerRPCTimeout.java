@@ -85,9 +85,11 @@ public class TestClientScannerRPCTimeout {
   public void testScannerNextRPCTimesout() throws Exception {
     final TableName TABLE_NAME = TableName.valueOf("testScannerNextRPCTimesout");
     Table ht = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
+    byte[] r0 = Bytes.toBytes("row-0");
     byte[] r1 = Bytes.toBytes("row-1");
     byte[] r2 = Bytes.toBytes("row-2");
     byte[] r3 = Bytes.toBytes("row-3");
+    putToTable(ht, r0);
     putToTable(ht, r1);
     putToTable(ht, r2);
     putToTable(ht, r3);
@@ -97,6 +99,9 @@ public class TestClientScannerRPCTimeout {
     scan.setCaching(1);
     ResultScanner scanner = ht.getScanner(scan);
     Result result = scanner.next();
+    // fetched when openScanner
+    assertTrue("Expected row: row-0", Bytes.equals(r0, result.getRow()));
+    result = scanner.next();
     assertTrue("Expected row: row-1", Bytes.equals(r1, result.getRow()));
     LOG.info("Got expected first row");
     long t1 = System.currentTimeMillis();

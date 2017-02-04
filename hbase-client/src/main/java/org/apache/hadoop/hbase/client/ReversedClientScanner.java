@@ -18,15 +18,18 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowBefore;
+
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -58,8 +61,7 @@ public class ReversedClientScanner extends ClientScanner {
   }
 
   @Override
-  protected boolean nextScanner(int nbRows, final boolean done)
-      throws IOException {
+  protected Result[] nextScanner(int nbRows) throws IOException {
     // Close the previous scanner if it's open
     closeScanner();
 
@@ -69,16 +71,17 @@ public class ReversedClientScanner extends ClientScanner {
     // if we're at start of table, close and return false to stop iterating
     if (this.currentRegion != null) {
       byte[] startKey = this.currentRegion.getStartKey();
-      if (startKey == null
-          || Bytes.equals(startKey, HConstants.EMPTY_BYTE_ARRAY)
-          || checkScanStopRow(startKey) || done) {
+      if (startKey == null || Bytes.equals(startKey, HConstants.EMPTY_BYTE_ARRAY)
+          || checkScanStopRow(startKey)) {
         close();
         if (LOG.isDebugEnabled()) {
           LOG.debug("Finished " + this.currentRegion);
         }
-        return false;
+        return null;
       }
       localStartKey = startKey;
+      // clear mvcc read point if we are going to switch regions
+      scan.resetMvccReadPoint();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Finished " + this.currentRegion);
       }
@@ -109,17 +112,21 @@ public class ReversedClientScanner extends ClientScanner {
       // beginning of the region
       // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
       // we do a callWithRetries
-      this.caller.callWithoutRetries(callable, scannerTimeout);
+      Result[] rrs = this.caller.callWithoutRetries(callable, scannerTimeout);
       this.currentRegion = callable.getHRegionInfo();
       if (this.scanMetrics != null) {
         this.scanMetrics.countOfRegions.incrementAndGet();
       }
+      if (rrs != null && rrs.length == 0 && callable.moreResultsForScan() == MoreResults.NO) {
+        // no results for the scan, return null to terminate the scan.
+        return null;
+      }
+      return rrs;
     } catch (IOException e) {
       ExceptionUtil.rethrowIfInterrupt(e);
       close();
       throw e;
     }
-    return true;
   }
 
   protected ScannerCallableWithReplicas getScannerCallable(byte[] localStartKey,
