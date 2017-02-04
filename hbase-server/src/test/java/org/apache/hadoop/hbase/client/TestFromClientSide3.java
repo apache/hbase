@@ -727,6 +727,7 @@ public class TestFromClientSide3 {
     scan.setTimeRange(0, Long.MAX_VALUE);
     scan.setCaching(1);
     ResultScanner scanner = table.getScanner(scan);
+    int rowNum = scanner.next() != null ? 1 : 0;
     //the started scanner shouldn't see the rows put below
     for(int i = 1; i < 1000; i++) {
       put = new Put(Bytes.toBytes(String.valueOf(i)));
@@ -734,7 +735,6 @@ public class TestFromClientSide3 {
       put.addColumn(FAMILY, Bytes.toBytes( ""), Bytes.toBytes(i));
       table.put(put);
     }
-    int rowNum = 0;
     for(Result result : scanner) {
       rowNum++;
     }

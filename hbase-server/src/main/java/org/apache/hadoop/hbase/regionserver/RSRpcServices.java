@@ -207,8 +207,6 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Implements the regionserver RPC services.
  */
@@ -353,14 +351,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private final String scannerName;
     private final RegionScanner s;
     private final Region r;
+    private final boolean allowPartial;
     private final RpcCallback closeCallBack;
     private final RpcCallback shippedCallback;
 
-    public RegionScannerHolder(String scannerName, RegionScanner s, Region r,
+    public RegionScannerHolder(String scannerName, RegionScanner s, Region r, boolean allowPartial,
         RpcCallback closeCallBack, RpcCallback shippedCallback) {
       this.scannerName = scannerName;
       this.s = s;
       this.r = r;
+      this.allowPartial = allowPartial;
       this.closeCallBack = closeCallBack;
       this.shippedCallback = shippedCallback;
     }
@@ -1211,8 +1211,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return lastBlock;
   }
 
-  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r)
-      throws LeaseStillHeldException {
+  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r,
+      boolean allowPartial) throws LeaseStillHeldException {
     Lease lease = regionServer.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
       new ScannerListener(scannerName));
     RpcCallback shippedCallback = new RegionScannerShippedCallBack(scannerName, s, lease);
@@ -1223,7 +1223,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       closeCallback = new RegionScannerCloseCallBack(s);
     }
     RegionScannerHolder rsh =
-        new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback);
+        new RegionScannerHolder(scannerName, s, r, allowPartial, closeCallback, shippedCallback);
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
     assert existing == null : "scannerId must be unique within regionserver's whole lifecycle!";
     return rsh;
@@ -2685,8 +2685,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return rsh;
   }
 
-  private Pair<RegionScannerHolder, Boolean> newRegionScanner(ScanRequest request,
-      ScanResponse.Builder builder) throws IOException {
+  private RegionScannerHolder newRegionScanner(ScanRequest request, ScanResponse.Builder builder)
+      throws IOException {
     Region region = getRegion(request.getRegion());
     ClientProtos.Scan protoScan = request.getScan();
     boolean isLoadingCfsOnDemandSet = protoScan.hasLoadColumnFamiliesOnDemand();
@@ -2717,7 +2717,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.setMvccReadPoint(scanner.getMvccReadPoint());
     builder.setTtl(scannerLeaseTimeoutPeriod);
     String scannerName = String.valueOf(scannerId);
-    return Pair.newPair(addScanner(scannerName, scanner, region), scan.isSmall());
+    return addScanner(scannerName, scanner, region,
+      !scan.isSmall() && !(request.hasLimitOfRows() && request.getLimitOfRows() > 0));
   }
 
   private void checkScanNextCallSeq(ScanRequest request, RegionScannerHolder rsh)
@@ -2773,9 +2774,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   // return whether we have more results in region.
   private boolean scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
-      boolean isSmallScan, long maxQuotaResultSize, int rows, List<Result> results,
-      ScanResponse.Builder builder, MutableObject lastBlock, RpcCallContext context)
-      throws IOException {
+      long maxQuotaResultSize, int rows, List<Result> results, ScanResponse.Builder builder,
+      MutableObject lastBlock, RpcCallContext context) throws IOException {
     Region region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
@@ -2806,7 +2806,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // formed.
         boolean serverGuaranteesOrderOfPartials = results.isEmpty();
         boolean allowPartialResults =
-            clientHandlesPartials && serverGuaranteesOrderOfPartials && !isSmallScan;
+            clientHandlesPartials && serverGuaranteesOrderOfPartials && rsh.allowPartial;
         boolean moreRows = false;
 
         // Heartbeat messages occur when the processing of the ScanRequest is exceeds a
@@ -2963,15 +2963,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     rpcScanRequestCount.increment();
     RegionScannerHolder rsh;
     ScanResponse.Builder builder = ScanResponse.newBuilder();
-    boolean isSmallScan;
     try {
       if (request.hasScannerId()) {
         rsh = getRegionScanner(request);
-        isSmallScan = false;
       } else {
-        Pair<RegionScannerHolder, Boolean> pair = newRegionScanner(request, builder);
-        rsh = pair.getFirst();
-        isSmallScan = pair.getSecond().booleanValue();
+        rsh = newRegionScanner(request, builder);
       }
     } catch (IOException e) {
       if (e == SCANNER_ALREADY_CLOSED) {
@@ -3058,7 +3054,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
         }
         if (!done) {
-          moreResultsInRegion = scan((HBaseRpcController) controller, request, rsh, isSmallScan,
+          moreResultsInRegion = scan((HBaseRpcController) controller, request, rsh,
             maxQuotaResultSize, rows, results, builder, lastBlock, context);
         }
       }

@@ -789,8 +789,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     s.setReversed(true);
     s.setStartRow(metaKey);
     s.addFamily(HConstants.CATALOG_FAMILY);
-    s.setSmall(true);
-    s.setCaching(1);
+    s.setOneRowLimit();
     if (this.useMetaReplicas) {
       s.setConsistency(Consistency.TIMELINE);
     }
@@ -818,21 +817,16 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       long pauseBase = this.pause;
       try {
         Result regionInfoRow = null;
-        ReversedClientScanner rcs = null;
-        try {
-          rcs = new ClientSmallReversedScanner(conf, s, TableName.META_TABLE_NAME, this,
-            rpcCallerFactory, rpcControllerFactory, getMetaLookupPool(), 0);
+        s.resetMvccReadPoint();
+        try (ReversedClientScanner rcs =
+            new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
+                rpcControllerFactory, getMetaLookupPool(), 0)) {
           regionInfoRow = rcs.next();
-        } finally {
-          if (rcs != null) {
-            rcs.close();
-          }
         }
 
         if (regionInfoRow == null) {
           throw new TableNotFoundException(tableName);
         }
-
         // convert the row result into the HRegionLocation we need!
         RegionLocations locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
         if (locations == null || locations.getRegionLocation(replicaId) == null) {
@@ -886,7 +880,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         throw e;
       } catch (IOException e) {
         ExceptionUtil.rethrowIfInterrupt(e);
-
         if (e instanceof RemoteException) {
           e = ((RemoteException)e).unwrapRemoteException();
         }

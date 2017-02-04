@@ -45,11 +45,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import junit.framework.Assert;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestScannerWithBulkload {
@@ -213,6 +212,7 @@ public class TestScannerWithBulkload {
     final Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
+    scan.setCaching(1);
     final Table table = init(admin, l, scan, tableName);
     // use bulkload
     final Path hfilePath = writeToHFile(l, "/temp/testBulkLoadWithParallelScan/",
@@ -221,6 +221,7 @@ public class TestScannerWithBulkload {
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
     ResultScanner scanner = table.getScanner(scan);
+    Result result = scanner.next();
     // Create a scanner and then do bulk load
     final CountDownLatch latch = new CountDownLatch(1);
     new Thread() {
@@ -242,7 +243,6 @@ public class TestScannerWithBulkload {
     latch.await();
     // By the time we do next() the bulk loaded files are also added to the kv
     // scanner
-    Result result = scanner.next();
     scanAfterBulkLoad(scanner, result, "version1");
     scanner.close();
     table.close();

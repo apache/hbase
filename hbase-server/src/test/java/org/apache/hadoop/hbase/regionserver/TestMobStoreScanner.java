@@ -183,7 +183,7 @@ public class TestMobStoreScanner {
     Scan scan = new Scan();
     scan.setCaching(1);
     ResultScanner rs = table.getScanner(scan);
-
+    Result result = rs.next();
     Put put3 = new Put(row1);
     byte[] value3 = Bytes.toBytes("value3");
     put3.addColumn(family, qf1, ts, value3);
@@ -192,7 +192,7 @@ public class TestMobStoreScanner {
     byte[] value4 = Bytes.toBytes("value4");
     put4.addColumn(family, qf1, ts, value4);
     table.put(put4);
-    Result result = rs.next();
+
     Cell cell = result.getColumnLatestCell(family, qf1);
     Assert.assertArrayEquals(value1, CellUtil.cloneValue(cell));
 

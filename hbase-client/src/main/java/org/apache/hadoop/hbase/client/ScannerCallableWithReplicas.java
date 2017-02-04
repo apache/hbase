@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -113,20 +114,16 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     return currentScannerCallable.getHRegionInfo();
   }
 
-  public boolean getServerHasMoreResults() {
-    return currentScannerCallable.getServerHasMoreResults();
+  public MoreResults moreResultsInRegion() {
+    return currentScannerCallable.moreResultsInRegion();
   }
 
-  public void setServerHasMoreResults(boolean serverHasMoreResults) {
-    currentScannerCallable.setServerHasMoreResults(serverHasMoreResults);
+  public MoreResults moreResultsForScan() {
+    return currentScannerCallable.moreResultsForScan();
   }
 
-  public boolean hasMoreResultsContext() {
-    return currentScannerCallable.hasMoreResultsContext();
-  }
-
-  public void setHasMoreResultsContext(boolean serverHasMoreResultsContext) {
-    currentScannerCallable.setHasMoreResultsContext(serverHasMoreResultsContext);
+  public boolean isOpenScanner() {
+    return currentScannerCallable.isOpenScanner();
   }
 
   @Override

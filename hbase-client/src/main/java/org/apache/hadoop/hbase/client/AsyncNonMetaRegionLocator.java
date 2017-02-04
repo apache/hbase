@@ -377,8 +377,8 @@ class AsyncNonMetaRegionLocator {
       metaKey = createRegionName(tableName, req.row, NINES, false);
     }
     conn.getRawTable(META_TABLE_NAME)
-        .scanAll(new Scan().withStartRow(metaKey).setReversed(true).setReadType(ReadType.PREAD)
-            .addFamily(CATALOG_FAMILY).setLimit(1))
+        .scanAll(new Scan().withStartRow(metaKey).setReversed(true).addFamily(CATALOG_FAMILY)
+            .setOneRowLimit())
         .whenComplete((results, error) -> onScanComplete(tableName, req, results, error));
   }
 

@@ -1119,6 +1119,15 @@ public class Scan extends Query {
     return this;
   }
 
+  /**
+   * Call this when you only want to get one row. It will set {@code limit} to {@code 1}, and also
+   * set {@code readType} to {@link ReadType#PREAD}.
+   * @return this
+   */
+  public Scan setOneRowLimit() {
+    return setLimit(1).setReadType(ReadType.PREAD);
+  }
+
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
   public enum ReadType {

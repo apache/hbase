@@ -560,14 +560,10 @@ public class MetaTableAccessor {
     // Stop key appends the smallest possible char to the table name
     byte[] stopKey = getTableStopRowForMeta(tableName, QueryType.REGION);
 
-    Scan scan = getMetaScan(connection);
+    Scan scan = getMetaScan(connection, -1);
     scan.setStartRow(startKey);
     scan.setStopRow(stopKey);
     return scan;
-  }
-
-  private static Scan getMetaScan(Connection connection) {
-    return getMetaScan(connection, Integer.MAX_VALUE);
   }
 
   private static Scan getMetaScan(Connection connection, int rowUpperLimit) {
@@ -579,11 +575,11 @@ public class MetaTableAccessor {
         HConstants.DEFAULT_USE_META_REPLICAS)) {
       scan.setConsistency(Consistency.TIMELINE);
     }
-    if (rowUpperLimit <= scannerCaching) {
-      scan.setSmall(true);
+    if (rowUpperLimit > 0) {
+      scan.setLimit(rowUpperLimit);
+      scan.setReadType(Scan.ReadType.PREAD);
     }
-    int rows = Math.min(rowUpperLimit, scannerCaching);
-    scan.setCaching(rows);
+    scan.setCaching(scannerCaching);
     return scan;
   }
   /**

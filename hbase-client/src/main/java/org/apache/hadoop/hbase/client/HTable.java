@@ -350,21 +350,9 @@ public class HTable implements Table {
     }
 
     if (scan.isReversed()) {
-      if (scan.isSmall()) {
-        return new ClientSmallReversedScanner(getConfiguration(), scan, getName(),
-            this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-            pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
-      } else {
-        return new ReversedClientScanner(getConfiguration(), scan, getName(),
-            this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-            pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
-      }
-    }
-
-    if (scan.isSmall()) {
-      return new ClientSmallScanner(getConfiguration(), scan, getName(),
-          this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-          pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
+      return new ReversedClientScanner(getConfiguration(), scan, getName(),
+        this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
+        pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
     } else {
       if (async) {
         return new ClientAsyncPrefetchScanner(getConfiguration(), scan, getName(), this.connection,

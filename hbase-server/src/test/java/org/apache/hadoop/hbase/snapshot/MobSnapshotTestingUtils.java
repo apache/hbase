@@ -20,13 +20,21 @@ package org.apache.hadoop.hbase.snapshot;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.junit.Assert;
 
@@ -100,24 +108,22 @@ public class MobSnapshotTestingUtils {
   /**
    * Return the number of rows in the given table.
    */
-  public static int countMobRows(final Table table, final byte[]... families)
-      throws IOException {
+  public static int countMobRows(final Table table, final byte[]... families) throws IOException {
     Scan scan = new Scan();
     for (byte[] family : families) {
       scan.addFamily(family);
     }
-    ResultScanner results = table.getScanner(scan);
-    int count = 0;
-    for (Result res : results) {
-      count++;
-      List<Cell> cells = res.listCells();
-      for (Cell cell : cells) {
-        // Verify the value
-        Assert.assertTrue(CellUtil.cloneValue(cell).length > 0);
+    try (ResultScanner results = table.getScanner(scan)) {
+      int count = 0;
+      for (Result res; (res = results.next()) != null;) {
+        count++;
+        for (Cell cell : res.listCells()) {
+          // Verify the value
+          Assert.assertTrue(CellUtil.cloneValue(cell).length > 0);
+        }
       }
+      return count;
     }
-    results.close();
-    return count;
   }
 
   public static void verifyMobRowCount(final HBaseTestingUtility util,

@@ -937,7 +937,6 @@ public class TestAccessController extends SecureTestUtil {
             for (Result r = scanner.next(); r != null; r = scanner.next()) {
               // do nothing
             }
-          } catch (IOException e) {
           } finally {
             scanner.close();
           }

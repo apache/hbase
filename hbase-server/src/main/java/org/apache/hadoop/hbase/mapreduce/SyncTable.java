@@ -63,27 +63,27 @@ public class SyncTable extends Configured implements Tool {
   static final String SOURCE_ZK_CLUSTER_CONF_KEY = "sync.table.source.zk.cluster";
   static final String TARGET_ZK_CLUSTER_CONF_KEY = "sync.table.target.zk.cluster";
   static final String DRY_RUN_CONF_KEY="sync.table.dry.run";
-  
+
   Path sourceHashDir;
   String sourceTableName;
   String targetTableName;
-  
+
   String sourceZkCluster;
   String targetZkCluster;
   boolean dryRun;
-  
+
   Counters counters;
-  
+
   public SyncTable(Configuration conf) {
     super(conf);
   }
-  
+
   public Job createSubmittableJob(String[] args) throws IOException {
     FileSystem fs = sourceHashDir.getFileSystem(getConf());
     if (!fs.exists(sourceHashDir)) {
       throw new IOException("Source hash dir not found: " + sourceHashDir);
     }
-    
+
     HashTable.TableHash tableHash = HashTable.TableHash.read(getConf(), sourceHashDir);
     LOG.info("Read source hash manifest: " + tableHash);
     LOG.info("Read " + tableHash.partitions.size() + " partition keys");
@@ -97,7 +97,7 @@ public class SyncTable extends Configured implements Tool {
           + " says numHashFiles=" + tableHash.numHashFiles + " but the number of partition keys"
           + " found in the partitions file is " + tableHash.partitions.size());
     }
-    
+
     Path dataDir = new Path(sourceHashDir, HashTable.HASH_DATA_DIR);
     int dataSubdirCount = 0;
     for (FileStatus file : fs.listStatus(dataDir)) {
@@ -105,14 +105,14 @@ public class SyncTable extends Configured implements Tool {
         dataSubdirCount++;
       }
     }
-    
+
     if (dataSubdirCount != tableHash.numHashFiles) {
       throw new RuntimeException("Hash data appears corrupt. The number of of hash files created"
           + " should be 1 more than the number of partition keys.  However, the number of data dirs"
           + " found is " + dataSubdirCount + " but the number of partition keys"
           + " found in the partitions file is " + tableHash.partitions.size());
     }
-    
+
     Job job = Job.getInstance(getConf(),getConf().get("mapreduce.job.name",
         "syncTable_" + sourceTableName + "-" + targetTableName));
     Configuration jobConf = job.getConfiguration();
@@ -127,12 +127,12 @@ public class SyncTable extends Configured implements Tool {
       jobConf.set(TARGET_ZK_CLUSTER_CONF_KEY, targetZkCluster);
     }
     jobConf.setBoolean(DRY_RUN_CONF_KEY, dryRun);
-    
+
     TableMapReduceUtil.initTableMapperJob(targetTableName, tableHash.initScan(),
         SyncMapper.class, null, null, job);
-    
+
     job.setNumReduceTasks(0);
-     
+
     if (dryRun) {
       job.setOutputFormatClass(NullOutputFormat.class);
     } else {
@@ -140,37 +140,37 @@ public class SyncTable extends Configured implements Tool {
       // because it sets up the TableOutputFormat.
       TableMapReduceUtil.initTableReducerJob(targetTableName, null, job, null,
           targetZkCluster, null, null);
-      
+
       // would be nice to add an option for bulk load instead
     }
-    
+
     return job;
   }
-  
+
   public static class SyncMapper extends TableMapper<ImmutableBytesWritable, Mutation> {
     Path sourceHashDir;
-    
+
     Connection sourceConnection;
     Connection targetConnection;
     Table sourceTable;
     Table targetTable;
     boolean dryRun;
-    
+
     HashTable.TableHash sourceTableHash;
     HashTable.TableHash.Reader sourceHashReader;
     ImmutableBytesWritable currentSourceHash;
     ImmutableBytesWritable nextSourceKey;
     HashTable.ResultHasher targetHasher;
-    
+
     Throwable mapperException;
-     
+
     public static enum Counter {BATCHES, HASHES_MATCHED, HASHES_NOT_MATCHED, SOURCEMISSINGROWS,
       SOURCEMISSINGCELLS, TARGETMISSINGROWS, TARGETMISSINGCELLS, ROWSWITHDIFFS, DIFFERENTCELLVALUES,
       MATCHINGROWS, MATCHINGCELLS, EMPTY_BATCHES, RANGESMATCHED, RANGESNOTMATCHED};
-    
+
     @Override
     protected void setup(Context context) throws IOException {
-      
+
       Configuration conf = context.getConfiguration();
       sourceHashDir = new Path(conf.get(SOURCE_HASH_DIR_CONF_KEY));
       sourceConnection = openConnection(conf, SOURCE_ZK_CLUSTER_CONF_KEY, null);
@@ -179,23 +179,23 @@ public class SyncTable extends Configured implements Tool {
       sourceTable = openTable(sourceConnection, conf, SOURCE_TABLE_CONF_KEY);
       targetTable = openTable(targetConnection, conf, TARGET_TABLE_CONF_KEY);
       dryRun = conf.getBoolean(SOURCE_TABLE_CONF_KEY, false);
-      
+
       sourceTableHash = HashTable.TableHash.read(conf, sourceHashDir);
       LOG.info("Read source hash manifest: " + sourceTableHash);
       LOG.info("Read " + sourceTableHash.partitions.size() + " partition keys");
-      
+
       TableSplit split = (TableSplit) context.getInputSplit();
       ImmutableBytesWritable splitStartKey = new ImmutableBytesWritable(split.getStartRow());
-      
+
       sourceHashReader = sourceTableHash.newReader(conf, splitStartKey);
       findNextKeyHashPair();
-      
+
       // create a hasher, but don't start it right away
       // instead, find the first hash batch at or after the start row
       // and skip any rows that come before.  they will be caught by the previous task
       targetHasher = new HashTable.ResultHasher();
     }
-  
+
     private static Connection openConnection(Configuration conf, String zkClusterConfKey,
                                              String configPrefix)
       throws IOException {
@@ -204,12 +204,12 @@ public class SyncTable extends Configured implements Tool {
             zkCluster, configPrefix);
         return ConnectionFactory.createConnection(clusterConf);
     }
-    
+
     private static Table openTable(Connection connection, Configuration conf,
         String tableNameConfKey) throws IOException {
       return connection.getTable(TableName.valueOf(conf.get(tableNameConfKey)));
     }
-    
+
     /**
      * Attempt to read the next source key/hash pair.
      * If there are no more, set nextSourceKey to null
@@ -223,7 +223,7 @@ public class SyncTable extends Configured implements Tool {
         nextSourceKey = null;
       }
     }
-    
+
     @Override
     protected void map(ImmutableBytesWritable key, Result value, Context context)
         throws IOException, InterruptedException {
@@ -232,7 +232,7 @@ public class SyncTable extends Configured implements Tool {
         while (nextSourceKey != null && key.compareTo(nextSourceKey) >= 0) {
           moveToNextBatch(context);
         }
-        
+
         // next, add the scanned row (as long as we've reached the first batch)
         if (targetHasher.isBatchStarted()) {
           targetHasher.hashResult(value);
@@ -247,7 +247,7 @@ public class SyncTable extends Configured implements Tool {
 
     /**
      * If there is an open hash batch, complete it and sync if there are diffs.
-     * Start a new batch, and seek to read the 
+     * Start a new batch, and seek to read the
      */
     private void moveToNextBatch(Context context) throws IOException, InterruptedException {
       if (targetHasher.isBatchStarted()) {
@@ -255,7 +255,7 @@ public class SyncTable extends Configured implements Tool {
       }
       targetHasher.startBatch(nextSourceKey);
       currentSourceHash = sourceHashReader.getCurrentHash();
-      
+
       findNextKeyHashPair();
     }
 
@@ -276,28 +276,28 @@ public class SyncTable extends Configured implements Tool {
         context.getCounter(Counter.HASHES_MATCHED).increment(1);
       } else {
         context.getCounter(Counter.HASHES_NOT_MATCHED).increment(1);
-        
+
         ImmutableBytesWritable stopRow = nextSourceKey == null
                                           ? new ImmutableBytesWritable(sourceTableHash.stopRow)
                                           : nextSourceKey;
-        
+
         if (LOG.isDebugEnabled()) {
           LOG.debug("Hash mismatch.  Key range: " + toHex(targetHasher.getBatchStartKey())
               + " to " + toHex(stopRow)
               + " sourceHash: " + toHex(currentSourceHash)
               + " targetHash: " + toHex(targetHash));
         }
-        
+
         syncRange(context, targetHasher.getBatchStartKey(), stopRow);
       }
     }
     private static String toHex(ImmutableBytesWritable bytes) {
       return Bytes.toHex(bytes.get(), bytes.getOffset(), bytes.getLength());
     }
-    
+
     private static final CellScanner EMPTY_CELL_SCANNER
       = new CellScanner(Iterators.<Result>emptyIterator());
-    
+
     /**
      * Rescan the given range directly from the source and target tables.
      * Count and log differences, and if this is not a dry run, output Puts and Deletes
@@ -305,17 +305,16 @@ public class SyncTable extends Configured implements Tool {
      */
     private void syncRange(Context context, ImmutableBytesWritable startRow,
         ImmutableBytesWritable stopRow) throws IOException, InterruptedException {
-      
       Scan scan = sourceTableHash.initScan();
       scan.setStartRow(startRow.copyBytes());
       scan.setStopRow(stopRow.copyBytes());
-      
+
       ResultScanner sourceScanner = sourceTable.getScanner(scan);
       CellScanner sourceCells = new CellScanner(sourceScanner.iterator());
 
-      ResultScanner targetScanner = targetTable.getScanner(scan);
+      ResultScanner targetScanner = targetTable.getScanner(new Scan(scan));
       CellScanner targetCells = new CellScanner(targetScanner.iterator());
-      
+
       boolean rangeMatched = true;
       byte[] nextSourceRow = sourceCells.nextRow();
       byte[] nextTargetRow = targetCells.nextRow();
@@ -327,7 +326,7 @@ public class SyncTable extends Configured implements Tool {
             LOG.info("Target missing row: " + Bytes.toHex(nextSourceRow));
           }
           context.getCounter(Counter.TARGETMISSINGROWS).increment(1);
-          
+
           rowMatched = syncRowCells(context, nextSourceRow, sourceCells, EMPTY_CELL_SCANNER);
           nextSourceRow = sourceCells.nextRow();  // advance only source to next row
         } else if (rowComparison > 0) {
@@ -335,41 +334,41 @@ public class SyncTable extends Configured implements Tool {
             LOG.info("Source missing row: " + Bytes.toHex(nextTargetRow));
           }
           context.getCounter(Counter.SOURCEMISSINGROWS).increment(1);
-          
+
           rowMatched = syncRowCells(context, nextTargetRow, EMPTY_CELL_SCANNER, targetCells);
           nextTargetRow = targetCells.nextRow();  // advance only target to next row
         } else {
           // current row is the same on both sides, compare cell by cell
           rowMatched = syncRowCells(context, nextSourceRow, sourceCells, targetCells);
-          nextSourceRow = sourceCells.nextRow();  
+          nextSourceRow = sourceCells.nextRow();
           nextTargetRow = targetCells.nextRow();
         }
-        
+
         if (!rowMatched) {
           rangeMatched = false;
         }
       }
-      
+
       sourceScanner.close();
       targetScanner.close();
-      
+
       context.getCounter(rangeMatched ? Counter.RANGESMATCHED : Counter.RANGESNOTMATCHED)
         .increment(1);
     }
-    
+
     private static class CellScanner {
       private final Iterator<Result> results;
-      
+
       private byte[] currentRow;
       private Result currentRowResult;
       private int nextCellInRow;
-      
+
       private Result nextRowResult;
-      
+
       public CellScanner(Iterator<Result> results) {
         this.results = results;
       }
-      
+
       /**
        * Advance to the next row and return its row key.
        * Returns null iff there are no more rows.
@@ -390,7 +389,7 @@ public class SyncTable extends Configured implements Tool {
               nextRowResult = null;
             }
           }
-          
+
           if (nextRowResult == null) {
             // end of data, no more rows
             currentRowResult = null;
@@ -398,7 +397,7 @@ public class SyncTable extends Configured implements Tool {
             return null;
           }
         }
-        
+
         // advance to cached result for next row
         currentRowResult = nextRowResult;
         nextCellInRow = 0;
@@ -406,7 +405,7 @@ public class SyncTable extends Configured implements Tool {
         nextRowResult = null;
         return currentRow;
       }
-      
+
       /**
        * Returns the next Cell in the current row or null iff none remain.
        */
@@ -415,7 +414,7 @@ public class SyncTable extends Configured implements Tool {
           // nothing left in current row
           return null;
         }
-        
+
         Cell nextCell = currentRowResult.rawCells()[nextCellInRow];
         nextCellInRow++;
         if (nextCellInRow == currentRowResult.size()) {
@@ -441,7 +440,7 @@ public class SyncTable extends Configured implements Tool {
         return nextCell;
       }
     }
-       
+
     /**
      * Compare the cells for the given row from the source and target tables.
      * Count and log any differences.
@@ -465,14 +464,14 @@ public class SyncTable extends Configured implements Tool {
           }
           context.getCounter(Counter.TARGETMISSINGCELLS).increment(1);
           matchingRow = false;
-          
+
           if (!dryRun) {
             if (put == null) {
               put = new Put(rowKey);
             }
             put.add(sourceCell);
           }
-          
+
           sourceCell = sourceCells.nextCellInRow();
         } else if (cellKeyComparison > 0) {
           if (LOG.isDebugEnabled()) {
@@ -480,7 +479,7 @@ public class SyncTable extends Configured implements Tool {
           }
           context.getCounter(Counter.SOURCEMISSINGCELLS).increment(1);
           matchingRow = false;
-          
+
           if (!dryRun) {
             if (delete == null) {
               delete = new Delete(rowKey);
@@ -489,7 +488,7 @@ public class SyncTable extends Configured implements Tool {
             delete.addColumn(CellUtil.cloneFamily(targetCell),
                 CellUtil.cloneQualifier(targetCell), targetCell.getTimestamp());
           }
-          
+
           targetCell = targetCells.nextCellInRow();
         } else {
           // the cell keys are equal, now check values
@@ -507,7 +506,7 @@ public class SyncTable extends Configured implements Tool {
             }
             context.getCounter(Counter.DIFFERENTCELLVALUES).increment(1);
             matchingRow = false;
-            
+
             if (!dryRun) {
               // overwrite target cell
               if (put == null) {
@@ -519,7 +518,7 @@ public class SyncTable extends Configured implements Tool {
           sourceCell = sourceCells.nextCellInRow();
           targetCell = targetCells.nextCellInRow();
         }
-        
+
         if (!dryRun && sourceTableHash.scanBatch > 0) {
           if (put != null && put.size() >= sourceTableHash.scanBatch) {
             context.write(new ImmutableBytesWritable(rowKey), put);
@@ -531,7 +530,7 @@ public class SyncTable extends Configured implements Tool {
           }
         }
       }
-      
+
       if (!dryRun) {
         if (put != null) {
           context.write(new ImmutableBytesWritable(rowKey), put);
@@ -540,7 +539,7 @@ public class SyncTable extends Configured implements Tool {
           context.write(new ImmutableBytesWritable(rowKey), delete);
         }
       }
-      
+
       if (matchingCells > 0) {
         context.getCounter(Counter.MATCHINGCELLS).increment(matchingCells);
       }
@@ -581,21 +580,21 @@ public class SyncTable extends Configured implements Tool {
       if (c2 == null) {
         return -1; // target missing cell
       }
-      
+
       int result = CellComparator.compareFamilies(c1, c2);
       if (result != 0) {
         return result;
       }
-      
+
       result = CellComparator.compareQualifiers(c1, c2);
       if (result != 0) {
         return result;
       }
-      
+
       // note timestamp comparison is inverted - more recent cells first
       return CellComparator.compareTimestamps(c1, c2);
     }
-     
+
     @Override
     protected void cleanup(Context context)
         throws IOException, InterruptedException {
@@ -606,7 +605,7 @@ public class SyncTable extends Configured implements Tool {
           mapperException = t;
         }
       }
-      
+
       try {
         sourceTable.close();
         targetTable.close();
@@ -619,7 +618,7 @@ public class SyncTable extends Configured implements Tool {
           LOG.error("Suppressing exception from closing tables", t);
         }
       }
-      
+
       // propagate first exception
       if (mapperException != null) {
         Throwables.propagateIfInstanceOf(mapperException, IOException.class);
@@ -639,7 +638,7 @@ public class SyncTable extends Configured implements Tool {
           && (nextSourceKey.compareTo(splitEndRow) < 0 || reachedEndOfTable)) {
         moveToNextBatch(context);
       }
-      
+
       if (targetHasher.isBatchStarted()) {
         // need to complete the final open hash batch
 
@@ -654,7 +653,7 @@ public class SyncTable extends Configured implements Tool {
           } else {
             scan.setStopRow(nextSourceKey.copyBytes());
           }
-          
+
           ResultScanner targetScanner = null;
           try {
             targetScanner = targetTable.getScanner(scan);
@@ -672,7 +671,7 @@ public class SyncTable extends Configured implements Tool {
       }
     }
   }
-  
+
   private static final int NUM_ARGS = 3;
   private static void printUsage(final String errorMsg) {
     if (errorMsg != null && errorMsg.length() > 0) {
@@ -682,7 +681,7 @@ public class SyncTable extends Configured implements Tool {
     System.err.println("Usage: SyncTable [options] <sourcehashdir> <sourcetable> <targettable>");
     System.err.println();
     System.err.println("Options:");
-    
+
     System.err.println(" sourcezkcluster  ZK cluster key of the source table");
     System.err.println("                  (defaults to cluster in classpath's config)");
     System.err.println(" targetzkcluster  ZK cluster key of the target table");
@@ -704,7 +703,7 @@ public class SyncTable extends Configured implements Tool {
         + " --sourcezkcluster=zk1.example.com,zk2.example.com,zk3.example.com:2181:/hbase"
         + " hdfs://nn:9000/hashes/tableA tableA tableA");
   }
-  
+
   private boolean doCommandLine(final String[] args) {
     if (args.length < NUM_ARGS) {
       printUsage(null);
@@ -714,37 +713,37 @@ public class SyncTable extends Configured implements Tool {
       sourceHashDir = new Path(args[args.length - 3]);
       sourceTableName = args[args.length - 2];
       targetTableName = args[args.length - 1];
-            
+
       for (int i = 0; i < args.length - NUM_ARGS; i++) {
         String cmd = args[i];
         if (cmd.equals("-h") || cmd.startsWith("--h")) {
           printUsage(null);
           return false;
         }
-        
+
         final String sourceZkClusterKey = "--sourcezkcluster=";
         if (cmd.startsWith(sourceZkClusterKey)) {
           sourceZkCluster = cmd.substring(sourceZkClusterKey.length());
           continue;
         }
-        
+
         final String targetZkClusterKey = "--targetzkcluster=";
         if (cmd.startsWith(targetZkClusterKey)) {
           targetZkCluster = cmd.substring(targetZkClusterKey.length());
           continue;
         }
-        
+
         final String dryRunKey = "--dryrun=";
         if (cmd.startsWith(dryRunKey)) {
           dryRun = Boolean.parseBoolean(cmd.substring(dryRunKey.length()));
           continue;
         }
-        
+
         printUsage("Invalid argument '" + cmd + "'");
         return false;
       }
 
-      
+
     } catch (Exception e) {
       e.printStackTrace();
       printUsage("Can't start because " + e.getMessage());
@@ -752,7 +751,7 @@ public class SyncTable extends Configured implements Tool {
     }
     return true;
   }
-  
+
   /**
    * Main entry point.
    */

@@ -42,13 +42,12 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 
 /**
@@ -75,9 +74,15 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   private int logCutOffLatency = 1000;
   private static String myAddress;
   protected final int id;
-  protected boolean serverHasMoreResultsContext;
-  protected boolean serverHasMoreResults;
 
+  enum MoreResults {
+    YES, NO, UNKNOWN
+  }
+
+  private MoreResults moreResultsInRegion;
+  private MoreResults moreResultsForScan;
+
+  private boolean openScanner;
   /**
    * Saves whether or not the most recent response from the server was a heartbeat message.
    * Heartbeat messages are identified by the flag {@link ScanResponse#getHeartbeatMessage()}
@@ -174,120 +179,121 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     }
   }
 
+  private ScanResponse next() throws IOException {
+    // Reset the heartbeat flag prior to each RPC in case an exception is thrown by the server
+    setHeartbeatMessage(false);
+    incRPCcallsMetrics();
+    ScanRequest request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq,
+      this.scanMetrics != null, renew, scan.getLimit());
+    try {
+      ScanResponse response = getStub().scan(getRpcController(), request);
+      nextCallSeq++;
+      return response;
+    } catch (Exception e) {
+      IOException ioe = ProtobufUtil.handleRemoteException(e);
+      if (logScannerActivity) {
+        LOG.info(
+          "Got exception making request " + ProtobufUtil.toText(request) + " to " + getLocation(),
+          e);
+      }
+      if (logScannerActivity) {
+        if (ioe instanceof UnknownScannerException) {
+          try {
+            HRegionLocation location =
+                getConnection().relocateRegion(getTableName(), scan.getStartRow());
+            LOG.info("Scanner=" + scannerId + " expired, current region location is "
+                + location.toString());
+          } catch (Throwable t) {
+            LOG.info("Failed to relocate region", t);
+          }
+        } else if (ioe instanceof ScannerResetException) {
+          LOG.info("Scanner=" + scannerId + " has received an exception, and the server "
+              + "asked us to reset the scanner state.",
+            ioe);
+        }
+      }
+      // The below convertion of exceptions into DoNotRetryExceptions is a little strange.
+      // Why not just have these exceptions implment DNRIOE you ask? Well, usually we want
+      // ServerCallable#withRetries to just retry when it gets these exceptions. In here in
+      // a scan when doing a next in particular, we want to break out and get the scanner to
+      // reset itself up again. Throwing a DNRIOE is how we signal this to happen (its ugly,
+      // yeah and hard to follow and in need of a refactor).
+      if (ioe instanceof NotServingRegionException) {
+        // Throw a DNRE so that we break out of cycle of calling NSRE
+        // when what we need is to open scanner against new location.
+        // Attach NSRE to signal client that it needs to re-setup scanner.
+        if (this.scanMetrics != null) {
+          this.scanMetrics.countOfNSRE.incrementAndGet();
+        }
+        throw new DoNotRetryIOException("Resetting the scanner -- see exception cause", ioe);
+      } else if (ioe instanceof RegionServerStoppedException) {
+        // Throw a DNRE so that we break out of cycle of the retries and instead go and
+        // open scanner against new location.
+        throw new DoNotRetryIOException("Resetting the scanner -- see exception cause", ioe);
+      } else {
+        // The outer layers will retry
+        throw ioe;
+      }
+    }
+  }
+
+  private void setAlreadyClosed() {
+    this.scannerId = -1L;
+    this.closed = true;
+  }
+
   @Override
-  protected Result [] rpcCall() throws Exception {
+  protected Result[] rpcCall() throws Exception {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
-    if (this.closed) {
-      if (this.scannerId != -1) {
-        close();
-      }
+    if (closed) {
+      close();
+      return null;
+    }
+    ScanResponse response;
+    if (this.scannerId == -1L) {
+      this.openScanner = true;
+      response = openScanner();
     } else {
-      if (this.scannerId == -1L) {
-        this.scannerId = openScanner();
-      } else {
-        Result [] rrs = null;
-        ScanRequest request = null;
-        // Reset the heartbeat flag prior to each RPC in case an exception is thrown by the server
-        setHeartbeatMessage(false);
-        try {
-          incRPCcallsMetrics();
-          request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq,
-            this.scanMetrics != null, renew, -1);
-          ScanResponse response = null;
-          response = getStub().scan(getRpcController(), request);
-          // Client and RS maintain a nextCallSeq number during the scan. Every next() call
-          // from client to server will increment this number in both sides. Client passes this
-          // number along with the request and at RS side both the incoming nextCallSeq and its
-          // nextCallSeq will be matched. In case of a timeout this increment at the client side
-          // should not happen. If at the server side fetching of next batch of data was over,
-          // there will be mismatch in the nextCallSeq number. Server will throw
-          // OutOfOrderScannerNextException and then client will reopen the scanner with startrow
-          // as the last successfully retrieved row.
-          // See HBASE-5974
-          nextCallSeq++;
-          long timestamp = System.currentTimeMillis();
-          setHeartbeatMessage(response.hasHeartbeatMessage() && response.getHeartbeatMessage());
-          rrs = ResponseConverter.getResults(getRpcControllerCellScanner(), response);
-          if (logScannerActivity) {
-            long now = System.currentTimeMillis();
-            if (now - timestamp > logCutOffLatency) {
-              int rows = rrs == null ? 0 : rrs.length;
-              LOG.info("Took " + (now-timestamp) + "ms to fetch "
-                  + rows + " rows from scanner=" + scannerId);
-            }
-          }
-          updateServerSideMetrics(response);
-          // moreResults is only used for the case where a filter exhausts all elements
-          if (response.hasMoreResults() && !response.getMoreResults()) {
-            this.scannerId = -1L;
-            this.closed = true;
-            // Implied that no results were returned back, either.
-            return null;
-          }
-          // moreResultsInRegion explicitly defines when a RS may choose to terminate a batch due
-          // to size or quantity of results in the response.
-          if (response.hasMoreResultsInRegion()) {
-            // Set what the RS said
-            setHasMoreResultsContext(true);
-            setServerHasMoreResults(response.getMoreResultsInRegion());
-          } else {
-            // Server didn't respond whether it has more results or not.
-            setHasMoreResultsContext(false);
-          }
-          updateResultsMetrics(rrs);
-        } catch (IOException e) {
-          if (logScannerActivity) {
-            LOG.info("Got exception making request " + ProtobufUtil.toText(request) + " to " +
-                getLocation(), e);
-          }
-          IOException ioe = e;
-          if (e instanceof RemoteException) {
-            ioe = ((RemoteException) e).unwrapRemoteException();
-          }
-          if (logScannerActivity) {
-            if (ioe instanceof UnknownScannerException) {
-              try {
-                HRegionLocation location =
-                    getConnection().relocateRegion(getTableName(), scan.getStartRow());
-                LOG.info("Scanner=" + scannerId + " expired, current region location is " +
-                    location.toString());
-              } catch (Throwable t) {
-                LOG.info("Failed to relocate region", t);
-              }
-            } else if (ioe instanceof ScannerResetException) {
-              LOG.info("Scanner=" + scannerId + " has received an exception, and the server "
-                  + "asked us to reset the scanner state.", ioe);
-            }
-          }
-          // The below convertion of exceptions into DoNotRetryExceptions is a little strange.
-          // Why not just have these exceptions implment DNRIOE you ask?  Well, usually we want
-          // ServerCallable#withRetries to just retry when it gets these exceptions.  In here in
-          // a scan when doing a next in particular, we want to break out and get the scanner to
-          // reset itself up again.  Throwing a DNRIOE is how we signal this to happen (its ugly,
-          // yeah and hard to follow and in need of a refactor).
-          if (ioe instanceof NotServingRegionException) {
-            // Throw a DNRE so that we break out of cycle of calling NSRE
-            // when what we need is to open scanner against new location.
-            // Attach NSRE to signal client that it needs to re-setup scanner.
-            if (this.scanMetrics != null) {
-              this.scanMetrics.countOfNSRE.incrementAndGet();
-            }
-            throw new DoNotRetryIOException("Resetting the scanner -- see exception cause", ioe);
-          } else if (ioe instanceof RegionServerStoppedException) {
-            // Throw a DNRE so that we break out of cycle of the retries and instead go and
-            // open scanner against new location.
-            throw new DoNotRetryIOException("Resetting the scanner -- see exception cause", ioe);
-          } else {
-            // The outer layers will retry
-            throw ioe;
-          }
-        }
-        return rrs;
+      this.openScanner = false;
+      response = next();
+    }
+    long timestamp = System.currentTimeMillis();
+    setHeartbeatMessage(response.hasHeartbeatMessage() && response.getHeartbeatMessage());
+    Result[] rrs = ResponseConverter.getResults(getRpcControllerCellScanner(), response);
+    if (logScannerActivity) {
+      long now = System.currentTimeMillis();
+      if (now - timestamp > logCutOffLatency) {
+        int rows = rrs == null ? 0 : rrs.length;
+        LOG.info("Took " + (now - timestamp) + "ms to fetch " + rows + " rows from scanner="
+            + scannerId);
       }
     }
-    return null;
+    updateServerSideMetrics(response);
+    // moreResults is only used for the case where a filter exhausts all elements
+    if (response.hasMoreResults()) {
+      if (response.getMoreResults()) {
+        setMoreResultsForScan(MoreResults.YES);
+      } else {
+        setMoreResultsForScan(MoreResults.NO);
+        setAlreadyClosed();
+      }
+    } else {
+      setMoreResultsForScan(MoreResults.UNKNOWN);
+    }
+    if (response.hasMoreResultsInRegion()) {
+      if (response.getMoreResultsInRegion()) {
+        setMoreResultsInRegion(MoreResults.YES);
+      } else {
+        setMoreResultsInRegion(MoreResults.NO);
+        setAlreadyClosed();
+      }
+    } else {
+      setMoreResultsInRegion(MoreResults.UNKNOWN);
+    }
+    updateResultsMetrics(rrs);
+    return rrs;
   }
 
   /**
@@ -296,11 +302,11 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
    *         scan request exceeds a certain time threshold. Heartbeats allow the server to avoid
    *         timeouts during long running scan operations.
    */
-  protected boolean isHeartbeatMessage() {
+  boolean isHeartbeatMessage() {
     return heartbeatMessage;
   }
 
-  protected void setHeartbeatMessage(boolean heartbeatMessage) {
+  private void setHeartbeatMessage(boolean heartbeatMessage) {
     this.heartbeatMessage = heartbeatMessage;
   }
 
@@ -367,10 +373,10 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     this.scannerId = -1L;
   }
 
-  protected long openScanner() throws IOException {
+  private ScanResponse openScanner() throws IOException {
     incRPCcallsMetrics();
     ScanRequest request = RequestConverter.buildScanRequest(
-        getLocation().getRegionInfo().getRegionName(), this.scan, 0, false);
+      getLocation().getRegionInfo().getRegionName(), this.scan, this.caching, false);
     try {
       ScanResponse response = getStub().scan(getRpcController(), request);
       long id = response.getScannerId();
@@ -381,7 +387,8 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       if (response.hasMvccReadPoint()) {
         this.scan.setMvccReadPoint(response.getMvccReadPoint());
       }
-      return id;
+      this.scannerId = id;
+      return response;
     } catch (Exception e) {
       throw ProtobufUtil.handleRemoteException(e);
     }
@@ -443,27 +450,31 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
 
   /**
    * Should the client attempt to fetch more results from this region
-   * @return True if the client should attempt to fetch more results, false otherwise.
    */
-  protected boolean getServerHasMoreResults() {
-    assert serverHasMoreResultsContext;
-    return this.serverHasMoreResults;
+  MoreResults moreResultsInRegion() {
+    return moreResultsInRegion;
   }
 
-  protected void setServerHasMoreResults(boolean serverHasMoreResults) {
-    this.serverHasMoreResults = serverHasMoreResults;
+  void setMoreResultsInRegion(MoreResults moreResults) {
+    this.moreResultsInRegion = moreResults;
   }
 
   /**
-   * Did the server respond with information about whether more results might exist.
-   * Not guaranteed to respond with older server versions
-   * @return True if the server responded with information about more results.
+   * Should the client attempt to fetch more results for the whole scan.
    */
-  protected boolean hasMoreResultsContext() {
-    return serverHasMoreResultsContext;
+  MoreResults moreResultsForScan() {
+    return moreResultsForScan;
   }
 
-  protected void setHasMoreResultsContext(boolean serverHasMoreResultsContext) {
-    this.serverHasMoreResultsContext = serverHasMoreResultsContext;
+  void setMoreResultsForScan(MoreResults moreResults) {
+    this.moreResultsForScan = moreResults;
+  }
+
+  /**
+   * Whether the previous call is openScanner. This is used to keep compatible with the old
+   * implementation that we always returns empty result for openScanner.
+   */
+  boolean isOpenScanner() {
+    return openScanner;
   }
 }
