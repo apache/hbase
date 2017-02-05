@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -41,13 +43,14 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HBaseFsck;
-import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -424,15 +427,16 @@ public class TestMetaWithReplicas {
     assertErrors(hbck, new ERROR_CODE[]{});
   }
 
-  @Test (timeout=180000)
+  @Test
   public void testMetaTableReplicaAssignment() throws Exception {
-    ClusterConnection c = ConnectionManager.getConnectionInternal(TEST_UTIL.getConfiguration());
-    RegionLocations rl =
+    final ClusterConnection c =
+        ConnectionManager.getConnectionInternal(TEST_UTIL.getConfiguration());
+    final RegionLocations rl =
         c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, true);
 
-    ServerName meta0SN = rl.getRegionLocation(0).getServerName();
+    final ServerName meta0SN = rl.getRegionLocation(0).getServerName();
     LOG.debug("The hbase:meta default replica region is in server: " + meta0SN);
-    ServerName meta1SN = rl.getRegionLocation(1).getServerName();
+    final ServerName meta1SN = rl.getRegionLocation(1).getServerName();
     LOG.debug("The hbase:meta replica 1 region " + rl.getRegionLocation(1).getRegionInfo() +
       " is in server: " + meta1SN);
 
@@ -448,19 +452,30 @@ public class TestMetaWithReplicas {
     LOG.debug("Restarting the master server " + masterSN);
     TEST_UTIL.getHBaseClusterInterface().startMaster(masterSN.getHostname(), masterSN.getPort());
     TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster();
-    rl = c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, true);
 
     // wait for replica 1 to be re-assigned
-    ServerName newMeta1SN;
-    int i = 0;
-    do {
-      Thread.sleep(100);
-      newMeta1SN = rl.getRegionLocation(1).getServerName();
-      i++;
-    } while (meta1SN.equals(newMeta1SN) & i < 600); // wait for 60 seconds
-    LOG.debug("The hbase:meta replica 1 region " + rl.getRegionLocation(1).getRegionInfo() +
-        " is now moved from server " + meta1SN + " to server " + newMeta1SN);
-    assert (!meta1SN.equals(newMeta1SN));
+    TEST_UTIL.waitFor(60000, 100, new ExplainingPredicate<IOException>() {
+
+      @Override
+      public boolean evaluate() throws IOException {
+        RegionLocations rls =
+            c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, true);
+        HRegionLocation loc = rls.getRegionLocation(1);
+        if (loc != null && !meta1SN.equals(loc.getServerName())) {
+          LOG.debug("The hbase:meta replica 1 region " + rls.getRegionLocation(1).getRegionInfo() +
+              " is now moved from server " + meta1SN + " to server " + loc.getServerName());
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      @Override
+      public String explainFailure() throws IOException {
+        return "The hbase:meta replica 1 region " + rl.getRegionLocation(1).getRegionInfo() +
+            " has not been assigned in time";
+      }
+    });
 
     LOG.debug("Killing the region server " + meta0SN +
       " that hosts hbase:meta default replica region " + rl.getRegionLocation(0).getRegionInfo());
@@ -471,16 +486,28 @@ public class TestMetaWithReplicas {
       HRegionInfo.FIRST_META_REGIONINFO);
 
     // wait for default replica to be re-assigned
-    ServerName newMeta0SN;
-    i = 0;
-    do {
-      Thread.sleep(100);
-      rl = c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, true);
-      newMeta0SN = rl.getRegionLocation(0).getServerName();
-      i++;
-    } while (meta0SN.equals(newMeta0SN) && i < 600); // wait for 60 seconds
-    LOG.debug("The hbase:meta default replica region is now moved from server " +
-      meta0SN + " to server " + newMeta0SN);
-    assert (!meta0SN.equals(newMeta0SN));
+    TEST_UTIL.waitFor(60000, 100, new ExplainingPredicate<IOException>() {
+
+      @Override
+      public boolean evaluate() throws IOException {
+        RegionLocations rls =
+            c.locateRegion(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, false, true);
+        HRegionLocation loc = rls.getRegionLocation(0);
+        if (loc != null && !meta0SN.equals(loc.getServerName())) {
+          LOG.debug(
+            "The hbase:meta default replica region " + rls.getRegionLocation(0).getRegionInfo() +
+                " is now moved from server " + meta0SN + " to server " + loc.getServerName());
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      @Override
+      public String explainFailure() throws IOException {
+        return "The hbase:meta default replica region " + rl.getRegionLocation(0).getRegionInfo() +
+            " has not been assigned in time";
+      }
+    });
   }
 }
