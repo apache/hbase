@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY;
+import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
@@ -46,6 +47,9 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -181,7 +185,8 @@ public class TestAsyncAdmin {
   }
 
   private TableState.State getStateFromMeta(TableName table) throws Exception {
-    Optional<TableState> state = AsyncMetaTableAccessor.getTableState(ASYNC_CONN, table).get();
+    Optional<TableState> state = AsyncMetaTableAccessor.getTableState(
+      ASYNC_CONN.getRawTable(META_TABLE_NAME), table).get();
     assertTrue(state.isPresent());
     return state.get().getState();
   }
@@ -518,6 +523,164 @@ public class TestAsyncAdmin {
     } else {
       assertEquals(1, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
     }
+  }
+
+  @Test(timeout = 300000)
+  public void testDisableAndEnableTable() throws Exception {
+    final byte[] row = Bytes.toBytes("row");
+    final byte[] qualifier = Bytes.toBytes("qualifier");
+    final byte[] value = Bytes.toBytes("value");
+    final TableName table = TableName.valueOf("testDisableAndEnableTable");
+    Table ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
+    Put put = new Put(row);
+    put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
+    ht.put(put);
+    Get get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    ht.get(get);
+
+    this.admin.disableTable(ht.getName()).join();
+    assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster().getMaster()
+        .getTableStateManager().isTableState(ht.getName(), TableState.State.DISABLED));
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(table));
+
+    // Test that table is disabled
+    get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    boolean ok = false;
+    try {
+      ht.get(get);
+    } catch (TableNotEnabledException e) {
+      ok = true;
+    }
+    ok = false;
+    // verify that scan encounters correct exception
+    Scan scan = new Scan();
+    try {
+      ResultScanner scanner = ht.getScanner(scan);
+      Result res = null;
+      do {
+        res = scanner.next();
+      } while (res != null);
+    } catch (TableNotEnabledException e) {
+      ok = true;
+    }
+    assertTrue(ok);
+    this.admin.enableTable(table).join();
+    assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
+        .getTableStateManager().isTableState(ht.getName(), TableState.State.ENABLED));
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(table));
+
+    // Test that table is enabled
+    try {
+      ht.get(get);
+    } catch (RetriesExhaustedException e) {
+      ok = false;
+    }
+    assertTrue(ok);
+    ht.close();
+  }
+
+  @Test(timeout = 300000)
+  public void testDisableAndEnableTables() throws Exception {
+    final byte[] row = Bytes.toBytes("row");
+    final byte[] qualifier = Bytes.toBytes("qualifier");
+    final byte[] value = Bytes.toBytes("value");
+    final TableName table1 = TableName.valueOf("testDisableAndEnableTable1");
+    final TableName table2 = TableName.valueOf("testDisableAndEnableTable2");
+    Table ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
+    Table ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
+    Put put = new Put(row);
+    put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
+    ht1.put(put);
+    ht2.put(put);
+    Get get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    ht1.get(get);
+    ht2.get(get);
+
+    this.admin.disableTables("testDisableAndEnableTable.*").join();
+
+    // Test that tables are disabled
+    get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    boolean ok = false;
+    try {
+      ht1.get(get);
+      ht2.get(get);
+    } catch (org.apache.hadoop.hbase.DoNotRetryIOException e) {
+      ok = true;
+    }
+
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(table1));
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(table2));
+
+    assertTrue(ok);
+    this.admin.enableTables("testDisableAndEnableTable.*").join();
+
+    // Test that tables are enabled
+    try {
+      ht1.get(get);
+    } catch (IOException e) {
+      ok = false;
+    }
+    try {
+      ht2.get(get);
+    } catch (IOException e) {
+      ok = false;
+    }
+    assertTrue(ok);
+
+    ht1.close();
+    ht2.close();
+
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(table1));
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(table2));
+  }
+
+  @Test(timeout = 300000)
+  public void testEnableTableRetainAssignment() throws Exception {
+    final TableName tableName = TableName.valueOf("testEnableTableAssignment");
+    byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
+        new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+        new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
+    int expectedRegions = splitKeys.length + 1;
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin.createTable(desc, splitKeys).join();
+
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      List<HRegionLocation> regions = l.getAllRegionLocations();
+
+      assertEquals(
+        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
+        expectedRegions, regions.size());
+      // Disable table.
+      admin.disableTable(tableName).join();
+      // Enable table, use retain assignment to assign regions.
+      admin.enableTable(tableName).join();
+      List<HRegionLocation> regions2 = l.getAllRegionLocations();
+
+      // Check the assignment.
+      assertEquals(regions.size(), regions2.size());
+      assertTrue(regions2.containsAll(regions));
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testDisableCatalogTable() throws Exception {
+    try {
+      this.admin.disableTable(TableName.META_TABLE_NAME).join();
+      fail("Expected to throw ConstraintException");
+    } catch (Exception e) {
+    }
+    // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
+    // actually getting disabled by the disableTable() call.
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testDisableCatalogTable"
+        .getBytes()));
+    HColumnDescriptor hcd = new HColumnDescriptor("cf1".getBytes());
+    htd.addFamily(hcd);
+    admin.createTable(htd).join();
   }
 
   @Test(timeout = 30000)

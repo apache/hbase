@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -43,6 +45,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -74,6 +80,8 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   private final AsyncConnectionImpl connection;
 
+  private final RawAsyncTable metaTable;
+
   private final long rpcTimeoutNs;
 
   private final long operationTimeoutNs;
@@ -88,6 +96,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   AsyncHBaseAdmin(AsyncConnectionImpl connection) {
     this.connection = connection;
+    this.metaTable = connection.getRawTable(META_TABLE_NAME);
     this.rpcTimeoutNs = connection.connConf.getRpcTimeoutNs();
     this.operationTimeoutNs = connection.connConf.getOperationTimeoutNs();
     this.pauseNs = connection.connConf.getPauseNs();
@@ -137,6 +146,46 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
+  private <PREQ, PRESP> CompletableFuture<Void> procedureCall(PREQ preq,
+      RpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
+      TableProcedureBiConsumer consumer) {
+    CompletableFuture<Long> procFuture = this
+        .<Long> newCaller()
+        .action(
+          (controller, stub) -> this.<PREQ, PRESP, Long> call(controller, stub, preq, rpcCall,
+            respConverter)).call();
+    return waitProcedureResult(procFuture).whenComplete(consumer);
+  }
+
+  @FunctionalInterface
+  private interface TableOperator {
+    CompletableFuture<Void> operate(TableName table);
+  }
+
+  private CompletableFuture<HTableDescriptor[]> batchTableOperations(Pattern pattern,
+      TableOperator operator, String operationType) {
+    CompletableFuture<HTableDescriptor[]> future = new CompletableFuture<>();
+    List<HTableDescriptor> failed = new LinkedList<>();
+    listTables(pattern, false).whenComplete(
+      (tables, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+          return;
+        }
+        CompletableFuture[] futures = Arrays.stream(tables)
+            .map((table) -> operator.operate(table.getTableName()).whenComplete((v, ex) -> {
+              if (ex != null) {
+                LOG.info("Failed to " + operationType + " table " + table.getTableName(), ex);
+                failed.add(table);
+              }
+            })).toArray(size -> new CompletableFuture[size]);
+        CompletableFuture.allOf(futures).thenAccept((v) -> {
+          future.complete(failed.toArray(new HTableDescriptor[failed.size()]));
+        });
+      });
+    return future;
+  }
+
   @Override
   public AsyncConnectionImpl getConnection() {
     return this.connection;
@@ -144,12 +193,12 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Boolean> tableExists(TableName tableName) {
-    return AsyncMetaTableAccessor.tableExists(connection, tableName);
+    return AsyncMetaTableAccessor.tableExists(metaTable, tableName);
   }
 
   @Override
   public CompletableFuture<HTableDescriptor[]> listTables() {
-    return listTables((Pattern)null, false);
+    return listTables((Pattern) null, false);
   }
 
   @Override
@@ -171,7 +220,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<TableName[]> listTableNames() {
-    return listTableNames((Pattern)null, false);
+    return listTableNames((Pattern) null, false);
   }
 
   @Override
@@ -252,29 +301,17 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
       }
     }
 
-    CompletableFuture<Long> procFuture = this
-        .<Long> newCaller()
-        .action(
-          (controller, stub) -> this.<CreateTableRequest, CreateTableResponse, Long> call(
-            controller,
-            stub,
-            RequestConverter.buildCreateTableRequest(desc, splitKeys, ng.getNonceGroup(),
-              ng.newNonce()), (s, c, req, done) -> s.createTable(c, req, done),
-            (resp) -> resp.getProcId())).call();
-    return waitProcedureResult(procFuture).whenComplete(
+    return this.<CreateTableRequest, CreateTableResponse> procedureCall(
+      RequestConverter.buildCreateTableRequest(desc, splitKeys, ng.getNonceGroup(), ng.newNonce()),
+      (s, c, req, done) -> s.createTable(c, req, done), (resp) -> resp.getProcId(),
       new CreateTableProcedureBiConsumer(this, desc.getTableName()));
   }
 
   @Override
   public CompletableFuture<Void> deleteTable(TableName tableName) {
-    CompletableFuture<Long> procFuture = this
-        .<Long> newCaller()
-        .action(
-          (controller, stub) -> this.<DeleteTableRequest, DeleteTableResponse, Long> call(
-            controller, stub,
-            RequestConverter.buildDeleteTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
-            (s, c, req, done) -> s.deleteTable(c, req, done), (resp) -> resp.getProcId())).call();
-    return waitProcedureResult(procFuture).whenComplete(
+    return this.<DeleteTableRequest, DeleteTableResponse> procedureCall(RequestConverter
+        .buildDeleteTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
+      (s, c, req, done) -> s.deleteTable(c, req, done), (resp) -> resp.getProcId(),
       new DeleteTableProcedureBiConsumer(this, tableName));
   }
 
@@ -285,41 +322,51 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<HTableDescriptor[]> deleteTables(Pattern pattern) {
-    CompletableFuture<HTableDescriptor[]> future = new CompletableFuture<>();
-    List<HTableDescriptor> failed = new LinkedList<>();
-    listTables(pattern, false).whenComplete(
-      (tables, error) -> {
-        if (error != null) {
-          future.completeExceptionally(error);
-          return;
-        }
-        CompletableFuture[] futures = Arrays.stream(tables)
-            .map((table) -> deleteTable(table.getTableName()).whenComplete((v, ex) -> {
-              if (ex != null) {
-                LOG.info("Failed to delete table " + table.getTableName(), ex);
-                failed.add(table);
-              }
-            })).toArray(size -> new CompletableFuture[size]);
-        CompletableFuture.allOf(futures).thenAccept((v) -> {
-          future.complete(failed.toArray(new HTableDescriptor[failed.size()]));
-        });
-      });
-    return future;
+    return batchTableOperations(pattern, (table) -> deleteTable(table), "DELETE");
   }
 
   @Override
   public CompletableFuture<Void> truncateTable(TableName tableName, boolean preserveSplits) {
-    CompletableFuture<Long> procFuture = this
-        .<Long> newCaller()
-        .action(
-          (controller, stub) -> this.<TruncateTableRequest, TruncateTableResponse, Long> call(
-            controller,
-            stub,
-            RequestConverter.buildTruncateTableRequest(tableName, preserveSplits,
-              ng.getNonceGroup(), ng.newNonce()),
-            (s, c, req, done) -> s.truncateTable(c, req, done), (resp) -> resp.getProcId())).call();
-    return waitProcedureResult(procFuture).whenComplete(
-      new TruncateTableProcedureBiConsumer(this, tableName));
+    return this.<TruncateTableRequest, TruncateTableResponse> procedureCall(
+      RequestConverter.buildTruncateTableRequest(tableName, preserveSplits, ng.getNonceGroup(),
+        ng.newNonce()), (s, c, req, done) -> s.truncateTable(c, req, done),
+      (resp) -> resp.getProcId(), new TruncateTableProcedureBiConsumer(this, tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> enableTable(TableName tableName) {
+    return this.<EnableTableRequest, EnableTableResponse> procedureCall(RequestConverter
+        .buildEnableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
+      (s, c, req, done) -> s.enableTable(c, req, done), (resp) -> resp.getProcId(),
+      new EnableTableProcedureBiConsumer(this, tableName));
+  }
+
+  @Override
+  public CompletableFuture<HTableDescriptor[]> enableTables(String regex) {
+    return enableTables(Pattern.compile(regex));
+  }
+
+  @Override
+  public CompletableFuture<HTableDescriptor[]> enableTables(Pattern pattern) {
+    return batchTableOperations(pattern, (table) -> enableTable(table), "ENABLE");
+  }
+
+  @Override
+  public CompletableFuture<Void> disableTable(TableName tableName) {
+    return this.<DisableTableRequest, DisableTableResponse> procedureCall(RequestConverter
+        .buildDisableTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
+      (s, c, req, done) -> s.disableTable(c, req, done), (resp) -> resp.getProcId(),
+      new DisableTableProcedureBiConsumer(this, tableName));
+  }
+
+  @Override
+  public CompletableFuture<HTableDescriptor[]> disableTables(String regex) {
+    return disableTables(Pattern.compile(regex));
+  }
+
+  @Override
+  public CompletableFuture<HTableDescriptor[]> disableTables(Pattern pattern) {
+    return batchTableOperations(pattern, (table) -> disableTable(table), "DISABLE");
   }
 
   @Override
@@ -459,6 +506,28 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
     String getOperationType() {
       return "TRUNCATE";
+    }
+  }
+
+  private class EnableTableProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    EnableTableProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(admin, tableName);
+    }
+
+    String getOperationType() {
+      return "ENABLE";
+    }
+  }
+
+  private class DisableTableProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    DisableTableProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(admin, tableName);
+    }
+
+    String getOperationType() {
+      return "DISABLE";
     }
   }
 

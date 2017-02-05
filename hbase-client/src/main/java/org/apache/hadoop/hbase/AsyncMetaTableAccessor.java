@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RawAsyncTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -44,29 +43,20 @@ public class AsyncMetaTableAccessor {
 
   private static final Log LOG = LogFactory.getLog(AsyncMetaTableAccessor.class);
 
-  private static CompletableFuture<RawAsyncTable> getMetaTable(AsyncConnection conn) {
-    return CompletableFuture.completedFuture(conn.getRawTable(META_TABLE_NAME));
-  }
-
-  public static CompletableFuture<Boolean> tableExists(AsyncConnection conn, TableName tableName) {
+  public static CompletableFuture<Boolean> tableExists(RawAsyncTable metaTable, TableName tableName) {
     if (tableName.equals(META_TABLE_NAME)) {
       return CompletableFuture.completedFuture(true);
     }
-    return getTableState(conn, tableName).thenApply(Optional::isPresent);
+    return getTableState(metaTable, tableName).thenApply(Optional::isPresent);
   }
 
-  public static CompletableFuture<Optional<TableState>> getTableState(AsyncConnection conn,
+  public static CompletableFuture<Optional<TableState>> getTableState(RawAsyncTable metaTable,
       TableName tableName) {
     CompletableFuture<Optional<TableState>> future = new CompletableFuture<>();
-    getMetaTable(conn).thenAccept((metaTable) -> {
-      Get get = new Get(tableName.getName()).addColumn(getTableFamily(), getStateColumn());
-      long time = EnvironmentEdgeManager.currentTime();
-      try {
-        get.setTimeRange(0, time);
-      } catch (IOException ioe) {
-        future.completeExceptionally(ioe);
-        return;
-      }
+    Get get = new Get(tableName.getName()).addColumn(getTableFamily(), getStateColumn());
+    long time = EnvironmentEdgeManager.currentTime();
+    try {
+      get.setTimeRange(0, time);
       metaTable.get(get).whenComplete((result, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
@@ -78,7 +68,9 @@ public class AsyncMetaTableAccessor {
           future.completeExceptionally(e);
         }
       });
-    });
+    } catch (IOException ioe) {
+      future.completeExceptionally(ioe);
+    }
     return future;
   }
 

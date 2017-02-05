@@ -165,6 +165,58 @@ public interface AsyncAdmin {
   CompletableFuture<Void> truncateTable(final TableName tableName, final boolean preserveSplits);
 
   /**
+   * Enable a table. The table has to be in disabled state for it to be enabled.
+   * @param tableName name of the table
+   */
+  CompletableFuture<Void> enableTable(final TableName tableName);
+
+  /**
+   * Enable tables matching the passed in pattern. Warning: Use this method carefully, there is no
+   * prompting and the effect is immediate. Consider using {@link #listTables(Pattern, boolean)} and
+   * {@link #enableTable(TableName)}
+   * @param regex The regular expression to match table names against
+   * @return Table descriptors for tables that couldn't be enabled. The return value will be wrapped
+   *         by a {@link CompletableFuture}.
+   */
+  CompletableFuture<HTableDescriptor[]> enableTables(String regex);
+
+  /**
+   * Enable tables matching the passed in pattern. Warning: Use this method carefully, there is no
+   * prompting and the effect is immediate. Consider using {@link #listTables(Pattern, boolean)} and
+   * {@link #enableTable(TableName)}
+   * @param pattern The pattern to match table names against
+   * @return Table descriptors for tables that couldn't be enabled. The return value will be wrapped
+   *         by a {@link CompletableFuture}.
+   */
+  CompletableFuture<HTableDescriptor[]> enableTables(Pattern pattern);
+
+  /**
+   * Disable a table. The table has to be in enabled state for it to be disabled.
+   * @param tableName
+   */
+  CompletableFuture<Void> disableTable(final TableName tableName);
+
+  /**
+   * Disable tables matching the passed in pattern. Warning: Use this method carefully, there is no
+   * prompting and the effect is immediate. Consider using {@link #listTables(Pattern, boolean)} and
+   * {@link #disableTable(TableName)}
+   * @param regex The regular expression to match table names against
+   * @return Table descriptors for tables that couldn't be disabled. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<HTableDescriptor[]> disableTables(String regex);
+
+  /**
+   * Disable tables matching the passed in pattern. Warning: Use this method carefully, there is no
+   * prompting and the effect is immediate. Consider using {@link #listTables(Pattern, boolean)} and
+   * {@link #disableTable(TableName)}
+   * @param pattern The pattern to match table names against
+   * @return Table descriptors for tables that couldn't be disabled. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<HTableDescriptor[]> disableTables(Pattern pattern);
+
+  /**
    * Turn the load balancer on or off.
    * @param on
    * @return Previous balancer value wrapped by a {@link CompletableFuture}.
