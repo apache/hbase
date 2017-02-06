@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -49,6 +47,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implements the scanner interface for the HBase client. If there are multiple regions in a table,
@@ -421,6 +421,9 @@ public class ClientScanner extends AbstractClientScanner {
     // This flag is set when we want to skip the result returned. We do
     // this when we reset scanner because it split under us.
     boolean retryAfterOutOfOrderException = true;
+    // Even if we are retrying due to UnknownScannerException, ScannerResetException, etc. we should
+    // make sure that we are not retrying indefinitely.
+    int retriesLeft = getRetries();
     for (;;) {
       try {
         // Server returns a null values if scanning is to stop. Else,
@@ -444,8 +447,18 @@ public class ClientScanner extends AbstractClientScanner {
         // An exception was thrown which makes any partial results that we were collecting
         // invalid. The scanner will need to be reset to the beginning of a row.
         clearPartialResults();
-        // DNRIOEs are thrown to make us break out of retries. Some types of DNRIOEs want us
-        // to reset the scanner and come back in again.
+
+        // Unfortunately, DNRIOE is used in two different semantics.
+        // (1) The first is to close the client scanner and bubble up the exception all the way
+        // to the application. This is preferred when the exception is really un-recoverable
+        // (like CorruptHFileException, etc). Plain DoNotRetryIOException also falls into this
+        // bucket usually.
+        // (2) Second semantics is to close the current region scanner only, but continue the
+        // client scanner by overriding the exception. This is usually UnknownScannerException,
+        // OutOfOrderScannerNextException, etc where the region scanner has to be closed, but the
+        // application-level ClientScanner has to continue without bubbling up the exception to
+        // the client. See RSRpcServices to see how it throws DNRIOE's.
+        // See also: HBASE-16604, HBASE-17187
 
         // If exception is any but the list below throw it back to the client; else setup
         // the scanner and retry.
@@ -457,6 +470,9 @@ public class ClientScanner extends AbstractClientScanner {
             e instanceof ScannerResetException) {
           // Pass. It is easier writing the if loop test as list of what is allowed rather than
           // as a list of what is not allowed... so if in here, it means we do not throw.
+          if (retriesLeft-- <= 0) {
+            throw e; // no more retries
+          }
         } else {
           throw e;
         }

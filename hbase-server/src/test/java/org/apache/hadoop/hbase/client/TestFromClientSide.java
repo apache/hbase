@@ -42,6 +42,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -53,6 +54,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -71,6 +73,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -644,6 +647,15 @@ public class TestFromClientSide {
    */
   public static class ExceptionInReseekRegionObserver extends BaseRegionObserver {
     static AtomicLong reqCount = new AtomicLong(0);
+    static AtomicBoolean isDoNotRetry = new AtomicBoolean(false); // whether to throw DNRIOE
+    static AtomicBoolean throwOnce = new AtomicBoolean(true); // whether to only throw once
+
+    static void reset() {
+      reqCount.set(0);
+      isDoNotRetry.set(false);
+      throwOnce.set(true);
+    }
+
     class MyStoreScanner extends StoreScanner {
       public MyStoreScanner(Store store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
           long readPt) throws IOException {
@@ -659,8 +671,13 @@ public class TestFromClientSide {
           newScanners.add(new DelegatingKeyValueScanner(scanner) {
             @Override
             public boolean reseek(Cell key) throws IOException {
-              if (reqCount.incrementAndGet() == 1) {
-                throw new IOException("Injected exception");
+              reqCount.incrementAndGet();
+              if (!throwOnce.get()||  reqCount.get() == 1) {
+                if (isDoNotRetry.get()) {
+                  throw new DoNotRetryIOException("Injected exception");
+                } else {
+                  throw new IOException("Injected exception");
+                }
               }
               return super.reseek(key);
             }
@@ -694,6 +711,8 @@ public class TestFromClientSide {
     HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name, FAMILY);
     htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
     TEST_UTIL.getHBaseAdmin().createTable(htd);
+    ExceptionInReseekRegionObserver.reset();
+    ExceptionInReseekRegionObserver.throwOnce.set(true); // throw exceptions only once
     try (Table t = TEST_UTIL.getConnection().getTable(name)) {
       int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
       TEST_UTIL.getHBaseAdmin().flush(name);
@@ -701,6 +720,59 @@ public class TestFromClientSide {
       assertEquals(rowCount, actualRowCount);
     }
     assertTrue(ExceptionInReseekRegionObserver.reqCount.get() > 0);
+  }
+
+  /**
+   * Tests the case where a coprocessor throws a DoNotRetryIOException in the scan. The expectation
+   * is that the exception will bubble up to the client scanner instead of being retried.
+   */
+  @Test (timeout = 180000)
+  public void testScannerThrowsExceptionWhenCoprocessorThrowsDNRIOE()
+      throws IOException, InterruptedException {
+    TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
+    TableName name = TableName.valueOf("testClientScannerIsNotRetriedWhenCoprocessorThrowsDNRIOE");
+
+    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name, FAMILY);
+    htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
+    TEST_UTIL.getHBaseAdmin().createTable(htd);
+    ExceptionInReseekRegionObserver.reset();
+    ExceptionInReseekRegionObserver.isDoNotRetry.set(true);
+    try (Table t = TEST_UTIL.getConnection().getTable(name)) {
+      TEST_UTIL.loadTable(t, FAMILY, false);
+      TEST_UTIL.getHBaseAdmin().flush(name);
+      countRows(t, new Scan().addColumn(FAMILY, FAMILY));
+      fail("Should have thrown an exception");
+    } catch (RuntimeException expected) {
+      // expected
+    }
+    assertTrue(ExceptionInReseekRegionObserver.reqCount.get() > 0);
+  }
+
+  /**
+   * Tests the case where a coprocessor throws a regular IOException in the scan. The expectation
+   * is that the we will keep on retrying, but fail after the retries are exhausted instead of
+   * retrying indefinitely.
+   */
+  @Test (timeout = 180000)
+  public void testScannerFailsAfterRetriesWhenCoprocessorThrowsIOE()
+      throws IOException, InterruptedException {
+    TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
+    TableName name = TableName.valueOf("testScannerFailsAfterRetriesWhenCoprocessorThrowsIOE");
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name, FAMILY);
+    htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
+    TEST_UTIL.getHBaseAdmin().createTable(htd);
+    ExceptionInReseekRegionObserver.reset();
+    ExceptionInReseekRegionObserver.throwOnce.set(false); // throw exceptions in every retry
+    try (Table t = TEST_UTIL.getConnection().getTable(name)) {
+      TEST_UTIL.loadTable(t, FAMILY, false);
+      TEST_UTIL.getHBaseAdmin().flush(name);
+      countRows(t, new Scan().addColumn(FAMILY, FAMILY));
+      fail("Should have thrown an exception");
+    } catch (RuntimeException expected) {
+      // expected
+    }
+    assertTrue(ExceptionInReseekRegionObserver.reqCount.get() >= 3);
   }
 
   /*
