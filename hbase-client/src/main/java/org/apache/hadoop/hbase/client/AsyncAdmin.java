@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.client;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  *  The asynchronous administrative API for HBase.
@@ -215,6 +217,39 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    */
   CompletableFuture<HTableDescriptor[]> disableTables(Pattern pattern);
+
+  /**
+   * Get the status of alter command - indicates how many regions have received the updated schema
+   * Asynchronous operation.
+   * @param tableName TableName instance
+   * @return Pair indicating the number of regions updated Pair.getFirst() is the regions that are
+   *         yet to be updated Pair.getSecond() is the total number of regions of the table. The
+   *         return value will be wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<Pair<Integer, Integer>> getAlterStatus(final TableName tableName);
+
+  /**
+   * Add a column family to an existing table.
+   * @param tableName name of the table to add column family to
+   * @param columnFamily column family descriptor of column family to be added
+   */
+  CompletableFuture<Void> addColumnFamily(final TableName tableName,
+      final HColumnDescriptor columnFamily);
+
+  /**
+   * Delete a column family from a table.
+   * @param tableName name of table
+   * @param columnFamily name of column family to be deleted
+   */
+  CompletableFuture<Void> deleteColumnFamily(final TableName tableName, final byte[] columnFamily);
+
+  /**
+   * Modify an existing column family on a table.
+   * @param tableName name of table
+   * @param columnFamily new column family descriptor to use
+   */
+  CompletableFuture<Void> modifyColumnFamily(final TableName tableName,
+      final HColumnDescriptor columnFamily);
 
   /**
    * Turn the load balancer on or off.

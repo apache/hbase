@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
@@ -43,14 +44,20 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableNamesRequest;
@@ -62,12 +69,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * The implementation of AsyncAdmin.
@@ -369,6 +379,44 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     return batchTableOperations(pattern, (table) -> disableTable(table), "DISABLE");
   }
 
+
+  @Override
+  public CompletableFuture<Pair<Integer, Integer>> getAlterStatus(TableName tableName) {
+    return this
+        .<Pair<Integer, Integer>> newCaller()
+        .action(
+          (controller, stub) -> this
+              .<GetSchemaAlterStatusRequest, GetSchemaAlterStatusResponse, Pair<Integer, Integer>> call(
+                controller, stub, RequestConverter.buildGetSchemaAlterStatusRequest(tableName), (s,
+                    c, req, done) -> s.getSchemaAlterStatus(c, req, done), (resp) -> new Pair<>(
+                    resp.getYetToUpdateRegions(), resp.getTotalRegions()))).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> addColumnFamily(TableName tableName, HColumnDescriptor columnFamily) {
+    return this.<AddColumnRequest, AddColumnResponse> procedureCall(
+      RequestConverter.buildAddColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
+        ng.newNonce()), (s, c, req, done) -> s.addColumn(c, req, done), (resp) -> resp.getProcId(),
+      new AddColumnFamilyProcedureBiConsumer(this, tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteColumnFamily(TableName tableName, byte[] columnFamily) {
+    return this.<DeleteColumnRequest, DeleteColumnResponse> procedureCall(
+      RequestConverter.buildDeleteColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
+        ng.newNonce()), (s, c, req, done) -> s.deleteColumn(c, req, done),
+      (resp) -> resp.getProcId(), new DeleteColumnFamilyProcedureBiConsumer(this, tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyColumnFamily(TableName tableName,
+      HColumnDescriptor columnFamily) {
+    return this.<ModifyColumnRequest, ModifyColumnResponse> procedureCall(
+      RequestConverter.buildModifyColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
+        ng.newNonce()), (s, c, req, done) -> s.modifyColumn(c, req, done),
+      (resp) -> resp.getProcId(), new ModifyColumnFamilyProcedureBiConsumer(this, tableName));
+  }
+
   @Override
   public CompletableFuture<Boolean> setBalancerRunning(final boolean on) {
     return this
@@ -528,6 +576,39 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
     String getOperationType() {
       return "DISABLE";
+    }
+  }
+
+  private class AddColumnFamilyProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    AddColumnFamilyProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(admin, tableName);
+    }
+
+    String getOperationType() {
+      return "ADD_COLUMN_FAMILY";
+    }
+  }
+
+  private class DeleteColumnFamilyProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    DeleteColumnFamilyProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(admin, tableName);
+    }
+
+    String getOperationType() {
+      return "DELETE_COLUMN_FAMILY";
+    }
+  }
+
+  private class ModifyColumnFamilyProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    ModifyColumnFamilyProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(admin, tableName);
+    }
+
+    String getOperationType() {
+      return "MODIFY_COLUMN_FAMILY";
     }
   }
 

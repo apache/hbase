@@ -32,12 +32,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -45,15 +47,20 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -68,6 +75,8 @@ public class TestAsyncAdmin {
   private static final Log LOG = LogFactory.getLog(TestAdmin1.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
+  private static final byte[] FAMILY_0 = Bytes.toBytes("cf0");
+  private static final byte[] FAMILY_1 = Bytes.toBytes("cf1");
 
   private static AsyncConnection ASYNC_CONN;
   private AsyncAdmin admin;
@@ -681,6 +690,189 @@ public class TestAsyncAdmin {
     HColumnDescriptor hcd = new HColumnDescriptor("cf1".getBytes());
     htd.addFamily(hcd);
     admin.createTable(htd).join();
+  }
+
+  @Test
+  public void testAddColumnFamily() throws IOException {
+    TableName TABLE_NAME = TableName.valueOf("testAddColumnFamily");
+    // Create a table with two families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
+    admin.createTable(baseHtd).join();
+    admin.disableTable(TABLE_NAME).join();
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      // Modify the table removing one family and verify the descriptor
+      admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1)).join();
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+    } finally {
+      admin.deleteTable(TABLE_NAME);
+    }
+  }
+
+  @Test
+  public void testAddSameColumnFamilyTwice() throws Exception {
+    TableName TABLE_NAME = TableName.valueOf("testAddSameColumnFamilyTwice");
+    // Create a table with one families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
+    admin.createTable(baseHtd).join();
+    admin.disableTable(TABLE_NAME).join();
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      // Modify the table removing one family and verify the descriptor
+      this.admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1)).join();
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+
+      try {
+        // Add same column family again - expect failure
+        this.admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1)).join();
+        Assert.fail("Delete a non-exist column family should fail");
+      } catch (Exception e) {
+        // Expected.
+      }
+    } finally {
+      admin.deleteTable(TABLE_NAME).join();
+    }
+  }
+
+  @Test
+  public void testModifyColumnFamily() throws Exception {
+    TableName TABLE_NAME = TableName.valueOf("testModifyColumnFamily");
+
+    HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_0);
+    int blockSize = cfDescriptor.getBlocksize();
+    // Create a table with one families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(cfDescriptor);
+    admin.createTable(baseHtd).join();
+    admin.disableTable(TABLE_NAME).join();
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      int newBlockSize = 2 * blockSize;
+      cfDescriptor.setBlocksize(newBlockSize);
+
+      // Modify colymn family
+      admin.modifyColumnFamily(TABLE_NAME, cfDescriptor).join();
+
+      HTableDescriptor htd = admin.getTableDescriptor(TABLE_NAME).get();
+      HColumnDescriptor hcfd = htd.getFamily(FAMILY_0);
+      assertTrue(hcfd.getBlocksize() == newBlockSize);
+    } finally {
+      admin.deleteTable(TABLE_NAME).join();
+    }
+  }
+
+  @Test
+  public void testModifyNonExistingColumnFamily() throws IOException {
+    TableName TABLE_NAME = TableName.valueOf("testModifyNonExistingColumnFamily");
+
+    HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_1);
+    int blockSize = cfDescriptor.getBlocksize();
+    // Create a table with one families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
+    admin.createTable(baseHtd).join();
+    admin.disableTable(TABLE_NAME).join();
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      int newBlockSize = 2 * blockSize;
+      cfDescriptor.setBlocksize(newBlockSize);
+
+      // Modify a column family that is not in the table.
+      try {
+        admin.modifyColumnFamily(TABLE_NAME, cfDescriptor).join();
+        Assert.fail("Modify a non-exist column family should fail");
+      } catch (Exception e) {
+        // Expected.
+      }
+    } finally {
+      admin.deleteTable(TABLE_NAME).join();
+    }
+  }
+
+  @Test
+  public void testDeleteColumnFamily() throws IOException {
+    TableName TABLE_NAME = TableName.valueOf("testDeleteColumnFamily");
+    // Create a table with two families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_1));
+    admin.createTable(baseHtd).join();
+    admin.disableTable(TABLE_NAME).join();
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+
+      // Modify the table removing one family and verify the descriptor
+      admin.deleteColumnFamily(TABLE_NAME, FAMILY_1).join();
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+    } finally {
+      admin.deleteTable(TABLE_NAME).join();
+    }
+  }
+
+  @Test
+  public void testDeleteSameColumnFamilyTwice() throws IOException {
+    TableName TABLE_NAME = TableName.valueOf("testDeleteSameColumnFamilyTwice");
+    // Create a table with two families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_1));
+    admin.createTable(baseHtd).join();
+    admin.disableTable(TABLE_NAME).join();
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+
+      // Modify the table removing one family and verify the descriptor
+      admin.deleteColumnFamily(TABLE_NAME, FAMILY_1).join();
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      try {
+        // Delete again - expect failure
+        admin.deleteColumnFamily(TABLE_NAME, FAMILY_1).join();
+        Assert.fail("Delete a non-exist column family should fail");
+      } catch (Exception e) {
+        // Expected.
+      }
+    } finally {
+      admin.deleteTable(TABLE_NAME).join();
+    }
+  }
+
+  private void verifyTableDescriptor(final TableName tableName, final byte[]... families)
+      throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+
+    // Verify descriptor from master
+    HTableDescriptor htd = admin.getTableDescriptor(tableName);
+    verifyTableDescriptor(htd, tableName, families);
+
+    // Verify descriptor from HDFS
+    MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
+    HTableDescriptor td = FSTableDescriptors
+        .getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
+    verifyTableDescriptor(td, tableName, families);
+  }
+
+  private void verifyTableDescriptor(final HTableDescriptor htd, final TableName tableName,
+      final byte[]... families) {
+    Set<byte[]> htdFamilies = htd.getFamiliesKeys();
+    assertEquals(tableName, htd.getTableName());
+    assertEquals(families.length, htdFamilies.size());
+    for (byte[] familyName : families) {
+      assertTrue("Expected family " + Bytes.toString(familyName), htdFamilies.contains(familyName));
+    }
   }
 
   @Test(timeout = 30000)
