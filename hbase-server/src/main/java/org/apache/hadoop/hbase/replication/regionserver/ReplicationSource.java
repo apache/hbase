@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -1145,8 +1146,10 @@ public class ReplicationSource extends Thread
       Thread.UncaughtExceptionHandler handler = new Thread.UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(final Thread t, final Throwable e) {
+          RSRpcServices.exitIfOOME(e);
           LOG.error("Unexpected exception in ReplicationSourceWorkerThread," + " currentPath="
               + getCurrentPath(), e);
+          stopper.stop("Unexpected exception in ReplicationSourceWorkerThread");
         }
       };
       Threads.setDaemonThreadRunning(this, n + ".replicationSource." + walGroupId + ","
