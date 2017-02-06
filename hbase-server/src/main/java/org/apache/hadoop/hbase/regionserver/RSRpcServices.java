@@ -1228,6 +1228,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   @Override
   public boolean checkOOME(final Throwable e) {
+    return exitIfOOME(e);
+  }
+
+  public static boolean exitIfOOME(final Throwable e ){
     boolean stop = false;
     try {
       if (e instanceof OutOfMemoryError
@@ -1235,7 +1239,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           || (e.getMessage() != null && e.getMessage().contains(
               "java.lang.OutOfMemoryError"))) {
         stop = true;
-        LOG.fatal("Run out of memory; " + getClass().getSimpleName()
+        LOG.fatal("Run out of memory; " + RSRpcServices.class.getSimpleName()
           + " will abort itself immediately", e);
       }
     } finally {
