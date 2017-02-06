@@ -161,7 +161,9 @@ public class TableRecordReaderImpl {
    *
    */
   public void close() {
-    this.scanner.close();
+    if (this.scanner != null) {
+      this.scanner.close();
+    }
     try {
       this.htable.close();
     } catch (IOException ioe) {
