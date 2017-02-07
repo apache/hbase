@@ -86,6 +86,8 @@
   }
   String action = request.getParameter("action");
   String key = request.getParameter("key");
+  String left = request.getParameter("left");
+  String right = request.getParameter("right");
   long totalStoreFileSizeMB = 0;
 
   final String numRegionsParam = request.getParameter("numRegions");
@@ -208,6 +210,11 @@ if ( fqtn != null ) {
         admin.compact(TableName.valueOf(fqtn));
       }
     %> Compact request accepted. <%
+    } else if (action.equals("merge")) {
+        if (left != null && left.length() > 0 && right != null && right.length() > 0) {
+            admin.mergeRegions(Bytes.toBytesBinary(left), Bytes.toBytesBinary(right), false);
+        }
+        %> Merge request accepted. <%
     }
   }
 %>
@@ -757,6 +764,19 @@ Actions:
   regions of the table, or, if a key is supplied, only the region containing the
   given key. An eligible region is one that does not contain any references to
   other regions. Split requests for noneligible regions will be ignored.</td>
+  </form>
+</tr>
+<tr>
+  <form method="get">
+  <input type="hidden" name="action" value="merge">
+  <input type="hidden" name="name" value="<%= fqtn %>">
+  <td style="border-style: none; text-align: center">
+      <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn"></td>
+  <td style="border-style: none" width="5%">&nbsp;</td>
+  <td style="border-style: none">Region Key (Required):<input type="text" name="left" size="40">
+  Region Key (Required) :<input type="text" name="right" size="40"></td>
+  <td style="border-style: none">This action will merge two
+  regions of the table, Merge requests for noneligible regions will be ignored.</td>
   </form>
 </tr>
 </table>
