@@ -44,11 +44,11 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
 
   static final String POLICY_REFRESHER_CHORE_PERIOD_KEY =
       "hbase.regionserver.quotas.policy.refresher.chore.period";
-  static final int POLICY_REFRESHER_CHORE_PERIOD_DEFAULT = 1000 * 60 * 5; // 5 minutes in millis
+  static final int POLICY_REFRESHER_CHORE_PERIOD_DEFAULT = 1000 * 60 * 1; // 1 minute in millis
 
   static final String POLICY_REFRESHER_CHORE_DELAY_KEY =
       "hbase.regionserver.quotas.policy.refresher.chore.delay";
-  static final long POLICY_REFRESHER_CHORE_DELAY_DEFAULT = 1000L * 60L; // 1 minute
+  static final long POLICY_REFRESHER_CHORE_DELAY_DEFAULT = 1000L * 15L; // 15 seconds in millis
 
   static final String POLICY_REFRESHER_CHORE_TIMEUNIT_KEY =
       "hbase.regionserver.quotas.policy.refresher.chore.timeunit";
