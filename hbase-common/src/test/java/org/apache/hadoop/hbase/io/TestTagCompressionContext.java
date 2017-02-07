@@ -166,7 +166,7 @@ public class TestTagCompressionContext {
     KeyValue kv = new KeyValue(ROW, CF, Q, 1234L, V, tags);
     ByteBuffer dbb = ByteBuffer.allocateDirect(kv.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(dbb, kv.getBuffer(), 0, kv.getBuffer().length);
-    OffheapKeyValue offheapKV = new OffheapKeyValue(dbb, 0, kv.getBuffer().length, true, 0);
+    OffheapKeyValue offheapKV = new OffheapKeyValue(dbb, 0, kv.getBuffer().length, 0);
     return offheapKV;
   }
 }

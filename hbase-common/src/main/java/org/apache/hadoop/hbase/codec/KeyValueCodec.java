@@ -111,7 +111,7 @@ public class KeyValueCodec implements Codec {
 
     protected Cell createCell(ByteBuffer bb, int pos, int len) {
       // We know there is not going to be any tags.
-      return new OffheapKeyValue(bb, pos, len, false, 0);
+      return new OffheapKeyValue(bb, pos, len, 0);
     }
 
   }

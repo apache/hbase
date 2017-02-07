@@ -371,7 +371,7 @@ public class RedundantKVGenerator {
         ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
           keyValue.getOffset(), keyValue.getLength());
         OffheapKeyValue offheapKV =
-            new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), true, 0);
+            new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), 0);
         result.add(offheapKV);
       } else {
         KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, value);
@@ -379,7 +379,7 @@ public class RedundantKVGenerator {
         ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
           keyValue.getOffset(), keyValue.getLength());
         OffheapKeyValue offheapKV =
-            new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), false, 0);
+            new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), 0);
         result.add(offheapKV);
       }
     }
@@ -390,9 +390,8 @@ public class RedundantKVGenerator {
   }
 
   static class ExtendedOffheapKeyValue extends OffheapKeyValue {
-    public ExtendedOffheapKeyValue(ByteBuffer buf, int offset, int length, boolean hasTags,
-        long seqId) {
-      super(buf, offset, length, hasTags, seqId);
+    public ExtendedOffheapKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
+      super(buf, offset, length, seqId);
     }
 
     @Override

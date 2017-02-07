@@ -957,7 +957,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       } else {
         ByteBuffer buf = blockBuffer.asSubByteBuffer(cellBufSize);
         if (buf.isDirect()) {
-          ret = new OffheapKeyValue(buf, buf.position(), cellBufSize, currTagsLen > 0, seqId);
+          ret = new OffheapKeyValue(buf, buf.position(), cellBufSize, seqId);
         } else {
           if (currTagsLen > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset() + buf.position(),

@@ -3202,6 +3202,6 @@ public final class CellUtil {
       newKv.setSequenceId(cell.getSequenceId());
       return newKv;
     }
-    return new OffheapKeyValue(buf, offset, len, tagsLen > 0, cell.getSequenceId());
+    return new OffheapKeyValue(buf, offset, len, cell.getSequenceId());
   }
 }

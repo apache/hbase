@@ -382,8 +382,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         currentBuffer.asSubByteBuffer(startOffset, cellBufSize, tmpPair);
         ByteBuffer buf = tmpPair.getFirst();
         if (buf.isDirect()) {
-          ret = new OffheapKeyValue(buf, tmpPair.getSecond(), cellBufSize,
-              tagsLength > 0, seqId);
+          ret = new OffheapKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId);
         } else {
           if (tagsLength > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset()

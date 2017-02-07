@@ -36,9 +36,6 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
   protected final ByteBuffer buf;
   protected final int offset;
   protected final int length;
-  protected final boolean hasTags;
-  private final short rowLen;
-  private final int keyLen;
   private long seqId = 0;
   // TODO : See if famLen can be cached or not?
 
@@ -46,14 +43,11 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
       + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT
       + Bytes.SIZEOF_BOOLEAN + Bytes.SIZEOF_LONG;
 
-  public OffheapKeyValue(ByteBuffer buf, int offset, int length, boolean hasTags, long seqId) {
+  public OffheapKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
     assert buf.isDirect();
     this.buf = buf;
     this.offset = offset;
     this.length = length;
-    rowLen = ByteBufferUtils.toShort(this.buf, this.offset + KeyValue.ROW_OFFSET);
-    keyLen = ByteBufferUtils.toInt(this.buf, this.offset);
-    this.hasTags = hasTags;
     this.seqId = seqId;
   }
 
@@ -62,11 +56,6 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
     this.buf = buf;
     this.offset = offset;
     this.length = length;
-    rowLen = ByteBufferUtils.toShort(this.buf, this.offset + KeyValue.ROW_OFFSET);
-    keyLen = ByteBufferUtils.toInt(this.buf, this.offset);
-    int tagsLen = this.length
-        - (this.keyLen + getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
-    this.hasTags = tagsLen > 0;
   }
 
   @Override
@@ -81,7 +70,11 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public short getRowLength() {
-    return this.rowLen;
+    return getRowLen();
+  }
+
+  private short getRowLen() {
+    return ByteBufferUtils.toShort(this.buf, this.offset + KeyValue.ROW_OFFSET);
   }
 
   @Override
@@ -100,7 +93,8 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
   }
 
   private int getFamilyLengthPosition() {
-    return this.offset + KeyValue.ROW_KEY_OFFSET + rowLen;
+    return this.offset + KeyValue.ROW_KEY_OFFSET
+        + getRowLen();
   }
 
   private byte getFamilyLength(int famLenPos) {
@@ -123,13 +117,18 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
   }
 
   private int getQualifierLength(int rlength, int flength) {
-    return this.keyLen - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
+    return getKeyLen()
+        - (int) KeyValue.getKeyDataStructureSize(rlength, flength, 0);
   }
 
   @Override
   public long getTimestamp() {
-    int offset = getTimestampOffset(this.keyLen);
+    int offset = getTimestampOffset(getKeyLen());
     return ByteBufferUtils.toLong(this.buf, offset);
+  }
+
+  private int getKeyLen() {
+    return ByteBufferUtils.toInt(this.buf, this.offset);
   }
 
   private int getTimestampOffset(int keyLen) {
@@ -138,7 +137,8 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public byte getTypeByte() {
-    return ByteBufferUtils.toByte(this.buf, this.offset + this.keyLen - 1 + KeyValue.ROW_OFFSET);
+    return ByteBufferUtils.toByte(this.buf,
+      this.offset + getKeyLen() - 1 + KeyValue.ROW_OFFSET);
   }
 
   @Override
@@ -177,11 +177,8 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public int getTagsLength() {
-    if(!hasTags) {
-      return 0;
-    }
-    int tagsLen = this.length
-        - (this.keyLen + getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
+    int tagsLen = this.length - (getKeyLen() + getValueLength()
+        + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
     if (tagsLen > 0) {
       // There are some Tag bytes in the byte[]. So reduce 2 bytes which is
       // added to denote the tags
@@ -228,7 +225,7 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public int getValuePosition() {
-    return this.offset + KeyValue.ROW_OFFSET + this.keyLen;
+    return this.offset + KeyValue.ROW_OFFSET + getKeyLen();
   }
 
   @Override
@@ -262,7 +259,8 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
     if (withTags) {
       return this.length;
     }
-    return this.keyLen + this.getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+    return getKeyLen() + this.getValueLength()
+        + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 
   @Override
@@ -278,12 +276,12 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
   @Override
   public void setTimestamp(long ts) throws IOException {
     ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), Bytes.toBytes(ts), 0,
-        Bytes.SIZEOF_LONG);
+      Bytes.SIZEOF_LONG);
   }
 
   private int getTimestampOffset() {
-    return this.offset + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + this.keyLen
-        - KeyValue.TIMESTAMP_TYPE_SIZE;
+    return this.offset + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE
+        + getKeyLen() - KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 
   @Override
@@ -301,12 +299,7 @@ public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
   public Cell deepClone() {
     byte[] copy = new byte[this.length];
     ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
-    KeyValue kv;
-    if (this.hasTags) {
-      kv = new KeyValue(copy, 0, copy.length);
-    } else {
-      kv = new NoTagsKeyValue(copy, 0, copy.length);
-    }
+    KeyValue kv = new KeyValue(copy, 0, copy.length);
     kv.setSequenceId(this.getSequenceId());
     return kv;
   }
