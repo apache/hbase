@@ -42,7 +42,6 @@ public class TestStochasticLoadBalancer2 extends BalancerTestBase {
   @After
   public void after() {
     // reset config to make sure balancer run
-    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.0f);
     loadBalancer.setConf(conf);
   }
 

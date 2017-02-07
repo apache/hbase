@@ -104,7 +104,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       assertNull(plans);
     }
     // reset config
-    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.0f);
     loadBalancer.setConf(conf);
   }
 
