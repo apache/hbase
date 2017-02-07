@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -27,6 +28,8 @@ import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
@@ -166,10 +169,7 @@ public class TestAsyncNonMetaRegionLocator {
     return endKeys;
   }
 
-  @Test
-  public void testMultiRegionTable() throws IOException, InterruptedException {
-    createMultiRegionTable();
-    byte[][] startKeys = getStartKeys();
+  private ServerName[] getLocations(byte[][] startKeys) {
     ServerName[] serverNames = new ServerName[startKeys.length];
     TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
         .forEach(rs -> {
@@ -178,6 +178,14 @@ public class TestAsyncNonMetaRegionLocator {
               Bytes::compareTo)] = rs.getServerName();
           });
         });
+    return serverNames;
+  }
+
+  @Test
+  public void testMultiRegionTable() throws IOException, InterruptedException {
+    createMultiRegionTable();
+    byte[][] startKeys = getStartKeys();
+    ServerName[] serverNames = getLocations(startKeys);
     IntStream.range(0, 2).forEach(n -> IntStream.range(0, startKeys.length).forEach(i -> {
       try {
         assertLocEquals(startKeys[i], i == startKeys.length - 1 ? EMPTY_END_ROW : startKeys[i + 1],
@@ -263,5 +271,25 @@ public class TestAsyncNonMetaRegionLocator {
     assertLocEquals(splitKey, EMPTY_END_ROW, afterServerName, afterLoc);
 
     assertSame(afterLoc, LOCATOR.getRegionLocation(TABLE_NAME, row, RegionLocateType.AFTER).get());
+  }
+
+  // For HBASE-17402
+  @Test
+  public void testConcurrentLocate() throws IOException, InterruptedException, ExecutionException {
+    createMultiRegionTable();
+    byte[][] startKeys = getStartKeys();
+    byte[][] endKeys = getEndKeys();
+    ServerName[] serverNames = getLocations(startKeys);
+    for (int i = 0; i < 100; i++) {
+      LOCATOR.clearCache(TABLE_NAME);
+      List<CompletableFuture<HRegionLocation>> futures = IntStream.range(0, 1000)
+          .mapToObj(n -> String.format("%03d", n)).map(s -> Bytes.toBytes(s))
+          .map(r -> LOCATOR.getRegionLocation(TABLE_NAME, r, RegionLocateType.CURRENT))
+          .collect(toList());
+      for (int j = 0; j < 1000; j++) {
+        int index = Math.min(8, j / 111);
+        assertLocEquals(startKeys[index], endKeys[index], serverNames[index], futures.get(j).get());
+      }
+    }
   }
 }
