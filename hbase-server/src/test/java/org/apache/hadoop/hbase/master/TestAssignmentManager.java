@@ -859,6 +859,7 @@ public class TestAssignmentManager {
     }
   }
 
+
   /**
    * Mocked load balancer class used in the testcase to make sure that the testcase waits until
    * random assignment is called and the gate variable is set to true.
@@ -929,6 +930,22 @@ public class TestAssignmentManager {
     am.shutdown();
   }
 
+  @Test(timeout = 600000)
+  public void testAssignmentOfRegionRITWithOffline() throws IOException,
+      KeeperException, ServiceException, CoordinatedStateException, InterruptedException {
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
+        this.server, this.serverManager);
+    ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_B);
+    am.gate.set(false);
+    // join the cluster - that's when the AM is really kicking in after a restart
+    am.joinCluster();
+    while (!am.gate.get()) {
+      Thread.sleep(10);
+    }
+    assertTrue(am.getRegionStates().getRegionState(REGIONINFO).getState()
+        == RegionState.State.PENDING_OPEN);
+    am.shutdown();
+  }
   /**
    * Test the scenario when the master is in failover and trying to process a
    * region which is in Opening state on a dead RS. Master will force offline the
@@ -1338,6 +1355,16 @@ public class TestAssignmentManager {
         this.regionOnline(region, SERVERNAME_A);
       } else {
         super.assign(region, setOfflineInZK, forceNewPlan);
+        this.gate.set(true);
+      }
+    }
+    @Override
+    public void assign(RegionState state,
+        boolean setOfflineInZK, final boolean forceNewPlan) {
+      if (enabling) {
+        assignmentCount++;
+      } else {
+        super.assign(state, setOfflineInZK, forceNewPlan);
         this.gate.set(true);
       }
     }
