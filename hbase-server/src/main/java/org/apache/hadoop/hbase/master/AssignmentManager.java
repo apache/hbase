@@ -847,7 +847,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
       case M_ZK_REGION_OFFLINE:
         // Insert in RIT and resend to the regionserver
-        regionStates.updateRegionState(rt, State.PENDING_OPEN);
+        regionStates.updateRegionState(rt, State.OFFLINE);
         final RegionState rsOffline = regionStates.getRegionState(regionInfo);
         this.executorService.submit(
           new EventHandler(server, EventType.M_MASTER_RECOVERY) {
@@ -857,7 +857,7 @@ public class AssignmentManager extends ZooKeeperListener {
               try {
                 RegionPlan plan = new RegionPlan(regionInfo, null, sn);
                 addPlan(encodedName, plan);
-                assign(rsOffline, false, false);
+                assign(rsOffline, true, false);
               } finally {
                 lock.unlock();
               }
@@ -1581,6 +1581,7 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Use care with forceNewPlan. It could cause double assignment.
    */
+  @VisibleForTesting
   public void assign(HRegionInfo region,
       boolean setOfflineInZK, boolean forceNewPlan) {
     if (isDisabledorDisablingRegionInRIT(region)) {
@@ -2058,7 +2059,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param setOfflineInZK
    * @param forceNewPlan
    */
-  private void assign(RegionState state,
+  public void assign(RegionState state,
       boolean setOfflineInZK, final boolean forceNewPlan) {
     long startTime = EnvironmentEdgeManager.currentTime();
     try {
