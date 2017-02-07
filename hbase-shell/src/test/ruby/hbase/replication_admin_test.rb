@@ -73,8 +73,8 @@ module Hbase
       command(:add_peer, @peer_id, {CLUSTER_KEY => cluster_key})
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
 
       # cleanup for future tests
       command(:remove_peer, @peer_id)
@@ -86,8 +86,8 @@ module Hbase
       command(:add_peer, @peer_id, {CLUSTER_KEY => cluster_key})
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
 
       # cleanup for future tests
       command(:remove_peer, @peer_id)
@@ -100,8 +100,8 @@ module Hbase
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
 
       # cleanup for future tests
       command(:remove_peer, @peer_id)
@@ -114,8 +114,8 @@ module Hbase
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
 
       # cleanup for future tests
       command(:remove_peer, @peer_id)
@@ -130,8 +130,8 @@ module Hbase
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(cluster_key, peer_config.get_cluster_key)
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
@@ -152,8 +152,8 @@ module Hbase
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(cluster_key, peer_config.get_cluster_key)
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
@@ -186,8 +186,8 @@ module Hbase
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
       assert_tablecfs_equal(table_cfs, command(:get_peer_config, @peer_id).getTableCFsMap())
 
       # cleanup for future tests
@@ -210,8 +210,8 @@ module Hbase
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
 
       table_cfs = { "table1" => [], "table2" => ["cf1"], "ns3:table3" => ["cf1", "cf2"] }
       command(:set_peer_tableCFs, @peer_id, table_cfs)
@@ -227,8 +227,8 @@ module Hbase
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
 
       table_cfs = { "table1" => [], "ns2:table2" => ["cf1"] }
       command(:append_peer_tableCFs, @peer_id, table_cfs)
@@ -249,8 +249,8 @@ module Hbase
       command(:add_peer, @peer_id, args)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      assert_equal(cluster_key, command(:list_peers).fetch(@peer_id).get_cluster_key)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      assert_equal(cluster_key, command(:list_peers).get(0).getPeerConfig.getClusterKey)
 
       table_cfs = { "table1" => [], "ns2:table2" => ["cf1"] }
       command(:remove_peer_tableCFs, @peer_id, { "ns3:table3" => ["cf1", "cf2"] })
@@ -268,15 +268,11 @@ module Hbase
       args = { CLUSTER_KEY => cluster_key }
       command(:add_peer, @peer_id, args)
 
-      # Normally the ReplicationSourceManager will call ReplicationPeer#peer_added
-      # but here we have to do it ourselves
-      replication_admin.peer_added(@peer_id)
-
       command(:set_peer_namespaces, @peer_id, namespaces)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
 
@@ -292,15 +288,11 @@ module Hbase
       args = { CLUSTER_KEY => cluster_key }
       command(:add_peer, @peer_id, args)
 
-      # Normally the ReplicationSourceManager will call ReplicationPeer#peer_added
-      # but here we have to do it ourselves
-      replication_admin.peer_added(@peer_id)
-
       command(:append_peer_namespaces, @peer_id, namespaces)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
 
@@ -309,8 +301,8 @@ module Hbase
       command(:append_peer_namespaces, @peer_id, namespaces)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
 
@@ -318,8 +310,8 @@ module Hbase
       command(:append_peer_namespaces, @peer_id, namespaces)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
 
@@ -334,17 +326,13 @@ module Hbase
       args = { CLUSTER_KEY => cluster_key, NAMESPACES => namespaces }
       command(:add_peer, @peer_id, args)
 
-      # Normally the ReplicationSourceManager will call ReplicationPeer#peer_added
-      # but here we have to do it ourselves
-      replication_admin.peer_added(@peer_id)
-
       namespaces = ["ns1", "ns2"]
       namespaces_str = "ns3"
       command(:remove_peer_namespaces, @peer_id, namespaces)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
 
@@ -353,8 +341,8 @@ module Hbase
       command(:remove_peer_namespaces, @peer_id, namespaces)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
 
@@ -362,8 +350,8 @@ module Hbase
       command(:remove_peer_namespaces, @peer_id, namespaces)
 
       assert_equal(1, command(:list_peers).length)
-      assert(command(:list_peers).key?(@peer_id))
-      peer_config = command(:list_peers).fetch(@peer_id)
+      assert_equal(@peer_id, command(:list_peers).get(0).getPeerId)
+      peer_config = command(:list_peers).get(0).getPeerConfig
       assert_equal(namespaces_str,
         replication_admin.show_peer_namespaces(peer_config))
 
@@ -375,9 +363,6 @@ module Hbase
       cluster_key = "localhost:2181:/hbase-test"
       args = { CLUSTER_KEY => cluster_key }
       command(:add_peer, @peer_id, args)
-      # Normally the ReplicationSourceManager will call ReplicationPeer#peer_added
-      # but here we have to do it ourselves
-      replication_admin.peer_added(@peer_id)
 
       peer_config = command(:get_peer_config, @peer_id)
       assert_equal(0, peer_config.get_bandwidth)
@@ -441,9 +426,6 @@ module Hbase
       data_params = {"data1" => "value1", "data2" => "value2"}
       args = { ENDPOINT_CLASSNAME => repl_impl, CONFIG => config_params, DATA => data_params}
       command(:add_peer, @peer_id, args)
-
-      #Normally the ReplicationSourceManager will call ReplicationPeer#peer_added, but here we have to do it ourselves
-      replication_admin.peer_added(@peer_id)
 
       new_config_params = { "config1" => "new_value1" }
       new_data_params = {"data1" => "new_value1"}

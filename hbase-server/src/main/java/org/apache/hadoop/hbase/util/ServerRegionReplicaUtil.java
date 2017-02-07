@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -148,10 +150,10 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     if (!isRegionReplicaReplicationEnabled(conf)) {
       return;
     }
-    ReplicationAdmin repAdmin = new ReplicationAdmin(conf);
+    Admin admin = ConnectionFactory.createConnection(conf).getAdmin();
     ReplicationPeerConfig peerConfig = null;
     try {
-      peerConfig = repAdmin.getPeerConfig(REGION_REPLICA_REPLICATION_PEER);
+      peerConfig = admin.getReplicationPeerConfig(REGION_REPLICA_REPLICATION_PEER);
     } catch (ReplicationPeerNotFoundException e) {
       LOG.warn("Region replica replication peer id=" + REGION_REPLICA_REPLICATION_PEER
           + " not exist", e);
@@ -163,12 +165,10 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
         peerConfig = new ReplicationPeerConfig();
         peerConfig.setClusterKey(ZKConfig.getZooKeeperClusterKey(conf));
         peerConfig.setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName());
-        repAdmin.addPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig, null);
+        admin.addReplicationPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig);
       }
-    } catch (ReplicationException ex) {
-      throw new IOException(ex);
     } finally {
-      repAdmin.close();
+      admin.close();
     }
   }
 

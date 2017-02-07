@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client.replication;
 
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -45,5 +46,16 @@ public class TableCFs {
 
   public Map<String, Integer> getColumnFamilyMap() {
     return this.cfs;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(table.getNameAsString());
+    if (!cfs.isEmpty()) {
+      sb.append(":");
+      sb.append(StringUtils.join(cfs.keySet(), ','));
+    }
+    return sb.toString();
   }
 }

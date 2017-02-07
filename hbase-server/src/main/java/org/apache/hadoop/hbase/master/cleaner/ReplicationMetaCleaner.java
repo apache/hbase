@@ -35,11 +35,11 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -50,14 +50,14 @@ public class ReplicationMetaCleaner extends ScheduledChore {
 
   private static final Log LOG = LogFactory.getLog(ReplicationMetaCleaner.class);
 
-  private ReplicationAdmin replicationAdmin;
-  private MasterServices master;
+  private final Admin admin;
+  private final MasterServices master;
 
   public ReplicationMetaCleaner(MasterServices master, Stoppable stoppable, int period)
       throws IOException {
     super("ReplicationMetaCleaner", stoppable, period);
     this.master = master;
-    replicationAdmin = new ReplicationAdmin(master.getConfiguration());
+    admin = master.getConnection().getAdmin();
   }
 
   @Override
@@ -81,12 +81,12 @@ public class ReplicationMetaCleaner extends ScheduledChore {
         return;
       }
 
-      Map<String, ReplicationPeerConfig> peers = replicationAdmin.listPeerConfigs();
-      for (Map.Entry<String, ReplicationPeerConfig> entry : peers.entrySet()) {
-        for (Map.Entry<TableName, List<String>> map : entry.getValue().getTableCFsMap()
+      List<ReplicationPeerDescription> peers = admin.listReplicationPeers();
+      for (ReplicationPeerDescription peerDesc : peers) {
+        for (Map.Entry<TableName, List<String>> map : peerDesc.getPeerConfig().getTableCFsMap()
             .entrySet()) {
           if (serialTables.containsKey(map.getKey().getNameAsString())) {
-            serialTables.get(map.getKey().getNameAsString()).add(entry.getKey());
+            serialTables.get(map.getKey().getNameAsString()).add(peerDesc.getPeerId());
             break;
           }
         }

@@ -194,7 +194,11 @@ public class ReplicationAdmin implements Closeable {
    * Add a new remote slave cluster for replication.
    * @param id a short name that identifies the cluster
    * @param peerConfig configuration for the replication slave cluster
+   * @deprecated use
+   *             {@link org.apache.hadoop.hbase.client.Admin#addReplicationPeer(String, ReplicationPeerConfig)}
+   *             instead
    */
+  @Deprecated
   public void addPeer(String id, ReplicationPeerConfig peerConfig) throws ReplicationException,
       IOException {
     checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
@@ -210,6 +214,12 @@ public class ReplicationAdmin implements Closeable {
     return ReplicationSerDeHelper.parseTableCFsFromConfig(tableCFsConfig);
   }
 
+  /**
+   * @deprecated use
+   *             {@link org.apache.hadoop.hbase.client.Admin#updateReplicationPeerConfig(String, ReplicationPeerConfig)}
+   *             instead
+   */
+  @Deprecated
   public void updatePeerConfig(String id, ReplicationPeerConfig peerConfig) throws IOException {
     this.admin.updateReplicationPeerConfig(id, peerConfig);
   }
@@ -217,7 +227,9 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Removes a peer cluster and stops the replication to it.
    * @param id a short name that identifies the cluster
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#removeReplicationPeer(String)} instead
    */
+  @Deprecated
   public void removePeer(String id) throws IOException {
     this.admin.removeReplicationPeer(id);
   }
@@ -225,7 +237,10 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Restart the replication stream to the specified peer.
    * @param id a short name that identifies the cluster
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#enableReplicationPeer(String)}
+   *             instead
    */
+  @Deprecated
   public void enablePeer(String id) throws IOException {
     this.admin.enableReplicationPeer(id);
   }
@@ -233,7 +248,10 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Stop the replication stream to the specified peer.
    * @param id a short name that identifies the cluster
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#disableReplicationPeer(String)}
+   *             instead
    */
+  @Deprecated
   public void disablePeer(String id) throws IOException {
     this.admin.disableReplicationPeer(id);
   }
@@ -242,11 +260,17 @@ public class ReplicationAdmin implements Closeable {
    * Get the number of slave clusters the local cluster has.
    * @return number of slave clusters
    * @throws IOException
+   * @deprecated
    */
+  @Deprecated
   public int getPeersCount() throws IOException {
     return this.admin.listReplicationPeers().size();
   }
 
+  /**
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#listReplicationPeers()} instead
+   */
+  @Deprecated
   public Map<String, ReplicationPeerConfig> listPeerConfigs() throws IOException {
     List<ReplicationPeerDescription> peers = this.admin.listReplicationPeers();
     Map<String, ReplicationPeerConfig> result = new TreeMap<String, ReplicationPeerConfig>();
@@ -256,6 +280,11 @@ public class ReplicationAdmin implements Closeable {
     return result;
   }
 
+  /**
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#getReplicationPeerConfig(String)}
+   *             instead
+   */
+  @Deprecated
   public ReplicationPeerConfig getPeerConfig(String id) throws IOException {
     return admin.getReplicationPeerConfig(id);
   }
@@ -294,6 +323,7 @@ public class ReplicationAdmin implements Closeable {
    * @throws ReplicationException
    * @throws IOException
    */
+  @Deprecated
   public void appendPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
       throws ReplicationException, IOException {
     if (tableCfs == null) {
@@ -350,6 +380,7 @@ public class ReplicationAdmin implements Closeable {
    * @throws ReplicationException
    * @throws IOException
    */
+  @Deprecated
   public void removePeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
       throws ReplicationException, IOException {
     if (tableCfs == null) {
@@ -398,6 +429,7 @@ public class ReplicationAdmin implements Closeable {
    * to indicate replicating all column families. Pass null for replicating all table and column
    * families
    */
+  @Deprecated
   public void setPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
       throws IOException {
     ReplicationPeerConfig peerConfig = getPeerConfig(id);
@@ -411,6 +443,7 @@ public class ReplicationAdmin implements Closeable {
    * an IllegalArgumentException is thrown if it doesn't exist
    * @return true if replication is enabled to that peer, false if it isn't
    */
+  @Deprecated
   public boolean getPeerState(String id) throws ReplicationException, IOException {
     List<ReplicationPeerDescription> peers = admin.listReplicationPeers(id);
     if (peers.isEmpty() || !id.equals(peers.get(0).getPeerId())) {

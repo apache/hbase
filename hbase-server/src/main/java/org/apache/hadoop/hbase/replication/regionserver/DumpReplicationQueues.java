@@ -21,12 +21,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,15 +37,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
+import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -207,8 +208,8 @@ public class DumpReplicationQueues extends Configured implements Tool {
 
     Configuration conf = getConf();
     HBaseAdmin.available(conf);
-    ReplicationAdmin replicationAdmin = new ReplicationAdmin(conf);
     ClusterConnection connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
+    Admin admin = connection.getAdmin();
 
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "DumpReplicationQueues" + System.currentTimeMillis(),
         new WarnOnlyAbortable(), true);
@@ -216,26 +217,28 @@ public class DumpReplicationQueues extends Configured implements Tool {
     try {
       // Our zk watcher
       LOG.info("Our Quorum: " + zkw.getQuorum());
-      List<HashMap<String, String>> replicatedTables = replicationAdmin.listReplicated();
-      if (replicatedTables.isEmpty()) {
+      List<TableCFs> replicatedTableCFs = admin.listReplicatedTableCFs();
+      if (replicatedTableCFs.isEmpty()) {
         LOG.info("No tables with a configured replication peer were found.");
         return(0);
       } else {
-        LOG.info("Replicated Tables: " + replicatedTables);
+        LOG.info("Replicated Tables: " + replicatedTableCFs);
       }
 
-      Map<String, ReplicationPeerConfig> peerConfigs = replicationAdmin.listPeerConfigs();
+      List<ReplicationPeerDescription> peers = admin.listReplicationPeers();
 
-      if (peerConfigs.isEmpty()) {
+      if (peers.isEmpty()) {
         LOG.info("Replication is enabled but no peer configuration was found.");
       }
 
       System.out.println("Dumping replication peers and configurations:");
-      System.out.println(dumpPeersState(replicationAdmin, peerConfigs));
+      System.out.println(dumpPeersState(peers));
 
       if (opts.isDistributed()) {
         LOG.info("Found [--distributed], will poll each RegionServer.");
-        System.out.println(dumpQueues(connection, zkw, peerConfigs.keySet(), opts.isHdfs()));
+        Set<String> peerIds = peers.stream().map((peer) -> peer.getPeerId())
+            .collect(Collectors.toSet());
+        System.out.println(dumpQueues(connection, zkw, peerIds, opts.isHdfs()));
         System.out.println(dumpReplicationSummary());
       } else {
         // use ZK instead
@@ -279,28 +282,22 @@ public class DumpReplicationQueues extends Configured implements Tool {
     return sb.toString();
   }
 
-  public String dumpPeersState(ReplicationAdmin replicationAdmin,
-      Map<String, ReplicationPeerConfig> peerConfigs) throws Exception {
+  public String dumpPeersState(List<ReplicationPeerDescription> peers) throws Exception {
     Map<String, String> currentConf;
     StringBuilder sb = new StringBuilder();
-    for (Map.Entry<String, ReplicationPeerConfig> peer : peerConfigs.entrySet()) {
-      try {
-        ReplicationPeerConfig peerConfig = peer.getValue();
-        sb.append("Peer: " + peer.getKey() + "\n");
-        sb.append("    " + "State: "
-            + (replicationAdmin.getPeerState(peer.getKey()) ? "ENABLED" : "DISABLED") + "\n");
-        sb.append("    " + "Cluster Name: " + peerConfig.getClusterKey() + "\n");
-        sb.append("    " + "Replication Endpoint: " + peerConfig.getReplicationEndpointImpl() + "\n");
-        currentConf = peerConfig.getConfiguration();
-        // Only show when we have a custom configuration for the peer
-        if (currentConf.size() > 1) {
-          sb.append("    " + "Peer Configuration: " + currentConf + "\n");
-        }
-        sb.append("    " + "Peer Table CFs: " + peerConfig.getTableCFsMap() + "\n");
-        sb.append("    " + "Peer Namespaces: " + peerConfig.getNamespaces() + "\n");
-      } catch (ReplicationException re) {
-        sb.append("Got an exception while invoking ReplicationAdmin: " + re + "\n");
+    for (ReplicationPeerDescription peer : peers) {
+      ReplicationPeerConfig peerConfig = peer.getPeerConfig();
+      sb.append("Peer: " + peer.getPeerId() + "\n");
+      sb.append("    " + "State: " + (peer.isEnabled() ? "ENABLED" : "DISABLED") + "\n");
+      sb.append("    " + "Cluster Name: " + peerConfig.getClusterKey() + "\n");
+      sb.append("    " + "Replication Endpoint: " + peerConfig.getReplicationEndpointImpl() + "\n");
+      currentConf = peerConfig.getConfiguration();
+      // Only show when we have a custom configuration for the peer
+      if (currentConf.size() > 1) {
+        sb.append("    " + "Peer Configuration: " + currentConf + "\n");
       }
+      sb.append("    " + "Peer Table CFs: " + peerConfig.getTableCFsMap() + "\n");
+      sb.append("    " + "Peer Namespaces: " + peerConfig.getNamespaces() + "\n");
     }
     return sb.toString();
   }

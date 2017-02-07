@@ -113,7 +113,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
     zkw1 = new ZooKeeperWatcher(conf, "cluster1", null, true);
-    replicationAdmin = new ReplicationAdmin(conf);
+    admin = TEST_UTIL.getAdmin();
 
     // Base conf2 on conf1 so it gets the right zk cluster.
     conf1 = HBaseConfiguration.create(conf);
@@ -136,7 +136,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(TEST_UTIL1.getClusterKey());
-    replicationAdmin.addPeer("2", rpc, null);
+    admin.addReplicationPeer("2", rpc);
 
     HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor desc = new HColumnDescriptor(fam);

@@ -3177,6 +3177,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.preGetReplicationPeerConfig(peerId);
     }
     final ReplicationPeerConfig peerConfig = this.replicationManager.getPeerConfig(peerId);
+    LOG.info(getClientIdAuditPrefix() + " get replication peer config, id=" + peerId + ", config="
+        + peerConfig);
     if (cpHost != null) {
       cpHost.postGetReplicationPeerConfig(peerId);
     }

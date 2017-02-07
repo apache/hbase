@@ -20,6 +20,7 @@
 include Java
 
 java_import org.apache.hadoop.hbase.client.replication.ReplicationAdmin
+java_import org.apache.hadoop.hbase.client.replication.ReplicationSerDeHelper
 java_import org.apache.hadoop.hbase.replication.ReplicationPeerConfig
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.zookeeper.ZKConfig
@@ -34,6 +35,7 @@ module Hbase
     def initialize(configuration)
       @replication_admin = ReplicationAdmin.new(configuration)
       @configuration = configuration
+      @admin = ConnectionFactory.createConnection(configuration).getAdmin
     end
 
     #----------------------------------------------------------------------------------------------
@@ -100,7 +102,7 @@ module Hbase
           }
           replication_peer_config.set_table_cfs_map(map)
         end
-        @replication_admin.add_peer(id, replication_peer_config)
+        @admin.addReplicationPeer(id, replication_peer_config)
       else
         raise(ArgumentError, "args must be a Hash")
       end
@@ -109,46 +111,40 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Remove a peer cluster, stops the replication
     def remove_peer(id)
-      @replication_admin.removePeer(id)
+      @admin.removeReplicationPeer(id)
     end
-
 
     #---------------------------------------------------------------------------------------------
     # Show replcated tables/column families, and their ReplicationType
     def list_replicated_tables(regex = ".*")
       pattern = java.util.regex.Pattern.compile(regex)
-      list = @replication_admin.listReplicated()
-      list.select {|s| pattern.match(s.get(ReplicationAdmin::TNAME))}
+      list = @admin.listReplicatedTableCFs()
+      list.select {|t| pattern.match(t.getTable().getNameAsString())}
     end
 
     #----------------------------------------------------------------------------------------------
     # List all peer clusters
     def list_peers
-      @replication_admin.listPeerConfigs
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Get peer cluster state
-    def get_peer_state(id)
-      @replication_admin.getPeerState(id) ? "ENABLED" : "DISABLED"
+      @admin.listReplicationPeers
     end
 
     #----------------------------------------------------------------------------------------------
     # Restart the replication stream to the specified peer
     def enable_peer(id)
-      @replication_admin.enablePeer(id)
+      @admin.enableReplicationPeer(id)
     end
 
     #----------------------------------------------------------------------------------------------
     # Stop the replication stream to the specified peer
     def disable_peer(id)
-      @replication_admin.disablePeer(id)
+      @admin.disableReplicationPeer(id)
     end
 
     #----------------------------------------------------------------------------------------------
     # Show the current tableCFs config for the specified peer
     def show_peer_tableCFs(id)
-      @replication_admin.getPeerTableCFs(id)
+      rpc = @admin.getReplicationPeerConfig(id)
+      ReplicationSerDeHelper.convertToString(rpc.getTableCFsMap())
     end
 
     #----------------------------------------------------------------------------------------------
@@ -160,8 +156,12 @@ module Hbase
         tableCFs.each{|key, val|
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
         }
+        rpc = get_peer_config(id)
+        unless rpc.nil?
+          rpc.setTableCFsMap(map)
+          @admin.updateReplicationPeerConfig(id, rpc)
+        end
       end
-      @replication_admin.setPeerTableCFs(id, map)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ module Hbase
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
         }
       end
-      @replication_admin.appendPeerTableCFs(id, map)
+      @admin.appendReplicationPeerTableCFs(id, map)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ module Hbase
           map.put(org.apache.hadoop.hbase.TableName.valueOf(key), val)
         }
       end
-      @replication_admin.removePeerTableCFs(id, map)
+      @admin.removeReplicationPeerTableCFs(id, map)
     end
 
     # Set new namespaces config for the specified peer
@@ -200,7 +200,7 @@ module Hbase
         rpc = get_peer_config(id)
         unless rpc.nil?
           rpc.setNamespaces(ns_set)
-          @replication_admin.updatePeerConfig(id, rpc)
+          @admin.updateReplicationPeerConfig(id, rpc)
         end
       end
     end
@@ -218,7 +218,7 @@ module Hbase
             ns_set.add(n)
           end
           rpc.setNamespaces(ns_set)
-          @replication_admin.updatePeerConfig(id, rpc)
+          @admin.updateReplicationPeerConfig(id, rpc)
         end
       end
     end
@@ -235,7 +235,7 @@ module Hbase
             end
           end
           rpc.setNamespaces(ns_set)
-          @replication_admin.updatePeerConfig(id, rpc)
+          @admin.updateReplicationPeerConfig(id, rpc)
         end
       end
     end
@@ -257,7 +257,7 @@ module Hbase
       rpc = get_peer_config(id)
       unless rpc.nil?
         rpc.setBandwidth(bandwidth)
-        @replication_admin.updatePeerConfig(id, rpc)
+        @admin.updateReplicationPeerConfig(id, rpc)
       end
     end
 
@@ -265,26 +265,27 @@ module Hbase
     # Enables a table's replication switch
     def enable_tablerep(table_name)
       tableName = TableName.valueOf(table_name)
-      @replication_admin.enableTableRep(tableName)
+      @admin.enableTableReplication(tableName)
     end
 
     #----------------------------------------------------------------------------------------------
     # Disables a table's replication switch
     def disable_tablerep(table_name)
       tableName = TableName.valueOf(table_name)
-      @replication_admin.disableTableRep(tableName)
+      @admin.disableTableReplication(tableName)
     end
 
     def list_peer_configs
-      @replication_admin.list_peer_configs
+      map = java.util.HashMap.new
+      peers = @admin.listReplicationPeers
+      peers.each do |peer|
+        map.put(peer.getPeerId, peer.getPeerConfig)
+      end
+      return map
     end
 
     def get_peer_config(id)
-      @replication_admin.get_peer_config(id)
-    end
-
-    def peer_added(id)
-      @replication_admin.peer_added(id)
+      @admin.getReplicationPeerConfig(id)
     end
 
     def update_peer_config(id, args={})
@@ -306,7 +307,7 @@ module Hbase
         }
       end
 
-      @replication_admin.update_peer_config(id, replication_peer_config)
+      @admin.updateReplicationPeerConfig(id, replication_peer_config)
     end
   end
 end

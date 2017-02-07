@@ -89,7 +89,7 @@ public class TestVisibilityLabelsReplication {
   protected static Configuration conf;
   protected static Configuration conf1;
   protected static TableName TABLE_NAME = TableName.valueOf("TABLE_NAME");
-  protected static ReplicationAdmin replicationAdmin;
+  protected static Admin admin;
   public static final String TOPSECRET = "topsecret";
   public static final String PUBLIC = "public";
   public static final String PRIVATE = "private";
@@ -161,7 +161,7 @@ public class TestVisibilityLabelsReplication {
     TEST_UTIL.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = TEST_UTIL.getZkCluster();
     zkw1 = new ZooKeeperWatcher(conf, "cluster1", null, true);
-    replicationAdmin = new ReplicationAdmin(conf);
+    admin = TEST_UTIL.getAdmin();
 
     // Base conf2 on conf1 so it gets the right zk cluster.
     conf1 = HBaseConfiguration.create(conf);
@@ -185,7 +185,7 @@ public class TestVisibilityLabelsReplication {
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(TEST_UTIL1.getClusterKey());
-    replicationAdmin.addPeer("2", rpc, null);
+    admin.addReplicationPeer("2", rpc);
 
     Admin hBaseAdmin = TEST_UTIL.getAdmin();
     HTableDescriptor table = new HTableDescriptor(TABLE_NAME);

@@ -514,51 +514,34 @@ public class TestMasterReplication {
 
   private void addPeer(String id, int masterClusterNumber,
       int slaveClusterNumber) throws Exception {
-    ReplicationAdmin replicationAdmin = null;
-    try {
-      replicationAdmin = new ReplicationAdmin(
-          configurations[masterClusterNumber]);
-      ReplicationPeerConfig rpc = new ReplicationPeerConfig();
-      rpc.setClusterKey(utilities[slaveClusterNumber].getClusterKey());
-      replicationAdmin.addPeer(id, rpc, null);
-    } finally {
-      close(replicationAdmin);
+    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
+        .getAdmin()) {
+      admin.addReplicationPeer(id,
+        new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey()));
     }
   }
 
   private void addPeer(String id, int masterClusterNumber, int slaveClusterNumber, String tableCfs)
       throws Exception {
-    ReplicationAdmin replicationAdmin = null;
-    try {
-      replicationAdmin = new ReplicationAdmin(configurations[masterClusterNumber]);
-      ReplicationPeerConfig replicationPeerConfig = new ReplicationPeerConfig();
-      replicationPeerConfig.setClusterKey(utilities[slaveClusterNumber].getClusterKey());
-      replicationAdmin.addPeer(id, replicationPeerConfig,
-        ReplicationSerDeHelper.parseTableCFsFromConfig(tableCfs));
-    } finally {
-      close(replicationAdmin);
+    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
+        .getAdmin()) {
+      admin.addReplicationPeer(id,
+        new ReplicationPeerConfig().setClusterKey(utilities[slaveClusterNumber].getClusterKey())
+            .setTableCFsMap(ReplicationSerDeHelper.parseTableCFsFromConfig(tableCfs)));
     }
   }
 
   private void disablePeer(String id, int masterClusterNumber) throws Exception {
-    ReplicationAdmin replicationAdmin = null;
-    try {
-      replicationAdmin = new ReplicationAdmin(
-          configurations[masterClusterNumber]);
-      replicationAdmin.disablePeer(id);
-    } finally {
-      close(replicationAdmin);
+    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
+        .getAdmin()) {
+      admin.disableReplicationPeer(id);
     }
   }
 
   private void enablePeer(String id, int masterClusterNumber) throws Exception {
-    ReplicationAdmin replicationAdmin = null;
-    try {
-      replicationAdmin = new ReplicationAdmin(
-          configurations[masterClusterNumber]);
-      replicationAdmin.enablePeer(id);
-    } finally {
-      close(replicationAdmin);
+    try (Admin admin = ConnectionFactory.createConnection(configurations[masterClusterNumber])
+        .getAdmin()) {
+      admin.enableReplicationPeer(id);
     }
   }
 

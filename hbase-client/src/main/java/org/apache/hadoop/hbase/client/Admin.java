@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
@@ -1904,6 +1906,30 @@ public interface Admin extends Abortable, Closeable {
    */
   default void updateReplicationPeerConfig(final String peerId,
       final ReplicationPeerConfig peerConfig) throws IOException {
+  }
+
+  /**
+   * Append the replicable table-cf config of the specified peer
+   * @param id a short that identifies the cluster
+   * @param tableCfs A map from tableName to column family names
+   * @throws ReplicationException
+   * @throws IOException
+   */
+  default void appendReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException,
+      IOException {
+  }
+
+  /**
+   * Remove some table-cfs from config of the specified peer
+   * @param id a short name that identifies the cluster
+   * @param tableCfs A map from tableName to column family names
+   * @throws ReplicationException
+   * @throws IOException
+   */
+  default void removeReplicationPeerTableCFs(String id,
+      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException,
+      IOException {
   }
 
   /**
