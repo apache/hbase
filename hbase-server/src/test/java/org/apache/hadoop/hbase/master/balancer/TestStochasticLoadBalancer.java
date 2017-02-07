@@ -96,6 +96,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
   @Test
   public void testNeedBalance() {
+    float minCost = conf.getFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.05f);
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
     loadBalancer.setConf(conf);
     for (int[] mockCluster : clusterStateMocks) {
@@ -104,6 +105,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       assertNull(plans);
     }
     // reset config
+    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", minCost);
     loadBalancer.setConf(conf);
   }
 
