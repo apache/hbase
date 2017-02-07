@@ -85,7 +85,6 @@ public class TestRegionRebalancing {
   public void before() throws Exception {
     UTIL.getConfiguration().set("hbase.master.loadbalancer.class", this.balancerName);
     // set minCostNeedBalance to 0, make sure balancer run
-    UTIL.getConfiguration().setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.0f);
     UTIL.startMiniCluster(1);
     this.desc = new HTableDescriptor(TableName.valueOf("test"));
     this.desc.addFamily(new HColumnDescriptor(FAMILY_NAME));

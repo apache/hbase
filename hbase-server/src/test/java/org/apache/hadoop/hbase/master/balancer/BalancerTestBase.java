@@ -92,7 +92,6 @@ public class BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 0.0f);
     loadBalancer = new StochasticLoadBalancer();
     loadBalancer.setConf(conf);
   }
@@ -150,6 +149,9 @@ public class BalancerTestBase {
       new int[]{0, 0, 0, 7},
       // 5 node
       new int[]{1, 1, 1, 1, 4},
+      // 6 nodes
+      new int[]{1500, 500, 500, 500, 10, 0},
+      new int[]{1500, 500, 500, 500, 500, 0},
       // more nodes
       new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
       new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 10},

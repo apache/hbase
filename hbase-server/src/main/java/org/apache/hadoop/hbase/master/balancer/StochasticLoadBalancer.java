@@ -283,6 +283,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (multiplier <= 0) {
         continue;
       }
+      if (!c.isNeeded()) {
+        LOG.debug(c.getClass().getName() + " indicated that its cost should not be considered");
+        continue;
+      }
       sumMultiplier += multiplier;
       total += c.cost() * multiplier;
     }
@@ -925,9 +929,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     protected Cluster cluster;
 
     CostFunction(Configuration c) {
-
     }
 
+    boolean isNeeded() {
+      return true;
+    }
     float getMultiplier() {
       return multiplier;
     }
@@ -1427,6 +1433,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       // compute numReplicas from the sorted array
       return costPerGroup(primariesOfRegions);
+    }
+
+    @Override
+    boolean isNeeded() {
+      return cluster.hasRegionReplicas;
     }
 
     @Override
