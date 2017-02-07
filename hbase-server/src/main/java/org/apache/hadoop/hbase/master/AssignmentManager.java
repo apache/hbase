@@ -1096,10 +1096,19 @@ public class AssignmentManager extends ZooKeeperListener {
               + regionStates.getRegionState(encodedName));
 
             if (regionState != null) {
-              // Close it without updating the internal region states,
-              // so as not to create double assignments in unlucky scenarios
-              // mentioned in OpenRegionHandler#process
-              unassign(regionState.getRegion(), null, -1, null, false, sn);
+              if(regionState.isOpened() && regionState.getServerName().equals(sn)) {
+                //if this region was opened before on this rs, we don't have to unassign it. It won't cause
+                //double assign. One possible scenario of what happened is HBASE-17275
+                failedOpenTracker.remove(encodedName); // reset the count, if any
+                new OpenedRegionHandler(
+                    server, this, regionState.getRegion(), coordination, ord).process();
+                updateOpenedRegionHandlerTracker(regionState.getRegion());
+              } else {
+                // Close it without updating the internal region states,
+                // so as not to create double assignments in unlucky scenarios
+                // mentioned in OpenRegionHandler#process
+                unassign(regionState.getRegion(), null, -1, null, false, sn);
+              }
             }
             return;
           }
