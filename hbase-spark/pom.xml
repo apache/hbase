@@ -40,7 +40,6 @@
         <spark.version>1.6.0</spark.version>
         <scala.version>2.10.4</scala.version>
         <scala.binary.version>2.10</scala.binary.version>
-        <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <top.dir>${project.basedir}/..</top.dir>
         <avro.version>1.7.6</avro.version>
         <avro.mapred.classifier></avro.mapred.classifier>
@@ -611,17 +610,6 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
-                            <skipTests>true</skipTests>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>integration-test</id>
-                        <phase>integration-test</phase>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                        <configuration>
-                            <tagsToExclude>Integration-Test</tagsToExclude>
                             <argLine>
                                 -Xmx1536m -XX:ReservedCodeCacheSize=512m
                             </argLine>
@@ -696,6 +684,7 @@
             <properties>
                 <surefire.skipFirstPart>true</surefire.skipFirstPart>
                 <surefire.skipSecondPart>true</surefire.skipSecondPart>
+                <skipTests>true</skipTests>
             </properties>
         </profile>
         <profile>
