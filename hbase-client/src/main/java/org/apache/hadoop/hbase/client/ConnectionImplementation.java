@@ -787,7 +787,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
     Scan s = new Scan();
     s.setReversed(true);
-    s.setStartRow(metaKey);
+    s.withStartRow(metaKey);
     s.addFamily(HConstants.CATALOG_FAMILY);
     s.setOneRowLimit();
     if (this.useMetaReplicas) {

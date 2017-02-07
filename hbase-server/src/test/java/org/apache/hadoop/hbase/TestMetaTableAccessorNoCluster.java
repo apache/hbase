@@ -162,14 +162,13 @@ public class TestMetaTableAccessorNoCluster {
           .thenThrow(new ServiceException("Server not running (1 of 3)"))
           .thenThrow(new ServiceException("Server not running (2 of 3)"))
           .thenThrow(new ServiceException("Server not running (3 of 3)"))
-          .thenReturn(ScanResponse.newBuilder().setScannerId(1234567890L).build())
           .thenAnswer(new Answer<ScanResponse>() {
             public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
               ((HBaseRpcController) invocation.getArguments()[0]).setCellScanner(CellUtil
                   .createCellScanner(cellScannables));
-              return builder.setScannerId(1234567890L).build();
+              return builder.setScannerId(1234567890L).setMoreResults(false).build();
             }
-          }).thenReturn(ScanResponse.newBuilder().setMoreResults(false).build());
+          });
       // Associate a spied-upon Connection with UTIL.getConfiguration.  Need
       // to shove this in here first so it gets picked up all over; e.g. by
       // HTable.
@@ -198,8 +197,8 @@ public class TestMetaTableAccessorNoCluster {
       assertTrue(hris.firstEntry().getKey().equals(HRegionInfo.FIRST_META_REGIONINFO));
       assertTrue(Bytes.equals(rowToVerify, hris.firstEntry().getValue().getRow()));
       // Finally verify that scan was called four times -- three times
-      // with exception and then on 4th, 5th and 6th attempt we succeed
-      Mockito.verify(implementation, Mockito.times(6)).
+      // with exception and then on 4th attempt we succeed
+      Mockito.verify(implementation, Mockito.times(4)).
         scan((RpcController)Mockito.any(), (ScanRequest)Mockito.any());
     } finally {
       if (connection != null && !connection.isClosed()) connection.close();

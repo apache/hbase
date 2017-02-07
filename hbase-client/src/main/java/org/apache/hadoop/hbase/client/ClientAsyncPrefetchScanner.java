@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.Threads;
  * This is defined in the method {@link ClientAsyncPrefetchScanner#prefetchCondition()}.
  */
 @InterfaceAudience.Private
-public class ClientAsyncPrefetchScanner extends ClientScanner {
+public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
 
   private static final int ESTIMATED_SINGLE_RESULT_SIZE = 1024;
   private static final int DEFAULT_QUEUE_CAPACITY = 1024;

@@ -175,7 +175,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   @Test
   public void testReversedScanWithStartKeyAndStopKey() throws Exception {
-    testReversedScan(998, true, 1, false); // from first region to first region
+    testReversedScan(998, true, 1, false); // from last region to first region
     testReversedScan(543, true, 321, true);
     testReversedScan(654, true, 432, false);
     testReversedScan(765, false, 543, true);

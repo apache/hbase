@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
+import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForScan;
+
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
 
 /**
  * ClientSimpleScanner implements a sync scanner behaviour.
@@ -41,12 +45,22 @@ public class ClientSimpleScanner extends ClientScanner {
   }
 
   @Override
-  protected void initCache() {
-    initSyncCache();
+  protected boolean setNewStartKey() {
+    if (noMoreResultsForScan(scan, currentRegion)) {
+      return false;
+    }
+    scan.withStartRow(currentRegion.getEndKey(), true);
+    return true;
   }
 
   @Override
-  public Result next() throws IOException {
-    return nextWithSyncCache();
+  protected ScannerCallable createScannerCallable() {
+    if (!scan.includeStartRow() && !isEmptyStartRow(scan.getStartRow())) {
+      // we have not implemented locate to next row for sync client yet, so here we change the
+      // inclusive of start row to true.
+      scan.withStartRow(createClosestRowAfter(scan.getStartRow()), true);
+    }
+    return new ScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
+        this.rpcControllerFactory);
   }
 }

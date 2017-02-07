@@ -248,12 +248,9 @@ public final class ConnectionUtils {
   }
 
   /**
-   * Create the closest row before the specified row
-   * @deprecated in fact, we do not know the closest row before the given row, the result is only a
-   *             row very close to the current row. Avoid using this method in the future.
+   * Create a row before the specified row and very close to the specified row.
    */
-  @Deprecated
-  static byte[] createClosestRowBefore(byte[] row) {
+  static byte[] createCloseRowBefore(byte[] row) {
     if (row.length == 0) {
       return MAX_BYTE_ARRAY;
     }
