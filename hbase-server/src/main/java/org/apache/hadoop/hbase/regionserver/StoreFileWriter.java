@@ -87,14 +87,15 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * @param maxKeys the expected maximum number of keys to be added. Was used
    *        for Bloom filter size in {@link HFile} format version 1.
    * @param fileContext - The HFile context
+   * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
    * @throws IOException problem writing to FS
    */
   StoreFileWriter(FileSystem fs, Path path, final Configuration conf, CacheConfig cacheConf,
       final CellComparator comparator, BloomType bloomType, long maxKeys,
-      InetSocketAddress[] favoredNodes, HFileContext fileContext)
+      InetSocketAddress[] favoredNodes, HFileContext fileContext, boolean shouldDropCacheBehind)
           throws IOException {
       this(fs, path, conf, cacheConf, comparator, bloomType, maxKeys, favoredNodes, fileContext,
-          null);
+          shouldDropCacheBehind, null);
     }
 
     /**
@@ -108,7 +109,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
      *        for Bloom filter size in {@link HFile} format version 1.
      * @param favoredNodes
      * @param fileContext - The HFile context
-   * @param trt Ready-made timetracker to use.
+     * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
+     * @param trt Ready-made timetracker to use.
      * @throws IOException problem writing to FS
      */
     private StoreFileWriter(FileSystem fs, Path path,
@@ -116,7 +118,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         CacheConfig cacheConf,
         final CellComparator comparator, BloomType bloomType, long maxKeys,
         InetSocketAddress[] favoredNodes, HFileContext fileContext,
-        final TimeRangeTracker trt)
+        boolean shouldDropCacheBehind, final TimeRangeTracker trt)
             throws IOException {
     // If passed a TimeRangeTracker, use it. Set timeRangeTrackerSet so we don't destroy it.
     // TODO: put the state of the TRT on the TRT; i.e. make a read-only version (TimeRange) when
@@ -129,6 +131,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         .withComparator(comparator)
         .withFavoredNodes(favoredNodes)
         .withFileContext(fileContext)
+        .withShouldDropCacheBehind(shouldDropCacheBehind)
         .create();
 
     generalBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(
@@ -371,6 +374,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     private InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
     private TimeRangeTracker trt;
+    private boolean shouldDropCacheBehind;
 
     public Builder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs) {
@@ -449,10 +453,11 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       return this;
     }
 
-    public Builder withShouldDropCacheBehind(boolean shouldDropCacheBehind/*NOT USED!!*/) {
-      // TODO: HAS NO EFFECT!!! FIX!!
+    public Builder withShouldDropCacheBehind(boolean shouldDropCacheBehind) {
+      this.shouldDropCacheBehind = shouldDropCacheBehind;
       return this;
     }
+
     /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
@@ -490,7 +495,8 @@ public class StoreFileWriter implements CellSink, ShipperListener {
         comparator = CellComparator.COMPARATOR;
       }
       return new StoreFileWriter(fs, filePath,
-          conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext, trt);
+          conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext,
+          shouldDropCacheBehind, trt);
     }
   }
 }
