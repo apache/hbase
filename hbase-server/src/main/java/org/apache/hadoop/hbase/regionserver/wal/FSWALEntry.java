@@ -18,14 +18,17 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 
-import com.google.common.collect.Sets;
+import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
+import static java.util.stream.Collectors.toCollection;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -64,21 +67,23 @@ class FSWALEntry extends Entry {
     this.txid = txid;
     if (inMemstore) {
       // construct familyNames here to reduce the work of log sinker.
-      ArrayList<Cell> cells = this.getEdit().getCells();
-      if (CollectionUtils.isEmpty(cells)) {
-        this.familyNames = Collections.<byte[]> emptySet();
-      } else {
-        Set<byte[]> familySet = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
-        for (Cell cell : cells) {
-          if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
-            // TODO: Avoid this clone?
-            familySet.add(CellUtil.cloneFamily(cell));
-          }
-        }
-        this.familyNames = Collections.unmodifiableSet(familySet);
-      }
+      this.familyNames = collectFamilies(edit.getCells());
     } else {
       this.familyNames = Collections.<byte[]> emptySet();
+    }
+  }
+
+  @VisibleForTesting
+  static Set<byte[]> collectFamilies(List<Cell> cells) {
+    if (CollectionUtils.isEmpty(cells)) {
+      return Collections.<byte[]> emptySet();
+    } else {
+      return cells.stream()
+           .filter(v -> !CellUtil.matchingFamily(v, WALEdit.METAFAMILY))
+           .collect(toCollection(() -> new TreeSet<>(CellComparator::compareFamilies)))
+           .stream()
+           .map(CellUtil::cloneFamily)
+           .collect(toCollection(() -> new TreeSet<>(Bytes.BYTES_COMPARATOR)));
     }
   }
 
