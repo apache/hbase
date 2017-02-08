@@ -618,6 +618,7 @@ public class StoreFile {
     private InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
     private TimeRangeTracker trt;
+    private boolean shouldDropCacheBehind;
 
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs) {
@@ -696,10 +697,11 @@ public class StoreFile {
       return this;
     }
 
-    public WriterBuilder withShouldDropCacheBehind(boolean shouldDropCacheBehind/*NOT USED!!*/) {
-      // TODO: HAS NO EFFECT!!! FIX!!
+    public WriterBuilder withShouldDropCacheBehind(boolean shouldDropCacheBehind) {
+      this.shouldDropCacheBehind = shouldDropCacheBehind;
       return this;
     }
+
     /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
@@ -730,7 +732,8 @@ public class StoreFile {
         comparator = KeyValue.COMPARATOR;
       }
       return new Writer(fs, filePath,
-          conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext, trt);
+          conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext,
+          shouldDropCacheBehind, trt);
     }
   }
 
@@ -829,16 +832,17 @@ public class StoreFile {
      *        for Bloom filter size in {@link HFile} format version 1.
      * @param favoredNodes
      * @param fileContext - The HFile context
+     * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
      * @throws IOException problem writing to FS
      */
     private Writer(FileSystem fs, Path path,
         final Configuration conf,
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys,
-        InetSocketAddress[] favoredNodes, HFileContext fileContext)
+        InetSocketAddress[] favoredNodes, HFileContext fileContext, boolean shouldDropCacheBehind)
             throws IOException {
       this(fs, path, conf, cacheConf, comparator, bloomType, maxKeys, favoredNodes, fileContext,
-          null);
+          shouldDropCacheBehind, null);
     }
 
     /**
@@ -852,7 +856,8 @@ public class StoreFile {
      *        for Bloom filter size in {@link HFile} format version 1.
      * @param favoredNodes
      * @param fileContext - The HFile context
-   * @param trt Ready-made timetracker to use.
+     * @param shouldDropCacheBehind Drop pages written to page cache after writing the store file.
+     * @param trt Ready-made timetracker to use.
      * @throws IOException problem writing to FS
      */
     private Writer(FileSystem fs, Path path,
@@ -860,7 +865,7 @@ public class StoreFile {
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys,
         InetSocketAddress[] favoredNodes, HFileContext fileContext,
-        final TimeRangeTracker trt)
+        boolean shouldDropCacheBehind, final TimeRangeTracker trt)
             throws IOException {
       // If passed a TimeRangeTracker, use it. Set timeRangeTrackerSet so we don't destroy it.
       // TODO: put the state of the TRT on the TRT; i.e. make a read-only version (TimeRange) when
@@ -872,6 +877,7 @@ public class StoreFile {
           .withComparator(comparator)
           .withFavoredNodes(favoredNodes)
           .withFileContext(fileContext)
+          .withShouldDropCacheBehind(shouldDropCacheBehind)
           .create();
 
       this.kvComparator = comparator;
