@@ -22,7 +22,9 @@ import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -35,7 +37,11 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -69,6 +75,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -77,6 +84,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putFromThrift;
@@ -1044,6 +1052,59 @@ public class TestThriftHBaseServiceHandler {
 
   }
 
+  /**
+   * See HBASE-17611
+   *
+   * Latency metrics were capped at ~ 2 seconds due to the use of an int variable to capture the
+   * duration.
+   */
+  @Test
+  public void testMetricsPrecision() throws Exception {
+    byte[] rowkey = Bytes.toBytes("row1");
+    byte[] family = Bytes.toBytes("f");
+    byte[] col = Bytes.toBytes("c");
+    // create a table which will throw exceptions for requests
+    TableName tableName = TableName.valueOf("testMetricsPrecision");
+    HTableDescriptor tableDesc = new HTableDescriptor(tableName);
+    tableDesc.addCoprocessor(DelayingRegionObserver.class.getName());
+    tableDesc.addFamily(new HColumnDescriptor(family));
+
+    Table table = null;
+    try {
+      table = UTIL.createTable(tableDesc, null);
+
+      table.put(new Put(rowkey).addColumn(family, col, Bytes.toBytes("val1")));
+
+      ThriftHBaseServiceHandler hbaseHandler = createHandler();
+      ThriftMetrics metrics = getMetrics(UTIL.getConfiguration());
+      THBaseService.Iface handler =
+          ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
+      ByteBuffer tTableName = wrap(tableName.getName());
+
+      // check metrics latency with a successful get
+      TGet tGet = new TGet(wrap(rowkey));
+      TResult tResult = handler.get(tTableName, tGet);
+
+      List<TColumnValue> expectedColumnValues = Lists.newArrayList(
+          new TColumnValue(wrap(family), wrap(col), wrap(Bytes.toBytes("val1")))
+      );
+      assertArrayEquals(rowkey, tResult.getRow());
+      List<TColumnValue> returnedColumnValues = tResult.getColumnValues();
+      assertTColumnValuesEqual(expectedColumnValues, returnedColumnValues);
+
+      metricsHelper.assertGaugeGt("get_max", 3000L, metrics.getSource());
+    } finally {
+      if (table != null) {
+        try {
+          table.close();
+        } catch (IOException ignored) {
+        }
+        UTIL.deleteTable(tableName);
+      }
+    }
+  }
+
+
   @Test
   public void testAttribute() throws Exception {
     byte[] rowName = "testAttribute".getBytes();
@@ -1263,6 +1324,32 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(2, result.getColumnValuesSize());
     assertTColumnValueEqual(columnValueA, result.getColumnValues().get(0));
     assertTColumnValueEqual(columnValueB, result.getColumnValues().get(1));
+  }
+
+  public static class DelayingRegionObserver extends BaseRegionObserver {
+    private static final Log LOG = LogFactory.getLog(DelayingRegionObserver.class);
+    // sleep time in msec
+    private long delayMillis;
+
+    @Override
+    public void start(CoprocessorEnvironment e) throws IOException {
+      this.delayMillis = e.getConfiguration()
+          .getLong("delayingregionobserver.delay", 3000);
+    }
+
+    @Override
+    public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
+                         List<Cell> results) throws IOException {
+      try {
+        long start = System.currentTimeMillis();
+        TimeUnit.MILLISECONDS.sleep(delayMillis);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Slept for " + (System.currentTimeMillis() - start) + " msec");
+        }
+      } catch (InterruptedException ie) {
+        throw new InterruptedIOException("Interrupted while sleeping");
+      }
+    }
   }
 }
 
