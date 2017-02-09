@@ -2552,6 +2552,39 @@ public class HBaseAdmin implements Admin {
     });
   }
 
+  @Override
+  public boolean setCleanerChoreRunning(final boolean on) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+      @Override
+      public Boolean call(int callTimeout) throws ServiceException {
+        return master.setCleanerChoreRunning(null,
+            RequestConverter.buildSetCleanerChoreRunningRequest(on)).getPrevValue();
+      }
+    });
+  }
+
+  @Override
+  public boolean runCleanerChore() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+      @Override
+      public Boolean call(int callTimeout) throws ServiceException {
+        return master.runCleanerChore(null, RequestConverter.buildCleanerChoreRequest())
+            .getCleanerChoreRan();
+      }
+    });
+  }
+
+  @Override
+  public boolean isCleanerChoreEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+      @Override
+      public Boolean call(int callTimeout) throws ServiceException {
+        return master.isCleanerChoreEnabled(null,
+            RequestConverter.buildIsCleanerChoreEnabledRequest()).getValue();
+      }
+    });
+  }
+
   private boolean isEncodedRegionName(byte[] regionName) throws IOException {
     try {
       HRegionInfo.parseRegionName(regionName);

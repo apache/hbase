@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.cleaner;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +50,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private final Path oldFileDir;
   private final Configuration conf;
   protected List<T> cleanersChain;
+  private AtomicBoolean enabled = new AtomicBoolean(true);
 
   /**
    * @param name name of the chore being run
@@ -119,13 +121,23 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
 
   @Override
   protected void chore() {
+      if (getEnabled()) {
+        runCleaner();
+      } else {
+        LOG.debug("Cleaner disabled! Not cleaning.");
+      }
+  }
+
+  public Boolean runCleaner() {
     try {
       FileStatus[] files = FSUtils.listStatus(this.fs, this.oldFileDir);
       checkAndDeleteEntries(files);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.warn("Error while cleaning the logs", e);
+      return false;
     }
+    return true;
   }
 
   /**
@@ -278,5 +290,16 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         LOG.warn("Stopping", t);
       }
     }
+  }
+
+  /**
+   * @param enabled
+   */
+  public boolean setEnabled(final boolean enabled) {
+    return this.enabled.getAndSet(enabled);
+  }
+
+  public boolean getEnabled() {
+    return this.enabled.get();
   }
 }

@@ -1053,6 +1053,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       catalogJanitorChore.getEnabled() : false;
   }
 
+  boolean isCleanerChoreEnabled() {
+    boolean hfileCleanerFlag = true, logCleanerFlag = true;
+
+    if (hfileCleaner != null) {
+      hfileCleanerFlag = hfileCleaner.getEnabled();
+    }
+
+    if(logCleaner != null) {
+      logCleanerFlag = logCleaner.getEnabled();
+    }
+
+    return (hfileCleanerFlag && logCleanerFlag);
+  }
+
   private void splitMetaLogBeforeAssignment(ServerName currentMetaServer) throws IOException {
     if (RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode()) {
       // In log replay mode, we mark hbase:meta region as recovering in ZK
@@ -2711,6 +2725,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   public HFileCleaner getHFileCleaner() {
     return this.hfileCleaner;
+  }
+
+  public LogCleaner getLogCleaner() {
+    return this.logCleaner;
   }
 
   /**

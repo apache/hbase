@@ -107,6 +107,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCleanerChoreEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCleanerChoreEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsInMaintenanceModeRequest;
@@ -149,11 +151,15 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCleanerChoreResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetCleanerChoreRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetCleanerChoreRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
@@ -650,6 +656,21 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  public SetCleanerChoreRunningResponse setCleanerChoreRunning(RpcController c,
+      SetCleanerChoreRunningRequest req) throws ServiceException {
+    try {
+      master.checkInitialized();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+    boolean prevValue =
+      master.getLogCleaner().getEnabled() && master.getHFileCleaner().getEnabled();
+    master.getLogCleaner().setEnabled(req.getOn());
+    master.getHFileCleaner().setEnabled(req.getOn());
+    return SetCleanerChoreRunningResponse.newBuilder().setPrevValue(prevValue).build();
+  }
+
+  @Override
   public EnableTableResponse enableTable(RpcController controller,
       EnableTableRequest request) throws ServiceException {
     try {
@@ -939,6 +960,13 @@ public class MasterRpcServices extends RSRpcServices
       IsCatalogJanitorEnabledRequest req) throws ServiceException {
     return IsCatalogJanitorEnabledResponse.newBuilder().setValue(
       master.isCatalogJanitorEnabled()).build();
+  }
+
+  @Override
+  public IsCleanerChoreEnabledResponse isCleanerChoreEnabled(RpcController c,
+      IsCleanerChoreEnabledRequest req) throws ServiceException {
+    return IsCleanerChoreEnabledResponse.newBuilder()
+        .setValue(master.isCleanerChoreEnabled()).build();
   }
 
   @Override
@@ -1298,6 +1326,19 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       return ResponseConverter.buildRunCatalogScanResponse(master.catalogJanitorChore.scan());
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public RunCleanerChoreResponse runCleanerChore(RpcController c, RunCleanerChoreRequest req)
+      throws ServiceException {
+    try {
+      master.checkInitialized();
+      Boolean result = master.getHFileCleaner().runCleaner()
+          && master.getLogCleaner().runCleaner();
+      return ResponseConverter.buildRunCleanerChoreResponse(result);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

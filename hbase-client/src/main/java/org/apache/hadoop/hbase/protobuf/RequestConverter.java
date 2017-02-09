@@ -89,12 +89,14 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableReque
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetCleanerChoreRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCleanerChoreEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
@@ -104,6 +106,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCleanerChoreRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
@@ -1483,6 +1486,42 @@ public final class RequestConverter {
    */
   public static IsCatalogJanitorEnabledRequest buildIsCatalogJanitorEnabledRequest() {
     return IS_CATALOG_JANITOR_ENABLED_REQUEST;
+  }
+
+  /**
+   * @see {@link #buildCleanerChoreRequest}
+   */
+  private static final RunCleanerChoreRequest CLEANER_CHORE_REQUEST = RunCleanerChoreRequest
+      .newBuilder().build();
+
+  /**
+   * Creates a request for running cleaner chore
+   * @return A {@link RunCleanerChoreRequest}
+   */
+  public static RunCleanerChoreRequest buildCleanerChoreRequest() {
+    return CLEANER_CHORE_REQUEST;
+  }
+
+  /**
+   * Creates a request for enabling/disabling the cleaner chore
+   * @return A {@link SetCleanerChoreRunningRequest}
+   */
+  public static SetCleanerChoreRunningRequest buildSetCleanerChoreRunningRequest(boolean on) {
+    return SetCleanerChoreRunningRequest.newBuilder().setOn(on).build();
+  }
+
+  /**
+   * @see {@link #buildIsCleanerChoreEnabledRequest()}
+   */
+  private static final IsCleanerChoreEnabledRequest IS_CLEANER_CHORE_ENABLED_REQUEST =
+    IsCleanerChoreEnabledRequest.newBuilder().build();
+
+  /**
+   * Creates a request for querying the master whether the cleaner chore is enabled
+   * @return A {@link IsCleanerChoreEnabledRequest}
+   */
+  public static IsCleanerChoreEnabledRequest buildIsCleanerChoreEnabledRequest() {
+    return IS_CLEANER_CHORE_ENABLED_REQUEST;
   }
 
   /**
