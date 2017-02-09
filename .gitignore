@@ -22,4 +22,5 @@ buck-out
 *.swp
 
 # Thirdparty dirs
-third-party/googletest*
+third-party/*
+/gcc-debug/

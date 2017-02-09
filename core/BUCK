@@ -22,6 +22,7 @@ cxx_library(
         "client.h",
         "cell.h",
         "hbase_macros.h",
+        "keyvalue-codec.h",
         "region-location.h",
         "location-cache.h",
         # TODO: move this out of exported
@@ -40,6 +41,7 @@ cxx_library(
     srcs=[
         "cell.cc",
         "client.cc",
+        "keyvalue-codec.cc",
         "location-cache.cc",
         "meta-utils.cc",
         "get.cc",
