@@ -269,7 +269,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
   public ServerName getServerHoldingRegion(TableName tn, byte[] regionName) throws IOException {
     HRegionLocation regionLoc = null;
     try (RegionLocator locator = connection.getRegionLocator(tn)) {
-      regionLoc = locator.getRegionLocation(regionName);
+      regionLoc = locator.getRegionLocation(regionName, true);
     }
     if (regionLoc == null) {
       LOG.warn("Cannot find region server holding region " + Bytes.toString(regionName) +
