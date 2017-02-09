@@ -1169,8 +1169,13 @@ public class HStore implements Store {
     List<KeyValueScanner> memStoreScanners;
     this.lock.readLock().lock();
     try {
-      storeFilesToScan =
-          this.storeEngine.getStoreFileManager().getFilesForScanOrGet(isGet, startRow, stopRow);
+      // As in branch-1 we need to support JDK7 so we can not add default methods to the Store
+      // interface, but add new methods directly in interface will break the compatibility, so here
+      // we always pass true to StoreFileManager to include more files. And for now, there is no
+      // performance issue as the DefaultStoreFileManager just returns all storefile, and
+      // StripeStoreFileManager just ignores the inclusive hints.
+      storeFilesToScan = this.storeEngine.getStoreFileManager().getFilesForScanOrGet(startRow, true,
+        stopRow, true);
       memStoreScanners = this.memstore.getScanners(readPt);
     } finally {
       this.lock.readLock().unlock();

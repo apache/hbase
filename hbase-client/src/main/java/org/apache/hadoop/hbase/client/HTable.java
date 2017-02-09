@@ -799,7 +799,7 @@ public class HTable implements HTableInterface, RegionLocator {
         this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
         pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
     } else {
-      return new ClientScanner(getConfiguration(), scan, getName(), this.connection,
+      return new ClientSimpleScanner(getConfiguration(), scan, getName(), this.connection,
           this.rpcCallerFactory, this.rpcControllerFactory,
           pool, connConfiguration.getReplicaCallTimeoutMicroSecondScan());
     }

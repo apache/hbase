@@ -21,10 +21,13 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * ReversibleRegionScannerImpl extends from RegionScannerImpl, and is used to
@@ -55,11 +58,15 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
     }
   }
 
-  @Override
-  protected boolean isStopRow(byte[] currentRow, int offset, short length) {
-    return currentRow == null
-        || (super.stopRow != null && region.getComparator().compareRows(
-            stopRow, 0, stopRow.length, currentRow, offset, length) >= super.isScan);
+  protected boolean shouldStop(Cell currentRowCell) {
+    if (currentRowCell == null) {
+      return true;
+    }
+    if (stopRow == null || Bytes.equals(stopRow, HConstants.EMPTY_START_ROW)) {
+      return false;
+    }
+    int c = region.getComparator().compareRows(currentRowCell, stopRow, 0, stopRow.length);
+    return c < 0 || (c == 0 && !includeStopRow);
   }
 
   @Override

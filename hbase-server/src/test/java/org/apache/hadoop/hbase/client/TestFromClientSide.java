@@ -153,6 +153,7 @@ public class TestFromClientSide {
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         MultiRowMutationEndpoint.class.getName());
     conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
+    conf.setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 6000000);
     // We need more than one region server in this test
     TEST_UTIL.startMiniCluster(SLAVES);
   }

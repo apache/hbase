@@ -116,7 +116,8 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
   private LegacyScanQueryMatcher(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
       boolean hasNullColumn, DeleteTracker deletes, ScanType scanType, long readPointToUse,
       long earliestPutTs, long oldestUnexpiredTS, long now) {
-    super(scan.getStartRow(), scanInfo, columns, oldestUnexpiredTS, now);
+    super(createStartKeyFromRow(scan.getStartRow(), scanInfo), scanInfo, columns, oldestUnexpiredTS,
+        now);
     TimeRange timeRange = scan.getColumnFamilyTimeRange().get(scanInfo.getFamily());
     if (timeRange == null) {
       this.tr = scan.getTimeRange();

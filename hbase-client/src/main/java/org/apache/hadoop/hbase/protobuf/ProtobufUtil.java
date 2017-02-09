@@ -1047,6 +1047,12 @@ public final class ProtobufUtil {
     if (mvccReadPoint > 0) {
       scanBuilder.setMvccReadPoint(mvccReadPoint);
     }
+    if (!scan.includeStartRow()) {
+      scanBuilder.setIncludeStartRow(false);
+    }
+    if (scan.includeStopRow()) {
+      scanBuilder.setIncludeStopRow(true);
+    }
     if (scan.getReadType() != Scan.ReadType.DEFAULT) {
       scanBuilder.setReadType(toReadType(scan.getReadType()));
     }
@@ -1062,15 +1068,24 @@ public final class ProtobufUtil {
    */
   public static Scan toScan(
       final ClientProtos.Scan proto) throws IOException {
-    byte [] startRow = HConstants.EMPTY_START_ROW;
-    byte [] stopRow  = HConstants.EMPTY_END_ROW;
+    byte[] startRow = HConstants.EMPTY_START_ROW;
+    byte[] stopRow = HConstants.EMPTY_END_ROW;
+    boolean includeStartRow = true;
+    boolean includeStopRow = false;
     if (proto.hasStartRow()) {
       startRow = proto.getStartRow().toByteArray();
     }
     if (proto.hasStopRow()) {
       stopRow = proto.getStopRow().toByteArray();
     }
-    Scan scan = new Scan(startRow, stopRow);
+    if (proto.hasIncludeStartRow()) {
+      includeStartRow = proto.getIncludeStartRow();
+    }
+    if (proto.hasIncludeStopRow()) {
+      includeStopRow = proto.getIncludeStopRow();
+    }
+    Scan scan =
+        new Scan().withStartRow(startRow, includeStartRow).withStopRow(stopRow, includeStopRow);
     if (proto.hasCacheBlocks()) {
       scan.setCacheBlocks(proto.getCacheBlocks());
     }

@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowBefore;
-
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -120,10 +117,6 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
   public MoreResults moreResultsForScan() {
     return currentScannerCallable.moreResultsForScan();
-  }
-
-  public boolean isOpenScanner() {
-    return currentScannerCallable.isOpenScanner();
   }
 
   @Override
@@ -322,24 +315,17 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
    * @param callable The callable to set the start row on
    */
   private void setStartRowForReplicaCallable(ScannerCallable callable) {
-    if (this.lastResult == null || callable == null) return;
-
-    if (this.lastResult.isPartial()) {
-      // The last result was a partial result which means we have not received all of the cells
-      // for this row. Thus, use the last result's row as the start row. If a replica switch
-      // occurs, the scanner will ensure that any accumulated partial results are cleared,
-      // and the scan can resume from this row.
-      callable.getScan().setStartRow(this.lastResult.getRow());
-    } else {
-      // The last result was not a partial result which means it contained all of the cells for
-      // that row (we no longer need any information from it). Set the start row to the next
-      // closest row that could be seen.
-      if (callable.getScan().isReversed()) {
-        callable.getScan().setStartRow(createClosestRowBefore(this.lastResult.getRow()));
-      } else {
-        callable.getScan().setStartRow(createClosestRowAfter(this.lastResult.getRow()));
-      }
+    if (this.lastResult == null || callable == null) {
+      return;
     }
+    // 1. The last result was a partial result which means we have not received all of the cells
+    // for this row. Thus, use the last result's row as the start row. If a replica switch
+    // occurs, the scanner will ensure that any accumulated partial results are cleared,
+    // and the scan can resume from this row.
+    // 2. The last result was not a partial result which means it contained all of the cells for
+    // that row (we no longer need any information from it). Set the start row to the next
+    // closest row that could be seen.
+    callable.getScan().withStartRow(this.lastResult.getRow(), this.lastResult.isPartial());
   }
 
   @VisibleForTesting

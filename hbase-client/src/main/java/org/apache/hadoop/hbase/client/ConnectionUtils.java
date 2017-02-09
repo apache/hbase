@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.HConstants.EMPTY_END_ROW;
+import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -27,6 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -209,12 +213,9 @@ public class ConnectionUtils {
   }
 
   /**
-   * Create the closest row before the specified row
-   * @deprecated in fact, we do not know the closest row before the given row, the result is only a
-   *             row very close to the current row. Avoid using this method in the future.
+   * Create a row before the specified row and very close to the specified row.
    */
-  @Deprecated
-  static byte[] createClosestRowBefore(byte[] row) {
+  static byte[] createCloseRowBefore(byte[] row) {
     if (row.length == 0) {
       return MAX_BYTE_ARRAY;
     }
@@ -227,5 +228,39 @@ public class ConnectionUtils {
       System.arraycopy(MAX_BYTE_ARRAY, 0, nextRow, row.length, MAX_BYTE_ARRAY.length);
       return nextRow;
     }
+  }
+
+  static boolean isEmptyStartRow(byte[] row) {
+    return Bytes.equals(row, EMPTY_START_ROW);
+  }
+
+  static boolean isEmptyStopRow(byte[] row) {
+    return Bytes.equals(row, EMPTY_END_ROW);
+  }
+
+  static boolean noMoreResultsForScan(Scan scan, HRegionInfo info) {
+    if (isEmptyStopRow(info.getEndKey())) {
+      return true;
+    }
+    if (isEmptyStopRow(scan.getStopRow())) {
+      return false;
+    }
+    int c = Bytes.compareTo(info.getEndKey(), scan.getStopRow());
+    // 1. if our stop row is less than the endKey of the region
+    // 2. if our stop row is equal to the endKey of the region and we do not include the stop row
+    // for scan.
+    return c > 0 || (c == 0 && !scan.includeStopRow());
+  }
+
+  static boolean noMoreResultsForReverseScan(Scan scan, HRegionInfo info) {
+    if (isEmptyStartRow(info.getStartKey())) {
+      return true;
+    }
+    if (isEmptyStopRow(scan.getStopRow())) {
+      return false;
+    }
+    // no need to test the inclusive of the stop row as the start key of a region is included in
+    // the region.
+    return Bytes.compareTo(info.getStartKey(), scan.getStopRow()) <= 0;
   }
 }

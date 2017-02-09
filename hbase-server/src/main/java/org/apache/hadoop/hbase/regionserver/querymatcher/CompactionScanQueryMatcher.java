@@ -45,7 +45,7 @@ public abstract class CompactionScanQueryMatcher extends ScanQueryMatcher {
 
   protected CompactionScanQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
       long readPointToUse, long oldestUnexpiredTS, long now) {
-    super(HConstants.EMPTY_START_ROW, scanInfo,
+    super(createStartKeyFromRow(HConstants.EMPTY_START_ROW, scanInfo), scanInfo,
         new ScanWildcardColumnTracker(scanInfo.getMinVersions(), scanInfo.getMaxVersions(),
             oldestUnexpiredTS),
         oldestUnexpiredTS, now);

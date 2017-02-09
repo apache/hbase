@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.regionserver.ScanInfo;
  * Query matcher for normal user scan.
  */
 @InterfaceAudience.Private
-public class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
+public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
 
   /** Keeps track of deletes */
   private final DeleteTracker deletes;
@@ -91,17 +91,45 @@ public class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
       RegionCoprocessorHost regionCoprocessorHost) throws IOException {
     DeleteTracker deletes = instantiateDeleteTracker(regionCoprocessorHost);
     if (scan.isReversed()) {
-      return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-          oldestUnexpiredTS, now) {
+      if (scan.includeStopRow()) {
+        return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
+            oldestUnexpiredTS, now) {
 
-        @Override
-        protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
-          return cmpToStopRow > 0;
-        }
-      };
+          @Override
+          protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
+            return cmpToStopRow >= 0;
+          }
+        };
+      } else {
+        return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
+            oldestUnexpiredTS, now) {
+
+          @Override
+          protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
+            return cmpToStopRow > 0;
+          }
+        };
+      }
     } else {
-      return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-          oldestUnexpiredTS, now);
+      if (scan.includeStopRow()) {
+        return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
+            oldestUnexpiredTS, now) {
+
+          @Override
+          protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
+            return cmpToStopRow <= 0;
+          }
+        };
+      } else {
+        return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
+            oldestUnexpiredTS, now) {
+
+          @Override
+          protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
+            return cmpToStopRow < 0;
+          }
+        };
+      }
     }
   }
 }

@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowBefore;
-
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -55,17 +52,15 @@ import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * Implements the scanner interface for the HBase client. If there are multiple regions in a table,
  * this scanner will iterate through them all.
  */
 @InterfaceAudience.Private
-public class ClientScanner extends AbstractClientScanner {
+public abstract class ClientScanner extends AbstractClientScanner {
   private static final Log LOG = LogFactory.getLog(ClientScanner.class);
 
-  protected Scan scan;
+  protected final Scan scan;
   protected boolean closed = false;
   // Current region scanner is against. Gets cleared if current region goes
   // wonky: e.g. if it splits on us.
@@ -219,89 +214,71 @@ public class ClientScanner extends AbstractClientScanner {
     return maxScannerResultSize;
   }
 
-  // returns true if the passed region endKey
-  protected boolean checkScanStopRow(final byte[] endKey) {
-    if (this.scan.getStopRow().length > 0) {
-      // there is a stop row, check to see if we are past it.
-      byte[] stopRow = scan.getStopRow();
-      int cmp = Bytes.compareTo(stopRow, 0, stopRow.length, endKey, 0, endKey.length);
-      if (cmp <= 0) {
-        // stopRow <= endKey (endKey is equals to or larger than stopRow)
-        // This is a stop.
-        return true;
-      }
-    }
-    return false; // unlikely.
-  }
-
-  protected final void closeScanner() throws IOException {
+  private void closeScanner() throws IOException {
     if (this.callable != null) {
       this.callable.setClose();
-      call(callable, caller, scannerTimeout);
+      call(callable, caller, scannerTimeout, false);
       this.callable = null;
     }
   }
 
   /**
-   * Gets a scanner for the next region. If this.currentRegion != null, then we will move to the
-   * endrow of this.currentRegion. Else we will get scanner at the scan.getStartRow().
-   * @param nbRows the caching option of the scan
-   * @return the results fetched when open scanner, or null which means terminate the scan.
+   * Will be called in moveToNextRegion when currentRegion is null. Abstract because for normal
+   * scan, we will start next scan from the endKey of the currentRegion, and for reversed scan, we
+   * will start next scan from the startKey of the currentRegion.
+   * @return {@code false} if we have reached the stop row. Otherwise {@code true}.
    */
-  protected Result[] nextScanner(int nbRows) throws IOException {
+  protected abstract boolean setNewStartKey();
+
+  /**
+   * Will be called in moveToNextRegion to create ScannerCallable. Abstract because for reversed
+   * scan we need to create a ReversedScannerCallable.
+   */
+  protected abstract ScannerCallable createScannerCallable();
+
+  /**
+   * Close the previous scanner and create a new ScannerCallable for the next scanner.
+   * <p>
+   * Marked as protected only because TestClientScanner need to override this method.
+   * @return false if we should terminate the scan. Otherwise
+   */
+  @VisibleForTesting
+  protected boolean moveToNextRegion() {
     // Close the previous scanner if it's open
-    closeScanner();
-
-    // Where to start the next scanner
-    byte[] localStartKey;
-
-    // if we're at end of table, close and return null to stop iterating
-    if (this.currentRegion != null) {
-      byte[] endKey = this.currentRegion.getEndKey();
-      if (endKey == null || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY) ||
-          checkScanStopRow(endKey)) {
-        close();
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Finished " + this.currentRegion);
-        }
-        return null;
+    try {
+      closeScanner();
+    } catch (IOException e) {
+      // not a big deal continue
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("close scanner for " + currentRegion + " failed", e);
       }
-      localStartKey = endKey;
-      // clear mvcc read point if we are going to switch regions
+    }
+    if (currentRegion != null) {
+      if (!setNewStartKey()) {
+        return false;
+      }
       scan.resetMvccReadPoint();
       if (LOG.isTraceEnabled()) {
         LOG.trace("Finished " + this.currentRegion);
       }
-    } else {
-      localStartKey = this.scan.getStartRow();
     }
-
     if (LOG.isDebugEnabled() && this.currentRegion != null) {
       // Only worth logging if NOT first region in scan.
       LOG.debug(
-        "Advancing internal scanner to startKey at '" + Bytes.toStringBinary(localStartKey) + "'");
+        "Advancing internal scanner to startKey at '" + Bytes.toStringBinary(scan.getStartRow()) +
+            "', " + (scan.includeStartRow() ? "inclusive" : "exclusive"));
     }
-    try {
-      callable = getScannerCallable(localStartKey, nbRows);
-      // Open a scanner on the region server starting at the
-      // beginning of the region
-      Result[] rrs = call(callable, caller, scannerTimeout);
-      this.currentRegion = callable.getHRegionInfo();
-      if (this.scanMetrics != null) {
-        this.scanMetrics.countOfRegions.incrementAndGet();
-      }
-      if (rrs != null && rrs.length == 0 && callable.moreResultsForScan() == MoreResults.NO) {
-        // no results for the scan, return null to terminate the scan.
-        closed = true;
-        callable = null;
-        currentRegion = null;
-        return null;
-      }
-      return rrs;
-    } catch (IOException e) {
-      closeScanner();
-      throw e;
+    // clear the current region, we will set a new value to it after the first call of the new
+    // callable.
+    this.currentRegion = null;
+    this.callable =
+        new ScannerCallableWithReplicas(getTable(), getConnection(), createScannerCallable(), pool,
+            primaryOperationTimeout, scan, getRetries(), scannerTimeout, caching, conf, caller);
+    this.callable.setCaching(this.caching);
+    if (this.scanMetrics != null) {
+      this.scanMetrics.countOfRegions.incrementAndGet();
     }
+    return true;
   }
 
   @VisibleForTesting
@@ -310,24 +287,17 @@ public class ClientScanner extends AbstractClientScanner {
   }
 
   private Result[] call(ScannerCallableWithReplicas callable, RpcRetryingCaller<Result[]> caller,
-      int scannerTimeout) throws IOException {
+      int scannerTimeout, boolean updateCurrentRegion) throws IOException {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
     }
     // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
     // we do a callWithRetries
-    return caller.callWithoutRetries(callable, scannerTimeout);
-  }
-
-  @InterfaceAudience.Private
-  protected ScannerCallableWithReplicas getScannerCallable(byte[] localStartKey, int nbRows) {
-    scan.setStartRow(localStartKey);
-    ScannerCallable s = new ScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
-        this.rpcControllerFactory);
-    s.setCaching(nbRows);
-    ScannerCallableWithReplicas sr = new ScannerCallableWithReplicas(tableName, getConnection(), s,
-        pool, primaryOperationTimeout, scan, retries, scannerTimeout, caching, conf, caller);
-    return sr;
+    Result[] rrs = caller.callWithoutRetries(callable, scannerTimeout);
+    if (currentRegion == null && updateCurrentRegion) {
+      currentRegion = callable.getHRegionInfo();
+    }
+    return rrs;
   }
 
   /**
@@ -374,9 +344,7 @@ public class ClientScanner extends AbstractClientScanner {
   }
 
   private boolean scanExhausted(Result[] values) {
-    // This means the server tells us the whole scan operation is done. Usually decided by filter or
-    // limit.
-    return values == null || callable.moreResultsForScan() == MoreResults.NO;
+    return callable.moreResultsForScan() == MoreResults.NO;
   }
 
   private boolean regionExhausted(Result[] values) {
@@ -384,8 +352,8 @@ public class ClientScanner extends AbstractClientScanner {
     // old time we always return empty result for a open scanner operation so we add a check here to
     // keep compatible with the old logic. Should remove the isOpenScanner in the future.
     // 2. Server tells us that it has no more results for this region.
-    return (values.length == 0 && !callable.isHeartbeatMessage() && !callable.isOpenScanner())
-        || callable.moreResultsInRegion() == MoreResults.NO;
+    return (values.length == 0 && !callable.isHeartbeatMessage()) ||
+        callable.moreResultsInRegion() == MoreResults.NO;
   }
 
   private void closeScannerIfExhausted(boolean exhausted) throws IOException {
@@ -393,21 +361,10 @@ public class ClientScanner extends AbstractClientScanner {
       if (!partialResults.isEmpty()) {
         // XXX: continue if there are partial results. But in fact server should not set
         // hasMoreResults to false if there are partial results.
-        LOG.warn("Server tells us there is no more results for this region but we still have"
-            + " partialResults, this should not happen, retry on the current scanner anyway");
+        LOG.warn("Server tells us there is no more results for this region but we still have" +
+            " partialResults, this should not happen, retry on the current scanner anyway");
       } else {
         closeScanner();
-      }
-    }
-  }
-
-  private Result[] nextScannerWithRetries(int nbRows) throws IOException {
-    int retriesLeft = getRetries();
-    for (;;) {
-      try {
-        return nextScanner(nbRows);
-      } catch (DoNotRetryIOException e) {
-        handleScanError(e, null, retriesLeft--);
       }
     }
   }
@@ -451,27 +408,18 @@ public class ClientScanner extends AbstractClientScanner {
       // The region has moved. We need to open a brand new scanner at the new location.
       // Reset the startRow to the row we've seen last so that the new scanner starts at
       // the correct row. Otherwise we may see previously returned rows again.
-      // (ScannerCallable by now has "relocated" the correct region)
-      if (!this.lastResult.isPartial() && scan.getBatch() < 0) {
-        if (scan.isReversed()) {
-          scan.setStartRow(createClosestRowBefore(lastResult.getRow()));
-        } else {
-          scan.setStartRow(createClosestRowAfter(lastResult.getRow()));
-        }
-      } else {
-        // we need rescan this row because we only loaded partial row before
-        scan.setStartRow(lastResult.getRow());
-      }
+      // If the lastRow is not partial, then we should start from the next row. As now we can
+      // exclude the start row, the logic here is the same for both normal scan and reversed scan.
+      // If lastResult is partial then include it, otherwise exclude it.
+      scan.withStartRow(lastResult.getRow(), lastResult.isPartial() || scan.getBatch() > 0);
     }
     if (e instanceof OutOfOrderScannerNextException) {
-      if (retryAfterOutOfOrderException != null) {
-        if (retryAfterOutOfOrderException.isTrue()) {
-          retryAfterOutOfOrderException.setValue(false);
-        } else {
-          // TODO: Why wrap this in a DNRIOE when it already is a DNRIOE?
-          throw new DoNotRetryIOException(
-              "Failed after retry of OutOfOrderScannerNextException: was there a rpc timeout?", e);
-        }
+      if (retryAfterOutOfOrderException.isTrue()) {
+        retryAfterOutOfOrderException.setValue(false);
+      } else {
+        // TODO: Why wrap this in a DNRIOE when it already is a DNRIOE?
+        throw new DoNotRetryIOException(
+            "Failed after retry of OutOfOrderScannerNextException: was there a rpc timeout?", e);
       }
     }
     // Clear region.
@@ -489,18 +437,14 @@ public class ClientScanner extends AbstractClientScanner {
     if (closed) {
       return;
     }
-    Result[] values = null;
     long remainingResultSize = maxScannerResultSize;
     int countdown = this.caching;
     // This is possible if we just stopped at the boundary of a region in the previous call.
     if (callable == null) {
-      values = nextScannerWithRetries(countdown);
-      if (values == null) {
+      if (!moveToNextRegion()) {
         return;
       }
     }
-    // We need to reset it if it's a new callable that was created with a countdown in nextScanner
-    callable.setCaching(this.caching);
     // This flag is set when we want to skip the result returned. We do
     // this when we reset scanner because it split under us.
     MutableBoolean retryAfterOutOfOrderException = new MutableBoolean(true);
@@ -508,15 +452,14 @@ public class ClientScanner extends AbstractClientScanner {
     // make sure that we are not retrying indefinitely.
     int retriesLeft = getRetries();
     for (;;) {
+      Result[] values;
       try {
         // Server returns a null values if scanning is to stop. Else,
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
         // now we will also fetch data when openScanner, so do not make a next call again if values
         // is already non-null.
-        if (values == null) {
-          values = call(callable, caller, scannerTimeout);
-        }
+        values = call(callable, caller, scannerTimeout, true);
         // When the replica switch happens, we need to do certain operations again.
         // The callable will openScanner with the right startkey but we need to pick up
         // from there. Bypass the rest of the loop and let the catch-up happen in the beginning
@@ -526,19 +469,12 @@ public class ClientScanner extends AbstractClientScanner {
           // openScanner with the correct startkey and we must pick up from there
           clearPartialResults();
           this.currentRegion = callable.getHRegionInfo();
-          // Now we will also fetch data when openScanner so usually we should not get a null
-          // result, but at some places we still use null to indicate the scan is terminated, so add
-          // a sanity check here. Should be removed later.
-          if (values == null) {
-            continue;
-          }
         }
         retryAfterOutOfOrderException.setValue(true);
       } catch (DoNotRetryIOException e) {
         handleScanError(e, retryAfterOutOfOrderException, retriesLeft--);
         // reopen the scanner
-        values = nextScannerWithRetries(countdown);
-        if (values == null) {
+        if (!moveToNextRegion()) {
           break;
         }
         continue;
@@ -590,8 +526,8 @@ public class ClientScanner extends AbstractClientScanner {
           // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
           // unnecesary delays to the caller
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Heartbeat message received and cache contains Results."
-                + " Breaking out of scan loop");
+            LOG.trace("Heartbeat message received and cache contains Results." +
+                " Breaking out of scan loop");
           }
           // we know that the region has not been exhausted yet so just break without calling
           // closeScannerIfExhausted
@@ -618,17 +554,13 @@ public class ClientScanner extends AbstractClientScanner {
         if (!partialResults.isEmpty()) {
           // XXX: continue if there are partial results. But in fact server should not set
           // hasMoreResults to false if there are partial results.
-          LOG.warn("Server tells us there is no more results for this region but we still have"
-              + " partialResults, this should not happen, retry on the current scanner anyway");
-          values = null; // reset values for the next call
+          LOG.warn("Server tells us there is no more results for this region but we still have" +
+              " partialResults, this should not happen, retry on the current scanner anyway");
           continue;
         }
-        values = nextScannerWithRetries(countdown);
-        if (values == null) {
+        if (!moveToNextRegion()) {
           break;
         }
-      } else {
-        values = null; // reset values for the next call
       }
     }
   }
@@ -769,9 +701,9 @@ public class ClientScanner extends AbstractClientScanner {
   private void addToPartialResults(final Result result) throws IOException {
     final byte[] row = result.getRow();
     if (partialResultsRow != null && !Bytes.equals(row, partialResultsRow)) {
-      throw new IOException("Partial result row does not match. All partial results must come "
-          + "from the same row. partialResultsRow: " + Bytes.toString(partialResultsRow) + "row: "
-          + Bytes.toString(row));
+      throw new IOException("Partial result row does not match. All partial results must come " +
+          "from the same row. partialResultsRow: " + Bytes.toString(partialResultsRow) + "row: " +
+          Bytes.toString(row));
     }
     partialResultsRow = row;
     partialResults.add(result);
@@ -806,7 +738,7 @@ public class ClientScanner extends AbstractClientScanner {
     if (callable != null) {
       callable.setClose();
       try {
-        call(callable, caller, scannerTimeout);
+        call(callable, caller, scannerTimeout, false);
       } catch (UnknownScannerException e) {
         // We used to catch this error, interpret, and rethrow. However, we
         // have since decided that it's not nice for a scanner's close to

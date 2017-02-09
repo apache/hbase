@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.regionserver.ScanInfo;
  * Query matcher for raw scan.
  */
 @InterfaceAudience.Private
-public class RawScanQueryMatcher extends UserScanQueryMatcher {
+public abstract class RawScanQueryMatcher extends UserScanQueryMatcher {
 
   protected RawScanQueryMatcher(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
       boolean hasNullColumn, long oldestUnexpiredTS, long now) {
@@ -63,17 +63,45 @@ public class RawScanQueryMatcher extends UserScanQueryMatcher {
   public static RawScanQueryMatcher create(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
       boolean hasNullColumn, long oldestUnexpiredTS, long now) {
     if (scan.isReversed()) {
-      return new RawScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS,
-          now) {
+      if (scan.includeStopRow()) {
+        return new RawScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS,
+            now) {
 
-        @Override
-        protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
-          return cmpToStopRow > 0;
-        }
-      };
+          @Override
+          protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
+            return cmpToStopRow >= 0;
+          }
+        };
+      } else {
+        return new RawScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS,
+            now) {
+
+          @Override
+          protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
+            return cmpToStopRow > 0;
+          }
+        };
+      }
     } else {
-      return new RawScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS,
-          now);
+      if (scan.includeStopRow()) {
+        return new RawScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS,
+            now) {
+
+          @Override
+          protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
+            return cmpToStopRow <= 0;
+          }
+        };
+      } else {
+        return new RawScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS,
+            now) {
+
+          @Override
+          protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
+            return cmpToStopRow < 0;
+          }
+        };
+      }
     }
   }
 }

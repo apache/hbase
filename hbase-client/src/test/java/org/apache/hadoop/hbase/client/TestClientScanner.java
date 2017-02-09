@@ -86,7 +86,7 @@ public class TestClientScanner {
     }
   }
 
-  private static class MockClientScanner extends ClientScanner {
+  private static class MockClientScanner extends ClientSimpleScanner {
 
     private boolean rpcFinished = false;
     private boolean rpcFinishedFired = false;
@@ -101,36 +101,21 @@ public class TestClientScanner {
     }
 
     @Override
-    protected Result[] nextScanner(int nbRows) throws IOException {
+    protected boolean moveToNextRegion() {
       if (!initialized) {
         initialized = true;
-        return super.nextScanner(nbRows);
+        return super.moveToNextRegion();
       }
       if (!rpcFinished) {
-        return super.nextScanner(nbRows);
+        return super.moveToNextRegion();
       }
-
       // Enforce that we don't short-circuit more than once
       if (rpcFinishedFired) {
         throw new RuntimeException("Expected nextScanner to only be called once after " +
             " short-circuit was triggered.");
       }
       rpcFinishedFired = true;
-      return null;
-    }
-
-    @Override
-    protected ScannerCallableWithReplicas getScannerCallable(byte [] localStartKey,
-        int nbRows) {
-      scan.setStartRow(localStartKey);
-      ScannerCallable s =
-          new ScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
-              this.rpcControllerFactory);
-      s.setCaching(nbRows);
-      ScannerCallableWithReplicas sr = new ScannerCallableWithReplicas(getTable(), getConnection(),
-       s, pool, primaryOperationTimeout, scan,
-       getRetries(), scannerTimeout, caching, conf, caller);
-      return sr;
+      return false;
     }
 
     public void setRpcFinished(boolean rpcFinished) {
@@ -164,7 +149,7 @@ public class TestClientScanner {
             case 1: // detect no more results
             case 2: // close
               count++;
-              return null;
+              return new Result[0];
             default:
               throw new RuntimeException("Expected only 2 invocations");
           }
@@ -184,10 +169,9 @@ public class TestClientScanner {
 
       scanner.loadCache();
 
-      // One for initializeScannerInConstruction()
       // One for fetching the results
-      // One for fetching null results and quit as we do not have moreResults hint.
-      inOrder.verify(caller, Mockito.times(3)).callWithoutRetries(
+      // One for fetching empty results and quit as we do not have moreResults hint.
+      inOrder.verify(caller, Mockito.times(2)).callWithoutRetries(
           Mockito.any(RetryingCallable.class), Mockito.anyInt());
 
       assertEquals(1, scanner.cache.size());

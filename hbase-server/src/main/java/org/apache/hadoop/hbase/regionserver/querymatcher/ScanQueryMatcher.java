@@ -119,13 +119,17 @@ public abstract class ScanQueryMatcher {
 
   protected boolean stickyNextRow;
 
-  protected ScanQueryMatcher(byte[] startRow, ScanInfo scanInfo, ColumnTracker columns,
+  protected ScanQueryMatcher(Cell startKey, ScanInfo scanInfo, ColumnTracker columns,
       long oldestUnexpiredTS, long now) {
     this.rowComparator = scanInfo.getComparator();
-    this.startKey = KeyValueUtil.createFirstDeleteFamilyOnRow(startRow, scanInfo.getFamily());
+    this.startKey = startKey;
     this.oldestUnexpiredTS = oldestUnexpiredTS;
     this.now = now;
     this.columns = columns;
+  }
+
+  protected static Cell createStartKeyFromRow(byte[] startRow, ScanInfo scanInfo) {
+    return KeyValueUtil.createFirstDeleteFamilyOnRow(startRow, scanInfo.getFamily());
   }
 
   /**

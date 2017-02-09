@@ -287,8 +287,8 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public Collection<StoreFile> getFilesForScanOrGet(
-      boolean isGet, byte[] startRow, byte[] stopRow) {
+  public Collection<StoreFile> getFilesForScanOrGet(byte[] startRow, boolean includeStartRow,
+      byte[] stopRow, boolean includeStopRow) {
     if (state.stripeFiles.isEmpty()) {
       return state.level0Files; // There's just L0.
     }

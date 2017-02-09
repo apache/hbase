@@ -71,7 +71,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   protected boolean instantiated = false;
   protected boolean closed = false;
   protected boolean renew = false;
-  private Scan scan;
+  protected final Scan scan;
   private int caching = 1;
   protected final ClusterConnection cConnection;
   protected ScanMetrics scanMetrics;
@@ -87,7 +87,6 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   private MoreResults moreResultsInRegion;
   private MoreResults moreResultsForScan;
 
-  private boolean openScanner;
   /**
    * Saves whether or not the most recent response from the server was a heartbeat message.
    * Heartbeat messages are identified by the flag {@link ScanResponse#getHeartbeatMessage()}
@@ -270,10 +269,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     controller.setCallTimeout(callTimeout);
     ScanResponse response;
     if (this.scannerId == -1L) {
-      this.openScanner = true;
       response = openScanner();
     } else {
-      this.openScanner = false;
       response = next();
     }
     long timestamp = System.currentTimeMillis();
@@ -490,13 +487,5 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
 
   void setMoreResultsForScan(MoreResults moreResults) {
     this.moreResultsForScan = moreResults;
-  }
-
-  /**
-   * Whether the previous call is openScanner. This is used to keep compatible with the old
-   * implementation that we always returns empty result for openScanner.
-   */
-  boolean isOpenScanner() {
-    return openScanner;
   }
 }
