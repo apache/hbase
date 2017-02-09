@@ -380,6 +380,16 @@ public class RegionStates {
    * Set the region state to CLOSED
    */
   public RegionState setRegionStateTOCLOSED(
+      final byte[] regionName,
+      final ServerName serverName) {
+    HRegionInfo regionInfo = getRegionInfo(regionName);
+    return setRegionStateTOCLOSED(regionInfo, serverName);
+  }
+
+  /**
+   * Set the region state to CLOSED
+   */
+  public RegionState setRegionStateTOCLOSED(
       final HRegionInfo regionInfo,
       final ServerName serverName) {
     ServerName sn = serverName;

@@ -1064,7 +1064,7 @@ public class AssignmentManager extends ZooKeeperListener {
             failedOpenTracker.remove(encodedName);
           } else {
             // Handle this the same as if it were opened and then closed.
-            regionState = regionStates.updateRegionState(rt, State.CLOSED);
+            regionState = regionStates.setRegionStateTOCLOSED(rt.getRegionName(), sn);
             if (regionState != null) {
               // When there are more than one region server a new RS is selected as the
               // destination and the same is updated in the regionplan. (HBASE-5546)
