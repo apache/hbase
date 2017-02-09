@@ -2048,7 +2048,11 @@ public final class ProtobufUtil {
         user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
-            admin.mergeRegions(controller, request);
+            try {
+              admin.mergeRegions(controller, request);
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
             return null;
           }
         });
