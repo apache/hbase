@@ -18,6 +18,9 @@
 cxx_library(
     name="serde",
     exported_headers=[
+        "cell-scanner.h",
+        "cell-outputstream.h",
+        "codec.h",
         "region-info.h",
         "rpc.h",
         "server-name.h",
