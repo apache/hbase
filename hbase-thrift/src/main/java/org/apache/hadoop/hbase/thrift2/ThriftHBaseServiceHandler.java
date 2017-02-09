@@ -121,7 +121,7 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
         metrics.exception(e);
         throw new RuntimeException("unexpected invocation exception: " + e.getMessage());
       } finally {
-        int processTime = (int) (now() - start);
+        long processTime = now() - start;
         metrics.incMethodTime(m.getName(), processTime);
       }
       return result;
