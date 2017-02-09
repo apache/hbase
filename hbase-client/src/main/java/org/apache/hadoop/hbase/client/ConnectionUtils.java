@@ -325,7 +325,7 @@ public final class ConnectionUtils {
       return null;
     }
     return Result.create(Arrays.copyOfRange(rawCells, index, rawCells.length), null,
-      result.isStale(), true);
+      result.isStale(), result.mayHaveMoreCellsInRow());
   }
 
   // Add a delta to avoid timeout immediately after a retry sleeping.

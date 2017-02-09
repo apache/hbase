@@ -4626,7 +4626,8 @@ public final class ClientProtos {
      * Whether or not the entire result could be returned. Results will be split when
      * the RPC chunk size limit is reached. Partial results contain only a subset of the
      * cells for a row and must be combined with a result containing the remaining cells
-     * to form a complete result
+     * to form a complete result. The equivalent flag in o.a.h.h.client.Result is
+     * mayHaveMoreCellsInRow.
      * </pre>
      */
     boolean hasPartial();
@@ -4637,7 +4638,8 @@ public final class ClientProtos {
      * Whether or not the entire result could be returned. Results will be split when
      * the RPC chunk size limit is reached. Partial results contain only a subset of the
      * cells for a row and must be combined with a result containing the remaining cells
-     * to form a complete result
+     * to form a complete result. The equivalent flag in o.a.h.h.client.Result is
+     * mayHaveMoreCellsInRow.
      * </pre>
      */
     boolean getPartial();
@@ -4919,7 +4921,8 @@ public final class ClientProtos {
      * Whether or not the entire result could be returned. Results will be split when
      * the RPC chunk size limit is reached. Partial results contain only a subset of the
      * cells for a row and must be combined with a result containing the remaining cells
-     * to form a complete result
+     * to form a complete result. The equivalent flag in o.a.h.h.client.Result is
+     * mayHaveMoreCellsInRow.
      * </pre>
      */
     public boolean hasPartial() {
@@ -4932,7 +4935,8 @@ public final class ClientProtos {
      * Whether or not the entire result could be returned. Results will be split when
      * the RPC chunk size limit is reached. Partial results contain only a subset of the
      * cells for a row and must be combined with a result containing the remaining cells
-     * to form a complete result
+     * to form a complete result. The equivalent flag in o.a.h.h.client.Result is
+     * mayHaveMoreCellsInRow.
      * </pre>
      */
     public boolean getPartial() {
@@ -5848,7 +5852,8 @@ public final class ClientProtos {
        * Whether or not the entire result could be returned. Results will be split when
        * the RPC chunk size limit is reached. Partial results contain only a subset of the
        * cells for a row and must be combined with a result containing the remaining cells
-       * to form a complete result
+       * to form a complete result. The equivalent flag in o.a.h.h.client.Result is
+       * mayHaveMoreCellsInRow.
        * </pre>
        */
       public boolean hasPartial() {
@@ -5861,7 +5866,8 @@ public final class ClientProtos {
        * Whether or not the entire result could be returned. Results will be split when
        * the RPC chunk size limit is reached. Partial results contain only a subset of the
        * cells for a row and must be combined with a result containing the remaining cells
-       * to form a complete result
+       * to form a complete result. The equivalent flag in o.a.h.h.client.Result is
+       * mayHaveMoreCellsInRow.
        * </pre>
        */
       public boolean getPartial() {
@@ -5874,7 +5880,8 @@ public final class ClientProtos {
        * Whether or not the entire result could be returned. Results will be split when
        * the RPC chunk size limit is reached. Partial results contain only a subset of the
        * cells for a row and must be combined with a result containing the remaining cells
-       * to form a complete result
+       * to form a complete result. The equivalent flag in o.a.h.h.client.Result is
+       * mayHaveMoreCellsInRow.
        * </pre>
        */
       public Builder setPartial(boolean value) {
@@ -5890,7 +5897,8 @@ public final class ClientProtos {
        * Whether or not the entire result could be returned. Results will be split when
        * the RPC chunk size limit is reached. Partial results contain only a subset of the
        * cells for a row and must be combined with a result containing the remaining cells
-       * to form a complete result
+       * to form a complete result. The equivalent flag in o.a.h.h.client.Result is
+       * mayHaveMoreCellsInRow.
        * </pre>
        */
       public Builder clearPartial() {

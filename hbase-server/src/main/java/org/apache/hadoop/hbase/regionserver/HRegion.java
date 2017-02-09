@@ -72,7 +72,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -5945,13 +5944,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         outResults.addAll(tmpList);
       }
 
-      // If the size limit was reached it means a partial Result is being
-      // returned. Returning a
-      // partial Result means that we should not reset the filters; filters
-      // should only be reset in
+      // If the size limit was reached it means a partial Result is being returned. Returning a
+      // partial Result means that we should not reset the filters; filters should only be reset in
       // between rows
-      if (!scannerContext.midRowResultFormed())
+      if (!scannerContext.mayHaveMoreCellsInRow()) {
         resetFilters();
+      }
 
       if (isFilterDoneInternal()) {
         moreValues = false;

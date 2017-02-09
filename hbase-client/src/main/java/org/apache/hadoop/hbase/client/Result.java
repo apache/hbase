@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -85,15 +84,10 @@ public class Result implements CellScannable, CellScanner {
   private boolean stale = false;
 
   /**
-   * Partial results do not contain the full row's worth of cells. The result had to be returned in
-   * parts because the size of the cells in the row exceeded the RPC result size on the server.
-   * Partial results must be combined client side with results representing the remainder of the
-   * row's cells to form the complete result. Partial results and RPC result size allow us to avoid
-   * OOME on the server when servicing requests for large rows. The Scan configuration used to
-   * control the result size on the server is {@link Scan#setMaxResultSize(long)} and the default
-   * value can be seen here: {@link HConstants#DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE}
+   * See {@link #mayHaveMoreCellsInRow()}. And please notice that, The client side implementation
+   * should also check for row key change to determine if a Result is the last one for a row.
    */
-  private boolean partial = false;
+  private boolean mayHaveMoreCellsInRow = false;
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
@@ -171,19 +165,20 @@ public class Result implements CellScannable, CellScanner {
     return create(cells, exists, stale, false);
   }
 
-  public static Result create(Cell[] cells, Boolean exists, boolean stale, boolean partial) {
-    if (exists != null){
-      return new Result(null, exists, stale, partial);
+  public static Result create(Cell[] cells, Boolean exists, boolean stale,
+      boolean mayHaveMoreCellsInRow) {
+    if (exists != null) {
+      return new Result(null, exists, stale, mayHaveMoreCellsInRow);
     }
-    return new Result(cells, null, stale, partial);
+    return new Result(cells, null, stale, mayHaveMoreCellsInRow);
   }
 
   /** Private ctor. Use {@link #create(Cell[])}. */
-  private Result(Cell[] cells, Boolean exists, boolean stale, boolean partial) {
+  private Result(Cell[] cells, Boolean exists, boolean stale, boolean mayHaveMoreCellsInRow) {
     this.cells = cells;
     this.exists = exists;
     this.stale = stale;
-    this.partial = partial;
+    this.mayHaveMoreCellsInRow = mayHaveMoreCellsInRow;
     this.readonly = false;
   }
 
@@ -828,7 +823,7 @@ public class Result implements CellScannable, CellScanner {
         // Result1: -1- -2- (2 cells, size limit reached, mark as partial)
         // Result2: -3- -4- (2 cells, size limit reached, mark as partial)
         // Result3: -5- (1 cell, size limit NOT reached, NOT marked as partial)
-        if (i != (partialResults.size() - 1) && !r.isPartial()) {
+        if (i != (partialResults.size() - 1) && !r.mayHaveMoreCellsInRow()) {
           throw new IOException(
               "Cannot form complete result. Result is missing partial flag. " +
                   "Partial Results: " + partialResults);
@@ -915,9 +910,28 @@ public class Result implements CellScannable, CellScanner {
    * for a row and should be combined with a result representing the remaining cells in that row to
    * form a complete (non-partial) result.
    * @return Whether or not the result is a partial result
+   * @deprecated the word 'partial' ambiguous, use {@link #mayHaveMoreCellsInRow()} instead.
+   *             Deprecated since 1.4.0.
+   * @see #mayHaveMoreCellsInRow()
    */
+  @Deprecated
   public boolean isPartial() {
-    return partial;
+    return mayHaveMoreCellsInRow;
+  }
+
+  /**
+   * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM.
+   * This flag is used to tell you if the current Result is the last one of the current row. False
+   * means this Result is the last one. True means there may still be more cells for the current
+   * row. Notice that, 'may' have, not must have. This is because we may reach the size or time
+   * limit just at the last cell of row at RS, so we do not know if it is the last one.
+   * <p>
+   * The Scan configuration used to control the result size on the server is
+   * {@link Scan#setMaxResultSize(long)} and the default value can be seen here:
+   * {@link HConstants#DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE}
+   */
+  public boolean mayHaveMoreCellsInRow() {
+    return mayHaveMoreCellsInRow;
   }
 
   /**
