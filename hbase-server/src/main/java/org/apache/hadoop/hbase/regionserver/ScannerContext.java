@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -51,7 +49,6 @@ import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public class ScannerContext {
-  private static final Log LOG = LogFactory.getLog(ScannerContext.class);
 
   /**
    * Two sets of the same fields. One for the limits, another for the progress towards those limits
@@ -221,21 +218,13 @@ public class ScannerContext {
   }
 
   /**
-   * @return true when a partial result is formed. A partial result is formed when a limit is
-   *         reached in the middle of a row.
+   * @return true when we may have more cells for the current row. This usually because we have
+   *         reached a limit in the middle of a row
    */
-  boolean partialResultFormed() {
-    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW
-        || scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW;
-  }
-
-  /**
-   * @return true when a mid-row result is formed.
-   */
-  boolean midRowResultFormed() {
-    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW
-        || scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW
-        || scannerState == NextState.BATCH_LIMIT_REACHED;
+  boolean mayHaveMoreCellsInRow() {
+    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW ||
+        scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW ||
+        scannerState == NextState.BATCH_LIMIT_REACHED;
   }
 
   /**

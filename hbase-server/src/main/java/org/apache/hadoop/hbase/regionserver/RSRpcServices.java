@@ -408,11 +408,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private void addResults(final ScanResponse.Builder builder, final List<Result> results,
       final PayloadCarryingRpcController controller, boolean isDefaultRegion) {
     builder.setStale(!isDefaultRegion);
-    if (results == null || results.isEmpty()) return;
+    if (results.isEmpty()) {
+      return;
+    }
     if (isClientCellBlockSupport()) {
       for (Result res : results) {
         builder.addCellsPerResult(res.size());
-        builder.addPartialFlagPerResult(res.isPartial());
+        builder.addPartialFlagPerResult(res.mayHaveMoreCellsInRow());
       }
       controller.setCellScanner(CellUtil.createCellScanner(results));
     } else {
@@ -2636,8 +2638,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           moreRows = scanner.nextRaw(values, scannerContext);
 
           if (!values.isEmpty()) {
-            final boolean partial = scannerContext.partialResultFormed();
-            Result r = Result.create(values, null, stale, partial);
+            Result r = Result.create(values, null, stale, scannerContext.mayHaveMoreCellsInRow());
             lastBlock.setValue(addSize(context, r, lastBlock.getValue()));
             results.add(r);
             i++;
@@ -2856,7 +2857,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // is false. Can remove the isEmpty check after we get rid of the old implementation.
         moreResults = false;
       } else if (limitOfRows > 0 && results.size() >= limitOfRows &&
-          !results.get(results.size() - 1).isPartial()) {
+          !results.get(results.size() - 1).mayHaveMoreCellsInRow()) {
         // if we have reached the limit of rows
         moreResults = false;
       }

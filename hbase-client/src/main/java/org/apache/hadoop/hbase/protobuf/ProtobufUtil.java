@@ -1423,7 +1423,7 @@ public final class ProtobufUtil {
     }
 
     builder.setStale(result.isStale());
-    builder.setPartial(result.isPartial());
+    builder.setPartial(result.mayHaveMoreCellsInRow());
 
     return builder.build();
   }
