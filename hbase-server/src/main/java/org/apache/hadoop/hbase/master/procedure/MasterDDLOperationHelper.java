@@ -27,18 +27,19 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.BulkReOpen;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
@@ -71,7 +72,13 @@ public final class MasterDDLOperationHelper {
     }
     for (HRegionInfo hri : regionInfoList) {
       // Delete the family directory in FS for all the regions one by one
-      mfs.deleteFamilyFromFS(hri, familyName, hasMob);
+      mfs.deleteFamilyFromFS(hri, familyName);
+    }
+    if (hasMob) {
+      // Delete the mob region
+      Path mobRootDir = new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME);
+      HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
+      mfs.deleteFamilyFromFS(mobRootDir, mobRegionInfo, familyName);
     }
   }
 

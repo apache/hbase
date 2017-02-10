@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -413,10 +412,15 @@ public class MasterFileSystem {
     }
   }
 
-  public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName, boolean hasMob)
+  public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName)
+      throws IOException {
+    deleteFamilyFromFS(rootdir, region, familyName);
+  }
+
+  public void deleteFamilyFromFS(Path rootDir, HRegionInfo region, byte[] familyName)
       throws IOException {
     // archive family store files
-    Path tableDir = FSUtils.getTableDir(rootdir, region.getTable());
+    Path tableDir = FSUtils.getTableDir(rootDir, region.getTable());
     HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
 
     // delete the family folder
@@ -428,24 +432,6 @@ public class MasterFileSystem {
             + Bytes.toString(familyName) + " from FileSystem for region "
             + region.getRegionNameAsString() + "(" + region.getEncodedName()
             + ")");
-      }
-    }
-
-    // archive and delete mob files
-    if (hasMob) {
-      Path mobTableDir =
-          FSUtils.getTableDir(new Path(getRootDir(), MobConstants.MOB_DIR_NAME), region.getTable());
-      HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(region.getTable());
-      Path mobFamilyDir =
-          new Path(mobTableDir,
-              new Path(mobRegionInfo.getEncodedName(), Bytes.toString(familyName)));
-      // archive mob family store files
-      MobUtils.archiveMobStoreFiles(conf, fs, mobRegionInfo, mobFamilyDir, familyName);
-
-      if (!fs.delete(mobFamilyDir, true)) {
-        throw new IOException("Could not delete mob store files for family "
-            + Bytes.toString(familyName) + " from FileSystem region "
-            + mobRegionInfo.getRegionNameAsString() + "(" + mobRegionInfo.getEncodedName() + ")");
       }
     }
   }
