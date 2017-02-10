@@ -19,8 +19,10 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
+  import="java.net.URLEncoder"
   import="java.util.TreeMap"
   import="java.util.Map"
+  import="org.apache.commons.lang.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.Admin"
@@ -44,6 +46,7 @@
   Configuration conf = master.getConfiguration();
   MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
+  final String escaped_fqtn = StringEscapeUtils.escapeHtml(fqtn);
   HTable table = null;
   String tableHeader;
   boolean withReplica = false;
@@ -67,9 +70,9 @@
   <head>
     <meta charset="utf-8">
     <% if ( !readOnly && action != null ) { %>
-        <title>HBase Master: <%= master.getServerName() %></title>
+        <title>HBase Master: <%= StringEscapeUtils.escapeHtml(master.getServerName().toString()) %></title>
     <% } else { %>
-        <title>Table: <%= fqtn %></title>
+        <title>Table: <%= escaped_fqtn %></title>
     <% } %>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
@@ -168,7 +171,7 @@ if ( fqtn != null ) {
 
     <div class="row inner_header">
         <div class="page-header">
-            <h1>Table <small><%= fqtn %></small></h1>
+            <h1>Table <small><%= escaped_fqtn %></small></h1>
         </div>
     </div>
     <div class="row">
@@ -183,12 +186,13 @@ if ( fqtn != null ) {
                             HRegionInfo.FIRST_META_REGIONINFO, j);
     ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
     for (int i = 0; i < 1; i++) {
-      String url = "//" + metaLocation.getHostname() + ":" +
+      // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
+      String url = "//" + URLEncoder.encode(metaLocation.getHostname()) + ":" +
                    master.getRegionServerInfoPort(metaLocation) + "/";
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
+    <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString()) + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
     <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
     <td>-</td>
@@ -222,8 +226,10 @@ if ( fqtn != null ) {
 <%= compactionState %>
 <%
   } catch (Exception e) {
-  // Nothing really to do here
-    e.printStackTrace();
+    // Nothing really to do here
+    for(StackTraceElement element : e.getStackTrace()) {
+      %><%= StringEscapeUtils.escapeHtml(element.toString()) %><%
+    }
 %> Unknown <%
   }
 %>
@@ -249,7 +255,6 @@ if ( fqtn != null ) {
     ServerName addr = hriEntry.getValue();
     long req = 0;
     float locality = 0.0f;
-    String urlRegionServer = null;
 
     if (addr != null) {
       ServerLoad sl = master.getServerManager().getLoad(addr);
@@ -269,10 +274,10 @@ if ( fqtn != null ) {
   <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
   <%
   if (addr != null) {
-    String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
+    String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
   %>
   <td>
-     <a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a>
+     <a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
   </td>
   <%
   } else {
@@ -298,19 +303,21 @@ if ( fqtn != null ) {
 <h2>Regions by Region Server</h2>
 <table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th></tr>
 <%
-  for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {   
-     ServerName addr = rdEntry.getKey();                                       
-     String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
+  for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
+     ServerName addr = rdEntry.getKey();
+     String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
 %>
 <tr>
-  <td><a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a></td>
+  <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
   <td><%= rdEntry.getValue()%></td>
 </tr>
 <% } %>
 </table>
 <% }
 } catch(Exception ex) {
-  ex.printStackTrace(System.err);
+  for(StackTraceElement element : ex.getStackTrace()) {
+    %><%= StringEscapeUtils.escapeHtml(element.toString()) %><%
+  }
 } finally {
   admin.close();
 }
@@ -327,7 +334,7 @@ Actions:
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="compact">
-  <input type="hidden" name="name" value="<%= fqtn %>">
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
@@ -341,7 +348,7 @@ Actions:
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="split">
-  <input type="hidden" name="name" value="<%= fqtn %>">
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
