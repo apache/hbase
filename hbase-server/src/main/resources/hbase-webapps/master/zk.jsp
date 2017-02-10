@@ -18,6 +18,7 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
+  import="org.apache.commons.lang.StringEscapeUtils"
   import="org.apache.hadoop.hbase.zookeeper.ZKUtil"
   import="org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
@@ -80,7 +81,7 @@
             </div>
             <div class="row">
                 <div class="span12">
-                    <pre><%= ZKUtil.dump(watcher).trim() %></pre>
+                    <pre><%= StringEscapeUtils.escapeHtml(ZKUtil.dump(watcher).trim()) %></pre>
                 </div>
             </div>
         </div>
