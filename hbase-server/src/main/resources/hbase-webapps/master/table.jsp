@@ -20,6 +20,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="com.google.protobuf.ByteString"
+  import="java.net.URLEncoder"
   import="java.util.ArrayList"
   import="java.util.TreeMap"
   import="java.util.List"
@@ -28,6 +29,7 @@
   import="java.util.Collections"
   import="java.util.Comparator"
   import="java.util.Collection"
+  import="org.apache.commons.lang.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.client.HTable"
@@ -56,6 +58,7 @@
   Configuration conf = master.getConfiguration();
   MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
+  final String escaped_fqtn = StringEscapeUtils.escapeHtml(fqtn);
   String sortKey = request.getParameter("sort");
   String reverse = request.getParameter("reverse");
   final boolean reverseOrder = (reverse==null||!reverse.equals("false"));
@@ -105,9 +108,9 @@
   <head>
     <meta charset="utf-8">
     <% if ( !readOnly && action != null ) { %>
-        <title>HBase Master: <%= master.getServerName() %></title>
+        <title>HBase Master: <%= StringEscapeUtils.escapeHtml(master.getServerName().toString()) %></title>
     <% } else { %>
-        <title>Table: <%= fqtn %></title>
+        <title>Table: <%= escaped_fqtn %></title>
     <% } %>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
@@ -207,7 +210,7 @@ if ( fqtn != null ) {
 <div class="container-fluid content">
     <div class="row inner_header">
         <div class="page-header">
-            <h1>Table <small><%= fqtn %></small></h1>
+            <h1>Table <small><%= escaped_fqtn %></small></h1>
         </div>
     </div>
     <div class="row">
@@ -232,7 +235,8 @@ if ( fqtn != null ) {
 
       if (metaLocation != null) {
         ServerLoad sl = master.getServerManager().getLoad(metaLocation);
-        url = "//" + metaLocation.getHostname() + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
+        // The host name portion should be safe, but I don't know how we handle IDNs so err on the side of failing safely.
+        url = "//" + URLEncoder.encode(metaLocation.getHostname()) + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
         if (sl != null) {
           Map<byte[], RegionLoad> map = sl.getRegionsLoad();
           if (map.containsKey(meta.getRegionName())) {
@@ -249,7 +253,7 @@ if ( fqtn != null ) {
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-    <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
+    <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(metaLocation.getHostname().toString()) + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
     <td><%= readReq%></td>
     <td><%= writeReq%></td>
     <td><%= fileSize%></td>
@@ -287,8 +291,10 @@ if ( fqtn != null ) {
 <%= compactionState %>
 <%
   } catch (Exception e) {
-  // Nothing really to do here
-    e.printStackTrace();
+    // Nothing really to do here
+    for(StackTraceElement element : e.getStackTrace()) {
+      %><%= StringEscapeUtils.escapeHtml(element.toString()) %><%
+    }
 %> Unknown <%
   }
 %>
@@ -314,7 +320,7 @@ if ( fqtn != null ) {
     for (HColumnDescriptor family: families) {
   %>
   <tr>
-    <td><%= family.getNameAsString() %></td>
+    <td><%= StringEscapeUtils.escapeHtml(family.getNameAsString()) %></td>
     <td>
     <table class="table table-striped">
       <tr>
@@ -328,10 +334,10 @@ if ( fqtn != null ) {
     %>
       <tr>
         <td>
-          <%= Bytes.toString(familyKey.get(), familyKey.getOffset(), familyKey.getLength()) %>
+          <%= StringEscapeUtils.escapeHtml(Bytes.toString(familyKey.get(), familyKey.getOffset(), familyKey.getLength())) %>
 		</td>
         <td>
-          <%= Bytes.toString(familyValue.get(), familyValue.getOffset(), familyValue.getLength()) %>
+          <%= StringEscapeUtils.escapeHtml(Bytes.toString(familyValue.get(), familyValue.getOffset(), familyValue.getLength())) %>
         </td>
       </tr>
     <% } %>
@@ -602,7 +608,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
       ServerLoad sl = master.getServerManager().getLoad(addr);
       // This port might be wrong if RS actually ended up using something else.
       urlRegionServer =
-          "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
+          "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
       if(sl != null) {
         Integer i = regDistribution.get(addr);
         if (null == i) i = Integer.valueOf(0);
@@ -623,7 +629,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
   if (urlRegionServer != null) {
   %>
   <td>
-     <a href="<%= urlRegionServer %>"><%= addr.getHostname().toString() + ":" + master.getRegionServerInfoPort(addr) %></a>
+     <a href="<%= urlRegionServer %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a>
   </td>
   <%
   } else {
@@ -652,7 +658,7 @@ ShowDetailName&Start/End Key<input type="checkbox" id="showWhole" style="margin-
 +<% } %>
 </table>
 <% if (numRegions > numRegionsRendered) {
-     String allRegionsUrl = "?name=" + fqtn + "&numRegions=all";
+     String allRegionsUrl = "?name=" + URLEncoder.encode(fqtn,"UTF-8") + "&numRegions=all";
 %>
   <p>This table has <b><%= numRegions %></b> regions in total, in order to improve the page load time,
      only <b><%= numRegionsRendered %></b> regions are displayed here, <a href="<%= allRegionsUrl %>">click
@@ -671,12 +677,12 @@ if (withReplica) {
 }
 %>
 <%
-  for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {   
-     ServerName addr = rdEntry.getKey();                                       
-     String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
+  for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
+     ServerName addr = rdEntry.getKey();
+     String url = "//" + URLEncoder.encode(addr.getHostname()) + ":" + master.getRegionServerInfoPort(addr) + "/";
 %>
 <tr>
-  <td><a href="<%= url %>"><%= addr.getHostname().toString() + ":" + master.getRegionServerInfoPort(addr) %></a></td>
+  <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml(addr.getHostname().toString()) + ":" + master.getRegionServerInfoPort(addr) %></a></td>
   <td><%= rdEntry.getValue()%></td>
 <%
 if (withReplica) {
@@ -690,7 +696,9 @@ if (withReplica) {
 </table>
 <% }
 } catch(Exception ex) {
-  ex.printStackTrace(System.err);
+  for(StackTraceElement element : ex.getStackTrace()) {
+    %><%= StringEscapeUtils.escapeHtml(element.toString()) %><%
+  }
 } finally {
   admin.close();
 }
@@ -720,7 +728,7 @@ Actions:
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="compact">
-  <input type="hidden" name="name" value="<%= fqtn %>">
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
@@ -734,7 +742,7 @@ Actions:
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="split">
-  <input type="hidden" name="name" value="<%= fqtn %>">
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
@@ -748,7 +756,7 @@ Actions:
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="merge">
-  <input type="hidden" name="name" value="<%= fqtn %>">
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>">
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
@@ -785,7 +793,7 @@ Actions:
 
 <script>
 var index=0;
-var sortKeyValue='<%= sortKey %>';
+var sortKeyValue='<%= StringEscapeUtils.escapeJavaScript(sortKey) %>';
 if(sortKeyValue=="readrequest")index=1;
 else if(sortKeyValue=="writerequest")index=2;
 else if(sortKeyValue=="size")index=3;
@@ -794,14 +802,16 @@ else if(sortKeyValue=="memstore")index=5;
 else if(sortKeyValue=="locality")index=6;
 document.getElementById("sel").selectedIndex=index;
 
+<% // turned into a boolean when we pulled it out of the request. %>
 var reverse='<%= reverseOrder %>';
 if(reverse=='false')document.getElementById("ascending").checked=true;
 
+<% // turned into a boolean when we pulled it out of the request. %>
 var showWhole='<%= showWhole %>';
 if(showWhole=='true')document.getElementById("showWhole").checked=true;
 
 function reloadAsSort(){
-  var url="?name="+'<%= fqtn %>';
+  var url="?name="+'<%= URLEncoder.encode(fqtn) %>';
   if(document.getElementById("sel").selectedIndex>0){
     url=url+"&sort="+document.getElementById("sel").value;
   }
