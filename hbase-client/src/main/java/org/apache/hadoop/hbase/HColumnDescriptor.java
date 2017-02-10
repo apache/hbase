@@ -1076,7 +1076,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   public int compareTo(HColumnDescriptor o) {
     int result = Bytes.compareTo(this.name, o.getName());
     if (result == 0) {
-      // punt on comparison for ordering, just calculate difference
+      // punt on comparison for ordering, just calculate difference.
       result = this.values.hashCode() - o.values.hashCode();
       if (result < 0)
         result = -1;
