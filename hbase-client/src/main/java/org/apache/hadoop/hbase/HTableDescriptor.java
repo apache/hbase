@@ -1064,6 +1064,106 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
+   * Detects whether replication has been already enabled on any of the column families of this
+   * table descriptor.
+   * @return true if any of the column families has replication enabled.
+   */
+  public boolean isReplicationEnabled() {
+    // Go through each Column-Family descriptor and check if the
+    // Replication has been enabled already.
+    // Return 'true' if replication has been enabled on any CF,
+    // otherwise return 'false'.
+    //
+    boolean result = false;
+    Iterator<HColumnDescriptor> it = this.families.values().iterator();
+
+    while (it.hasNext()) {
+      HColumnDescriptor tempHcd = it.next();
+      if (tempHcd.getScope() != HConstants.REPLICATION_SCOPE_LOCAL) {
+        result = true;
+        break;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Compare the contents of the descriptor with another one passed as a parameter for replication
+   * purpose. The REPLICATION_SCOPE field is ignored during comparison.
+   * @param obj descriptor on source cluster which needs to be replicated.
+   * @return true if the contents of the two descriptors match (ignoring just REPLICATION_SCOPE).
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  public boolean compareForReplication(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof HTableDescriptor)) {
+      return false;
+    }
+
+    boolean result = false;
+
+    // Create a copy of peer HTD as we need to change its replication
+    // scope to match with the local HTD.
+    HTableDescriptor peerHtdCopy = new HTableDescriptor(this);
+
+    // Copy the replication scope of local Htd to remote Htd.
+    HTableDescriptor localHtd = (HTableDescriptor) obj;
+
+    result = (peerHtdCopy.copyReplicationScope(localHtd) == 0);
+
+    // If copy was successful, compare the two tables now.
+    if (result == true) {
+      result = (peerHtdCopy.compareTo(localHtd) == 0);
+    }
+
+    return result;
+  }
+
+  /**
+   * Copies the REPLICATION_SCOPE of table descriptor passed as an argument. Before copy, the method
+   * ensures that the name of table and column-families should match.
+   * @param localHtd - The HTableDescriptor of table from source cluster.
+   * @return 0 If the name of table and column families match and REPLICATION_SCOPE copied
+   *         successfully. 1 If there is any mismatch in the names.
+   */
+  public int copyReplicationScope(final HTableDescriptor localHtd)
+  {
+    // Copy the REPLICATION_SCOPE only when table names and the names of
+    // Column-Families are same.
+    int result = this.name.compareTo(localHtd.name);
+
+    if (result == 0) {
+      Iterator<HColumnDescriptor> remoteHCDIter = families.values().iterator();
+      Iterator<HColumnDescriptor> localHCDIter = localHtd.families.values().iterator();
+          
+      while (remoteHCDIter.hasNext() && localHCDIter.hasNext()) {
+        HColumnDescriptor remoteHCD = remoteHCDIter.next();
+        HColumnDescriptor localHCD = localHCDIter.next();
+        
+        String remoteHCDName = remoteHCD.getNameAsString();
+        String localHCDName = localHCD.getNameAsString();
+
+        if (remoteHCDName.equals(localHCDName))
+        {
+          remoteHCD.setScope(localHCD.getScope());
+        }
+        else {
+          result = -1;
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * @see java.lang.Object#hashCode()
    */
   @Override

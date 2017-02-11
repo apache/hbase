@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,6 +50,9 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSerDeHelper;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 /**
  * <p>
@@ -560,7 +560,9 @@ public class ReplicationAdmin implements Closeable {
    * Connect to peer and check the table descriptor on peer:
    * <ol>
    * <li>Create the same table on peer when not exist.</li>
-   * <li>Throw exception if the table exists on peer cluster but descriptors are not same.</li>
+   * <li>Throw an exception if the table already has replication enabled on any of the column
+   * families.</li>
+   * <li>Throw an exception if the table exists on peer cluster but descriptors are not same.</li>
    * </ol>
    * @param tableName name of the table to sync to the peer
    * @param splits table split keys
@@ -584,24 +586,39 @@ public class ReplicationAdmin implements Closeable {
       }
 
       Configuration peerConf = repPeer.getConfiguration();
-      HTableDescriptor htd = null;
+      
+      HTableDescriptor localHtd = null;
       try (Connection conn = ConnectionFactory.createConnection(peerConf);
           Admin admin = this.connection.getAdmin();
           Admin repHBaseAdmin = conn.getAdmin()) {
-        htd = admin.getTableDescriptor(tableName);
+        localHtd = admin.getTableDescriptor(tableName);
         HTableDescriptor peerHtd = null;
         if (!repHBaseAdmin.tableExists(tableName)) {
-          repHBaseAdmin.createTable(htd, splits);
+          repHBaseAdmin.createTable(localHtd, splits);
         } else {
           peerHtd = repHBaseAdmin.getTableDescriptor(tableName);
           if (peerHtd == null) {
             throw new IllegalArgumentException("Failed to get table descriptor for table "
                 + tableName.getNameAsString() + " from peer cluster " + repPeer.getId());
-          } else if (!peerHtd.equals(htd)) {
-            throw new IllegalArgumentException("Table " + tableName.getNameAsString()
-                + " exists in peer cluster " + repPeer.getId()
-                + ", but the table descriptors are not same when compared with source cluster."
-                + " Thus can not enable the table's replication switch.");
+          } else {
+            // To support cyclic replication (HBASE-17460), we need to match the
+            // REPLICATION_SCOPE of table on both the clusters. We should do this
+            // only when the replication is not already enabled on local HTD (local
+            // table on this cluster).
+            //
+            if (localHtd.isReplicationEnabled()) {
+              throw new IllegalArgumentException("Table " + tableName.getNameAsString()
+                  + " has replication already enabled for atleast one Column Family.");
+            }
+            else
+            {
+            if (!peerHtd.compareForReplication(localHtd)) {
+                throw new IllegalArgumentException("Table " + tableName.getNameAsString()
+                    + " exists in peer cluster " + repPeer.getId()
+                    + ", but the table descriptors are not same when compared with source cluster."
+                    + " Thus can not enable the table's replication switch.");
+              }
+            }
           }
         }
       }
