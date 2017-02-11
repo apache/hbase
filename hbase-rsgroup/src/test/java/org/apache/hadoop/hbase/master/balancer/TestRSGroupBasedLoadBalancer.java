@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +19,6 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.net.HostAndPort;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +37,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -176,12 +174,11 @@ public class TestRSGroupBasedLoadBalancer {
       ServerName server = assignments.get(region);
       TableName tableName = region.getTable();
 
-      String groupName =
-          getMockedGroupInfoManager().getRSGroupOfTable(tableName);
+      String groupName = getMockedGroupInfoManager().getRSGroupOfTable(tableName);
       assertTrue(StringUtils.isNotEmpty(groupName));
       RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
       assertTrue("Region is not correctly assigned to group servers.",
-          gInfo.containsServer(server.getHostPort()));
+          gInfo.containsServer(server.getAddress()));
     }
   }
 
@@ -216,7 +213,7 @@ public class TestRSGroupBasedLoadBalancer {
             groupName);
         assertTrue(
             "Region is not correctly assigned to group servers.",
-            gInfo.containsServer(sn.getHostPort()));
+            gInfo.containsServer(sn.getAddress()));
       }
     }
     ArrayListMultimap<String, ServerAndLoad> loadMap = convertToGroupBasedMap(assignments);
@@ -295,15 +292,15 @@ public class TestRSGroupBasedLoadBalancer {
             groupName);
         assertTrue(
             "Region is not correctly assigned to group servers.",
-            gInfo.containsServer(currentServer.getHostPort()));
+            gInfo.containsServer(currentServer.getAddress()));
         if (oldAssignedServer != null
             && onlineHostNames.contains(oldAssignedServer
             .getHostname())) {
           // this region was previously assigned somewhere, and that
           // host is still around, then the host must have been is a
           // different group.
-          if (!oldAssignedServer.getHostPort().equals(currentServer.getHostPort())) {
-            assertFalse(gInfo.containsServer(oldAssignedServer.getHostPort()));
+          if (!oldAssignedServer.getAddress().equals(currentServer.getAddress())) {
+            assertFalse(gInfo.containsServer(oldAssignedServer.getAddress()));
           }
         }
       }
@@ -346,11 +343,11 @@ public class TestRSGroupBasedLoadBalancer {
     ArrayListMultimap<String, ServerAndLoad> loadMap = ArrayListMultimap
         .create();
     for (RSGroupInfo gInfo : getMockedGroupInfoManager().listRSGroups()) {
-      Set<HostAndPort> groupServers = gInfo.getServers();
-      for (HostAndPort hostPort : groupServers) {
+      Set<Address> groupServers = gInfo.getServers();
+      for (Address hostPort : groupServers) {
         ServerName actual = null;
         for(ServerName entry: servers) {
-          if(entry.getHostPort().equals(hostPort)) {
+          if(entry.getAddress().equals(hostPort)) {
             actual = entry;
             break;
           }
@@ -486,14 +483,14 @@ public class TestRSGroupBasedLoadBalancer {
     Map<String, RSGroupInfo> groupMap = new HashMap<String, RSGroupInfo>();
     for (String grpName : groups) {
       RSGroupInfo RSGroupInfo = new RSGroupInfo(grpName);
-      RSGroupInfo.addServer(servers.get(index).getHostPort());
+      RSGroupInfo.addServer(servers.get(index).getAddress());
       groupMap.put(grpName, RSGroupInfo);
       index++;
     }
     while (index < servers.size()) {
       int grpIndex = rand.nextInt(groups.length);
       groupMap.get(groups[grpIndex]).addServer(
-          servers.get(index).getHostPort());
+          servers.get(index).getAddress());
       index++;
     }
     return groupMap;
@@ -558,7 +555,7 @@ public class TestRSGroupBasedLoadBalancer {
     RSGroupInfoManager gm = getMockedGroupInfoManager();
     RSGroupInfo groupOfServer = null;
     for(RSGroupInfo gInfo : gm.listRSGroups()){
-      if(gInfo.containsServer(sn.getHostPort())){
+      if(gInfo.containsServer(sn.getAddress())){
         groupOfServer = gInfo;
         break;
       }

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -98,10 +99,8 @@ public class TestWALObserver {
 
   private Configuration conf;
   private FileSystem fs;
-  private Path dir;
   private Path hbaseRootDir;
   private Path hbaseWALRootDir;
-  private String logName;
   private Path oldLogDir;
   private Path logDir;
   private WALFactory wals;
@@ -137,12 +136,12 @@ public class TestWALObserver {
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
     this.hbaseRootDir = FSUtils.getRootDir(conf);
     this.hbaseWALRootDir = FSUtils.getWALRootDir(conf);
-    this.dir = new Path(this.hbaseRootDir, TestWALObserver.class.getName());
     this.oldLogDir = new Path(this.hbaseWALRootDir,
         HConstants.HREGION_OLDLOGDIR_NAME);
+    String serverName = ServerName.valueOf(currentTest.getMethodName(), 16010,
+        System.currentTimeMillis()).toString();
     this.logDir = new Path(this.hbaseWALRootDir,
-      AbstractFSWALProvider.getWALDirectoryName(currentTest.getMethodName()));
-    this.logName = HConstants.HREGION_LOGDIR_NAME;
+      AbstractFSWALProvider.getWALDirectoryName(serverName));
 
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
@@ -150,7 +149,7 @@ public class TestWALObserver {
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseWALRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseWALRootDir, true);
     }
-    this.wals = new WALFactory(conf, null, currentTest.getMethodName());
+    this.wals = new WALFactory(conf, null, serverName);
   }
 
   @After
@@ -351,7 +350,8 @@ public class TestWALObserver {
         LOG.info("WALSplit path == " + p);
         FileSystem newFS = FileSystem.get(newConf);
         // Make a new wal for new region open.
-        final WALFactory wals2 = new WALFactory(conf, null, currentTest.getMethodName()+"2");
+        final WALFactory wals2 = new WALFactory(conf, null,
+            ServerName.valueOf(currentTest.getMethodName()+"2", 16010, System.currentTimeMillis()).toString());
         WAL wal2 = wals2.getWAL(UNSPECIFIED_REGION, null);;
         HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,
             hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);

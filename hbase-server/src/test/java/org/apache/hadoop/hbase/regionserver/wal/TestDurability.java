@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Increment;
@@ -109,7 +109,8 @@ public class TestDurability {
 
   @Test
   public void testDurability() throws Exception {
-    final WALFactory wals = new WALFactory(CONF, null, "TestDurability");
+    final WALFactory wals = new WALFactory(CONF, null, ServerName.valueOf("TestDurability",
+        16010, System.currentTimeMillis()).toString());
     byte[] tableName = Bytes.toBytes("TestDurability");
     final WAL wal = wals.getWAL(tableName, null);
     HRegion region = createHRegion(tableName, "region", wal, Durability.USE_DEFAULT);
@@ -172,7 +173,8 @@ public class TestDurability {
     byte[] col3 = Bytes.toBytes("col3");
 
     // Setting up region
-    final WALFactory wals = new WALFactory(CONF, null, "TestIncrement");
+    final WALFactory wals = new WALFactory(CONF, null,
+        ServerName.valueOf("TestIncrement", 16010, System.currentTimeMillis()).toString());
     byte[] tableName = Bytes.toBytes("TestIncrement");
     final WAL wal = wals.getWAL(tableName, null);
     HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);
@@ -238,7 +240,9 @@ public class TestDurability {
     byte[] col1 = Bytes.toBytes("col1");
 
     // Setting up region
-    final WALFactory wals = new WALFactory(CONF, null, "testIncrementWithReturnResultsSetToFalse");
+    final WALFactory wals = new WALFactory(CONF, null,
+        ServerName.valueOf("testIncrementWithReturnResultsSetToFalse", 16010,
+            System.currentTimeMillis()).toString());
     byte[] tableName = Bytes.toBytes("testIncrementWithReturnResultsSetToFalse");
     final WAL wal = wals.getWAL(tableName, null);
     HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);

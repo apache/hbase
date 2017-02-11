@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.net.HostAndPort;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
@@ -28,31 +24,20 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.util.Address;
 
 /**
  * Group user API interface used between client and server.
  */
 @InterfaceAudience.Private
-public abstract class RSGroupAdmin implements Closeable {
-
-  /**
-   * Create a new RSGroupAdmin client
-   * @param conn connection RSGroupAdmin instance will use
-   * @return a new RSGroupAdmin client
-   * @throws IOException on failure to create new client
-   */
-  public static RSGroupAdmin newClient(Connection conn) throws IOException {
-    return new RSGroupAdminClient(conn);
-  }
-
+public interface RSGroupAdmin {
   /**
    * Gets the regionserver group information.
    *
    * @param groupName the group name
    * @return An instance of RSGroupInfo
    */
-  public abstract RSGroupInfo getRSGroupInfo(String groupName) throws IOException;
+  RSGroupInfo getRSGroupInfo(String groupName) throws IOException;
 
   /**
    * Gets the regionserver group info of table.
@@ -60,7 +45,7 @@ public abstract class RSGroupAdmin implements Closeable {
    * @param tableName the table name
    * @return An instance of RSGroupInfo.
    */
-  public abstract RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException;
+  RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException;
 
   /**
    * Move a set of serves to another group
@@ -70,7 +55,8 @@ public abstract class RSGroupAdmin implements Closeable {
    * @param targetGroup the target group
    * @throws java.io.IOException Signals that an I/O exception has occurred.
    */
-  public abstract void moveServers(Set<HostAndPort> servers, String targetGroup) throws IOException;
+  void moveServers(Set<Address> servers, String targetGroup)
+  throws IOException;
 
   /**
    * Move tables to a new group.
@@ -79,21 +65,21 @@ public abstract class RSGroupAdmin implements Closeable {
    * @param targetGroup target group
    * @throws java.io.IOException on failure to move tables
    */
-  public abstract void moveTables(Set<TableName> tables, String targetGroup) throws IOException;
+  void moveTables(Set<TableName> tables, String targetGroup) throws IOException;
 
   /**
    * Add a new group
    * @param name name of the group
    * @throws java.io.IOException on failure to add group
    */
-  public abstract void addRSGroup(String name) throws IOException;
+  void addRSGroup(String name) throws IOException;
 
   /**
    * Remove a regionserver group
    * @param name name of the group
    * @throws java.io.IOException on failure to remove group
    */
-  public abstract void removeRSGroup(String name) throws IOException;
+  void removeRSGroup(String name) throws IOException;
 
   /**
    * Balance the regions in a group
@@ -102,14 +88,14 @@ public abstract class RSGroupAdmin implements Closeable {
    * @return boolean whether balance ran or not
    * @throws java.io.IOException on unexpected failure to balance group
    */
-  public abstract boolean balanceRSGroup(String name) throws IOException;
+  boolean balanceRSGroup(String name) throws IOException;
 
   /**
    * Lists the existing groups.
    *
    * @return Collection of RSGroupInfo.
    */
-  public abstract List<RSGroupInfo> listRSGroups() throws IOException;
+  List<RSGroupInfo> listRSGroups() throws IOException;
 
   /**
    * Retrieve the RSGroupInfo a server is affiliated to
@@ -117,5 +103,5 @@ public abstract class RSGroupAdmin implements Closeable {
    * @return RSGroupInfo associated with the server
    * @throws java.io.IOException on unexpected failure to retrieve GroupInfo
    */
-  public abstract RSGroupInfo getRSGroupOfServer(HostAndPort hostPort) throws IOException;
+  RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException;
 }

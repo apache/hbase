@@ -309,6 +309,8 @@ public class WALSplitter {
       outputSinkStarted = true;
       Entry entry;
       Long lastFlushedSequenceId = -1L;
+      // THIS IS BROKEN!!!! GETTING SERVERNAME FROM PATH IS NOT GOING TO WORK IF LAYOUT CHANGES!!!
+      // TODO: Fix.
       ServerName serverName = AbstractFSWALProvider.getServerNameFromWALDirectoryName(logPath);
       failedServerName = (serverName == null) ? "" : serverName.getServerName();
       while ((entry = getNextLogLine(in, logPath, skipErrors)) != null) {

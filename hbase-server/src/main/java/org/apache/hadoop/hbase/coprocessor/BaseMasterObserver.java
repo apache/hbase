@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.common.net.HostAndPort;
 
 import java.io.IOException;
 import java.util.List;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.util.Address;
 
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.CONFIG})
 @InterfaceStability.Evolving
@@ -1113,12 +1113,12 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
-  public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx, Set<HostAndPort>
+  public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx, Set<Address>
       servers, String targetGroup) throws IOException {
   }
 
   @Override
-  public void postMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx, Set<HostAndPort>
+  public void postMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx, Set<Address>
       servers, String targetGroup) throws IOException {
   }
 

@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +17,21 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.net.HostAndPort;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.security.SecureRandom;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -40,23 +50,13 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.util.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.security.SecureRandom;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public abstract class TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroupsBase.class);
@@ -85,8 +85,8 @@ public abstract class TestRSGroupsBase {
     assertTrue(defaultInfo.getServers().size() >= serverCount);
     gAdmin.addRSGroup(groupName);
 
-    Set<HostAndPort> set = new HashSet<HostAndPort>();
-    for(HostAndPort server: defaultInfo.getServers()) {
+    Set<Address> set = new HashSet<Address>();
+    for(Address server: defaultInfo.getServers()) {
       if(set.size() == serverCount) {
         break;
       }
@@ -120,7 +120,8 @@ public abstract class TestRSGroupsBase {
   }
 
   protected void deleteGroups() throws IOException {
-    RSGroupAdmin groupAdmin = rsGroupAdmin.newClient(TEST_UTIL.getConnection());
+    RSGroupAdmin groupAdmin =
+        new RSGroupAdminClient(TEST_UTIL.getConnection());
     for(RSGroupInfo group: groupAdmin.listRSGroups()) {
       if(!group.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
         groupAdmin.moveTables(group.getTables(), RSGroupInfo.DEFAULT_GROUP);
@@ -167,7 +168,7 @@ public abstract class TestRSGroupsBase {
   @Test
   public void testBogusArgs() throws Exception {
     assertNull(rsGroupAdmin.getRSGroupInfoOfTable(TableName.valueOf("nonexistent")));
-    assertNull(rsGroupAdmin.getRSGroupOfServer(HostAndPort.fromParts("bogus",123)));
+    assertNull(rsGroupAdmin.getRSGroupOfServer(Address.fromParts("bogus",123)));
     assertNull(rsGroupAdmin.getRSGroupInfo("bogus"));
 
     try {
@@ -185,7 +186,7 @@ public abstract class TestRSGroupsBase {
     }
 
     try {
-      rsGroupAdmin.moveServers(Sets.newHashSet(HostAndPort.fromParts("bogus",123)), "bogus");
+      rsGroupAdmin.moveServers(Sets.newHashSet(Address.fromParts("bogus",123)), "bogus");
       fail("Expected move with bogus group to fail");
     } catch(ConstraintException ex) {
       //expected
@@ -276,10 +277,10 @@ public abstract class TestRSGroupsBase {
 
     //test fail bogus server move
     try {
-      rsGroupAdmin.moveServers(Sets.newHashSet(HostAndPort.fromString("foo:9999")),"foo");
+      rsGroupAdmin.moveServers(Sets.newHashSet(Address.fromString("foo:9999")),"foo");
       fail("Bogus servers shouldn't have been successfully moved.");
     } catch(IOException ex) {
-      String exp = "Server foo:9999 does not have a rsgroup";
+      String exp = "Source RSGroup for server foo:9999 does not exist.";
       String msg = "Expected '"+exp+"' in exception message: ";
       assertTrue(msg+" "+ex.getMessage(), ex.getMessage().contains(exp));
     }
@@ -354,7 +355,7 @@ public abstract class TestRSGroupsBase {
         int count = 0;
         if (serverMap != null) {
           for (ServerName rs : serverMap.keySet()) {
-            if (newGroup.containsServer(rs.getHostPort())) {
+            if (newGroup.containsServer(rs.getAddress())) {
               count += serverMap.get(rs).size();
             }
           }
@@ -476,7 +477,7 @@ public abstract class TestRSGroupsBase {
     //get server which is not a member of new group
     ServerName targetServer = null;
     for(ServerName server : admin.getClusterStatus().getServers()) {
-      if(!newGroup.containsServer(server.getHostPort())) {
+      if(!newGroup.containsServer(server.getAddress())) {
         targetServer = server;
         break;
       }
@@ -486,7 +487,7 @@ public abstract class TestRSGroupsBase {
       ((ClusterConnection) admin.getConnection()).getAdmin(targetServer);
 
     //move target server to group
-    rsGroupAdmin.moveServers(Sets.newHashSet(targetServer.getHostPort()),
+    rsGroupAdmin.moveServers(Sets.newHashSet(targetServer.getAddress()),
         newGroup.getName());
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -592,7 +593,7 @@ public abstract class TestRSGroupsBase {
         return cluster.getClusterStatus().getRegionsInTransition().isEmpty();
       }
     });
-    Set<HostAndPort> newServers = Sets.newHashSet();
+    Set<Address> newServers = Sets.newHashSet();
     newServers.add(
         rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().iterator().next());
     rsGroupAdmin.moveServers(newServers, appInfo.getName());

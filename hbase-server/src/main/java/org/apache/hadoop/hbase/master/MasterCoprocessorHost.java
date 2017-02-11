@@ -54,8 +54,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-
-import com.google.common.net.HostAndPort;
+import org.apache.hadoop.hbase.util.Address;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -1512,7 +1511,7 @@ public class MasterCoprocessorHost
     return bypass;
   }
 
-  public void preMoveServers(final Set<HostAndPort> servers, final String targetGroup)
+  public void preMoveServers(final Set<Address> servers, final String targetGroup)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -1525,7 +1524,7 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postMoveServers(final Set<HostAndPort> servers, final String targetGroup)
+  public void postMoveServers(final Set<Address> servers, final String targetGroup)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override

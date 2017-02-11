@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +19,6 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.Collection;
-import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -29,10 +26,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.util.Addressing;
-
-import com.google.common.collect.Sets;
-import com.google.common.net.HostAndPort;
+import org.apache.hadoop.hbase.util.Address;
 
 /**
  * Stores the group information of region server groups.
@@ -45,18 +39,18 @@ public class RSGroupInfo {
   public static final String NAMESPACEDESC_PROP_GROUP = "hbase.rsgroup.name";
 
   private String name;
-  private SortedSet<HostAndPort> servers;
-  private NavigableSet<TableName> tables;
+  // Keep servers in a sorted set so has an expected ordering when displayed.
+  private SortedSet<Address> servers;
+  // Keep tables sorted too.
+  private SortedSet<TableName> tables;
 
   public RSGroupInfo(String name) {
-    this(name, Sets.<HostAndPort>newHashSet(), Sets.newTreeSet());
+    this(name, new TreeSet(), new TreeSet());
   }
 
-  RSGroupInfo(String name,
-              Set<HostAndPort> servers,
-              NavigableSet<TableName> tables) {
+  RSGroupInfo(String name, SortedSet<Address> servers, SortedSet<TableName> tables) {
     this.name = name;
-    this.servers = new TreeSet<>(new Addressing.HostAndPortComparable());
+    this.servers = servers == null? new TreeSet(): servers;
     this.servers.addAll(servers);
     this.tables = new TreeSet<>(tables);
   }
@@ -79,7 +73,7 @@ public class RSGroupInfo {
    *
    * @param hostPort the server
    */
-  public void addServer(HostAndPort hostPort){
+  public void addServer(Address hostPort){
     servers.add(hostPort);
   }
 
@@ -88,7 +82,7 @@ public class RSGroupInfo {
    *
    * @param hostPort the servers
    */
-  public void addAllServers(Collection<HostAndPort> hostPort){
+  public void addAllServers(Collection<Address> hostPort){
     servers.addAll(hostPort);
   }
 
@@ -96,7 +90,7 @@ public class RSGroupInfo {
    * @param hostPort hostPort of the server
    * @return true, if a server with hostPort is found
    */
-  public boolean containsServer(HostAndPort hostPort) {
+  public boolean containsServer(Address hostPort) {
     return servers.contains(hostPort);
   }
 
@@ -105,7 +99,7 @@ public class RSGroupInfo {
    *
    * @return set of servers
    */
-  public Set<HostAndPort> getServers() {
+  public Set<Address> getServers() {
     return servers;
   }
 
@@ -114,7 +108,7 @@ public class RSGroupInfo {
    *
    * @param hostPort HostPort of the server to remove
    */
-  public boolean removeServer(HostAndPort hostPort) {
+  public boolean removeServer(Address hostPort) {
     return servers.remove(hostPort);
   }
 
@@ -122,7 +116,7 @@ public class RSGroupInfo {
    * Set of tables that are members of this group
    * @return set of tables
    */
-  public NavigableSet<TableName> getTables() {
+  public SortedSet<TableName> getTables() {
     return tables;
   }
 

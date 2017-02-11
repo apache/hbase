@@ -27,7 +27,7 @@ module Hbase
       @shell = Shell::Shell.new(@hbase)
       connection = $TEST_CLUSTER.getConnection
       @rsgroup_admin =
-          org.apache.hadoop.hbase.rsgroup.RSGroupAdmin.newClient(connection)
+          org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient.new(connection)
     end
 
     define_test 'Test Basic RSGroup Commands' do

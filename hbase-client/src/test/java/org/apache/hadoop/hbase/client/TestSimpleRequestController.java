@@ -54,8 +54,8 @@ public class TestSimpleRequestController {
   private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes();
   private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes();
   private static final byte[] DUMMY_BYTES_3 = "DUMMY_BYTES_3".getBytes();
-  private static final ServerName SN = ServerName.valueOf("s1:1,1");
-  private static final ServerName SN2 = ServerName.valueOf("s2:2,2");
+  private static final ServerName SN = ServerName.valueOf("s1,1,1");
+  private static final ServerName SN2 = ServerName.valueOf("s2,2,2");
   private static final HRegionInfo HRI1
           = new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
   private static final HRegionInfo HRI2

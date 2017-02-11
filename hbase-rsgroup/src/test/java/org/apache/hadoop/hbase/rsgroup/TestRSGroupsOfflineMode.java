@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -105,49 +103,46 @@ public class TestRSGroupsOfflineMode {
     //so it gets assigned later
     final TableName failoverTable = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(failoverTable, Bytes.toBytes("f"));
-
-    RSGroupAdmin groupAdmin = RSGroupAdmin.newClient(TEST_UTIL.getConnection());
-
     final HRegionServer killRS = ((MiniHBaseCluster)cluster).getRegionServer(0);
     final HRegionServer groupRS = ((MiniHBaseCluster)cluster).getRegionServer(1);
     final HRegionServer failoverRS = ((MiniHBaseCluster)cluster).getRegionServer(2);
-
     String newGroup =  "my_group";
+    RSGroupAdmin groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
     groupAdmin.addRSGroup(newGroup);
     if(master.getAssignmentManager().getRegionStates().getRegionAssignments()
-        .containsValue(failoverRS.getServerName())) {
-      for(HRegionInfo regionInfo: hbaseAdmin.getOnlineRegions(failoverRS.getServerName())) {
-        hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
-            Bytes.toBytes(failoverRS.getServerName().getServerName()));
-      }
-      LOG.info("Waiting for region unassignments on failover RS...");
+          .containsValue(failoverRS.getServerName())) {
+        for(HRegionInfo regionInfo: hbaseAdmin.getOnlineRegions(failoverRS.getServerName())) {
+          hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
+              Bytes.toBytes(failoverRS.getServerName().getServerName()));
+        }
+        LOG.info("Waiting for region unassignments on failover RS...");
+        TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+          @Override
+          public boolean evaluate() throws Exception {
+            return master.getServerManager().getLoad(failoverRS.getServerName())
+                .getRegionsLoad().size() > 0;
+          }
+        });
+
+      //move server to group and make sure all tables are assigned
+      groupAdmin.moveServers(Sets.newHashSet(groupRS.getServerName().getAddress()), newGroup);
       TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return master.getServerManager().getLoad(failoverRS.getServerName())
-              .getRegionsLoad().size() > 0;
+          return groupRS.getNumberOfOnlineRegions() < 1 &&
+              master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() < 1;
+        }
+      });
+      //move table to group and wait
+      groupAdmin.moveTables(Sets.newHashSet(RSGroupInfoManager.RSGROUP_TABLE_NAME), newGroup);
+      LOG.info("Waiting for move table...");
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return groupRS.getNumberOfOnlineRegions() == 1;
         }
       });
     }
-
-    //move server to group and make sure all tables are assigned
-    groupAdmin.moveServers(Sets.newHashSet(groupRS.getServerName().getHostPort()), newGroup);
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return groupRS.getNumberOfOnlineRegions() < 1 &&
-            master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() < 1;
-      }
-    });
-    //move table to group and wait
-    groupAdmin.moveTables(Sets.newHashSet(RSGroupInfoManager.RSGROUP_TABLE_NAME), newGroup);
-    LOG.info("Waiting for move table...");
-    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return groupRS.getNumberOfOnlineRegions() == 1;
-      }
-    });
 
     groupRS.stop("die");
     //race condition here
@@ -167,12 +162,13 @@ public class TestRSGroupsOfflineMode {
 
     RSGroupInfoManager groupMgr = RSGroupAdminEndpoint.getGroupInfoManager();
     //make sure balancer is in offline mode, since this is what we're testing
-    assertFalse(groupMgr.isOnline());
-    //verify the group affiliation that's loaded from ZK instead of tables
-    assertEquals(newGroup,
+    synchronized (groupMgr) {
+      assertFalse(groupMgr.isOnline());
+      //verify the group affiliation that's loaded from ZK instead of tables
+      assertEquals(newGroup,
         groupMgr.getRSGroupOfTable(RSGroupInfoManager.RSGROUP_TABLE_NAME));
-    assertEquals(RSGroupInfo.DEFAULT_GROUP, groupMgr.getRSGroupOfTable(failoverTable));
-
+      assertEquals(RSGroupInfo.DEFAULT_GROUP, groupMgr.getRSGroupOfTable(failoverTable));
+    }
     //kill final regionserver to see the failover happens for all tables
     //except GROUP table since it's group does not have any online RS
     killRS.stop("die");

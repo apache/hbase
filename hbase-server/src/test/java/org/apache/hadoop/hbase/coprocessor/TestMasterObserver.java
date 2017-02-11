@@ -76,8 +76,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.apache.hadoop.hbase.util.Address;
 
-import com.google.common.net.HostAndPort;
 
 /**
  * Tests invocation of the {@link org.apache.hadoop.hbase.coprocessor.MasterObserver}
@@ -1462,12 +1462,12 @@ public class TestMasterObserver {
 
     @Override
     public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                               Set<HostAndPort> servers, String targetGroup) throws IOException {
+                               Set<Address> servers, String targetGroup) throws IOException {
     }
 
     @Override
     public void postMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                Set<HostAndPort> servers, String targetGroup) throws IOException {
+                                Set<Address> servers, String targetGroup) throws IOException {
     }
 
     @Override

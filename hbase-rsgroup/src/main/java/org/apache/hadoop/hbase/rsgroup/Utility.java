@@ -25,8 +25,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
-
-import com.google.common.net.HostAndPort;
+import org.apache.hadoop.hbase.util.Address;
 
 /**
  * Utility for this RSGroup package in hbase-rsgroup.
@@ -37,11 +36,11 @@ class Utility {
    * @param master
    * @return Set of online Servers named for their hostname and port (not ServerName).
    */
-  static Set<HostAndPort> getOnlineServers(final MasterServices master) {
-    Set<HostAndPort> onlineServers = new HashSet<HostAndPort>();
+  static Set<Address> getOnlineServers(final MasterServices master) {
+    Set<Address> onlineServers = new HashSet<Address>();
     if (master == null) return onlineServers;
     for(ServerName server: master.getServerManager().getOnlineServers().keySet()) {
-      onlineServers.add(server.getHostPort());
+      onlineServers.add(server.getAddress());
     }
     return onlineServers;
   }

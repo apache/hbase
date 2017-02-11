@@ -516,8 +516,8 @@ public class TestSplitLogManager {
     LOG.info("testEmptyLogDir");
     slm = new SplitLogManager(master, conf);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Path emptyLogDirPath = new Path(fs.getWorkingDirectory(),
-        UUID.randomUUID().toString());
+    Path emptyLogDirPath = new Path(new Path(fs.getWorkingDirectory(), HConstants.HREGION_LOGDIR_NAME),
+        ServerName.valueOf("emptyLogDir", 1, 1).toString());
     fs.mkdirs(emptyLogDirPath);
     slm.splitLogDistributed(emptyLogDirPath);
     assertFalse(fs.exists(emptyLogDirPath));
@@ -530,10 +530,11 @@ public class TestSplitLogManager {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path dir = TEST_UTIL.getDataTestDirOnTestFS("testLogFilesAreArchived");
     conf.set(HConstants.HBASE_DIR, dir.toString());
-    Path logDirPath = new Path(dir, UUID.randomUUID().toString());
+    String serverName = ServerName.valueOf("foo", 1, 1).toString();
+    Path logDirPath = new Path(new Path(dir, HConstants.HREGION_LOGDIR_NAME), serverName);
     fs.mkdirs(logDirPath);
     // create an empty log file
-    String logFile = ServerName.valueOf("foo", 1, 1).toString();
+    String logFile = new Path(logDirPath, UUID.randomUUID().toString()).toString();
     fs.create(new Path(logDirPath, logFile)).close();
 
     // spin up a thread mocking split done.

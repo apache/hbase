@@ -767,16 +767,6 @@ public class TestAdmin2 {
   }
 
   /*
-   * Test that invalid draining server names (invalid start code) don't get added to drain list.
-   */
-  @Test(timeout = 10000, expected = IllegalArgumentException.class)
-  public void testCheckDrainServerName() throws Exception {
-    List<ServerName> servers = new ArrayList<ServerName>();
-    servers.add(ServerName.parseServerName("127.0.0.1:123"));
-    admin.drainRegionServers(servers);
-  }
-
-  /*
    * This test drains all regions so cannot be run in parallel with other tests.
    */
   @Test(timeout = 30000)

@@ -120,6 +120,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.util.Address;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -128,7 +129,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.net.HostAndPort;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -2671,7 +2671,7 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public void preMoveServers(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                             Set<HostAndPort> servers, String targetGroup) throws IOException {
+                             Set<Address> servers, String targetGroup) throws IOException {
     requirePermission(getActiveUser(ctx), "moveServers", Action.ADMIN);
   }
 

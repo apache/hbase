@@ -1,6 +1,3 @@
-#
-# Copyright The Apache Software Foundation
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -29,7 +26,7 @@ module Hbase
     include HBaseConstants
 
     def initialize(connection)
-      @admin = org.apache.hadoop.hbase.rsgroup.RSGroupAdmin.newClient(connection)
+      @admin = org.apache.hadoop.hbase.rsgroup.RSGroupAdminClient.new(connection)
     end
 
     def close
@@ -108,7 +105,7 @@ module Hbase
     def move_servers(dest, *args)
       servers = java.util.HashSet.new
       args[0].each do |s|
-        servers.add(com.google.common.net.HostAndPort.fromString(s))
+        servers.add(org.apache.hadoop.hbase.util.Address.fromString(s))
       end
       @admin.moveServers(servers, dest)
     end
@@ -127,7 +124,7 @@ module Hbase
     # get group of server
     def get_rsgroup_of_server(server)
       res = @admin.getRSGroupOfServer(
-          com.google.common.net.HostAndPort.fromString(server))
+        org.apache.hadoop.hbase.util.Address.fromString(server))
       if res.nil?
         raise(ArgumentError,'Server has no group: ' + server)
       end

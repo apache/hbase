@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +18,6 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.net.HostAndPort;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,6 +27,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Address;
 
 /**
  * Interface used to manage RSGroupInfo storage. An implementation
@@ -65,14 +63,14 @@ public interface RSGroupInfoManager {
   void removeRSGroup(String groupName) throws IOException;
 
   /**
-   * move servers to a new group.
-   * @param hostPorts list of servers, must be part of the same group
+   * Move servers to a new group.
+   * @param servers list of servers, must be part of the same group
    * @param srcGroup groupName being moved from
    * @param dstGroup groupName being moved to
-   * @return Set of servers moved (May be a subset of {@code hostPorts}).
+   * @return Set of servers moved (May be a subset of {@code servers}).
    * @throws java.io.IOException on move failure
    */
-  Set<HostAndPort> moveServers(Set<HostAndPort> hostPorts,
+  Set<Address> moveServers(Set<Address> servers,
                       String srcGroup, String dstGroup) throws IOException;
 
   /**
@@ -81,7 +79,7 @@ public interface RSGroupInfoManager {
    * @param hostPort the server
    * @return An instance of RSGroupInfo
    */
-  RSGroupInfo getRSGroupOfServer(HostAndPort hostPort) throws IOException;
+  RSGroupInfo getRSGroupOfServer(Address hostPort) throws IOException;
 
   /**
    * Gets the group information.

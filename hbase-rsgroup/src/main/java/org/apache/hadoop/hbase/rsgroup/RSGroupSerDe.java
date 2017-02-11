@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +19,6 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import com.google.common.collect.Lists;
-import com.google.common.net.HostAndPort;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -30,15 +27,16 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
+import org.apache.hadoop.hbase.util.Address;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -94,7 +92,7 @@ public class RSGroupSerDe {
   public static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
     RSGroupInfo RSGroupInfo = new RSGroupInfo(proto.getName());
     for(HBaseProtos.ServerName el: proto.getServersList()) {
-      RSGroupInfo.addServer(HostAndPort.fromParts(el.getHostName(), el.getPort()));
+      RSGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
     }
     for(HBaseProtos.TableName pTableName: proto.getTablesList()) {
       RSGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
@@ -110,9 +108,9 @@ public class RSGroupSerDe {
     }
     List<HBaseProtos.ServerName> hostports =
         new ArrayList<HBaseProtos.ServerName>(pojo.getServers().size());
-    for(HostAndPort el: pojo.getServers()) {
+    for(Address el: pojo.getServers()) {
       hostports.add(HBaseProtos.ServerName.newBuilder()
-          .setHostName(el.getHostText())
+          .setHostName(el.getHostname())
           .setPort(el.getPort())
           .build());
     }

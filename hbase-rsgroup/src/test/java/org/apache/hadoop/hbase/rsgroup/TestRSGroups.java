@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import com.google.common.collect.Sets;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import com.google.common.net.HostAndPort;
+import java.io.IOException;
+import java.util.Iterator;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -50,18 +53,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.Iterator;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import com.google.common.collect.Sets;
 
 @Category({MediumTests.class})
 public class TestRSGroups extends TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroups.class);
   private static HMaster master;
-  private static boolean init = false;
+  private static boolean INIT = false;
   private static RSGroupAdminEndpoint RSGroupAdminEndpoint;
 
 
@@ -93,8 +91,8 @@ public class TestRSGroups extends TestRSGroupsBase {
       }
     });
     admin.setBalancerRunning(false,true);
-    rsGroupAdmin = new VerifyingRSGroupAdminClient(rsGroupAdmin.newClient(TEST_UTIL.getConnection()),
-        TEST_UTIL.getConfiguration());
+    rsGroupAdmin = new VerifyingRSGroupAdminClient(
+        new RSGroupAdminClient(TEST_UTIL.getConnection()), TEST_UTIL.getConfiguration());
     RSGroupAdminEndpoint =
         master.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class).get(0);
   }
@@ -106,8 +104,8 @@ public class TestRSGroups extends TestRSGroupsBase {
 
   @Before
   public void beforeMethod() throws Exception {
-    if(!init) {
-      init = true;
+    if (!INIT) {
+      INIT = true;
       afterMethod();
     }
 
@@ -130,11 +128,9 @@ public class TestRSGroups extends TestRSGroupsBase {
         ((MiniHBaseCluster)cluster).getMaster().getServerName();
 
     try {
-      rsGroupAdmin.moveServers(
-          Sets.newHashSet(masterServerName.getHostPort()),
-          "master");
+      rsGroupAdmin.moveServers(Sets.newHashSet(masterServerName.getAddress()), "master");
     } catch (Exception ex) {
-      // ignore
+      LOG.warn("Got this on setup, FYI", ex);
     }
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -241,10 +237,13 @@ public class TestRSGroups extends TestRSGroupsBase {
   @Test
   public void testGroupInfoMultiAccessing() throws Exception {
     RSGroupInfoManager manager = RSGroupAdminEndpoint.getGroupInfoManager();
-    final RSGroupInfo defaultGroup = manager.getRSGroup("default");
+    RSGroupInfo defaultGroup = null;
+    synchronized (manager) {
+      defaultGroup = manager.getRSGroup("default");
+    }
     // getRSGroup updates default group's server list
     // this process must not affect other threads iterating the list
-    Iterator<HostAndPort> it = defaultGroup.getServers().iterator();
+    Iterator<Address> it = defaultGroup.getServers().iterator();
     manager.getRSGroup("default");
     it.next();
   }

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
@@ -88,6 +89,7 @@ public class TestWALFactory {
   protected FileSystem fs;
   protected Path dir;
   protected WALFactory wals;
+  private ServerName currentServername;
 
   @Rule
   public final TestName currentTest = new TestName();
@@ -96,7 +98,8 @@ public class TestWALFactory {
   public void setUp() throws Exception {
     fs = cluster.getFileSystem();
     dir = new Path(hbaseDir, currentTest.getMethodName());
-    wals = new WALFactory(conf, null, currentTest.getMethodName());
+    this.currentServername = ServerName.valueOf(currentTest.getMethodName(), 16010, 1);
+    wals = new WALFactory(conf, null, this.currentServername.toString());
   }
 
   @After
@@ -165,9 +168,6 @@ public class TestWALFactory {
     final TableName tableName = TableName.valueOf(currentTest.getMethodName());
     final byte [] rowName = tableName.getName();
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
-    final Path logdir = new Path(hbaseWALDir,
-      AbstractFSWALProvider.getWALDirectoryName(currentTest.getMethodName()));
-    Path oldLogDir = new Path(hbaseWALDir, HConstants.HREGION_OLDLOGDIR_NAME);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
     Path tabledir = FSUtils.getTableDir(hbaseWALDir, tableName);
@@ -209,7 +209,13 @@ public class TestWALFactory {
       }
     }
     wals.shutdown();
-    List<Path> splits = WALSplitter.split(hbaseWALDir, logdir, oldLogDir, fs, conf, wals);
+    // The below calculation of logDir relies on insider information... WALSplitter should be connected better
+    // with the WAL system.... not requiring explicit path. The oldLogDir is just made up not used.
+    Path logDir =
+        new Path(new Path(hbaseWALDir, HConstants.HREGION_LOGDIR_NAME),
+            this.currentServername.toString());
+    Path oldLogDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    List<Path> splits = WALSplitter.split(hbaseWALDir, logDir, oldLogDir, fs, conf, wals);
     verifySplits(splits, howmany);
   }
 

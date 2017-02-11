@@ -255,7 +255,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
-   * Construct the directory name for all WALs on a given server.
+   * Construct the directory name for all WALs on a given server. Dir names currently look like
+   * this for WALs: <code>hbase//WALs/kalashnikov.att.net,61634,1486865297088</code>.
    * @param serverName Server name formatted as described in {@link ServerName}
    * @return the relative WAL directory name, e.g. <code>.logs/1.example.org,60030,12345</code> if
    *         <code>serverName</code> passed is <code>1.example.org,60030,12345</code>

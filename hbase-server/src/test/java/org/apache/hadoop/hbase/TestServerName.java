@@ -91,21 +91,12 @@ public class TestServerName {
     assertEquals(sn.hashCode(), sn2.hashCode());
     assertNotSame(sn.hashCode(), sn3.hashCode());
     assertEquals(sn.toString(),
-      ServerName.getServerName("www.example.org", 1234, 5678));
+      ServerName.valueOf("www.example.org", 1234, 5678).toString());
     assertEquals(sn.toString(),
-      ServerName.getServerName("www.example.org:1234", 5678));
+      ServerName.valueOf("www.example.org:1234", 5678).toString());
     assertEquals(sn.toString(),
       "www.example.org" + ServerName.SERVERNAME_SEPARATOR + "1234" +
       ServerName.SERVERNAME_SEPARATOR + "5678");
-  }
-
-  @Test
-  public void getServerStartcodeFromServerName() {
-    ServerName sn = ServerName.valueOf("www.example.org", 1234, 5678);
-    assertEquals(5678,
-      ServerName.getServerStartcodeFromServerName(sn.toString()));
-    assertNotSame(5677,
-      ServerName.getServerStartcodeFromServerName(sn.toString()));
   }
 
   @Test
