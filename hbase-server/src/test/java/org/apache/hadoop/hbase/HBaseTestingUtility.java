@@ -197,6 +197,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   private volatile Connection connection;
 
+  private boolean localMode = false;
+
   /**
    * System property key to get test directory value.
    * Name is as it is because mini dfs has hard-codings to put test data here.
@@ -354,8 +356,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public static HBaseTestingUtility createLocalHTU(Configuration c) {
     HBaseTestingUtility htu = new HBaseTestingUtility(c);
     String dataTestDir = htu.getDataTestDir().toString();
-    htu.getConfiguration().set(HConstants.HBASE_DIR, dataTestDir);
+    htu.getConfiguration().set("fs.defaultFS","file:///");
+    htu.getConfiguration().set(HConstants.HBASE_DIR, "file://" + dataTestDir);
     LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
+    htu.localMode = true;
     return htu;
   }
 
@@ -1059,9 +1063,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
-    if(this.dfsCluster == null) {
+    if(this.dfsCluster == null && !localMode) {
+      LOG.info("STARTING DFS");
       dfsCluster = startMiniDFSCluster(numDataNodes, dataNodeHosts);
-    }
+    } else LOG.info("NOT STARTING DFS");
 
     // Start up a zk cluster.
     if (this.zkCluster == null) {
