@@ -37,8 +37,10 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 @Category({RegionServerTests.class, SmallTests.class})
@@ -49,6 +51,9 @@ public class TestRegionSplitPolicy {
   private HRegion mockRegion;
   private List<Store> stores;
   private static final TableName TABLENAME = TableName.valueOf("t");
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setupMocks() {
@@ -229,7 +234,7 @@ public class TestRegionSplitPolicy {
    */
   @Test
   public void testCustomPolicy() throws IOException {
-    HTableDescriptor myHtd = new HTableDescriptor(TableName.valueOf("foobar"));
+    HTableDescriptor myHtd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     myHtd.setValue(HTableDescriptor.SPLIT_POLICY,
         KeyPrefixRegionSplitPolicy.class.getName());
     myHtd.setValue(KeyPrefixRegionSplitPolicy.PREFIX_LENGTH_KEY, String.valueOf(2));
@@ -338,7 +343,7 @@ public class TestRegionSplitPolicy {
 
   @Test
   public void testDelimitedKeyPrefixRegionSplitPolicy() throws IOException {
-    HTableDescriptor myHtd = new HTableDescriptor(TableName.valueOf("foobar"));
+    HTableDescriptor myHtd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     myHtd.setValue(HTableDescriptor.SPLIT_POLICY,
         DelimitedKeyPrefixRegionSplitPolicy.class.getName());
     myHtd.setValue(DelimitedKeyPrefixRegionSplitPolicy.DELIMITER_KEY, ",");

@@ -38,8 +38,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
@@ -74,6 +76,9 @@ public class TestRSStatusServlet {
 
   private final ServerName fakeMasterAddress =
       ServerName.valueOf("localhost", 60010, 1212121212);
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setupBasicMocks() throws IOException, ServiceException {
@@ -118,7 +123,7 @@ public class TestRSStatusServlet {
   
   @Test
   public void testWithRegions() throws IOException, ServiceException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("mytable"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     List<HRegionInfo> regions = Lists.newArrayList(
         new HRegionInfo(htd.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("d")),
         new HRegionInfo(htd.getTableName(), Bytes.toBytes("d"), Bytes.toBytes("z"))

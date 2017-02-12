@@ -39,8 +39,10 @@ import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /** Unit tests to test retrieving table/region compaction state*/
 @Category({VerySlowRegionServerTests.class, LargeTests.class})
@@ -48,6 +50,9 @@ public class TestCompactionState {
   private static final Log LOG = LogFactory.getLog(TestCompactionState.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Random random = new Random();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -61,48 +66,48 @@ public class TestCompactionState {
 
   @Test(timeout=600000)
   public void testMajorCompaction() throws IOException, InterruptedException {
-    compaction("testMajorCompaction", 8, CompactionState.MAJOR, false);
+    compaction(name.getMethodName(), 8, CompactionState.MAJOR, false);
   }
 
   @Test(timeout=600000)
   public void testMinorCompaction() throws IOException, InterruptedException {
-    compaction("testMinorCompaction", 15, CompactionState.MINOR, false);
+    compaction(name.getMethodName(), 15, CompactionState.MINOR, false);
   }
 
   @Test(timeout=600000)
   public void testMajorCompactionOnFamily() throws IOException, InterruptedException {
-    compaction("testMajorCompactionOnFamily", 8, CompactionState.MAJOR, true);
+    compaction(name.getMethodName(), 8, CompactionState.MAJOR, true);
   }
 
   @Test(timeout=600000)
   public void testMinorCompactionOnFamily() throws IOException, InterruptedException {
-    compaction("testMinorCompactionOnFamily", 15, CompactionState.MINOR, true);
+    compaction(name.getMethodName(), 15, CompactionState.MINOR, true);
   }
 
   @Test
   public void testInvalidColumnFamily() throws IOException, InterruptedException {
-    TableName table = TableName.valueOf("testInvalidColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] family = Bytes.toBytes("family");
     byte [] fakecf = Bytes.toBytes("fakecf");
     boolean caughtMinorCompact = false;
     boolean caughtMajorCompact = false;
     Table ht = null;
     try {
-      ht = TEST_UTIL.createTable(table, family);
+      ht = TEST_UTIL.createTable(tableName, family);
       Admin admin = TEST_UTIL.getAdmin();
       try {
-        admin.compact(table, fakecf);
+        admin.compact(tableName, fakecf);
       } catch (IOException ioe) {
         caughtMinorCompact = true;
       }
       try {
-        admin.majorCompact(table, fakecf);
+        admin.majorCompact(tableName, fakecf);
       } catch (IOException ioe) {
         caughtMajorCompact = true;
       }
     } finally {
       if (ht != null) {
-        TEST_UTIL.deleteTable(table);
+        TEST_UTIL.deleteTable(tableName);
       }
       assertTrue(caughtMinorCompact);
       assertTrue(caughtMajorCompact);

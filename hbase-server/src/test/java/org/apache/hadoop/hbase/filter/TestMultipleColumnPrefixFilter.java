@@ -43,8 +43,10 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({FilterTests.class, SmallTests.class})
 public class TestMultipleColumnPrefixFilter {
@@ -52,10 +54,13 @@ public class TestMultipleColumnPrefixFilter {
   private final static HBaseTestingUtility TEST_UTIL = new
       HBaseTestingUtility();
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void testMultipleColumnPrefixFilter() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestMultipleColumnPrefixFilter"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMaxVersions(3);
     htd.addFamily(hcd);
@@ -120,7 +125,7 @@ public class TestMultipleColumnPrefixFilter {
   public void testMultipleColumnPrefixFilterWithManyFamilies() throws IOException {
     String family1 = "Family1";
     String family2 = "Family2";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestMultipleColumnPrefixFilter"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor hcd1 = new HColumnDescriptor(family1);
     hcd1.setMaxVersions(3);
     htd.addFamily(hcd1);
@@ -192,7 +197,7 @@ public class TestMultipleColumnPrefixFilter {
   @Test
   public void testMultipleColumnPrefixFilterWithColumnPrefixFilter() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestMultipleColumnPrefixFilter"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.

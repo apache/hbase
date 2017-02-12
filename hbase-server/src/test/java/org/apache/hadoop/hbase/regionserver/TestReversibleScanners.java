@@ -60,10 +60,13 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+import org.junit.rules.TestName;
+
 /**
  * Test cases against ReversibleKeyValueScanner
  */
@@ -84,6 +87,9 @@ public class TestReversibleScanners {
   private static byte[] VALUE = Bytes.toBytes("testValue");
   private static final int VALUESIZE = 3;
   private static byte[][] VALUES = makeN(VALUE, VALUESIZE);
+
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testReversibleStoreFileScanner() throws IOException {
@@ -310,7 +316,7 @@ public class TestReversibleScanners {
   @Test
   public void testReversibleRegionScanner() throws IOException {
     byte[] FAMILYNAME2 = Bytes.toBytes("testCf2");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testtable"))
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()))
         .addFamily(new HColumnDescriptor(FAMILYNAME))
         .addFamily(new HColumnDescriptor(FAMILYNAME2));
     Region region = TEST_UTIL.createLocalHRegion(htd, null, null);

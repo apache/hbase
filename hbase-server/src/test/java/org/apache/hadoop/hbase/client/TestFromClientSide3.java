@@ -69,8 +69,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestFromClientSide3 {
@@ -87,6 +89,9 @@ public class TestFromClientSide3 {
   private final static byte[] COL_QUAL = Bytes.toBytes("f1");
   private final static byte[] VAL_BYTES = Bytes.toBytes("v1");
   private final static byte[] ROW_BYTES = Bytes.toBytes("r1");
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -169,7 +174,7 @@ public class TestFromClientSide3 {
      */
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
 
-    TableName tableName = TableName.valueOf("testAdvancedConfigOverride");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
     Admin admin = TEST_UTIL.getAdmin();
     ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
@@ -283,7 +288,7 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableBatchWithEmptyPut ()throws Exception {
-      Table table = TEST_UTIL.createTable(TableName.valueOf("testHTableBatchWithEmptyPut"),
+      Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
           new byte[][] { FAMILY });
     try {
       List actions = (List) new ArrayList();
@@ -309,7 +314,7 @@ public class TestFromClientSide3 {
   public void testHTableExistsMethodSingleRegionSingleGet() throws Exception {
       // Test with a single region table.
       Table table = TEST_UTIL.createTable(
-          TableName.valueOf("testHTableExistsMethodSingleRegionSingleGet"),
+          TableName.valueOf(name.getMethodName()),
           new byte[][] { FAMILY });
 
     Put put = new Put(ROW);
@@ -328,7 +333,7 @@ public class TestFromClientSide3 {
 
   public void testHTableExistsMethodSingleRegionMultipleGets() throws Exception {
     Table table = TEST_UTIL.createTable(TableName.valueOf(
-        "testHTableExistsMethodSingleRegionMultipleGets"), new byte[][] { FAMILY });
+        name.getMethodName()), new byte[][] { FAMILY });
 
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -347,7 +352,7 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableExistsBeforeGet() throws Exception {
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testHTableExistsBeforeGet"),
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
         new byte[][] { FAMILY });
     try {
       Put put = new Put(ROW);
@@ -371,7 +376,7 @@ public class TestFromClientSide3 {
   public void testHTableExistsAllBeforeGet() throws Exception {
     final byte[] ROW2 = Bytes.add(ROW, Bytes.toBytes("2"));
     Table table = TEST_UTIL.createTable(
-        TableName.valueOf("testHTableExistsAllBeforeGet"), new byte[][] { FAMILY });
+        TableName.valueOf(name.getMethodName()), new byte[][] { FAMILY });
     try {
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -403,7 +408,7 @@ public class TestFromClientSide3 {
   @Test
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
     Table table = TEST_UTIL.createTable(
-      TableName.valueOf("testHTableExistsMethodMultipleRegionsSingleGet"), new byte[][] { FAMILY },
+      TableName.valueOf(name.getMethodName()), new byte[][] { FAMILY },
       1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -422,7 +427,7 @@ public class TestFromClientSide3 {
   @Test
   public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
     Table table = TEST_UTIL.createTable(
-      TableName.valueOf("testHTableExistsMethodMultipleRegionsMultipleGets"),
+      TableName.valueOf(name.getMethodName()),
       new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
@@ -472,7 +477,7 @@ public class TestFromClientSide3 {
   public void testGetEmptyRow() throws Exception {
     //Create a table and put in 1 row
     Admin admin = TEST_UTIL.getAdmin();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes(name.getMethodName())));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
@@ -505,7 +510,7 @@ public class TestFromClientSide3 {
 
   @Test(timeout = 60000)
   public void testPutWithPreBatchMutate() throws Exception {
-    TableName tableName = TableName.valueOf("testPutWithPreBatchMutate");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testPreBatchMutate(tableName, () -> {
       try {
         Table t = TEST_UTIL.getConnection().getTable(tableName);
@@ -520,7 +525,7 @@ public class TestFromClientSide3 {
 
   @Test(timeout = 60000)
   public void testRowMutationsWithPreBatchMutate() throws Exception {
-    TableName tableName = TableName.valueOf("testRowMutationsWithPreBatchMutate");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testPreBatchMutate(tableName, () -> {
       try {
         RowMutations rm = new RowMutations(ROW, 1);
@@ -567,7 +572,7 @@ public class TestFromClientSide3 {
 
   @Test(timeout = 30000)
   public void testLockLeakWithDelta() throws Exception, Throwable {
-    TableName tableName = TableName.valueOf("testLockLeakWithDelta");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addCoprocessor(WatiingForMultiMutationsObserver.class.getName());
     desc.setConfiguration("hbase.rowlock.wait.duration", String.valueOf(5000));
@@ -620,7 +625,7 @@ public class TestFromClientSide3 {
 
   @Test(timeout = 30000)
   public void testMultiRowMutations() throws Exception, Throwable {
-    TableName tableName = TableName.valueOf("testMultiRowMutations");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addCoprocessor(MultiRowMutationEndpoint.class.getName());
     desc.addCoprocessor(WatiingForMultiMutationsObserver.class.getName());
@@ -709,13 +714,13 @@ public class TestFromClientSide3 {
    */
   @Test
   public void testMVCCUsingMVCCPreAssign() throws IOException {
-    TableName tableName = TableName.valueOf("testMVCCUsingMVCCPreAssign");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
     Admin admin = TEST_UTIL.getAdmin();
     admin.createTable(htd);
-    Table table = admin.getConnection().getTable(TableName.valueOf("testMVCCUsingMVCCPreAssign"));
+    Table table = admin.getConnection().getTable(TableName.valueOf(name.getMethodName()));
     //put two row first to init the scanner
     Put put = new Put(Bytes.toBytes("0"));
     put.addColumn(FAMILY, Bytes.toBytes( ""), Bytes.toBytes("0"));
@@ -753,13 +758,13 @@ public class TestFromClientSide3 {
 
   @Test
   public void testPutThenGetWithMultipleThreads() throws Exception {
-    TableName TABLE = TableName.valueOf("testParallelPutAndGet");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final int THREAD_NUM = 20;
     final int ROUND_NUM = 10;
     for (int round = 0; round < ROUND_NUM; round++) {
       ArrayList<Thread> threads = new ArrayList<>(THREAD_NUM);
       final AtomicInteger successCnt = new AtomicInteger(0);
-      Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+      Table ht = TEST_UTIL.createTable(tableName, FAMILY);
       for (int i = 0; i < THREAD_NUM; i++) {
         final int index = i;
         Thread t = new Thread(new Runnable() {
@@ -797,7 +802,7 @@ public class TestFromClientSide3 {
       }
       assertEquals("Not equal in round " + round, THREAD_NUM, successCnt.get());
       ht.close();
-      TEST_UTIL.deleteTable(TABLE);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 

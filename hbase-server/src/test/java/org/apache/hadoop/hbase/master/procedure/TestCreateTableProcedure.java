@@ -30,25 +30,29 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
+  @Rule
+  public TestName name = new TestName();
 
   @Test(timeout=60000)
   public void testSimpleCreate() throws Exception {
-    final TableName tableName = TableName.valueOf("testSimpleCreate");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[][] splitKeys = null;
     testSimpleCreate(tableName, splitKeys);
   }
 
   @Test(timeout=60000)
   public void testSimpleCreateWithSplits() throws Exception {
-    final TableName tableName = TableName.valueOf("testSimpleCreateWithSplits");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[][] splitKeys = new byte[][] {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
@@ -65,7 +69,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   @Test(timeout=60000)
   public void testCreateWithoutColumnFamily() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final TableName tableName = TableName.valueOf("testCreateWithoutColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // create table with 0 families will fail
     final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName);
 
@@ -85,7 +89,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000, expected=TableExistsException.class)
   public void testCreateExisting() throws Exception {
-    final TableName tableName = TableName.valueOf("testCreateExisting");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f");
     final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
@@ -108,7 +112,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // create the table
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -132,13 +136,13 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=90000)
   public void testRollbackAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testRollbackAndDoubleExecution(MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2"));
   }
 
   @Test(timeout=90000)
   public void testRollbackAndDoubleExecutionOnMobTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecutionOnMobTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
     htd.getFamily(Bytes.toBytes("f1")).setMobEnabled(true);
     testRollbackAndDoubleExecution(htd);

@@ -138,9 +138,8 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testWholesomeMerge() throws Exception {
-    LOG.info("Starting testWholesomeMerge");
-    final TableName tableName =
-        TableName.valueOf("testWholesomeMerge");
+    LOG.info("Starting " + name.getMethodName());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table and load data.
     Table table = createTableAndLoadData(MASTER, tableName);
@@ -189,7 +188,7 @@ public class TestRegionMergeTransactionOnCluster {
    */
   @Test
   public void testMergeAndRestartingMaster() throws Exception {
-    final TableName tableName = TableName.valueOf("testMergeAndRestartingMaster");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table and load data.
     Table table = createTableAndLoadData(MASTER, tableName);
@@ -208,11 +207,10 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testCleanMergeReference() throws Exception {
-    LOG.info("Starting testCleanMergeReference");
+    LOG.info("Starting " + name.getMethodName());
     ADMIN.enableCatalogJanitor(false);
     try {
-      final TableName tableName =
-          TableName.valueOf("testCleanMergeReference");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create table and load data.
       Table table = createTableAndLoadData(MASTER, tableName);
       // Merge 1st and 2nd region
@@ -320,8 +318,8 @@ public class TestRegionMergeTransactionOnCluster {
    */
   @Test
   public void testMerge() throws Exception {
-    LOG.info("Starting testMerge");
-    final TableName tableName = TableName.valueOf("testMerge");
+    LOG.info("Starting " + name.getMethodName());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final Admin admin = TEST_UTIL.getAdmin();
     final int syncWaitTimeout = 10 * 60000; // 10min
 
@@ -372,7 +370,7 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testMergeWithReplicas() throws Exception {
-    final TableName tableName = TableName.valueOf("testMergeWithReplicas");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create table and load data.
     createTableAndLoadData(MASTER, tableName, 5, 2);
     List<Pair<HRegionInfo, ServerName>> initialRegionToServers =

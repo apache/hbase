@@ -62,6 +62,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 @Category({MapReduceTests.class, LargeTests.class})
@@ -89,6 +90,9 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   private final String FAMILY = "FAM";
 
+  @Rule
+  public TestName name = new TestName();
+
   public Configuration getConf() {
     return util.getConfiguration();
   }
@@ -112,7 +116,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -128,7 +132,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @Test
   public void testMROnTableWithInvalidOperationAttr() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {

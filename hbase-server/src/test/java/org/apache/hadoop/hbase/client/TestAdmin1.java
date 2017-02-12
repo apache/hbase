@@ -68,8 +68,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Class to test HBaseAdmin.
@@ -81,6 +83,9 @@ public class TestAdmin1 {
   private static final Log LOG = LogFactory.getLog(TestAdmin1.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Admin admin;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -110,7 +115,7 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testSplitFlushCompactUnknownTable() throws InterruptedException {
-    final TableName unknowntable = TableName.valueOf("fubar");
+    final TableName unknowntable = TableName.valueOf(name.getMethodName());
     Exception exception = null;
     try {
       this.admin.compact(unknowntable);
@@ -202,8 +207,7 @@ public class TestAdmin1 {
 
     // Now make it so at least the table exists and then do tests against a
     // nonexistent column family -- see if we get right exceptions.
-    final TableName tableName =
-      TableName.valueOf("testDeleteEditUnknownColumnFamilyAndOrTable" + System.currentTimeMillis());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + System.currentTimeMillis());
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("cf"));
     this.admin.createTable(htd);
@@ -236,7 +240,7 @@ public class TestAdmin1 {
     final byte [] row = Bytes.toBytes("row");
     final byte [] qualifier = Bytes.toBytes("qualifier");
     final byte [] value = Bytes.toBytes("value");
-    final TableName table = TableName.valueOf("testDisableAndEnableTable");
+    final TableName table = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
     put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
@@ -301,8 +305,8 @@ public class TestAdmin1 {
     final byte [] row = Bytes.toBytes("row");
     final byte [] qualifier = Bytes.toBytes("qualifier");
     final byte [] value = Bytes.toBytes("value");
-    final TableName table1 = TableName.valueOf("testDisableAndEnableTable1");
-    final TableName table2 = TableName.valueOf("testDisableAndEnableTable2");
+    final TableName table1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName table2 = TableName.valueOf(name.getMethodName() + "2");
     Table ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
     Table ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
@@ -358,7 +362,7 @@ public class TestAdmin1 {
   public void testCreateTable() throws IOException {
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
-    TableName tableName = TableName.valueOf("testCreateTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
@@ -370,12 +374,12 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testTruncateTable() throws IOException {
-    testTruncateTable(TableName.valueOf("testTruncateTable"), false);
+    testTruncateTable(TableName.valueOf(name.getMethodName()), false);
   }
 
   @Test (timeout=300000)
   public void testTruncateTablePreservingSplits() throws IOException {
-    testTruncateTable(TableName.valueOf("testTruncateTablePreservingSplits"), true);
+    testTruncateTable(TableName.valueOf(name.getMethodName()), true);
   }
 
   private void testTruncateTable(final TableName tableName, boolean preserveSplits)
@@ -415,7 +419,7 @@ public class TestAdmin1 {
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
     HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("myTestTable"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(fam1);
     htd.addFamily(fam2);
     htd.addFamily(fam3);
@@ -430,7 +434,7 @@ public class TestAdmin1 {
   @Test (timeout=300000)
   public void testCompactionTimestamps() throws Exception {
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
-    TableName tableName = TableName.valueOf("testCompactionTimestampsTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(fam1);
     this.admin.createTable(htd);
@@ -499,8 +503,7 @@ public class TestAdmin1 {
    */
   @Test (timeout=300000)
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
-    final TableName tableName =
-        TableName.valueOf("changeTableSchemaOnline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
@@ -613,7 +616,7 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testCreateTableNumberOfRegions() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf("testCreateTableNumberOfRegions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
@@ -663,8 +666,7 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testCreateTableWithRegions() throws IOException, InterruptedException {
-
-    TableName tableName = TableName.valueOf("testCreateTableWithRegions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     byte [][] splitKeys = {
         new byte [] { 1, 1, 1 },
@@ -840,7 +842,7 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testTableAvailableWithRandomSplitKeys() throws Exception {
-    TableName tableName = TableName.valueOf("testTableAvailableWithRandomSplitKeys");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor("col"));
     byte[][] splitKeys = new byte[1][];
@@ -855,7 +857,7 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testCreateTableWithOnlyEmptyStartRow() throws IOException {
-    byte[] tableName = Bytes.toBytes("testCreateTableWithOnlyEmptyStartRow");
+    final byte[] tableName = Bytes.toBytes(name.getMethodName());
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
@@ -869,7 +871,7 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testCreateTableWithEmptyRowInTheSplitKeys() throws IOException{
-    byte[] tableName = Bytes.toBytes("testCreateTableWithEmptyRowInTheSplitKeys");
+    final byte[] tableName = Bytes.toBytes(name.getMethodName());
     byte[][] splitKeys = new byte[3][];
     splitKeys[0] = "region1".getBytes();
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
@@ -886,7 +888,7 @@ public class TestAdmin1 {
 
   @Test (timeout=120000)
   public void testTableExist() throws IOException {
-    final TableName table = TableName.valueOf("testTableExist");
+    final TableName table = TableName.valueOf(name.getMethodName());
     boolean exist;
     exist = this.admin.tableExists(table);
     assertEquals(false, exist);
@@ -919,7 +921,7 @@ public class TestAdmin1 {
    */
   @Test (timeout=300000)
   public void testEnableTableRetainAssignment() throws IOException {
-    final TableName tableName = TableName.valueOf("testEnableTableAssignment");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
         new byte[] { 3, 3, 3 }, new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 },
         new byte[] { 6, 6, 6 }, new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 },
@@ -1124,7 +1126,7 @@ public class TestAdmin1 {
     // are not allowed. The test validates that. Then the test does a valid split/merge of allowed
     // regions.
     // Set up a table with 3 regions and replication set to 3
-    TableName tableName = TableName.valueOf("testSplitAndMergeWithReplicaTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.setRegionReplication(3);
     byte[] cf = "f".getBytes();
@@ -1220,9 +1222,9 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
-    TableName tableName = TableName.valueOf("testEnableDisableAddColumnDeleteColumn");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    while (!this.admin.isTableEnabled(TableName.valueOf("testEnableDisableAddColumnDeleteColumn"))) {
+    while (!this.admin.isTableEnabled(TableName.valueOf(name.getMethodName()))) {
       Thread.sleep(10);
     }
     this.admin.disableTable(tableName);
@@ -1245,9 +1247,9 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testDeleteLastColumnFamily() throws Exception {
-    TableName tableName = TableName.valueOf("testDeleteLastColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    while (!this.admin.isTableEnabled(TableName.valueOf("testDeleteLastColumnFamily"))) {
+    while (!this.admin.isTableEnabled(TableName.valueOf(name.getMethodName()))) {
       Thread.sleep(10);
     }
 
@@ -1278,17 +1280,17 @@ public class TestAdmin1 {
    */
   @Test(timeout = 300000)
   public void testHFileReplication() throws Exception {
-    TableName name = TableName.valueOf("testHFileReplication");
+    final TableName tableName = TableName.valueOf(this.name.getMethodName());
     String fn1 = "rep1";
     HColumnDescriptor hcd1 = new HColumnDescriptor(fn1);
     hcd1.setDFSReplication((short) 1);
     String fn = "defaultRep";
     HColumnDescriptor hcd = new HColumnDescriptor(fn);
-    HTableDescriptor htd = new HTableDescriptor(name);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(hcd);
     htd.addFamily(hcd1);
     Table table = TEST_UTIL.createTable(htd, null);
-    TEST_UTIL.waitTableAvailable(name);
+    TEST_UTIL.waitTableAvailable(tableName);
     Put p = new Put(Bytes.toBytes("defaultRep_rk"));
     byte[] q1 = Bytes.toBytes("q1");
     byte[] v1 = Bytes.toBytes("v1");
@@ -1300,9 +1302,9 @@ public class TestAdmin1 {
     puts.add(p);
     try {
       table.put(puts);
-      admin.flush(name);
+      admin.flush(tableName);
 
-      List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(name);
+      List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(tableName);
       for (HRegion r : regions) {
         Store store = r.getStore(Bytes.toBytes(fn));
         for (StoreFile sf : store.getStorefiles()) {
@@ -1320,16 +1322,16 @@ public class TestAdmin1 {
         }
       }
     } finally {
-      if (admin.isTableEnabled(name)) {
-        this.admin.disableTable(name);
-        this.admin.deleteTable(name);
+      if (admin.isTableEnabled(tableName)) {
+        this.admin.disableTable(tableName);
+        this.admin.deleteTable(tableName);
       }
     }
   }
 
   @Test (timeout=300000)
   public void testMergeRegions() throws Exception {
-    TableName tableName = TableName.valueOf("testMergeWithFullRegionName");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HColumnDescriptor cd = new HColumnDescriptor("d");
     HTableDescriptor td = new HTableDescriptor(tableName);
     td.addFamily(cd);

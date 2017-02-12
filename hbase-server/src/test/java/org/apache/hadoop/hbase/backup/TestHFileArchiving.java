@@ -52,8 +52,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test that the {@link HFileArchiver} correctly removes all the parts of a region when cleaning up
@@ -65,6 +67,9 @@ public class TestHFileArchiving {
   private static final Log LOG = LogFactory.getLog(TestHFileArchiving.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Setup the config for the cluster
@@ -112,14 +117,13 @@ public class TestHFileArchiving {
 
   @Test
   public void testRemovesRegionDirOnArchive() throws Exception {
-    TableName TABLE_NAME =
-        TableName.valueOf("testRemovesRegionDirOnArchive");
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, TEST_FAM);
 
     final Admin admin = UTIL.getAdmin();
 
     // get the current store files for the region
-    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(tableName);
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
     HRegion region = servingRegions.get(0);
@@ -128,7 +132,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // shutdown the table so we can manipulate the files
-    admin.disableTable(TABLE_NAME);
+    admin.disableTable(tableName);
 
     FileSystem fs = UTIL.getTestFileSystem();
 
@@ -162,7 +166,7 @@ public class TestHFileArchiving {
     // then ensure the region's directory isn't present
     assertFalse(fs.exists(regionDir));
 
-    UTIL.deleteTable(TABLE_NAME);
+    UTIL.deleteTable(tableName);
   }
 
   /**
@@ -172,12 +176,11 @@ public class TestHFileArchiving {
    */
   @Test
   public void testDeleteRegionWithNoStoreFiles() throws Exception {
-    TableName TABLE_NAME =
-        TableName.valueOf("testDeleteRegionWithNoStoreFiles");
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, TEST_FAM);
 
     // get the current store files for the region
-    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(tableName);
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
     HRegion region = servingRegions.get(0);
@@ -216,22 +219,21 @@ public class TestHFileArchiving {
     // and check to make sure the region directoy got deleted
     assertFalse("Region directory (" + regionDir + "), still exists.", fs.exists(regionDir));
 
-    UTIL.deleteTable(TABLE_NAME);
+    UTIL.deleteTable(tableName);
   }
 
   @Test
   public void testArchiveOnTableDelete() throws Exception {
-    TableName TABLE_NAME =
-        TableName.valueOf("testArchiveOnTableDelete");
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, TEST_FAM);
 
-    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(tableName);
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
     Region region = servingRegions.get(0);
 
     // get the parent RS and monitor
-    HRegionServer hrs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    HRegionServer hrs = UTIL.getRSForFirstRegionInTable(tableName);
     FileSystem fs = hrs.getFileSystem();
 
     // put some data on the region
@@ -239,7 +241,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // get the hfiles in the region
-    List<Region> regions = hrs.getOnlineRegions(TABLE_NAME);
+    List<Region> regions = hrs.getOnlineRegions(tableName);
     assertEquals("More that 1 region for test table.", 1, regions.size());
 
     region = regions.get(0);
@@ -247,7 +249,7 @@ public class TestHFileArchiving {
     region.waitForFlushesAndCompactions();
 
     // disable table to prevent new updates
-    UTIL.getAdmin().disableTable(TABLE_NAME);
+    UTIL.getAdmin().disableTable(tableName);
     LOG.debug("Disabled table");
 
     // remove all the files from the archive to get a fair comparison
@@ -258,7 +260,7 @@ public class TestHFileArchiving {
     List<String> storeFiles = region.getStoreFileList(columns);
 
     // then delete the table so the hfiles get archived
-    UTIL.deleteTable(TABLE_NAME);
+    UTIL.deleteTable(tableName);
     LOG.debug("Deleted table");
 
     assertArchiveFiles(fs, storeFiles, 30000);
@@ -301,17 +303,16 @@ public class TestHFileArchiving {
    */
   @Test
   public void testArchiveOnTableFamilyDelete() throws Exception {
-    TableName TABLE_NAME =
-        TableName.valueOf("testArchiveOnTableFamilyDelete");
-    UTIL.createTable(TABLE_NAME, new byte[][] {TEST_FAM, Bytes.toBytes("fam2")});
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, new byte[][] {TEST_FAM, Bytes.toBytes("fam2")});
 
-    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(tableName);
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
     Region region = servingRegions.get(0);
 
     // get the parent RS and monitor
-    HRegionServer hrs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    HRegionServer hrs = UTIL.getRSForFirstRegionInTable(tableName);
     FileSystem fs = hrs.getFileSystem();
 
     // put some data on the region
@@ -319,7 +320,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // get the hfiles in the region
-    List<Region> regions = hrs.getOnlineRegions(TABLE_NAME);
+    List<Region> regions = hrs.getOnlineRegions(tableName);
     assertEquals("More that 1 region for test table.", 1, regions.size());
 
     region = regions.get(0);
@@ -327,7 +328,7 @@ public class TestHFileArchiving {
     region.waitForFlushesAndCompactions();
 
     // disable table to prevent new updates
-    UTIL.getAdmin().disableTable(TABLE_NAME);
+    UTIL.getAdmin().disableTable(tableName);
     LOG.debug("Disabled table");
 
     // remove all the files from the archive to get a fair comparison
@@ -338,11 +339,11 @@ public class TestHFileArchiving {
     List<String> storeFiles = region.getStoreFileList(columns);
 
     // then delete the table so the hfiles get archived
-    UTIL.getAdmin().deleteColumnFamily(TABLE_NAME, TEST_FAM);
+    UTIL.getAdmin().deleteColumnFamily(tableName, TEST_FAM);
 
     assertArchiveFiles(fs, storeFiles, 30000);
 
-    UTIL.deleteTable(TABLE_NAME);
+    UTIL.deleteTable(tableName);
   }
 
   /**
@@ -359,7 +360,7 @@ public class TestHFileArchiving {
 
     Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
     Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
-        TableName.valueOf("table")), "abcdef");
+        TableName.valueOf(name.getMethodName())), "abcdef");
     Path familyDir = new Path(regionDir, "cf");
 
     Path sourceRegionDir = new Path(rootDir, regionDir);

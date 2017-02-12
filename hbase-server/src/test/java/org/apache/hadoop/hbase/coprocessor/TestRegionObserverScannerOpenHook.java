@@ -66,13 +66,18 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestRegionObserverScannerOpenHook {
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   static final Path DIR = UTIL.getDataTestDir();
+
+  @Rule
+  public TestName name = new TestName();
 
   public static class NoDataFilter extends FilterBase {
 
@@ -261,10 +266,9 @@ public class TestRegionObserverScannerOpenHook {
     conf.setClass(HConstants.REGION_IMPL, CompactionCompletionNotifyingRegion.class, HRegion.class);
     conf.setInt("hbase.hstore.compaction.min", 2);
     UTIL.startMiniCluster();
-    String tableName = "testRegionObserverCompactionTimeStacking";
     byte[] ROW = Bytes.toBytes("testRow");
     byte[] A = Bytes.toBytes("A");
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     desc.addFamily(new HColumnDescriptor(A));
     desc.addCoprocessor(EmptyRegionObsever.class.getName(), null, Coprocessor.PRIORITY_USER, null);
     desc.addCoprocessor(NoDataFromCompaction.class.getName(), null, Coprocessor.PRIORITY_HIGHEST,

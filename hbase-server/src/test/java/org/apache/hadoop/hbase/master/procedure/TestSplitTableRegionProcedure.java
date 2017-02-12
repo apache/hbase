@@ -54,8 +54,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestSplitTableRegionProcedure {
@@ -68,6 +70,9 @@ public class TestSplitTableRegionProcedure {
 
   private static final int startRowNum = 11;
   private static final int rowCount = 60;
+
+  @Rule
+  public TestName name = new TestName();
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -110,7 +115,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test(timeout=60000)
   public void testSplitTableRegion() throws Exception {
-    final TableName tableName = TableName.valueOf("testSplitTableRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
@@ -134,7 +139,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test(timeout=60000)
   public void testSplitTableRegionNoStoreFile() throws Exception {
-    final TableName tableName = TableName.valueOf("testSplitTableRegionNoStoreFile");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
@@ -158,7 +163,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test(timeout=60000)
   public void testSplitTableRegionUnevenDaughter() throws Exception {
-    final TableName tableName = TableName.valueOf("testSplitTableRegionUnevenDaughter");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
@@ -183,7 +188,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test(timeout=60000)
   public void testSplitTableRegionEmptyDaughter() throws Exception {
-    final TableName tableName = TableName.valueOf("testSplitTableRegionEmptyDaughter");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
@@ -212,7 +217,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test(timeout=60000)
   public void testSplitTableRegionDeletedRowsDaughter() throws Exception {
-    final TableName tableName = TableName.valueOf("testSplitTableRegionDeletedRowsDaughter");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
@@ -252,7 +257,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test(timeout=60000)
   public void testInvalidSplitKey() throws Exception {
-    final TableName tableName = TableName.valueOf("testInvalidSplitKey");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
@@ -275,7 +280,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test(timeout = 60000)
   public void testRollbackAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(
@@ -306,7 +311,7 @@ public class TestSplitTableRegionProcedure {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo [] regions = MasterProcedureTestingUtility.createTable(

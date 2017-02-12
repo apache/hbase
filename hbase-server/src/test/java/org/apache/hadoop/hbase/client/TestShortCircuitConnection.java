@@ -38,13 +38,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestShortCircuitConnection {
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -59,14 +64,14 @@ public class TestShortCircuitConnection {
   @Test
   @SuppressWarnings("deprecation")
   public void testShortCircuitConnection() throws IOException, InterruptedException {
-    TableName tn = TableName.valueOf("testShortCircuitConnection");
-    HTableDescriptor htd = UTIL.createTableDescriptor(tn);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = UTIL.createTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("cf"));
     htd.addFamily(hcd);
     UTIL.createTable(htd, null);
-    HRegionServer regionServer = UTIL.getRSForFirstRegionInTable(tn);
+    HRegionServer regionServer = UTIL.getRSForFirstRegionInTable(tableName);
     ClusterConnection connection = regionServer.getClusterConnection();
-    Table tableIf = connection.getTable(tn);
+    Table tableIf = connection.getTable(tableName);
     assertTrue(tableIf instanceof HTable);
     HTable table = (HTable) tableIf;
     assertTrue(table.getConnection() == connection);

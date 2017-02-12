@@ -34,8 +34,10 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -68,6 +70,9 @@ public class TestWALMonotonicallyIncreasingSeqId {
   private static final int KEY_SEED_LEN = KEY_SEED.length();
 
   private static final char[] KEY_SEED_CHARS = KEY_SEED.toCharArray();
+
+  @Rule
+  public TestName name = new TestName();
 
   private HTableDescriptor getTableDesc(TableName tableName, byte[]... families) {
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -157,7 +162,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
   public void TestWALMonotonicallyIncreasingSeqId() throws Exception {
     byte[][] families = new byte[][] {Bytes.toBytes("cf")};
     byte[] qf = Bytes.toBytes("cq");
-    HTableDescriptor htd = getTableDesc(TableName.valueOf("TestWALMonotonicallyIncreasingSeqId"), families);
+    HTableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), families);
     HRegion region = (HRegion)initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     List<Thread> putThreads = new ArrayList<>();
     for(int i = 0; i < 1; i++) {

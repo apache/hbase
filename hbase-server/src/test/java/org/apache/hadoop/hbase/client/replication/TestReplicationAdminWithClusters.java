@@ -35,8 +35,10 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Unit testing of ReplicationAdmin with clusters
@@ -49,6 +51,9 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   static Admin admin1;
   static Admin admin2;
   static ReplicationAdmin adminExt;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -145,12 +150,12 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test(timeout = 300000, expected = TableNotFoundException.class)
   public void testDisableReplicationForNonExistingTable() throws Exception {
-    admin1.disableTableReplication(TableName.valueOf("nonExistingTable"));
+    admin1.disableTableReplication(TableName.valueOf(name.getMethodName()));
   }
 
   @Test(timeout = 300000, expected = TableNotFoundException.class)
   public void testEnableReplicationForNonExistingTable() throws Exception {
-    admin1.enableTableReplication(TableName.valueOf("nonExistingTable"));
+    admin1.enableTableReplication(TableName.valueOf(name.getMethodName()));
   }
 
   @Test(timeout = 300000, expected = IllegalArgumentException.class)
@@ -169,33 +174,33 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
    */
   @Test(timeout = 300000)
   public void testEnableReplicationForExplicitSetTableCfs() throws Exception {
-    TableName tn = TableName.valueOf("testEnableReplicationForSetTableCfs");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     String peerId = "2";
-    if (admin2.isTableAvailable(tableName)) {
-      admin2.disableTable(tableName);
-      admin2.deleteTable(tableName);
+    if (admin2.isTableAvailable(TestReplicationBase.tableName)) {
+      admin2.disableTable(TestReplicationBase.tableName);
+      admin2.deleteTable(TestReplicationBase.tableName);
     }
-    assertFalse("Table should not exists in the peer cluster", admin2.isTableAvailable(tableName));
+    assertFalse("Table should not exists in the peer cluster", admin2.isTableAvailable(TestReplicationBase.tableName));
 
     Map<TableName, ? extends Collection<String>> tableCfs =
         new HashMap<TableName, Collection<String>>();
-    tableCfs.put(tn, null);
+    tableCfs.put(tableName, null);
     try {
       adminExt.setPeerTableCFs(peerId, tableCfs);
-      admin1.enableTableReplication(tableName);
+      admin1.enableTableReplication(TestReplicationBase.tableName);
       assertFalse("Table should not be created if user has set table cfs explicitly for the "
           + "peer and this is not part of that collection",
-        admin2.isTableAvailable(tableName));
+        admin2.isTableAvailable(TestReplicationBase.tableName));
 
-      tableCfs.put(tableName, null);
+      tableCfs.put(TestReplicationBase.tableName, null);
       adminExt.setPeerTableCFs(peerId, tableCfs);
-      admin1.enableTableReplication(tableName);
+      admin1.enableTableReplication(TestReplicationBase.tableName);
       assertTrue(
         "Table should be created if user has explicitly added table into table cfs collection",
-        admin2.isTableAvailable(tableName));
+        admin2.isTableAvailable(TestReplicationBase.tableName));
     } finally {
       adminExt.removePeerTableCFs(peerId, adminExt.getPeerTableCFs(peerId));
-      admin1.disableTableReplication(tableName);
+      admin1.disableTableReplication(TestReplicationBase.tableName);
     }
   }
 

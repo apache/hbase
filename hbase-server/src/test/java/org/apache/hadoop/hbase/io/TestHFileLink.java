@@ -26,8 +26,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.util.regex.Matcher;
 
@@ -40,6 +42,8 @@ import static org.junit.Assert.assertTrue;
  */
 @Category({IOTests.class, SmallTests.class})
 public class TestHFileLink {
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testValidLinkNames() {
@@ -53,21 +57,21 @@ public class TestHFileLink {
       Assert.assertTrue("Failed validating:" + name, HFileLink.isHFileLink(name));
     }
 
-    String testName = "foo=fefefe-0123456";
-    Assert.assertEquals(TableName.valueOf("foo"),
+    String testName = name.getMethodName() + "=fefefe-0123456";
+    Assert.assertEquals(TableName.valueOf(name.getMethodName()),
         HFileLink.getReferencedTableName(testName));
     Assert.assertEquals("fefefe", HFileLink.getReferencedRegionName(testName));
     Assert.assertEquals("0123456", HFileLink.getReferencedHFileName(testName));
     Assert.assertEquals(testName,
-        HFileLink.createHFileLinkName(TableName.valueOf("foo"), "fefefe", "0123456"));
+        HFileLink.createHFileLinkName(TableName.valueOf(name.getMethodName()), "fefefe", "0123456"));
 
-    testName = "ns=foo=fefefe-0123456";
-    Assert.assertEquals(TableName.valueOf("ns", "foo"),
+    testName = "ns=" + name.getMethodName() + "=fefefe-0123456";
+    Assert.assertEquals(TableName.valueOf("ns", name.getMethodName()),
         HFileLink.getReferencedTableName(testName));
     Assert.assertEquals("fefefe", HFileLink.getReferencedRegionName(testName));
     Assert.assertEquals("0123456", HFileLink.getReferencedHFileName(testName));
     Assert.assertEquals(testName,
-        HFileLink.createHFileLinkName(TableName.valueOf("ns", "foo"), "fefefe", "0123456"));
+        HFileLink.createHFileLinkName(TableName.valueOf("ns", name.getMethodName()), "fefefe", "0123456"));
 
     for(String name : validLinkNames) {
       Matcher m = HFileLink.LINK_NAME_PATTERN.matcher(name);
@@ -90,8 +94,8 @@ public class TestHFileLink {
     String encodedRegion = "FEFE";
     String cf = "cf1";
 
-    TableName refTables[] = {TableName.valueOf("refTable"),
-        TableName.valueOf("ns", "refTable")};
+    TableName refTables[] = {TableName.valueOf(name.getMethodName()),
+        TableName.valueOf("ns", name.getMethodName())};
 
     for(TableName refTable : refTables) {
       Path refTableDir = FSUtils.getTableDir(archiveDir, refTable);
@@ -101,8 +105,8 @@ public class TestHFileLink {
       String refStoreFileName = refTable.getNameAsString().replace(
           TableName.NAMESPACE_DELIM, '=') + "=" + encodedRegion + "-" + storeFileName;
 
-      TableName tableNames[] = {TableName.valueOf("tableName1"),
-          TableName.valueOf("ns", "tableName2")};
+      TableName tableNames[] = {TableName.valueOf(name.getMethodName() + "1"),
+          TableName.valueOf("ns", name.getMethodName() + "2")};
 
       for( TableName tableName : tableNames) {
         Path tableDir = FSUtils.getTableDir(rootDir, tableName);

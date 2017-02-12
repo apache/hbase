@@ -44,11 +44,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestHRegionInfo {
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void testPb() throws DeserializationException {
     HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
@@ -91,7 +96,7 @@ public class TestHRegionInfo {
 
   @Test
   public void testCreateHRegionInfoName() throws Exception {
-    String tableName = "tablename";
+    final String tableName = name.getMethodName();
     final TableName tn = TableName.valueOf(tableName);
     String startKey = "startkey";
     final byte[] sk = Bytes.toBytes(startKey);
@@ -115,7 +120,7 @@ public class TestHRegionInfo {
 
   @Test
   public void testContainsRange() {
-    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf("testtable"));
+    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HRegionInfo hri = new HRegionInfo(
         tableDesc.getTableName(), Bytes.toBytes("a"), Bytes.toBytes("g"));
     // Single row range at start of region
@@ -143,7 +148,7 @@ public class TestHRegionInfo {
 
   @Test
   public void testLastRegionCompare() {
-    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf("testtable"));
+    HTableDescriptor tableDesc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HRegionInfo hrip = new HRegionInfo(
         tableDesc.getTableName(), Bytes.toBytes("a"), new byte[0]);
     HRegionInfo hric = new HRegionInfo(
@@ -158,10 +163,10 @@ public class TestHRegionInfo {
 
   @Test
   public void testComparator() {
-    TableName tablename = TableName.valueOf("comparatorTablename");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] empty = new byte[0];
-    HRegionInfo older = new HRegionInfo(tablename, empty, empty, false, 0L);
-    HRegionInfo newer = new HRegionInfo(tablename, empty, empty, false, 1L);
+    HRegionInfo older = new HRegionInfo(tableName, empty, empty, false, 0L);
+    HRegionInfo newer = new HRegionInfo(tableName, empty, empty, false, 1L);
     assertTrue(older.compareTo(newer) < 0);
     assertTrue(newer.compareTo(older) > 0);
     assertTrue(older.compareTo(older) == 0);
@@ -170,7 +175,7 @@ public class TestHRegionInfo {
 
   @Test
   public void testRegionNameForRegionReplicas() throws Exception {
-    String tableName = "tablename";
+    String tableName = name.getMethodName();
     final TableName tn = TableName.valueOf(tableName);
     String startKey = "startkey";
     final byte[] sk = Bytes.toBytes(startKey);
@@ -198,7 +203,7 @@ public class TestHRegionInfo {
 
   @Test
   public void testParseName() throws IOException {
-    TableName tableName = TableName.valueOf("testParseName");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] startKey = Bytes.toBytes("startKey");
     long regionId = System.currentTimeMillis();
     int replicaId = 42;
@@ -226,7 +231,7 @@ public class TestHRegionInfo {
 
   @Test
   public void testConvert() {
-    TableName tableName = TableName.valueOf("ns1:table1");
+    final TableName tableName = TableName.valueOf("ns1:" + name.getMethodName());
     byte[] startKey = Bytes.toBytes("startKey");
     byte[] endKey = Bytes.toBytes("endKey");
     boolean split = false;
@@ -266,10 +271,10 @@ public class TestHRegionInfo {
     byte[] endKey = new byte[] {0x01, 0x01, 0x02, 0x04};
     Configuration conf = new Configuration();
     conf.setBoolean("hbase.display.keys", false);
-    HRegionInfo h = new HRegionInfo(TableName.valueOf("foo"), startKey, endKey);
+    HRegionInfo h = new HRegionInfo(TableName.valueOf(name.getMethodName()), startKey, endKey);
     checkEquality(h, conf);
     // check HRIs with non-default replicaId
-    h = new HRegionInfo(TableName.valueOf("foo"), startKey, endKey, false,
+    h = new HRegionInfo(TableName.valueOf(name.getMethodName()), startKey, endKey, false,
         System.currentTimeMillis(), 1);
     checkEquality(h, conf);
     Assert.assertArrayEquals(HRegionInfo.HIDDEN_END_KEY,

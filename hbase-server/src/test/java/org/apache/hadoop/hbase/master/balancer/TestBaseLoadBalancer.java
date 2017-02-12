@@ -51,8 +51,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -73,6 +75,9 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       new int[] { 10, 1 }, new int[] { 1, 2 }, new int[] { 2, 2 }, new int[] { 3, 2 },
       new int[] { 1, 3 }, new int[] { 2, 3 }, new int[] { 3, 3 }, new int[] { 25, 3 },
       new int[] { 2, 10 }, new int[] { 2, 100 }, new int[] { 12, 10 }, new int[] { 12, 100 }, };
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -244,7 +249,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Mockito.when(services.getServerManager()).thenReturn(sm);
     balancer.setMasterServices(services);
     HRegionInfo hri1 = new HRegionInfo(
-        TableName.valueOf("table"), "key1".getBytes(), "key2".getBytes(),
+        TableName.valueOf(name.getMethodName()), "key1".getBytes(), "key2".getBytes(),
         false, 100);
     assertNull(balancer.randomAssignment(hri1, Collections.EMPTY_LIST));
     assertNull(balancer.randomAssignment(hri1, null));
@@ -266,13 +271,13 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<HRegionInfo> list2 = new ArrayList<HRegionInfo>();
     // create a region (region1)
     HRegionInfo hri1 = new HRegionInfo(
-        TableName.valueOf("table"), "key1".getBytes(), "key2".getBytes(),
+        TableName.valueOf(name.getMethodName()), "key1".getBytes(), "key2".getBytes(),
         false, 100);
     // create a replica of the region (replica_of_region1)
     HRegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
     HRegionInfo hri3 = new HRegionInfo(
-        TableName.valueOf("table"), "key2".getBytes(), "key3".getBytes(),
+        TableName.valueOf(name.getMethodName()), "key2".getBytes(), "key3".getBytes(),
         false, 101);
     list0.add(hri1); //only region1
     list1.add(hri2); //only replica_of_region1
@@ -335,13 +340,13 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<HRegionInfo> list2 = new ArrayList<HRegionInfo>();
     // create a region (region1)
     HRegionInfo hri1 = new HRegionInfo(
-        TableName.valueOf("table"), "key1".getBytes(), "key2".getBytes(),
+        TableName.valueOf(name.getMethodName()), "key1".getBytes(), "key2".getBytes(),
         false, 100);
     // create a replica of the region (replica_of_region1)
     HRegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
     HRegionInfo hri3 = new HRegionInfo(
-        TableName.valueOf("table"), "key2".getBytes(), "key3".getBytes(),
+        TableName.valueOf(name.getMethodName()), "key2".getBytes(), "key3".getBytes(),
         false, 101);
     list0.add(hri1); //only region1
     list1.add(hri2); //only replica_of_region1

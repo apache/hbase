@@ -34,8 +34,10 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -54,6 +56,9 @@ import static org.junit.Assert.*;
 
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
+  @Rule
+  public TestName name = new TestName();
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
@@ -105,24 +110,22 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
  */
   @Test(timeout=180000)
   public void testHbckWithRegionReplica() throws Exception {
-    TableName table =
-        TableName.valueOf("testHbckWithRegionReplica");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTableWithRegionReplica(table, 2);
-      admin.flush(table);
+      setupTableWithRegionReplica(tableName, 2);
+      admin.flush(tableName);
       assertNoErrors(doFsck(conf, false));
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
   @Test (timeout=180000)
   public void testHbckWithFewerReplica() throws Exception {
-    TableName table =
-        TableName.valueOf("testHbckWithFewerReplica");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTableWithRegionReplica(table, 2);
-      admin.flush(table);
+      setupTableWithRegionReplica(tableName, 2);
+      admin.flush(tableName);
       assertNoErrors(doFsck(conf, false));
       assertEquals(ROWKEYS.length, countRows());
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("C"), true,
@@ -136,17 +139,16 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
       hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {});
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
   @Test (timeout=180000)
   public void testHbckWithExcessReplica() throws Exception {
-    TableName table =
-        TableName.valueOf("testHbckWithExcessReplica");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTableWithRegionReplica(table, 2);
-      admin.flush(table);
+      setupTableWithRegionReplica(tableName, 2);
+      admin.flush(tableName);
       assertNoErrors(doFsck(conf, false));
       assertEquals(ROWKEYS.length, countRows());
       // the next few lines inject a location in meta for a replica, and then
@@ -154,7 +156,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
       // for the master to treat the request for assignment as valid; the master
       // checks the region is valid either from its memory or meta)
       Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
-      List<HRegionInfo> regions = admin.getTableRegions(table);
+      List<HRegionInfo> regions = admin.getTableRegions(tableName);
       byte[] startKey = Bytes.toBytes("B");
       byte[] endKey = Bytes.toBytes("C");
       byte[] metaKey = null;
@@ -194,7 +196,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
       hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[]{});
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
@@ -204,11 +206,10 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
    */
   @Test (timeout=180000)
   public void testNotInHdfsWithReplicas() throws Exception {
-    TableName table =
-        TableName.valueOf("tableNotInHdfs");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       HRegionInfo[] oldHris = new HRegionInfo[2];
-      setupTableWithRegionReplica(table, 2);
+      setupTableWithRegionReplica(tableName, 2);
       assertEquals(ROWKEYS.length, countRows());
       NavigableMap<HRegionInfo, ServerName> map =
           MetaTableAccessor.allTableRegions(TEST_UTIL.getConnection(),
@@ -223,7 +224,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
         }
       }
       // make sure data in regions
-      admin.flush(table);
+      admin.flush(tableName);
 
       // Mess it up by leaving a hole in the hdfs data
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("C"), false,
@@ -265,7 +266,7 @@ public class TestHBaseFsckReplicas extends BaseTestHBaseFsck {
       // the set didn't change)
       assertFalse(onlineRegions.removeAll(Arrays.asList(oldHris)));
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
       admin.close();
     }
   }

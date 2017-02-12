@@ -46,6 +46,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 import com.google.common.base.Throwables;
@@ -59,7 +60,10 @@ public class TestSyncTable {
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   private static final Log LOG = LogFactory.getLog(TestSyncTable.class);
   
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();  
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
   
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -81,8 +85,8 @@ public class TestSyncTable {
   
   @Test
   public void testSyncTable() throws Exception {
-    TableName sourceTableName = TableName.valueOf("testSourceTable");
-    TableName targetTableName = TableName.valueOf("testTargetTable");
+    final TableName sourceTableName = TableName.valueOf(name.getMethodName() + "_source");
+    final TableName targetTableName = TableName.valueOf(name.getMethodName() + "_target");
     Path testDir = TEST_UTIL.getDataTestDirOnTestFS("testSyncTable");
     
     writeTestData(sourceTableName, targetTableName);

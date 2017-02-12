@@ -30,8 +30,10 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertTrue;
 
@@ -39,9 +41,12 @@ import static org.junit.Assert.assertTrue;
 public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestDeleteTableProcedure.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test(timeout=60000, expected=TableNotFoundException.class)
   public void testDeleteNotExistentTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testDeleteNotExistentTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedurePrepareLatch latch = new ProcedurePrepareLatch.CompatibilityLatch();
@@ -52,7 +57,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000, expected=TableNotDisabledException.class)
   public void testDeleteNotDisabledTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testDeleteNotDisabledTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");
@@ -65,7 +70,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testDeleteDeletedTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testDeleteDeletedTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
@@ -97,14 +102,14 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testSimpleDelete() throws Exception {
-    final TableName tableName = TableName.valueOf("testSimpleDelete");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[][] splitKeys = null;
     testSimpleDelete(tableName, splitKeys);
   }
 
   @Test(timeout=60000)
   public void testSimpleDeleteWithSplits() throws Exception {
-    final TableName tableName = TableName.valueOf("testSimpleDeleteWithSplits");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[][] splitKeys = new byte[][] {
       Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
     };
@@ -127,7 +132,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // create the table
     byte[][] splitKeys = null;

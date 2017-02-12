@@ -116,8 +116,11 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+
 /**
  * Run tests that use the HBase clients; {@link Table}.
  * Sets up the HBase mini cluster once at start and runs through all client tests.
@@ -134,6 +137,9 @@ public class TestFromClientSide {
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
   protected static int SLAVES = 3;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -182,7 +188,7 @@ public class TestFromClientSide {
    */
   @Test
   public void testDuplicateAppend() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testDuplicateAppend");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(name.getMethodName());
     Map<String, String> kvs = new HashMap<String, String>();
     kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
     hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
@@ -194,7 +200,7 @@ public class TestFromClientSide {
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
     Connection connection = ConnectionFactory.createConnection(c);
-    Table t = connection.getTable(TableName.valueOf("HCM-testDuplicateAppend"));
+    Table t = connection.getTable(TableName.valueOf(name.getMethodName()));
     if (t instanceof HTable) {
       HTable table = (HTable) t;
       table.setOperationTimeout(3 * 1000);
@@ -226,7 +232,7 @@ public class TestFromClientSide {
    */
    @Test
    public void testKeepDeletedCells() throws Exception {
-     final TableName TABLENAME = TableName.valueOf("testKeepDeletesCells");
+     final TableName tableName = TableName.valueOf(name.getMethodName());
      final byte[] FAMILY = Bytes.toBytes("family");
      final byte[] C0 = Bytes.toBytes("c0");
 
@@ -238,10 +244,10 @@ public class TestFromClientSide {
          .setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE)
          .setMaxVersions(3);
 
-     HTableDescriptor desc = new HTableDescriptor(TABLENAME);
+     HTableDescriptor desc = new HTableDescriptor(tableName);
      desc.addFamily(hcd);
      TEST_UTIL.getAdmin().createTable(desc);
-     Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
+     Table h = TEST_UTIL.getConnection().getTable(tableName);
 
      long ts = System.currentTimeMillis();
      Put p = new Put(T1, ts);
@@ -295,13 +301,13 @@ public class TestFromClientSide {
     */
    @Test
    public void testPurgeFutureDeletes() throws Exception {
-     final TableName TABLENAME = TableName.valueOf("testPurgeFutureDeletes");
+     final TableName tableName = TableName.valueOf(name.getMethodName());
      final byte[] ROW = Bytes.toBytes("row");
      final byte[] FAMILY = Bytes.toBytes("family");
      final byte[] COLUMN = Bytes.toBytes("column");
      final byte[] VALUE = Bytes.toBytes("value");
 
-     Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+     Table table = TEST_UTIL.createTable(tableName, FAMILY);
 
      // future timestamp
      long ts = System.currentTimeMillis() * 2;
@@ -322,14 +328,14 @@ public class TestFromClientSide {
      assertNull(result.getValue(FAMILY, COLUMN));
 
      // major compaction, purged future deletes
-     TEST_UTIL.getAdmin().flush(TABLENAME);
-     TEST_UTIL.getAdmin().majorCompact(TABLENAME);
+     TEST_UTIL.getAdmin().flush(tableName);
+     TEST_UTIL.getAdmin().majorCompact(tableName);
 
      // waiting for the major compaction to complete
      TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
        @Override
        public boolean evaluate() throws IOException {
-         return TEST_UTIL.getAdmin().getCompactionState(TABLENAME) ==
+         return TEST_UTIL.getAdmin().getCompactionState(tableName) ==
              CompactionState.NONE;
        }
      });
@@ -351,10 +357,10 @@ public class TestFromClientSide {
    */
   @Test
   public void testGetConfiguration() throws Exception {
-    TableName TABLE = TableName.valueOf("testGetConfiguration");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
     Configuration conf = TEST_UTIL.getConfiguration();
-    Table table = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table table = TEST_UTIL.createTable(tableName, FAMILIES);
     assertSame(conf, table.getConfiguration());
   }
 
@@ -366,11 +372,11 @@ public class TestFromClientSide {
    */
   @Test
   public void testWeirdCacheBehaviour() throws Exception {
-    TableName TABLE = TableName.valueOf("testWeirdCacheBehaviour");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
         Bytes.toBytes("trans-type"), Bytes.toBytes("trans-date"),
         Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
     String value = "this is the value";
     String value2 = "this is some other value";
     String keyPrefix1 = UUID.randomUUID().toString();
@@ -382,7 +388,7 @@ public class TestFromClientSide {
     putRows(ht, 3, value2, keyPrefix1);
     putRows(ht, 3, value2, keyPrefix2);
     putRows(ht, 3, value2, keyPrefix3);
-    Table table = TEST_UTIL.getConnection().getTable(TABLE);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     System.out.println("Checking values for key: " + keyPrefix1);
     assertEquals("Got back incorrect number of rows from scan", 3,
         getNumberOfRows(keyPrefix1, value2, table));
@@ -493,8 +499,8 @@ public class TestFromClientSide {
   @Test
   public void testFilterAcrossMultipleRegions()
   throws IOException, InterruptedException {
-    TableName name = TableName.valueOf("testFilterAcrossMutlipleRegions");
-    Table t = TEST_UTIL.createTable(name, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table t = TEST_UTIL.createTable(tableName, FAMILY);
     int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
     assertRowCount(t, rowCount);
     // Split the table.  Should split on a reasonable key; 'lqj'
@@ -608,16 +614,16 @@ public class TestFromClientSide {
   public void testClientScannerIsResetWhenScanThrowsIOException()
   throws IOException, InterruptedException {
     TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
-    TableName name = TableName.valueOf("testClientScannerIsResetWhenScanThrowsIOException");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name, FAMILY);
+    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(tableName, FAMILY);
     htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
     TEST_UTIL.getAdmin().createTable(htd);
     ExceptionInReseekRegionObserver.reset();
     ExceptionInReseekRegionObserver.throwOnce.set(true); // throw exceptions only once
-    try (Table t = TEST_UTIL.getConnection().getTable(name)) {
+    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
       int rowCount = TEST_UTIL.loadTable(t, FAMILY, false);
-      TEST_UTIL.getAdmin().flush(name);
+      TEST_UTIL.getAdmin().flush(tableName);
       int actualRowCount = TEST_UTIL.countRows(t, new Scan().addColumn(FAMILY, FAMILY));
       assertEquals(rowCount, actualRowCount);
     }
@@ -632,16 +638,16 @@ public class TestFromClientSide {
   public void testScannerThrowsExceptionWhenCoprocessorThrowsDNRIOE()
       throws IOException, InterruptedException {
     TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
-    TableName name = TableName.valueOf("testClientScannerIsNotRetriedWhenCoprocessorThrowsDNRIOE");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name, FAMILY);
+    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(tableName, FAMILY);
     htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
     TEST_UTIL.getAdmin().createTable(htd);
     ExceptionInReseekRegionObserver.reset();
     ExceptionInReseekRegionObserver.isDoNotRetry.set(true);
-    try (Table t = TEST_UTIL.getConnection().getTable(name)) {
+    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
       TEST_UTIL.loadTable(t, FAMILY, false);
-      TEST_UTIL.getAdmin().flush(name);
+      TEST_UTIL.getAdmin().flush(tableName);
       TEST_UTIL.countRows(t, new Scan().addColumn(FAMILY, FAMILY));
       fail("Should have thrown an exception");
     } catch (DoNotRetryIOException expected) {
@@ -659,16 +665,16 @@ public class TestFromClientSide {
   public void testScannerFailsAfterRetriesWhenCoprocessorThrowsIOE()
       throws IOException, InterruptedException {
     TEST_UTIL.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
-    TableName name = TableName.valueOf("testScannerFailsAfterRetriesWhenCoprocessorThrowsIOE");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name, FAMILY);
+    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(tableName, FAMILY);
     htd.addCoprocessor(ExceptionInReseekRegionObserver.class.getName());
     TEST_UTIL.getAdmin().createTable(htd);
     ExceptionInReseekRegionObserver.reset();
     ExceptionInReseekRegionObserver.throwOnce.set(false); // throw exceptions in every retry
-    try (Table t = TEST_UTIL.getConnection().getTable(name)) {
+    try (Table t = TEST_UTIL.getConnection().getTable(tableName)) {
       TEST_UTIL.loadTable(t, FAMILY, false);
-      TEST_UTIL.getAdmin().flush(name);
+      TEST_UTIL.getAdmin().flush(tableName);
       TEST_UTIL.countRows(t, new Scan().addColumn(FAMILY, FAMILY));
       fail("Should have thrown an exception");
     } catch (DoNotRetryIOException expected) {
@@ -755,13 +761,13 @@ public class TestFromClientSide {
 
   @Test
   public void testSuperSimple() throws Exception {
-    TableName TABLE = TableName.valueOf("testSuperSimple");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     Scan scan = new Scan();
-    scan.addColumn(FAMILY, TABLE.toBytes());
+    scan.addColumn(FAMILY, tableName.toBytes());
     ResultScanner scanner = ht.getScanner(scan);
     Result result = scanner.next();
     assertTrue("Expected null result", result == null);
@@ -770,10 +776,10 @@ public class TestFromClientSide {
 
   @Test
   public void testMaxKeyValueSize() throws Exception {
-    TableName TABLE = TableName.valueOf("testMaxKeyValueSize");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Configuration conf = TEST_UTIL.getConfiguration();
     String oldMaxSize = conf.get(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY);
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte[] value = new byte[4 * 1024 * 1024];
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, value);
@@ -797,8 +803,8 @@ public class TestFromClientSide {
 
   @Test
   public void testFilters() throws Exception {
-    TableName TABLE = TableName.valueOf("testFilters");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte [][] ROWS = makeN(ROW, 10);
     byte [][] QUALIFIERS = {
         Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
@@ -833,8 +839,8 @@ public class TestFromClientSide {
 
   @Test
   public void testFilterWithLongCompartor() throws Exception {
-    TableName TABLE = TableName.valueOf("testFilterWithLongCompartor");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte [][] ROWS = makeN(ROW, 10);
     byte [][] values = new byte[10][];
     for (int i = 0; i < 10; i ++) {
@@ -864,8 +870,8 @@ public class TestFromClientSide {
 
   @Test
   public void testKeyOnlyFilter() throws Exception {
-    TableName TABLE = TableName.valueOf("testKeyOnlyFilter");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte [][] ROWS = makeN(ROW, 10);
     byte [][] QUALIFIERS = {
         Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
@@ -901,8 +907,8 @@ public class TestFromClientSide {
    */
   @Test
   public void testSimpleMissing() throws Exception {
-    TableName TABLE = TableName.valueOf("testSimpleMissing");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte [][] ROWS = makeN(ROW, 4);
 
     // Try to get a row on an empty table
@@ -1012,13 +1018,13 @@ public class TestFromClientSide {
    */
   @Test
   public void testSingleRowMultipleFamily() throws Exception {
-    TableName TABLE = TableName.valueOf("testSingleRowMultipleFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] ROWS = makeN(ROW, 3);
     byte [][] FAMILIES = makeNAscii(FAMILY, 10);
     byte [][] QUALIFIERS = makeN(QUALIFIER, 10);
     byte [][] VALUES = makeN(VALUE, 10);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
 
     Get get;
     Scan scan;
@@ -1313,7 +1319,7 @@ public class TestFromClientSide {
 
   @Test
   public void testNull() throws Exception {
-    TableName TABLE = TableName.valueOf("testNull");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Null table name (should NOT work)
     try {
@@ -1323,11 +1329,11 @@ public class TestFromClientSide {
 
     // Null family (should NOT work)
     try {
-      TEST_UTIL.createTable(TABLE, new byte[][]{(byte[])null});
+      TEST_UTIL.createTable(tableName, new byte[][]{(byte[])null});
       fail("Creating a table with a null family passed, should fail");
     } catch(Exception e) {}
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     // Null row (should NOT work)
     try {
@@ -1357,8 +1363,7 @@ public class TestFromClientSide {
     }
 
     // Use a new table
-    byte [] TABLE2 = Bytes.toBytes("testNull2");
-    ht = TEST_UTIL.createTable(TableName.valueOf(TABLE2), FAMILY);
+    ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName() + "2"), FAMILY);
 
     // Empty qualifier, byte[0] instead of null (should work)
     try {
@@ -1421,12 +1426,12 @@ public class TestFromClientSide {
 
   @Test
   public void testVersions() throws Exception {
-    TableName TABLE = TableName.valueOf("testVersions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     long [] STAMPS = makeStamps(20);
     byte [][] VALUES = makeNAscii(VALUE, 20);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
 
     // Insert 4 versions of same column
     Put put = new Put(ROW);
@@ -1635,12 +1640,12 @@ public class TestFromClientSide {
 
   @Test
   public void testVersionLimits() throws Exception {
-    TableName TABLE = TableName.valueOf("testVersionLimits");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
     int [] LIMITS = {1,3,5};
     long [] STAMPS = makeStamps(10);
     byte [][] VALUES = makeNAscii(VALUE, 10);
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, LIMITS);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, LIMITS);
 
     // Insert limit + 1 on each family
     Put put = new Put(ROW);
@@ -1830,26 +1835,26 @@ public class TestFromClientSide {
   @Test
   public void testDeleteFamilyVersion() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    TableName TABLE = TableName.valueOf("testDeleteFamilyVersion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 1);
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 5);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5);
 
     Put put = new Put(ROW);
     for (int q = 0; q < 1; q++)
       for (int t = 0; t < 5; t++)
         put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
     ht.put(put);
-    admin.flush(TABLE);
+    admin.flush(tableName);
 
     Delete delete = new Delete(ROW);
     delete.addFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
     delete.addFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
     ht.delete(delete);
-    admin.flush(TABLE);
+    admin.flush(tableName);
 
     for (int i = 0; i < 1; i++) {
       Get get = new Get(ROW);
@@ -1868,14 +1873,14 @@ public class TestFromClientSide {
 
   @Test
   public void testDeleteFamilyVersionWithOtherDeletes() throws Exception {
-    TableName TABLE = TableName.valueOf("testDeleteFamilyVersionWithOtherDeletes");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 5);
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
     Admin admin = TEST_UTIL.getAdmin();
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 5);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 5);
     Put put = null;
     Result result = null;
     Get get = null;
@@ -1887,7 +1892,7 @@ public class TestFromClientSide {
       for (int t = 0; t < 5; t++)
         put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
     ht.put(put);
-    admin.flush(TABLE);
+    admin.flush(tableName);
 
     // 2. put on ROWS[0]
     byte [] ROW2 = Bytes.toBytes("myRowForTest");
@@ -1896,7 +1901,7 @@ public class TestFromClientSide {
       for (int t = 0; t < 5; t++)
         put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
     ht.put(put);
-    admin.flush(TABLE);
+    admin.flush(tableName);
 
     // 3. delete on ROW
     delete = new Delete(ROW);
@@ -1913,14 +1918,14 @@ public class TestFromClientSide {
     // delete version 5000 of column 4
     delete.addColumn(FAMILY, QUALIFIERS[4], ts[4]);
     ht.delete(delete);
-    admin.flush(TABLE);
+    admin.flush(tableName);
 
      // 4. delete on ROWS[0]
     delete = new Delete(ROW2);
     delete.addFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
     delete.addFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
     ht.delete(delete);
-    admin.flush(TABLE);
+    admin.flush(tableName);
 
     // 5. check ROW
     get = new Get(ROW);
@@ -1983,14 +1988,14 @@ public class TestFromClientSide {
 
   @Test
   public void testDeleteWithFailed() throws Exception {
-    TableName TABLE = TableName.valueOf("testDeleteWithFailed");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     byte [][] ROWS = makeNAscii(ROW, 6);
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, 3);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3);
 
     Put put = new Put(ROW);
     put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
@@ -2010,14 +2015,14 @@ public class TestFromClientSide {
 
   @Test
   public void testDeletes() throws Exception {
-    TableName TABLE = TableName.valueOf("testDeletes");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     byte [][] ROWS = makeNAscii(ROW, 6);
     byte [][] FAMILIES = makeNAscii(FAMILY, 3);
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, 3);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3);
 
     Put put = new Put(ROW);
     put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
@@ -2379,12 +2384,12 @@ public class TestFromClientSide {
     int numRows = 10;
     int numColsPerRow = 2000;
 
-    TableName TABLE = TableName.valueOf("testJiraTest867");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     byte [][] ROWS = makeN(ROW, numRows);
     byte [][] QUALIFIERS = makeN(QUALIFIER, numColsPerRow);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     // Insert rows
 
@@ -2462,12 +2467,11 @@ public class TestFromClientSide {
    */
   @Test
   public void testJiraTest861() throws Exception {
-
-    TableName TABLE = TableName.valueOf("testJiraTest861");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
 
     // Insert three versions
 
@@ -2526,12 +2530,11 @@ public class TestFromClientSide {
    */
   @Test
   public void testJiraTest33() throws Exception {
-
-    TableName TABLE = TableName.valueOf("testJiraTest33");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
 
     // Insert lots versions
 
@@ -2575,10 +2578,9 @@ public class TestFromClientSide {
    */
   @Test
   public void testJiraTest1014() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
-    TableName TABLE = TableName.valueOf("testJiraTest1014");
-
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
 
     long manualStamp = 12345;
 
@@ -2600,12 +2602,11 @@ public class TestFromClientSide {
    */
   @Test
   public void testJiraTest1182() throws Exception {
-
-    TableName TABLE = TableName.valueOf("testJiraTest1182");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
 
     // Insert lots versions
 
@@ -2644,11 +2645,11 @@ public class TestFromClientSide {
    */
   @Test
   public void testJiraTest52() throws Exception {
-    TableName TABLE = TableName.valueOf("testJiraTest52");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] VALUES = makeNAscii(VALUE, 7);
     long [] STAMPS = makeStamps(7);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
 
     // Insert lots versions
 
@@ -3474,12 +3475,12 @@ public class TestFromClientSide {
 
   @Test
   public void testDuplicateVersions() throws Exception {
-    TableName TABLE = TableName.valueOf("testDuplicateVersions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     long [] STAMPS = makeStamps(20);
     byte [][] VALUES = makeNAscii(VALUE, 20);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, 10);
 
     // Insert 4 versions of same column
     Put put = new Put(ROW);
@@ -3688,9 +3689,8 @@ public class TestFromClientSide {
 
   @Test
   public void testUpdates() throws Exception {
-
-    TableName TABLE = TableName.valueOf("testUpdates");
-    Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
 
     // Write a column with values at timestamp 1, 2 and 3
     byte[] row = Bytes.toBytes("row1");
@@ -3738,9 +3738,8 @@ public class TestFromClientSide {
 
   @Test
   public void testUpdatesWithMajorCompaction() throws Exception {
-
-    TableName TABLE = TableName.valueOf("testUpdatesWithMajorCompaction");
-    Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
     Admin admin = TEST_UTIL.getAdmin();
 
     // Write a column with values at timestamp 1, 2 and 3
@@ -3771,8 +3770,8 @@ public class TestFromClientSide {
     assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
 
     // Trigger a major compaction
-    admin.flush(TABLE);
-    admin.majorCompact(TABLE);
+    admin.flush(tableName);
+    admin.majorCompact(tableName);
     Thread.sleep(6000);
 
     // Update the value at timestamp 1
@@ -3786,8 +3785,8 @@ public class TestFromClientSide {
     hTable.put(put);
 
     // Trigger a major compaction
-    admin.flush(TABLE);
-    admin.majorCompact(TABLE);
+    admin.flush(tableName);
+    admin.majorCompact(tableName);
     Thread.sleep(6000);
 
     // Check that the values at timestamp 2 and 1 got updated
@@ -3799,8 +3798,7 @@ public class TestFromClientSide {
 
   @Test
   public void testMajorCompactionBetweenTwoUpdates() throws Exception {
-
-    TableName tableName = TableName.valueOf("testMajorCompactionBetweenTwoUpdates");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Table hTable = TEST_UTIL.createTable(tableName, FAMILY, 10);
     Admin admin = TEST_UTIL.getAdmin();
 
@@ -3866,7 +3864,7 @@ public class TestFromClientSide {
 
   @Test
   public void testGet_EmptyTable() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testGet_EmptyTable"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
     Get get = new Get(ROW);
     get.addFamily(FAMILY);
     Result r = table.get(get);
@@ -3875,7 +3873,7 @@ public class TestFromClientSide {
 
   @Test
   public void testGet_NullQualifier() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testGet_NullQualifier"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
@@ -3898,7 +3896,7 @@ public class TestFromClientSide {
 
   @Test
   public void testGet_NonExistentRow() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testGet_NonExistentRow"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
@@ -3925,7 +3923,7 @@ public class TestFromClientSide {
     final byte [] row1 = Bytes.toBytes("row1");
     final byte [] row2 = Bytes.toBytes("row2");
     final byte [] value = Bytes.toBytes("abcd");
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testPut"),
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
         new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY });
     Put put = new Put(row1);
     put.addColumn(CONTENTS_FAMILY, null, value);
@@ -3962,7 +3960,7 @@ public class TestFromClientSide {
   public void testPutNoCF() throws IOException {
     final byte[] BAD_FAM = Bytes.toBytes("BAD_CF");
     final byte[] VAL = Bytes.toBytes(100);
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testPutNoCF"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
 
     boolean caughtNSCFE = false;
 
@@ -3983,7 +3981,7 @@ public class TestFromClientSide {
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
     final int NB_BATCH_ROWS = 10;
     final byte[] value = Bytes.toBytes("abcd");
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testRowsPut"),
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
       new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY });
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     for (int i = 0; i < NB_BATCH_ROWS; i++) {
@@ -4010,7 +4008,7 @@ public class TestFromClientSide {
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
     final byte[] value = Bytes.toBytes("abcd");
     final int NB_BATCH_ROWS = 10;
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testRowsPutBufferedManyManyFlushes"),
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
         new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY });
     table.setWriteBufferSize(10);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
@@ -4072,7 +4070,7 @@ public class TestFromClientSide {
     final byte [] FAM1 = Bytes.toBytes("fam1");
     final byte [] FAM2 = Bytes.toBytes("fam2");
     // Open table
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testHBase737"),
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
       new byte [][] {FAM1, FAM2});
     // Insert some values
     Put put = new Put(ROW);
@@ -4160,10 +4158,10 @@ public class TestFromClientSide {
 
   @Test
   public void testListTables() throws IOException, InterruptedException {
-    TableName t1 = TableName.valueOf("testListTables1");
-    TableName t2 = TableName.valueOf("testListTables2");
-    TableName t3 = TableName.valueOf("testListTables3");
-    TableName [] tables = new TableName[] { t1, t2, t3 };
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "3");
+    TableName [] tables = new TableName[] { tableName1, tableName2, tableName3 };
     for (int i = 0; i < tables.length; i++) {
       TEST_UTIL.createTable(tables[i], FAMILY);
     }
@@ -4193,7 +4191,7 @@ public class TestFromClientSide {
    */
   @Test
   public void testUnmanagedHConnection() throws IOException {
-    final TableName tableName = TableName.valueOf("testUnmanagedHConnection");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Table t = conn.getTable(tableName);
@@ -4211,7 +4209,7 @@ public class TestFromClientSide {
    */
   @Test
   public void testUnmanagedHConnectionReconnect() throws Exception {
-    final TableName tableName = TableName.valueOf("testUnmanagedHConnectionReconnect");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Table t = conn.getTable(tableName);
@@ -4239,8 +4237,8 @@ public class TestFromClientSide {
 
   @Test
   public void testMiscHTableStuff() throws IOException {
-    final TableName tableAname = TableName.valueOf("testMiscHTableStuffA");
-    final TableName tableBname = TableName.valueOf("testMiscHTableStuffB");
+    final TableName tableAname = TableName.valueOf(name.getMethodName() + "A");
+    final TableName tableBname = TableName.valueOf(name.getMethodName() + "B");
     final byte[] attrName = Bytes.toBytes("TESTATTR");
     final byte[] attrValue = Bytes.toBytes("somevalue");
     byte[] value = Bytes.toBytes("value");
@@ -4316,7 +4314,7 @@ public class TestFromClientSide {
 
   @Test
   public void testGetClosestRowBefore() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf("testGetClosestRowBefore");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] firstRow = Bytes.toBytes("row111");
     final byte[] secondRow = Bytes.toBytes("row222");
     final byte[] thirdRow = Bytes.toBytes("row333");
@@ -4445,10 +4443,10 @@ public class TestFromClientSide {
   @Test
   public void testMultiRowMutation() throws Exception {
     LOG.info("Starting testMultiRowMutation");
-    final TableName TABLENAME = TableName.valueOf("testMultiRowMutation");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte [] ROW1 = Bytes.toBytes("testRow1");
 
-    Table t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    Table t = TEST_UTIL.createTable(tableName, FAMILY);
     Put p = new Put(ROW);
     p.addColumn(FAMILY, QUALIFIER, VALUE);
     MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, p);
@@ -4476,8 +4474,8 @@ public class TestFromClientSide {
   @Test
   public void testRowMutation() throws Exception {
     LOG.info("Starting testRowMutation");
-    final TableName TABLENAME = TableName.valueOf("testRowMutation");
-    Table t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table t = TEST_UTIL.createTable(tableName, FAMILY);
     byte [][] QUALIFIERS = new byte [][] {
         Bytes.toBytes("a"), Bytes.toBytes("b")
     };
@@ -4525,8 +4523,8 @@ public class TestFromClientSide {
   @Test
   public void testBatchAppendWithReturnResultFalse() throws Exception {
     LOG.info("Starting testBatchAppendWithReturnResultFalse");
-    final TableName TABLENAME = TableName.valueOf("testBatchAppend");
-    Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
     Append append1 = new Append(Bytes.toBytes("row1"));
     append1.setReturnResults(false);
     append1.add(FAMILY, Bytes.toBytes("f1"), Bytes.toBytes("value1"));
@@ -4549,8 +4547,8 @@ public class TestFromClientSide {
   @Test
   public void testAppend() throws Exception {
     LOG.info("Starting testAppend");
-    final TableName TABLENAME = TableName.valueOf("testAppend");
-    Table t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table t = TEST_UTIL.createTable(tableName, FAMILY);
     byte[] v1 = Bytes.toBytes("42");
     byte[] v2 = Bytes.toBytes("23");
     byte [][] QUALIFIERS = new byte [][] {
@@ -4637,7 +4635,7 @@ public class TestFromClientSide {
 
   @Test
   public void testClientPoolRoundRobin() throws IOException {
-    final TableName tableName = TableName.valueOf("testClientPoolRoundRobin");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     int poolSize = 3;
     int numVersions = poolSize * 2;
@@ -4673,7 +4671,7 @@ public class TestFromClientSide {
 
   @Ignore ("Flakey: HBASE-8989") @Test
   public void testClientPoolThreadLocal() throws IOException {
-    final TableName tableName = TableName.valueOf("testClientPoolThreadLocal");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     int poolSize = Integer.MAX_VALUE;
     int numVersions = 3;
@@ -4758,7 +4756,7 @@ public class TestFromClientSide {
     final byte [] anotherrow = Bytes.toBytes("anotherrow");
     final byte [] value2 = Bytes.toBytes("abcd");
 
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testCheckAndPut"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
     Put put1 = new Put(ROW);
     put1.addColumn(FAMILY, QUALIFIER, VALUE);
 
@@ -4799,7 +4797,7 @@ public class TestFromClientSide {
     final byte [] value3 = Bytes.toBytes("cccc");
     final byte [] value4 = Bytes.toBytes("dddd");
 
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testCheckAndPutWithCompareOp"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
 
     Put put2 = new Put(ROW);
     put2.addColumn(FAMILY, QUALIFIER, value2);
@@ -4861,7 +4859,7 @@ public class TestFromClientSide {
   public void testCheckAndDelete() throws IOException {
     final byte [] value1 = Bytes.toBytes("aaaa");
 
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testCheckAndDelete"),
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
         FAMILY);
 
     Put put = new Put(ROW);
@@ -4882,7 +4880,7 @@ public class TestFromClientSide {
     final byte [] value3 = Bytes.toBytes("cccc");
     final byte [] value4 = Bytes.toBytes("dddd");
 
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testCheckAndDeleteWithCompareOp"),
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
         FAMILY);
 
     Put put2 = new Put(ROW);
@@ -4956,13 +4954,13 @@ public class TestFromClientSide {
   @Test
   @SuppressWarnings ("unused")
   public void testScanMetrics() throws Exception {
-    TableName TABLENAME = TableName.valueOf("testScanMetrics");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Set up test table:
     // Create table:
-    Table ht = TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILY);
+    Table ht = TEST_UTIL.createMultiRegionTable(tableName, FAMILY);
     int numOfRegions = -1;
-    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(TABLENAME)) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       numOfRegions = r.getStartKeys().length;
     }
     // Create 3 rows in the table, with rowkeys starting with "zzz*" so that
@@ -5094,7 +5092,7 @@ public class TestFromClientSide {
    */
   @Test
   public void testCacheOnWriteEvictOnClose() throws Exception {
-    TableName tableName = TableName.valueOf("testCOWEOCfromClient");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] data = Bytes.toBytes("data");
     Table table = TEST_UTIL.createTable(tableName, FAMILY);
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
@@ -5212,12 +5210,12 @@ public class TestFromClientSide {
    */
   public void testNonCachedGetRegionLocation() throws Exception {
     // Test Initialization.
-    TableName TABLE = TableName.valueOf("testNonCachedGetRegionLocation");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] family1 = Bytes.toBytes("f1");
     byte [] family2 = Bytes.toBytes("f2");
-    try (Table table = TEST_UTIL.createTable(TABLE, new byte[][] {family1, family2}, 10);
+    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] {family1, family2}, 10);
         Admin admin = TEST_UTIL.getAdmin();
-        RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+        RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       List<HRegionLocation> allRegionLocations = locator.getAllRegionLocations();
       assertEquals(1, allRegionLocations.size());
       HRegionInfo regionInfo = allRegionLocations.get(0).getRegionInfo();
@@ -5262,55 +5260,55 @@ public class TestFromClientSide {
     // Test Initialization.
     byte [] startKey = Bytes.toBytes("ddc");
     byte [] endKey = Bytes.toBytes("mmm");
-    TableName TABLE = TableName.valueOf("testGetRegionsInRange");
-    Table t = TEST_UTIL.createMultiRegionTable(TABLE, new byte[][] { FAMILY }, 10);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table t = TEST_UTIL.createMultiRegionTable(tableName, new byte[][] { FAMILY }, 10);
 
     int numOfRegions = -1;
-    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       numOfRegions = r.getStartKeys().length;
     }
     assertEquals(26, numOfRegions);
 
     // Get the regions in this range
-    List<HRegionLocation> regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    List<HRegionLocation> regionsList = getRegionsInRange(tableName, startKey, endKey);
     assertEquals(10, regionsList.size());
 
     // Change the start key
     startKey = Bytes.toBytes("fff");
-    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    regionsList = getRegionsInRange(tableName, startKey, endKey);
     assertEquals(7, regionsList.size());
 
     // Change the end key
     endKey = Bytes.toBytes("nnn");
-    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    regionsList = getRegionsInRange(tableName, startKey, endKey);
     assertEquals(8, regionsList.size());
 
     // Empty start key
-    regionsList = getRegionsInRange(TABLE, HConstants.EMPTY_START_ROW, endKey);
+    regionsList = getRegionsInRange(tableName, HConstants.EMPTY_START_ROW, endKey);
     assertEquals(13, regionsList.size());
 
     // Empty end key
-    regionsList = getRegionsInRange(TABLE, startKey, HConstants.EMPTY_END_ROW);
+    regionsList = getRegionsInRange(tableName, startKey, HConstants.EMPTY_END_ROW);
     assertEquals(21, regionsList.size());
 
     // Both start and end keys empty
-    regionsList = getRegionsInRange(TABLE, HConstants.EMPTY_START_ROW,
+    regionsList = getRegionsInRange(tableName, HConstants.EMPTY_START_ROW,
         HConstants.EMPTY_END_ROW);
     assertEquals(26, regionsList.size());
 
     // Change the end key to somewhere in the last block
     endKey = Bytes.toBytes("zzz1");
-    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    regionsList = getRegionsInRange(tableName, startKey, endKey);
     assertEquals(21, regionsList.size());
 
     // Change the start key to somewhere in the first block
     startKey = Bytes.toBytes("aac");
-    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    regionsList = getRegionsInRange(tableName, startKey, endKey);
     assertEquals(26, regionsList.size());
 
     // Make start and end key the same
     startKey = endKey = Bytes.toBytes("ccc");
-    regionsList = getRegionsInRange(TABLE, startKey, endKey);
+    regionsList = getRegionsInRange(tableName, startKey, endKey);
     assertEquals(1, regionsList.size());
   }
 
@@ -5332,8 +5330,8 @@ public class TestFromClientSide {
 
   @Test
   public void testJira6912() throws Exception {
-    TableName TABLE = TableName.valueOf("testJira6912");
-    Table foo = TEST_UTIL.createTable(TABLE, new byte[][] {FAMILY}, 10);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table foo = TEST_UTIL.createTable(tableName, new byte[][] {FAMILY}, 10);
 
     List<Put> puts = new ArrayList<Put>();
     for (int i=0;i !=100; i++){
@@ -5359,7 +5357,7 @@ public class TestFromClientSide {
 
   @Test
   public void testScan_NullQualifier() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testScan_NullQualifier"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
     Put put = new Put(ROW);
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
@@ -5388,7 +5386,7 @@ public class TestFromClientSide {
 
   @Test
   public void testNegativeTimestamp() throws IOException {
-    Table table = TEST_UTIL.createTable(TableName.valueOf("testNegativeTimestamp"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
 
     try {
       Put put = new Put(ROW, -1);
@@ -5448,8 +5446,8 @@ public class TestFromClientSide {
 
   @Test
   public void testRawScanRespectsVersions() throws Exception {
-    TableName TABLE = TableName.valueOf("testRawScan");
-    Table table = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
     byte[] row = Bytes.toBytes("row");
 
     // put the same row 4 times, with different values
@@ -5513,14 +5511,14 @@ public class TestFromClientSide {
     scanner.close();
 
     table.close();
-    TEST_UTIL.deleteTable(TABLE);
+    TEST_UTIL.deleteTable(tableName);
   }
 
   @Test
   public void testEmptyFilterList() throws Exception {
     // Test Initialization.
-    TableName TABLE = TableName.valueOf("testEmptyFilterList");
-    Table table = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
 
     // Insert one row each region
     Put put = new Put(Bytes.toBytes("row"));
@@ -5554,8 +5552,8 @@ public class TestFromClientSide {
   @Test
   public void testSmallScan() throws Exception {
     // Test Initialization.
-    TableName TABLE = TableName.valueOf("testSmallScan");
-    Table table = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
 
     // Insert one row each region
     int insertNum = 10;
@@ -5590,8 +5588,8 @@ public class TestFromClientSide {
 
   @Test
   public void testSuperSimpleWithReverseScan() throws Exception {
-    TableName TABLE = TableName.valueOf("testSuperSimpleWithReverseScan");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     Put put = new Put(Bytes.toBytes("0-b11111-0000000000000000000"));
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
@@ -5635,8 +5633,8 @@ public class TestFromClientSide {
 
   @Test
   public void testFiltersWithReverseScan() throws Exception {
-    TableName TABLE = TableName.valueOf("testFiltersWithReverseScan");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte[][] ROWS = makeN(ROW, 10);
     byte[][] QUALIFIERS = { Bytes.toBytes("col0-<d2v1>-<d3v2>"),
         Bytes.toBytes("col1-<d2v1>-<d3v2>"),
@@ -5677,8 +5675,8 @@ public class TestFromClientSide {
 
   @Test
   public void testKeyOnlyFilterWithReverseScan() throws Exception {
-    TableName TABLE = TableName.valueOf("testKeyOnlyFilterWithReverseScan");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte[][] ROWS = makeN(ROW, 10);
     byte[][] QUALIFIERS = { Bytes.toBytes("col0-<d2v1>-<d3v2>"),
         Bytes.toBytes("col1-<d2v1>-<d3v2>"),
@@ -5718,8 +5716,8 @@ public class TestFromClientSide {
    */
   @Test
   public void testSimpleMissingWithReverseScan() throws Exception {
-    TableName TABLE = TableName.valueOf("testSimpleMissingWithReverseScan");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte[][] ROWS = makeN(ROW, 4);
 
     // Try to get a row on an empty table
@@ -5783,8 +5781,8 @@ public class TestFromClientSide {
 
   @Test
   public void testNullWithReverseScan() throws Exception {
-    TableName TABLE = TableName.valueOf("testNullWithReverseScan");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     // Null qualifier (should work)
     Put put = new Put(ROW);
     put.addColumn(FAMILY, null, VALUE);
@@ -5794,8 +5792,7 @@ public class TestFromClientSide {
     delete.addColumns(FAMILY, null);
     ht.delete(delete);
     // Use a new table
-    byte[] TABLE2 = Bytes.toBytes("testNull2WithReverseScan");
-    ht = TEST_UTIL.createTable(TableName.valueOf(TABLE2), FAMILY);
+    ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName() + "2"), FAMILY);
     // Empty qualifier, byte[0] instead of null (should work)
     put = new Put(ROW);
     put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
@@ -5820,12 +5817,12 @@ public class TestFromClientSide {
 
   @Test
   public void testDeletesWithReverseScan() throws Exception {
-    TableName TABLE = TableName.valueOf("testDeletesWithReverseScan");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] ROWS = makeNAscii(ROW, 6);
     byte[][] FAMILIES = makeNAscii(FAMILY, 3);
     byte[][] VALUES = makeN(VALUE, 5);
     long[] ts = { 1000, 2000, 3000, 4000, 5000 };
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, 3);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, 3);
 
     Put put = new Put(ROW);
     put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
@@ -6006,7 +6003,7 @@ public class TestFromClientSide {
   @Test
   public void testReversedScanUnderMultiRegions() throws Exception {
     // Test Initialization.
-    TableName TABLE = TableName.valueOf("testReversedScanUnderMultiRegions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] maxByteArray = ConnectionUtils.MAX_BYTE_ARRAY;
     byte[][] splitRows = new byte[][] { Bytes.toBytes("005"),
         Bytes.add(Bytes.toBytes("005"), Bytes.multiple(maxByteArray, 16)),
@@ -6015,10 +6012,10 @@ public class TestFromClientSide {
         Bytes.toBytes("007"),
         Bytes.add(Bytes.toBytes("007"), Bytes.multiple(maxByteArray, 4)),
         Bytes.toBytes("008"), Bytes.multiple(maxByteArray, 2) };
-    Table table = TEST_UTIL.createTable(TABLE, FAMILY, splitRows);
+    Table table = TEST_UTIL.createTable(tableName, FAMILY, splitRows);
     TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
 
-    try(RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+    try(RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       assertEquals(splitRows.length + 1, l.getAllRegionLocations().size());
     }
     // Insert one row each region
@@ -6065,14 +6062,14 @@ public class TestFromClientSide {
   @Test
   public void testSmallReversedScanUnderMultiRegions() throws Exception {
     // Test Initialization.
-    TableName TABLE = TableName.valueOf("testSmallReversedScanUnderMultiRegions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] splitRows = new byte[][]{
         Bytes.toBytes("000"), Bytes.toBytes("002"), Bytes.toBytes("004"),
         Bytes.toBytes("006"), Bytes.toBytes("008"), Bytes.toBytes("010")};
-    Table table = TEST_UTIL.createTable(TABLE, FAMILY, splitRows);
+    Table table = TEST_UTIL.createTable(tableName, FAMILY, splitRows);
     TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
 
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       assertEquals(splitRows.length + 1, l.getAllRegionLocations().size());
     }
     for (byte[] splitRow : splitRows) {
@@ -6228,7 +6225,7 @@ public class TestFromClientSide {
 
   @Test
   public void testGetStartEndKeysWithRegionReplicas() throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testGetStartEndKeys"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
     byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;
@@ -6279,7 +6276,7 @@ public class TestFromClientSide {
 
   @Test
   public void testRegionCache() throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionCache"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     htd.addFamily(fam);
     byte[][] KEYS = HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE;

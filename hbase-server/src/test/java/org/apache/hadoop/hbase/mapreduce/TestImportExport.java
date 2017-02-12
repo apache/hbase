@@ -170,8 +170,7 @@ public class TestImportExport {
    */
   @Test
   public void testSimpleCase() throws Exception {
-    String EXPORT_TABLE = "exportSimpleCase";
-    try (Table t = UTIL.createTable(TableName.valueOf(EXPORT_TABLE), FAMILYA, 3);) {
+    try (Table t = UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILYA, 3);) {
       Put p = new Put(ROW1);
       p.addColumn(FAMILYA, QUAL, now, QUAL);
       p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
@@ -193,13 +192,13 @@ public class TestImportExport {
           // Only export row1 & row2.
           "-D" + TableInputFormat.SCAN_ROW_START + "=\\x32row1",
           "-D" + TableInputFormat.SCAN_ROW_STOP + "=\\x32row3",
-          EXPORT_TABLE,
+          name.getMethodName(),
           FQ_OUTPUT_DIR,
           "1000", // max number of key versions per key to export
       };
       assertTrue(runExport(args));
 
-      String IMPORT_TABLE = "importTableSimpleCase";
+      final String IMPORT_TABLE = name.getMethodName() + "import";
       try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), FAMILYB, 3);) {
         args = new String[] {
             "-D" + Import.CF_RENAME_PROP + "="+FAMILYA_STRING+":"+FAMILYB_STRING,
@@ -255,8 +254,8 @@ public class TestImportExport {
     String IMPORT_TABLE = name;
     try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), Bytes.toBytes("f1"), 3);) {
       String[] args = new String[] {
-          "-Dhbase.import.version=0.94" ,
-          IMPORT_TABLE, FQ_OUTPUT_DIR
+              "-Dhbase.import.version=0.94" ,
+              IMPORT_TABLE, FQ_OUTPUT_DIR
       };
       assertTrue(runImport(args));
       /* exportedTableIn94Format contains 5 rows
@@ -276,8 +275,7 @@ public class TestImportExport {
    */
    @Test
    public void testExportScannerBatching() throws Exception {
-    String BATCH_TABLE = "exportWithBatch";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(BATCH_TABLE));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(1)
     );
@@ -294,7 +292,7 @@ public class TestImportExport {
 
       String[] args = new String[] {
           "-D" + Export.EXPORT_BATCHING + "=" + EXPORT_BATCH_SIZE,  // added scanner batching arg.
-          BATCH_TABLE,
+          name.getMethodName(),
           FQ_OUTPUT_DIR
       };
       assertTrue(runExport(args));
@@ -306,8 +304,7 @@ public class TestImportExport {
 
   @Test
   public void testWithDeletes() throws Exception {
-    String EXPORT_TABLE = "exportWithDeletes";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(EXPORT_TABLE));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
@@ -332,13 +329,13 @@ public class TestImportExport {
 
     String[] args = new String[] {
         "-D" + Export.RAW_SCAN + "=true",
-        EXPORT_TABLE,
+        name.getMethodName(),
         FQ_OUTPUT_DIR,
         "1000", // max number of key versions per key to export
     };
     assertTrue(runExport(args));
 
-    String IMPORT_TABLE = "importWithDeletes";
+    final String IMPORT_TABLE = name.getMethodName() + "import";
     desc = new HTableDescriptor(TableName.valueOf(IMPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
@@ -371,16 +368,15 @@ public class TestImportExport {
 
   @Test
   public void testWithMultipleDeleteFamilyMarkersOfSameRowSameFamily() throws Exception {
-    TableName EXPORT_TABLE =
-        TableName.valueOf("exportWithMultipleDeleteFamilyMarkersOfSameRowSameFamily");
-    HTableDescriptor desc = new HTableDescriptor(EXPORT_TABLE);
+    final TableName exportTable = TableName.valueOf(name.getMethodName());
+    HTableDescriptor desc = new HTableDescriptor(exportTable);
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
     UTIL.getAdmin().createTable(desc);
 
-    Table exportT = UTIL.getConnection().getTable(EXPORT_TABLE);
+    Table exportT = UTIL.getConnection().getTable(exportTable);
 
     //Add first version of QUAL
     Put p = new Put(ROW1);
@@ -402,23 +398,23 @@ public class TestImportExport {
 
 
     String[] args = new String[] {
-        "-D" + Export.RAW_SCAN + "=true", EXPORT_TABLE.getNameAsString(),
+        "-D" + Export.RAW_SCAN + "=true", exportTable.getNameAsString(),
         FQ_OUTPUT_DIR,
         "1000", // max number of key versions per key to export
     };
     assertTrue(runExport(args));
 
-    String IMPORT_TABLE = "importWithMultipleDeleteFamilyMarkersOfSameRowSameFamily";
-    desc = new HTableDescriptor(TableName.valueOf(IMPORT_TABLE));
+    final String importTable = name.getMethodName() + "import";
+    desc = new HTableDescriptor(TableName.valueOf(importTable));
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
         .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
     UTIL.getAdmin().createTable(desc);
 
-    Table importT = UTIL.getConnection().getTable(TableName.valueOf(IMPORT_TABLE));
+    Table importT = UTIL.getConnection().getTable(TableName.valueOf(importTable));
     args = new String[] {
-        IMPORT_TABLE,
+        importTable,
         FQ_OUTPUT_DIR
     };
     assertTrue(runImport(args));
@@ -449,8 +445,7 @@ public class TestImportExport {
   @Test
   public void testWithFilter() throws Exception {
     // Create simple table to export
-    String EXPORT_TABLE = "exportSimpleCase_ImportWithFilter";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(EXPORT_TABLE));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
     UTIL.getAdmin().createTable(desc);
     Table exportTable = UTIL.getConnection().getTable(desc.getTableName());
@@ -469,11 +464,11 @@ public class TestImportExport {
     exportTable.put(Arrays.asList(p1, p2));
 
     // Export the simple table
-    String[] args = new String[] { EXPORT_TABLE, FQ_OUTPUT_DIR, "1000" };
+    String[] args = new String[] { name.getMethodName(), FQ_OUTPUT_DIR, "1000" };
     assertTrue(runExport(args));
 
     // Import to a new table
-    String IMPORT_TABLE = "importWithFilter";
+    final String IMPORT_TABLE = name.getMethodName() + "import";
     desc = new HTableDescriptor(TableName.valueOf(IMPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
     UTIL.getAdmin().createTable(desc);
@@ -496,7 +491,7 @@ public class TestImportExport {
     // need to re-run the export job
 
     args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + Filter.class.getName(),
-        "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1) + "", EXPORT_TABLE,
+        "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1) + "", name.getMethodName(),
         FQ_OUTPUT_DIR, "1000" };
     assertFalse(runImport(args));
 
@@ -646,7 +641,7 @@ public class TestImportExport {
   @Test
   public void testDurability() throws Exception {
     // Create an export table.
-    String exportTableName = "exporttestDurability";
+    String exportTableName = name.getMethodName() + "export";
     try (Table exportTable = UTIL.createTable(TableName.valueOf(exportTableName), FAMILYA, 3);) {
 
       // Insert some data
@@ -667,7 +662,7 @@ public class TestImportExport {
       assertTrue(runExport(args));
 
       // Create the table for import
-      String importTableName = "importTestDurability1";
+      String importTableName = name.getMethodName() + "import1";
       Table importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
 
       // Register the wal listener for the import table
@@ -688,7 +683,7 @@ public class TestImportExport {
       assertTrue(getCount(importTable, null) == 2);
 
       // Run the import with the default durability option
-      importTableName = "importTestDurability2";
+      importTableName = name.getMethodName() + "import2";
       importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
       region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
           .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();

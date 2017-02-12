@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(LargeTests.class)
 public class TestDefaultMobStoreFlusher {
@@ -47,6 +49,9 @@ public class TestDefaultMobStoreFlusher {
  private final static byte [] value1 = Bytes.toBytes("value1");
  private final static byte [] value2 = Bytes.toBytes("value2");
 
+ @Rule
+ public TestName name = new TestName();
+
  @BeforeClass
  public static void setUpBeforeClass() throws Exception {
    TEST_UTIL.startMiniCluster(1);
@@ -59,8 +64,8 @@ public class TestDefaultMobStoreFlusher {
 
  @Test
  public void testFlushNonMobFile() throws Exception {
-   TableName tn = TableName.valueOf("testFlushNonMobFile");
-   HTableDescriptor desc = new HTableDescriptor(tn);
+   final TableName tableName = TableName.valueOf(name.getMethodName());
+   HTableDescriptor desc = new HTableDescriptor(tableName);
    HColumnDescriptor hcd = new HColumnDescriptor(family);
    hcd.setMaxVersions(4);
    desc.addFamily(hcd);
@@ -70,8 +75,8 @@ public class TestDefaultMobStoreFlusher {
 
  @Test
  public void testFlushMobFile() throws Exception {
-   TableName tn = TableName.valueOf("testFlushMobFile");
-   HTableDescriptor desc = new HTableDescriptor(tn);
+   final TableName tableName = TableName.valueOf(name.getMethodName());
+   HTableDescriptor desc = new HTableDescriptor(tableName);
    HColumnDescriptor hcd = new HColumnDescriptor(family);
    hcd.setMobEnabled(true);
    hcd.setMobThreshold(3L);

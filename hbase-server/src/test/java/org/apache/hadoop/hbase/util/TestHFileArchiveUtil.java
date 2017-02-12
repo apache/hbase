@@ -25,8 +25,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 
@@ -36,10 +38,14 @@ import java.io.IOException;
 @Category({MiscTests.class, SmallTests.class})
 public class TestHFileArchiveUtil {
   private Path rootDir = new Path("./");
+
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void testGetTableArchivePath() {
     assertNotNull(HFileArchiveUtil.getTableArchivePath(rootDir,
-        TableName.valueOf("table")));
+        TableName.valueOf(name.getMethodName())));
   }
 
   @Test
@@ -53,15 +59,14 @@ public class TestHFileArchiveUtil {
   public void testRegionArchiveDir() {
     Path regionDir = new Path("region");
     assertNotNull(HFileArchiveUtil.getRegionArchiveDir(rootDir,
-        TableName.valueOf("table"), regionDir));
+        TableName.valueOf(name.getMethodName()), regionDir));
   }
   
   @Test
   public void testGetStoreArchivePath() throws IOException {
       byte[] family = Bytes.toBytes("Family");
-    Path tabledir = FSUtils.getTableDir(rootDir,
-        TableName.valueOf("table"));
-    HRegionInfo region = new HRegionInfo(TableName.valueOf("table"));
+    Path tabledir = FSUtils.getTableDir(rootDir, TableName.valueOf(name.getMethodName()));
+    HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     Configuration conf = new Configuration();
     FSUtils.setRootDir(conf, new Path("root"));
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));

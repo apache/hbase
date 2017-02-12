@@ -52,8 +52,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * A client-side test, mostly testing scanners with various parameters.
@@ -67,6 +69,9 @@ public class TestScannersFromClientSide {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -109,10 +114,10 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanBatch() throws Exception {
-    TableName TABLE = TableName.valueOf("testScanBatch");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 8);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     Put put;
     Scan scan;
@@ -179,8 +184,8 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testMaxResultSizeIsSetToDefault() throws Exception {
-    TableName TABLE = TableName.valueOf("testMaxResultSizeIsSetToDefault");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     // The max result size we expect the scan to use by default.
     long expectedMaxResultSize =
@@ -229,7 +234,7 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testSmallScan() throws Exception {
-    TableName TABLE = TableName.valueOf("testSmallScan");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     int numRows = 10;
     byte[][] ROWS = HTestConst.makeNAscii(ROW, numRows);
@@ -237,7 +242,7 @@ public class TestScannersFromClientSide {
     int numQualifiers = 10;
     byte[][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, numQualifiers);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     Put put;
     List<Put> puts = new ArrayList<Put>();
@@ -313,11 +318,11 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testGetMaxResults() throws Exception {
-    TableName TABLE = TableName.valueOf("testGetMaxResults");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
 
     Get get;
     Put put;
@@ -433,12 +438,12 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanMaxResults() throws Exception {
-    TableName TABLE = TableName.valueOf("testScanLimit");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] ROWS = HTestConst.makeNAscii(ROW, 2);
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
 
     Put put;
     Scan scan;
@@ -483,11 +488,11 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testGetRowOffset() throws Exception {
-    TableName TABLE = TableName.valueOf("testGetRowOffset");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES);
 
     Get get;
     Put put;
@@ -579,10 +584,10 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanOnReopenedRegion() throws Exception {
-    TableName TABLE = TableName.valueOf("testScanOnReopenedRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 2);
 
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
 
     Put put;
     Scan scan;
@@ -604,7 +609,7 @@ public class TestScannersFromClientSide {
 
     HRegionLocation loc;
 
-    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       loc = locator.getRegionLocation(ROW);
     }
     HRegionInfo hri = loc.getRegionInfo();
@@ -651,7 +656,7 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testAsyncScannerWithSmallData() throws Exception {
-    testAsyncScanner(TableName.valueOf("testAsyncScannerWithSmallData"),
+    testAsyncScanner(TableName.valueOf(name.getMethodName()),
       2,
       3,
       10);
@@ -659,7 +664,7 @@ public class TestScannersFromClientSide {
 
   @Test
   public void testAsyncScannerWithManyRows() throws Exception {
-    testAsyncScanner(TableName.valueOf("testAsyncScannerWithManyRows"),
+    testAsyncScanner(TableName.valueOf(name.getMethodName()),
       30000,
       1,
       1);

@@ -44,8 +44,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestRpcControllerFactory {
@@ -101,6 +103,9 @@ public class TestRpcControllerFactory {
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
+  @Rule
+  public TestName name = new TestName();
+
   @BeforeClass
   public static void setup() throws Exception {
     // load an endpoint so we have an endpoint to test - it doesn't matter which one, but
@@ -130,14 +135,14 @@ public class TestRpcControllerFactory {
     conf.set(RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY,
       StaticRpcControllerFactory.class.getName());
 
-    TableName name = TableName.valueOf("testcustomcontroller");
-    UTIL.createTable(name, fam1).close();
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, fam1).close();
 
     // change one of the connection properties so we get a new Connection with our configuration
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT + 1);
 
     Connection connection = ConnectionFactory.createConnection(conf);
-    Table table = connection.getTable(name);
+    Table table = connection.getTable(tableName);
     byte[] row = Bytes.toBytes("row");
     Put p = new Put(row);
     p.addColumn(fam1, fam1, Bytes.toBytes("val0"));

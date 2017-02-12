@@ -39,8 +39,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(LargeTests.class)
 public class TestLeaseRenewal {
@@ -55,6 +57,9 @@ public class TestLeaseRenewal {
   private final static byte[] ROW_BYTES = Bytes.toBytes("r1");
   private final static int leaseTimeout =
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD / 4;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -95,8 +100,7 @@ public class TestLeaseRenewal {
 
   @Test
   public void testLeaseRenewal() throws Exception {
-    Table table = TEST_UTIL.createTable(
-      TableName.valueOf("testLeaseRenewal"), FAMILY);
+    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
     Put p = new Put(ROW_BYTES);
     p.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
     table.put(p);

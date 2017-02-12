@@ -66,6 +66,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
 
@@ -83,6 +84,9 @@ public class TestMasterNoCluster {
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
       withTimeout(this.getClass()).withLookingForStuckThread(true).build();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -163,7 +167,7 @@ public class TestMasterNoCluster {
     // Put data into sn2 so it looks like it has a few regions for a table named 't'.
     MetaTableLocator.setMetaLocation(rs0.getZooKeeper(),
       rs0.getServerName(), RegionState.State.OPEN);
-    final TableName tableName = TableName.valueOf("t");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Result [] results = new Result [] {
       MetaMockingUtil.getMetaTableRowResult(
         new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HBaseTestingUtility.KEYS[1]),

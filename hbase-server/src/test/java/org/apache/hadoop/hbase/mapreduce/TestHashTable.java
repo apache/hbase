@@ -38,11 +38,13 @@ import org.apache.hadoop.io.MapFile;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import org.junit.rules.TestName;
 
 /**
  * Basic test for the HashTable M/R tool
@@ -52,7 +54,10 @@ public class TestHashTable {
   
   private static final Log LOG = LogFactory.getLog(TestHashTable.class);
   
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();  
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
   
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -66,7 +71,7 @@ public class TestHashTable {
   
   @Test
   public void testHashTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testHashTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
     final byte[] column2 = Bytes.toBytes("c2");
@@ -185,6 +190,6 @@ public class TestHashTable {
     TEST_UTIL.deleteTable(tableName);
     TEST_UTIL.cleanupDataTestDirOnTestFS();
   }
-  
+
 
 }

@@ -22,11 +22,15 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.regionserver.MemStoreFlusher.FlushRegionEntry;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestFlushRegionEntry {
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -42,7 +46,7 @@ public class TestFlushRegionEntry {
 
   @Test
   public void testFlushRegionEntryEquality() {
-    HRegionInfo hri = new HRegionInfo(1, TableName.valueOf("TestTable"), 0);
+    HRegionInfo hri = new HRegionInfo(1, TableName.valueOf(name.getMethodName()), 0);
     HRegion r = mock(HRegion.class);
     doReturn(hri).when(r).getRegionInfo();
 

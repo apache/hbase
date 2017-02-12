@@ -39,8 +39,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.*;
 
@@ -49,6 +51,9 @@ public class TestProcedureAdmin {
   private static final Log LOG = LogFactory.getLog(TestProcedureAdmin.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -88,7 +93,7 @@ public class TestProcedureAdmin {
 
   @Test(timeout=60000)
   public void testAbortProcedureSuccess() throws Exception {
-    final TableName tableName = TableName.valueOf("testAbortProcedureSuccess");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");
@@ -113,7 +118,7 @@ public class TestProcedureAdmin {
 
   @Test(timeout=60000)
   public void testAbortProcedureFailure() throws Exception {
-    final TableName tableName = TableName.valueOf("testAbortProcedureFailure");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo[] regions =
@@ -145,7 +150,7 @@ public class TestProcedureAdmin {
 
   @Test(timeout=60000)
   public void testAbortProcedureInterruptedNotAllowed() throws Exception {
-    final TableName tableName = TableName.valueOf("testAbortProcedureInterruptedNotAllowed");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     HRegionInfo[] regions =
@@ -187,7 +192,7 @@ public class TestProcedureAdmin {
 
   @Test(timeout=60000)
   public void testListProcedure() throws Exception {
-    final TableName tableName = TableName.valueOf("testListProcedure");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");

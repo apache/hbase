@@ -49,6 +49,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 /**
@@ -74,6 +75,9 @@ public class TestRestoreSnapshotFromClient {
   private int snapshot0Rows;
   private int snapshot1Rows;
   private Admin admin;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -106,8 +110,7 @@ public class TestRestoreSnapshotFromClient {
     this.admin = TEST_UTIL.getAdmin();
 
     long tid = System.currentTimeMillis();
-    tableName =
-        TableName.valueOf("testtb-" + tid);
+    tableName = TableName.valueOf(name.getMethodName() + "-" + tid);
     emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
     snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
@@ -244,8 +247,7 @@ public class TestRestoreSnapshotFromClient {
 
   @Test
   public void testCloneSnapshotOfCloned() throws IOException, InterruptedException {
-    TableName clonedTableName =
-        TableName.valueOf("clonedtb-" + System.currentTimeMillis());
+    TableName clonedTableName = TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());
@@ -280,7 +282,7 @@ public class TestRestoreSnapshotFromClient {
   @Test
   public void testCorruptedSnapshot() throws IOException, InterruptedException {
     SnapshotTestingUtils.corruptSnapshot(TEST_UTIL, Bytes.toString(snapshotName0));
-    TableName cloneName = TableName.valueOf("corruptedClone-" + System.currentTimeMillis());
+    TableName cloneName = TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
     try {
       admin.cloneSnapshot(snapshotName0, cloneName);
       fail("Expected CorruptedSnapshotException, got succeeded cloneSnapshot()");

@@ -79,6 +79,7 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 import static org.junit.Assert.assertEquals;
@@ -112,6 +113,9 @@ public class TestHCM {
   private static final byte[] ROW_X = Bytes.toBytes("xxx");
   private static Random _randy = new Random();
   private static final int RPC_RETRY = 5;
+
+  @Rule
+  public TestName name = new TestName();
 
 /**
 * This copro sleeps 20 second. The first call it fails. The second time, it works.
@@ -248,7 +252,7 @@ public class TestHCM {
     // make sure the internally created ExecutorService is the one passed
     assertTrue(otherPool == ((ConnectionImplementation) con2).getCurrentBatchPool());
 
-    TableName tableName = TableName.valueOf("testClusterConnection");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     Table table = con1.getTable(tableName, otherPool);
 
@@ -323,9 +327,7 @@ public class TestHCM {
   // Fails too often!  Needs work.  HBASE-12558
   @Ignore @Test (expected = RegionServerStoppedException.class)
   public void testClusterStatus() throws Exception {
-
-    TableName tn =
-        TableName.valueOf("testClusterStatus");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] cf = "cf".getBytes();
     byte[] rk = "rk1".getBytes();
 
@@ -333,17 +335,17 @@ public class TestHCM {
     rs.waitForServerOnline();
     final ServerName sn = rs.getRegionServer().getServerName();
 
-    Table t = TEST_UTIL.createTable(tn, cf);
-    TEST_UTIL.waitTableAvailable(tn);
+    Table t = TEST_UTIL.createTable(tableName, cf);
+    TEST_UTIL.waitTableAvailable(tableName);
     TEST_UTIL.waitUntilNoRegionsInTransition();
 
     final ConnectionImplementation hci =  (ConnectionImplementation)TEST_UTIL.getConnection();
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tn)) {
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       while (l.getRegionLocation(rk).getPort() != sn.getPort()) {
         TEST_UTIL.getAdmin().move(l.getRegionLocation(rk).getRegionInfo().
             getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
         TEST_UTIL.waitUntilNoRegionsInTransition();
-        hci.clearRegionCache(tn);
+        hci.clearRegionCache(tableName);
       }
       Assert.assertNotNull(hci.clusterStatusListener);
       TEST_UTIL.assertRegionOnServer(l.getRegionLocation(rk).getRegionInfo(), sn, 20000);
@@ -399,7 +401,7 @@ public class TestHCM {
    */
   @Test
   public void testGetOperationTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testGetOperationTimeout");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
     Table table = TEST_UTIL.createTable(hdt, new byte[][]{FAM_NAM}, TEST_UTIL.getConfiguration());
     table.setRpcTimeout(Integer.MAX_VALUE);
@@ -428,7 +430,7 @@ public class TestHCM {
 
   @Test
   public void testPutOperationTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testPutOperationTimeout");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
     Table table = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM },TEST_UTIL.getConfiguration());
     table.setRpcTimeout(Integer.MAX_VALUE);
@@ -457,7 +459,7 @@ public class TestHCM {
 
   @Test
   public void testDeleteOperationTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testDeleteOperationTimeout");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
     Table table = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM },TEST_UTIL.getConfiguration());
     table.setRpcTimeout(Integer.MAX_VALUE);
@@ -486,7 +488,7 @@ public class TestHCM {
 
   @Test
   public void testRpcTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testRpcTimeout");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -513,7 +515,7 @@ public class TestHCM {
 
   @Test
   public void testIncrementRpcTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testIncrementRpcTimeout");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -544,7 +546,7 @@ public class TestHCM {
 
   @Test
   public void testDeleteRpcTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testDeleteRpcTimeout");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -563,7 +565,7 @@ public class TestHCM {
 
   @Test
   public void testPutRpcTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testPutRpcTimeout");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -582,7 +584,7 @@ public class TestHCM {
 
   @Test
   public void testGetRpcTimeout() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testGetRpcTimeout");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -613,7 +615,7 @@ public class TestHCM {
     // of timeout. When a request can be handled after waiting in the queue, we will drop it if
     // it has been considered as timeout at client. If we don't drop it, the server will waste time
     // on handling timeout requests and finally all requests timeout and client throws exception.
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testDropTimeputRequest");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepLongerAtFirstCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     try (Table t = TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c)) {
@@ -627,7 +629,7 @@ public class TestHCM {
    */
   @Test
   public void testRpcRetryingCallerSleep() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testRpcRetryingCallerSleep");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessorWithSpec("|" + SleepAndFailFirstTime.class.getName() + "||"
         + SleepAndFailFirstTime.SLEEP_TIME_CONF_KEY + "=2000");
     TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }).close();
@@ -638,7 +640,7 @@ public class TestHCM {
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 4000);
 
     Connection connection = ConnectionFactory.createConnection(c);
-    Table table = connection.getTable(TableName.valueOf("HCM-testRpcRetryingCallerSleep"));
+    Table table = connection.getTable(TableName.valueOf(name.getMethodName()));
     table.setOperationTimeout(8000);
     // Check that it works. Because 2s + 3s * RETRY_BACKOFF[0] + 2s < 8s
     table.get(new Get(FAM_NAM));
@@ -665,7 +667,7 @@ public class TestHCM {
   public void testCallableSleep() throws Exception {
     long pauseTime;
     long baseTime = 100;
-    TableName tableName = TableName.valueOf("HCM-testCallableSleep");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, FAM_NAM);
     ClientServiceCallable<Object> regionServerCallable = new ClientServiceCallable<Object>(
         TEST_UTIL.getConnection(), tableName, ROW,
@@ -812,7 +814,7 @@ public class TestHCM {
    */
   @Test
   public void testConnectionIdle() throws Exception {
-    TableName tableName = TableName.valueOf("HCM-testConnectionIdle");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     int idleTime =  20000;
     boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
@@ -873,8 +875,7 @@ public class TestHCM {
      */
   @Test
   public void testConnectionCut() throws Exception {
-
-    TableName tableName = TableName.valueOf("HCM-testConnectionCut");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
@@ -1459,7 +1460,7 @@ public class TestHCM {
   public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
     Configuration config = new Configuration(TEST_UTIL.getConfiguration());
 
-    TableName tableName = TableName.valueOf("testConnectionRideOverClusterRestart");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, new byte[][] {FAM_NAM}).close();
 
     Connection connection = ConnectionFactory.createConnection(config);
@@ -1526,7 +1527,7 @@ public class TestHCM {
 
   @Test()
   public void testServerBusyException() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testServerBusy");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(SleepCoprocessor.class.getName());
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c);

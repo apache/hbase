@@ -40,8 +40,10 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -62,6 +64,9 @@ public class TestCompactionArchiveConcurrentClose {
   private Path testDir;
   private AtomicBoolean archived = new AtomicBoolean();
 
+  @Rule
+  public TestName name = new TestName();
+
   @Before
   public void setup() throws Exception {
     testUtil = HBaseTestingUtility.createLocalHTU();
@@ -80,7 +85,7 @@ public class TestCompactionArchiveConcurrentClose {
     byte[] col = Bytes.toBytes("c");
     byte[] val = Bytes.toBytes("val");
 
-    TableName tableName = TableName.valueOf(getClass().getSimpleName());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(fam));
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);

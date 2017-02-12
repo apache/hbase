@@ -45,14 +45,19 @@ import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.mockito.Mockito;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterProcedureWalLease {
   private static final Log LOG = LogFactory.getLog(TestMasterProcedureWalLease.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   @ClassRule
   public static final TestRule timeout =
@@ -128,7 +133,7 @@ public class TestMasterProcedureWalLease {
     backupStore3.recoverLease();
 
     // Try to trigger a command on the master (WAL lease expired on the active one)
-    HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(TableName.valueOf("mtb"), "f");
+    HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(TableName.valueOf(name.getMethodName()), "f");
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
     LOG.debug("submit proc");
     try {

@@ -41,14 +41,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterProcedureEvents {
   private static final Log LOG = LogFactory.getLog(TestCreateTableProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -81,7 +86,7 @@ public class TestMasterProcedureEvents {
 
   @Test(timeout = 30000)
   public void testMasterInitializedEvent() throws Exception {
-    TableName tableName = TableName.valueOf("testMasterInitializedEvent");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
 
@@ -99,7 +104,7 @@ public class TestMasterProcedureEvents {
 
   @Test(timeout = 30000)
   public void testServerCrashProcedureEvent() throws Exception {
-    TableName tableName = TableName.valueOf("testServerCrashProcedureEventTb");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
 

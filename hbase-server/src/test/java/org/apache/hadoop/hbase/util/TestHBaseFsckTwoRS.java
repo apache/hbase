@@ -58,14 +58,18 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.*;
 import static org.junit.Assert.*;
 
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -131,10 +135,9 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
    */
   @Test (timeout=180000)
   public void testDupeStartKey() throws Exception {
-    TableName table =
-        TableName.valueOf("tableDupeStartKey");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTable(table);
+      setupTable(tableName);
       assertNoErrors(doFsck(conf, false));
       assertEquals(ROWKEYS.length, countRows());
 
@@ -148,7 +151,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS, HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS });
-      assertEquals(2, hbck.getOverlapGroups(table).size());
+      assertEquals(2, hbck.getOverlapGroups(tableName).size());
       assertEquals(ROWKEYS.length, countRows()); // seems like the "bigger" region won.
 
       // fix the degenerate region.
@@ -157,10 +160,10 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // check that the degenerate region is gone and no data loss
       HBaseFsck hbck2 = doFsck(conf,false);
       assertNoErrors(hbck2);
-      assertEquals(0, hbck2.getOverlapGroups(table).size());
+      assertEquals(0, hbck2.getOverlapGroups(tableName).size());
       assertEquals(ROWKEYS.length, countRows());
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
@@ -170,10 +173,9 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
    */
   @Test (timeout=180000)
   public void testDupeRegion() throws Exception {
-    TableName table =
-        TableName.valueOf("tableDupeRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTable(table);
+      setupTable(tableName);
       assertNoErrors(doFsck(conf, false));
       assertEquals(ROWKEYS.length, countRows());
 
@@ -198,7 +200,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // TODO why is dupe region different from dupe start keys?
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS, HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS });
-      assertEquals(2, hbck.getOverlapGroups(table).size());
+      assertEquals(2, hbck.getOverlapGroups(tableName).size());
       assertEquals(ROWKEYS.length, countRows()); // seems like the "bigger" region won.
 
       // fix the degenerate region.
@@ -207,10 +209,10 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // check that the degenerate region is gone and no data loss
       HBaseFsck hbck2 = doFsck(conf,false);
       assertNoErrors(hbck2);
-      assertEquals(0, hbck2.getOverlapGroups(table).size());
+      assertEquals(0, hbck2.getOverlapGroups(tableName).size());
       assertEquals(ROWKEYS.length, countRows());
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
@@ -221,10 +223,9 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
    */
   @Test (timeout=180000)
   public void testContainedRegionOverlap() throws Exception {
-    TableName table =
-        TableName.valueOf("tableContainedRegionOverlap");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTable(table);
+      setupTable(tableName);
       assertEquals(ROWKEYS.length, countRows());
 
       // Mess it up by creating an overlap in the metadata
@@ -237,7 +238,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] { HBaseFsck.ErrorReporter.ERROR_CODE.OVERLAP_IN_REGION_CHAIN });
-      assertEquals(2, hbck.getOverlapGroups(table).size());
+      assertEquals(2, hbck.getOverlapGroups(tableName).size());
       assertEquals(ROWKEYS.length, countRows());
 
       // fix the problem.
@@ -246,10 +247,10 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // verify that overlaps are fixed
       HBaseFsck hbck2 = doFsck(conf,false);
       assertNoErrors(hbck2);
-      assertEquals(0, hbck2.getOverlapGroups(table).size());
+      assertEquals(0, hbck2.getOverlapGroups(tableName).size());
       assertEquals(ROWKEYS.length, countRows());
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
@@ -258,15 +259,14 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
    */
   @Test (timeout=180000)
   public void testLingeringReferenceFile() throws Exception {
-    TableName table =
-        TableName.valueOf("testLingeringReferenceFile");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTable(table);
+      setupTable(tableName);
       assertEquals(ROWKEYS.length, countRows());
 
       // Mess it up by creating a fake reference file
       FileSystem fs = FileSystem.get(conf);
-      Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+      Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), tableName);
       Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
       Path famDir = new Path(regionDir, FAM_STR);
       Path fakeReferenceFile = new Path(famDir, "fbce357483ceea.12144538");
@@ -279,7 +279,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // check that reference file fixed
       assertNoErrors(doFsck(conf, false));
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
@@ -288,12 +288,12 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
    */
   @Test(timeout = 180000)
   public void testLingeringHFileLinks() throws Exception {
-    TableName table = TableName.valueOf("testLingeringHFileLinks");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTable(table);
+      setupTable(tableName);
 
       FileSystem fs = FileSystem.get(conf);
-      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableName);
       Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
       String regionName = regionDir.getName();
       Path famDir = new Path(regionDir, FAM_STR);
@@ -307,7 +307,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
               .create();
       w.close();
 
-      HFileLink.create(conf, fs, famDir, table, regionName, HFILE_NAME);
+      HFileLink.create(conf, fs, famDir, tableName, regionName, HFILE_NAME);
 
       // should report no error
       HBaseFsck hbck = doFsck(conf, false);
@@ -330,23 +330,23 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       hbck = doFsck(conf, false);
       assertNoErrors(hbck);
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
   @Test(timeout = 180000)
   public void testCorruptLinkDirectory() throws Exception {
-    TableName table = TableName.valueOf("testLingeringHFileLinks");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTable(table);
+      setupTable(tableName);
       FileSystem fs = FileSystem.get(conf);
 
-      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableName);
       Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
       Path famDir = new Path(regionDir, FAM_STR);
       String regionName = regionDir.getName();
       String HFILE_NAME = "01234567abcd";
-      String link = HFileLink.createHFileLinkName(table, regionName, HFILE_NAME);
+      String link = HFileLink.createHFileLinkName(tableName, regionName, HFILE_NAME);
 
       // should report no error
       HBaseFsck hbck = doFsck(conf, false);
@@ -370,7 +370,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       hbck = doFsck(conf, false);
       assertNoErrors(hbck);
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
@@ -398,10 +398,9 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
    */
   @Test (timeout=180000)
   public void testSidelineOverlapRegion() throws Exception {
-    TableName table =
-        TableName.valueOf("testSidelineOverlapRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTable(table);
+      setupTable(tableName);
       assertEquals(ROWKEYS.length, countRows());
 
       // Mess it up by creating an overlap
@@ -418,11 +417,11 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS,
           HBaseFsck.ErrorReporter.ERROR_CODE.DUPE_STARTKEYS, HBaseFsck.ErrorReporter.ERROR_CODE.OVERLAP_IN_REGION_CHAIN});
-      assertEquals(3, hbck.getOverlapGroups(table).size());
+      assertEquals(3, hbck.getOverlapGroups(tableName).size());
       assertEquals(ROWKEYS.length, countRows());
 
       // mess around the overlapped regions, to trigger NotServingRegionException
-      Multimap<byte[], HBaseFsck.HbckInfo> overlapGroups = hbck.getOverlapGroups(table);
+      Multimap<byte[], HBaseFsck.HbckInfo> overlapGroups = hbck.getOverlapGroups(tableName);
       ServerName serverName = null;
       byte[] regionName = null;
       for (HBaseFsck.HbckInfo hbi: overlapGroups.values()) {
@@ -476,20 +475,20 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       // since one region is sidelined.
       HBaseFsck hbck2 = doFsck(conf,false);
       assertNoErrors(hbck2);
-      assertEquals(0, hbck2.getOverlapGroups(table).size());
+      assertEquals(0, hbck2.getOverlapGroups(tableName).size());
       assertTrue(ROWKEYS.length > countRows());
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 
   @Test(timeout=180000)
   public void testHBaseFsck() throws Exception {
     assertNoErrors(doFsck(conf, false));
-    TableName table = TableName.valueOf("tableBadMetaAssign");
-    HTableDescriptor desc = new HTableDescriptor(table);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
-    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
+    desc.addFamily(hcd); // If a tableName has no CF's it doesn't get checked
     createTable(TEST_UTIL, desc, null);
 
     // We created 1 table, should be fine
@@ -499,7 +498,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
     // point to a different region server
     Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
     Scan scan = new Scan();
-    scan.setStartRow(Bytes.toBytes(table+",,"));
+    scan.setStartRow(Bytes.toBytes(tableName+",,"));
     ResultScanner scanner = meta.getScanner(scan);
     HRegionInfo hri = null;
 
@@ -541,7 +540,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
     assertNoErrors(doFsck(conf, false));
 
     // comment needed - what is the purpose of this line
-    Table t = connection.getTable(table, tableExecutorService);
+    Table t = connection.getTable(tableName, tableExecutorService);
     ResultScanner s = t.getScanner(new Scan());
     s.close();
     t.close();
@@ -557,16 +556,16 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
    */
   @Test(timeout = 180000)
   public void testHDFSRegioninfoMissingAndCheckRegionBoundary() throws Exception {
-    TableName table = TableName.valueOf("testHDFSRegioninfoMissingAndCheckRegionBoundary");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      setupTable(table);
+      setupTable(tableName);
       assertEquals(ROWKEYS.length, countRows());
 
       // Mess it up by leaving a hole in the meta data
-      admin.disableTable(table);
+      admin.disableTable(tableName);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"), Bytes.toBytes("C"), true,
         true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
-      admin.enableTable(table);
+      admin.enableTable(tableName);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck,
@@ -575,7 +574,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
             HBaseFsck.ErrorReporter.ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             HBaseFsck.ErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN });
       // holes are separate from overlap groups
-      assertEquals(0, hbck.getOverlapGroups(table).size());
+      assertEquals(0, hbck.getOverlapGroups(tableName).size());
 
       // fix hole
       doFsck(conf, true);
@@ -593,7 +592,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       }
 
     } finally {
-      cleanupTable(table);
+      cleanupTable(tableName);
     }
   }
 }

@@ -34,11 +34,15 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestBufferedMutatorParams {
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Just to create in instance, this doesn't actually function.
@@ -116,8 +120,8 @@ public class TestBufferedMutatorParams {
   @Test
   public void testClone() {
     ExecutorService pool = new MockExecutorService();
-    BufferedMutatorParams bmp =
-        new BufferedMutatorParams(TableName.valueOf("SomeTableName"));
+    final String tableName = name.getMethodName();
+    BufferedMutatorParams bmp = new BufferedMutatorParams(TableName.valueOf(tableName));
 
     BufferedMutator.ExceptionListener listener = new MockExceptionListener();
     bmp.writeBufferSize(17).maxKeyValueSize(13).pool(pool).listener(listener);
@@ -125,7 +129,7 @@ public class TestBufferedMutatorParams {
     BufferedMutatorParams clone = bmp.clone();
 
     // Confirm some literals
-    assertEquals("SomeTableName", clone.getTableName().toString());
+    assertEquals(tableName, clone.getTableName().toString());
     assertEquals(17, clone.getWriteBufferSize());
     assertEquals(13, clone.getMaxKeyValueSize());
     assertEquals("someClassName", clone.getImplementationClassName());

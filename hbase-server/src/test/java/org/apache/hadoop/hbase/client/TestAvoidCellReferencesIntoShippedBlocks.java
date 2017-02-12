@@ -57,8 +57,10 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ LargeTests.class, ClientTests.class })
 @SuppressWarnings("deprecation")
@@ -81,6 +83,9 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
   private CountDownLatch latch = new CountDownLatch(1);
   private static CountDownLatch compactReadLatch = new CountDownLatch(1);
   private static AtomicBoolean doScan = new AtomicBoolean(false);
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -117,7 +122,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
 
   @Test
   public void testHBase16372InCompactionWritePath() throws Exception {
-    TableName tableName = TableName.valueOf("testHBase16372InCompactionWritePath");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with block size as 1024
     final Table table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
       CompactorRegionObserver.class.getName());
@@ -299,7 +304,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
 
   @Test
   public void testHBASE16372InReadPath() throws Exception {
-    TableName tableName = TableName.valueOf("testHBASE16372");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with block size as 1024
     final Table table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024, null);
     try {

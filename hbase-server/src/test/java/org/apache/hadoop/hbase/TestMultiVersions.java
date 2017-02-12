@@ -45,8 +45,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
@@ -59,6 +61,9 @@ public class TestMultiVersions {
   private Admin admin;
   
   private static final int NUM_SLAVES = 3;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -87,7 +92,7 @@ public class TestMultiVersions {
    */
   @Test
   public void testTimestamps() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("testTimestamps"));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor hcd = new HColumnDescriptor(TimestampTestBase.FAMILY_NAME);
     hcd.setMaxVersions(3);
     desc.addFamily(hcd);
@@ -120,14 +125,13 @@ public class TestMultiVersions {
    */
   @Test
   public void testGetRowVersions() throws Exception {
-    final String tableName = "testGetRowVersions";
     final byte [] contents = Bytes.toBytes("contents");
     final byte [] row = Bytes.toBytes("row");
     final byte [] value1 = Bytes.toBytes("value1");
     final byte [] value2 = Bytes.toBytes("value2");
     final long timestamp1 = 100L;
     final long timestamp2 = 200L;
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor hcd = new HColumnDescriptor(contents);
     hcd.setMaxVersions(3);
     desc.addFamily(hcd);
@@ -186,7 +190,7 @@ public class TestMultiVersions {
    */
   @Test
   public void testScanMultipleVersions() throws Exception {
-    final TableName tableName = TableName.valueOf("testScanMultipleVersions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     final byte [][] rows = new byte[][] {

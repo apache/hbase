@@ -55,8 +55,10 @@ import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 
@@ -74,6 +76,9 @@ public class TestSerialReplication {
   private static final byte[] VALUE = Bytes.toBytes("v");
   private static final byte[] ROW = Bytes.toBytes("r");
   private static final byte[][] ROWS = HTestConst.makeNAscii(ROW, 100);
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -119,7 +124,7 @@ public class TestSerialReplication {
 
   @Test
   public void testRegionMoveAndFailover() throws Exception {
-    TableName tableName = TableName.valueOf("testRSFailover");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
@@ -178,7 +183,7 @@ public class TestSerialReplication {
 
   @Test
   public void testRegionSplit() throws Exception {
-    TableName tableName = TableName.valueOf("testRegionSplit");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);
@@ -248,7 +253,7 @@ public class TestSerialReplication {
 
   @Test
   public void testRegionMerge() throws Exception {
-    TableName tableName = TableName.valueOf("testRegionMerge");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);

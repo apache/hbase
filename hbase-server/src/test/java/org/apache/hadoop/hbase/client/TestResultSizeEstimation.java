@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 
@@ -44,6 +46,9 @@ public class TestResultSizeEstimation {
 
   final static int TAG_DATA_SIZE = 2048;
   final static int SCANNER_DATA_LIMIT = TAG_DATA_SIZE + 256;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -69,9 +74,9 @@ public class TestResultSizeEstimation {
     byte [] QUALIFIER = Bytes.toBytes("testQualifier");
     byte [] VALUE = Bytes.toBytes("testValue");
 
-    TableName TABLE = TableName.valueOf("testResultSizeEstimation");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] FAMILIES = new byte[][] { FAMILY };
-    Table table = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table table = TEST_UTIL.createTable(tableName, FAMILIES);
     Put p = new Put(ROW1);
     p.add(new KeyValue(ROW1, FAMILY, QUALIFIER, Long.MAX_VALUE, VALUE));
     table.put(p);
@@ -99,9 +104,9 @@ public class TestResultSizeEstimation {
     byte [] QUALIFIER = Bytes.toBytes("testQualifier");
     byte [] VALUE = Bytes.toBytes("testValue");
 
-    TableName TABLE = TableName.valueOf("testResultSizeEstimationWithTags");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] FAMILIES = new byte[][] { FAMILY };
-    Table table = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table table = TEST_UTIL.createTable(tableName, FAMILIES);
     Put p = new Put(ROW1);
     p.add(new KeyValue(ROW1, FAMILY, QUALIFIER, Long.MAX_VALUE, VALUE,
       new Tag[] { new ArrayBackedTag((byte)1, new byte[TAG_DATA_SIZE]) } ));

@@ -95,8 +95,10 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(LargeTests.class)
 public class TestMobCompactor {
@@ -160,6 +162,9 @@ public class TestMobCompactor {
   private static int cellNumPerRow = 3;
   private static int rowNumPerFile = 2;
   private static ExecutorService pool;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -511,7 +516,6 @@ public class TestMobCompactor {
     int mergeSize = 5000;
     // change the mob compaction merge size
     conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
-    String tableNameAsString = "testMajorCompactionFromAdmin";
     SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
     rng.nextBytes(keyBytes);
@@ -519,7 +523,7 @@ public class TestMobCompactor {
     Key cfKey = new SecretKeySpec(keyBytes, algorithm);
     byte[] encryptionKey = EncryptionUtil.wrapKey(conf,
       conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()), cfKey);
-    TableName tableName = TableName.valueOf(tableNameAsString);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd1 = new HColumnDescriptor(family1);
     hcd1.setMobEnabled(true);
@@ -649,7 +653,7 @@ public class TestMobCompactor {
     byte[] fam = Bytes.toBytes(famStr);
     byte[] qualifier = Bytes.toBytes("q1");
     byte[] mobVal = Bytes.toBytes("01234567890");
-    HTableDescriptor hdt = new HTableDescriptor(TableName.valueOf("testGetAfterCompaction"));
+    HTableDescriptor hdt = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     hdt.addCoprocessor(CompactTwoLatestHfilesCopro.class.getName());
     HColumnDescriptor hcd = new HColumnDescriptor(fam);
     hcd.setMobEnabled(true);

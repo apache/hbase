@@ -67,8 +67,10 @@ import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Tests for the hdfs fix from HBASE-6435.
@@ -89,6 +91,9 @@ public class TestBlockReorder {
   private static final String host1 = "host1";
   private static final String host2 = "host2";
   private static final String host3 = "host3";
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setUp() throws Exception {
@@ -268,7 +273,7 @@ public class TestBlockReorder {
     // We use the regionserver file system & conf as we expect it to have the hook.
     conf = targetRs.getConfiguration();
     HFileSystem rfs = (HFileSystem) targetRs.getFileSystem();
-    Table h = htu.createTable(TableName.valueOf("table"), sb);
+    Table h = htu.createTable(TableName.valueOf(name.getMethodName()), sb);
 
     // Now, we have 4 datanodes and a replication count of 3. So we don't know if the datanode
     // with the same node will be used. We can't really stop an existing datanode, this would

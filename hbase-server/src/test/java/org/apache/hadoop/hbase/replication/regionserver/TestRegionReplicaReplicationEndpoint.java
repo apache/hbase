@@ -58,10 +58,12 @@ import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+import org.junit.rules.TestName;
 
 /**
  * Tests RegionReplicaReplicationEndpoint class by setting up region replicas and verifying
@@ -79,6 +81,9 @@ public class TestRegionReplicaReplicationEndpoint {
   private static final int NB_SERVERS = 2;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -290,8 +295,8 @@ public class TestRegionReplicaReplicationEndpoint {
   @Test (timeout = 240000)
   public void testRegionReplicaWithoutMemstoreReplication() throws Exception {
     int regionReplication = 3;
-    TableName tableName = TableName.valueOf("testRegionReplicaWithoutMemstoreReplication");
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
     htd.setRegionMemstoreReplication(false);
     HTU.getAdmin().createTable(htd);
@@ -326,8 +331,8 @@ public class TestRegionReplicaReplicationEndpoint {
     // does not test whether the replicas actually pick up flushed files and apply compaction
     // to their stores
     int regionReplication = 3;
-    TableName tableName = TableName.valueOf("testRegionReplicaReplicationForFlushAndCompaction");
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
     HTU.getAdmin().createTable(htd);
 
@@ -369,9 +374,8 @@ public class TestRegionReplicaReplicationEndpoint {
     // tests having edits from a disabled or dropped table is handled correctly by skipping those
     // entries and further edits after the edits from dropped/disabled table can be replicated
     // without problems.
-    TableName tableName = TableName.valueOf("testRegionReplicaReplicationIgnoresDisabledTables"
-      + dropTable);
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + dropTable);
+    HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     int regionReplication = 3;
     htd.setRegionReplication(regionReplication);
     HTU.deleteTableIfAny(tableName);

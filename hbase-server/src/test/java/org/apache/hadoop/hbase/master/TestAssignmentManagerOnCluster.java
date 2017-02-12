@@ -77,8 +77,10 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * This tests AssignmentManager with a testing cluster.
@@ -90,6 +92,9 @@ public class TestAssignmentManagerOnCluster {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final static Configuration conf = TEST_UTIL.getConfiguration();
   private static Admin admin;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -179,9 +184,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testAssignRegion() throws Exception {
-    TableName table = TableName.valueOf("testAssignRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -205,7 +210,7 @@ public class TestAssignmentManagerOnCluster {
       RegionState newState = regionStates.getRegionState(hri);
       assertTrue(newState.isOpened());
     } finally {
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -214,7 +219,7 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=120000)
   public void testAssignRegionOnRestartedServer() throws Exception {
-    TableName table = TableName.valueOf("testAssignRegionOnRestartedServer");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 20);
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
     //restart the master so that conf take into affect
@@ -223,7 +228,7 @@ public class TestAssignmentManagerOnCluster {
     ServerName deadServer = null;
     HMaster master = null;
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -262,7 +267,7 @@ public class TestAssignmentManagerOnCluster {
         master.getServerManager().expireServer(deadServer);
       }
 
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
 
       // reset the value for other tests
       TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 3);
@@ -277,10 +282,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testOfflineRegion() throws Exception {
-    TableName table =
-        TableName.valueOf("testOfflineRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HRegionInfo hri = createTableAndGetOneRegion(table);
+      HRegionInfo hri = createTableAndGetOneRegion(tableName);
 
       RegionStates regionStates = TEST_UTIL.getHBaseCluster().
         getMaster().getAssignmentManager().getRegionStates();
@@ -290,7 +294,7 @@ public class TestAssignmentManagerOnCluster {
 
       long timeoutTime = System.currentTimeMillis() + 800;
       while (true) {
-        if (regionStates.getRegionByStateOfTable(table)
+        if (regionStates.getRegionByStateOfTable(tableName)
             .get(RegionState.State.OFFLINE).contains(hri))
           break;
         long now = System.currentTimeMillis();
@@ -303,7 +307,7 @@ public class TestAssignmentManagerOnCluster {
       RegionState regionState = regionStates.getRegionState(hri);
       assertTrue(regionState.isOffline());
     } finally {
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -312,10 +316,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=50000)
   public void testMoveRegion() throws Exception {
-    TableName table =
-        TableName.valueOf("testMoveRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HRegionInfo hri = createTableAndGetOneRegion(table);
+      HRegionInfo hri = createTableAndGetOneRegion(tableName);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
@@ -353,7 +356,7 @@ public class TestAssignmentManagerOnCluster {
       }
 
     } finally {
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -364,11 +367,10 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=50000)
   public void testMoveRegionOfDeletedTable() throws Exception {
-    TableName table =
-        TableName.valueOf("testMoveRegionOfDeletedTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Admin admin = TEST_UTIL.getAdmin();
     try {
-      HRegionInfo hri = createTableAndGetOneRegion(table);
+      HRegionInfo hri = createTableAndGetOneRegion(tableName);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       AssignmentManager am = master.getAssignmentManager();
@@ -385,7 +387,7 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(destServerName != null
         && !destServerName.equals(serverName));
 
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
 
       try {
         admin.move(hri.getEncodedNameAsBytes(),
@@ -399,8 +401,8 @@ public class TestAssignmentManagerOnCluster {
       assertFalse("The region should not be in transition",
         regionStates.isRegionInTransition(hri));
     } finally {
-      if (admin.tableExists(table)) {
-        TEST_UTIL.deleteTable(table);
+      if (admin.tableExists(tableName)) {
+        TEST_UTIL.deleteTable(tableName);
       }
     }
   }
@@ -433,9 +435,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testAssignWhileClosing() throws Exception {
-    TableName table = TableName.valueOf("testAssignWhileClosing");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -472,7 +474,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
     } finally {
       MyRegionObserver.preCloseEnabled.set(false);
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -481,9 +483,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testCloseFailed() throws Exception {
-    TableName table = TableName.valueOf("testCloseFailed");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -517,7 +519,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
       MyRegionObserver.preCloseEnabled.set(false);
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -526,9 +528,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testOpenFailed() throws Exception {
-    TableName table = TableName.valueOf("testOpenFailed");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -556,7 +558,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
       MyLoadBalancer.controledRegion = null;
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -565,7 +567,7 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testRoundRobinAssignmentFailed() throws Exception {
-    TableName tableName = TableName.valueOf("testRoundRobinAssignmentFailed");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
@@ -608,7 +610,7 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testRetainAssignmentFailed() throws Exception {
-    TableName tableName = TableName.valueOf("testRetainAssignmentFailed");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
@@ -661,10 +663,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testOpenFailedUnrecoverable() throws Exception {
-    TableName table =
-        TableName.valueOf("testOpenFailedUnrecoverable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -674,7 +675,7 @@ public class TestAssignmentManagerOnCluster {
       MetaTableAccessor.addRegionToMeta(meta, hri);
 
       FileSystem fs = FileSystem.get(conf);
-      Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
+      Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), tableName);
       Path regionDir = new Path(tableDir, hri.getEncodedName());
       // create a file named the same as the region dir to
       // mess up with region opening
@@ -699,7 +700,7 @@ public class TestAssignmentManagerOnCluster {
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -746,9 +747,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testCloseHang() throws Exception {
-    TableName table = TableName.valueOf("testCloseHang");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -781,7 +782,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
       MyRegionObserver.postCloseEnabled.set(false);
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -790,9 +791,9 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testOpenCloseRacing() throws Exception {
-    TableName table = TableName.valueOf("testOpenCloseRacing");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -852,7 +853,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 6000);
     } finally {
       MyRegionObserver.postOpenEnabled.set(false);
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -861,11 +862,11 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testAssignRacingWithSSH() throws Exception {
-    TableName table = TableName.valueOf("testAssignRacingWithSSH");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     MyMaster master = null;
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -929,7 +930,7 @@ public class TestAssignmentManagerOnCluster {
       if (master != null) {
         master.enableSSH(true);
       }
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
       cluster.startRegionServer();
     }
   }
@@ -939,11 +940,11 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=300000)
   public void testSSHWaitForServerToAssignRegion() throws Exception {
-    TableName table = TableName.valueOf("testSSHWaitForServerToAssignRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     boolean startAServer = false;
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -951,7 +952,7 @@ public class TestAssignmentManagerOnCluster {
       final ServerManager serverManager = master.getServerManager();
       MyLoadBalancer.countRegionServers = Integer.valueOf(
         serverManager.countOfRegionServers());
-      HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(table);
+      HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       assertNotNull("First region should be assigned", rs);
       final ServerName serverName = rs.getServerName();
       // Wait till SSH tried to assign regions a several times
@@ -974,12 +975,12 @@ public class TestAssignmentManagerOnCluster {
       });
       TEST_UTIL.waitUntilNoRegionsInTransition(300000);
 
-      rs = TEST_UTIL.getRSForFirstRegionInTable(table);
+      rs = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       assertTrue("First region should be re-assigned to a different server",
         rs != null && !serverName.equals(rs.getServerName()));
     } finally {
       MyLoadBalancer.countRegionServers = null;
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
       if (startAServer) {
         cluster.startRegionServer();
       }
@@ -991,11 +992,11 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testAssignDisabledRegion() throws Exception {
-    TableName table = TableName.valueOf("testAssignDisabledRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     MyMaster master = null;
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -1011,7 +1012,7 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(TEST_UTIL.assignRegion(hri));
 
       // Disable the table
-      admin.disableTable(table);
+      admin.disableTable(tableName);
       assertTrue(regionStates.isRegionOffline(hri));
 
       // You can't assign a disabled region
@@ -1022,7 +1023,7 @@ public class TestAssignmentManagerOnCluster {
       am.unassign(hri);
       assertTrue(regionStates.isRegionOffline(hri));
     } finally {
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
@@ -1031,11 +1032,11 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testAssignOfflinedRegionBySSH() throws Exception {
-    TableName table = TableName.valueOf("testAssignOfflinedRegionBySSH");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     MyMaster master = null;
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -1094,7 +1095,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
     } finally {
       MyRegionServer.abortedServer = null;
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
       cluster.startRegionServer();
     }
   }
@@ -1104,11 +1105,11 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testAssignDisabledRegionBySSH() throws Exception {
-    TableName table = TableName.valueOf("testAssignDisabledRegionBySSH");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     MyMaster master;
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -1165,7 +1166,7 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(regionStates.isRegionOffline(hri));
     } finally {
       MyRegionServer.abortedServer = null;
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
       cluster.startRegionServer();
     }
   }
@@ -1175,10 +1176,10 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test(timeout = 60000)
   public void testReportRegionStateTransition() throws Exception {
-    TableName table = TableName.valueOf("testReportRegionStateTransition");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       MyRegionServer.simulateRetry = true;
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
       Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
@@ -1193,13 +1194,13 @@ public class TestAssignmentManagerOnCluster {
       // Assert the the region is actually open on the server
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
       // Closing region should just work fine
-      admin.disableTable(table);
+      admin.disableTable(tableName);
       assertTrue(regionStates.isRegionOffline(hri));
       List<HRegionInfo> regions = TEST_UTIL.getAdmin().getOnlineRegions(serverName);
       assertTrue(!regions.contains(hri));
     } finally {
       MyRegionServer.simulateRetry = false;
-      TEST_UTIL.deleteTable(table);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 

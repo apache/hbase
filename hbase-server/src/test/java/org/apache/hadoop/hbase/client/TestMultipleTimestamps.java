@@ -35,8 +35,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Run tests related to {@link TimestampsFilter} using HBase client APIs.
@@ -47,6 +49,9 @@ import org.junit.experimental.categories.Category;
 public class TestMultipleTimestamps {
   private static final Log LOG = LogFactory.getLog(TestMultipleTimestamps.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -82,14 +87,12 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithOneColumnMiltipleTimestamp() throws IOException {
-    TableName TABLE =
-        TableName.valueOf("testReseeksWithOne" +
-            "ColumnMiltipleTimestamps");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, Integer.MAX_VALUE);
 
     Integer[] putRows = new Integer[] {1, 3, 5, 7};
     Integer[] putColumns = new Integer[] { 1, 3, 5};
@@ -102,7 +105,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    TEST_UTIL.flush(TABLE);
+    TEST_UTIL.flush(tableName);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
@@ -123,15 +126,13 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithMultipleColumnOneTimestamp() throws IOException {
-    LOG.info("testReseeksWithMultipleColumnOneTimestamp");
-    TableName TABLE =
-        TableName.valueOf("testReseeksWithMultiple" +
-            "ColumnOneTimestamps");
+    LOG.info(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, Integer.MAX_VALUE);
 
     Integer[] putRows = new Integer[] {1, 3, 5, 7};
     Integer[] putColumns = new Integer[] { 1, 3, 5};
@@ -144,7 +145,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    TEST_UTIL.flush(TABLE);
+    TEST_UTIL.flush(tableName);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
@@ -164,15 +165,14 @@ public class TestMultipleTimestamps {
   @Test
   public void testReseeksWithMultipleColumnMultipleTimestamp() throws
   IOException {
-    LOG.info("testReseeksWithMultipleColumnMultipleTimestamp");
+    LOG.info(name.getMethodName());
 
-    TableName TABLE =
-        TableName.valueOf("testReseeksWithMultipleColumnMiltipleTimestamps");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, Integer.MAX_VALUE);
 
     Integer[] putRows = new Integer[] {1, 3, 5, 7};
     Integer[] putColumns = new Integer[] { 1, 3, 5};
@@ -185,7 +185,7 @@ public class TestMultipleTimestamps {
 
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
-    TEST_UTIL.flush(TABLE);
+    TEST_UTIL.flush(tableName);
     Scan scan = new Scan();
     scan.setMaxVersions(10);
     ResultScanner scanner = ht.getScanner(scan);
@@ -218,14 +218,13 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithMultipleFiles() throws IOException {
-    LOG.info("testReseeksWithMultipleFiles");
-    TableName TABLE =
-        TableName.valueOf("testReseeksWithMultipleFiles");
+    LOG.info(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, Integer.MAX_VALUE);
 
     Integer[] putRows1 = new Integer[] {1, 2, 3};
     Integer[] putColumns1 = new Integer[] { 2, 5, 6};
@@ -246,9 +245,9 @@ public class TestMultipleTimestamps {
     int scanMaxVersions = 5;
 
     put(ht, FAMILY, putRows1, putColumns1, putTimestamps1);
-    TEST_UTIL.flush(TABLE);
+    TEST_UTIL.flush(tableName);
     put(ht, FAMILY, putRows2, putColumns2, putTimestamps2);
-    TEST_UTIL.flush(TABLE);
+    TEST_UTIL.flush(tableName);
     put(ht, FAMILY, putRows3, putColumns3, putTimestamps3);
 
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
@@ -287,21 +286,20 @@ public class TestMultipleTimestamps {
   }
 
   public void testWithVersionDeletes(boolean flushTables) throws IOException {
-    LOG.info("testWithVersionDeletes_"+ (flushTables ? "flush" : "noflush"));
-    TableName TABLE =
-        TableName.valueOf("testWithVersionDeletes_" + (flushTables ?
+    LOG.info(name.getMethodName() + "_"+ (flushTables ? "flush" : "noflush"));
+    final TableName tableName = TableName.valueOf(name.getMethodName() + "_" + (flushTables ?
             "flush" : "noflush"));
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, Integer.MAX_VALUE);
 
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
     if (flushTables) {
-      TEST_UTIL.flush(TABLE);
+      TEST_UTIL.flush(tableName);
     }
 
     // delete version 4.
@@ -321,20 +319,19 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testWithMultipleVersionDeletes() throws IOException {
-    LOG.info("testWithMultipleVersionDeletes");
+    LOG.info(name.getMethodName());
 
-    TableName TABLE =
-        TableName.valueOf("testWithMultipleVersionDeletes");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, Integer.MAX_VALUE);
 
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    TEST_UTIL.flush(TABLE);
+    TEST_UTIL.flush(tableName);
 
     // delete all versions before 4.
     deleteAllVersionsBefore(ht, FAMILY, 0, 0, 4);
@@ -349,18 +346,17 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testWithColumnDeletes() throws IOException {
-    TableName TABLE =
-        TableName.valueOf("testWithColumnDeletes");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, Integer.MAX_VALUE);
 
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    TEST_UTIL.flush(TABLE);
+    TEST_UTIL.flush(tableName);
 
     // delete all versions before 4.
     deleteColumn(ht, FAMILY, 0, 0);
@@ -375,18 +371,17 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testWithFamilyDeletes() throws IOException {
-    TableName TABLE =
-        TableName.valueOf("testWithFamilyDeletes");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILIES, Integer.MAX_VALUE);
 
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
 
-    TEST_UTIL.flush(TABLE);
+    TEST_UTIL.flush(tableName);
 
     // delete all versions before 4.
     deleteFamily(ht, FAMILY, 0);

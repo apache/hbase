@@ -38,8 +38,10 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test clone snapshots from the client
@@ -48,6 +50,9 @@ import org.junit.experimental.categories.Category;
 public class TestMobCloneSnapshotFromClient extends TestCloneSnapshotFromClient {
 
   private static boolean delayFlush = false;
+
+  @Rule
+  public TestName name = new TestName();
 
   protected static void setupConfiguration() {
     TestCloneSnapshotFromClient.setupConfiguration();
@@ -108,7 +113,7 @@ public class TestMobCloneSnapshotFromClient extends TestCloneSnapshotFromClient 
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 20, FAMILY);
     long tid = System.currentTimeMillis();
     byte[] snapshotName3 = Bytes.toBytes("snaptb3-" + tid);
-    TableName clonedTableName3 = TableName.valueOf("clonedtb3-" + System.currentTimeMillis());
+    TableName clonedTableName3 = TableName.valueOf(name.getMethodName() + System.currentTimeMillis());
     admin.snapshot(snapshotName3, tableName);
     delayFlush = false;
     int snapshot3Rows = -1;

@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 
@@ -48,6 +50,9 @@ public class TestRemoveRegionMetrics {
   private static Configuration conf;
   private static HBaseTestingUtility TEST_UTIL;
   private static MetricsAssertHelper metricsHelper;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void startCluster() throws Exception {
@@ -72,7 +77,7 @@ public class TestRemoveRegionMetrics {
 
   @Test
   public void testMoveRegion() throws IOException, InterruptedException {
-    String tableNameString = "testMoveRegion";
+    String tableNameString = name.getMethodName();
     TableName tableName = TableName.valueOf(tableNameString);
     Table t = TEST_UTIL.createTable(tableName, Bytes.toBytes("D"));
     TEST_UTIL.waitUntilAllRegionsAssigned(t.getName());

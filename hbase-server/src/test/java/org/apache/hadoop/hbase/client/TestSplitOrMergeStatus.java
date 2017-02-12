@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.List;
@@ -48,6 +50,9 @@ public class TestSplitOrMergeStatus {
   private static final Log LOG = LogFactory.getLog(TestSplitOrMergeStatus.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -67,8 +72,8 @@ public class TestSplitOrMergeStatus {
 
   @Test
   public void testSplitSwitch() throws Exception {
-    TableName name = TableName.valueOf("testSplitSwitch");
-    Table t = TEST_UTIL.createTable(name, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table t = TEST_UTIL.createTable(tableName, FAMILY);
     TEST_UTIL.loadTable(t, FAMILY, false);
 
     RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(t.getName());
@@ -94,8 +99,8 @@ public class TestSplitOrMergeStatus {
 
   @Test
   public void testMergeSwitch() throws Exception {
-    TableName name = TableName.valueOf("testMergeSwitch");
-    Table t = TEST_UTIL.createTable(name, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table t = TEST_UTIL.createTable(tableName, FAMILY);
     TEST_UTIL.loadTable(t, FAMILY, false);
 
     RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(t.getName());
@@ -105,7 +110,7 @@ public class TestSplitOrMergeStatus {
     admin.split(t.getName());
     waitOnSplitOrMerge(t); //Split the table to ensure we have two regions at least.
 
-    waitForMergable(admin, name);
+    waitForMergable(admin, tableName);
     int orignalCount = locator.getAllRegionLocations().size();
     boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.MERGE);
     assertEquals(results.length, 1);
@@ -117,7 +122,7 @@ public class TestSplitOrMergeStatus {
     int count = waitOnSplitOrMerge(t).size();
     assertTrue(orignalCount == count);
 
-    waitForMergable(admin, name);
+    waitForMergable(admin, tableName);
     results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.MERGE);
     assertEquals(results.length, 1);
     assertFalse(results[0]);

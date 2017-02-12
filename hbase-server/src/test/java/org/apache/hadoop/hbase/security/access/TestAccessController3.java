@@ -51,8 +51,10 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Performs checks for reference counting w.r.t. TableAuthManager which is used by AccessController.
@@ -116,6 +118,9 @@ public class TestAccessController3 extends SecureTestUtil {
   private static RegionCoprocessorEnvironment RCP_ENV;
   
   private static boolean callSuperTwice = true;
+
+  @Rule
+  public TestName name = new TestName();
 
   // class with faulty stop() method, controlled by flag
   public static class FaultyAccessController extends AccessController {
@@ -276,7 +281,7 @@ public class TestAccessController3 extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testnewtable"));
+        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
         ACCESS_CONTROLLER.preCreateTable(ObserverContext.createAndPrepare(CP_ENV, null), htd, null);
         return null;

@@ -1338,10 +1338,10 @@ public class TestHRegion {
    */
   @Test
   public void testWeirdCacheBehaviour() throws Exception {
-    TableName TABLE = TableName.valueOf("testWeirdCacheBehaviour");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"), Bytes.toBytes("trans-type"),
         Bytes.toBytes("trans-date"), Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
-    this.region = initHRegion(TABLE, method, CONF, FAMILIES);
+    this.region = initHRegion(tableName, method, CONF, FAMILIES);
     try {
       String value = "this is the value";
       String value2 = "this is some other value";
@@ -1381,8 +1381,8 @@ public class TestHRegion {
 
   @Test
   public void testAppendWithReadOnlyTable() throws Exception {
-    TableName TABLE = TableName.valueOf("readOnlyTable");
-    this.region = initHRegion(TABLE, method, CONF, true, Bytes.toBytes("somefamily"));
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    this.region = initHRegion(tableName, method, CONF, true, Bytes.toBytes("somefamily"));
     boolean exceptionCaught = false;
     Append append = new Append(Bytes.toBytes("somerow"));
     append.setDurability(Durability.SKIP_WAL);
@@ -1401,8 +1401,8 @@ public class TestHRegion {
 
   @Test
   public void testIncrWithReadOnlyTable() throws Exception {
-    TableName TABLE = TableName.valueOf("readOnlyTable");
-    this.region = initHRegion(TABLE, method, CONF, true, Bytes.toBytes("somefamily"));
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    this.region = initHRegion(tableName, method, CONF, true, Bytes.toBytes("somefamily"));
     boolean exceptionCaught = false;
     Increment inc = new Increment(Bytes.toBytes("somerow"));
     inc.setDurability(Durability.SKIP_WAL);
@@ -4018,7 +4018,7 @@ public class TestHRegion {
 
   @Test
   public void testAllColumnsWithBloomFilter() throws IOException {
-    byte[] TABLE = Bytes.toBytes("testAllColumnsWithBloomFilter");
+    byte[] TABLE = Bytes.toBytes(name.getMethodName());
     byte[] FAMILY = Bytes.toBytes("family");
 
     // Create table
@@ -4217,7 +4217,7 @@ public class TestHRegion {
   public void testRegionInfoFileCreation() throws IOException {
     Path rootDir = new Path(dir + "testRegionInfoFileCreation");
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testtb"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor("cf"));
 
     HRegionInfo hri = new HRegionInfo(htd.getTableName());
@@ -4605,14 +4605,14 @@ public class TestHRegion {
   public void testRegionReplicaSecondary() throws IOException {
     // create a primary region, load some data and flush
     // create a secondary region, and do a get against that
-    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+    Path rootDir = new Path(dir + name.getMethodName());
     FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
     };
     byte[] cq = Bytes.toBytes("cq");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
@@ -4655,14 +4655,14 @@ public class TestHRegion {
   public void testRegionReplicaSecondaryIsReadOnly() throws IOException {
     // create a primary region, load some data and flush
     // create a secondary region, and do a put against that
-    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+    Path rootDir = new Path(dir + name.getMethodName());
     FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
     };
     byte[] cq = Bytes.toBytes("cq");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
@@ -4716,14 +4716,14 @@ public class TestHRegion {
 
   @Test
   public void testCompactionFromPrimary() throws IOException {
-    Path rootDir = new Path(dir + "testRegionReplicaSecondary");
+    Path rootDir = new Path(dir + name.getMethodName());
     FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
     };
     byte[] cq = Bytes.toBytes("cq");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testRegionReplicaSecondary"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
@@ -5691,11 +5691,10 @@ public class TestHRegion {
 
   @Test
   public void testOpenRegionWrittenToWAL() throws Exception {
-    final ServerName serverName = ServerName.valueOf("testOpenRegionWrittenToWAL", 100, 42);
+    final ServerName serverName = ServerName.valueOf(name.getMethodName(), 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
-    HTableDescriptor htd
-        = new HTableDescriptor(TableName.valueOf("testOpenRegionWrittenToWAL"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(fam1));
     htd.addFamily(new HColumnDescriptor(fam2));
 
@@ -5774,7 +5773,7 @@ public class TestHRegion {
 
   @Test
   public void testFlushedFileWithNoTags() throws Exception {
-    TableName tableName = TableName.valueOf(getClass().getSimpleName());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(fam1));
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
@@ -5795,12 +5794,10 @@ public class TestHRegion {
   @Test
   public void testOpenRegionWrittenToWALForLogReplay() throws Exception {
     // similar to the above test but with distributed log replay
-    final ServerName serverName = ServerName.valueOf("testOpenRegionWrittenToWALForLogReplay",
-        100, 42);
+    final ServerName serverName = ServerName.valueOf(name.getMethodName(), 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
-    HTableDescriptor htd
-        = new HTableDescriptor(TableName.valueOf("testOpenRegionWrittenToWALForLogReplay"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(fam1));
     htd.addFamily(new HColumnDescriptor(fam2));
 
@@ -5909,8 +5906,7 @@ public class TestHRegion {
     final ServerName serverName = ServerName.valueOf("testCloseRegionWrittenToWAL", 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
-    HTableDescriptor htd
-    = new HTableDescriptor(TableName.valueOf("testOpenRegionWrittenToWAL"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(fam1));
     htd.addFamily(new HColumnDescriptor(fam2));
 
@@ -6025,7 +6021,7 @@ public class TestHRegion {
     final byte[] q3 = Bytes.toBytes("q3");
     final byte[] q4 = Bytes.toBytes("q4");
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testCellTTLs"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor hcd = new HColumnDescriptor(fam1);
     hcd.setTimeToLive(10); // 10 seconds
     htd.addFamily(hcd);

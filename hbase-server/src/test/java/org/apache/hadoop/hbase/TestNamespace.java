@@ -44,10 +44,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Sets;
+import org.junit.rules.TestName;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestNamespace {
@@ -59,6 +61,9 @@ public class TestNamespace {
   protected static HBaseCluster cluster;
   private static ZKNamespaceManager zkNamespaceManager;
   private String prefix = "TestNamespace";
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -166,9 +171,8 @@ public class TestNamespace {
 
   @Test
   public void createRemoveTest() throws Exception {
-    String testName = "createRemoveTest";
-    String nsName = prefix+"_"+testName;
-    LOG.info(testName);
+    String nsName = prefix + "_" + name.getMethodName();
+    LOG.info(name.getMethodName());
 
     //create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
@@ -189,12 +193,11 @@ public class TestNamespace {
 
   @Test
   public void createDoubleTest() throws IOException, InterruptedException {
-    String testName = "createDoubleTest";
-    String nsName = prefix+"_"+testName;
-    LOG.info(testName);
+    String nsName = prefix + "_" + name.getMethodName();
+    LOG.info(name.getMethodName());
 
-    TableName tableName = TableName.valueOf("my_table");
-    TableName tableNameFoo = TableName.valueOf(nsName+":my_table");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableNameFoo = TableName.valueOf(nsName + ":" + name.getMethodName());
     //create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     TEST_UTIL.createTable(tableName, Bytes.toBytes(nsName));
@@ -212,11 +215,10 @@ public class TestNamespace {
 
   @Test
   public void createTableTest() throws IOException, InterruptedException {
-    String testName = "createTableTest";
-    String nsName = prefix+"_"+testName;
-    LOG.info(testName);
+    String nsName = prefix + "_" + name.getMethodName();
+    LOG.info(name.getMethodName());
 
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(nsName+":my_table"));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(nsName + ":" + name.getMethodName()));
     HColumnDescriptor colDesc = new HColumnDescriptor("my_cf");
     desc.addFamily(colDesc);
     try {
@@ -260,7 +262,7 @@ public class TestNamespace {
 
   @Test
   public void createTableInDefaultNamespace() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("default_table"));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor colDesc = new HColumnDescriptor("cf1");
     desc.addFamily(colDesc);
     admin.createTable(desc);
@@ -271,7 +273,7 @@ public class TestNamespace {
 
   @Test
   public void createTableInSystemNamespace() throws Exception {
-    TableName tableName = TableName.valueOf("hbase:createTableInSystemNamespace");
+    final TableName tableName = TableName.valueOf("hbase:" + name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor colDesc = new HColumnDescriptor("cf1");
     desc.addFamily(colDesc);
@@ -301,7 +303,7 @@ public class TestNamespace {
       @Override
       public Void call() throws Exception {
         HTableDescriptor htd =
-            new HTableDescriptor(TableName.valueOf("non_existing_namespace", "table1"));
+            new HTableDescriptor(TableName.valueOf("non_existing_namespace", name.getMethodName()));
         htd.addFamily(new HColumnDescriptor("family1"));
         admin.createTable(htd);
         return null;
@@ -346,7 +348,7 @@ public class TestNamespace {
     }, NamespaceNotFoundException.class);
 
     // get table descriptors for existing namespace
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(prefix + "ns1", "table1"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(prefix + "ns1", name.getMethodName()));
     htd.addFamily(new HColumnDescriptor("family1"));
     admin.createTable(htd);
     HTableDescriptor[] htds = admin.listTableDescriptorsByNamespace(prefix + "ns1");

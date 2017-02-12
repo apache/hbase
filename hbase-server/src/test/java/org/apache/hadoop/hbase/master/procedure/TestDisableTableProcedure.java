@@ -32,16 +32,21 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestDisableTableProcedure.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test(timeout = 60000)
   public void testDisableTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testDisableTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2");
@@ -58,7 +63,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testDisableTableMultipleTimes() throws Exception {
-    final TableName tableName = TableName.valueOf("testDisableTableMultipleTimes");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2");
@@ -108,7 +113,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     final byte[][] splitKeys = new byte[][] {

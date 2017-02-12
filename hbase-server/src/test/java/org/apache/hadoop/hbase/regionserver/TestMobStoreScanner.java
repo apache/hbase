@@ -53,8 +53,10 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(MediumTests.class)
 public class TestMobStoreScanner {
@@ -74,6 +76,9 @@ public class TestMobStoreScanner {
   private static long defaultThreshold = 10;
   private FileSystem fs;
   private Configuration conf;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -148,7 +153,7 @@ public class TestMobStoreScanner {
 
   @Test(timeout=60000)
   public void testGetMassive() throws Exception {
-    setUp(defaultThreshold, TableName.valueOf("testGetMassive"));
+    setUp(defaultThreshold, TableName.valueOf(name.getMethodName()));
 
     // Put some data 5 10, 15, 20  mb ok  (this would be right below protobuf
     // default max size of 64MB.
@@ -168,8 +173,8 @@ public class TestMobStoreScanner {
 
   @Test
   public void testReadPt() throws Exception {
-    TableName tn = TableName.valueOf("testReadPt");
-    setUp(0L, tn);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    setUp(0L, tableName);
     long ts = System.currentTimeMillis();
     byte[] value1 = Bytes.toBytes("value1");
     Put put1 = new Put(row1);
@@ -196,7 +201,7 @@ public class TestMobStoreScanner {
     Cell cell = result.getColumnLatestCell(family, qf1);
     Assert.assertArrayEquals(value1, CellUtil.cloneValue(cell));
 
-    admin.flush(tn);
+    admin.flush(tableName);
     result = rs.next();
     cell = result.getColumnLatestCell(family, qf1);
     Assert.assertArrayEquals(value2, CellUtil.cloneValue(cell));
@@ -204,9 +209,9 @@ public class TestMobStoreScanner {
 
   @Test
   public void testReadFromCorruptMobFilesWithReadEmptyValueOnMobCellMiss() throws Exception {
-    TableName tn = TableName.valueOf("testReadFromCorruptMobFilesWithReadEmptyValueOnMobCellMiss");
-    setUp(0, tn);
-    createRecordAndCorruptMobFile(tn, row1, family, qf1, Bytes.toBytes("value1"));
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    setUp(0, tableName);
+    createRecordAndCorruptMobFile(tableName, row1, family, qf1, Bytes.toBytes("value1"));
     Get get = new Get(row1);
     get.setAttribute(MobConstants.EMPTY_VALUE_ON_MOBCELL_MISS, Bytes.toBytes(true));
     Result result = table.get(get);
@@ -216,9 +221,9 @@ public class TestMobStoreScanner {
 
   @Test
   public void testReadFromCorruptMobFiles() throws Exception {
-    TableName tn = TableName.valueOf("testReadFromCorruptMobFiles");
-    setUp(0, tn);
-    createRecordAndCorruptMobFile(tn, row1, family, qf1, Bytes.toBytes("value1"));
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    setUp(0, tableName);
+    createRecordAndCorruptMobFile(tableName, row1, family, qf1, Bytes.toBytes("value1"));
     Get get = new Get(row1);
     IOException ioe = null;
     try {

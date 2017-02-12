@@ -55,8 +55,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMasterOperationsForRegionReplicas {
@@ -66,6 +68,9 @@ public class TestMasterOperationsForRegionReplicas {
   private static Admin ADMIN;
   private static int numSlaves = 2;
   private static Configuration conf;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -90,37 +95,37 @@ public class TestMasterOperationsForRegionReplicas {
   public void testCreateTableWithSingleReplica() throws Exception {
     final int numRegions = 3;
     final int numReplica = 1;
-    final TableName table = TableName.valueOf("singleReplicaTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.setRegionReplication(numReplica);
       desc.addFamily(new HColumnDescriptor("family"));
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
 
-      validateNumberOfRowsInMeta(table, numRegions, ADMIN.getConnection());
+      validateNumberOfRowsInMeta(tableName, numRegions, ADMIN.getConnection());
       List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(
-        ADMIN.getConnection(), table);
+        ADMIN.getConnection(), tableName);
       assert(hris.size() == numRegions * numReplica);
     } finally {
-      ADMIN.disableTable(table);
-      ADMIN.deleteTable(table);
+      ADMIN.disableTable(tableName);
+      ADMIN.deleteTable(tableName);
     }
   }
 
   @Test
   public void testCreateTableWithMultipleReplicas() throws Exception {
-    final TableName table = TableName.valueOf("fooTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final int numRegions = 3;
     final int numReplica = 2;
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.setRegionReplication(numReplica);
       desc.addFamily(new HColumnDescriptor("family"));
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
-      TEST_UTIL.waitTableEnabled(table);
-      validateNumberOfRowsInMeta(table, numRegions, ADMIN.getConnection());
+      TEST_UTIL.waitTableEnabled(tableName);
+      validateNumberOfRowsInMeta(tableName, numRegions, ADMIN.getConnection());
 
-      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), table);
+      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
       assert(hris.size() == numRegions * numReplica);
       // check that the master created expected number of RegionState objects
       for (int i = 0; i < numRegions; i++) {
@@ -137,7 +142,7 @@ public class TestMasterOperationsForRegionReplicas {
       for (Result result : metaRows) {
         RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
         HRegionInfo hri = locations.getRegionLocation().getRegionInfo();
-        if (!hri.getTable().equals(table)) continue;
+        if (!hri.getTable().equals(tableName)) continue;
         numRows += 1;
         HRegionLocation[] servers = locations.getRegionLocations();
         // have two locations for the replicas of a region, and the locations should be different
@@ -148,7 +153,7 @@ public class TestMasterOperationsForRegionReplicas {
 
       // The same verification of the meta as above but with the SnapshotOfRegionAssignmentFromMeta
       // class
-      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica,
+      validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
 
       // Now kill the master, restart it and see if the assignments are kept
@@ -165,7 +170,7 @@ public class TestMasterOperationsForRegionReplicas {
           assert (state != null);
         }
       }
-      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica,
+      validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
 
       // Now shut the whole cluster down, and verify the assignments are kept so that the
@@ -173,43 +178,43 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.getConfiguration().setBoolean("hbase.master.startup.retainassign", true);
       TEST_UTIL.shutdownMiniHBaseCluster();
       TEST_UTIL.startMiniHBaseCluster(1, numSlaves);
-      TEST_UTIL.waitTableEnabled(table);
-      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica,
+      TEST_UTIL.waitTableEnabled(tableName);
+      validateFromSnapshotFromMeta(TEST_UTIL, tableName, numRegions, numReplica,
         ADMIN.getConnection());
 
       // Now shut the whole cluster down, and verify regions are assigned even if there is only
       // one server running
       TEST_UTIL.shutdownMiniHBaseCluster();
       TEST_UTIL.startMiniHBaseCluster(1, 1);
-      TEST_UTIL.waitTableEnabled(table);
+      TEST_UTIL.waitTableEnabled(tableName);
       validateSingleRegionServerAssignment(ADMIN.getConnection(), numRegions, numReplica);
       for (int i = 1; i < numSlaves; i++) { //restore the cluster
         TEST_UTIL.getMiniHBaseCluster().startRegionServer();
       }
 
       //check on alter table
-      ADMIN.disableTable(table);
-      assert(ADMIN.isTableDisabled(table));
+      ADMIN.disableTable(tableName);
+      assert(ADMIN.isTableDisabled(tableName));
       //increase the replica
       desc.setRegionReplication(numReplica + 1);
-      ADMIN.modifyTable(table, desc);
-      ADMIN.enableTable(table);
-      assert(ADMIN.isTableEnabled(table));
+      ADMIN.modifyTable(tableName, desc);
+      ADMIN.enableTable(tableName);
+      assert(ADMIN.isTableEnabled(tableName));
       List<HRegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster()
-          .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+          .getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
       assert(regions.size() == numRegions * (numReplica + 1));
 
       //decrease the replica(earlier, table was modified to have a replica count of numReplica + 1)
-      ADMIN.disableTable(table);
+      ADMIN.disableTable(tableName);
       desc.setRegionReplication(numReplica);
-      ADMIN.modifyTable(table, desc);
-      ADMIN.enableTable(table);
-      assert(ADMIN.isTableEnabled(table));
+      ADMIN.modifyTable(tableName, desc);
+      ADMIN.enableTable(tableName);
+      assert(ADMIN.isTableEnabled(tableName));
       regions = TEST_UTIL.getMiniHBaseCluster().getMaster()
-          .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+          .getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
       assert(regions.size() == numRegions * numReplica);
       //also make sure the meta table has the replica locations removed
-      hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), table);
+      hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
       assert(hris.size() == numRegions * numReplica);
       //just check that the number of default replica regions in the meta table are the same
       //as the number of regions the table was created with, and the count of the
@@ -225,30 +230,30 @@ public class TestMasterOperationsForRegionReplicas {
       Collection<Integer> counts = new HashSet<Integer>(defaultReplicas.values());
       assert(counts.size() == 1 && counts.contains(new Integer(numReplica)));
     } finally {
-      ADMIN.disableTable(table);
-      ADMIN.deleteTable(table);
+      ADMIN.disableTable(tableName);
+      ADMIN.deleteTable(tableName);
     }
   }
 
   //@Test (TODO: enable when we have support for alter_table- HBASE-10361).
   public void testIncompleteMetaTableReplicaInformation() throws Exception {
-    final TableName table = TableName.valueOf("fooTableTest1");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final int numRegions = 3;
     final int numReplica = 2;
     try {
       // Create a table and let the meta table be updated with the location of the
       // region locations.
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.setRegionReplication(numReplica);
       desc.addFamily(new HColumnDescriptor("family"));
       ADMIN.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
-      TEST_UTIL.waitTableEnabled(table);
+      TEST_UTIL.waitTableEnabled(tableName);
       Set<byte[]> tableRows = new HashSet<byte[]>();
-      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), table);
+      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(ADMIN.getConnection(), tableName);
       for (HRegionInfo hri : hris) {
         tableRows.add(hri.getRegionName());
       }
-      ADMIN.disableTable(table);
+      ADMIN.disableTable(tableName);
       // now delete one replica info from all the rows
       // this is to make the meta appear to be only partially updated
       Table metaTable = ADMIN.getConnection().getTable(TableName.META_TABLE_NAME);
@@ -265,14 +270,14 @@ public class TestMasterOperationsForRegionReplicas {
       metaTable.close();
       // even if the meta table is partly updated, when we re-enable the table, we should
       // get back the desired number of replicas for the regions
-      ADMIN.enableTable(table);
-      assert(ADMIN.isTableEnabled(table));
+      ADMIN.enableTable(tableName);
+      assert(ADMIN.isTableEnabled(tableName));
       List<HRegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster()
-          .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
+          .getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
       assert(regions.size() == numRegions * numReplica);
     } finally {
-      ADMIN.disableTable(table);
-      ADMIN.deleteTable(table);
+      ADMIN.disableTable(tableName);
+      ADMIN.deleteTable(tableName);
     }
   }
 

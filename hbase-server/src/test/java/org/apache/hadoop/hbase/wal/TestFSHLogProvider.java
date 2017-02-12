@@ -186,12 +186,12 @@ public class TestFSHLogProvider {
 
   @Test
   public void testLogCleaning() throws Exception {
-    LOG.info("testLogCleaning");
+    LOG.info(currentTest.getMethodName());
     final HTableDescriptor htd =
-        new HTableDescriptor(TableName.valueOf("testLogCleaning")).addFamily(new HColumnDescriptor(
+        new HTableDescriptor(TableName.valueOf(currentTest.getMethodName())).addFamily(new HColumnDescriptor(
             "row"));
     final HTableDescriptor htd2 =
-        new HTableDescriptor(TableName.valueOf("testLogCleaning2"))
+        new HTableDescriptor(TableName.valueOf(currentTest.getMethodName() + "2"))
             .addFamily(new HColumnDescriptor("row"));
     NavigableMap<byte[], Integer> scopes1 = new TreeMap<byte[], Integer>(
         Bytes.BYTES_COMPARATOR);
@@ -270,11 +270,11 @@ public class TestFSHLogProvider {
    */
   @Test
   public void testWALArchiving() throws IOException {
-    LOG.debug("testWALArchiving");
+    LOG.debug(currentTest.getMethodName());
     HTableDescriptor table1 =
-        new HTableDescriptor(TableName.valueOf("t1")).addFamily(new HColumnDescriptor("row"));
+        new HTableDescriptor(TableName.valueOf(currentTest.getMethodName() + "1")).addFamily(new HColumnDescriptor("row"));
     HTableDescriptor table2 =
-        new HTableDescriptor(TableName.valueOf("t2")).addFamily(new HColumnDescriptor("row"));
+        new HTableDescriptor(TableName.valueOf(currentTest.getMethodName() + "2")).addFamily(new HColumnDescriptor("row"));
     NavigableMap<byte[], Integer> scopes1 = new TreeMap<byte[], Integer>(
         Bytes.BYTES_COMPARATOR);
     for(byte[] fam : table1.getFamiliesKeys()) {

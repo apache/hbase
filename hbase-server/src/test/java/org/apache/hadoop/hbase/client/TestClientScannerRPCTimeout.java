@@ -42,11 +42,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+import org.junit.rules.TestName;
 
 /**
  * Test the scenario where a HRegionServer#scan() call, while scanning, timeout at client side and
@@ -61,6 +63,9 @@ public class TestClientScannerRPCTimeout {
   private static final byte[] VALUE = Bytes.toBytes("testValue");
   private static final int rpcTimeout = 2 * 1000;
   private static final int CLIENT_RETRIES_NUMBER = 3;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -84,8 +89,8 @@ public class TestClientScannerRPCTimeout {
 
   @Test
   public void testScannerNextRPCTimesout() throws Exception {
-    final TableName TABLE_NAME = TableName.valueOf("testScannerNextRPCTimesout");
-    Table ht = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     byte[] r0 = Bytes.toBytes("row-0");
     byte[] r1 = Bytes.toBytes("row-1");
     byte[] r2 = Bytes.toBytes("row-2");

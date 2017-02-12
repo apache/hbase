@@ -53,8 +53,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 @Category({MasterTests.class, MediumTests.class})
@@ -62,6 +64,9 @@ public class TestAssignmentListener {
   private static final Log LOG = LogFactory.getLog(TestAssignmentListener.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   private static final Abortable abortable = new Abortable() {
     @Override
@@ -213,19 +218,18 @@ public class TestAssignmentListener {
     DummyAssignmentListener listener = new DummyAssignmentListener();
     am.registerListener(listener);
     try {
-      final String TABLE_NAME_STR = "testtb";
-      final TableName TABLE_NAME = TableName.valueOf(TABLE_NAME_STR);
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       final byte[] FAMILY = Bytes.toBytes("cf");
 
       // Create a new table, with a single region
       LOG.info("Create Table");
-      TEST_UTIL.createTable(TABLE_NAME, FAMILY);
+      TEST_UTIL.createTable(tableName, FAMILY);
       listener.awaitModifications(1);
       assertEquals(1, listener.getLoadCount());
       assertEquals(0, listener.getCloseCount());
 
       // Add some data
-      Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
+      Table table = TEST_UTIL.getConnection().getTable(tableName);
       try {
         for (int i = 0; i < 10; ++i) {
           byte[] key = Bytes.toBytes("row-" + i);
@@ -240,7 +244,7 @@ public class TestAssignmentListener {
       // Split the table in two
       LOG.info("Split Table");
       listener.reset();
-      admin.split(TABLE_NAME, Bytes.toBytes("row-3"));
+      admin.split(tableName, Bytes.toBytes("row-3"));
       listener.awaitModifications(3);
       assertEquals(2, listener.getLoadCount());     // daughters added
       assertEquals(1, listener.getCloseCount());    // parent removed
@@ -250,10 +254,10 @@ public class TestAssignmentListener {
       int mergeable = 0;
       while (mergeable < 2) {
         Thread.sleep(100);
-        admin.majorCompact(TABLE_NAME);
+        admin.majorCompact(tableName);
         mergeable = 0;
         for (JVMClusterUtil.RegionServerThread regionThread: miniCluster.getRegionServerThreads()) {
-          for (Region region: regionThread.getRegionServer().getOnlineRegions(TABLE_NAME)) {
+          for (Region region: regionThread.getRegionServer().getOnlineRegions(tableName)) {
             mergeable += ((HRegion)region).isMergeable() ? 1 : 0;
           }
         }
@@ -262,9 +266,9 @@ public class TestAssignmentListener {
       // Merge the two regions
       LOG.info("Merge Regions");
       listener.reset();
-      List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
+      List<HRegionInfo> regions = admin.getTableRegions(tableName);
       assertEquals(2, regions.size());
-      boolean sameServer = areAllRegionsLocatedOnSameServer(TABLE_NAME);
+      boolean sameServer = areAllRegionsLocatedOnSameServer(tableName);
       // If the regions are located by different server, we need to move
       // regions to same server before merging. So the expected modifications
       // will increaes to 5. (open + close)
@@ -274,14 +278,14 @@ public class TestAssignmentListener {
       admin.mergeRegionsAsync(regions.get(0).getEncodedNameAsBytes(),
         regions.get(1).getEncodedNameAsBytes(), true);
       listener.awaitModifications(expectedModifications);
-      assertEquals(1, admin.getTableRegions(TABLE_NAME).size());
+      assertEquals(1, admin.getTableRegions(tableName).size());
       assertEquals(expectedLoadCount, listener.getLoadCount());     // new merged region added
       assertEquals(expectedCloseCount, listener.getCloseCount());    // daughters removed
 
       // Delete the table
       LOG.info("Drop Table");
       listener.reset();
-      TEST_UTIL.deleteTable(TABLE_NAME);
+      TEST_UTIL.deleteTable(tableName);
       listener.awaitModifications(1);
       assertEquals(0, listener.getLoadCount());
       assertEquals(1, listener.getCloseCount());

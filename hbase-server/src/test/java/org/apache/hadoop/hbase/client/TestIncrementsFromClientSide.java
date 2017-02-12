@@ -93,7 +93,7 @@ public class TestIncrementsFromClientSide {
    */
   @Test
   public void testDuplicateIncrement() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testDuplicateIncrement");
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
     Map<String, String> kvs = new HashMap<String, String>();
     kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
     hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
@@ -105,7 +105,7 @@ public class TestIncrementsFromClientSide {
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
     Connection connection = ConnectionFactory.createConnection(c);
-    Table t = connection.getTable(TableName.valueOf("HCM-testDuplicateIncrement"));
+    Table t = connection.getTable(TableName.valueOf(name.getMethodName()));
     if (t instanceof HTable) {
       HTable table = (HTable) t;
       table.setOperationTimeout(3 * 1000);
@@ -183,8 +183,8 @@ public class TestIncrementsFromClientSide {
   @Test
   public void testBatchIncrementsWithReturnResultFalse() throws Exception {
     LOG.info("Starting testBatchIncrementsWithReturnResultFalse");
-    final TableName TABLENAME = TableName.valueOf("testBatchAppend");
-    Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
     Increment inc1 = new Increment(Bytes.toBytes("row2"));
     inc1.setReturnResults(false);
     inc1.addColumn(FAMILY, Bytes.toBytes("f1"), 1);

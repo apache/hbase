@@ -114,8 +114,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
@@ -143,6 +145,9 @@ public class TestDistributedLogSplitting {
   static HBaseTestingUtility TEST_UTIL;
   static MiniDFSCluster dfsCluster;
   static MiniZooKeeperCluster zkCluster;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -836,8 +841,8 @@ public class TestDistributedLogSplitting {
       makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
 
       LOG.info("Disabling table\n");
-      TEST_UTIL.getAdmin().disableTable(TableName.valueOf("disableTable"));
-      TEST_UTIL.waitTableDisabled(TableName.valueOf("disableTable").getName());
+      TEST_UTIL.getAdmin().disableTable(TableName.valueOf(name.getMethodName()));
+      TEST_UTIL.waitTableDisabled(TableName.valueOf(name.getMethodName()).getName());
 
       // abort RS
       LOG.info("Aborting region server: " + hrs.getServerName());
@@ -875,7 +880,7 @@ public class TestDistributedLogSplitting {
       int count = 0;
       FileSystem fs = master.getMasterFileSystem().getFileSystem();
       Path rootdir = FSUtils.getRootDir(conf);
-      Path tdir = FSUtils.getTableDir(rootdir, TableName.valueOf("disableTable"));
+      Path tdir = FSUtils.getTableDir(rootdir, TableName.valueOf(name.getMethodName()));
       for (HRegionInfo hri : regions) {
         Path editsdir =
             WALSplitter.getRegionDirRecoveredEditsDir(
@@ -1256,7 +1261,7 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, name.getMethodName(), "family", NUM_REGIONS_TO_CREATE);
     try {
       List<HRegionInfo> regions = null;
       HRegionServer hrs = null;
@@ -1296,7 +1301,7 @@ public class TestDistributedLogSplitting {
       // use last 5 bytes because HBaseTestingUtility.createMultiRegions use 5 bytes key
       row = Arrays.copyOfRange(row, 3, 8);
       long value = 0;
-      TableName tableName = TableName.valueOf("table");
+      TableName tableName = TableName.valueOf(name.getMethodName());
       byte[] family = Bytes.toBytes("family");
       byte[] qualifier = Bytes.toBytes("c1");
       long timeStamp = System.currentTimeMillis();
@@ -1391,7 +1396,7 @@ public class TestDistributedLogSplitting {
       // use last 5 bytes because HBaseTestingUtility.createMultiRegions use 5 bytes key
       row = Arrays.copyOfRange(row, 3, 8);
       long value = 0;
-      final TableName tableName = TableName.valueOf("table");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       byte[] family = Bytes.toBytes("family");
       byte[] qualifier = Bytes.toBytes("c1");
       long timeStamp = System.currentTimeMillis();
@@ -1446,10 +1451,10 @@ public class TestDistributedLogSplitting {
     LOG.info("testReadWriteSeqIdFiles");
     startCluster(2);
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    Table ht = installTable(zkw, "table", "family", 10);
+    Table ht = installTable(zkw, name.getMethodName(), "family", 10);
     try {
       FileSystem fs = master.getMasterFileSystem().getFileSystem();
-      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf("table"));
+      Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf(name.getMethodName()));
       List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
       long newSeqId = WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 1L, 1000L);
       WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);

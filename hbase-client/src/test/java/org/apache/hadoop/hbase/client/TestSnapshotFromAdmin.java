@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
@@ -49,6 +51,9 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 public class TestSnapshotFromAdmin {
 
   private static final Log LOG = LogFactory.getLog(TestSnapshotFromAdmin.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Test that the logic for doing 'correct' back-off based on exponential increase and the max-time
@@ -111,7 +116,7 @@ public class TestSnapshotFromAdmin {
     // setup the admin and run the test
     Admin admin = new HBaseAdmin(mockConnection);
     String snapshot = "snapshot";
-    TableName table = TableName.valueOf("table");
+    final TableName table = TableName.valueOf(name.getMethodName());
     // get start time
     long start = System.currentTimeMillis();
     admin.snapshot(snapshot, table);
@@ -165,7 +170,7 @@ public class TestSnapshotFromAdmin {
           Mockito.any(IsSnapshotDoneRequest.class))).thenReturn(doneResponse);
 
       // make sure that we can use valid names
-    admin.snapshot(new SnapshotDescription("snapshot", TableName.valueOf("table")));
+    admin.snapshot(new SnapshotDescription("snapshot", TableName.valueOf(name.getMethodName())));
   }
 
   private void failSnapshotStart(Admin admin, SnapshotDescription snapshot)

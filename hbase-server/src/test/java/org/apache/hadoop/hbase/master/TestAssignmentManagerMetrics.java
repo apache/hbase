@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.fail;
 
@@ -53,6 +55,9 @@ public class TestAssignmentManagerMetrics {
   private static HBaseTestingUtility TEST_UTIL;
   private static Configuration conf;
   private static final int msgInterval = 1000;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void startCluster() throws Exception {
@@ -91,8 +96,7 @@ public class TestAssignmentManagerMetrics {
 
   @Test
   public void testRITAssignmentManagerMetrics() throws Exception {
-
-    final TableName TABLENAME = TableName.valueOf("testRITMetrics");
+    final TableName TABLENAME = TableName.valueOf(name.getMethodName());
     final byte[] FAMILY = Bytes.toBytes("family");
 
     Table table = null;

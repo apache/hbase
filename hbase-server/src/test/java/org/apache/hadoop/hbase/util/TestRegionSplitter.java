@@ -44,8 +44,10 @@ import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Tests for {@link RegionSplitter}, which can create a pre-split table or do a
@@ -57,6 +59,9 @@ public class TestRegionSplitter {
     private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
     private final static String CF_NAME = "SPLIT_TEST_CF";
     private final static byte xFF = (byte) 0xff;
+
+    @Rule
+    public TestName name = new TestName();
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -95,7 +100,7 @@ public class TestRegionSplitter {
           // Do table creation/pre-splitting and verification of region boundaries
     preSplitTableAndVerify(expectedBounds,
         HexStringSplit.class.getSimpleName(),
-        TableName.valueOf("NewHexPresplitTable"));
+        TableName.valueOf(name.getMethodName()));
     }
 
     /**
@@ -124,7 +129,7 @@ public class TestRegionSplitter {
 
       // Do table creation/pre-splitting and verification of region boundaries
       preSplitTableAndVerify(expectedBounds, UniformSplit.class.getSimpleName(),
-          TableName.valueOf("NewUniformPresplitTable"));
+          TableName.valueOf(name.getMethodName()));
     }
 
     /**

@@ -57,10 +57,12 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.base.Throwables;
+import org.junit.rules.TestName;
 
 /**
  * Test filters at the HRegion doorstep.
@@ -70,6 +72,9 @@ public class TestFilter {
   private final static Log LOG = LogFactory.getLog(TestFilter.class);
   private Region region;
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   //
   // Rows, Qualifiers, and Values are in two groups, One and Two.
@@ -1490,7 +1495,7 @@ public class TestFilter {
   public void testFilterListWithPrefixFilter() throws IOException {
     byte[] family = Bytes.toBytes("f1");
     byte[] qualifier = Bytes.toBytes("q1");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Region testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
@@ -2051,7 +2056,7 @@ public class TestFilter {
   // TODO: intentionally disabled?
   public void testNestedFilterListWithSCVF() throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testNestedFilterListWithSCVF"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Region testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),

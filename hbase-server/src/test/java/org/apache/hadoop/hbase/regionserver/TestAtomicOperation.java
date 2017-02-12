@@ -588,10 +588,9 @@ public class TestAtomicOperation {
    */
   @Test
   public void testPutAndCheckAndPutInParallel() throws Exception {
-    final String tableName = "testPutAndCheckAndPut";
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setClass(HConstants.REGION_IMPL, MockHRegion.class, HeapSize.class);
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName))
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()))
         .addFamily(new HColumnDescriptor(family));
     this.region = TEST_UTIL.createLocalHRegion(htd, null, null);
     Put[] puts = new Put[1];

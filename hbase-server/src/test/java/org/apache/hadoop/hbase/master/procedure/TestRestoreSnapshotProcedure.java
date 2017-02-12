@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -67,6 +69,9 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
 
   private HBaseProtos.SnapshotDescription snapshot = null;
   private HTableDescriptor snapshotHTD = null;
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   @Override
@@ -153,7 +158,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
   @Test(timeout=60000)
   public void testRestoreSnapshotToDifferentTable() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final TableName restoredTableName = TableName.valueOf("testRestoreSnapshotToDifferentTable");
+    final TableName restoredTableName = TableName.valueOf(name.getMethodName());
     final HTableDescriptor newHTD = createHTableDescriptor(restoredTableName, CF1, CF2);
 
     long procId = ProcedureTestingUtility.submitAndWait(

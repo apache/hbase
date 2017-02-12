@@ -41,8 +41,10 @@ import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Basic test for the CopyTable M/R tool
@@ -58,6 +60,8 @@ public class TestCopyTable {
   private static final byte[] FAMILY_B = Bytes.toBytes(FAMILY_B_STRING);
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
 
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -70,13 +74,13 @@ public class TestCopyTable {
   }
 
   private void doCopyTableTest(boolean bulkload) throws Exception {
-    final TableName TABLENAME1 = TableName.valueOf("testCopyTable1");
-    final TableName TABLENAME2 = TableName.valueOf("testCopyTable2");
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
 
-    try (Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-         Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);) {
+    try (Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
+         Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);) {
       // put rows into the first table
       for (int i = 0; i < 10; i++) {
         Put p = new Put(Bytes.toBytes("row" + i));
@@ -89,12 +93,12 @@ public class TestCopyTable {
       int code;
       if (bulkload) {
         code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
-            copy, new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
-            "--bulkload", TABLENAME1.getNameAsString() });
+            copy, new String[] { "--new.name=" + tableName2.getNameAsString(),
+            "--bulkload", tableName1.getNameAsString() });
       } else {
         code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
-            copy, new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
-            TABLENAME1.getNameAsString() });
+            copy, new String[] { "--new.name=" + tableName2.getNameAsString(),
+            tableName1.getNameAsString() });
       }
       assertEquals("copy job failed", 0, code);
 
@@ -106,8 +110,8 @@ public class TestCopyTable {
         assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
       }
     } finally {
-      TEST_UTIL.deleteTable(TABLENAME1);
-      TEST_UTIL.deleteTable(TABLENAME2);
+      TEST_UTIL.deleteTable(tableName1);
+      TEST_UTIL.deleteTable(tableName2);
     }
   }
 
@@ -130,16 +134,16 @@ public class TestCopyTable {
 
   @Test
   public void testStartStopRow() throws Exception {
-    final TableName TABLENAME1 = TableName.valueOf("testStartStopRow1");
-    final TableName TABLENAME2 = TableName.valueOf("testStartStopRow2");
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
     final byte[] ROW0 = Bytes.toBytesBinary("\\x01row0");
     final byte[] ROW1 = Bytes.toBytesBinary("\\x01row1");
     final byte[] ROW2 = Bytes.toBytesBinary("\\x01row2");
 
-    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);
 
     // put rows into the first table
     Put p = new Put(ROW0);
@@ -156,8 +160,8 @@ public class TestCopyTable {
     assertEquals(
       0,
       ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
-        copy, new String[] { "--new.name=" + TABLENAME2, "--startrow=\\x01row1",
-            "--stoprow=\\x01row2", TABLENAME1.getNameAsString() }));
+        copy, new String[] { "--new.name=" + tableName2, "--startrow=\\x01row1",
+            "--stoprow=\\x01row2", tableName1.getNameAsString() }));
 
     // verify the data was copied into table 2
     // row1 exist, row0, row2 do not exist
@@ -176,8 +180,8 @@ public class TestCopyTable {
 
     t1.close();
     t2.close();
-    TEST_UTIL.deleteTable(TABLENAME1);
-    TEST_UTIL.deleteTable(TABLENAME2);
+    TEST_UTIL.deleteTable(tableName1);
+    TEST_UTIL.deleteTable(tableName2);
   }
 
   /**
@@ -185,8 +189,8 @@ public class TestCopyTable {
    */
   @Test
   public void testRenameFamily() throws Exception {
-    TableName sourceTable = TableName.valueOf("sourceTable");
-    TableName targetTable = TableName.valueOf("targetTable");
+    final TableName sourceTable = TableName.valueOf(name.getMethodName() + "source");
+    final TableName targetTable = TableName.valueOf(name.getMethodName() + "-target");
 
     byte[][] families = { FAMILY_A, FAMILY_B };
 

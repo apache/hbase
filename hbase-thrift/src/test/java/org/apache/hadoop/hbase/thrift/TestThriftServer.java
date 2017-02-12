@@ -65,8 +65,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Unit testing for ThriftServerRunner.HBaseHandler, a part of the
@@ -100,6 +102,9 @@ public class TestThriftServer {
   private static ByteBuffer valueCname = asByteBuffer("valueC");
   private static ByteBuffer valueDname = asByteBuffer("valueD");
   private static ByteBuffer valueEname = asByteBuffer(100l);
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -722,7 +727,7 @@ public class TestThriftServer {
     String family = "f";
     String col = "c";
     // create a table which will throw exceptions for requests
-    TableName tableName = TableName.valueOf("testMetricsWithException");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor tableDesc = new HTableDescriptor(tableName);
     tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
     tableDesc.addFamily(new HColumnDescriptor(family));

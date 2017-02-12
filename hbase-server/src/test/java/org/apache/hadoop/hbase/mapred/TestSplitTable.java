@@ -27,11 +27,15 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MapReduceTests.class, SmallTests.class})
 public class TestSplitTable {
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   @SuppressWarnings("deprecation")
@@ -96,10 +100,10 @@ public class TestSplitTable {
   @SuppressWarnings("deprecation")
   public void testToString() {
     TableSplit split =
-        new TableSplit(TableName.valueOf("table"), "row-start".getBytes(), "row-end".getBytes(),
+        new TableSplit(TableName.valueOf(name.getMethodName()), "row-start".getBytes(), "row-end".getBytes(),
             "location");
     String str =
-        "HBase table split(table name: table, start row: row-start, "
+        "HBase table split(table name: " + name.getMethodName() + ", start row: row-start, "
             + "end row: row-end, region location: location)";
     Assert.assertEquals(str, split.toString());
 

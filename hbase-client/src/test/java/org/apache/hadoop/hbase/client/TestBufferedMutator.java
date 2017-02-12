@@ -29,11 +29,15 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({SmallTests.class, ClientTests.class})
 public class TestBufferedMutator {
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Registry that does nothing.
@@ -77,7 +81,7 @@ public class TestBufferedMutator {
 
   @Test
   public void testAlternateBufferedMutatorImpl() throws IOException {
-    BufferedMutatorParams params =  new BufferedMutatorParams(TableName.valueOf("t"));
+    BufferedMutatorParams params =  new BufferedMutatorParams(TableName.valueOf(name.getMethodName()));
     Configuration conf = HBaseConfiguration.create();
     conf.set(RegistryFactory.REGISTRY_IMPL_CONF_KEY, DoNothingRegistry.class.getName());
     try (Connection connection = ConnectionFactory.createConnection(conf)) {

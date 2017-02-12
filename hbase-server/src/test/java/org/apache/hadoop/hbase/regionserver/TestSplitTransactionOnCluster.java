@@ -99,8 +99,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * The below tests are testing split region against a running cluster
@@ -116,6 +118,9 @@ public class TestSplitTransactionOnCluster {
 
   static final HBaseTestingUtility TESTING_UTIL =
     new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass public static void before() throws Exception {
     TESTING_UTIL.getConfiguration().setInt(HConstants.HBASE_BALANCER_PERIOD, 60000);
@@ -174,8 +179,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test(timeout = 60000)
   public void testRITStateForRollback() throws Exception {
-    final TableName tableName =
-        TableName.valueOf("testRITStateForRollback");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final HMaster master = cluster.getMaster();
     try {
       // Create table then get the single region for our new table.
@@ -222,7 +226,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test(timeout = 60000)
   public void testSplitFailedCompactionAndSplit() throws Exception {
-    final TableName tableName = TableName.valueOf("testSplitFailedCompactionAndSplit");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create table then get the single region for our new table.
     HTableDescriptor htd = new HTableDescriptor(tableName);
     byte[] cf = Bytes.toBytes("cf");
@@ -282,8 +286,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test (timeout = 300000)
   public void testExistingZnodeBlocksSplitAndWeRollback() throws IOException, InterruptedException {
-    final TableName tableName =
-        TableName.valueOf("testExistingZnodeBlocksSplitAndWeRollback");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table then get the single region for our new table.
     Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -341,8 +344,7 @@ public class TestSplitTransactionOnCluster {
   @Ignore // TODO: revisit this test when the new AM and SSH is implement
   @Test (timeout=300000)
   public void testShutdownFixupWhenDaughterHasSplit()throws IOException, InterruptedException {
-    final TableName tableName =
-        TableName.valueOf("testShutdownFixupWhenDaughterHasSplit");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table then get the single region for our new table.
     Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -419,8 +421,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test(timeout = 180000)
   public void testSplitShouldNotThrowNPEEvenARegionHasEmptySplitFiles() throws Exception {
-    TableName userTableName =
-        TableName.valueOf("testSplitShouldNotThrowNPEEvenARegionHasEmptySplitFiles");
+    TableName userTableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor htd = new HTableDescriptor(userTableName);
     HColumnDescriptor hcd = new HColumnDescriptor("col");
     htd.addFamily(hcd);
@@ -491,8 +492,7 @@ public class TestSplitTransactionOnCluster {
   public void testMasterRestartAtRegionSplitPendingCatalogJanitor()
       throws IOException, InterruptedException, NodeExistsException,
       KeeperException, ServiceException {
-    final TableName tableName = TableName
-        .valueOf("testMasterRestartAtRegionSplitPendingCatalogJanitor");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     // Create table then get the single region for our new table.
     Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -537,9 +537,8 @@ public class TestSplitTransactionOnCluster {
 
   @Test
   public void testSplitWithRegionReplicas() throws Exception {
-    final TableName tableName =
-        TableName.valueOf("foobar");
-    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor("foobar");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor(name.getMethodName());
     htd.setRegionReplication(2);
     htd.addCoprocessor(SlowMeCopro.class.getName());
     // Create table then get the single region for our new table.
@@ -633,8 +632,7 @@ public class TestSplitTransactionOnCluster {
   @Test(timeout = 60000)
   public void testSplitRegionWithNoStoreFiles()
       throws Exception {
-    final TableName tableName =
-        TableName.valueOf("testSplitRegionWithNoStoreFiles");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create table then get the single region for our new table.
     createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
     List<HRegion> regions = cluster.getRegions(tableName);
@@ -712,8 +710,7 @@ public class TestSplitTransactionOnCluster {
   @Test
   public void testStoreFileReferenceCreationWhenSplitPolicySaysToSkipRangeCheck()
       throws Exception {
-    final TableName tableName =
-        TableName.valueOf("testStoreFileReferenceCreationWhenSplitPolicySaysToSkipRangeCheck");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor("f"));

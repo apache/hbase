@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -74,6 +75,7 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.junit.rules.TestName;
 
 /**
  * Testing of coprocessor metrics end-to-end.
@@ -86,6 +88,10 @@ public class TestCoprocessorMetrics {
 
   private static final byte[] foo = Bytes.toBytes("foo");
   private static final byte[] bar = Bytes.toBytes("bar");
+
+  @Rule
+  public TestName name = new TestName();
+
   /**
    * MasterObserver that has a Timer metric for create table operation.
    */
@@ -289,7 +295,7 @@ public class TestCoprocessorMetrics {
       long prevCount = createTableTimer.getHistogram().getCount();
       LOG.info("Creating table");
       admin.createTable(
-          new HTableDescriptor("testMasterObserver")
+          new HTableDescriptor(TableName.valueOf(name.getMethodName()))
               .addFamily(new HColumnDescriptor("foo")));
 
       assertEquals(1, createTableTimer.getHistogram().getCount() - prevCount);
@@ -333,14 +339,14 @@ public class TestCoprocessorMetrics {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
-          new HTableDescriptor("testWALObserver")
+          new HTableDescriptor(TableName.valueOf(name.getMethodName()))
               .addFamily(new HColumnDescriptor("foo")));
 
       Counter rollWalRequests = (Counter)metric.get();
       long prevCount = rollWalRequests.getCount();
       assertTrue(prevCount > 0);
 
-      try (Table table = connection.getTable(TableName.valueOf("testWALObserver"))) {
+      try (Table table = connection.getTable(TableName.valueOf(name.getMethodName()))) {
         table.put(new Put(foo).addColumn(foo, foo, foo));
       }
 
@@ -368,7 +374,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverSingleRegion() throws IOException {
-    TableName tableName = TableName.valueOf("testRegionObserverSingleRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
@@ -387,7 +393,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverMultiRegion() throws IOException {
-    TableName tableName = TableName.valueOf("testRegionObserverMultiRegion");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
@@ -411,8 +417,8 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverMultiTable() throws IOException {
-    TableName tableName1 = TableName.valueOf("testRegionObserverMultiTable1");
-    TableName tableName2 = TableName.valueOf("testRegionObserverMultiTable2");
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
@@ -426,7 +432,7 @@ public class TestCoprocessorMetrics {
               // add the coprocessor for the region
               .addCoprocessor(CustomRegionObserver.class.getName()));
       try (Table table1 = connection.getTable(tableName1);
-           Table table2 = connection.getTable(tableName2);) {
+           Table table2 = connection.getTable(tableName2)) {
         table1.get(new Get(bar));
         table2.get(new Get(foo)); // 2 gets to 2 separate tables
       }
@@ -436,7 +442,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverMultiCoprocessor() throws IOException {
-    TableName tableName = TableName.valueOf("testRegionObserverMultiCoprocessor");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
@@ -458,7 +464,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverAfterRegionClosed() throws IOException {
-    TableName tableName = TableName.valueOf("testRegionObserverAfterRegionClosed");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(
@@ -502,7 +508,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverEndpoint() throws IOException, ServiceException {
-    TableName tableName = TableName.valueOf("testRegionObserverEndpoint");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
          Admin admin = connection.getAdmin()) {
       admin.createTable(

@@ -948,9 +948,9 @@ public class TestDefaultMemStore {
         conf, FSTableDescriptors.createMetaTableDescriptor(conf),
         wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
             getEncodedNameAsBytes()));
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf("testShouldFlushMeta"),
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()),
         Bytes.toBytes("row_0200"), Bytes.toBytes("row_0300"));
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("testShouldFlushMeta"));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     desc.addFamily(new HColumnDescriptor("foo".getBytes()));
     HRegion r =
         HRegion.createHRegion(hri, testDir, conf, desc,

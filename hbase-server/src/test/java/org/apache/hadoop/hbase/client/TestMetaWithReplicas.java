@@ -62,6 +62,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 /**
@@ -75,6 +76,9 @@ public class TestMetaWithReplicas {
       build();
   private static final Log LOG = LogFactory.getLog(TestMetaWithReplicas.class);
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setup() throws Exception {
@@ -235,17 +239,17 @@ public class TestMetaWithReplicas {
 
   @Test
   public void testMetaLookupThreadPoolCreated() throws Exception {
-    TableName TABLE = TableName.valueOf("testMetaLookupThreadPoolCreated");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
-    if (TEST_UTIL.getAdmin().tableExists(TABLE)) {
-      TEST_UTIL.getAdmin().disableTable(TABLE);
-      TEST_UTIL.getAdmin().deleteTable(TABLE);
+    if (TEST_UTIL.getAdmin().tableExists(tableName)) {
+      TEST_UTIL.getAdmin().disableTable(tableName);
+      TEST_UTIL.getAdmin().deleteTable(tableName);
     }
-    try (Table htable = TEST_UTIL.createTable(TABLE, FAMILIES);) {
+    try (Table htable = TEST_UTIL.createTable(tableName, FAMILIES);) {
       byte[] row = "test".getBytes();
       ConnectionImplementation c = ((ConnectionImplementation) TEST_UTIL.getConnection());
       // check that metalookup pool would get created
-      c.relocateRegion(TABLE, row);
+      c.relocateRegion(tableName, row);
       ExecutorService ex = c.getCurrentMetaLookupPool();
       assert(ex != null);
     }
@@ -368,7 +372,7 @@ public class TestMetaWithReplicas {
   public void testAccessingUnknownTables() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setBoolean(HConstants.USE_META_REPLICAS, true);
-    Table table = TEST_UTIL.getConnection().getTable(TableName.valueOf("RandomTable"));
+    Table table = TEST_UTIL.getConnection().getTable(TableName.valueOf(name.getMethodName()));
     Get get = new Get(Bytes.toBytes("foo"));
     try {
       table.get(get);
@@ -400,7 +404,7 @@ public class TestMetaWithReplicas {
       }
     }
     assert(moveToServer != null);
-    TableName tableName = TableName.valueOf("randomTable5678");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, "f");
     assertTrue(TEST_UTIL.getAdmin().tableExists(tableName));
     TEST_UTIL.getAdmin().move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),

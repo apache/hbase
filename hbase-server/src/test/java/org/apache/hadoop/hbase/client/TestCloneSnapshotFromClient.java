@@ -36,8 +36,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test clone snapshots from the client
@@ -58,6 +60,9 @@ public class TestCloneSnapshotFromClient {
   protected int snapshot0Rows;
   protected int snapshot1Rows;
   protected Admin admin;
+
+  @Rule
+  public TestName name = new TestName();
 
   protected static void setupConfiguration() {
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
@@ -90,7 +95,7 @@ public class TestCloneSnapshotFromClient {
     this.admin = TEST_UTIL.getAdmin();
 
     long tid = System.currentTimeMillis();
-    tableName = TableName.valueOf("testtb-" + tid);
+    tableName = TableName.valueOf(name.getMethodName() + tid);
     emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
     snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
@@ -149,19 +154,19 @@ public class TestCloneSnapshotFromClient {
   @Test(expected=SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws IOException, InterruptedException {
     String snapshotName = "random-snapshot-" + System.currentTimeMillis();
-    TableName tableName = TableName.valueOf("random-table-" + System.currentTimeMillis());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName, tableName);
   }
 
   @Test(expected = NamespaceNotFoundException.class)
   public void testCloneOnMissingNamespace() throws IOException, InterruptedException {
-    TableName clonedTableName = TableName.valueOf("unknownNS:clonetb");
+    final TableName clonedTableName = TableName.valueOf("unknownNS:" + name.getMethodName());
     admin.cloneSnapshot(snapshotName1, clonedTableName);
   }
 
   @Test
   public void testCloneSnapshot() throws IOException, InterruptedException {
-    TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
+    final TableName clonedTableName = TableName.valueOf(name.getMethodName() + "-" + System.currentTimeMillis());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);
@@ -185,8 +190,7 @@ public class TestCloneSnapshotFromClient {
   public void testCloneSnapshotCrossNamespace() throws IOException, InterruptedException {
     String nsName = "testCloneSnapshotCrossNamespace";
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
-    TableName clonedTableName =
-        TableName.valueOf(nsName, "clonedtb-" + System.currentTimeMillis());
+    final TableName clonedTableName = TableName.valueOf(nsName, name.getMethodName() + "-" + System.currentTimeMillis());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);
@@ -198,7 +202,7 @@ public class TestCloneSnapshotFromClient {
   @Test
   public void testCloneLinksAfterDelete() throws IOException, InterruptedException {
     // Clone a table from the first snapshot
-    TableName clonedTableName = TableName.valueOf("clonedtb1-" + System.currentTimeMillis());
+    final TableName clonedTableName = TableName.valueOf(name.getMethodName() + "1-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
 
@@ -207,7 +211,7 @@ public class TestCloneSnapshotFromClient {
     admin.snapshot(snapshotName2, clonedTableName);
 
     // Clone the snapshot of the cloned table
-    TableName clonedTableName2 = TableName.valueOf("clonedtb2-" + System.currentTimeMillis());
+    final TableName clonedTableName2 = TableName.valueOf(name.getMethodName() + "2-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName2);
     verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
     admin.disableTable(clonedTableName2);
@@ -234,7 +238,7 @@ public class TestCloneSnapshotFromClient {
     verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
 
     // Clone a new table from cloned
-    TableName clonedTableName3 = TableName.valueOf("clonedtb3-" + System.currentTimeMillis());
+    final TableName clonedTableName3 = TableName.valueOf(name.getMethodName() + "3-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName3);
     verifyRowCount(TEST_UTIL, clonedTableName3, snapshot0Rows);
 

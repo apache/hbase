@@ -49,10 +49,12 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.base.Joiner;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestMaster {
@@ -62,6 +64,9 @@ public class TestMaster {
       TableName.valueOf("TestMaster");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
   private static Admin admin;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -140,8 +145,7 @@ public class TestMaster {
 
   @Test
   public void testMoveThrowsUnknownRegionException() throws IOException {
-    TableName tableName =
-        TableName.valueOf("testMoveThrowsUnknownRegionException");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("value");
     htd.addFamily(hcd);
@@ -161,7 +165,7 @@ public class TestMaster {
 
   @Test
   public void testMoveThrowsPleaseHoldException() throws IOException {
-    TableName tableName = TableName.valueOf("testMoveThrowsPleaseHoldException");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("value");

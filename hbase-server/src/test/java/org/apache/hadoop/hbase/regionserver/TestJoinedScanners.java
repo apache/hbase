@@ -47,8 +47,10 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test performance improvement of joined scanners optimization:
@@ -71,6 +73,9 @@ public class TestJoinedScanners {
   private static int selectionRatio = 30;
   private static int valueWidth = 128 * 1024;
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void testJoinedScanners() throws Exception {
     String dataNodeHosts[] = new String[] { "host1", "host2", "host3" };
@@ -88,7 +93,7 @@ public class TestJoinedScanners {
       cluster = htu.startMiniCluster(1, regionServersCount, dataNodeHosts);
       byte [][] families = {cf_essential, cf_joined};
 
-      TableName tableName = TableName.valueOf(this.getClass().getSimpleName());
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       HTableDescriptor desc = new HTableDescriptor(tableName);
       for(byte[] family : families) {
         HColumnDescriptor hcd = new HColumnDescriptor(family);

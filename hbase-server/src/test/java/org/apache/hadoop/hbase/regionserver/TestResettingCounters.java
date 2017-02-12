@@ -33,11 +33,15 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestResettingCounters {
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testResettingCounters() throws Exception {
@@ -45,7 +49,7 @@ public class TestResettingCounters {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     Configuration conf = htu.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
-    byte [] table = Bytes.toBytes("table");
+    byte [] table = Bytes.toBytes(name.getMethodName());
     byte [][] families = new byte [][] {
         Bytes.toBytes("family1"),
         Bytes.toBytes("family2"),

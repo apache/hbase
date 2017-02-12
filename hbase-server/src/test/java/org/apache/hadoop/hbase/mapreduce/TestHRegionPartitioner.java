@@ -24,14 +24,19 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 
 @Category({MapReduceTests.class, MediumTests.class})
 public class TestHRegionPartitioner {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -51,12 +56,12 @@ public class TestHRegionPartitioner {
 
     byte[][] families = { Bytes.toBytes("familyA"), Bytes.toBytes("familyB") };
 
-    UTIL.createTable(TableName.valueOf("out_table"), families, 1,
+    UTIL.createTable(TableName.valueOf(name.getMethodName()), families, 1,
     Bytes.toBytes("aa"), Bytes.toBytes("cc"), 3);
 
     HRegionPartitioner<Long, Long> partitioner = new HRegionPartitioner<Long, Long>();
     Configuration configuration = UTIL.getConfiguration();
-    configuration.set(TableOutputFormat.OUTPUT_TABLE, "out_table");
+    configuration.set(TableOutputFormat.OUTPUT_TABLE, name.getMethodName());
     partitioner.setConf(configuration);
     ImmutableBytesWritable writable = new ImmutableBytesWritable(Bytes.toBytes("bb"));
 

@@ -68,14 +68,19 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationSmallTests extends TestReplicationBase {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationSmallTests.class);
   private static final String PEER_ID = "2";
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -499,9 +504,9 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    */
   @Test(timeout=300000)
   public void testVerifyRepJobWithRawOptions() throws Exception {
-    LOG.info("testVerifyRepJobWithRawOptions");
+    LOG.info(name.getMethodName());
 
-    TableName tablename = TableName.valueOf("test_raw");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] familyname = Bytes.toBytes("fam_raw");
     byte[] row = Bytes.toBytes("row_raw");
 
@@ -509,7 +514,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     Table lHtable2 = null;
 
     try {
-      HTableDescriptor table = new HTableDescriptor(tablename);
+      HTableDescriptor table = new HTableDescriptor(tableName);
       HColumnDescriptor fam = new HColumnDescriptor(familyname);
       fam.setMaxVersions(100);
       fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
@@ -528,11 +533,11 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       try (Admin admin2 = connection2.getAdmin()) {
         admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
       }
-      utility1.waitUntilAllRegionsAssigned(tablename);
-      utility2.waitUntilAllRegionsAssigned(tablename);
+      utility1.waitUntilAllRegionsAssigned(tableName);
+      utility2.waitUntilAllRegionsAssigned(tableName);
 
-      lHtable1 = utility1.getConnection().getTable(tablename);
-      lHtable2 = utility2.getConnection().getTable(tablename);
+      lHtable1 = utility1.getConnection().getTable(tableName);
+      lHtable2 = utility2.getConnection().getTable(tableName);
 
       Put put = new Put(row);
       put.addColumn(familyname, row, row);
@@ -571,11 +576,11 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       }
 
       // Checking verifyReplication for the default behavior.
-      String[] argsWithoutRaw = new String[] {PEER_ID, tablename.getNameAsString()};
+      String[] argsWithoutRaw = new String[] {PEER_ID, tableName.getNameAsString()};
       runVerifyReplication(argsWithoutRaw, 0, 0);
 
       // Checking verifyReplication with raw
-      String[] argsWithRawAsTrue = new String[] {"--raw", PEER_ID, tablename.getNameAsString()};
+      String[] argsWithRawAsTrue = new String[] {"--raw", PEER_ID, tableName.getNameAsString()};
       runVerifyReplication(argsWithRawAsTrue, 1, 0);
     } finally {
       if (lHtable1 != null) {

@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Do some ops and prove that client and server can work w/o codecs; that we can pb all the time.
@@ -42,6 +44,10 @@ import org.junit.experimental.categories.Category;
 @Category({MediumTests.class, ClientTests.class})
 public class TestFromClientSideNoCodec {
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
+
   /**
    * @throws java.lang.Exception
    */
@@ -62,10 +68,10 @@ public class TestFromClientSideNoCodec {
 
   @Test
   public void testBasics() throws IOException {
-    final TableName t = TableName.valueOf("testBasics");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte [][] fs = new byte[][] {Bytes.toBytes("cf1"), Bytes.toBytes("cf2"),
       Bytes.toBytes("cf3") };
-    Table ht = TEST_UTIL.createTable(t, fs);
+    Table ht = TEST_UTIL.createTable(tableName, fs);
     // Check put and get.
     final byte [] row = Bytes.toBytes("row");
     Put p = new Put(row);

@@ -48,8 +48,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithTTLs implements Configurable {
@@ -71,6 +73,9 @@ public class TestImportTSVWithTTLs implements Configurable {
 
   private final String FAMILY = "FAM";
   private static Configuration conf;
+
+  @Rule
+  public TestName name = new TestName();
 
   @Override
   public Configuration getConf() {
@@ -99,7 +104,7 @@ public class TestImportTSVWithTTLs implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {

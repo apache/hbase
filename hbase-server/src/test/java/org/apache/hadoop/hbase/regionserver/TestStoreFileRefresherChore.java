@@ -52,14 +52,19 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestStoreFileRefresherChore {
 
   private HBaseTestingUtility TEST_UTIL;
   private Path testDir;
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setUp() throws IOException {
@@ -169,7 +174,7 @@ public class TestStoreFileRefresherChore {
     when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
-    HTableDescriptor htd = getTableDesc(TableName.valueOf("testIsStale"), families);
+    HTableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), families);
     Region primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     Region replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);

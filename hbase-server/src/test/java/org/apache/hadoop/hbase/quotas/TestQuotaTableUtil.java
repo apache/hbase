@@ -40,8 +40,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test the quota table helpers (e.g. CRUD operations)
@@ -52,6 +54,9 @@ public class TestQuotaTableUtil {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Connection connection;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -83,7 +88,7 @@ public class TestQuotaTableUtil {
 
   @Test
   public void testTableQuotaUtil() throws Exception {
-    final TableName table = TableName.valueOf("testTableQuotaUtilTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     Quotas quota = Quotas.newBuilder()
               .setThrottle(Throttle.newBuilder()
@@ -94,13 +99,13 @@ public class TestQuotaTableUtil {
               .build();
 
     // Add user quota and verify it
-    QuotaUtil.addTableQuota(this.connection, table, quota);
-    Quotas resQuota = QuotaUtil.getTableQuota(this.connection, table);
+    QuotaUtil.addTableQuota(this.connection, tableName, quota);
+    Quotas resQuota = QuotaUtil.getTableQuota(this.connection, tableName);
     assertEquals(quota, resQuota);
 
     // Remove user quota and verify it
-    QuotaUtil.deleteTableQuota(this.connection, table);
-    resQuota = QuotaUtil.getTableQuota(this.connection, table);
+    QuotaUtil.deleteTableQuota(this.connection, tableName);
+    resQuota = QuotaUtil.getTableQuota(this.connection, tableName);
     assertEquals(null, resQuota);
   }
 
@@ -129,7 +134,7 @@ public class TestQuotaTableUtil {
 
   @Test
   public void testUserQuotaUtil() throws Exception {
-    final TableName table = TableName.valueOf("testUserQuotaUtilTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String namespace = "testNS";
     final String user = "testUser";
 
@@ -159,8 +164,8 @@ public class TestQuotaTableUtil {
     assertEquals(quota, resQuota);
 
     // Add user quota for table
-    QuotaUtil.addUserQuota(this.connection, user, table, quotaTable);
-    Quotas resQuotaTable = QuotaUtil.getUserQuota(this.connection, user, table);
+    QuotaUtil.addUserQuota(this.connection, user, tableName, quotaTable);
+    Quotas resQuotaTable = QuotaUtil.getUserQuota(this.connection, user, tableName);
     assertEquals(quotaTable, resQuotaTable);
 
     // Add user quota for namespace
@@ -174,8 +179,8 @@ public class TestQuotaTableUtil {
     assertEquals(null, resQuota);
 
     // Delete user quota for table
-    QuotaUtil.deleteUserQuota(this.connection, user, table);
-    resQuotaTable = QuotaUtil.getUserQuota(this.connection, user, table);
+    QuotaUtil.deleteUserQuota(this.connection, user, tableName);
+    resQuotaTable = QuotaUtil.getUserQuota(this.connection, user, tableName);
     assertEquals(null, resQuotaTable);
 
     // Delete user quota for namespace

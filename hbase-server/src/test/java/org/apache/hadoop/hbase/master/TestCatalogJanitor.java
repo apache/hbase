@@ -73,8 +73,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Triple;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -82,6 +84,9 @@ import org.mockito.stubbing.Answer;
 @Category({MasterTests.class, SmallTests.class})
 public class TestCatalogJanitor {
   private static final Log LOG = LogFactory.getLog(TestCatalogJanitor.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Mock MasterServices for tests below.
@@ -227,7 +232,7 @@ public class TestCatalogJanitor {
     try {
       CatalogJanitor janitor = new CatalogJanitor(services);
       // Create regions.
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
       htd.addFamily(new HColumnDescriptor("f"));
       HRegionInfo parent =
         new HRegionInfo(htd.getTableName(), Bytes.toBytes("aaa"),
@@ -555,7 +560,6 @@ public class TestCatalogJanitor {
 
   @Test
   public void testArchiveOldRegion() throws Exception {
-    String table = "table";
     HBaseTestingUtility htu = new HBaseTestingUtility();
     setRootDirAndCleanIt(htu, "testCleanParent");
     MasterServices services = new MockMasterServices(htu);
@@ -564,7 +568,7 @@ public class TestCatalogJanitor {
     CatalogJanitor janitor = new CatalogJanitor(services);
 
     // Create regions.
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor("f"));
     HRegionInfo parent = new HRegionInfo(htd.getTableName(),
         Bytes.toBytes("aaa"), Bytes.toBytes("eee"));
@@ -637,7 +641,6 @@ public class TestCatalogJanitor {
    */
   @Test
   public void testDuplicateHFileResolution() throws Exception {
-    String table = "table";
     HBaseTestingUtility htu = new HBaseTestingUtility();
     setRootDirAndCleanIt(htu, "testCleanParent");
     MasterServices services = new MockMasterServices(htu);
@@ -647,7 +650,7 @@ public class TestCatalogJanitor {
     CatalogJanitor janitor = new CatalogJanitor(services);
 
     // Create regions.
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor("f"));
     HRegionInfo parent = new HRegionInfo(htd.getTableName(),
         Bytes.toBytes("aaa"), Bytes.toBytes("eee"));

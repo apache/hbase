@@ -39,8 +39,10 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestMasterProcedureScheduler {
@@ -48,6 +50,9 @@ public class TestMasterProcedureScheduler {
 
   private MasterProcedureScheduler queue;
   private Configuration conf;
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setUp() throws IOException {
@@ -112,7 +117,7 @@ public class TestMasterProcedureScheduler {
    */
   @Test
   public void testCreateDeleteTableOperationsWithWriteLock() throws Exception {
-    TableName tableName = TableName.valueOf("testtb");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     final TestTableProcedure dummyProc = new TestTableProcedure(100, tableName,
         TableProcedureInterface.TableOperationType.DELETE);
@@ -143,7 +148,7 @@ public class TestMasterProcedureScheduler {
    */
   @Test
   public void testCreateDeleteTableOperationsWithReadLock() throws Exception {
-    final TableName tableName = TableName.valueOf("testtb");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final int nitems = 2;
 
     final TestTableProcedure dummyProc = new TestTableProcedure(100, tableName,
@@ -186,7 +191,7 @@ public class TestMasterProcedureScheduler {
    */
   @Test
   public void testVerifyRwLocks() throws Exception {
-    TableName tableName = TableName.valueOf("testtb");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     queue.addBack(new TestTableProcedure(1, tableName,
           TableProcedureInterface.TableOperationType.EDIT));
     queue.addBack(new TestTableProcedure(2, tableName,
@@ -253,8 +258,8 @@ public class TestMasterProcedureScheduler {
   public void testVerifyNamespaceRwLocks() throws Exception {
     String nsName1 = "ns1";
     String nsName2 = "ns2";
-    TableName tableName1 = TableName.valueOf(nsName1, "testtb");
-    TableName tableName2 = TableName.valueOf(nsName2, "testtb");
+    TableName tableName1 = TableName.valueOf(nsName1, name.getMethodName());
+    TableName tableName2 = TableName.valueOf(nsName2, name.getMethodName());
     queue.addBack(new TestNamespaceProcedure(1, nsName1,
           TableProcedureInterface.TableOperationType.EDIT));
     queue.addBack(new TestTableProcedure(2, tableName1,
@@ -306,7 +311,7 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testVerifyNamespaceXLock() throws Exception {
     String nsName = "ns1";
-    TableName tableName = TableName.valueOf(nsName, "testtb");
+    TableName tableName = TableName.valueOf(nsName, name.getMethodName());
     queue.addBack(new TestNamespaceProcedure(1, nsName,
           TableProcedureInterface.TableOperationType.CREATE));
     queue.addBack(new TestTableProcedure(2, tableName,
@@ -331,7 +336,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testXLockWaitingForExecutingSharedLockToRelease() {
-    final TableName tableName = TableName.valueOf("testtb");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
 
     queue.addBack(new TestRegionProcedure(1, tableName,
@@ -375,7 +380,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testVerifyRegionLocks() throws Exception {
-    final TableName tableName = TableName.valueOf("testtb");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
     final HRegionInfo regionB = new HRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c"));
     final HRegionInfo regionC = new HRegionInfo(tableName, Bytes.toBytes("c"), Bytes.toBytes("d"));
@@ -448,7 +453,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testVerifySubProcRegionLocks() throws Exception {
-    final TableName tableName = TableName.valueOf("testVerifySubProcRegionLocks");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final HRegionInfo regionA = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
     final HRegionInfo regionB = new HRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c"));
     final HRegionInfo regionC = new HRegionInfo(tableName, Bytes.toBytes("c"), Bytes.toBytes("d"));
@@ -508,7 +513,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testInheritedRegionXLock() {
-    final TableName tableName = TableName.valueOf("testInheritedRegionXLock");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final HRegionInfo region = new HRegionInfo(tableName, Bytes.toBytes("a"), Bytes.toBytes("b"));
 
     queue.addBack(new TestRegionProcedure(1, tableName,
@@ -551,7 +556,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testSuspendedProcedure() throws Exception {
-    final TableName tableName = TableName.valueOf("testSuspendedProcedure");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     queue.addBack(new TestTableProcedure(1, tableName,
         TableProcedureInterface.TableOperationType.READ));
@@ -587,7 +592,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testParentXLockAndChildrenSharedLock() throws Exception {
-    final TableName tableName = TableName.valueOf("testParentXLockAndChildrenSharedLock");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final HRegionInfo[] regions = generateRegionInfo(tableName);
     final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
     for (int i = 0; i < regions.length; ++i) {
@@ -602,7 +607,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testRootXLockAndChildrenSharedLock() throws Exception {
-    final TableName tableName = TableName.valueOf("testRootXLockAndChildrenSharedLock");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final HRegionInfo[] regions = generateRegionInfo(tableName);
     final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
     for (int i = 0; i < regions.length; ++i) {
@@ -657,7 +662,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testParentXLockAndChildrenXLock() throws Exception {
-    final TableName tableName = TableName.valueOf("testParentXLockAndChildrenXLock");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testInheritedXLockAndChildrenXLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
       new TestTableProcedure(1, 2, tableName, TableProcedureInterface.TableOperationType.EDIT)
@@ -666,7 +671,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testRootXLockAndChildrenXLock() throws Exception {
-    final TableName tableName = TableName.valueOf("testRootXLockAndChildrenXLock");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // simulate 3 procedures: 1 (root), (2) child of root, (3) child of proc-2
     testInheritedXLockAndChildrenXLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
@@ -698,7 +703,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testYieldWithXLockHeld() throws Exception {
-    final TableName tableName = TableName.valueOf("testYieldWithXLockHeld");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     queue.addBack(new TestTableProcedure(1, tableName,
         TableProcedureInterface.TableOperationType.EDIT));
@@ -729,7 +734,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testYieldWithSharedLockHeld() throws Exception {
-    final TableName tableName = TableName.valueOf("testYieldWithSharedLockHeld");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     queue.addBack(new TestTableProcedure(1, tableName,
         TableProcedureInterface.TableOperationType.READ));

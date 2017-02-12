@@ -61,8 +61,10 @@ import com.google.common.collect.Maps;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 
 @Category({ClientTests.class, MediumTests.class})
@@ -79,6 +81,9 @@ public class TestTableFavoredNodes {
 
   private final byte[][] splitKeys = new byte[][] {Bytes.toBytes(1), Bytes.toBytes(9)};
   private final int NUM_REGIONS = splitKeys.length + 1;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -115,8 +120,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testCreateTable() throws Exception {
-
-    TableName tableName = TableName.valueOf("createTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -135,8 +139,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testTruncateTable() throws Exception {
-
-    TableName tableName = TableName.valueOf("truncateTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -161,8 +164,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testSplitTable() throws Exception {
-
-    TableName tableName = TableName.valueOf("splitRegions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -219,8 +221,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testMergeTable() throws Exception {
-
-    TableName tableName = TableName.valueOf("mergeRegions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -335,8 +336,7 @@ public class TestTableFavoredNodes {
    */
   @Test
   public void testSystemTables() throws Exception {
-
-    TableName tableName = TableName.valueOf("createTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(tableName, Bytes.toBytes("f"), splitKeys);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 

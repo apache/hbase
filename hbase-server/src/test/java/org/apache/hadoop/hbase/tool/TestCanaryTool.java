@@ -35,8 +35,10 @@ import com.google.common.collect.Iterables;
 import org.apache.hadoop.hbase.HConstants;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
@@ -62,6 +64,9 @@ public class TestCanaryTool {
   private HBaseTestingUtility testingUtility;
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] COLUMN = Bytes.toBytes("col");
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setUp() throws Exception {
@@ -99,7 +104,7 @@ public class TestCanaryTool {
 
   @Test
   public void testBasicCanaryWorks() throws Exception {
-    TableName tableName = TableName.valueOf("testTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Table table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
     // insert some test rows
     for (int i=0; i<1000; i++) {
@@ -111,7 +116,7 @@ public class TestCanaryTool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary.RegionServerStdOutSink sink = spy(new Canary.RegionServerStdOutSink());
     Canary canary = new Canary(executor, sink);
-    String[] args = { "-writeSniffing", "-t", "10000", "testTable" };
+    String[] args = { "-writeSniffing", "-t", "10000", name.getMethodName() };
     ToolRunner.run(testingUtility.getConfiguration(), canary, args);
     assertEquals("verify no read error count", 0, canary.getReadFailures().size());
     assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
@@ -133,7 +138,7 @@ public class TestCanaryTool {
   //by creating a table, there shouldn't be any region servers not serving any regions
   @Test
   public void testRegionserverWithRegions() throws Exception {
-    TableName tableName = TableName.valueOf("testTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testingUtility.createTable(tableName, new byte[][] { FAMILY });
     runRegionserverCanary();
     verify(mockAppender, never()).doAppend(argThat(new ArgumentMatcher<LoggingEvent>() {
@@ -146,7 +151,7 @@ public class TestCanaryTool {
 
   @Test
   public void testRawScanConfig() throws Exception {
-    TableName tableName = TableName.valueOf("testTableRawScan");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Table table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
     // insert some test rows
     for (int i=0; i<1000; i++) {
@@ -158,7 +163,7 @@ public class TestCanaryTool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     Canary.RegionServerStdOutSink sink = spy(new Canary.RegionServerStdOutSink());
     Canary canary = new Canary(executor, sink);
-    String[] args = { "-t", "10000", "testTableRawScan" };
+    String[] args = { "-t", "10000", name.getMethodName() };
     org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
     conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
     ToolRunner.run(conf, canary, args);

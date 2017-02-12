@@ -25,14 +25,19 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestRegionPlan {
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void test() {
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf("table"));
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     ServerName source = ServerName.valueOf("source", 1234, 2345);
     ServerName dest = ServerName.valueOf("dest", 1234, 2345);
     
@@ -46,7 +51,7 @@ public class TestRegionPlan {
     assertEquals(plan, new RegionPlan(hri, dest, source));
 
     // HRI is used for equality
-    HRegionInfo other = new HRegionInfo(TableName.valueOf("other"));
+    HRegionInfo other = new HRegionInfo(TableName.valueOf(name.getMethodName() + "other"));
     assertNotEquals(plan.hashCode(), new RegionPlan(other, source, dest).hashCode());
     assertNotEquals(plan, new RegionPlan(other, source, dest));
   }

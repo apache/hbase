@@ -44,8 +44,10 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 
 /**
@@ -59,6 +61,9 @@ public class TestHRegionOnCluster {
   private static final Log LOG = LogFactory.getLog(TestHRegionOnCluster.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test (timeout=300000)
   public void testDataCorrectnessReplayingRecoveredEdits() throws Exception {
     final int NUM_MASTERS = 1;
@@ -67,29 +72,29 @@ public class TestHRegionOnCluster {
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
 
     try {
-      final TableName TABLENAME = TableName.valueOf("testDataCorrectnessReplayingRecoveredEdits");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       final byte[] FAMILY = Bytes.toBytes("family");
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       HMaster master = cluster.getMaster();
 
       // Create table
-      HTableDescriptor desc = new HTableDescriptor(TABLENAME);
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       hbaseAdmin = master.getConnection().getAdmin();
       hbaseAdmin.createTable(desc);
 
-      assertTrue(hbaseAdmin.isTableAvailable(TABLENAME));
+      assertTrue(hbaseAdmin.isTableAvailable(tableName));
 
       // Put data: r1->v1
-      LOG.info("Loading r1 to v1 into " + TABLENAME);
-      Table table = TEST_UTIL.getConnection().getTable(TABLENAME);
+      LOG.info("Loading r1 to v1 into " + tableName);
+      Table table = TEST_UTIL.getConnection().getTable(tableName);
       putDataAndVerify(table, "r1", FAMILY, "v1", 1);
 
       TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
       // Move region to target server
 
       HRegionInfo regionInfo;
-      try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLENAME)) {
+      try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
         regionInfo = locator.getRegionLocation(Bytes.toBytes("r1")).getRegionInfo();
       }
 
@@ -108,7 +113,7 @@ public class TestHRegionOnCluster {
       } while (cluster.getServerWith(regionInfo.getRegionName()) == originServerNum);
 
       // Put data: r2->v2
-      LOG.info("Loading r2 to v2 into " + TABLENAME);
+      LOG.info("Loading r2 to v2 into " + tableName);
       putDataAndVerify(table, "r2", FAMILY, "v2", 2);
 
       TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
@@ -121,7 +126,7 @@ public class TestHRegionOnCluster {
       } while (cluster.getServerWith(regionInfo.getRegionName()) == targetServerNum);
 
       // Put data: r3->v3
-      LOG.info("Loading r3 to v3 into " + TABLENAME);
+      LOG.info("Loading r3 to v3 into " + tableName);
       putDataAndVerify(table, "r3", FAMILY, "v3", 3);
 
       // Kill target server
@@ -138,7 +143,7 @@ public class TestHRegionOnCluster {
       cluster.getRegionServerThreads().get(originServerNum).join();
 
       // Put data: r4->v4
-      LOG.info("Loading r4 to v4 into " + TABLENAME);
+      LOG.info("Loading r4 to v4 into " + tableName);
       putDataAndVerify(table, "r4", FAMILY, "v4", 4);
 
     } finally {

@@ -68,9 +68,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
+import org.junit.rules.TestName;
 
 
 @Category({MiscTests.class, LargeTests.class})
@@ -79,6 +80,9 @@ public class TestZooKeeper {
 
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -213,16 +217,16 @@ public class TestZooKeeper {
 
   @Test (timeout = 120000)
   public void testRegionServerSessionExpired() throws Exception {
-    LOG.info("Starting testRegionServerSessionExpired");
+    LOG.info("Starting " + name.getMethodName());
     TEST_UTIL.expireRegionServerSession(0);
-    testSanity("testRegionServerSessionExpired");
+    testSanity(name.getMethodName());
   }
 
   @Test(timeout = 300000)
   public void testMasterSessionExpired() throws Exception {
-    LOG.info("Starting testMasterSessionExpired");
+    LOG.info("Starting " + name.getMethodName());
     TEST_UTIL.expireMasterSession();
-    testSanity("testMasterSessionExpired");
+    testSanity(name.getMethodName());
   }
 
   /**
@@ -232,13 +236,13 @@ public class TestZooKeeper {
    */
   @Test(timeout = 300000)
   public void testMasterZKSessionRecoveryFailure() throws Exception {
-    LOG.info("Starting testMasterZKSessionRecoveryFailure");
+    LOG.info("Starting " + name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     m.abort("Test recovery from zk session expired",
         new KeeperException.SessionExpiredException());
     assertTrue(m.isStopped()); // Master doesn't recover any more
-    testSanity("testMasterZKSessionRecoveryFailure");
+    testSanity(name.getMethodName());
   }
 
   /**
@@ -445,8 +449,7 @@ public class TestZooKeeper {
   @SuppressWarnings("deprecation")
   public void testGetChildDataAndWatchForNewChildrenShouldNotThrowNPE()
       throws Exception {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "testGetChildDataAndWatchForNewChildrenShouldNotThrowNPE", null);
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(), name.getMethodName(), null);
     ZKUtil.getChildDataAndWatchForNewChildren(zkw, "/wrongNode");
   }
 
@@ -467,8 +470,7 @@ public class TestZooKeeper {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
           Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
           Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
-      String tableName = "testRegionAssignmentAfterMasterRecoveryDueToZKExpiry";
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
       admin.createTable(htd, SPLIT_KEYS);
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
@@ -533,8 +535,7 @@ public class TestZooKeeper {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
         Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
 
-      String tableName = "testLogSplittingAfterMasterRecoveryDueToZKExpiry";
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
       HColumnDescriptor hcd = new HColumnDescriptor("col");
       htd.addFamily(hcd);
       admin.createTable(htd, SPLIT_KEYS);

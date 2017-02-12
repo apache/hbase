@@ -40,8 +40,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /*
  * This test is for the optimization added in HBASE-15243.
@@ -57,6 +59,9 @@ public class TestFilterListOrOperatorWithBlkCnt {
   private byte[] value = Bytes.toBytes("val");
   private TableName tableName;
   private int numRows = 10000;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws Exception
@@ -88,7 +93,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
 
   @Test
   public void testMultiRowRangeWithFilterListOrOperatorWithBlkCnt() throws IOException {
-    tableName = TableName.valueOf("TestMultiRowRangeFilterWithFilterListOrOperatorWithBlkCnt");
+    tableName = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 

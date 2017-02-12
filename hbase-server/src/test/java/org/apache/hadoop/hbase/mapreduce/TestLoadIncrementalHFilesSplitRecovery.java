@@ -71,8 +71,10 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Multimap;
@@ -96,6 +98,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   final static int ROWCOUNT = 100;
 
   private final static byte[][] families = new byte[NUM_CFS][];
+
+  @Rule
+  public TestName name = new TestName();
+
   static {
     for (int i = 0; i < NUM_CFS; i++) {
       families[i] = Bytes.toBytes(family(i));
@@ -276,7 +282,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test(expected=IOException.class, timeout=120000)
   public void testBulkLoadPhaseFailure() throws Exception {
-    final TableName table = TableName.valueOf("bulkLoadPhaseFailure");
+    final TableName table = TableName.valueOf(name.getMethodName());
     final AtomicInteger attmptedCalls = new AtomicInteger();
     final AtomicInteger failedCalls = new AtomicInteger();
     util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
@@ -329,7 +335,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test
   public void testRetryOnIOException() throws Exception {
-    final TableName table = TableName.valueOf("retryOnIOException");
+    final TableName table = TableName.valueOf(name.getMethodName());
     final AtomicInteger calls = new AtomicInteger(1);
     final Connection conn = ConnectionFactory.createConnection(util
         .getConfiguration());
@@ -400,7 +406,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test (timeout=120000)
   public void testSplitWhileBulkLoadPhase() throws Exception {
-    final TableName table = TableName.valueOf("splitWhileBulkloadPhase");
+    final TableName table = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
       setupTable(connection, table, 10);
       populateTable(connection, table,1);
@@ -447,7 +453,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test (timeout=120000)
   public void testGroupOrSplitPresplit() throws Exception {
-    final TableName table = TableName.valueOf("groupOrSplitPresplit");
+    final TableName table = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
       setupTable(connection, table, 10);
       populateTable(connection, table, 1);
@@ -489,7 +495,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test (timeout=120000)
   public void testSplitTmpFileCleanUp() throws Exception {
-    final TableName table = TableName.valueOf("splitTmpFileCleanUp");
+    final TableName table = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
         Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"),
         Bytes.toBytes("row_00000040"), Bytes.toBytes("row_00000050")};
@@ -525,9 +531,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test(expected = IOException.class, timeout=120000)
   public void testGroupOrSplitFailure() throws Exception {
-    TableName table = TableName.valueOf("groupOrSplitFailure");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
-      setupTable(connection, table, 10);
+      setupTable(connection, tableName, 10);
 
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
           util.getConfiguration()) {
@@ -548,9 +554,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       };
 
       // create HFiles for different column families
-      Path dir = buildBulkFiles(table,1);
-      try (Table t = connection.getTable(table);
-          RegionLocator locator = connection.getRegionLocator(table);
+      Path dir = buildBulkFiles(tableName,1);
+      try (Table t = connection.getTable(tableName);
+          RegionLocator locator = connection.getRegionLocator(tableName);
           Admin admin = connection.getAdmin()) {
         lih.doBulkLoad(dir, admin, t, locator);
       }
@@ -561,7 +567,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
   @Test (timeout=120000)
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
-    TableName tableName = TableName.valueOf("testGroupOrSplitWhenRegionHoleExistsInMeta");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
     // Share connection. We were failing to find the table with our new reverse scan because it
     // looks for first region, not any region -- that is how it works now.  The below removes first

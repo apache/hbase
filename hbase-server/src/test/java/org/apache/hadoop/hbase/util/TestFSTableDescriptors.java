@@ -48,8 +48,10 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Tests for {@link FSTableDescriptors}.
@@ -59,6 +61,9 @@ import org.junit.experimental.categories.Category;
 public class TestFSTableDescriptors {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestFSTableDescriptors.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   @Test (expected=IllegalArgumentException.class)
   public void testRegexAgainstOldStyleTableInfo() {
@@ -72,8 +77,8 @@ public class TestFSTableDescriptors {
 
   @Test
   public void testCreateAndUpdate() throws IOException {
-    Path testdir = UTIL.getDataTestDir("testCreateAndUpdate");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testCreate"));
+    Path testdir = UTIL.getDataTestDir(name.getMethodName());
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
     assertTrue(fstd.createTableDescriptor(htd));
@@ -92,9 +97,8 @@ public class TestFSTableDescriptors {
 
   @Test
   public void testSequenceIdAdvancesOnTableInfo() throws IOException {
-    Path testdir = UTIL.getDataTestDir("testSequenceidAdvancesOnTableInfo");
-    HTableDescriptor htd = new HTableDescriptor(
-        TableName.valueOf("testSequenceidAdvancesOnTableInfo"));
+    Path testdir = UTIL.getDataTestDir(name.getMethodName());
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
     Path p0 = fstd.updateTableDescriptor(htd);
@@ -152,7 +156,7 @@ public class TestFSTableDescriptors {
 
   @Test
   public void testRemoves() throws IOException {
-    final String name = "testRemoves";
+    final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
@@ -164,7 +168,7 @@ public class TestFSTableDescriptors {
   }
 
   @Test public void testReadingHTDFromFS() throws IOException {
-    final String name = "testReadingHTDFromFS";
+    final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     Path rootdir = UTIL.getDataTestDir(name);
@@ -176,7 +180,7 @@ public class TestFSTableDescriptors {
   }
 
   @Test public void testReadingOldHTDFromFS() throws IOException, DeserializationException {
-    final String name = "testReadingOldHTDFromFS";
+    final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = UTIL.getDataTestDir(name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
@@ -200,7 +204,7 @@ public class TestFSTableDescriptors {
 
   @Test public void testHTableDescriptors()
   throws IOException, InterruptedException {
-    final String name = "testHTableDescriptors";
+    final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any debris laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
@@ -248,7 +252,7 @@ public class TestFSTableDescriptors {
   @Test
   public void testHTableDescriptorsNoCache()
     throws IOException, InterruptedException {
-    final String name = "testHTableDescriptorsNoCache";
+    final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any debris laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
@@ -306,7 +310,7 @@ public class TestFSTableDescriptors {
   @Test
   public void testCacheConsistency()
     throws IOException, InterruptedException {
-    final String name = "testCacheConsistency";
+    final String name = this.name.getMethodName();
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any debris laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
@@ -410,9 +414,8 @@ public class TestFSTableDescriptors {
 
   @Test
   public void testCreateTableDescriptorUpdatesIfExistsAlready() throws IOException {
-    Path testdir = UTIL.getDataTestDir("testCreateTableDescriptorUpdatesIfThereExistsAlready");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(
-        "testCreateTableDescriptorUpdatesIfThereExistsAlready"));
+    Path testdir = UTIL.getDataTestDir(name.getMethodName());
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
     assertTrue(fstd.createTableDescriptor(htd));

@@ -39,8 +39,10 @@ import org.apache.htrace.TraceTree;
 import org.apache.htrace.impl.POJOSpanReceiver;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestHTraceHooks {
@@ -49,6 +51,9 @@ public class TestHTraceHooks {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static POJOSpanReceiver rcvr;
   private static long ROOT_SPAN_ID = 0;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void before() throws Exception {
@@ -79,8 +84,7 @@ public class TestHTraceHooks {
     Table table;
     try {
 
-      table = TEST_UTIL.createTable(TableName.valueOf("table"),
-        FAMILY_BYTES);
+      table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY_BYTES);
     } finally {
       tableCreationSpan.close();
     }

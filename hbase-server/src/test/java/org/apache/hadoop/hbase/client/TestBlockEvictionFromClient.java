@@ -63,8 +63,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ LargeTests.class, ClientTests.class })
 @SuppressWarnings("deprecation")
@@ -88,6 +90,9 @@ public class TestBlockEvictionFromClient {
   private static CountDownLatch getLatch;
   private static CountDownLatch compactionLatch;
   private static CountDownLatch exceptionLatch;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -169,7 +174,7 @@ public class TestBlockEvictionFromClient {
     Table table = null;
     try {
       latch = new CountDownLatch(1);
-      TableName tableName = TableName.valueOf("testBlockEvictionWithParallelScans");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserver.class.getName());
@@ -259,7 +264,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      TableName tableName = TableName.valueOf("testParallelGetsAndScans");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -318,7 +323,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      TableName tableName = TableName.valueOf("testGetWithCellsInDifferentFiles");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -380,7 +385,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      TableName tableName = TableName.valueOf("testGetsWithMultiColumnsAndExplicitTracker");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -468,7 +473,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      TableName tableName = TableName.valueOf("testGetWithMultipleColumnFamilies");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       byte[][] fams = new byte[10][];
@@ -560,7 +565,7 @@ public class TestBlockEvictionFromClient {
   public void testBlockRefCountAfterSplits() throws IOException, InterruptedException {
     Table table = null;
     try {
-      TableName tableName = TableName.valueOf("testBlockRefCountAfterSplits");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024);
       // get the block cache and region
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
@@ -614,7 +619,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      TableName tableName = TableName.valueOf("testMultiGets");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -692,7 +697,7 @@ public class TestBlockEvictionFromClient {
     try {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
-      TableName tableName = TableName.valueOf("testScanWithMultipleColumnFamilies");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       byte[][] fams = new byte[10][];
@@ -797,7 +802,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      TableName tableName = TableName.valueOf("testParallelGetsAndScanWithWrappedRegionScanner");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -850,12 +855,12 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testScanWithCompaction() throws IOException, InterruptedException {
-    testScanWithCompactionInternals("testScanWithCompaction", false);
+    testScanWithCompactionInternals(name.getMethodName(), false);
   }
 
   @Test
   public void testReverseScanWithCompaction() throws IOException, InterruptedException {
-    testScanWithCompactionInternals("testReverseScanWithCompaction", true);
+    testScanWithCompactionInternals(name.getMethodName(), true);
   }
 
   private void testScanWithCompactionInternals(String tableNameStr, boolean reversed)
@@ -982,8 +987,7 @@ public class TestBlockEvictionFromClient {
     try {
       latch = new CountDownLatch(1);
       compactionLatch = new CountDownLatch(1);
-      TableName tableName =
-          TableName.valueOf("testBlockEvictionAfterHBASE13082WithCompactionAndFlush");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
           CustomInnerRegionObserverWrapper.class.getName());
@@ -1112,7 +1116,7 @@ public class TestBlockEvictionFromClient {
     try {
       latch = new CountDownLatch(1);
       exceptionLatch = new CountDownLatch(1);
-      TableName tableName = TableName.valueOf("testScanWithException");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,

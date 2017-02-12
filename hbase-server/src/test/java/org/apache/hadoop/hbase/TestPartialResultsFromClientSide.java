@@ -50,8 +50,10 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * These tests are focused on testing how partial results appear to a client. Partial results are
@@ -101,6 +103,9 @@ public class TestPartialResultsFromClientSide {
   private static long CELL_HEAP_SIZE = -1;
 
   private static long timeout = 10000;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -722,7 +727,7 @@ public class TestPartialResultsFromClientSide {
 
   @Test
   public void testReadPointAndPartialResults() throws Exception {
-    TableName testName = TableName.valueOf("testReadPointAndPartialResults");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     int numRows = 5;
     int numFamilies = 5;
     int numQualifiers = 5;
@@ -731,7 +736,7 @@ public class TestPartialResultsFromClientSide {
     byte[][] qualifiers = HTestConst.makeNAscii(Bytes.toBytes("testQualifier"), numQualifiers);
     byte[] value = Bytes.createMaxByteArray(100);
 
-    Table tmpTable = createTestTable(testName, rows, families, qualifiers, value);
+    Table tmpTable = createTestTable(tableName, rows, families, qualifiers, value);
     // Open scanner before deletes
     ResultScanner scanner =
         tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
@@ -784,7 +789,7 @@ public class TestPartialResultsFromClientSide {
     assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,
         scannerCount == expectedCount);
 
-    TEST_UTIL.deleteTable(testName);
+    TEST_UTIL.deleteTable(tableName);
   }
 
   /**
@@ -862,7 +867,7 @@ public class TestPartialResultsFromClientSide {
 
   @Test
   public void testPartialResultWhenRegionMove() throws IOException {
-    Table table=createTestTable(TableName.valueOf("testPartialResultWhenRegionMove"),
+    Table table = createTestTable(TableName.valueOf(name.getMethodName()),
         ROWS, FAMILIES, QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
@@ -900,7 +905,7 @@ public class TestPartialResultsFromClientSide {
 
   @Test
   public void testReversedPartialResultWhenRegionMove() throws IOException {
-    Table table=createTestTable(TableName.valueOf("testReversedPartialResultWhenRegionMove"),
+    Table table = createTestTable(TableName.valueOf(name.getMethodName()),
         ROWS, FAMILIES, QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
@@ -939,7 +944,7 @@ public class TestPartialResultsFromClientSide {
 
   @Test
   public void testCompleteResultWhenRegionMove() throws IOException {
-    Table table=createTestTable(TableName.valueOf("testCompleteResultWhenRegionMove"),
+    Table table = createTestTable(TableName.valueOf(name.getMethodName()),
         ROWS, FAMILIES, QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
@@ -975,7 +980,7 @@ public class TestPartialResultsFromClientSide {
 
   @Test
   public void testReversedCompleteResultWhenRegionMove() throws IOException {
-    Table table=createTestTable(TableName.valueOf("testReversedCompleteResultWhenRegionMove"),
+    Table table = createTestTable(TableName.valueOf(name.getMethodName()),
         ROWS, FAMILIES, QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
@@ -1012,8 +1017,7 @@ public class TestPartialResultsFromClientSide {
 
   @Test
   public void testBatchingResultWhenRegionMove() throws IOException {
-    Table table =
-        createTestTable(TableName.valueOf("testBatchingResultWhenRegionMove"), ROWS, FAMILIES,
+    Table table = createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES,
             QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
@@ -1048,8 +1052,7 @@ public class TestPartialResultsFromClientSide {
 
   @Test
   public void testDontThrowUnknowScannerExceptionToClient() throws Exception {
-    Table table =
-        createTestTable(TableName.valueOf("testDontThrowUnknowScannerException"), ROWS, FAMILIES,
+    Table table = createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES,
             QUALIFIERS, VALUE);
     Scan scan = new Scan();
     scan.setCaching(1);

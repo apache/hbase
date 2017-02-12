@@ -66,17 +66,22 @@ import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+import org.junit.rules.TestName;
 
 @Category(LargeTests.class)
 public class TestEndToEndSplitTransaction {
   private static final Log LOG = LogFactory.getLog(TestEndToEndSplitTransaction.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Configuration CONF = TEST_UTIL.getConfiguration();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -95,17 +100,16 @@ public class TestEndToEndSplitTransaction {
   @Test
   public void testFromClientSideWhileSplitting() throws Throwable {
     LOG.info("Starting testFromClientSideWhileSplitting");
-    final TableName TABLENAME =
-        TableName.valueOf("testFromClientSideWhileSplitting");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] FAMILY = Bytes.toBytes("family");
 
     //SplitTransaction will update the meta table by offlining the parent region, and adding info
     //for daughters.
-    Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    Table table = TEST_UTIL.createTable(tableName, FAMILY);
 
     Stoppable stopper = new StoppableImplementation();
     RegionSplitter regionSplitter = new RegionSplitter(table);
-    RegionChecker regionChecker = new RegionChecker(CONF, stopper, TABLENAME);
+    RegionChecker regionChecker = new RegionChecker(CONF, stopper, tableName);
     final ChoreService choreService = new ChoreService("TEST_SERVER");
 
     choreService.scheduleChore(regionChecker);

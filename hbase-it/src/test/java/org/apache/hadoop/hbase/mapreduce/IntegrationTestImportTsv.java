@@ -54,8 +54,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Validate ImportTsv + LoadIncrementalHFiles on a distributed cluster.
@@ -77,6 +79,9 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
       "row8\t1\tc1\tc2\n" +
       "row9\t1\tc1\tc2\n" +
       "row10\t1\tc1\tc2\n";
+
+  @Rule
+  public TestName name = new TestName();
 
   protected static final Set<KeyValue> simple_expected =
       new TreeSet<KeyValue>(CellComparator.COMPARATOR) {
@@ -183,7 +188,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
   @Test
   public void testGenerateAndLoad() throws Exception {
     LOG.info("Running test testGenerateAndLoad.");
-    TableName table = TableName.valueOf(NAME + "-" + UUID.randomUUID());
+    final TableName table = TableName.valueOf(name.getMethodName());
     String cf = "d";
     Path hfiles = new Path(
         util.getDataTestDirOnTestFS(table.getNameAsString()), "hfiles");

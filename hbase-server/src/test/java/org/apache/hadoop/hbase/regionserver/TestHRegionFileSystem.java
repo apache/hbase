@@ -53,8 +53,10 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestHRegionFileSystem {
@@ -64,6 +66,9 @@ public class TestHRegionFileSystem {
     Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A")),
     Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B")) };
   private static final TableName TABLE_NAME = TableName.valueOf("TestTable");
+
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testBlockStoragePolicy() throws Exception {
@@ -188,7 +193,7 @@ public class TestHRegionFileSystem {
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Create a Region
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf("TestTable"));
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
         FSUtils.getTableDir(rootDir, hri.getTable()), hri);
 
@@ -220,7 +225,7 @@ public class TestHRegionFileSystem {
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Create a Region
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf("TestTable"));
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
     assertTrue(fs.exists(regionFs.getRegionDir()));
 
@@ -345,7 +350,7 @@ public class TestHRegionFileSystem {
 
     // Create a Region
     String familyName = "cf";
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf("TestTable"));
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
 
     // New region, no store files

@@ -39,13 +39,18 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, LargeTests.class})
 public class TestMasterRestartAfterDisablingTable {
 
   private static final Log LOG = LogFactory.getLog(TestMasterRestartAfterDisablingTable.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testForCheckingIfEnableAndDisableWorksFineAfterSwitch()
@@ -64,19 +69,19 @@ public class TestMasterRestartAfterDisablingTable {
     cluster.waitForActiveAndReadyMaster();
 
     // Create a table with regions
-    TableName table = TableName.valueOf("tableRestart");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
-    Table ht = TEST_UTIL.createMultiRegionTable(table, family, NUM_REGIONS_TO_CREATE);
+    Table ht = TEST_UTIL.createMultiRegionTable(tableName, family, NUM_REGIONS_TO_CREATE);
     int numRegions = -1;
-    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(table)) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       numRegions = r.getStartKeys().length;
     }
     numRegions += 1; // catalogs
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Disabling table\n");
-    TEST_UTIL.getAdmin().disableTable(table);
+    TEST_UTIL.getAdmin().disableTable(tableName);
 
     NavigableSet<String> regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     assertEquals(
@@ -97,12 +102,12 @@ public class TestMasterRestartAfterDisablingTable {
 
     assertTrue("The table should not be in enabled state",
         cluster.getMaster().getTableStateManager().isTableState(
-        TableName.valueOf("tableRestart"), TableState.State.DISABLED,
+        TableName.valueOf(name.getMethodName()), TableState.State.DISABLED,
         TableState.State.DISABLING));
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
     Admin admin = TEST_UTIL.getAdmin();
-    admin.enableTable(table);
+    admin.enableTable(tableName);
     admin.close();
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
@@ -113,7 +118,7 @@ public class TestMasterRestartAfterDisablingTable {
           6, regions.size());
     assertTrue("The table should be in enabled state",
         cluster.getMaster().getTableStateManager()
-        .isTableState(TableName.valueOf("tableRestart"), TableState.State.ENABLED));
+        .isTableState(TableName.valueOf(name.getMethodName()), TableState.State.ENABLED));
     ht.close();
     TEST_UTIL.shutdownMiniCluster();
   }

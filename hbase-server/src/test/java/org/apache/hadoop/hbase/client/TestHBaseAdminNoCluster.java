@@ -51,8 +51,10 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -64,6 +66,9 @@ import com.google.protobuf.ServiceException;
 public class TestHBaseAdminNoCluster {
 
   private static final Log LOG = LogFactory.getLog(TestHBaseAdminNoCluster.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Verify that PleaseHoldException gets retried.
@@ -99,8 +104,7 @@ public class TestHBaseAdminNoCluster {
     Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
     Admin admin = new HBaseAdmin(connection);
     try {
-      HTableDescriptor htd =
-        new HTableDescriptor(TableName.valueOf("testMasterMonitorCollableRetries"));
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
       // Pass any old htable descriptor; not important
       try {
         admin.createTable(htd, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
@@ -152,7 +156,7 @@ public class TestHBaseAdminNoCluster {
     testMasterOperationIsRetried(new MethodCaller() {
       @Override
       public void call(Admin admin) throws Exception {
-        admin.getTableDescriptor(TableName.valueOf("getTableDescriptor"));
+        admin.getTableDescriptor(TableName.valueOf(name.getMethodName()));
       }
       @Override
       public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {

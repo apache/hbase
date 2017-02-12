@@ -34,8 +34,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -51,6 +53,9 @@ public class TestHTableMultiplexerFlushCache {
   private static byte[] VALUE2 = Bytes.toBytes("testValue2");
   private static int SLAVES = 3;
   private static int PER_REGIONSERVER_QUEUE_SIZE = 100000;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -88,21 +93,21 @@ public class TestHTableMultiplexerFlushCache {
 
   @Test
   public void testOnRegionChange() throws Exception {
-    TableName TABLE = TableName.valueOf("testOnRegionChange");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final int NUM_REGIONS = 10;
-    Table htable = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, 3,
+    Table htable = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
 
     HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(), 
       PER_REGIONSERVER_QUEUE_SIZE);
     
-    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       byte[][] startRows = r.getStartKeys();
       byte[] row = startRows[1];
       assertTrue("2nd region should not start with empty row", row != null && row.length > 0);
 
       Put put = new Put(row).addColumn(FAMILY, QUALIFIER1, VALUE1);
-      assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
+      assertTrue("multiplexer.put returns", multiplexer.put(tableName, put));
 
       checkExistence(htable, row, FAMILY, QUALIFIER1, VALUE1);
 
@@ -110,11 +115,11 @@ public class TestHTableMultiplexerFlushCache {
       HRegionLocation loc = r.getRegionLocation(row);
       MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
       hbaseCluster.stopRegionServer(loc.getServerName());
-      TEST_UTIL.waitUntilAllRegionsAssigned(TABLE);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
       // put with multiplexer.
       put = new Put(row).addColumn(FAMILY, QUALIFIER2, VALUE2);
-      assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
+      assertTrue("multiplexer.put returns", multiplexer.put(tableName, put));
 
       checkExistence(htable, row, FAMILY, QUALIFIER2, VALUE2);
     }
@@ -126,21 +131,21 @@ public class TestHTableMultiplexerFlushCache {
     // potential to get a ConnectionClosingException. By moving the region, we can be certain that
     // the connection is still valid and that the implementation is correctly handling an invalid
     // Region cache (and not just tearing down the entire connection).
-    TableName TABLE = TableName.valueOf("testOnRegionMove");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final int NUM_REGIONS = 10;
-    Table htable = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, 3,
+    Table htable = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
 
     HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(),
       PER_REGIONSERVER_QUEUE_SIZE);
 
-    final RegionLocator regionLocator = TEST_UTIL.getConnection().getRegionLocator(TABLE);
+    final RegionLocator regionLocator = TEST_UTIL.getConnection().getRegionLocator(tableName);
     Pair<byte[][],byte[][]> startEndRows = regionLocator.getStartEndKeys();
     byte[] row = startEndRows.getFirst()[1];
     assertTrue("2nd region should not start with empty row", row != null && row.length > 0);
 
     Put put = new Put(row).addColumn(FAMILY, QUALIFIER1, VALUE1);
-    assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
+    assertTrue("multiplexer.put returns", multiplexer.put(tableName, put));
 
     checkExistence(htable, row, FAMILY, QUALIFIER1, VALUE1);
 
@@ -165,11 +170,11 @@ public class TestHTableMultiplexerFlushCache {
     TEST_UTIL.getAdmin().move(loc.getRegionInfo().getEncodedNameAsBytes(),
         Bytes.toBytes(newServer.getServerName()));
 
-    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // Send a new Put
     put = new Put(row).addColumn(FAMILY, QUALIFIER2, VALUE2);
-    assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
+    assertTrue("multiplexer.put returns", multiplexer.put(tableName, put));
 
     // We should see the update make it to the new server eventually
     checkExistence(htable, row, FAMILY, QUALIFIER2, VALUE2);

@@ -136,7 +136,7 @@ public class TestLoadIncrementalHFiles {
 
   @Test(timeout = 120000)
   public void testSimpleLoadWithFileCopy() throws Exception {
-    String testName = "mytable_testSimpleLoadWithFileCopy";
+    String testName = tn.getMethodName();
     final byte[] TABLE_NAME = Bytes.toBytes("mytable_" + testName);
     runTest(testName, buildHTD(TableName.valueOf(TABLE_NAME), BloomType.NONE), BloomType.NONE,
         false, null, new byte[][][] {
@@ -439,7 +439,7 @@ public class TestLoadIncrementalHFiles {
    */
   @Test(timeout = 60000)
   public void testNonexistentColumnFamilyLoad() throws Exception {
-    String testName = "testNonexistentColumnFamilyLoad";
+    String testName = tn.getMethodName();
     byte[][][] hFileRanges = new byte[][][] {
       new byte[][]{ Bytes.toBytes("aaa"), Bytes.toBytes("ccc") },
       new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
@@ -730,7 +730,7 @@ public class TestLoadIncrementalHFiles {
     byte[] from = Bytes.toBytes("begin");
     byte[] to = Bytes.toBytes("end");
     Configuration conf = util.getConfiguration();
-    String tableName = "mytable_cfNameStartWithUnderScore";
+    String tableName = tn.getMethodName();
     Table table = util.createTable(TableName.valueOf(tableName), family);
     HFileTestUtil.createHFile(conf, fs, new Path(familyDir, "hfile"), Bytes.toBytes(family),
       QUALIFIER, from, to, 1000);

@@ -44,8 +44,10 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
@@ -61,6 +63,9 @@ public class TestFavoredNodeAssignmentHelper {
 
   // Some tests have randomness, so we run them multiple times
   private static final int MAX_ATTEMPTS = 100;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -287,7 +292,7 @@ public class TestFavoredNodeAssignmentHelper {
     // create regions
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionCount);
     for (int i = 0; i < regionCount; i++) {
-      HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"),
+      HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()),
           Bytes.toBytes(i), Bytes.toBytes(i + 1));
       regions.add(region);
     }
@@ -387,7 +392,7 @@ public class TestFavoredNodeAssignmentHelper {
 
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(20);
     for (int i = 0; i < 20; i++) {
-      HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"),
+      HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()),
           Bytes.toBytes(i), Bytes.toBytes(i + 1));
       regions.add(region);
     }
@@ -532,7 +537,7 @@ public class TestFavoredNodeAssignmentHelper {
     helper.initialize();
     assertTrue(helper.canPlaceFavoredNodes());
 
-    HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"),
+    HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
 
     for (int maxattempts = 0; maxattempts < MAX_ATTEMPTS; maxattempts++) {

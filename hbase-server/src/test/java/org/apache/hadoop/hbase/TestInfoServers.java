@@ -33,8 +33,10 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Testing, info servers are disabled.  This test enables then and checks that
@@ -44,6 +46,9 @@ import org.junit.experimental.categories.Category;
 public class TestInfoServers {
   private static final Log LOG = LogFactory.getLog(TestInfoServers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -97,7 +102,7 @@ public class TestInfoServers {
 
   @Test
   public void testMasterServerReadOnly() throws Exception {
-    TableName tableName = TableName.valueOf("testMasterServerReadOnly");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[] cf = Bytes.toBytes("d");
     UTIL.createTable(tableName, cf);
     UTIL.waitTableAvailable(tableName);

@@ -52,8 +52,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -64,6 +66,9 @@ public class TestEnableTable {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestEnableTable.class);
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setUp() throws Exception {
@@ -79,7 +84,7 @@ public class TestEnableTable {
 
   @Test(timeout = 300000)
   public void testEnableTableWithNoRegionServers() throws Exception {
-    final TableName tableName = TableName.valueOf("testEnableTableWithNoRegionServers");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
     final Admin admin = TEST_UTIL.getAdmin();
@@ -142,7 +147,7 @@ public class TestEnableTable {
   @Test(timeout=60000)
   public void testDeleteForSureClearsAllTableRowsFromMeta()
   throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf("testDeleteForSureClearsAllTableRowsFromMeta");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));

@@ -30,8 +30,10 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -40,9 +42,12 @@ import static org.junit.Assert.assertTrue;
 public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestTruncateTableProcedure.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test(timeout=60000)
   public void testTruncateNotExistentTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testTruncateNotExistentTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
@@ -57,7 +62,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testTruncateNotDisabledTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testTruncateNotDisabledTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");
@@ -75,13 +80,13 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testSimpleTruncatePreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf("testSimpleTruncatePreserveSplits");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testSimpleTruncate(tableName, true);
   }
 
   @Test(timeout=60000)
   public void testSimpleTruncateNoPreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf("testSimpleTruncateNoPreserveSplits");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testSimpleTruncate(tableName, false);
   }
 
@@ -130,13 +135,13 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionPreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionPreserveSplits");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testRecoveryAndDoubleExecution(tableName, true);
   }
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionNoPreserveSplits() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionNoPreserveSplits");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     testRecoveryAndDoubleExecution(tableName, false);
   }
 

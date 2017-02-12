@@ -39,8 +39,10 @@ import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.zookeeper.KeeperException;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 /**
@@ -49,6 +51,9 @@ import org.mockito.Mockito;
 @Category({MasterTests.class, SmallTests.class})
 public class TestSnapshotManager {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   MasterServices services = Mockito.mock(MasterServices.class);
   MetricsMaster metrics = Mockito.mock(MetricsMaster.class);
@@ -80,7 +85,7 @@ public class TestSnapshotManager {
 
   @Test
   public void testInProcess() throws KeeperException, IOException {
-    TableName tableName = TableName.valueOf("testTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     SnapshotManager manager = getNewManager();
     TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
     assertFalse("Manager is in process when there is no current handler",

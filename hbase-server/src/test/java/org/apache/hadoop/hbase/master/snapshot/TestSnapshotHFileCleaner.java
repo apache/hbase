@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test that the snapshot hfile cleaner finds hfiles referenced in a snapshot
@@ -57,6 +59,9 @@ public class TestSnapshotHFileCleaner {
   private static final String SNAPSHOT_NAME_STR = "testSnapshotManifest-snapshot";
   private static Path rootDir;
   private static FileSystem fs;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Setup the test environment
@@ -89,7 +94,7 @@ public class TestSnapshotHFileCleaner {
     // write an hfile to the snapshot directory
     String snapshotName = "snapshot";
     byte[] snapshot = Bytes.toBytes(snapshotName);
-    TableName tableName = TableName.valueOf("table");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     HRegionInfo mockRegion = new HRegionInfo(tableName);
     Path regionSnapshotDir = new Path(snapshotDir, mockRegion.getEncodedName());

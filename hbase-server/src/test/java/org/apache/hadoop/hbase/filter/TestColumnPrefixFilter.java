@@ -43,8 +43,10 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({FilterTests.class, SmallTests.class})
 public class TestColumnPrefixFilter {
@@ -52,10 +54,13 @@ public class TestColumnPrefixFilter {
   private final static HBaseTestingUtility TEST_UTIL = new
       HBaseTestingUtility();
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void testColumnPrefixFilter() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestColumnPrefixFilter"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily((new HColumnDescriptor(family)).setMaxVersions(3));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
@@ -118,7 +123,7 @@ public class TestColumnPrefixFilter {
   @Test
   public void testColumnPrefixFilterWithFilterList() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestColumnPrefixFilter"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily((new HColumnDescriptor(family)).setMaxVersions(3));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),

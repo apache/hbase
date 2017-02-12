@@ -37,8 +37,10 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(MediumTests.class)
 public class TestDeleteMobTable {
@@ -47,6 +49,9 @@ public class TestDeleteMobTable {
   private final static byte[] FAMILY = Bytes.toBytes("family");
   private final static byte[] QF = Bytes.toBytes("qualifier");
   private static Random random = new Random();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -103,79 +108,79 @@ public class TestDeleteMobTable {
 
   @Test
   public void testDeleteMobTable() throws Exception {
-    TableName tn = TableName.valueOf("testDeleteMobTable");
-    HTableDescriptor htd = createTableDescriptor(tn, true);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = createTableDescriptor(tableName, true);
     HColumnDescriptor hcd = htd.getFamily(FAMILY);
 
     String fileName = null;
     Table table = createTableWithOneFile(htd);
     try {
       // the mob file exists
-      Assert.assertEquals(1, countMobFiles(tn, hcd.getNameAsString()));
-      Assert.assertEquals(0, countArchiveMobFiles(tn, hcd.getNameAsString()));
-      fileName = assertHasOneMobRow(table, tn, hcd.getNameAsString());
-      Assert.assertFalse(mobArchiveExist(tn, hcd.getNameAsString(), fileName));
-      Assert.assertTrue(mobTableDirExist(tn));
+      Assert.assertEquals(1, countMobFiles(tableName, hcd.getNameAsString()));
+      Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd.getNameAsString()));
+      fileName = assertHasOneMobRow(table, tableName, hcd.getNameAsString());
+      Assert.assertFalse(mobArchiveExist(tableName, hcd.getNameAsString(), fileName));
+      Assert.assertTrue(mobTableDirExist(tableName));
     } finally {
       table.close();
-      TEST_UTIL.deleteTable(tn);
+      TEST_UTIL.deleteTable(tableName);
     }
 
-    Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tn));
-    Assert.assertEquals(0, countMobFiles(tn, hcd.getNameAsString()));
-    Assert.assertEquals(1, countArchiveMobFiles(tn, hcd.getNameAsString()));
-    Assert.assertTrue(mobArchiveExist(tn, hcd.getNameAsString(), fileName));
-    Assert.assertFalse(mobTableDirExist(tn));
+    Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
+    Assert.assertEquals(0, countMobFiles(tableName, hcd.getNameAsString()));
+    Assert.assertEquals(1, countArchiveMobFiles(tableName, hcd.getNameAsString()));
+    Assert.assertTrue(mobArchiveExist(tableName, hcd.getNameAsString(), fileName));
+    Assert.assertFalse(mobTableDirExist(tableName));
   }
 
   @Test
   public void testDeleteNonMobTable() throws Exception {
-    TableName tn = TableName.valueOf("testDeleteNonMobTable");
-    HTableDescriptor htd = createTableDescriptor(tn, false);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = createTableDescriptor(tableName, false);
     HColumnDescriptor hcd = htd.getFamily(FAMILY);
 
     Table table = createTableWithOneFile(htd);
     try {
       // the mob file doesn't exist
-      Assert.assertEquals(0, countMobFiles(tn, hcd.getNameAsString()));
-      Assert.assertEquals(0, countArchiveMobFiles(tn, hcd.getNameAsString()));
-      Assert.assertFalse(mobTableDirExist(tn));
+      Assert.assertEquals(0, countMobFiles(tableName, hcd.getNameAsString()));
+      Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd.getNameAsString()));
+      Assert.assertFalse(mobTableDirExist(tableName));
     } finally {
       table.close();
-      TEST_UTIL.deleteTable(tn);
+      TEST_UTIL.deleteTable(tableName);
     }
 
-    Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tn));
-    Assert.assertEquals(0, countMobFiles(tn, hcd.getNameAsString()));
-    Assert.assertEquals(0, countArchiveMobFiles(tn, hcd.getNameAsString()));
-    Assert.assertFalse(mobTableDirExist(tn));
+    Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
+    Assert.assertEquals(0, countMobFiles(tableName, hcd.getNameAsString()));
+    Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd.getNameAsString()));
+    Assert.assertFalse(mobTableDirExist(tableName));
   }
 
   @Test
   public void testMobFamilyDelete() throws Exception {
-    TableName tn = TableName.valueOf("testMobFamilyDelete");
-    HTableDescriptor htd = createTableDescriptor(tn, true);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    HTableDescriptor htd = createTableDescriptor(tableName, true);
     HColumnDescriptor hcd = htd.getFamily(FAMILY);
     htd.addFamily(new HColumnDescriptor(Bytes.toBytes("family2")));
 
     Table table = createTableWithOneFile(htd);
     try {
       // the mob file exists
-      Assert.assertEquals(1, countMobFiles(tn, hcd.getNameAsString()));
-      Assert.assertEquals(0, countArchiveMobFiles(tn, hcd.getNameAsString()));
-      String fileName = assertHasOneMobRow(table, tn, hcd.getNameAsString());
-      Assert.assertFalse(mobArchiveExist(tn, hcd.getNameAsString(), fileName));
-      Assert.assertTrue(mobTableDirExist(tn));
+      Assert.assertEquals(1, countMobFiles(tableName, hcd.getNameAsString()));
+      Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd.getNameAsString()));
+      String fileName = assertHasOneMobRow(table, tableName, hcd.getNameAsString());
+      Assert.assertFalse(mobArchiveExist(tableName, hcd.getNameAsString(), fileName));
+      Assert.assertTrue(mobTableDirExist(tableName));
 
-      TEST_UTIL.getAdmin().deleteColumnFamily(tn, FAMILY);
+      TEST_UTIL.getAdmin().deleteColumnFamily(tableName, FAMILY);
 
-      Assert.assertEquals(0, countMobFiles(tn, hcd.getNameAsString()));
-      Assert.assertEquals(1, countArchiveMobFiles(tn, hcd.getNameAsString()));
-      Assert.assertTrue(mobArchiveExist(tn, hcd.getNameAsString(), fileName));
-      Assert.assertFalse(mobColumnFamilyDirExist(tn, hcd.getNameAsString()));
+      Assert.assertEquals(0, countMobFiles(tableName, hcd.getNameAsString()));
+      Assert.assertEquals(1, countArchiveMobFiles(tableName, hcd.getNameAsString()));
+      Assert.assertTrue(mobArchiveExist(tableName, hcd.getNameAsString(), fileName));
+      Assert.assertFalse(mobColumnFamilyDirExist(tableName, hcd.getNameAsString()));
     } finally {
       table.close();
-      TEST_UTIL.deleteTable(tn);
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 

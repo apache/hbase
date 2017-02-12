@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 /**
@@ -59,6 +60,9 @@ public class TestHFileLinkCleaner {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void testHFileLinkCleaning() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -67,8 +71,8 @@ public class TestHFileLinkCleaner {
     Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(conf);
 
-    final TableName tableName = TableName.valueOf("test-table");
-    final TableName tableLinkName = TableName.valueOf("test-link");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableLinkName = TableName.valueOf(name.getMethodName() + "-link");
     final String hfileName = "1234567890";
     final String familyName = "cf";
 

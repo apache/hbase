@@ -31,16 +31,21 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyColumnFamilyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestModifyColumnFamilyProcedure.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test(timeout = 60000)
   public void testModifyColumnFamily() throws Exception {
-    final TableName tableName = TableName.valueOf("testModifyColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf1 = "cf1";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf1);
     int oldBlockSize = columnDescriptor.getBlocksize();
@@ -74,7 +79,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testModifyNonExistingColumnFamily() throws Exception {
-    final TableName tableName = TableName.valueOf("testModifyExistingColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf2 = "cf2";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf2);
     int oldBlockSize = columnDescriptor.getBlocksize();
@@ -100,7 +105,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOffline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf3 = "cf3";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf3);
     int oldBlockSize = columnDescriptor.getBlocksize();
@@ -129,7 +134,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRecoveryAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOnline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf4 = "cf4";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf4);
     int oldBlockSize = columnDescriptor.getBlocksize();
@@ -157,7 +162,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRollbackAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf3 = "cf3";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf3);
     int oldBlockSize = columnDescriptor.getBlocksize();

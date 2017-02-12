@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestRegionPlacement2 {
@@ -53,6 +55,9 @@ public class TestRegionPlacement2 {
   private final static int PRIMARY = Position.PRIMARY.ordinal();
   private final static int SECONDARY = Position.SECONDARY.ordinal();
   private final static int TERTIARY = Position.TERTIARY.ordinal();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -80,7 +85,7 @@ public class TestRegionPlacement2 {
       servers.add(server);
     }
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
-    HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"));
+    HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     regions.add(region);
     Map<ServerName,List<HRegionInfo>> assignmentMap = balancer.roundRobinAssignment(regions,
         servers);
@@ -141,7 +146,7 @@ public class TestRegionPlacement2 {
       servers.add(server);
     }
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
-    HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"));
+    HRegionInfo region = new HRegionInfo(TableName.valueOf(name.getMethodName()));
     regions.add(region);
     ServerName serverBefore = balancer.randomAssignment(region, servers);
     List<ServerName> favoredNodesBefore =

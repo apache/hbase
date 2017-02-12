@@ -31,8 +31,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,9 +49,12 @@ public class TestScanRowPrefix extends FilterTestingCluster {
   private static final Log LOG = LogFactory
       .getLog(TestScanRowPrefix.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void testPrefixScanning() throws IOException {
-    TableName tableName = TableName.valueOf("prefixScanning");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     createTable(tableName,"F");
     Table table = openTable(tableName);
 

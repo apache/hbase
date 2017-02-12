@@ -34,8 +34,10 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestHTableMultiplexer {
@@ -47,6 +49,9 @@ public class TestHTableMultiplexer {
   private static byte[] VALUE2 = Bytes.toBytes("testValue2");
   private static int SLAVES = 3;
   private static int PER_REGIONSERVER_QUEUE_SIZE = 100000;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -83,8 +88,8 @@ public class TestHTableMultiplexer {
 
   @Test
   public void testHTableMultiplexer() throws Exception {
-    TableName TABLE_1 = TableName.valueOf("testHTableMultiplexer_1");
-    TableName TABLE_2 = TableName.valueOf("testHTableMultiplexer_2");
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "_1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "_2");
     final int NUM_REGIONS = 10;
     final int VERSION = 3;
     List<Put> failedPuts;
@@ -94,15 +99,15 @@ public class TestHTableMultiplexer {
         PER_REGIONSERVER_QUEUE_SIZE);
 
     Table htable1 =
-        TEST_UTIL.createTable(TABLE_1, new byte[][] { FAMILY }, VERSION,
+        TEST_UTIL.createTable(tableName1, new byte[][] { FAMILY }, VERSION,
         Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
     Table htable2 =
-        TEST_UTIL.createTable(TABLE_2, new byte[][] { FAMILY }, VERSION, Bytes.toBytes("aaaaa"),
+        TEST_UTIL.createTable(tableName2, new byte[][] { FAMILY }, VERSION, Bytes.toBytes("aaaaa"),
           Bytes.toBytes("zzzzz"), NUM_REGIONS);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_1);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_2);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName1);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName2);
 
-    try (RegionLocator rl = TEST_UTIL.getConnection().getRegionLocator(TABLE_1)) {
+    try (RegionLocator rl = TEST_UTIL.getConnection().getRegionLocator(tableName1)) {
       byte[][] startRows = rl.getStartKeys();
       byte[][] endRows = rl.getEndKeys();
 
@@ -111,11 +116,11 @@ public class TestHTableMultiplexer {
         byte [] row = startRows[i];
         if (row == null || row.length <= 0) continue;
         Put put = new Put(row).addColumn(FAMILY, QUALIFIER, VALUE1);
-        success = multiplexer.put(TABLE_1, put);
+        success = multiplexer.put(tableName1, put);
         assertTrue("multiplexer.put returns", success);
 
         put = new Put(row).addColumn(FAMILY, QUALIFIER, VALUE1);
-        success = multiplexer.put(TABLE_2, put);
+        success = multiplexer.put(tableName2, put);
         assertTrue("multiplexer.put failed", success);
 
         LOG.info("Put for " + Bytes.toStringBinary(startRows[i]) + " @ iteration " + (i + 1));
@@ -134,7 +139,7 @@ public class TestHTableMultiplexer {
         put.addColumn(FAMILY, QUALIFIER, VALUE2);
         multiput.add(put);
       }
-      failedPuts = multiplexer.put(TABLE_1, multiput);
+      failedPuts = multiplexer.put(tableName1, multiput);
       assertTrue(failedPuts == null);
 
       // verify that the Get returns the correct result

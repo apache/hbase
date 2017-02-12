@@ -127,8 +127,10 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import com.google.protobuf.BlockingRpcChannel;
@@ -201,6 +203,9 @@ public class TestAccessController extends SecureTestUtil {
   private static AccessController ACCESS_CONTROLLER;
   private static RegionServerCoprocessorEnvironment RSCP_ENV;
   private static RegionCoprocessorEnvironment RCP_ENV;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -378,7 +383,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testnewtable"));
+        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
         ACCESS_CONTROLLER.preCreateTable(ObserverContext.createAndPrepare(CP_ENV, null), htd, null);
         return null;
@@ -600,7 +605,7 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testAbortProcedure() throws Exception {
-    final TableName tableName = TableName.valueOf("testAbortProcedure");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec =
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
@@ -624,7 +629,7 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testListProcedures() throws Exception {
-    final TableName tableName = TableName.valueOf("testAbortProcedure");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec =
         TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
@@ -821,14 +826,14 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test (timeout=180000)
   public void testSplitWithSplitRow() throws Exception {
-    final TableName tname = TableName.valueOf("testSplitWithSplitRow");
-    createTestTable(tname);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    createTestTable(tableName);
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preSplitRegion(
             ObserverContext.createAndPrepare(CP_ENV, null),
-            tname,
+            tableName,
             TEST_ROW);
         return null;
       }
@@ -841,10 +846,10 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test (timeout=180000)
   public void testMergeRegions() throws Exception {
-    final TableName tname = TableName.valueOf("testMergeRegions");
-    createTestTable(tname);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    createTestTable(tableName);
     try {
-      final List<HRegion> regions = TEST_UTIL.getHBaseCluster().findRegionsForTable(tname);
+      final List<HRegion> regions = TEST_UTIL.getHBaseCluster().findRegionsForTable(tableName);
       assertTrue("not enough regions: " + regions.size(), regions.size() >= 2);
 
       AccessTestAction action = new AccessTestAction() {
@@ -860,7 +865,7 @@ public class TestAccessController extends SecureTestUtil {
       verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
         USER_GROUP_WRITE, USER_GROUP_CREATE);
     } finally {
-      deleteTable(TEST_UTIL, tname);
+      deleteTable(TEST_UTIL, tableName);
     }
   }
 
@@ -1513,8 +1518,7 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test (timeout=180000)
   public void testPostGrantRevokeAtQualifierLevel() throws Exception {
-    final TableName tableName =
-        TableName.valueOf("testGrantRevokeAtQualifierLevel");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
     final byte[] qualifier = Bytes.toBytes("q");
@@ -1617,8 +1621,7 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test (timeout=180000)
   public void testPermissionList() throws Exception {
-    final TableName tableName =
-        TableName.valueOf("testPermissionList");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
     final byte[] qualifier = Bytes.toBytes("q");
@@ -2258,11 +2261,11 @@ public class TestAccessController extends SecureTestUtil {
   @Test (timeout=180000)
   public void testTableDeletion() throws Exception {
     User TABLE_ADMIN = User.createUserForTesting(conf, "TestUser", new String[0]);
-    final TableName tname = TableName.valueOf("testTableDeletion");
-    createTestTable(tname);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    createTestTable(tableName);
 
     // Grant TABLE ADMIN privs
-    grantOnTable(TEST_UTIL, TABLE_ADMIN.getShortName(), tname, null, null, Permission.Action.ADMIN);
+    grantOnTable(TEST_UTIL, TABLE_ADMIN.getShortName(), tableName, null, null, Permission.Action.ADMIN);
 
     AccessTestAction deleteTableAction = new AccessTestAction() {
       @Override
@@ -2271,7 +2274,7 @@ public class TestAccessController extends SecureTestUtil {
             ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
         Admin admin = unmanagedConnection.getAdmin();
         try {
-          deleteTable(TEST_UTIL, admin, tname);
+          deleteTable(TEST_UTIL, admin, tableName);
         } finally {
           admin.close();
           unmanagedConnection.close();
@@ -2687,20 +2690,20 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test (timeout=180000)
   public void testAccessControlClientUserPerms() throws Exception {
-    TableName tname = TableName.valueOf("testAccessControlClientUserPerms");
-    createTestTable(tname);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    createTestTable(tableName);
     try {
-      final String regex = tname.getNameWithNamespaceInclAsString();
+      final String regex = tableName.getNameWithNamespaceInclAsString();
       User testUserPerms = User.createUserForTesting(conf, "testUserPerms", new String[0]);
       assertEquals(0, testUserPerms.runAs(getPrivilegedAction(regex)).size());
       // Grant TABLE ADMIN privs to testUserPerms
-      grantOnTable(TEST_UTIL, testUserPerms.getShortName(), tname, null, null, Action.ADMIN);
+      grantOnTable(TEST_UTIL, testUserPerms.getShortName(), tableName, null, null, Action.ADMIN);
       List<UserPermission> perms = testUserPerms.runAs(getPrivilegedAction(regex));
       assertNotNull(perms);
       // Superuser, testUserPerms
       assertEquals(2, perms.size());
     } finally {
-      deleteTable(TEST_UTIL, tname);
+      deleteTable(TEST_UTIL, tableName);
     }
   }
 
@@ -2709,7 +2712,7 @@ public class TestAccessController extends SecureTestUtil {
     User testRegexHandler = User.createUserForTesting(conf, "testRegexHandling", new String[0]);
 
     final String REGEX_ALL_TABLES = ".*";
-    final String tableName = "testRegex";
+    final String tableName = name.getMethodName();
     final TableName table1 = TableName.valueOf(tableName);
     final byte[] family = Bytes.toBytes("f1");
 
@@ -2984,7 +2987,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testRemoteLocks() throws Exception {
     String namespace = "preQueueNs";
-    final TableName tableName = TableName.valueOf(namespace, "testTable");
+    final TableName tableName = TableName.valueOf(namespace, name.getMethodName());
     HRegionInfo[] regionInfos = new HRegionInfo[] {new HRegionInfo(tableName)};
 
     // Setup Users

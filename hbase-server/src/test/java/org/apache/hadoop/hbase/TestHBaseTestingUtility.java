@@ -48,8 +48,10 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -60,6 +62,9 @@ import org.mockito.stubbing.Answer;
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseTestingUtility {
   private static final Log LOG = LogFactory.getLog(TestHBaseTestingUtility.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Basic sanity test that spins up multiple HDFS and HBase clusters that share
@@ -98,14 +103,14 @@ public class TestHBaseTestingUtility {
       htu2.startMiniCluster();
       htu3.startMiniCluster();
 
-      final TableName TABLE_NAME = TableName.valueOf("test");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       final byte[] FAM_NAME = Bytes.toBytes("fam");
       final byte[] ROW = Bytes.toBytes("row");
       final byte[] QUAL_NAME = Bytes.toBytes("qual");
       final byte[] VALUE = Bytes.toBytes("value");
 
-      Table table1 = htu1.createTable(TABLE_NAME, FAM_NAME);
-      Table table2 = htu2.createTable(TABLE_NAME, FAM_NAME);
+      Table table1 = htu1.createTable(tableName, FAM_NAME);
+      Table table2 = htu2.createTable(tableName, FAM_NAME);
 
       Put put = new Put(ROW);
       put.addColumn(FAM_NAME, QUAL_NAME, VALUE);

@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(MediumTests.class)
 public class TestMultiRowRangeFilter {
@@ -55,6 +57,9 @@ public class TestMultiRowRangeFilter {
   private byte[] value = Bytes.toBytes("val");
   private TableName tableName;
   private int numRows = 100;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws Exception
@@ -243,7 +248,7 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testMultiRowRangeFilterWithRangeOverlap() throws IOException {
-    tableName = TableName.valueOf("testMultiRowRangeFilterWithRangeOverlap");
+    tableName = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -271,7 +276,7 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testMultiRowRangeFilterWithoutRangeOverlap() throws IOException {
-    tableName = TableName.valueOf("testMultiRowRangeFilterWithoutRangeOverlap");
+    tableName = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -298,7 +303,7 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testMultiRowRangeFilterWithEmptyStartRow() throws IOException {
-    tableName = TableName.valueOf("testMultiRowRangeFilterWithEmptyStartRow");
+    tableName = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
     Scan scan = new Scan();
@@ -320,7 +325,7 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testMultiRowRangeFilterWithEmptyStopRow() throws IOException {
-    tableName = TableName.valueOf("testMultiRowRangeFilterWithEmptyStopRow");
+    tableName = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
     Scan scan = new Scan();
@@ -341,7 +346,7 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testMultiRowRangeFilterWithInclusive() throws IOException {
-    tableName = TableName.valueOf("testMultiRowRangeFilterWithInclusive");
+    tableName = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -369,7 +374,7 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testMultiRowRangeFilterWithExclusive() throws IOException {
-    tableName = TableName.valueOf("testMultiRowRangeFilterWithExclusive");
+    tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 6000000);
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     ht.setReadRpcTimeout(600000);
@@ -398,7 +403,7 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testMultiRowRangeWithFilterListAndOperator() throws IOException {
-    tableName = TableName.valueOf("TestMultiRowRangeFilterWithFilterListAndOperator");
+    tableName = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 
@@ -433,7 +438,7 @@ public class TestMultiRowRangeFilter {
 
   @Test
   public void testMultiRowRangeWithFilterListOrOperator() throws IOException {
-    tableName = TableName.valueOf("TestMultiRowRangeFilterWithFilterListOrOperator");
+    tableName = TableName.valueOf(name.getMethodName());
     Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
     generateRows(numRows, ht, family, qf, value);
 

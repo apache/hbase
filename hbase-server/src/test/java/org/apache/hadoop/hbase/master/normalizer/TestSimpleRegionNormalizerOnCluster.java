@@ -43,8 +43,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -62,6 +64,9 @@ public class TestSimpleRegionNormalizerOnCluster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
   private static Admin admin;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -97,9 +102,9 @@ public class TestSimpleRegionNormalizerOnCluster {
           .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
       admin.createNamespace(nspDesc);
       TABLENAME = TableName.valueOf(nsp +
-        TableName.NAMESPACE_DELIM + "testRegionNormalizationSplitOnCluster");
+        TableName.NAMESPACE_DELIM + name.getMethodName());
     } else {
-      TABLENAME = TableName.valueOf("testRegionNormalizationSplitOnCluster");
+      TABLENAME = TableName.valueOf(name.getMethodName());
     }
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
@@ -176,15 +181,14 @@ public class TestSimpleRegionNormalizerOnCluster {
   @Test(timeout = 60000)
   @SuppressWarnings("deprecation")
   public void testRegionNormalizationMergeOnCluster() throws Exception {
-    final TableName TABLENAME =
-      TableName.valueOf("testRegionNormalizationMergeOnCluster");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 
     // create 5 regions with sizes to trigger merge of small regions
-    try (Table ht = TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILYNAME, 5)) {
+    try (Table ht = TEST_UTIL.createMultiRegionTable(tableName, FAMILYNAME, 5)) {
       // Need to get sorted list of regions here
-      List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(TABLENAME);
+      List<HRegion> generatedRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
       Collections.sort(generatedRegions, new Comparator<HRegion>() {
         @Override
         public int compare(HRegion o1, HRegion o2) {
@@ -213,27 +217,27 @@ public class TestSimpleRegionNormalizerOnCluster {
       region.flush(true);
     }
 
-    HTableDescriptor htd = admin.getTableDescriptor(TABLENAME);
+    HTableDescriptor htd = admin.getTableDescriptor(tableName);
     htd.setNormalizationEnabled(true);
-    admin.modifyTable(TABLENAME, htd);
+    admin.modifyTable(tableName, htd);
 
-    admin.flush(TABLENAME);
+    admin.flush(tableName);
 
-    assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
+    assertEquals(5, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
 
     // Now trigger a merge and stop when the merge is in progress
     Thread.sleep(5000); // to let region load to update
     m.normalizeRegions();
 
-    while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME) > 4) {
+    while (MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName) > 4) {
       LOG.info("Waiting for normalization merge to complete");
       Thread.sleep(100);
     }
 
-    assertEquals(4, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), TABLENAME));
+    assertEquals(4, MetaTableAccessor.getRegionCount(TEST_UTIL.getConnection(), tableName));
 
-    admin.disableTable(TABLENAME);
-    admin.deleteTable(TABLENAME);
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
   }
 
   private void generateTestData(Region region, int numRows) throws IOException {

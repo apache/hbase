@@ -30,15 +30,19 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(SmallTests.class)
 public class TestMobFileLink {
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testMobFilePath() throws IOException {
-    TableName tableName = TableName.valueOf("testMobFilePath");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
     Path rootDir = FSUtils.getRootDir(conf);

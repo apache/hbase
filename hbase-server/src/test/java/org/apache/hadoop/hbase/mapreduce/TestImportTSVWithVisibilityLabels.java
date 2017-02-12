@@ -70,8 +70,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithVisibilityLabels implements Configurable {
@@ -99,6 +101,9 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   private final static String SECRET = "secret";
   private static User SUPERUSER;
   private static Configuration conf;
+
+  @Rule
+  public TestName name = new TestName();
 
   @Override
   public Configuration getConf() {
@@ -152,7 +157,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -168,7 +173,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTableWithDeletes() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -220,7 +225,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMROnTableWithBulkload() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -236,7 +241,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
-    TableName table = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName table = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
     String FAMILY = "FAM";
     Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table.getNameAsString()),"hfiles");
     // Prepare the arguments required for the test.
@@ -257,7 +262,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testMRWithOutputFormat() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -274,7 +279,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithInvalidLabels() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args =
@@ -292,7 +297,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @Test
   public void testBulkOutputWithTsvImporterTextMapperWithInvalidLabels() throws Exception {
-    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
+    final TableName tableName = TableName.valueOf(name.getMethodName() + UUID.randomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args =

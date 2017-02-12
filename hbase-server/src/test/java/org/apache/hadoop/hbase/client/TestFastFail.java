@@ -53,9 +53,11 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestFastFail {
@@ -66,6 +68,9 @@ public class TestFastFail {
   private static int SLAVES = 1;
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final int SLEEPTIME = 5000;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -107,7 +112,7 @@ public class TestFastFail {
   public void testFastFail() throws IOException, InterruptedException {
     Admin admin = TEST_UTIL.getAdmin();
 
-    final String tableName = "testClientRelearningExperiment";
+    final String tableName = name.getMethodName();
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes
         .toBytes(tableName)));
     desc.addFamily(new HColumnDescriptor(FAMILY));
@@ -297,7 +302,7 @@ public class TestFastFail {
   public void testCallQueueTooBigExceptionDoesntTriggerPffe() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
 
-    final String tableName = "testCallQueueTooBigException";
+    final String tableName = name.getMethodName();
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes
       .toBytes(tableName)));
     desc.addFamily(new HColumnDescriptor(FAMILY));

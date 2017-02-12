@@ -45,10 +45,12 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+import org.junit.rules.TestName;
 
 /**
  */
@@ -56,6 +58,9 @@ import com.google.common.collect.Lists;
 public class TestFuzzyRowAndColumnRangeFilter {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestFuzzyRowAndColumnRangeFilter.class);
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -92,8 +97,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
   @Test
   public void Test() throws Exception {
     String cf = "f";
-    String table = "TestFuzzyAndColumnRangeFilterClient";
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(table),
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
             Bytes.toBytes(cf), Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)

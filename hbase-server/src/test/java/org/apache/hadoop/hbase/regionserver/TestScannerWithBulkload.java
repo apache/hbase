@@ -47,12 +47,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestScannerWithBulkload {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -69,7 +74,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoad() throws Exception {
-    TableName tableName = TableName.valueOf("testBulkLoad");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     long l = System.currentTimeMillis();
     Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
@@ -207,7 +212,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadWithParallelScan() throws Exception {
-    final TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
       final long l = System.currentTimeMillis();
     final Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
@@ -250,7 +255,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadNativeHFile() throws Exception {
-    TableName tableName = TableName.valueOf("testBulkLoadNativeHFile");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     long l = System.currentTimeMillis();
     Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);

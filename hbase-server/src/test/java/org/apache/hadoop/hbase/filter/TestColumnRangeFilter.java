@@ -38,12 +38,14 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 
 class StringRange {
@@ -124,6 +126,9 @@ public class TestColumnRangeFilter {
 
   private static final Log LOG = LogFactory.getLog(TestColumnRangeFilter.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   /**
    * @throws java.lang.Exception
    */
@@ -159,8 +164,7 @@ public class TestColumnRangeFilter {
   @Test
   public void TestColumnRangeFilterClient() throws Exception {
     String family = "Family";
-    String table = "TestColumnRangeFilterClient";
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(table),
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
         Bytes.toBytes(family), Integer.MAX_VALUE);
 
     List<String> rows = generateRandomWords(10, 8);

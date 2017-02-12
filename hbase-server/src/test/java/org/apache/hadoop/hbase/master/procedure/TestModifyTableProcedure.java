@@ -33,15 +33,19 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
+  @Rule
+  public TestName name = new TestName();
 
   @Test(timeout=60000)
   public void testModifyTable() throws Exception {
-    final TableName tableName = TableName.valueOf("testModifyTable");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf");
@@ -79,7 +83,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testModifyTableAddCF() throws Exception {
-    final TableName tableName = TableName.valueOf("testModifyTableAddCF");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1");
@@ -119,7 +123,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testModifyTableDeleteCF() throws Exception {
-    final TableName tableName = TableName.valueOf("testModifyTableDeleteCF");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf1 = "cf1";
     final String cf2 = "cf2";
     final String cf3 = "cf3";
@@ -178,7 +182,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOffline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf2 = "cf2";
     final String cf3 = "cf3";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -219,7 +223,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRecoveryAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOnline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf2 = "cf2";
     final String cf3 = "cf3";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -259,7 +263,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRollbackAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String familyName = "cf2";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -288,7 +292,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRollbackAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String familyName = "cf2";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 

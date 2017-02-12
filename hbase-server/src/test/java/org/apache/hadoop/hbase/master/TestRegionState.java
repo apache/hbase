@@ -22,17 +22,22 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestRegionState {
+  @Rule
+  public TestName name = new TestName();
+
   @Test
   public void test() {
     RegionState state1 = new RegionState(
-            new HRegionInfo(TableName.valueOf("table")), RegionState.State.OPENING);
+            new HRegionInfo(TableName.valueOf(name.getMethodName())), RegionState.State.OPENING);
     ClusterStatusProtos.RegionState protobuf1 = state1.convert();
     RegionState state2 = RegionState.convert(protobuf1);
     ClusterStatusProtos.RegionState protobuf2 = state1.convert();

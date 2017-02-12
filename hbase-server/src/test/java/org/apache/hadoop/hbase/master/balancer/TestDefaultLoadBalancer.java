@@ -38,8 +38,10 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -114,6 +116,8 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
 
   int [] mockUniformCluster = new int[] { 5, 5, 5, 5, 5 ,0};
 
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Test the load balancing algorithm.
@@ -130,7 +134,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<HRegionInfo>> clusterServers = mockClusterServers(mockCluster, 50);
       List<ServerAndLoad> clusterList = convertToList(clusterServers);
-      clusterLoad.put(TableName.valueOf("ensemble"), clusterServers);
+      clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
       HashMap<TableName, TreeMap<ServerName, List<HRegionInfo>>> result = mockClusterServersWithTables(clusterServers);
       loadBalancer.setClusterLoad(clusterLoad);
       List<RegionPlan> clusterplans = new ArrayList<RegionPlan>();
@@ -168,7 +172,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
             = new TreeMap<TableName, Map<ServerName, List<HRegionInfo>>>();
     Map<ServerName, List<HRegionInfo>> clusterServers = mockUniformClusterServers(mockUniformCluster);
     List<ServerAndLoad> clusterList = convertToList(clusterServers);
-    clusterLoad.put(TableName.valueOf("ensemble"), clusterServers);
+    clusterLoad.put(TableName.valueOf(name.getMethodName()), clusterServers);
     // use overall can achieve both table and cluster level balance
     HashMap<TableName, TreeMap<ServerName, List<HRegionInfo>>> result1 = mockClusterServersWithTables(clusterServers);
     loadBalancer.setClusterLoad(clusterLoad);

@@ -31,16 +31,21 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteColumnFamilyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestDeleteColumnFamilyProcedure.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test(timeout = 60000)
   public void testDeleteColumnFamily() throws Exception {
-    final TableName tableName = TableName.valueOf("testDeleteColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     final String cf1 = "cf1";
     final String cf2 = "cf2";
@@ -68,7 +73,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testDeleteColumnFamilyTwice() throws Exception {
-    final TableName tableName = TableName.valueOf("testDeleteColumnFamilyTwice");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     final String cf2 = "cf2";
@@ -116,7 +121,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testDeleteNonExistingColumnFamily() throws Exception {
-    final TableName tableName = TableName.valueOf("testDeleteNonExistingColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     final String cf3 = "cf3";
@@ -138,7 +143,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOffline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf4 = "cf4";
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -163,7 +168,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRecoveryAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOnline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf5 = "cf5";
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -187,7 +192,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRollbackAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf5 = "cf5";
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

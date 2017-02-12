@@ -24,14 +24,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertTrue;
 
 @Category({MediumTests.class, ClientTests.class})
 public class TestPutWithDelete {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -51,7 +56,7 @@ public class TestPutWithDelete {
 
   @Test
   public void testHbasePutDeleteCell() throws Exception {
-    final TableName tableName = TableName.valueOf("TestPutWithDelete");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] rowKey = Bytes.toBytes("12345");
     final byte[] family = Bytes.toBytes("cf");
     Table table = TEST_UTIL.createTable(tableName, family);

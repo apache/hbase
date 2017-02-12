@@ -47,12 +47,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 @Category(MediumTests.class)
 public class TestRpcClientLeaks {
   @Rule public final TestRule timeout = CategoryBasedTimeout.builder().withTimeout(this.getClass()).
       withLookingForStuckThread(true).build();
+
+  @Rule
+  public TestName name = new TestName();
 
   public static class MyRpcClientImpl extends BlockingRpcClient {
     public static List<Socket> savedSockets = Lists.newArrayList();
@@ -99,16 +103,15 @@ public class TestRpcClientLeaks {
 
   @Test(expected=RetriesExhaustedException.class)
   public void testSocketClosed() throws IOException, InterruptedException {
-    String tableName = "testSocketClosed";
-    TableName name = TableName.valueOf(tableName);
-    UTIL.createTable(name, fam1).close();
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    UTIL.createTable(tableName, fam1).close();
 
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
       MyRpcClientImpl.class.getName());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     Connection connection = ConnectionFactory.createConnection(conf);
-    Table table = connection.getTable(TableName.valueOf(tableName));
+    Table table = connection.getTable(TableName.valueOf(name.getMethodName()));
     table.get(new Get("asd".getBytes()));
     connection.close();
     for (Socket socket : MyRpcClientImpl.savedSockets) {

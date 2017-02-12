@@ -31,16 +31,21 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.AddColumnFamilyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
   private static final Log LOG = LogFactory.getLog(TestAddColumnFamilyProcedure.class);
 
+  @Rule
+  public TestName name = new TestName();
+
   @Test(timeout = 60000)
   public void testAddColumnFamily() throws Exception {
-    final TableName tableName = TableName.valueOf("testAddColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf1 = "cf1";
     final String cf2 = "cf2";
     final HColumnDescriptor columnDescriptor1 = new HColumnDescriptor(cf1);
@@ -72,7 +77,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testAddSameColumnFamilyTwice() throws Exception {
-    final TableName tableName = TableName.valueOf("testAddColumnFamilyTwice");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf2 = "cf2";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf2);
 
@@ -119,7 +124,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRecoveryAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOffline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf4 = "cf4";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf4);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -144,7 +149,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRecoveryAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOnline");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf5 = "cf5";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf5);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -168,7 +173,7 @@ public class TestAddColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRollbackAndDoubleExecution() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     final String cf6 = "cf6";
     final HColumnDescriptor columnDescriptor = new HColumnDescriptor(cf6);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();

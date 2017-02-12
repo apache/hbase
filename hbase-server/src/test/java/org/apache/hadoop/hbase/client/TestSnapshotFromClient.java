@@ -50,10 +50,12 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+import org.junit.rules.TestName;
 
 /**
  * Test create/using/deleting snapshots from the client
@@ -70,6 +72,9 @@ public class TestSnapshotFromClient {
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
   protected static final TableName TABLE_NAME =
       TableName.valueOf(STRING_TABLE_NAME);
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Setup the config for the cluster
@@ -312,11 +317,11 @@ public class TestSnapshotFromClient {
   @Test(timeout = 300000)
   public void testListTableSnapshots() throws Exception {
     Admin admin = null;
-    TableName tableName2 = TableName.valueOf("testListTableSnapshots");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       admin = UTIL.getAdmin();
 
-      HTableDescriptor htd = new HTableDescriptor(tableName2);
+      HTableDescriptor htd = new HTableDescriptor(tableName);
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
       String table1Snapshot1 = "Table1Snapshot1";
@@ -328,7 +333,7 @@ public class TestSnapshotFromClient {
       LOG.debug("Snapshot2 completed.");
 
       String table2Snapshot1 = "Table2Snapshot1";
-      admin.snapshot(Bytes.toBytes(table2Snapshot1), tableName2);
+      admin.snapshot(Bytes.toBytes(table2Snapshot1), tableName);
       LOG.debug(table2Snapshot1 + " completed.");
 
       List<SnapshotDescription> listTableSnapshots = admin.listTableSnapshots("test.*", ".*");
@@ -346,8 +351,8 @@ public class TestSnapshotFromClient {
           admin.deleteSnapshots("Table.*");
         } catch (SnapshotDoesNotExistException ignore) {
         }
-        if (admin.tableExists(tableName2)) {
-          UTIL.deleteTable(tableName2);
+        if (admin.tableExists(tableName)) {
+          UTIL.deleteTable(tableName);
         }
         admin.close();
       }
@@ -396,11 +401,11 @@ public class TestSnapshotFromClient {
   @Test(timeout = 300000)
   public void testDeleteTableSnapshots() throws Exception {
     Admin admin = null;
-    TableName tableName2 = TableName.valueOf("testListTableSnapshots");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       admin = UTIL.getAdmin();
 
-      HTableDescriptor htd = new HTableDescriptor(tableName2);
+      HTableDescriptor htd = new HTableDescriptor(tableName);
       UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
 
       String table1Snapshot1 = "Table1Snapshot1";
@@ -412,15 +417,15 @@ public class TestSnapshotFromClient {
       LOG.debug("Snapshot2 completed.");
 
       String table2Snapshot1 = "Table2Snapshot1";
-      admin.snapshot(Bytes.toBytes(table2Snapshot1), tableName2);
+      admin.snapshot(Bytes.toBytes(table2Snapshot1), tableName);
       LOG.debug(table2Snapshot1 + " completed.");
 
       admin.deleteTableSnapshots("test.*", ".*");
       assertEquals(0, admin.listTableSnapshots("test.*", ".*").size());
     } finally {
       if (admin != null) {
-        if (admin.tableExists(tableName2)) {
-          UTIL.deleteTable(tableName2);
+        if (admin.tableExists(tableName)) {
+          UTIL.deleteTable(tableName);
         }
         admin.close();
       }

@@ -43,14 +43,19 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestDeleteNamespaceProcedure {
   private static final Log LOG = LogFactory.getLog(TestDeleteNamespaceProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -138,7 +143,7 @@ public class TestDeleteNamespaceProcedure {
   @Test(timeout=60000)
   public void testDeleteNonEmptyNamespace() throws Exception {
     final String namespaceName = "testDeleteNonExistNamespace";
-    final TableName tableName = TableName.valueOf("testDeleteNonExistNamespace:t1");
+    final TableName tableName = TableName.valueOf("testDeleteNonExistNamespace:" + name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     // create namespace
     createNamespaceForTesting(namespaceName);

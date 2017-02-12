@@ -46,8 +46,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
 
@@ -56,6 +58,8 @@ import static org.junit.Assert.assertEquals;
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestFSHLog extends AbstractTestFSWAL {
+  @Rule
+  public TestName name = new TestName();
 
   @Override
   protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String walDir, String archiveDir,
@@ -84,7 +88,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
   @Test
   public void testSyncRunnerIndexOverflow() throws IOException, NoSuchFieldException,
       SecurityException, IllegalArgumentException, IllegalAccessException {
-    final String name = "testSyncRunnerIndexOverflow";
+    final String name = this.name.getMethodName();
     FSHLog log = new FSHLog(FS, FSUtils.getRootDir(CONF), name, HConstants.HREGION_OLDLOGDIR_NAME,
         CONF, null, true, null, null);
     try {
@@ -97,7 +101,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       syncRunnerIndexField.setAccessible(true);
       syncRunnerIndexField.set(ringBufferEventHandler, Integer.MAX_VALUE - 1);
       HTableDescriptor htd =
-          new HTableDescriptor(TableName.valueOf("t1")).addFamily(new HColumnDescriptor("row"));
+          new HTableDescriptor(TableName.valueOf(this.name.getMethodName())).addFamily(new HColumnDescriptor("row"));
       NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
       for (byte[] fam : htd.getFamiliesKeys()) {
         scopes.put(fam, 0);
@@ -118,7 +122,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
    */
   @Test (timeout = 30000)
   public void testUnflushedSeqIdTracking() throws IOException, InterruptedException {
-    final String name = "testSyncRunnerIndexOverflow";
+    final String name = this.name.getMethodName();
     final byte[] b = Bytes.toBytes("b");
 
     final AtomicBoolean startHoldingForAppend = new AtomicBoolean(false);
@@ -146,7 +150,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
 
       // open a new region which uses this WAL
       HTableDescriptor htd =
-          new HTableDescriptor(TableName.valueOf("t1")).addFamily(new HColumnDescriptor(b));
+          new HTableDescriptor(TableName.valueOf(this.name.getMethodName())).addFamily(new HColumnDescriptor(b));
       HRegionInfo hri =
           new HRegionInfo(htd.getTableName(), HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
 

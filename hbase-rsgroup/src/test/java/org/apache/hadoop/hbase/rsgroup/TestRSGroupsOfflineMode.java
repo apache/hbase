@@ -38,8 +38,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 
 import static org.junit.Assert.assertEquals;
@@ -59,6 +61,9 @@ public class TestRSGroupsOfflineMode {
   private static HBaseCluster cluster;
   private static RSGroupAdminEndpoint RSGroupAdminEndpoint;
   public final static long WAIT_TIMEOUT = 60000*5;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -98,7 +103,7 @@ public class TestRSGroupsOfflineMode {
   public void testOffline() throws Exception, InterruptedException {
     //table should be after group table name
     //so it gets assigned later
-    final TableName failoverTable = TableName.valueOf("testOffline");
+    final TableName failoverTable = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(failoverTable, Bytes.toBytes("f"));
 
     RSGroupAdmin groupAdmin = RSGroupAdmin.newClient(TEST_UTIL.getConnection());

@@ -33,8 +33,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Tests the default table lock manager
@@ -44,6 +46,9 @@ public class TestTableStateManager {
 
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  @Rule
+  public TestName name = new TestName();
+
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
@@ -51,8 +56,7 @@ public class TestTableStateManager {
 
   @Test(timeout = 60000)
   public void testUpgradeFromZk() throws Exception {
-    TableName tableName =
-        TableName.valueOf("testUpgradeFromZk");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.startMiniCluster(2, 1);
     TEST_UTIL.shutdownMiniHBaseCluster();
     ZooKeeperWatcher watcher = TEST_UTIL.getZooKeeperWatcher();

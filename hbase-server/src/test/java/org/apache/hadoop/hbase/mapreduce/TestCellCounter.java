@@ -35,8 +35,10 @@ import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.*;
 
@@ -60,6 +62,9 @@ public class TestCellCounter {
       + "output";
   private static long now = System.currentTimeMillis();
 
+  @Rule
+  public TestName name = new TestName();
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
@@ -78,7 +83,7 @@ public class TestCellCounter {
    */
   @Test (timeout=300000)
   public void testCellCounter() throws Exception {
-    TableName sourceTable = TableName.valueOf("sourceTable");
+    final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     Table t = UTIL.createTable(sourceTable, families);
     try{
@@ -116,7 +121,7 @@ public class TestCellCounter {
    */
   @Test(timeout = 300000)
   public void testCellCounterPrefix() throws Exception {
-    TableName sourceTable = TableName.valueOf("testCellCounterPrefix");
+    final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     Table t = UTIL.createTable(sourceTable, families);
     try {
@@ -154,7 +159,7 @@ public class TestCellCounter {
    */
   @Test (timeout=300000)
   public void testCellCounterStartTimeRange() throws Exception {
-    TableName sourceTable = TableName.valueOf("testCellCounterStartTimeRange");
+    final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     Table t = UTIL.createTable(sourceTable, families);
     try{
@@ -195,7 +200,7 @@ public class TestCellCounter {
    */
   @Test (timeout=300000)
   public void testCellCounteEndTimeRange() throws Exception {
-    TableName sourceTable = TableName.valueOf("testCellCounterEndTimeRange");
+    final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     Table t = UTIL.createTable(sourceTable, families);
     try{
@@ -235,7 +240,7 @@ public class TestCellCounter {
    */
   @Test (timeout=300000)
   public void testCellCounteOutOfTimeRange() throws Exception {
-    TableName sourceTable = TableName.valueOf("testCellCounterOutTimeRange");
+    final TableName sourceTable = TableName.valueOf(name.getMethodName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     Table t = UTIL.createTable(sourceTable, families);
     try{
@@ -312,7 +317,7 @@ public class TestCellCounter {
    */
   @Test(timeout = 600000)
   public void testCellCounterForCompleteTable() throws Exception {
-    TableName sourceTable = TableName.valueOf("testCellCounterForCompleteTable");
+    final TableName sourceTable = TableName.valueOf(name.getMethodName());
     String outputPath = OUTPUT_DIR + sourceTable;
     LocalFileSystem localFileSystem = new LocalFileSystem();
     Path outputDir =

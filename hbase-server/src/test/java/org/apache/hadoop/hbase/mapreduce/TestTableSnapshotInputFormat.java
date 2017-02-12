@@ -50,6 +50,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 
 import com.google.common.collect.Lists;
@@ -61,6 +62,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   private static final byte[] bbb = Bytes.toBytes("bbb");
   private static final byte[] yyy = Bytes.toBytes("yyy");
+
+  @Rule
+  public TestName name = new TestName();
 
   @Override
   protected byte[] getStartRow() {
@@ -155,7 +159,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Test
   public void testInitTableSnapshotMapperJobConfig() throws Exception {
     setupCluster();
-    TableName tableName = TableName.valueOf("testInitTableSnapshotMapperJobConfig");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     String snapshotName = "foo";
 
     try {
@@ -196,7 +200,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int expectedNumSplits) throws Exception {
     setupCluster();
-    TableName tableName = TableName.valueOf("testWithMockedMapReduce");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
       createTableAndSnapshot(
         util, tableName, snapshotName, getStartRow(), getEndRow(), numRegions);

@@ -38,8 +38,10 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test HBASE-3694 whether the GlobalMemStoreSize is the same as the summary
@@ -55,6 +57,9 @@ public class TestGlobalMemStoreSize {
 
   private HBaseTestingUtility TEST_UTIL;
   private MiniHBaseCluster cluster;
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Test the global mem store size in the region server is equal to sum of each
@@ -73,7 +78,7 @@ public class TestGlobalMemStoreSize {
     cluster.waitForActiveAndReadyMaster();
 
     // Create a table with regions
-    TableName table = TableName.valueOf("TestGlobalMemStoreSize");
+    final TableName table = TableName.valueOf(name.getMethodName());
     byte [] family = Bytes.toBytes("family");
     LOG.info("Creating table with " + regionNum + " regions");
     Table ht = TEST_UTIL.createMultiRegionTable(table, family, regionNum);

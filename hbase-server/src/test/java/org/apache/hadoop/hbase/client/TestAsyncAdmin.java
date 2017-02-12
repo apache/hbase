@@ -63,8 +63,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Class to test AsyncAdmin.
@@ -80,6 +82,9 @@ public class TestAsyncAdmin {
 
   private static AsyncConnection ASYNC_CONN;
   private AsyncAdmin admin;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -105,12 +110,12 @@ public class TestAsyncAdmin {
 
   @Test
   public void testTableExist() throws Exception {
-    final TableName table = TableName.valueOf("testTableExist");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     boolean exist;
-    exist = admin.tableExists(table).get();
+    exist = admin.tableExists(tableName).get();
     assertEquals(false, exist);
-    TEST_UTIL.createTable(table, FAMILY);
-    exist = admin.tableExists(table).get();
+    TEST_UTIL.createTable(tableName, FAMILY);
+    exist = admin.tableExists(tableName).get();
     assertEquals(true, exist);
     exist = admin.tableExists(TableName.META_TABLE_NAME).get();
     assertEquals(true, exist);
@@ -119,10 +124,10 @@ public class TestAsyncAdmin {
   @Test
   public void testListTables() throws Exception {
     int numTables = admin.listTables().get().length;
-    TableName t1 = TableName.valueOf("testListTables1");
-    TableName t2 = TableName.valueOf("testListTables2");
-    TableName t3 = TableName.valueOf("testListTables3");
-    TableName[] tables = new TableName[] { t1, t2, t3 };
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "3");
+    TableName[] tables = new TableName[] { tableName1, tableName2, tableName3 };
     for (int i = 0; i < tables.length; i++) {
       TEST_UTIL.createTable(tables[i], FAMILY);
     }
@@ -170,7 +175,7 @@ public class TestAsyncAdmin {
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
     HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("myTestTable"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(fam1);
     htd.addFamily(fam2);
     htd.addFamily(fam3);
@@ -183,7 +188,7 @@ public class TestAsyncAdmin {
   public void testCreateTable() throws Exception {
     HTableDescriptor[] tables = admin.listTables().get();
     int numTables = tables.length;
-    TableName tableName = TableName.valueOf("testCreateTable");
+    final  TableName tableName = TableName.valueOf(name.getMethodName());
     admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(FAMILY)))
         .join();
     tables = admin.listTables().get();
@@ -202,7 +207,7 @@ public class TestAsyncAdmin {
 
   @Test(timeout = 300000)
   public void testCreateTableNumberOfRegions() throws Exception {
-    TableName tableName = TableName.valueOf("testCreateTableNumberOfRegions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc).join();
@@ -212,26 +217,26 @@ public class TestAsyncAdmin {
       assertEquals("Table should have only 1 region", 1, regions.size());
     }
 
-    TableName TABLE_2 = TableName.valueOf(tableName.getNameAsString() + "_2");
-    desc = new HTableDescriptor(TABLE_2);
+    final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
+    desc = new HTableDescriptor(tableName2);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[][] { new byte[] { 42 } }).join();
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_2)) {
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName2)) {
       regions = l.getAllRegionLocations();
       assertEquals("Table should have only 2 region", 2, regions.size());
     }
 
-    TableName TABLE_3 = TableName.valueOf(tableName.getNameAsString() + "_3");
-    desc = new HTableDescriptor(TABLE_3);
+    final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
+    desc = new HTableDescriptor(tableName3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, "a".getBytes(), "z".getBytes(), 3).join();
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_3)) {
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName3)) {
       regions = l.getAllRegionLocations();
       assertEquals("Table should have only 3 region", 3, regions.size());
     }
 
-    TableName TABLE_4 = TableName.valueOf(tableName.getNameAsString() + "_4");
-    desc = new HTableDescriptor(TABLE_4);
+    final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");
+    desc = new HTableDescriptor(tableName4);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     try {
       admin.createTable(desc, "a".getBytes(), "z".getBytes(), 2).join();
@@ -240,11 +245,11 @@ public class TestAsyncAdmin {
       assertTrue(e.getCause() instanceof IllegalArgumentException);
     }
 
-    TableName TABLE_5 = TableName.valueOf(tableName.getNameAsString() + "_5");
-    desc = new HTableDescriptor(TABLE_5);
+    final TableName tableName5 = TableName.valueOf(tableName.getNameAsString() + "_5");
+    desc = new HTableDescriptor(tableName5);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[] { 1 }, new byte[] { 127 }, 16).join();
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_5)) {
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName5)) {
       regions = l.getAllRegionLocations();
       assertEquals("Table should have 16 region", 16, regions.size());
     }
@@ -252,8 +257,7 @@ public class TestAsyncAdmin {
 
   @Test(timeout = 300000)
   public void testCreateTableWithRegions() throws IOException, InterruptedException {
-
-    TableName tableName = TableName.valueOf("testCreateTableWithRegions");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
         new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
@@ -322,13 +326,13 @@ public class TestAsyncAdmin {
 
     expectedRegions = 10;
 
-    TableName TABLE_2 = TableName.valueOf(tableName.getNameAsString() + "_2");
+    final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
 
-    desc = new HTableDescriptor(TABLE_2);
+    desc = new HTableDescriptor(tableName2);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, startKey, endKey, expectedRegions).join();
 
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_2)) {
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName2)) {
       regions = l.getAllRegionLocations();
       assertEquals(
         "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
@@ -377,13 +381,13 @@ public class TestAsyncAdmin {
 
     expectedRegions = 5;
 
-    TableName TABLE_3 = TableName.valueOf(tableName.getNameAsString() + "_3");
+    final TableName tableName3 = TableName.valueOf(tableName.getNameAsString() + "_3");
 
-    desc = new HTableDescriptor(TABLE_3);
+    desc = new HTableDescriptor(tableName3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, startKey, endKey, expectedRegions).join();
 
-    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_3)) {
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName3)) {
       regions = l.getAllRegionLocations();
       assertEquals(
         "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
@@ -397,8 +401,8 @@ public class TestAsyncAdmin {
     splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
         new byte[] { 3, 3, 3 }, new byte[] { 2, 2, 2 } };
 
-    TableName TABLE_4 = TableName.valueOf(tableName.getNameAsString() + "_4");
-    desc = new HTableDescriptor(TABLE_4);
+    final TableName tableName4 = TableName.valueOf(tableName.getNameAsString() + "_4");
+    desc = new HTableDescriptor(tableName4);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     try {
       admin.createTable(desc, splitKeys).join();
@@ -432,7 +436,7 @@ public class TestAsyncAdmin {
 
   @Test(timeout = 300000)
   public void testCreateTableWithOnlyEmptyStartRow() throws IOException {
-    byte[] tableName = Bytes.toBytes("testCreateTableWithOnlyEmptyStartRow");
+    byte[] tableName = Bytes.toBytes(name.getMethodName());
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
@@ -447,7 +451,7 @@ public class TestAsyncAdmin {
 
   @Test(timeout = 300000)
   public void testCreateTableWithEmptyRowInTheSplitKeys() throws IOException {
-    byte[] tableName = Bytes.toBytes("testCreateTableWithEmptyRowInTheSplitKeys");
+    byte[] tableName = Bytes.toBytes(name.getMethodName());
     byte[][] splitKeys = new byte[3][];
     splitKeys[0] = "region1".getBytes();
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
@@ -464,18 +468,18 @@ public class TestAsyncAdmin {
 
   @Test(timeout = 300000)
   public void testDeleteTable() throws Exception {
-    TableName table = TableName.valueOf("testDeleteTable");
-    admin.createTable(new HTableDescriptor(table).addFamily(new HColumnDescriptor(FAMILY))).join();
-    assertTrue(admin.tableExists(table).get());
-    TEST_UTIL.getAdmin().disableTable(table);
-    admin.deleteTable(table).join();
-    assertFalse(admin.tableExists(table).get());
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(FAMILY))).join();
+    assertTrue(admin.tableExists(tableName).get());
+    TEST_UTIL.getAdmin().disableTable(tableName);
+    admin.deleteTable(tableName).join();
+    assertFalse(admin.tableExists(tableName).get());
   }
 
   @Test(timeout = 300000)
   public void testDeleteTables() throws Exception {
-    TableName[] tables = { TableName.valueOf("testDeleteTables1"),
-        TableName.valueOf("testDeleteTables2"), TableName.valueOf("testDeleteTables3") };
+    TableName[] tables = { TableName.valueOf(name.getMethodName() + "1"),
+        TableName.valueOf(name.getMethodName() + "2"), TableName.valueOf(name.getMethodName() + "3") };
     Arrays.stream(tables).map(HTableDescriptor::new)
         .map((table) -> table.addFamily(new HColumnDescriptor(FAMILY))).forEach((table) -> {
           admin.createTable(table).join();
@@ -494,12 +498,12 @@ public class TestAsyncAdmin {
 
   @Test(timeout = 300000)
   public void testTruncateTable() throws IOException {
-    testTruncateTable(TableName.valueOf("testTruncateTable"), false);
+    testTruncateTable(TableName.valueOf(name.getMethodName()), false);
   }
 
   @Test(timeout = 300000)
   public void testTruncateTablePreservingSplits() throws IOException {
-    testTruncateTable(TableName.valueOf("testTruncateTablePreservingSplits"), true);
+    testTruncateTable(TableName.valueOf(name.getMethodName()), true);
   }
 
   private void testTruncateTable(final TableName tableName, boolean preserveSplits)
@@ -539,8 +543,8 @@ public class TestAsyncAdmin {
     final byte[] row = Bytes.toBytes("row");
     final byte[] qualifier = Bytes.toBytes("qualifier");
     final byte[] value = Bytes.toBytes("value");
-    final TableName table = TableName.valueOf("testDisableAndEnableTable");
-    Table ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
     put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
     ht.put(put);
@@ -551,7 +555,7 @@ public class TestAsyncAdmin {
     this.admin.disableTable(ht.getName()).join();
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster().getMaster()
         .getTableStateManager().isTableState(ht.getName(), TableState.State.DISABLED));
-    assertEquals(TableState.State.DISABLED, getStateFromMeta(table));
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName));
 
     // Test that table is disabled
     get = new Get(row);
@@ -575,10 +579,10 @@ public class TestAsyncAdmin {
       ok = true;
     }
     assertTrue(ok);
-    this.admin.enableTable(table).join();
+    this.admin.enableTable(tableName).join();
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
         .getTableStateManager().isTableState(ht.getName(), TableState.State.ENABLED));
-    assertEquals(TableState.State.ENABLED, getStateFromMeta(table));
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
 
     // Test that table is enabled
     try {
@@ -595,10 +599,10 @@ public class TestAsyncAdmin {
     final byte[] row = Bytes.toBytes("row");
     final byte[] qualifier = Bytes.toBytes("qualifier");
     final byte[] value = Bytes.toBytes("value");
-    final TableName table1 = TableName.valueOf("testDisableAndEnableTable1");
-    final TableName table2 = TableName.valueOf("testDisableAndEnableTable2");
-    Table ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
-    Table ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName());
+    Table ht1 = TEST_UTIL.createTable(tableName1, HConstants.CATALOG_FAMILY);
+    Table ht2 = TEST_UTIL.createTable(tableName2, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
     put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
     ht1.put(put);
@@ -621,8 +625,8 @@ public class TestAsyncAdmin {
       ok = true;
     }
 
-    assertEquals(TableState.State.DISABLED, getStateFromMeta(table1));
-    assertEquals(TableState.State.DISABLED, getStateFromMeta(table2));
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName1));
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(tableName2));
 
     assertTrue(ok);
     this.admin.enableTables("testDisableAndEnableTable.*").join();
@@ -643,13 +647,13 @@ public class TestAsyncAdmin {
     ht1.close();
     ht2.close();
 
-    assertEquals(TableState.State.ENABLED, getStateFromMeta(table1));
-    assertEquals(TableState.State.ENABLED, getStateFromMeta(table2));
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName1));
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName2));
   }
 
   @Test(timeout = 300000)
   public void testEnableTableRetainAssignment() throws Exception {
-    final TableName tableName = TableName.valueOf("testEnableTableAssignment");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
         new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
         new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 } };
@@ -685,8 +689,7 @@ public class TestAsyncAdmin {
     }
     // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
     // actually getting disabled by the disableTable() call.
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testDisableCatalogTable"
-        .getBytes()));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName().getBytes()));
     HColumnDescriptor hcd = new HColumnDescriptor("cf1".getBytes());
     htd.addFamily(hcd);
     admin.createTable(htd).join();
@@ -694,158 +697,158 @@ public class TestAsyncAdmin {
 
   @Test
   public void testAddColumnFamily() throws IOException {
-    TableName TABLE_NAME = TableName.valueOf("testAddColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with two families
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
     admin.createTable(baseHtd).join();
-    admin.disableTable(TABLE_NAME).join();
+    admin.disableTable(tableName).join();
     try {
       // Verify the table descriptor
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+      verifyTableDescriptor(tableName, FAMILY_0);
 
       // Modify the table removing one family and verify the descriptor
-      admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1)).join();
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+      admin.addColumnFamily(tableName, new HColumnDescriptor(FAMILY_1)).join();
+      verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
     } finally {
-      admin.deleteTable(TABLE_NAME);
+      admin.deleteTable(tableName);
     }
   }
 
   @Test
   public void testAddSameColumnFamilyTwice() throws Exception {
-    TableName TABLE_NAME = TableName.valueOf("testAddSameColumnFamilyTwice");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with one families
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
     admin.createTable(baseHtd).join();
-    admin.disableTable(TABLE_NAME).join();
+    admin.disableTable(tableName).join();
     try {
       // Verify the table descriptor
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+      verifyTableDescriptor(tableName, FAMILY_0);
 
       // Modify the table removing one family and verify the descriptor
-      this.admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1)).join();
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+      this.admin.addColumnFamily(tableName, new HColumnDescriptor(FAMILY_1)).join();
+      verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
 
       try {
         // Add same column family again - expect failure
-        this.admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1)).join();
+        this.admin.addColumnFamily(tableName, new HColumnDescriptor(FAMILY_1)).join();
         Assert.fail("Delete a non-exist column family should fail");
       } catch (Exception e) {
         // Expected.
       }
     } finally {
-      admin.deleteTable(TABLE_NAME).join();
+      admin.deleteTable(tableName).join();
     }
   }
 
   @Test
   public void testModifyColumnFamily() throws Exception {
-    TableName TABLE_NAME = TableName.valueOf("testModifyColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_0);
     int blockSize = cfDescriptor.getBlocksize();
     // Create a table with one families
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
     baseHtd.addFamily(cfDescriptor);
     admin.createTable(baseHtd).join();
-    admin.disableTable(TABLE_NAME).join();
+    admin.disableTable(tableName).join();
     try {
       // Verify the table descriptor
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+      verifyTableDescriptor(tableName, FAMILY_0);
 
       int newBlockSize = 2 * blockSize;
       cfDescriptor.setBlocksize(newBlockSize);
 
       // Modify colymn family
-      admin.modifyColumnFamily(TABLE_NAME, cfDescriptor).join();
+      admin.modifyColumnFamily(tableName, cfDescriptor).join();
 
-      HTableDescriptor htd = admin.getTableDescriptor(TABLE_NAME).get();
+      HTableDescriptor htd = admin.getTableDescriptor(tableName).get();
       HColumnDescriptor hcfd = htd.getFamily(FAMILY_0);
       assertTrue(hcfd.getBlocksize() == newBlockSize);
     } finally {
-      admin.deleteTable(TABLE_NAME).join();
+      admin.deleteTable(tableName).join();
     }
   }
 
   @Test
   public void testModifyNonExistingColumnFamily() throws IOException {
-    TableName TABLE_NAME = TableName.valueOf("testModifyNonExistingColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
 
     HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_1);
     int blockSize = cfDescriptor.getBlocksize();
     // Create a table with one families
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
     admin.createTable(baseHtd).join();
-    admin.disableTable(TABLE_NAME).join();
+    admin.disableTable(tableName).join();
     try {
       // Verify the table descriptor
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+      verifyTableDescriptor(tableName, FAMILY_0);
 
       int newBlockSize = 2 * blockSize;
       cfDescriptor.setBlocksize(newBlockSize);
 
       // Modify a column family that is not in the table.
       try {
-        admin.modifyColumnFamily(TABLE_NAME, cfDescriptor).join();
+        admin.modifyColumnFamily(tableName, cfDescriptor).join();
         Assert.fail("Modify a non-exist column family should fail");
       } catch (Exception e) {
         // Expected.
       }
     } finally {
-      admin.deleteTable(TABLE_NAME).join();
+      admin.deleteTable(tableName).join();
     }
   }
 
   @Test
   public void testDeleteColumnFamily() throws IOException {
-    TableName TABLE_NAME = TableName.valueOf("testDeleteColumnFamily");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with two families
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_1));
     admin.createTable(baseHtd).join();
-    admin.disableTable(TABLE_NAME).join();
+    admin.disableTable(tableName).join();
     try {
       // Verify the table descriptor
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+      verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
 
       // Modify the table removing one family and verify the descriptor
-      admin.deleteColumnFamily(TABLE_NAME, FAMILY_1).join();
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+      admin.deleteColumnFamily(tableName, FAMILY_1).join();
+      verifyTableDescriptor(tableName, FAMILY_0);
     } finally {
-      admin.deleteTable(TABLE_NAME).join();
+      admin.deleteTable(tableName).join();
     }
   }
 
   @Test
   public void testDeleteSameColumnFamilyTwice() throws IOException {
-    TableName TABLE_NAME = TableName.valueOf("testDeleteSameColumnFamilyTwice");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with two families
-    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor baseHtd = new HTableDescriptor(tableName);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_1));
     admin.createTable(baseHtd).join();
-    admin.disableTable(TABLE_NAME).join();
+    admin.disableTable(tableName).join();
     try {
       // Verify the table descriptor
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+      verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
 
       // Modify the table removing one family and verify the descriptor
-      admin.deleteColumnFamily(TABLE_NAME, FAMILY_1).join();
-      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+      admin.deleteColumnFamily(tableName, FAMILY_1).join();
+      verifyTableDescriptor(tableName, FAMILY_0);
 
       try {
         // Delete again - expect failure
-        admin.deleteColumnFamily(TABLE_NAME, FAMILY_1).join();
+        admin.deleteColumnFamily(tableName, FAMILY_1).join();
         Assert.fail("Delete a non-exist column family should fail");
       } catch (Exception e) {
         // Expected.
       }
     } finally {
-      admin.deleteTable(TABLE_NAME).join();
+      admin.deleteTable(tableName).join();
     }
   }
 

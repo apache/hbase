@@ -53,8 +53,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestEncryptionKeyRotation {
@@ -63,6 +65,10 @@ public class TestEncryptionKeyRotation {
   private static final Configuration conf = TEST_UTIL.getConfiguration();
   private static final Key initialCFKey;
   private static final Key secondCFKey;
+
+  @Rule
+  public TestName name = new TestName();
+
   static {
     // Create the test encryption keys
     SecureRandom rng = new SecureRandom();
@@ -93,8 +99,7 @@ public class TestEncryptionKeyRotation {
   @Test
   public void testCFKeyRotation() throws Exception {
     // Create the table schema
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("default",
-      "testCFKeyRotation"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("default", name.getMethodName()));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
     String algorithm =
         conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
@@ -161,8 +166,7 @@ public class TestEncryptionKeyRotation {
   @Test
   public void testMasterKeyRotation() throws Exception {
     // Create the table schema
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("default",
-      "testMasterKeyRotation"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("default", name.getMethodName()));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
     String algorithm =
         conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);

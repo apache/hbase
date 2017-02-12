@@ -48,8 +48,10 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({LargeTests.class, ClientTests.class})
 public class TestIllegalTableDescriptor {
@@ -58,6 +60,9 @@ public class TestIllegalTableDescriptor {
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -74,7 +79,7 @@ public class TestIllegalTableDescriptor {
 
   @Test
   public void testIllegalTableDescriptor() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testIllegalTableDescriptor"));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
 
     // create table with 0 families

@@ -50,10 +50,12 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+import org.junit.rules.TestName;
 
 /**
  */
@@ -70,6 +72,9 @@ public class TestFuzzyRowFilterEndToEnd {
   private static int totalFuzzyKeys = thirdPartCardinality / 2;
 
   private static String table = "TestFuzzyRowFilterEndToEnd";
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -115,10 +120,9 @@ public class TestFuzzyRowFilterEndToEnd {
   public void testAllFixedBits() throws IOException {
     String cf = "f";
     String cq = "q";
-    String table = "testAllFixedBits";
 
     Table ht =
-        TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf), Integer.MAX_VALUE);
+        TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf), Integer.MAX_VALUE);
     // Load data
     String[] rows = new String[] { "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
         "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00", "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
@@ -148,7 +152,7 @@ public class TestFuzzyRowFilterEndToEnd {
       total++;
     }
     assertEquals(2, total);
-    TEST_UTIL.deleteTable(TableName.valueOf(table));
+    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
   }
 
   @Test
@@ -156,10 +160,9 @@ public class TestFuzzyRowFilterEndToEnd {
   {
     String cf = "f";
     String cq = "q";
-    String table = "HBASE14872";
 
     Table ht =
-        TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf), Integer.MAX_VALUE);
+        TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf), Integer.MAX_VALUE);
     // Load data
     String[] rows = new String[]{
         "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
@@ -199,7 +202,7 @@ public class TestFuzzyRowFilterEndToEnd {
       total++;
     }    
     assertEquals(rows.length, total);
-    TEST_UTIL.deleteTable(TableName.valueOf(table));
+    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
   }
   
   @Test
@@ -344,9 +347,8 @@ public class TestFuzzyRowFilterEndToEnd {
   @Test
   public void testFilterList() throws Exception {
     String cf = "f";
-    String table = "TestFuzzyRowFiltersInFilterList";
     Table ht =
-        TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf), Integer.MAX_VALUE);
+        TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf), Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)
     // 4 byte qualifier

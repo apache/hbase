@@ -56,8 +56,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(LargeTests.class)
 public class TestPartitionedMobCompactor {
@@ -77,6 +79,9 @@ public class TestPartitionedMobCompactor {
   private String mobSuffix;
   private String delSuffix;
   private static ExecutorService pool;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -320,26 +325,23 @@ public class TestPartitionedMobCompactor {
 
   @Test
   public void testCompactDelFilesWithDefaultBatchSize() throws Exception {
-    String tableName = "testCompactDelFilesWithDefaultBatchSize";
-    testCompactDelFilesAtBatchSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_BATCH_SIZE,
+    testCompactDelFilesAtBatchSize(name.getMethodName(), MobConstants.DEFAULT_MOB_COMPACTION_BATCH_SIZE,
         MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
   }
 
   @Test
   public void testCompactDelFilesWithSmallBatchSize() throws Exception {
-    String tableName = "testCompactDelFilesWithSmallBatchSize";
-    testCompactDelFilesAtBatchSize(tableName, 4, MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
+    testCompactDelFilesAtBatchSize(name.getMethodName(), 4, MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
   }
 
   @Test
   public void testCompactDelFilesChangeMaxDelFileCount() throws Exception {
-    String tableName = "testCompactDelFilesWithSmallBatchSize";
-    testCompactDelFilesAtBatchSize(tableName, 4, 2);
+    testCompactDelFilesAtBatchSize(name.getMethodName(), 4, 2);
   }
 
   @Test
   public void testCompactFilesWithDstDirFull() throws Exception {
-    String tableName = "testCompactFilesWithDstDirFull";
+    String tableName = name.getMethodName();
     fs = FileSystem.get(conf);
     FaultyDistributedFileSystem faultyFs = (FaultyDistributedFileSystem)fs;
     Path testDir = FSUtils.getRootDir(conf);

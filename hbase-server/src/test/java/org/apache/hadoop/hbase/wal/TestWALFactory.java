@@ -498,7 +498,7 @@ public class TestWALFactory {
   public void testEditAdd() throws IOException {
     final int COL_COUNT = 10;
     final HTableDescriptor htd =
-        new HTableDescriptor(TableName.valueOf("tablename")).addFamily(new HColumnDescriptor(
+        new HTableDescriptor(TableName.valueOf(currentTest.getMethodName())).addFamily(new HColumnDescriptor(
             "column"));
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
         Bytes.BYTES_COMPARATOR);
@@ -563,7 +563,7 @@ public class TestWALFactory {
   public void testAppend() throws IOException {
     final int COL_COUNT = 10;
     final HTableDescriptor htd =
-        new HTableDescriptor(TableName.valueOf("tablename")).addFamily(new HColumnDescriptor(
+        new HTableDescriptor(TableName.valueOf(currentTest.getMethodName())).addFamily(new HColumnDescriptor(
             "column"));
     NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
         Bytes.BYTES_COMPARATOR);
@@ -624,8 +624,7 @@ public class TestWALFactory {
   @Test
   public void testVisitors() throws Exception {
     final int COL_COUNT = 10;
-    final TableName tableName =
-        TableName.valueOf("tablename");
+    final TableName tableName = TableName.valueOf(currentTest.getMethodName());
     final byte [] row = Bytes.toBytes("row");
     final DumbWALActionsListener visitor = new DumbWALActionsListener();
     final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);

@@ -307,7 +307,7 @@ public class TestWALObserver {
   public void testWALCoprocessorReplay() throws Exception {
     // WAL replay is handled at HRegion::replayRecoveredEdits(), which is
     // ultimately called by HRegion::initialize()
-    TableName tableName = TableName.valueOf("testWALCoprocessorReplay");
+    final TableName tableName = TableName.valueOf(currentTest.getMethodName());
     final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(tableName);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     // final HRegionInfo hri =

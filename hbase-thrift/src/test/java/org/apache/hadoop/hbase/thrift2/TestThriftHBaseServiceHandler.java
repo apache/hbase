@@ -71,8 +71,10 @@ import org.apache.thrift.TException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -120,6 +122,9 @@ public class TestThriftHBaseServiceHandler {
 
   private static final MetricsAssertHelper metricsHelper =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+
+  @Rule
+  public TestName name = new TestName();
 
 
   public void assertTColumnValuesEqual(List<TColumnValue> columnValuesA,
@@ -993,7 +998,7 @@ public class TestThriftHBaseServiceHandler {
     byte[] family = Bytes.toBytes("f");
     byte[] col = Bytes.toBytes("c");
     // create a table which will throw exceptions for requests
-    TableName tableName = TableName.valueOf("testMetricsWithException");
+    TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor tableDesc = new HTableDescriptor(tableName);
     tableDesc.addCoprocessor(ErrorThrowingGetObserver.class.getName());
     tableDesc.addFamily(new HColumnDescriptor(family));

@@ -52,8 +52,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestGlobalThrottler {
@@ -68,6 +70,9 @@ public class TestGlobalThrottler {
   private static final byte[] VALUE = Bytes.toBytes("v");
   private static final byte[] ROW = Bytes.toBytes("r");
   private static final byte[][] ROWS = HTestConst.makeNAscii(ROW, 100);
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -113,7 +118,7 @@ public class TestGlobalThrottler {
   volatile private boolean testQuotaNonZero = false;
   @Test
   public void testQuota() throws IOException {
-    TableName tableName = TableName.valueOf("testQuota");
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_SERIAL);

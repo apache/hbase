@@ -37,8 +37,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Run tests related to {@link TimestampsFilter} using HBase client APIs.
@@ -49,6 +51,9 @@ import org.junit.experimental.categories.Category;
 public class TestTimestampsFilter {
   private static final Log LOG = LogFactory.getLog(TestTimestampsFilter.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * @throws java.lang.Exception
@@ -92,7 +97,7 @@ public class TestTimestampsFilter {
    */
   @Test
   public void testTimestampsFilter() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testTimestampsFilter");
+    final byte [] TABLE = Bytes.toBytes(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
     Cell kvs[];
@@ -168,7 +173,7 @@ public class TestTimestampsFilter {
 
   @Test
   public void testMultiColumns() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testTimestampsFilterMultiColumns");
+    final byte [] TABLE = Bytes.toBytes(name.getMethodName());
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -227,7 +232,7 @@ public class TestTimestampsFilter {
   }
 
   private void testWithVersionDeletes(boolean flushTables) throws IOException {
-    byte [] TABLE = Bytes.toBytes("testWithVersionDeletes_" +
+    final byte [] TABLE = Bytes.toBytes(name.getMethodName() + "_" +
                                    (flushTables ? "flush" : "noflush")); 
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };

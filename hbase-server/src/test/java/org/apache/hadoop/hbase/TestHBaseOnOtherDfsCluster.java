@@ -24,8 +24,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import java.util.UUID;
 
@@ -37,6 +39,8 @@ import static org.junit.Assert.assertTrue;
  */
 @Category(MediumTests.class)
 public class TestHBaseOnOtherDfsCluster {
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testOveralyOnOtherCluster() throws Exception {
@@ -65,7 +69,7 @@ public class TestHBaseOnOtherDfsCluster {
 
     // do a simple create/write to ensure the cluster works as expected
     byte[] family = Bytes.toBytes("testfamily");
-    TableName tablename = TableName.valueOf("testtable");
+    final TableName tablename = TableName.valueOf(name.getMethodName());
     Table table = util2.createTable(tablename, family);
     Put p = new Put(new byte[] { 1, 2, 3 });
     p.addColumn(family, null, new byte[] { 1 });

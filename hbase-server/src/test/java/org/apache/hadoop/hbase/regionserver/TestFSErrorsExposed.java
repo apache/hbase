@@ -54,8 +54,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assume;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test cases that ensure that file system level errors are bubbled up
@@ -66,6 +68,9 @@ public class TestFSErrorsExposed {
   private static final Log LOG = LogFactory.getLog(TestFSErrorsExposed.class);
 
   HBaseTestingUtility util = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Injects errors into the pread calls of an on-disk file, and makes
@@ -186,7 +191,7 @@ public class TestFSErrorsExposed {
       util.getConfiguration().setInt("hbase.lease.recovery.timeout", 10000);
       util.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
       util.startMiniCluster(1);
-      TableName tableName = TableName.valueOf("table");
+      final TableName tableName = TableName.valueOf(name.getMethodName());
       byte[] fam = Bytes.toBytes("fam");
 
       Admin admin = util.getAdmin();

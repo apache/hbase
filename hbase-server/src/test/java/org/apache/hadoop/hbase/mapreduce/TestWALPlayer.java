@@ -59,8 +59,10 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -76,6 +78,9 @@ public class TestWALPlayer {
   private static FileSystem fs;
   private static FileSystem logFs;
   private static Configuration conf;
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -100,14 +105,14 @@ public class TestWALPlayer {
    */
   @Test
   public void testWALPlayer() throws Exception {
-    final TableName TABLENAME1 = TableName.valueOf("testWALPlayer1");
-    final TableName TABLENAME2 = TableName.valueOf("testWALPlayer2");
+    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
+    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
     final byte[] COLUMN2 = Bytes.toBytes("c2");
     final byte[] ROW = Bytes.toBytes("row");
-    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);
 
     // put a row into the first table
     Put p = new Put(ROW);
@@ -132,8 +137,8 @@ public class TestWALPlayer {
     player.setupTime(configuration, optionName);
     assertEquals(1000,configuration.getLong(optionName,0));
     assertEquals(0, ToolRunner.run(configuration, player,
-        new String[] {walInputDir, TABLENAME1.getNameAsString(),
-        TABLENAME2.getNameAsString() }));
+        new String[] {walInputDir, tableName1.getNameAsString(),
+        tableName2.getNameAsString() }));
 
 
     // verify the WAL was player into table 2
