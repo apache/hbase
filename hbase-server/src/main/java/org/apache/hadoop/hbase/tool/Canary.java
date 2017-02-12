@@ -417,7 +417,7 @@ public final class Canary implements Tool {
   private static final int ERROR_EXIT_CODE = 4;
   private static final int FAILURE_EXIT_CODE = 5;
 
-  private static final long DEFAULT_INTERVAL = 6000;
+  private static final long DEFAULT_INTERVAL = 60000;
 
   private static final long DEFAULT_TIMEOUT = 600000; // 10 mins
   private static final int MAX_THREADS_NUM = 16; // #threads to contact regions
