@@ -185,7 +185,7 @@ $ ${HBASE_HOME}/bin/hbase canary -e test-0[1-2]
 
 ==== Run canary test as daemon mode
 
-Run repeatedly with interval defined in option `-interval` whose default value is 6 seconds.
+Run repeatedly with interval defined in option `-interval` whose default value is 60 seconds.
 This daemon will stop itself and return non-zero error code if any error occurs, due to the default value of option -f is true.
 
 ----
