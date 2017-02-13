@@ -156,9 +156,9 @@ public class TBoundedThreadPoolServer extends TServer {
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift-worker-%d");
     executorService =
-        new ThreadPoolExecutor(minWorkerThreads,
+        new THBaseThreadPoolExecutor(minWorkerThreads,
             maxWorkerThreads, options.threadKeepAliveTimeSec,
-            TimeUnit.SECONDS, this.callQueue, tfb.build());
+            TimeUnit.SECONDS, this.callQueue, tfb.build(), metrics);
     executorService.allowCoreThreadTimeOut(true);
     serverOptions = options;
   }

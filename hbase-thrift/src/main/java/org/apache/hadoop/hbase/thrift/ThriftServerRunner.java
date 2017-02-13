@@ -659,8 +659,8 @@ public class ThriftServerRunner implements Runnable {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift-worker-%d");
-    ThreadPoolExecutor threadPool = new ThreadPoolExecutor(minWorkers, maxWorkers,
-            Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
+    ThreadPoolExecutor threadPool = new THBaseThreadPoolExecutor(minWorkers, maxWorkers,
+            Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build(), metrics);
     threadPool.allowCoreThreadTimeOut(true);
     return threadPool;
   }

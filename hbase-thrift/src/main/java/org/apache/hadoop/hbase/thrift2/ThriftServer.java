@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.CallQueue;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
+import org.apache.hadoop.hbase.thrift.THBaseThreadPoolExecutor;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.util.DNS;
@@ -312,8 +314,8 @@ public class ThriftServer extends Configured implements Tool {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift2-worker-%d");
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(workerThreads, workerThreads,
-            Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
+    ThreadPoolExecutor pool = new THBaseThreadPoolExecutor(workerThreads, workerThreads,
+            Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build(), metrics);
     pool.prestartAllCoreThreads();
     return pool;
   }
@@ -324,7 +326,8 @@ public class ThriftServer extends Configured implements Tool {
                                               int workerThreads,
                                               InetSocketAddress inetSocketAddress,
                                               int backlog,
-                                              int clientTimeout)
+                                              int clientTimeout,
+                                              ThriftMetrics metrics)
       throws TTransportException {
     TServerTransport serverTransport = new TServerSocket(
                                            new TServerSocket.ServerSocketTransportArgs().
@@ -338,6 +341,11 @@ public class ThriftServer extends Configured implements Tool {
     if (workerThreads > 0) {
       serverArgs.maxWorkerThreads(workerThreads);
     }
+    ThreadPoolExecutor executor = new THBaseThreadPoolExecutor(serverArgs.minWorkerThreads,
+        serverArgs.maxWorkerThreads, serverArgs.stopTimeoutVal, TimeUnit.SECONDS,
+        new SynchronousQueue<>(), metrics);
+    serverArgs.executorService(executor);
+
     return new TThreadPoolServer(serverArgs);
   }
 
@@ -574,7 +582,8 @@ public class ThriftServer extends Configured implements Tool {
           workerThreads,
           inetSocketAddress,
           backlog,
-          readTimeout);
+          readTimeout,
+          metrics);
     }
 
     final TServer tserver = server;
