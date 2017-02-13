@@ -762,9 +762,12 @@ public class ReplicationSource extends Thread
       if (!canSkipWaitingSet.getUnchecked(key)) {
         try {
           manager.waitUntilCanBePushed(Bytes.toBytes(key), seq, actualPeerId);
-        } catch (Exception e) {
+        } catch (IOException e) {
           LOG.error("waitUntilCanBePushed fail", e);
           stopper.stop("waitUntilCanBePushed fail");
+        } catch (InterruptedException e) {
+          LOG.warn("waitUntilCanBePushed interrupted", e);
+          Thread.currentThread().interrupt();
         }
         canSkipWaitingSet.put(key, true);
       }
