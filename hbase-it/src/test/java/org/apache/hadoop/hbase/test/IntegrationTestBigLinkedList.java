@@ -507,6 +507,12 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       protected void persist(Context output, long count, byte[][] prev, byte[][] current, byte[] id)
           throws IOException {
         for (int i = 0; i < current.length; i++) {
+
+          if (i % 100 == 0) {
+            // Tickle progress every so often else maprunner will think us hung
+            output.progress();
+          }
+
           Put put = new Put(current[i]);
           put.addColumn(FAMILY_NAME, COLUMN_PREV, prev == null ? NO_KEY : prev[i]);
 
@@ -529,12 +535,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             put.addColumn(BIG_FAMILY_NAME, BIG_FAMILY_NAME, this.bigValue);
           }
           mutator.mutate(put);
-
-          if (i % 1000 == 0) {
-            // Tickle progress every so often else maprunner will think us hung
-            output.progress();
-          }
         }
+
         mutator.flush();
       }
 
