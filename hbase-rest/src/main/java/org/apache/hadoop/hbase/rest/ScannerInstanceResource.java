@@ -33,11 +33,11 @@ import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
@@ -106,6 +106,14 @@ public class ScannerInstanceResource extends ResourceBase {
         return Response.status(Response.Status.GONE)
           .type(MIMETYPE_TEXT).entity("Gone" + CRLF)
           .build();
+      } catch (IllegalArgumentException e) {
+        Throwable t = e.getCause();
+        if (t instanceof TableNotFoundException) {
+          return Response.status(Response.Status.NOT_FOUND)
+              .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
+              .build();
+        }
+        throw e;
       }
       if (value == null) {
         if (LOG.isTraceEnabled()) {
