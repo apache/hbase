@@ -21,7 +21,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -282,4 +284,52 @@ public interface AsyncAdmin {
    *         The return value will be wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> isBalancerEnabled();
+
+  /**
+   * Close a region. For expert-admins.  Runs close on the regionserver.  The master will not be
+   * informed of the close.
+   *
+   * @param regionname region name to close
+   * @param serverName If supplied, we'll use this location rather than the one currently in
+   * <code>hbase:meta</code>
+   */
+  CompletableFuture<Void> closeRegion(String regionname, String serverName);
+
+  /**
+   * Close a region.  For expert-admins  Runs close on the regionserver.  The master will not be
+   * informed of the close.
+   *
+   * @param regionname region name to close
+   * @param serverName The servername of the regionserver.  If passed null we will use servername
+   * found in the hbase:meta table. A server name is made of host, port and startcode.  Here is an
+   * example: <code> host187.example.com,60020,1289493121758</code>
+   */
+  CompletableFuture<Void> closeRegion(byte[] regionname, String serverName);
+
+  /**
+   * For expert-admins. Runs close on the regionserver. Closes a region based on the encoded region
+   * name. The region server name is mandatory. If the servername is provided then based on the
+   * online regions in the specified regionserver the specified region will be closed. The master
+   * will not be informed of the close. Note that the regionname is the encoded regionname.
+   *
+   * @param encodedRegionName The encoded region name; i.e. the hash that makes up the region name
+   * suffix: e.g. if regionname is
+   * <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
+   * then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
+   * @param serverName The servername of the regionserver. A server name is made of host, port and
+   * startcode. This is mandatory. Here is an example:
+   * <code> host187.example.com,60020,1289493121758</code>
+   * @return true if the region was closed, false if not. The return value will be wrapped by a
+   * {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> closeRegionWithEncodedRegionName(String encodedRegionName, String serverName);
+
+  /**
+   * Close a region.  For expert-admins  Runs close on the regionserver.  The master will not be
+   * informed of the close.
+   *
+   * @param sn
+   * @param hri
+   */
+  CompletableFuture<Void> closeRegion(ServerName sn, HRegionInfo hri);
 }

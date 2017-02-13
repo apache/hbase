@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,6 +50,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsMasterRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
@@ -96,6 +96,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final NonceGenerator nonceGenerator;
 
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, AdminService.Interface> adminSubs = new ConcurrentHashMap<>();
 
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
 
@@ -165,6 +166,16 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   private MasterService.Interface createMasterStub(ServerName serverName) throws IOException {
     return MasterService.newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
+  }
+
+  private AdminService.Interface createAdminServerStub(ServerName serverName) throws IOException{
+    return AdminService.newStub(rpcClient.createRpcChannel(serverName, user, rpcTimeout));
+  }
+
+  AdminService.Interface getAdminStub(ServerName serverName) throws IOException {
+    return CollectionUtils.computeIfAbsentEx(adminSubs,
+      getStubKey(AdminService.Interface.class.getSimpleName(), serverName, hostnameCanChange),
+      () -> createAdminServerStub(serverName));
   }
 
   private void makeMasterStub(CompletableFuture<MasterService.Interface> future) {

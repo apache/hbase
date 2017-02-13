@@ -28,11 +28,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
 
 /**
  * Factory to create an AsyncRpcRetryCaller.
@@ -351,5 +353,66 @@ class AsyncRpcRetryingCallerFactory {
 
   public <T> MasterRequestCallerBuilder<T> masterRequest() {
     return new MasterRequestCallerBuilder<>();
+  }
+
+  public class AdminRequestCallerBuilder<T> extends BuilderBase{
+    // TODO: maybe we can reuse AdminRequestCallerBuild, MasterRequestCallerBuild etc.
+
+    private AsyncAdminRequestRetryingCaller.Callable<T> callable;
+
+    private long operationTimeoutNs = -1L;
+
+    private long rpcTimeoutNs = -1L;
+
+    private ServerName serverName;
+
+    public AdminRequestCallerBuilder<T> action(AsyncAdminRequestRetryingCaller.Callable<T> callable) {
+      this.callable = callable;
+      return this;
+    }
+
+    public AdminRequestCallerBuilder<T> operationTimeout(long operationTimeout, TimeUnit unit) {
+      this.operationTimeoutNs = unit.toNanos(operationTimeout);
+      return this;
+    }
+
+    public AdminRequestCallerBuilder<T> rpcTimeout(long rpcTimeout, TimeUnit unit) {
+      this.rpcTimeoutNs = unit.toNanos(rpcTimeout);
+      return this;
+    }
+
+    public AdminRequestCallerBuilder<T> pause(long pause, TimeUnit unit) {
+      this.pauseNs = unit.toNanos(pause);
+      return this;
+    }
+
+    public AdminRequestCallerBuilder<T> maxAttempts(int maxAttempts) {
+      this.maxAttempts = maxAttempts;
+      return this;
+    }
+
+    public AdminRequestCallerBuilder<T> startLogErrorsCnt(int startLogErrorsCnt) {
+      this.startLogErrorsCnt = startLogErrorsCnt;
+      return this;
+    }
+
+    public AdminRequestCallerBuilder<T> serverName(ServerName serverName){
+      this.serverName = serverName;
+      return this;
+    }
+
+    public AsyncAdminRequestRetryingCaller<T> build() {
+      return new AsyncAdminRequestRetryingCaller<T>(retryTimer, conn, pauseNs, maxAttempts,
+          operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, serverName, checkNotNull(callable,
+            "action is null"));
+    }
+
+    public CompletableFuture<T> call() {
+      return build().call();
+    }
+  }
+
+  public <T> AdminRequestCallerBuilder<T> adminRequest(){
+    return new AdminRequestCallerBuilder<>();
   }
 }

@@ -31,18 +31,24 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.AdminRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterRequestCallerBuilder;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnResponse;
@@ -115,7 +121,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     this.ng = connection.getNonceGenerator();
   }
 
-  private <T> MasterRequestCallerBuilder<T> newCaller() {
+  private <T> MasterRequestCallerBuilder<T> newMasterCaller() {
     return this.connection.callerFactory.<T> masterRequest()
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
@@ -123,9 +129,23 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
         .startLogErrorsCnt(startLogErrorsCnt);
   }
 
+  private <T> AdminRequestCallerBuilder<T> newAdminCaller() {
+    return this.connection.callerFactory.<T> adminRequest()
+        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
+        .pause(pauseNs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
+        .startLogErrorsCnt(startLogErrorsCnt);
+  }
+
   @FunctionalInterface
-  private interface RpcCall<RESP, REQ> {
+  private interface MasterRpcCall<RESP, REQ> {
     void call(MasterService.Interface stub, HBaseRpcController controller, REQ req,
+        RpcCallback<RESP> done);
+  }
+
+  @FunctionalInterface
+  private interface AdminRpcCall<RESP, REQ> {
+    void call(AdminService.Interface stub, HBaseRpcController controller, REQ req,
         RpcCallback<RESP> done);
   }
 
@@ -135,7 +155,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private <PREQ, PRESP, RESP> CompletableFuture<RESP> call(HBaseRpcController controller,
-      MasterService.Interface stub, PREQ preq, RpcCall<PRESP, PREQ> rpcCall,
+      MasterService.Interface stub, PREQ preq, MasterRpcCall<PRESP, PREQ> rpcCall,
       Converter<RESP, PRESP> respConverter) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
     rpcCall.call(stub, controller, preq, new RpcCallback<PRESP>() {
@@ -156,11 +176,37 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
+  //TODO abstract call and adminCall into a single method.
+  private <PREQ, PRESP, RESP> CompletableFuture<RESP> adminCall(HBaseRpcController controller,
+      AdminService.Interface stub, PREQ preq, AdminRpcCall<PRESP, PREQ> rpcCall,
+      Converter<RESP, PRESP> respConverter) {
+
+    CompletableFuture<RESP> future = new CompletableFuture<>();
+    rpcCall.call(stub, controller, preq, new RpcCallback<PRESP>() {
+
+      @Override
+      public void run(PRESP resp) {
+        if (controller.failed()) {
+          future.completeExceptionally(new IOException(controller.errorText()));
+        } else {
+          if (respConverter != null) {
+            try {
+              future.complete(respConverter.convert(resp));
+            } catch (IOException e) {
+              future.completeExceptionally(e);
+            }
+          }
+        }
+      }
+    });
+    return future;
+  }
+
   private <PREQ, PRESP> CompletableFuture<Void> procedureCall(PREQ preq,
-      RpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
+      MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
       TableProcedureBiConsumer consumer) {
     CompletableFuture<Long> procFuture = this
-        .<Long> newCaller()
+        .<Long>newMasterCaller()
         .action(
           (controller, stub) -> this.<PREQ, PRESP, Long> call(controller, stub, preq, rpcCall,
             respConverter)).call();
@@ -219,7 +265,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<HTableDescriptor[]> listTables(Pattern pattern, boolean includeSysTables) {
     return this
-        .<HTableDescriptor[]> newCaller()
+        .<HTableDescriptor[]>newMasterCaller()
         .action(
           (controller, stub) -> this
               .<GetTableDescriptorsRequest, GetTableDescriptorsResponse, HTableDescriptor[]> call(
@@ -241,7 +287,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<TableName[]> listTableNames(Pattern pattern, boolean includeSysTables) {
     return this
-        .<TableName[]> newCaller()
+        .<TableName[]>newMasterCaller()
         .action(
           (controller, stub) -> this
               .<GetTableNamesRequest, GetTableNamesResponse, TableName[]> call(controller, stub,
@@ -253,7 +299,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<HTableDescriptor> getTableDescriptor(TableName tableName) {
     CompletableFuture<HTableDescriptor> future = new CompletableFuture<>();
-    this.<List<TableSchema>> newCaller()
+    this.<List<TableSchema>> newMasterCaller()
         .action(
           (controller, stub) -> this
               .<GetTableDescriptorsRequest, GetTableDescriptorsResponse, List<TableSchema>> call(
@@ -383,7 +429,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Pair<Integer, Integer>> getAlterStatus(TableName tableName) {
     return this
-        .<Pair<Integer, Integer>> newCaller()
+        .<Pair<Integer, Integer>>newMasterCaller()
         .action(
           (controller, stub) -> this
               .<GetSchemaAlterStatusRequest, GetSchemaAlterStatusResponse, Pair<Integer, Integer>> call(
@@ -420,7 +466,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> setBalancerRunning(final boolean on) {
     return this
-        .<Boolean> newCaller()
+        .<Boolean>newMasterCaller()
         .action(
           (controller, stub) -> this
               .<SetBalancerRunningRequest, SetBalancerRunningResponse, Boolean> call(controller,
@@ -437,7 +483,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> balancer(boolean force) {
     return this
-        .<Boolean> newCaller()
+        .<Boolean>newMasterCaller()
         .action(
           (controller, stub) -> this.<BalanceRequest, BalanceResponse, Boolean> call(controller,
             stub, RequestConverter.buildBalanceRequest(force),
@@ -447,12 +493,45 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Boolean> isBalancerEnabled() {
     return this
-        .<Boolean> newCaller()
+        .<Boolean>newMasterCaller()
         .action(
           (controller, stub) -> this.<IsBalancerEnabledRequest, IsBalancerEnabledResponse, Boolean> call(
             controller, stub, RequestConverter.buildIsBalancerEnabledRequest(),
             (s, c, req, done) -> s.isBalancerEnabled(c, req, done), (resp) -> resp.getEnabled()))
         .call();
+  }
+
+  @Override
+  public CompletableFuture<Void> closeRegion(String regionname, String serverName) {
+    return closeRegion(Bytes.toBytes(regionname), serverName);
+  }
+
+  @Override
+  public CompletableFuture<Void> closeRegion(byte[] regionname, String serverName) {
+    throw new UnsupportedOperationException("closeRegion method depends on getRegion API, will support soon.");
+  }
+
+  @Override
+  public CompletableFuture<Boolean> closeRegionWithEncodedRegionName(String encodedRegionName,
+      String serverName) {
+    return this
+        .<Boolean> newAdminCaller()
+        .action(
+          (controller, stub) -> this.<CloseRegionRequest, CloseRegionResponse, Boolean> adminCall(
+            controller, stub,
+            ProtobufUtil.buildCloseRegionRequest(ServerName.valueOf(serverName), encodedRegionName),
+            (s, c, req, done) -> s.closeRegion(controller, req, done), (resp) -> resp.getClosed()))
+        .serverName(ServerName.valueOf(serverName)).call();
+  }
+
+  @Override
+  public CompletableFuture<Void> closeRegion(ServerName sn, HRegionInfo hri) {
+    return this.<Void> newAdminCaller()
+        .action(
+          (controller, stub) -> this.<CloseRegionRequest, CloseRegionResponse, Void> adminCall(
+            controller, stub, ProtobufUtil.buildCloseRegionRequest(sn, hri.getRegionName()),
+            (s, c, req, done) -> s.closeRegion(controller, req, done), null))
+        .serverName(sn).call();
   }
 
   private byte[][] getSplitKeys(byte[] startKey, byte[] endKey, int numRegions) {
@@ -625,7 +704,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private void getProcedureResult(final long procId, CompletableFuture<Void> future) {
-    this.<GetProcedureResultResponse> newCaller()
+    this.<GetProcedureResultResponse> newMasterCaller()
         .action(
           (controller, stub) -> this
               .<GetProcedureResultRequest, GetProcedureResultResponse, GetProcedureResultResponse> call(
