@@ -358,6 +358,9 @@ public class TestScannerResource {
     byte[] body = Bytes.toBytes(writer.toString());
     Response response = client.put("/" + NONEXISTENT_TABLE +
       "/scanner", Constants.MIMETYPE_XML, body);
+    String scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+    response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 404);
   }
 
