@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.procedure2;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -119,6 +120,12 @@ public interface ProcedureScheduler {
    * @return true if the procedure has to wait for the event to be ready, false otherwise.
    */
   boolean waitEvent(ProcedureEvent event, Procedure procedure);
+
+  /**
+   * List lock queues.
+   * @return the locks
+   */
+  List<LockInfo> listLocks();
 
   /**
    * Returns the number of elements in this queue.

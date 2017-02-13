@@ -104,6 +104,114 @@ public final class LockServiceProtos {
     // @@protoc_insertion_point(enum_scope:hbase.pb.LockType)
   }
 
+  /**
+   * Protobuf enum {@code hbase.pb.ResourceType}
+   */
+  public enum ResourceType
+      implements org.apache.hadoop.hbase.shaded.com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>RESOURCE_TYPE_SERVER = 1;</code>
+     */
+    RESOURCE_TYPE_SERVER(1),
+    /**
+     * <code>RESOURCE_TYPE_NAMESPACE = 2;</code>
+     */
+    RESOURCE_TYPE_NAMESPACE(2),
+    /**
+     * <code>RESOURCE_TYPE_TABLE = 3;</code>
+     */
+    RESOURCE_TYPE_TABLE(3),
+    /**
+     * <code>RESOURCE_TYPE_REGION = 4;</code>
+     */
+    RESOURCE_TYPE_REGION(4),
+    ;
+
+    /**
+     * <code>RESOURCE_TYPE_SERVER = 1;</code>
+     */
+    public static final int RESOURCE_TYPE_SERVER_VALUE = 1;
+    /**
+     * <code>RESOURCE_TYPE_NAMESPACE = 2;</code>
+     */
+    public static final int RESOURCE_TYPE_NAMESPACE_VALUE = 2;
+    /**
+     * <code>RESOURCE_TYPE_TABLE = 3;</code>
+     */
+    public static final int RESOURCE_TYPE_TABLE_VALUE = 3;
+    /**
+     * <code>RESOURCE_TYPE_REGION = 4;</code>
+     */
+    public static final int RESOURCE_TYPE_REGION_VALUE = 4;
+
+
+    public final int getNumber() {
+      return value;
+    }
+
+    /**
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static ResourceType valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static ResourceType forNumber(int value) {
+      switch (value) {
+        case 1: return RESOURCE_TYPE_SERVER;
+        case 2: return RESOURCE_TYPE_NAMESPACE;
+        case 3: return RESOURCE_TYPE_TABLE;
+        case 4: return RESOURCE_TYPE_REGION;
+        default: return null;
+      }
+    }
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<ResourceType>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<
+        ResourceType> internalValueMap =
+          new org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<ResourceType>() {
+            public ResourceType findValueByNumber(int number) {
+              return ResourceType.forNumber(number);
+            }
+          };
+
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(ordinal());
+    }
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.getDescriptor().getEnumTypes().get(1);
+    }
+
+    private static final ResourceType[] VALUES = values();
+
+    public static ResourceType valueOf(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int value;
+
+    private ResourceType(int value) {
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:hbase.pb.ResourceType)
+  }
+
   public interface LockRequestOrBuilder extends
       // @@protoc_insertion_point(interface_extends:hbase.pb.LockRequest)
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
@@ -4898,6 +5006,2129 @@ public final class LockServiceProtos {
 
   }
 
+  public interface WaitingProcedureOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.WaitingProcedure)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required .hbase.pb.LockType lock_type = 1;</code>
+     */
+    boolean hasLockType();
+    /**
+     * <code>required .hbase.pb.LockType lock_type = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType getLockType();
+
+    /**
+     * <code>required .hbase.pb.Procedure procedure = 2;</code>
+     */
+    boolean hasProcedure();
+    /**
+     * <code>required .hbase.pb.Procedure procedure = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure getProcedure();
+    /**
+     * <code>required .hbase.pb.Procedure procedure = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.WaitingProcedure}
+   */
+  public  static final class WaitingProcedure extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.WaitingProcedure)
+      WaitingProcedureOrBuilder {
+    // Use WaitingProcedure.newBuilder() to construct.
+    private WaitingProcedure(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private WaitingProcedure() {
+      lockType_ = 1;
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private WaitingProcedure(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType value = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                lockType_ = rawValue;
+              }
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = procedure_.toBuilder();
+              }
+              procedure_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(procedure_);
+                procedure_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_WaitingProcedure_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_WaitingProcedure_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.class, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int LOCK_TYPE_FIELD_NUMBER = 1;
+    private int lockType_;
+    /**
+     * <code>required .hbase.pb.LockType lock_type = 1;</code>
+     */
+    public boolean hasLockType() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .hbase.pb.LockType lock_type = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType getLockType() {
+      org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType result = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.valueOf(lockType_);
+      return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.EXCLUSIVE : result;
+    }
+
+    public static final int PROCEDURE_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure procedure_;
+    /**
+     * <code>required .hbase.pb.Procedure procedure = 2;</code>
+     */
+    public boolean hasProcedure() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required .hbase.pb.Procedure procedure = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure getProcedure() {
+      return procedure_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance() : procedure_;
+    }
+    /**
+     * <code>required .hbase.pb.Procedure procedure = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder() {
+      return procedure_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance() : procedure_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasLockType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasProcedure()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getProcedure().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, lockType_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, getProcedure());
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, lockType_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, getProcedure());
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure other = (org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure) obj;
+
+      boolean result = true;
+      result = result && (hasLockType() == other.hasLockType());
+      if (hasLockType()) {
+        result = result && lockType_ == other.lockType_;
+      }
+      result = result && (hasProcedure() == other.hasProcedure());
+      if (hasProcedure()) {
+        result = result && getProcedure()
+            .equals(other.getProcedure());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasLockType()) {
+        hash = (37 * hash) + LOCK_TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + lockType_;
+      }
+      if (hasProcedure()) {
+        hash = (37 * hash) + PROCEDURE_FIELD_NUMBER;
+        hash = (53 * hash) + getProcedure().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.WaitingProcedure}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.WaitingProcedure)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_WaitingProcedure_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_WaitingProcedure_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.class, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getProcedureFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        lockType_ = 1;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        if (procedureBuilder_ == null) {
+          procedure_ = null;
+        } else {
+          procedureBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_WaitingProcedure_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure result = new org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.lockType_ = lockType_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (procedureBuilder_ == null) {
+          result.procedure_ = procedure_;
+        } else {
+          result.procedure_ = procedureBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.getDefaultInstance()) return this;
+        if (other.hasLockType()) {
+          setLockType(other.getLockType());
+        }
+        if (other.hasProcedure()) {
+          mergeProcedure(other.getProcedure());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasLockType()) {
+          return false;
+        }
+        if (!hasProcedure()) {
+          return false;
+        }
+        if (!getProcedure().isInitialized()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private int lockType_ = 1;
+      /**
+       * <code>required .hbase.pb.LockType lock_type = 1;</code>
+       */
+      public boolean hasLockType() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .hbase.pb.LockType lock_type = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType getLockType() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType result = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.valueOf(lockType_);
+        return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.EXCLUSIVE : result;
+      }
+      /**
+       * <code>required .hbase.pb.LockType lock_type = 1;</code>
+       */
+      public Builder setLockType(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        lockType_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.LockType lock_type = 1;</code>
+       */
+      public Builder clearLockType() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        lockType_ = 1;
+        onChanged();
+        return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure procedure_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> procedureBuilder_;
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      public boolean hasProcedure() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure getProcedure() {
+        if (procedureBuilder_ == null) {
+          return procedure_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance() : procedure_;
+        } else {
+          return procedureBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      public Builder setProcedure(org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure value) {
+        if (procedureBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          procedure_ = value;
+          onChanged();
+        } else {
+          procedureBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      public Builder setProcedure(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder builderForValue) {
+        if (procedureBuilder_ == null) {
+          procedure_ = builderForValue.build();
+          onChanged();
+        } else {
+          procedureBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      public Builder mergeProcedure(org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure value) {
+        if (procedureBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              procedure_ != null &&
+              procedure_ != org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance()) {
+            procedure_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.newBuilder(procedure_).mergeFrom(value).buildPartial();
+          } else {
+            procedure_ = value;
+          }
+          onChanged();
+        } else {
+          procedureBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      public Builder clearProcedure() {
+        if (procedureBuilder_ == null) {
+          procedure_ = null;
+          onChanged();
+        } else {
+          procedureBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder getProcedureBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getProcedureFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder() {
+        if (procedureBuilder_ != null) {
+          return procedureBuilder_.getMessageOrBuilder();
+        } else {
+          return procedure_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance() : procedure_;
+        }
+      }
+      /**
+       * <code>required .hbase.pb.Procedure procedure = 2;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+          getProcedureFieldBuilder() {
+        if (procedureBuilder_ == null) {
+          procedureBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder>(
+                  getProcedure(),
+                  getParentForChildren(),
+                  isClean());
+          procedure_ = null;
+        }
+        return procedureBuilder_;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.WaitingProcedure)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.WaitingProcedure)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<WaitingProcedure>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<WaitingProcedure>() {
+      public WaitingProcedure parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new WaitingProcedure(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<WaitingProcedure> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<WaitingProcedure> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface LockInfoOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.LockInfo)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required .hbase.pb.ResourceType resource_type = 1;</code>
+     */
+    boolean hasResourceType();
+    /**
+     * <code>required .hbase.pb.ResourceType resource_type = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType getResourceType();
+
+    /**
+     * <code>optional string resource_name = 2;</code>
+     */
+    boolean hasResourceName();
+    /**
+     * <code>optional string resource_name = 2;</code>
+     */
+    java.lang.String getResourceName();
+    /**
+     * <code>optional string resource_name = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getResourceNameBytes();
+
+    /**
+     * <code>required .hbase.pb.LockType lock_type = 3;</code>
+     */
+    boolean hasLockType();
+    /**
+     * <code>required .hbase.pb.LockType lock_type = 3;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType getLockType();
+
+    /**
+     * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+     */
+    boolean hasExclusiveLockOwnerProcedure();
+    /**
+     * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure getExclusiveLockOwnerProcedure();
+    /**
+     * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getExclusiveLockOwnerProcedureOrBuilder();
+
+    /**
+     * <code>optional int32 shared_lock_count = 5;</code>
+     */
+    boolean hasSharedLockCount();
+    /**
+     * <code>optional int32 shared_lock_count = 5;</code>
+     */
+    int getSharedLockCount();
+
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure> 
+        getWaitingProceduresList();
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure getWaitingProcedures(int index);
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    int getWaitingProceduresCount();
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder> 
+        getWaitingProceduresOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder getWaitingProceduresOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code hbase.pb.LockInfo}
+   */
+  public  static final class LockInfo extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.LockInfo)
+      LockInfoOrBuilder {
+    // Use LockInfo.newBuilder() to construct.
+    private LockInfo(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private LockInfo() {
+      resourceType_ = 1;
+      resourceName_ = "";
+      lockType_ = 1;
+      sharedLockCount_ = 0;
+      waitingProcedures_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private LockInfo(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType value = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                resourceType_ = rawValue;
+              }
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000002;
+              resourceName_ = bs;
+              break;
+            }
+            case 24: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType value = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(3, rawValue);
+              } else {
+                bitField0_ |= 0x00000004;
+                lockType_ = rawValue;
+              }
+              break;
+            }
+            case 34: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000008) == 0x00000008)) {
+                subBuilder = exclusiveLockOwnerProcedure_.toBuilder();
+              }
+              exclusiveLockOwnerProcedure_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(exclusiveLockOwnerProcedure_);
+                exclusiveLockOwnerProcedure_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000008;
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              sharedLockCount_ = input.readInt32();
+              break;
+            }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                waitingProcedures_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure>();
+                mutable_bitField0_ |= 0x00000020;
+              }
+              waitingProcedures_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+          waitingProcedures_ = java.util.Collections.unmodifiableList(waitingProcedures_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_LockInfo_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_LockInfo_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.class, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int RESOURCE_TYPE_FIELD_NUMBER = 1;
+    private int resourceType_;
+    /**
+     * <code>required .hbase.pb.ResourceType resource_type = 1;</code>
+     */
+    public boolean hasResourceType() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .hbase.pb.ResourceType resource_type = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType getResourceType() {
+      org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType result = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType.valueOf(resourceType_);
+      return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType.RESOURCE_TYPE_SERVER : result;
+    }
+
+    public static final int RESOURCE_NAME_FIELD_NUMBER = 2;
+    private volatile java.lang.Object resourceName_;
+    /**
+     * <code>optional string resource_name = 2;</code>
+     */
+    public boolean hasResourceName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string resource_name = 2;</code>
+     */
+    public java.lang.String getResourceName() {
+      java.lang.Object ref = resourceName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs = 
+            (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          resourceName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string resource_name = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+        getResourceNameBytes() {
+      java.lang.Object ref = resourceName_;
+      if (ref instanceof java.lang.String) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        resourceName_ = b;
+        return b;
+      } else {
+        return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int LOCK_TYPE_FIELD_NUMBER = 3;
+    private int lockType_;
+    /**
+     * <code>required .hbase.pb.LockType lock_type = 3;</code>
+     */
+    public boolean hasLockType() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required .hbase.pb.LockType lock_type = 3;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType getLockType() {
+      org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType result = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.valueOf(lockType_);
+      return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.EXCLUSIVE : result;
+    }
+
+    public static final int EXCLUSIVE_LOCK_OWNER_PROCEDURE_FIELD_NUMBER = 4;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure exclusiveLockOwnerProcedure_;
+    /**
+     * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+     */
+    public boolean hasExclusiveLockOwnerProcedure() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure getExclusiveLockOwnerProcedure() {
+      return exclusiveLockOwnerProcedure_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance() : exclusiveLockOwnerProcedure_;
+    }
+    /**
+     * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getExclusiveLockOwnerProcedureOrBuilder() {
+      return exclusiveLockOwnerProcedure_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance() : exclusiveLockOwnerProcedure_;
+    }
+
+    public static final int SHARED_LOCK_COUNT_FIELD_NUMBER = 5;
+    private int sharedLockCount_;
+    /**
+     * <code>optional int32 shared_lock_count = 5;</code>
+     */
+    public boolean hasSharedLockCount() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional int32 shared_lock_count = 5;</code>
+     */
+    public int getSharedLockCount() {
+      return sharedLockCount_;
+    }
+
+    public static final int WAITINGPROCEDURES_FIELD_NUMBER = 6;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure> waitingProcedures_;
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure> getWaitingProceduresList() {
+      return waitingProcedures_;
+    }
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder> 
+        getWaitingProceduresOrBuilderList() {
+      return waitingProcedures_;
+    }
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    public int getWaitingProceduresCount() {
+      return waitingProcedures_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure getWaitingProcedures(int index) {
+      return waitingProcedures_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder getWaitingProceduresOrBuilder(
+        int index) {
+      return waitingProcedures_.get(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasResourceType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasLockType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (hasExclusiveLockOwnerProcedure()) {
+        if (!getExclusiveLockOwnerProcedure().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getWaitingProceduresCount(); i++) {
+        if (!getWaitingProcedures(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, resourceType_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.writeString(output, 2, resourceName_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeEnum(3, lockType_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeMessage(4, getExclusiveLockOwnerProcedure());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeInt32(5, sharedLockCount_);
+      }
+      for (int i = 0; i < waitingProcedures_.size(); i++) {
+        output.writeMessage(6, waitingProcedures_.get(i));
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, resourceType_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.computeStringSize(2, resourceName_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeEnumSize(3, lockType_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, getExclusiveLockOwnerProcedure());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeInt32Size(5, sharedLockCount_);
+      }
+      for (int i = 0; i < waitingProcedures_.size(); i++) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, waitingProcedures_.get(i));
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo other = (org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo) obj;
+
+      boolean result = true;
+      result = result && (hasResourceType() == other.hasResourceType());
+      if (hasResourceType()) {
+        result = result && resourceType_ == other.resourceType_;
+      }
+      result = result && (hasResourceName() == other.hasResourceName());
+      if (hasResourceName()) {
+        result = result && getResourceName()
+            .equals(other.getResourceName());
+      }
+      result = result && (hasLockType() == other.hasLockType());
+      if (hasLockType()) {
+        result = result && lockType_ == other.lockType_;
+      }
+      result = result && (hasExclusiveLockOwnerProcedure() == other.hasExclusiveLockOwnerProcedure());
+      if (hasExclusiveLockOwnerProcedure()) {
+        result = result && getExclusiveLockOwnerProcedure()
+            .equals(other.getExclusiveLockOwnerProcedure());
+      }
+      result = result && (hasSharedLockCount() == other.hasSharedLockCount());
+      if (hasSharedLockCount()) {
+        result = result && (getSharedLockCount()
+            == other.getSharedLockCount());
+      }
+      result = result && getWaitingProceduresList()
+          .equals(other.getWaitingProceduresList());
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasResourceType()) {
+        hash = (37 * hash) + RESOURCE_TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + resourceType_;
+      }
+      if (hasResourceName()) {
+        hash = (37 * hash) + RESOURCE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getResourceName().hashCode();
+      }
+      if (hasLockType()) {
+        hash = (37 * hash) + LOCK_TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + lockType_;
+      }
+      if (hasExclusiveLockOwnerProcedure()) {
+        hash = (37 * hash) + EXCLUSIVE_LOCK_OWNER_PROCEDURE_FIELD_NUMBER;
+        hash = (53 * hash) + getExclusiveLockOwnerProcedure().hashCode();
+      }
+      if (hasSharedLockCount()) {
+        hash = (37 * hash) + SHARED_LOCK_COUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getSharedLockCount();
+      }
+      if (getWaitingProceduresCount() > 0) {
+        hash = (37 * hash) + WAITINGPROCEDURES_FIELD_NUMBER;
+        hash = (53 * hash) + getWaitingProceduresList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.LockInfo}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.LockInfo)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_LockInfo_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_LockInfo_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.class, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getExclusiveLockOwnerProcedureFieldBuilder();
+          getWaitingProceduresFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        resourceType_ = 1;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        resourceName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        lockType_ = 1;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        if (exclusiveLockOwnerProcedureBuilder_ == null) {
+          exclusiveLockOwnerProcedure_ = null;
+        } else {
+          exclusiveLockOwnerProcedureBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        sharedLockCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        if (waitingProceduresBuilder_ == null) {
+          waitingProcedures_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000020);
+        } else {
+          waitingProceduresBuilder_.clear();
+        }
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.internal_static_hbase_pb_LockInfo_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo result = new org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.resourceType_ = resourceType_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.resourceName_ = resourceName_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.lockType_ = lockType_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        if (exclusiveLockOwnerProcedureBuilder_ == null) {
+          result.exclusiveLockOwnerProcedure_ = exclusiveLockOwnerProcedure_;
+        } else {
+          result.exclusiveLockOwnerProcedure_ = exclusiveLockOwnerProcedureBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.sharedLockCount_ = sharedLockCount_;
+        if (waitingProceduresBuilder_ == null) {
+          if (((bitField0_ & 0x00000020) == 0x00000020)) {
+            waitingProcedures_ = java.util.Collections.unmodifiableList(waitingProcedures_);
+            bitField0_ = (bitField0_ & ~0x00000020);
+          }
+          result.waitingProcedures_ = waitingProcedures_;
+        } else {
+          result.waitingProcedures_ = waitingProceduresBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.getDefaultInstance()) return this;
+        if (other.hasResourceType()) {
+          setResourceType(other.getResourceType());
+        }
+        if (other.hasResourceName()) {
+          bitField0_ |= 0x00000002;
+          resourceName_ = other.resourceName_;
+          onChanged();
+        }
+        if (other.hasLockType()) {
+          setLockType(other.getLockType());
+        }
+        if (other.hasExclusiveLockOwnerProcedure()) {
+          mergeExclusiveLockOwnerProcedure(other.getExclusiveLockOwnerProcedure());
+        }
+        if (other.hasSharedLockCount()) {
+          setSharedLockCount(other.getSharedLockCount());
+        }
+        if (waitingProceduresBuilder_ == null) {
+          if (!other.waitingProcedures_.isEmpty()) {
+            if (waitingProcedures_.isEmpty()) {
+              waitingProcedures_ = other.waitingProcedures_;
+              bitField0_ = (bitField0_ & ~0x00000020);
+            } else {
+              ensureWaitingProceduresIsMutable();
+              waitingProcedures_.addAll(other.waitingProcedures_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.waitingProcedures_.isEmpty()) {
+            if (waitingProceduresBuilder_.isEmpty()) {
+              waitingProceduresBuilder_.dispose();
+              waitingProceduresBuilder_ = null;
+              waitingProcedures_ = other.waitingProcedures_;
+              bitField0_ = (bitField0_ & ~0x00000020);
+              waitingProceduresBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getWaitingProceduresFieldBuilder() : null;
+            } else {
+              waitingProceduresBuilder_.addAllMessages(other.waitingProcedures_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasResourceType()) {
+          return false;
+        }
+        if (!hasLockType()) {
+          return false;
+        }
+        if (hasExclusiveLockOwnerProcedure()) {
+          if (!getExclusiveLockOwnerProcedure().isInitialized()) {
+            return false;
+          }
+        }
+        for (int i = 0; i < getWaitingProceduresCount(); i++) {
+          if (!getWaitingProcedures(i).isInitialized()) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private int resourceType_ = 1;
+      /**
+       * <code>required .hbase.pb.ResourceType resource_type = 1;</code>
+       */
+      public boolean hasResourceType() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .hbase.pb.ResourceType resource_type = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType getResourceType() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType result = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType.valueOf(resourceType_);
+        return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType.RESOURCE_TYPE_SERVER : result;
+      }
+      /**
+       * <code>required .hbase.pb.ResourceType resource_type = 1;</code>
+       */
+      public Builder setResourceType(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.ResourceType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        resourceType_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.ResourceType resource_type = 1;</code>
+       */
+      public Builder clearResourceType() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        resourceType_ = 1;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object resourceName_ = "";
+      /**
+       * <code>optional string resource_name = 2;</code>
+       */
+      public boolean hasResourceName() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string resource_name = 2;</code>
+       */
+      public java.lang.String getResourceName() {
+        java.lang.Object ref = resourceName_;
+        if (!(ref instanceof java.lang.String)) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString bs =
+              (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            resourceName_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string resource_name = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString
+          getResourceNameBytes() {
+        java.lang.Object ref = resourceName_;
+        if (ref instanceof String) {
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString b = 
+              org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          resourceName_ = b;
+          return b;
+        } else {
+          return (org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string resource_name = 2;</code>
+       */
+      public Builder setResourceName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        resourceName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string resource_name = 2;</code>
+       */
+      public Builder clearResourceName() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        resourceName_ = getDefaultInstance().getResourceName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string resource_name = 2;</code>
+       */
+      public Builder setResourceNameBytes(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        resourceName_ = value;
+        onChanged();
+        return this;
+      }
+
+      private int lockType_ = 1;
+      /**
+       * <code>required .hbase.pb.LockType lock_type = 3;</code>
+       */
+      public boolean hasLockType() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required .hbase.pb.LockType lock_type = 3;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType getLockType() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType result = org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.valueOf(lockType_);
+        return result == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType.EXCLUSIVE : result;
+      }
+      /**
+       * <code>required .hbase.pb.LockType lock_type = 3;</code>
+       */
+      public Builder setLockType(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
+        lockType_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.LockType lock_type = 3;</code>
+       */
+      public Builder clearLockType() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        lockType_ = 1;
+        onChanged();
+        return this;
+      }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure exclusiveLockOwnerProcedure_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> exclusiveLockOwnerProcedureBuilder_;
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      public boolean hasExclusiveLockOwnerProcedure() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure getExclusiveLockOwnerProcedure() {
+        if (exclusiveLockOwnerProcedureBuilder_ == null) {
+          return exclusiveLockOwnerProcedure_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance() : exclusiveLockOwnerProcedure_;
+        } else {
+          return exclusiveLockOwnerProcedureBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      public Builder setExclusiveLockOwnerProcedure(org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure value) {
+        if (exclusiveLockOwnerProcedureBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          exclusiveLockOwnerProcedure_ = value;
+          onChanged();
+        } else {
+          exclusiveLockOwnerProcedureBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      public Builder setExclusiveLockOwnerProcedure(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder builderForValue) {
+        if (exclusiveLockOwnerProcedureBuilder_ == null) {
+          exclusiveLockOwnerProcedure_ = builderForValue.build();
+          onChanged();
+        } else {
+          exclusiveLockOwnerProcedureBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      public Builder mergeExclusiveLockOwnerProcedure(org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure value) {
+        if (exclusiveLockOwnerProcedureBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              exclusiveLockOwnerProcedure_ != null &&
+              exclusiveLockOwnerProcedure_ != org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance()) {
+            exclusiveLockOwnerProcedure_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.newBuilder(exclusiveLockOwnerProcedure_).mergeFrom(value).buildPartial();
+          } else {
+            exclusiveLockOwnerProcedure_ = value;
+          }
+          onChanged();
+        } else {
+          exclusiveLockOwnerProcedureBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      public Builder clearExclusiveLockOwnerProcedure() {
+        if (exclusiveLockOwnerProcedureBuilder_ == null) {
+          exclusiveLockOwnerProcedure_ = null;
+          onChanged();
+        } else {
+          exclusiveLockOwnerProcedureBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder getExclusiveLockOwnerProcedureBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getExclusiveLockOwnerProcedureFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getExclusiveLockOwnerProcedureOrBuilder() {
+        if (exclusiveLockOwnerProcedureBuilder_ != null) {
+          return exclusiveLockOwnerProcedureBuilder_.getMessageOrBuilder();
+        } else {
+          return exclusiveLockOwnerProcedure_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance() : exclusiveLockOwnerProcedure_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.Procedure exclusive_lock_owner_procedure = 4;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+          getExclusiveLockOwnerProcedureFieldBuilder() {
+        if (exclusiveLockOwnerProcedureBuilder_ == null) {
+          exclusiveLockOwnerProcedureBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureOrBuilder>(
+                  getExclusiveLockOwnerProcedure(),
+                  getParentForChildren(),
+                  isClean());
+          exclusiveLockOwnerProcedure_ = null;
+        }
+        return exclusiveLockOwnerProcedureBuilder_;
+      }
+
+      private int sharedLockCount_ ;
+      /**
+       * <code>optional int32 shared_lock_count = 5;</code>
+       */
+      public boolean hasSharedLockCount() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional int32 shared_lock_count = 5;</code>
+       */
+      public int getSharedLockCount() {
+        return sharedLockCount_;
+      }
+      /**
+       * <code>optional int32 shared_lock_count = 5;</code>
+       */
+      public Builder setSharedLockCount(int value) {
+        bitField0_ |= 0x00000010;
+        sharedLockCount_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 shared_lock_count = 5;</code>
+       */
+      public Builder clearSharedLockCount() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        sharedLockCount_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure> waitingProcedures_ =
+        java.util.Collections.emptyList();
+      private void ensureWaitingProceduresIsMutable() {
+        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
+          waitingProcedures_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure>(waitingProcedures_);
+          bitField0_ |= 0x00000020;
+         }
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder> waitingProceduresBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure> getWaitingProceduresList() {
+        if (waitingProceduresBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(waitingProcedures_);
+        } else {
+          return waitingProceduresBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public int getWaitingProceduresCount() {
+        if (waitingProceduresBuilder_ == null) {
+          return waitingProcedures_.size();
+        } else {
+          return waitingProceduresBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure getWaitingProcedures(int index) {
+        if (waitingProceduresBuilder_ == null) {
+          return waitingProcedures_.get(index);
+        } else {
+          return waitingProceduresBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder setWaitingProcedures(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure value) {
+        if (waitingProceduresBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureWaitingProceduresIsMutable();
+          waitingProcedures_.set(index, value);
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder setWaitingProcedures(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder builderForValue) {
+        if (waitingProceduresBuilder_ == null) {
+          ensureWaitingProceduresIsMutable();
+          waitingProcedures_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder addWaitingProcedures(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure value) {
+        if (waitingProceduresBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureWaitingProceduresIsMutable();
+          waitingProcedures_.add(value);
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder addWaitingProcedures(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure value) {
+        if (waitingProceduresBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureWaitingProceduresIsMutable();
+          waitingProcedures_.add(index, value);
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder addWaitingProcedures(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder builderForValue) {
+        if (waitingProceduresBuilder_ == null) {
+          ensureWaitingProceduresIsMutable();
+          waitingProcedures_.add(builderForValue.build());
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder addWaitingProcedures(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder builderForValue) {
+        if (waitingProceduresBuilder_ == null) {
+          ensureWaitingProceduresIsMutable();
+          waitingProcedures_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder addAllWaitingProcedures(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure> values) {
+        if (waitingProceduresBuilder_ == null) {
+          ensureWaitingProceduresIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, waitingProcedures_);
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder clearWaitingProcedures() {
+        if (waitingProceduresBuilder_ == null) {
+          waitingProcedures_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000020);
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public Builder removeWaitingProcedures(int index) {
+        if (waitingProceduresBuilder_ == null) {
+          ensureWaitingProceduresIsMutable();
+          waitingProcedures_.remove(index);
+          onChanged();
+        } else {
+          waitingProceduresBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder getWaitingProceduresBuilder(
+          int index) {
+        return getWaitingProceduresFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder getWaitingProceduresOrBuilder(
+          int index) {
+        if (waitingProceduresBuilder_ == null) {
+          return waitingProcedures_.get(index);  } else {
+          return waitingProceduresBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder> 
+           getWaitingProceduresOrBuilderList() {
+        if (waitingProceduresBuilder_ != null) {
+          return waitingProceduresBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(waitingProcedures_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder addWaitingProceduresBuilder() {
+        return getWaitingProceduresFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder addWaitingProceduresBuilder(
+          int index) {
+        return getWaitingProceduresFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.WaitingProcedure waitingProcedures = 6;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder> 
+           getWaitingProceduresBuilderList() {
+        return getWaitingProceduresFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder> 
+          getWaitingProceduresFieldBuilder() {
+        if (waitingProceduresBuilder_ == null) {
+          waitingProceduresBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedure.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.WaitingProcedureOrBuilder>(
+                  waitingProcedures_,
+                  ((bitField0_ & 0x00000020) == 0x00000020),
+                  getParentForChildren(),
+                  isClean());
+          waitingProcedures_ = null;
+        }
+        return waitingProceduresBuilder_;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.LockInfo)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.LockInfo)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<LockInfo>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<LockInfo>() {
+      public LockInfo parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new LockInfo(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<LockInfo> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<LockInfo> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   /**
    * Protobuf service {@code hbase.pb.LockService}
    */
@@ -5242,6 +7473,16 @@ public final class LockServiceProtos {
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_LockProcedureData_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_WaitingProcedure_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_WaitingProcedure_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_LockInfo_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_LockInfo_fieldAccessorTable;
 
   public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -5252,31 +7493,43 @@ public final class LockServiceProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\021LockService.proto\022\010hbase.pb\032\013HBase.pro" +
-      "to\"\332\001\n\013LockRequest\022%\n\tlock_type\030\001 \002(\0162\022." +
-      "hbase.pb.LockType\022\021\n\tnamespace\030\002 \001(\t\022\'\n\n" +
-      "table_name\030\003 \001(\0132\023.hbase.pb.TableName\022)\n" +
-      "\013region_info\030\004 \003(\0132\024.hbase.pb.RegionInfo" +
-      "\022\023\n\013description\030\005 \001(\t\022\026\n\013nonce_group\030\006 \001" +
-      "(\004:\0010\022\020\n\005nonce\030\007 \001(\004:\0010\"\037\n\014LockResponse\022" +
-      "\017\n\007proc_id\030\001 \002(\004\"A\n\024LockHeartbeatRequest" +
-      "\022\017\n\007proc_id\030\001 \002(\004\022\030\n\nkeep_alive\030\002 \001(\010:\004t" +
-      "rue\"\224\001\n\025LockHeartbeatResponse\022?\n\013lock_st",
-      "atus\030\001 \002(\0162*.hbase.pb.LockHeartbeatRespo" +
-      "nse.LockStatus\022\022\n\ntimeout_ms\030\002 \001(\r\"&\n\nLo" +
-      "ckStatus\022\014\n\010UNLOCKED\020\001\022\n\n\006LOCKED\020\002\"\325\001\n\021L" +
-      "ockProcedureData\022%\n\tlock_type\030\001 \002(\0162\022.hb" +
-      "ase.pb.LockType\022\021\n\tnamespace\030\002 \001(\t\022\'\n\nta" +
-      "ble_name\030\003 \001(\0132\023.hbase.pb.TableName\022)\n\013r" +
-      "egion_info\030\004 \003(\0132\024.hbase.pb.RegionInfo\022\023" +
-      "\n\013description\030\005 \001(\t\022\035\n\016is_master_lock\030\006 " +
-      "\001(\010:\005false*%\n\010LockType\022\r\n\tEXCLUSIVE\020\001\022\n\n" +
-      "\006SHARED\020\0022\235\001\n\013LockService\022<\n\013RequestLock",
-      "\022\025.hbase.pb.LockRequest\032\026.hbase.pb.LockR" +
-      "esponse\022P\n\rLockHeartbeat\022\036.hbase.pb.Lock" +
-      "HeartbeatRequest\032\037.hbase.pb.LockHeartbea" +
-      "tResponseBN\n1org.apache.hadoop.hbase.sha" +
-      "ded.protobuf.generatedB\021LockServiceProto" +
-      "sH\001\210\001\001\240\001\001"
+      "to\032\017Procedure.proto\"\332\001\n\013LockRequest\022%\n\tl" +
+      "ock_type\030\001 \002(\0162\022.hbase.pb.LockType\022\021\n\tna" +
+      "mespace\030\002 \001(\t\022\'\n\ntable_name\030\003 \001(\0132\023.hbas" +
+      "e.pb.TableName\022)\n\013region_info\030\004 \003(\0132\024.hb" +
+      "ase.pb.RegionInfo\022\023\n\013description\030\005 \001(\t\022\026" +
+      "\n\013nonce_group\030\006 \001(\004:\0010\022\020\n\005nonce\030\007 \001(\004:\0010" +
+      "\"\037\n\014LockResponse\022\017\n\007proc_id\030\001 \002(\004\"A\n\024Loc" +
+      "kHeartbeatRequest\022\017\n\007proc_id\030\001 \002(\004\022\030\n\nke" +
+      "ep_alive\030\002 \001(\010:\004true\"\224\001\n\025LockHeartbeatRe",
+      "sponse\022?\n\013lock_status\030\001 \002(\0162*.hbase.pb.L" +
+      "ockHeartbeatResponse.LockStatus\022\022\n\ntimeo" +
+      "ut_ms\030\002 \001(\r\"&\n\nLockStatus\022\014\n\010UNLOCKED\020\001\022" +
+      "\n\n\006LOCKED\020\002\"\325\001\n\021LockProcedureData\022%\n\tloc" +
+      "k_type\030\001 \002(\0162\022.hbase.pb.LockType\022\021\n\tname" +
+      "space\030\002 \001(\t\022\'\n\ntable_name\030\003 \001(\0132\023.hbase." +
+      "pb.TableName\022)\n\013region_info\030\004 \003(\0132\024.hbas" +
+      "e.pb.RegionInfo\022\023\n\013description\030\005 \001(\t\022\035\n\016" +
+      "is_master_lock\030\006 \001(\010:\005false\"a\n\020WaitingPr" +
+      "ocedure\022%\n\tlock_type\030\001 \002(\0162\022.hbase.pb.Lo",
+      "ckType\022&\n\tprocedure\030\002 \002(\0132\023.hbase.pb.Pro" +
+      "cedure\"\206\002\n\010LockInfo\022-\n\rresource_type\030\001 \002" +
+      "(\0162\026.hbase.pb.ResourceType\022\025\n\rresource_n" +
+      "ame\030\002 \001(\t\022%\n\tlock_type\030\003 \002(\0162\022.hbase.pb." +
+      "LockType\022;\n\036exclusive_lock_owner_procedu" +
+      "re\030\004 \001(\0132\023.hbase.pb.Procedure\022\031\n\021shared_" +
+      "lock_count\030\005 \001(\005\0225\n\021waitingProcedures\030\006 " +
+      "\003(\0132\032.hbase.pb.WaitingProcedure*%\n\010LockT" +
+      "ype\022\r\n\tEXCLUSIVE\020\001\022\n\n\006SHARED\020\002*x\n\014Resour" +
+      "ceType\022\030\n\024RESOURCE_TYPE_SERVER\020\001\022\033\n\027RESO",
+      "URCE_TYPE_NAMESPACE\020\002\022\027\n\023RESOURCE_TYPE_T" +
+      "ABLE\020\003\022\030\n\024RESOURCE_TYPE_REGION\020\0042\235\001\n\013Loc" +
+      "kService\022<\n\013RequestLock\022\025.hbase.pb.LockR" +
+      "equest\032\026.hbase.pb.LockResponse\022P\n\rLockHe" +
+      "artbeat\022\036.hbase.pb.LockHeartbeatRequest\032" +
+      "\037.hbase.pb.LockHeartbeatResponseBN\n1org." +
+      "apache.hadoop.hbase.shaded.protobuf.gene" +
+      "ratedB\021LockServiceProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -5290,6 +7543,7 @@ public final class LockServiceProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.getDescriptor(),
+          org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.getDescriptor(),
         }, assigner);
     internal_static_hbase_pb_LockRequest_descriptor =
       getDescriptor().getMessageTypes().get(0);
@@ -5321,7 +7575,20 @@ public final class LockServiceProtos {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_LockProcedureData_descriptor,
         new java.lang.String[] { "LockType", "Namespace", "TableName", "RegionInfo", "Description", "IsMasterLock", });
+    internal_static_hbase_pb_WaitingProcedure_descriptor =
+      getDescriptor().getMessageTypes().get(5);
+    internal_static_hbase_pb_WaitingProcedure_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_WaitingProcedure_descriptor,
+        new java.lang.String[] { "LockType", "Procedure", });
+    internal_static_hbase_pb_LockInfo_descriptor =
+      getDescriptor().getMessageTypes().get(6);
+    internal_static_hbase_pb_LockInfo_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_LockInfo_descriptor,
+        new java.lang.String[] { "ResourceType", "ResourceName", "LockType", "ExclusiveLockOwnerProcedure", "SharedLockCount", "WaitingProcedures", });
     org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.getDescriptor();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

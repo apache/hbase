@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.util.Collections;
+import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Simple scheduler for procedures
@@ -72,5 +75,10 @@ public class SimpleProcedureScheduler extends AbstractProcedureScheduler {
 
   @Override
   public void completionCleanup(Procedure proc) {
+  }
+
+  @Override
+  public List<LockInfo> listLocks() {
+    return Collections.emptyList();
   }
 }

@@ -1192,6 +1192,11 @@ module Hbase
       @admin.listProcedures()
     end
 
+    # List all locks
+    def list_locks()
+      @admin.listLocks();
+    end
+
     # Parse arguments and update HTableDescriptor accordingly
     def update_htd_from_arg(htd, arg)
       htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER]

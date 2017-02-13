@@ -43,7 +43,7 @@ package org.apache.hadoop.hbase.procedure2;
  * We do not use ReentrantReadWriteLock directly because of its high memory overhead.
  */
 public class LockAndQueue extends ProcedureDeque implements LockStatus {
-  private long exclusiveLockProcIdOwner = Long.MIN_VALUE;
+  private Procedure<?> exclusiveLockOwnerProcedure = null;
   private int sharedLock = 0;
 
   // ======================================================================
@@ -57,12 +57,12 @@ public class LockAndQueue extends ProcedureDeque implements LockStatus {
 
   @Override
   public boolean hasExclusiveLock() {
-    return this.exclusiveLockProcIdOwner != Long.MIN_VALUE;
+    return this.exclusiveLockOwnerProcedure != null;
   }
 
   @Override
   public boolean isLockOwner(long procId) {
-    return exclusiveLockProcIdOwner == procId;
+    return getExclusiveLockProcIdOwner() == procId;
   }
 
   @Override
@@ -76,8 +76,17 @@ public class LockAndQueue extends ProcedureDeque implements LockStatus {
   }
 
   @Override
+  public Procedure<?> getExclusiveLockOwnerProcedure() {
+    return exclusiveLockOwnerProcedure;
+  }
+
+  @Override
   public long getExclusiveLockProcIdOwner() {
-    return exclusiveLockProcIdOwner;
+    if (exclusiveLockOwnerProcedure == null) {
+      return Long.MIN_VALUE;
+    } else {
+      return exclusiveLockOwnerProcedure.getProcId();
+    }
   }
 
   @Override
@@ -101,7 +110,7 @@ public class LockAndQueue extends ProcedureDeque implements LockStatus {
 
   public boolean tryExclusiveLock(final Procedure proc) {
     if (isLocked()) return hasLockAccess(proc);
-    exclusiveLockProcIdOwner = proc.getProcId();
+    exclusiveLockOwnerProcedure = proc;
     return true;
   }
 
@@ -110,7 +119,7 @@ public class LockAndQueue extends ProcedureDeque implements LockStatus {
    */
   public boolean releaseExclusiveLock(final Procedure proc) {
     if (isLockOwner(proc.getProcId())) {
-      exclusiveLockProcIdOwner = Long.MIN_VALUE;
+      exclusiveLockOwnerProcedure = null;
       return true;
     }
     return false;

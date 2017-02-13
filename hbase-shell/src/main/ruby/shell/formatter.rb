@@ -17,6 +17,8 @@
 # limitations under the License.
 #
 
+require 'stringio'
+
 # Results formatter
 module Shell
   module Formatter
@@ -25,7 +27,7 @@ module Shell
       attr_reader :row_count
 
       def is_valid_io?(obj)
-        obj.instance_of?(IO) || obj == Kernel
+        obj.instance_of?(IO) || obj.instance_of?(StringIO) || obj == Kernel
       end
 
       def refresh_width()
@@ -164,6 +166,11 @@ module Shell
 
       def output_str(str)
         output(@max_width, str)
+      end
+
+      def output_strln(str)
+        output_str(str)
+        @out.puts
       end
 
       def output(width, str)

@@ -30,6 +30,7 @@ import "HBase.proto";
 import "Client.proto";
 import "ClusterStatus.proto";
 import "ErrorHandling.proto";
+import "LockService.proto";
 import "Procedure.proto";
 import "Quota.proto";
 import "Replication.proto";
@@ -534,6 +535,13 @@ message ListProceduresResponse {
   repeated Procedure procedure = 1;
 }
 
+message ListLocksRequest {
+}
+
+message ListLocksResponse {
+  repeated LockInfo lock = 1;
+}
+
 message SetQuotaRequest {
   optional string user_name = 1;
   optional string user_group = 2;
@@ -887,6 +895,9 @@ service MasterService {
   /** returns a list of procedures */
   rpc ListProcedures(ListProceduresRequest)
     returns(ListProceduresResponse);
+
+  rpc ListLocks(ListLocksRequest)
+    returns(ListLocksResponse);
 
   /** Add a replication peer */
   rpc AddReplicationPeer(AddReplicationPeerRequest)

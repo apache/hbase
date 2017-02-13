@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -125,6 +126,8 @@ public class TestMasterObserver {
     private boolean postAbortProcedureCalled;
     private boolean preListProceduresCalled;
     private boolean postListProceduresCalled;
+    private boolean preListLocksCalled;
+    private boolean postListLocksCalled;
     private boolean preMoveCalled;
     private boolean postMoveCalled;
     private boolean preAssignCalled;
@@ -723,6 +726,25 @@ public class TestMasterObserver {
 
     public boolean wasPreListProceduresCalledOnly() {
       return preListProceduresCalled && !postListProceduresCalled;
+    }
+
+    @Override
+    public void preListLocks(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+      preListLocksCalled = true;
+    }
+
+    @Override
+    public void postListLocks(ObserverContext<MasterCoprocessorEnvironment> ctx, List<LockInfo> lockInfoList)
+        throws IOException {
+      postListLocksCalled = true;
+    }
+
+    public boolean wasListLocksCalled() {
+      return preListLocksCalled && postListLocksCalled;
+    }
+
+    public boolean wasPreListLocksCalledOnly() {
+      return preListLocksCalled && !postListLocksCalled;
     }
 
     @Override
@@ -2162,6 +2184,22 @@ public class TestMasterObserver {
     assertTrue(
       "Coprocessor should be called on list procedures request",
       cp.wasListProceduresCalled());
+  }
+
+  @Test (timeout=180000)
+  public void testListLocksOperation() throws Exception {
+    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+
+    HMaster master = cluster.getMaster();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
+    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
+        CPMasterObserver.class.getName());
+    cp.resetStates();
+
+    master.listLocks();
+    assertTrue(
+      "Coprocessor should be called on list locks request",
+      cp.wasListLocksCalled());
   }
 
   private void deleteTable(Admin admin, TableName tableName) throws Exception {

@@ -62144,6 +62144,1133 @@ public final class MasterProtos {
 
   }
 
+  public interface ListLocksRequestOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.ListLocksRequest)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code hbase.pb.ListLocksRequest}
+   */
+  public  static final class ListLocksRequest extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.ListLocksRequest)
+      ListLocksRequestOrBuilder {
+    // Use ListLocksRequest.newBuilder() to construct.
+    private ListLocksRequest(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ListLocksRequest() {
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ListLocksRequest(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksRequest_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.class, org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.Builder.class);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest other = (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest) obj;
+
+      boolean result = true;
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.ListLocksRequest}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.ListLocksRequest)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequestOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksRequest_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.class, org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest result = new org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ListLocksRequest)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ListLocksRequest)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ListLocksRequest>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<ListLocksRequest>() {
+      public ListLocksRequest parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new ListLocksRequest(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ListLocksRequest> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ListLocksRequest> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ListLocksResponseOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.ListLocksResponse)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo> 
+        getLockList();
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo getLock(int index);
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    int getLockCount();
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> 
+        getLockOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder getLockOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code hbase.pb.ListLocksResponse}
+   */
+  public  static final class ListLocksResponse extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.ListLocksResponse)
+      ListLocksResponseOrBuilder {
+    // Use ListLocksResponse.newBuilder() to construct.
+    private ListLocksResponse(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ListLocksResponse() {
+      lock_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ListLocksResponse(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                lock_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              lock_.add(
+                  input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          lock_ = java.util.Collections.unmodifiableList(lock_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksResponse_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.class, org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.Builder.class);
+    }
+
+    public static final int LOCK_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo> lock_;
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo> getLockList() {
+      return lock_;
+    }
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> 
+        getLockOrBuilderList() {
+      return lock_;
+    }
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    public int getLockCount() {
+      return lock_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo getLock(int index) {
+      return lock_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder getLockOrBuilder(
+        int index) {
+      return lock_.get(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      for (int i = 0; i < getLockCount(); i++) {
+        if (!getLock(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      for (int i = 0; i < lock_.size(); i++) {
+        output.writeMessage(1, lock_.get(i));
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      for (int i = 0; i < lock_.size(); i++) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, lock_.get(i));
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse other = (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse) obj;
+
+      boolean result = true;
+      result = result && getLockList()
+          .equals(other.getLockList());
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (getLockCount() > 0) {
+        hash = (37 * hash) + LOCK_FIELD_NUMBER;
+        hash = (53 * hash) + getLockList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.ListLocksResponse}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.ListLocksResponse)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponseOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksResponse_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.class, org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getLockFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (lockBuilder_ == null) {
+          lock_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+        } else {
+          lockBuilder_.clear();
+        }
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListLocksResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse result = new org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse(this);
+        int from_bitField0_ = bitField0_;
+        if (lockBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            lock_ = java.util.Collections.unmodifiableList(lock_);
+            bitField0_ = (bitField0_ & ~0x00000001);
+          }
+          result.lock_ = lock_;
+        } else {
+          result.lock_ = lockBuilder_.build();
+        }
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.getDefaultInstance()) return this;
+        if (lockBuilder_ == null) {
+          if (!other.lock_.isEmpty()) {
+            if (lock_.isEmpty()) {
+              lock_ = other.lock_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+            } else {
+              ensureLockIsMutable();
+              lock_.addAll(other.lock_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.lock_.isEmpty()) {
+            if (lockBuilder_.isEmpty()) {
+              lockBuilder_.dispose();
+              lockBuilder_ = null;
+              lock_ = other.lock_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+              lockBuilder_ = 
+                org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getLockFieldBuilder() : null;
+            } else {
+              lockBuilder_.addAllMessages(other.lock_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        for (int i = 0; i < getLockCount(); i++) {
+          if (!getLock(i).isInitialized()) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo> lock_ =
+        java.util.Collections.emptyList();
+      private void ensureLockIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          lock_ = new java.util.ArrayList<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo>(lock_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> lockBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo> getLockList() {
+        if (lockBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(lock_);
+        } else {
+          return lockBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public int getLockCount() {
+        if (lockBuilder_ == null) {
+          return lock_.size();
+        } else {
+          return lockBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo getLock(int index) {
+        if (lockBuilder_ == null) {
+          return lock_.get(index);
+        } else {
+          return lockBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder setLock(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo value) {
+        if (lockBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureLockIsMutable();
+          lock_.set(index, value);
+          onChanged();
+        } else {
+          lockBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder setLock(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder builderForValue) {
+        if (lockBuilder_ == null) {
+          ensureLockIsMutable();
+          lock_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          lockBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder addLock(org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo value) {
+        if (lockBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureLockIsMutable();
+          lock_.add(value);
+          onChanged();
+        } else {
+          lockBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder addLock(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo value) {
+        if (lockBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureLockIsMutable();
+          lock_.add(index, value);
+          onChanged();
+        } else {
+          lockBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder addLock(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder builderForValue) {
+        if (lockBuilder_ == null) {
+          ensureLockIsMutable();
+          lock_.add(builderForValue.build());
+          onChanged();
+        } else {
+          lockBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder addLock(
+          int index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder builderForValue) {
+        if (lockBuilder_ == null) {
+          ensureLockIsMutable();
+          lock_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          lockBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder addAllLock(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo> values) {
+        if (lockBuilder_ == null) {
+          ensureLockIsMutable();
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, lock_);
+          onChanged();
+        } else {
+          lockBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder clearLock() {
+        if (lockBuilder_ == null) {
+          lock_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+          onChanged();
+        } else {
+          lockBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public Builder removeLock(int index) {
+        if (lockBuilder_ == null) {
+          ensureLockIsMutable();
+          lock_.remove(index);
+          onChanged();
+        } else {
+          lockBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder getLockBuilder(
+          int index) {
+        return getLockFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder getLockOrBuilder(
+          int index) {
+        if (lockBuilder_ == null) {
+          return lock_.get(index);  } else {
+          return lockBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> 
+           getLockOrBuilderList() {
+        if (lockBuilder_ != null) {
+          return lockBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(lock_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder addLockBuilder() {
+        return getLockFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder addLockBuilder(
+          int index) {
+        return getLockFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.LockInfo lock = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder> 
+           getLockBuilderList() {
+        return getLockFieldBuilder().getBuilderList();
+      }
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder> 
+          getLockFieldBuilder() {
+        if (lockBuilder_ == null) {
+          lockBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockInfoOrBuilder>(
+                  lock_,
+                  ((bitField0_ & 0x00000001) == 0x00000001),
+                  getParentForChildren(),
+                  isClean());
+          lock_ = null;
+        }
+        return lockBuilder_;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ListLocksResponse)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ListLocksResponse)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ListLocksResponse>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<ListLocksResponse>() {
+      public ListLocksResponse parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new ListLocksResponse(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ListLocksResponse> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<ListLocksResponse> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface SetQuotaRequestOrBuilder extends
       // @@protoc_insertion_point(interface_extends:hbase.pb.SetQuotaRequest)
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
@@ -70841,6 +71968,14 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse> done);
 
       /**
+       * <code>rpc ListLocks(.hbase.pb.ListLocksRequest) returns (.hbase.pb.ListLocksResponse);</code>
+       */
+      public abstract void listLocks(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse> done);
+
+      /**
        * <pre>
        ** Add a replication peer 
        * </pre>
@@ -71446,6 +72581,14 @@ public final class MasterProtos {
         }
 
         @java.lang.Override
+        public  void listLocks(
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse> done) {
+          impl.listLocks(controller, request, done);
+        }
+
+        @java.lang.Override
         public  void addReplicationPeer(
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest request,
@@ -71668,24 +72811,26 @@ public final class MasterProtos {
             case 59:
               return impl.listProcedures(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest)request);
             case 60:
-              return impl.addReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest)request);
+              return impl.listLocks(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest)request);
             case 61:
-              return impl.removeReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest)request);
+              return impl.addReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest)request);
             case 62:
-              return impl.enableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest)request);
+              return impl.removeReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest)request);
             case 63:
-              return impl.disableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest)request);
+              return impl.enableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest)request);
             case 64:
-              return impl.getReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest)request);
+              return impl.disableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest)request);
             case 65:
-              return impl.updateReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest)request);
+              return impl.getReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest)request);
             case 66:
-              return impl.listReplicationPeers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest)request);
+              return impl.updateReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest)request);
             case 67:
-              return impl.listDrainingRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest)request);
+              return impl.listReplicationPeers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest)request);
             case 68:
-              return impl.drainRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest)request);
+              return impl.listDrainingRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest)request);
             case 69:
+              return impl.drainRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest)request);
+            case 70:
               return impl.removeDrainFromRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -71822,24 +72967,26 @@ public final class MasterProtos {
             case 59:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest.getDefaultInstance();
             case 60:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.getDefaultInstance();
             case 61:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest.getDefaultInstance();
             case 62:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest.getDefaultInstance();
             case 63:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest.getDefaultInstance();
             case 64:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest.getDefaultInstance();
             case 65:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest.getDefaultInstance();
             case 66:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest.getDefaultInstance();
             case 67:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest.getDefaultInstance();
             case 68:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest.getDefaultInstance();
             case 69:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest.getDefaultInstance();
+            case 70:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -71976,24 +73123,26 @@ public final class MasterProtos {
             case 59:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance();
             case 60:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.getDefaultInstance();
             case 61:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse.getDefaultInstance();
             case 62:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance();
             case 63:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance();
             case 64:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance();
             case 65:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance();
             case 66:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance();
             case 67:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse.getDefaultInstance();
             case 68:
-              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance();
             case 69:
+              return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance();
+            case 70:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -72755,6 +73904,14 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse> done);
 
     /**
+     * <code>rpc ListLocks(.hbase.pb.ListLocksRequest) returns (.hbase.pb.ListLocksResponse);</code>
+     */
+    public abstract void listLocks(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest request,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse> done);
+
+    /**
      * <pre>
      ** Add a replication peer 
      * </pre>
@@ -73197,51 +74354,56 @@ public final class MasterProtos {
               done));
           return;
         case 60:
+          this.listLocks(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest)request,
+            org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse>specializeCallback(
+              done));
+          return;
+        case 61:
           this.addReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse>specializeCallback(
               done));
           return;
-        case 61:
+        case 62:
           this.removeReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse>specializeCallback(
               done));
           return;
-        case 62:
+        case 63:
           this.enableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse>specializeCallback(
               done));
           return;
-        case 63:
+        case 64:
           this.disableReplicationPeer(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse>specializeCallback(
               done));
           return;
-        case 64:
+        case 65:
           this.getReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse>specializeCallback(
               done));
           return;
-        case 65:
+        case 66:
           this.updateReplicationPeerConfig(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse>specializeCallback(
               done));
           return;
-        case 66:
+        case 67:
           this.listReplicationPeers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse>specializeCallback(
               done));
           return;
-        case 67:
+        case 68:
           this.listDrainingRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse>specializeCallback(
               done));
           return;
-        case 68:
+        case 69:
           this.drainRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse>specializeCallback(
               done));
           return;
-        case 69:
+        case 70:
           this.removeDrainFromRegionServers(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse>specializeCallback(
               done));
@@ -73381,24 +74543,26 @@ public final class MasterProtos {
         case 59:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest.getDefaultInstance();
         case 60:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest.getDefaultInstance();
         case 61:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest.getDefaultInstance();
         case 62:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest.getDefaultInstance();
         case 63:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest.getDefaultInstance();
         case 64:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest.getDefaultInstance();
         case 65:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest.getDefaultInstance();
         case 66:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest.getDefaultInstance();
         case 67:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest.getDefaultInstance();
         case 68:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest.getDefaultInstance();
         case 69:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest.getDefaultInstance();
+        case 70:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -73535,24 +74699,26 @@ public final class MasterProtos {
         case 59:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance();
         case 60:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.getDefaultInstance();
         case 61:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse.getDefaultInstance();
         case 62:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance();
         case 63:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance();
         case 64:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance();
         case 65:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance();
         case 66:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance();
         case 67:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse.getDefaultInstance();
         case 68:
-          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance();
         case 69:
+          return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance();
+        case 70:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -74475,12 +75641,27 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance()));
       }
 
+      public  void listLocks(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest request,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(60),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.getDefaultInstance(),
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.class,
+            org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.getDefaultInstance()));
+      }
+
       public  void addReplicationPeer(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(60),
+          getDescriptor().getMethods().get(61),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse.getDefaultInstance(),
@@ -74495,7 +75676,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(61),
+          getDescriptor().getMethods().get(62),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance(),
@@ -74510,7 +75691,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(62),
+          getDescriptor().getMethods().get(63),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance(),
@@ -74525,7 +75706,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(63),
+          getDescriptor().getMethods().get(64),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance(),
@@ -74540,7 +75721,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(64),
+          getDescriptor().getMethods().get(65),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance(),
@@ -74555,7 +75736,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(65),
+          getDescriptor().getMethods().get(66),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance(),
@@ -74570,7 +75751,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(66),
+          getDescriptor().getMethods().get(67),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse.getDefaultInstance(),
@@ -74585,7 +75766,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(67),
+          getDescriptor().getMethods().get(68),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance(),
@@ -74600,7 +75781,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(68),
+          getDescriptor().getMethods().get(69),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance(),
@@ -74615,7 +75796,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(69),
+          getDescriptor().getMethods().get(70),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse.getDefaultInstance(),
@@ -74930,6 +76111,11 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresResponse listProcedures(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse listLocks(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse addReplicationPeer(
@@ -75710,12 +76896,24 @@ public final class MasterProtos {
       }
 
 
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse listLocks(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest request)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(60),
+          controller,
+          request,
+          org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse.getDefaultInstance());
+      }
+
+
       public org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse addReplicationPeer(
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(60),
+          getDescriptor().getMethods().get(61),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerResponse.getDefaultInstance());
@@ -75727,7 +76925,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(61),
+          getDescriptor().getMethods().get(62),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse.getDefaultInstance());
@@ -75739,7 +76937,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(62),
+          getDescriptor().getMethods().get(63),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse.getDefaultInstance());
@@ -75751,7 +76949,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(63),
+          getDescriptor().getMethods().get(64),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse.getDefaultInstance());
@@ -75763,7 +76961,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(64),
+          getDescriptor().getMethods().get(65),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse.getDefaultInstance());
@@ -75775,7 +76973,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(65),
+          getDescriptor().getMethods().get(66),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse.getDefaultInstance());
@@ -75787,7 +76985,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(66),
+          getDescriptor().getMethods().get(67),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse.getDefaultInstance());
@@ -75799,7 +76997,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(67),
+          getDescriptor().getMethods().get(68),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersResponse.getDefaultInstance());
@@ -75811,7 +77009,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(68),
+          getDescriptor().getMethods().get(69),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DrainRegionServersResponse.getDefaultInstance());
@@ -75823,7 +77021,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(69),
+          getDescriptor().getMethods().get(70),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RemoveDrainFromRegionServersResponse.getDefaultInstance());
@@ -76385,6 +77583,16 @@ public final class MasterProtos {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_ListProceduresResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ListLocksRequest_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_ListLocksRequest_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ListLocksResponse_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_ListLocksResponse_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetQuotaRequest_descriptor;
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -76460,383 +77668,387 @@ public final class MasterProtos {
     java.lang.String[] descriptorData = {
       "\n\014Master.proto\022\010hbase.pb\032\013HBase.proto\032\014C" +
       "lient.proto\032\023ClusterStatus.proto\032\023ErrorH" +
-      "andling.proto\032\017Procedure.proto\032\013Quota.pr" +
-      "oto\032\021Replication.proto\"\234\001\n\020AddColumnRequ" +
-      "est\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.Table" +
-      "Name\0225\n\017column_families\030\002 \002(\0132\034.hbase.pb" +
-      ".ColumnFamilySchema\022\026\n\013nonce_group\030\003 \001(\004" +
-      ":\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"$\n\021AddColumnRespon" +
-      "se\022\017\n\007proc_id\030\001 \001(\004\"}\n\023DeleteColumnReque" +
-      "st\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableN",
-      "ame\022\023\n\013column_name\030\002 \002(\014\022\026\n\013nonce_group\030" +
-      "\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"\'\n\024DeleteColu" +
-      "mnResponse\022\017\n\007proc_id\030\001 \001(\004\"\237\001\n\023ModifyCo" +
-      "lumnRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase." +
-      "pb.TableName\0225\n\017column_families\030\002 \002(\0132\034." +
-      "hbase.pb.ColumnFamilySchema\022\026\n\013nonce_gro" +
-      "up\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"\'\n\024ModifyC" +
-      "olumnResponse\022\017\n\007proc_id\030\001 \001(\004\"n\n\021MoveRe" +
-      "gionRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.R" +
-      "egionSpecifier\022.\n\020dest_server_name\030\002 \001(\013",
-      "2\024.hbase.pb.ServerName\"\024\n\022MoveRegionResp" +
-      "onse\"\210\001\n\030MergeTableRegionsRequest\022)\n\006reg" +
-      "ion\030\001 \003(\0132\031.hbase.pb.RegionSpecifier\022\027\n\010" +
-      "forcible\030\003 \001(\010:\005false\022\026\n\013nonce_group\030\004 \001" +
-      "(\004:\0010\022\020\n\005nonce\030\005 \001(\004:\0010\",\n\031MergeTableReg" +
-      "ionsResponse\022\017\n\007proc_id\030\001 \001(\004\"@\n\023AssignR" +
-      "egionRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb." +
-      "RegionSpecifier\"\026\n\024AssignRegionResponse\"" +
-      "X\n\025UnassignRegionRequest\022)\n\006region\030\001 \002(\013" +
-      "2\031.hbase.pb.RegionSpecifier\022\024\n\005force\030\002 \001",
-      "(\010:\005false\"\030\n\026UnassignRegionResponse\"A\n\024O" +
-      "fflineRegionRequest\022)\n\006region\030\001 \002(\0132\031.hb" +
-      "ase.pb.RegionSpecifier\"\027\n\025OfflineRegionR" +
-      "esponse\"\177\n\022CreateTableRequest\022+\n\014table_s" +
-      "chema\030\001 \002(\0132\025.hbase.pb.TableSchema\022\022\n\nsp" +
-      "lit_keys\030\002 \003(\014\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020" +
-      "\n\005nonce\030\004 \001(\004:\0010\"&\n\023CreateTableResponse\022" +
-      "\017\n\007proc_id\030\001 \001(\004\"g\n\022DeleteTableRequest\022\'" +
-      "\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableName\022" +
-      "\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\001",
-      "0\"&\n\023DeleteTableResponse\022\017\n\007proc_id\030\001 \001(" +
-      "\004\"\207\001\n\024TruncateTableRequest\022&\n\ttableName\030" +
-      "\001 \002(\0132\023.hbase.pb.TableName\022\035\n\016preserveSp" +
-      "lits\030\002 \001(\010:\005false\022\026\n\013nonce_group\030\003 \001(\004:\001" +
-      "0\022\020\n\005nonce\030\004 \001(\004:\0010\"(\n\025TruncateTableResp" +
-      "onse\022\017\n\007proc_id\030\001 \001(\004\"g\n\022EnableTableRequ" +
-      "est\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.Table" +
-      "Name\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 " +
-      "\001(\004:\0010\"&\n\023EnableTableResponse\022\017\n\007proc_id" +
-      "\030\001 \001(\004\"h\n\023DisableTableRequest\022\'\n\ntable_n",
-      "ame\030\001 \002(\0132\023.hbase.pb.TableName\022\026\n\013nonce_" +
-      "group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"\'\n\024Disa" +
-      "bleTableResponse\022\017\n\007proc_id\030\001 \001(\004\"\224\001\n\022Mo" +
-      "difyTableRequest\022\'\n\ntable_name\030\001 \002(\0132\023.h" +
-      "base.pb.TableName\022+\n\014table_schema\030\002 \002(\0132" +
-      "\025.hbase.pb.TableSchema\022\026\n\013nonce_group\030\003 " +
-      "\001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"&\n\023ModifyTableR" +
-      "esponse\022\017\n\007proc_id\030\001 \001(\004\"~\n\026CreateNamesp" +
-      "aceRequest\022:\n\023namespaceDescriptor\030\001 \002(\0132" +
-      "\035.hbase.pb.NamespaceDescriptor\022\026\n\013nonce_",
-      "group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"*\n\027Crea" +
-      "teNamespaceResponse\022\017\n\007proc_id\030\001 \001(\004\"Y\n\026" +
-      "DeleteNamespaceRequest\022\025\n\rnamespaceName\030" +
-      "\001 \002(\t\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003" +
-      " \001(\004:\0010\"*\n\027DeleteNamespaceResponse\022\017\n\007pr" +
-      "oc_id\030\001 \001(\004\"~\n\026ModifyNamespaceRequest\022:\n" +
-      "\023namespaceDescriptor\030\001 \002(\0132\035.hbase.pb.Na" +
-      "mespaceDescriptor\022\026\n\013nonce_group\030\002 \001(\004:\001" +
-      "0\022\020\n\005nonce\030\003 \001(\004:\0010\"*\n\027ModifyNamespaceRe" +
-      "sponse\022\017\n\007proc_id\030\001 \001(\004\"6\n\035GetNamespaceD",
-      "escriptorRequest\022\025\n\rnamespaceName\030\001 \002(\t\"" +
-      "\\\n\036GetNamespaceDescriptorResponse\022:\n\023nam" +
-      "espaceDescriptor\030\001 \002(\0132\035.hbase.pb.Namesp" +
-      "aceDescriptor\"!\n\037ListNamespaceDescriptor" +
-      "sRequest\"^\n ListNamespaceDescriptorsResp" +
-      "onse\022:\n\023namespaceDescriptor\030\001 \003(\0132\035.hbas" +
-      "e.pb.NamespaceDescriptor\"?\n&ListTableDes" +
-      "criptorsByNamespaceRequest\022\025\n\rnamespaceN" +
-      "ame\030\001 \002(\t\"U\n\'ListTableDescriptorsByNames" +
-      "paceResponse\022*\n\013tableSchema\030\001 \003(\0132\025.hbas",
-      "e.pb.TableSchema\"9\n ListTableNamesByName" +
-      "spaceRequest\022\025\n\rnamespaceName\030\001 \002(\t\"K\n!L" +
-      "istTableNamesByNamespaceResponse\022&\n\ttabl" +
-      "eName\030\001 \003(\0132\023.hbase.pb.TableName\"\021\n\017Shut" +
-      "downRequest\"\022\n\020ShutdownResponse\"\023\n\021StopM" +
-      "asterRequest\"\024\n\022StopMasterResponse\"\034\n\032Is" +
-      "InMaintenanceModeRequest\"8\n\033IsInMaintena" +
-      "nceModeResponse\022\031\n\021inMaintenanceMode\030\001 \002" +
-      "(\010\"\037\n\016BalanceRequest\022\r\n\005force\030\001 \001(\010\"\'\n\017B" +
-      "alanceResponse\022\024\n\014balancer_ran\030\001 \002(\010\"<\n\031",
-      "SetBalancerRunningRequest\022\n\n\002on\030\001 \002(\010\022\023\n" +
-      "\013synchronous\030\002 \001(\010\"8\n\032SetBalancerRunning" +
-      "Response\022\032\n\022prev_balance_value\030\001 \001(\010\"\032\n\030" +
-      "IsBalancerEnabledRequest\",\n\031IsBalancerEn" +
-      "abledResponse\022\017\n\007enabled\030\001 \002(\010\"w\n\035SetSpl" +
-      "itOrMergeEnabledRequest\022\017\n\007enabled\030\001 \002(\010" +
-      "\022\023\n\013synchronous\030\002 \001(\010\0220\n\014switch_types\030\003 " +
-      "\003(\0162\032.hbase.pb.MasterSwitchType\"4\n\036SetSp" +
-      "litOrMergeEnabledResponse\022\022\n\nprev_value\030" +
-      "\001 \003(\010\"O\n\034IsSplitOrMergeEnabledRequest\022/\n",
-      "\013switch_type\030\001 \002(\0162\032.hbase.pb.MasterSwit" +
-      "chType\"0\n\035IsSplitOrMergeEnabledResponse\022" +
-      "\017\n\007enabled\030\001 \002(\010\"\022\n\020NormalizeRequest\"+\n\021" +
-      "NormalizeResponse\022\026\n\016normalizer_ran\030\001 \002(" +
-      "\010\")\n\033SetNormalizerRunningRequest\022\n\n\002on\030\001" +
-      " \002(\010\"=\n\034SetNormalizerRunningResponse\022\035\n\025" +
-      "prev_normalizer_value\030\001 \001(\010\"\034\n\032IsNormali" +
-      "zerEnabledRequest\".\n\033IsNormalizerEnabled" +
-      "Response\022\017\n\007enabled\030\001 \002(\010\"\027\n\025RunCatalogS" +
-      "canRequest\"-\n\026RunCatalogScanResponse\022\023\n\013",
-      "scan_result\030\001 \001(\005\"-\n\033EnableCatalogJanito" +
-      "rRequest\022\016\n\006enable\030\001 \002(\010\"2\n\034EnableCatalo" +
-      "gJanitorResponse\022\022\n\nprev_value\030\001 \001(\010\" \n\036" +
-      "IsCatalogJanitorEnabledRequest\"0\n\037IsCata" +
-      "logJanitorEnabledResponse\022\r\n\005value\030\001 \002(\010" +
-      "\"\030\n\026RunCleanerChoreRequest\"4\n\027RunCleaner" +
-      "ChoreResponse\022\031\n\021cleaner_chore_ran\030\001 \002(\010" +
-      "\"+\n\035SetCleanerChoreRunningRequest\022\n\n\002on\030" +
-      "\001 \002(\010\"4\n\036SetCleanerChoreRunningResponse\022" +
-      "\022\n\nprev_value\030\001 \001(\010\"\036\n\034IsCleanerChoreEna",
-      "bledRequest\".\n\035IsCleanerChoreEnabledResp" +
-      "onse\022\r\n\005value\030\001 \002(\010\"B\n\017SnapshotRequest\022/" +
-      "\n\010snapshot\030\001 \002(\0132\035.hbase.pb.SnapshotDesc" +
-      "ription\",\n\020SnapshotResponse\022\030\n\020expected_" +
-      "timeout\030\001 \002(\003\"\036\n\034GetCompletedSnapshotsRe" +
-      "quest\"Q\n\035GetCompletedSnapshotsResponse\0220" +
-      "\n\tsnapshots\030\001 \003(\0132\035.hbase.pb.SnapshotDes" +
-      "cription\"H\n\025DeleteSnapshotRequest\022/\n\010sna" +
+      "andling.proto\032\021LockService.proto\032\017Proced" +
+      "ure.proto\032\013Quota.proto\032\021Replication.prot" +
+      "o\"\234\001\n\020AddColumnRequest\022\'\n\ntable_name\030\001 \002" +
+      "(\0132\023.hbase.pb.TableName\0225\n\017column_famili" +
+      "es\030\002 \002(\0132\034.hbase.pb.ColumnFamilySchema\022\026" +
+      "\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010" +
+      "\"$\n\021AddColumnResponse\022\017\n\007proc_id\030\001 \001(\004\"}" +
+      "\n\023DeleteColumnRequest\022\'\n\ntable_name\030\001 \002(",
+      "\0132\023.hbase.pb.TableName\022\023\n\013column_name\030\002 " +
+      "\002(\014\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001" +
+      "(\004:\0010\"\'\n\024DeleteColumnResponse\022\017\n\007proc_id" +
+      "\030\001 \001(\004\"\237\001\n\023ModifyColumnRequest\022\'\n\ntable_" +
+      "name\030\001 \002(\0132\023.hbase.pb.TableName\0225\n\017colum" +
+      "n_families\030\002 \002(\0132\034.hbase.pb.ColumnFamily" +
+      "Schema\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030" +
+      "\004 \001(\004:\0010\"\'\n\024ModifyColumnResponse\022\017\n\007proc" +
+      "_id\030\001 \001(\004\"n\n\021MoveRegionRequest\022)\n\006region" +
+      "\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022.\n\020des",
+      "t_server_name\030\002 \001(\0132\024.hbase.pb.ServerNam" +
+      "e\"\024\n\022MoveRegionResponse\"\210\001\n\030MergeTableRe" +
+      "gionsRequest\022)\n\006region\030\001 \003(\0132\031.hbase.pb." +
+      "RegionSpecifier\022\027\n\010forcible\030\003 \001(\010:\005false" +
+      "\022\026\n\013nonce_group\030\004 \001(\004:\0010\022\020\n\005nonce\030\005 \001(\004:" +
+      "\0010\",\n\031MergeTableRegionsResponse\022\017\n\007proc_" +
+      "id\030\001 \001(\004\"@\n\023AssignRegionRequest\022)\n\006regio" +
+      "n\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\"\026\n\024As" +
+      "signRegionResponse\"X\n\025UnassignRegionRequ" +
+      "est\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpe",
+      "cifier\022\024\n\005force\030\002 \001(\010:\005false\"\030\n\026Unassign" +
+      "RegionResponse\"A\n\024OfflineRegionRequest\022)" +
+      "\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifie" +
+      "r\"\027\n\025OfflineRegionResponse\"\177\n\022CreateTabl" +
+      "eRequest\022+\n\014table_schema\030\001 \002(\0132\025.hbase.p" +
+      "b.TableSchema\022\022\n\nsplit_keys\030\002 \003(\014\022\026\n\013non" +
+      "ce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"&\n\023C" +
+      "reateTableResponse\022\017\n\007proc_id\030\001 \001(\004\"g\n\022D" +
+      "eleteTableRequest\022\'\n\ntable_name\030\001 \002(\0132\023." +
+      "hbase.pb.TableName\022\026\n\013nonce_group\030\002 \001(\004:",
+      "\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"&\n\023DeleteTableRespo" +
+      "nse\022\017\n\007proc_id\030\001 \001(\004\"\207\001\n\024TruncateTableRe" +
+      "quest\022&\n\ttableName\030\001 \002(\0132\023.hbase.pb.Tabl" +
+      "eName\022\035\n\016preserveSplits\030\002 \001(\010:\005false\022\026\n\013" +
+      "nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"(" +
+      "\n\025TruncateTableResponse\022\017\n\007proc_id\030\001 \001(\004" +
+      "\"g\n\022EnableTableRequest\022\'\n\ntable_name\030\001 \002" +
+      "(\0132\023.hbase.pb.TableName\022\026\n\013nonce_group\030\002" +
+      " \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"&\n\023EnableTable" +
+      "Response\022\017\n\007proc_id\030\001 \001(\004\"h\n\023DisableTabl",
+      "eRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb." +
+      "TableName\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005non" +
+      "ce\030\003 \001(\004:\0010\"\'\n\024DisableTableResponse\022\017\n\007p" +
+      "roc_id\030\001 \001(\004\"\224\001\n\022ModifyTableRequest\022\'\n\nt" +
+      "able_name\030\001 \002(\0132\023.hbase.pb.TableName\022+\n\014" +
+      "table_schema\030\002 \002(\0132\025.hbase.pb.TableSchem" +
+      "a\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004" +
+      ":\0010\"&\n\023ModifyTableResponse\022\017\n\007proc_id\030\001 " +
+      "\001(\004\"~\n\026CreateNamespaceRequest\022:\n\023namespa" +
+      "ceDescriptor\030\001 \002(\0132\035.hbase.pb.NamespaceD",
+      "escriptor\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005non" +
+      "ce\030\003 \001(\004:\0010\"*\n\027CreateNamespaceResponse\022\017" +
+      "\n\007proc_id\030\001 \001(\004\"Y\n\026DeleteNamespaceReques" +
+      "t\022\025\n\rnamespaceName\030\001 \002(\t\022\026\n\013nonce_group\030" +
+      "\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"*\n\027DeleteName" +
+      "spaceResponse\022\017\n\007proc_id\030\001 \001(\004\"~\n\026Modify" +
+      "NamespaceRequest\022:\n\023namespaceDescriptor\030" +
+      "\001 \002(\0132\035.hbase.pb.NamespaceDescriptor\022\026\n\013" +
+      "nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"*" +
+      "\n\027ModifyNamespaceResponse\022\017\n\007proc_id\030\001 \001",
+      "(\004\"6\n\035GetNamespaceDescriptorRequest\022\025\n\rn" +
+      "amespaceName\030\001 \002(\t\"\\\n\036GetNamespaceDescri" +
+      "ptorResponse\022:\n\023namespaceDescriptor\030\001 \002(" +
+      "\0132\035.hbase.pb.NamespaceDescriptor\"!\n\037List" +
+      "NamespaceDescriptorsRequest\"^\n ListNames" +
+      "paceDescriptorsResponse\022:\n\023namespaceDesc" +
+      "riptor\030\001 \003(\0132\035.hbase.pb.NamespaceDescrip" +
+      "tor\"?\n&ListTableDescriptorsByNamespaceRe" +
+      "quest\022\025\n\rnamespaceName\030\001 \002(\t\"U\n\'ListTabl" +
+      "eDescriptorsByNamespaceResponse\022*\n\013table",
+      "Schema\030\001 \003(\0132\025.hbase.pb.TableSchema\"9\n L" +
+      "istTableNamesByNamespaceRequest\022\025\n\rnames" +
+      "paceName\030\001 \002(\t\"K\n!ListTableNamesByNamesp" +
+      "aceResponse\022&\n\ttableName\030\001 \003(\0132\023.hbase.p" +
+      "b.TableName\"\021\n\017ShutdownRequest\"\022\n\020Shutdo" +
+      "wnResponse\"\023\n\021StopMasterRequest\"\024\n\022StopM" +
+      "asterResponse\"\034\n\032IsInMaintenanceModeRequ" +
+      "est\"8\n\033IsInMaintenanceModeResponse\022\031\n\021in" +
+      "MaintenanceMode\030\001 \002(\010\"\037\n\016BalanceRequest\022" +
+      "\r\n\005force\030\001 \001(\010\"\'\n\017BalanceResponse\022\024\n\014bal",
+      "ancer_ran\030\001 \002(\010\"<\n\031SetBalancerRunningReq" +
+      "uest\022\n\n\002on\030\001 \002(\010\022\023\n\013synchronous\030\002 \001(\010\"8\n" +
+      "\032SetBalancerRunningResponse\022\032\n\022prev_bala" +
+      "nce_value\030\001 \001(\010\"\032\n\030IsBalancerEnabledRequ" +
+      "est\",\n\031IsBalancerEnabledResponse\022\017\n\007enab" +
+      "led\030\001 \002(\010\"w\n\035SetSplitOrMergeEnabledReque" +
+      "st\022\017\n\007enabled\030\001 \002(\010\022\023\n\013synchronous\030\002 \001(\010" +
+      "\0220\n\014switch_types\030\003 \003(\0162\032.hbase.pb.Master" +
+      "SwitchType\"4\n\036SetSplitOrMergeEnabledResp" +
+      "onse\022\022\n\nprev_value\030\001 \003(\010\"O\n\034IsSplitOrMer",
+      "geEnabledRequest\022/\n\013switch_type\030\001 \002(\0162\032." +
+      "hbase.pb.MasterSwitchType\"0\n\035IsSplitOrMe" +
+      "rgeEnabledResponse\022\017\n\007enabled\030\001 \002(\010\"\022\n\020N" +
+      "ormalizeRequest\"+\n\021NormalizeResponse\022\026\n\016" +
+      "normalizer_ran\030\001 \002(\010\")\n\033SetNormalizerRun" +
+      "ningRequest\022\n\n\002on\030\001 \002(\010\"=\n\034SetNormalizer" +
+      "RunningResponse\022\035\n\025prev_normalizer_value" +
+      "\030\001 \001(\010\"\034\n\032IsNormalizerEnabledRequest\".\n\033" +
+      "IsNormalizerEnabledResponse\022\017\n\007enabled\030\001" +
+      " \002(\010\"\027\n\025RunCatalogScanRequest\"-\n\026RunCata",
+      "logScanResponse\022\023\n\013scan_result\030\001 \001(\005\"-\n\033" +
+      "EnableCatalogJanitorRequest\022\016\n\006enable\030\001 " +
+      "\002(\010\"2\n\034EnableCatalogJanitorResponse\022\022\n\np" +
+      "rev_value\030\001 \001(\010\" \n\036IsCatalogJanitorEnabl" +
+      "edRequest\"0\n\037IsCatalogJanitorEnabledResp" +
+      "onse\022\r\n\005value\030\001 \002(\010\"\030\n\026RunCleanerChoreRe" +
+      "quest\"4\n\027RunCleanerChoreResponse\022\031\n\021clea" +
+      "ner_chore_ran\030\001 \002(\010\"+\n\035SetCleanerChoreRu" +
+      "nningRequest\022\n\n\002on\030\001 \002(\010\"4\n\036SetCleanerCh" +
+      "oreRunningResponse\022\022\n\nprev_value\030\001 \001(\010\"\036",
+      "\n\034IsCleanerChoreEnabledRequest\".\n\035IsClea" +
+      "nerChoreEnabledResponse\022\r\n\005value\030\001 \002(\010\"B" +
+      "\n\017SnapshotRequest\022/\n\010snapshot\030\001 \002(\0132\035.hb" +
+      "ase.pb.SnapshotDescription\",\n\020SnapshotRe" +
+      "sponse\022\030\n\020expected_timeout\030\001 \002(\003\"\036\n\034GetC" +
+      "ompletedSnapshotsRequest\"Q\n\035GetCompleted" +
+      "SnapshotsResponse\0220\n\tsnapshots\030\001 \003(\0132\035.h" +
+      "base.pb.SnapshotDescription\"H\n\025DeleteSna" +
+      "pshotRequest\022/\n\010snapshot\030\001 \002(\0132\035.hbase.p" +
+      "b.SnapshotDescription\"\030\n\026DeleteSnapshotR",
+      "esponse\"s\n\026RestoreSnapshotRequest\022/\n\010sna" +
       "pshot\030\001 \002(\0132\035.hbase.pb.SnapshotDescripti" +
-      "on\"\030\n\026DeleteSnapshotResponse\"s\n\026RestoreS",
-      "napshotRequest\022/\n\010snapshot\030\001 \002(\0132\035.hbase" +
-      ".pb.SnapshotDescription\022\026\n\013nonce_group\030\002" +
-      " \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"*\n\027RestoreSnap" +
-      "shotResponse\022\017\n\007proc_id\030\001 \002(\004\"H\n\025IsSnaps" +
-      "hotDoneRequest\022/\n\010snapshot\030\001 \001(\0132\035.hbase" +
-      ".pb.SnapshotDescription\"^\n\026IsSnapshotDon" +
-      "eResponse\022\023\n\004done\030\001 \001(\010:\005false\022/\n\010snapsh" +
-      "ot\030\002 \001(\0132\035.hbase.pb.SnapshotDescription\"" +
-      "O\n\034IsRestoreSnapshotDoneRequest\022/\n\010snaps" +
-      "hot\030\001 \001(\0132\035.hbase.pb.SnapshotDescription",
-      "\"4\n\035IsRestoreSnapshotDoneResponse\022\023\n\004don" +
-      "e\030\001 \001(\010:\005false\"F\n\033GetSchemaAlterStatusRe" +
-      "quest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.Tab" +
-      "leName\"T\n\034GetSchemaAlterStatusResponse\022\035" +
-      "\n\025yet_to_update_regions\030\001 \001(\r\022\025\n\rtotal_r" +
-      "egions\030\002 \001(\r\"\213\001\n\032GetTableDescriptorsRequ" +
-      "est\022(\n\013table_names\030\001 \003(\0132\023.hbase.pb.Tabl" +
-      "eName\022\r\n\005regex\030\002 \001(\t\022!\n\022include_sys_tabl" +
-      "es\030\003 \001(\010:\005false\022\021\n\tnamespace\030\004 \001(\t\"J\n\033Ge" +
-      "tTableDescriptorsResponse\022+\n\014table_schem",
-      "a\030\001 \003(\0132\025.hbase.pb.TableSchema\"[\n\024GetTab" +
-      "leNamesRequest\022\r\n\005regex\030\001 \001(\t\022!\n\022include" +
-      "_sys_tables\030\002 \001(\010:\005false\022\021\n\tnamespace\030\003 " +
-      "\001(\t\"A\n\025GetTableNamesResponse\022(\n\013table_na" +
-      "mes\030\001 \003(\0132\023.hbase.pb.TableName\"?\n\024GetTab" +
-      "leStateRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hba" +
-      "se.pb.TableName\"B\n\025GetTableStateResponse" +
-      "\022)\n\013table_state\030\001 \002(\0132\024.hbase.pb.TableSt" +
-      "ate\"\031\n\027GetClusterStatusRequest\"K\n\030GetClu" +
-      "sterStatusResponse\022/\n\016cluster_status\030\001 \002",
-      "(\0132\027.hbase.pb.ClusterStatus\"\030\n\026IsMasterR" +
-      "unningRequest\"4\n\027IsMasterRunningResponse" +
-      "\022\031\n\021is_master_running\030\001 \002(\010\"I\n\024ExecProce" +
-      "dureRequest\0221\n\tprocedure\030\001 \002(\0132\036.hbase.p" +
-      "b.ProcedureDescription\"F\n\025ExecProcedureR" +
-      "esponse\022\030\n\020expected_timeout\030\001 \001(\003\022\023\n\013ret" +
-      "urn_data\030\002 \001(\014\"K\n\026IsProcedureDoneRequest" +
-      "\0221\n\tprocedure\030\001 \001(\0132\036.hbase.pb.Procedure" +
-      "Description\"`\n\027IsProcedureDoneResponse\022\023" +
-      "\n\004done\030\001 \001(\010:\005false\0220\n\010snapshot\030\002 \001(\0132\036.",
-      "hbase.pb.ProcedureDescription\",\n\031GetProc" +
-      "edureResultRequest\022\017\n\007proc_id\030\001 \002(\004\"\375\001\n\032" +
-      "GetProcedureResultResponse\0229\n\005state\030\001 \002(" +
-      "\0162*.hbase.pb.GetProcedureResultResponse." +
-      "State\022\026\n\016submitted_time\030\002 \001(\004\022\023\n\013last_up" +
-      "date\030\003 \001(\004\022\016\n\006result\030\004 \001(\014\0224\n\texception\030" +
-      "\005 \001(\0132!.hbase.pb.ForeignExceptionMessage" +
-      "\"1\n\005State\022\r\n\tNOT_FOUND\020\000\022\013\n\007RUNNING\020\001\022\014\n" +
-      "\010FINISHED\020\002\"M\n\025AbortProcedureRequest\022\017\n\007" +
-      "proc_id\030\001 \002(\004\022#\n\025mayInterruptIfRunning\030\002",
-      " \001(\010:\004true\"6\n\026AbortProcedureResponse\022\034\n\024" +
-      "is_procedure_aborted\030\001 \002(\010\"\027\n\025ListProced" +
-      "uresRequest\"@\n\026ListProceduresResponse\022&\n" +
-      "\tprocedure\030\001 \003(\0132\023.hbase.pb.Procedure\"\315\001" +
-      "\n\017SetQuotaRequest\022\021\n\tuser_name\030\001 \001(\t\022\022\n\n" +
-      "user_group\030\002 \001(\t\022\021\n\tnamespace\030\003 \001(\t\022\'\n\nt" +
-      "able_name\030\004 \001(\0132\023.hbase.pb.TableName\022\022\n\n" +
-      "remove_all\030\005 \001(\010\022\026\n\016bypass_globals\030\006 \001(\010" +
-      "\022+\n\010throttle\030\007 \001(\0132\031.hbase.pb.ThrottleRe" +
-      "quest\"\022\n\020SetQuotaResponse\"J\n\037MajorCompac",
-      "tionTimestampRequest\022\'\n\ntable_name\030\001 \002(\013" +
-      "2\023.hbase.pb.TableName\"U\n(MajorCompaction" +
-      "TimestampForRegionRequest\022)\n\006region\030\001 \002(" +
-      "\0132\031.hbase.pb.RegionSpecifier\"@\n MajorCom" +
-      "pactionTimestampResponse\022\034\n\024compaction_t" +
-      "imestamp\030\001 \002(\003\"\035\n\033SecurityCapabilitiesRe" +
-      "quest\"\354\001\n\034SecurityCapabilitiesResponse\022G" +
-      "\n\014capabilities\030\001 \003(\01621.hbase.pb.Security" +
-      "CapabilitiesResponse.Capability\"\202\001\n\nCapa" +
-      "bility\022\031\n\025SIMPLE_AUTHENTICATION\020\000\022\031\n\025SEC",
-      "URE_AUTHENTICATION\020\001\022\021\n\rAUTHORIZATION\020\002\022" +
-      "\026\n\022CELL_AUTHORIZATION\020\003\022\023\n\017CELL_VISIBILI" +
-      "TY\020\004\"\"\n ListDrainingRegionServersRequest" +
-      "\"N\n!ListDrainingRegionServersResponse\022)\n" +
-      "\013server_name\030\001 \003(\0132\024.hbase.pb.ServerName" +
-      "\"F\n\031DrainRegionServersRequest\022)\n\013server_" +
-      "name\030\001 \003(\0132\024.hbase.pb.ServerName\"\034\n\032Drai" +
-      "nRegionServersResponse\"P\n#RemoveDrainFro" +
-      "mRegionServersRequest\022)\n\013server_name\030\001 \003" +
-      "(\0132\024.hbase.pb.ServerName\"&\n$RemoveDrainF",
-      "romRegionServersResponse*(\n\020MasterSwitch" +
-      "Type\022\t\n\005SPLIT\020\000\022\t\n\005MERGE\020\0012\3013\n\rMasterSer" +
-      "vice\022e\n\024GetSchemaAlterStatus\022%.hbase.pb." +
-      "GetSchemaAlterStatusRequest\032&.hbase.pb.G" +
-      "etSchemaAlterStatusResponse\022b\n\023GetTableD" +
-      "escriptors\022$.hbase.pb.GetTableDescriptor" +
-      "sRequest\032%.hbase.pb.GetTableDescriptorsR" +
-      "esponse\022P\n\rGetTableNames\022\036.hbase.pb.GetT" +
-      "ableNamesRequest\032\037.hbase.pb.GetTableName" +
-      "sResponse\022Y\n\020GetClusterStatus\022!.hbase.pb",
-      ".GetClusterStatusRequest\032\".hbase.pb.GetC" +
-      "lusterStatusResponse\022V\n\017IsMasterRunning\022" +
-      " .hbase.pb.IsMasterRunningRequest\032!.hbas" +
-      "e.pb.IsMasterRunningResponse\022D\n\tAddColum" +
-      "n\022\032.hbase.pb.AddColumnRequest\032\033.hbase.pb" +
-      ".AddColumnResponse\022M\n\014DeleteColumn\022\035.hba" +
-      "se.pb.DeleteColumnRequest\032\036.hbase.pb.Del" +
-      "eteColumnResponse\022M\n\014ModifyColumn\022\035.hbas" +
-      "e.pb.ModifyColumnRequest\032\036.hbase.pb.Modi" +
-      "fyColumnResponse\022G\n\nMoveRegion\022\033.hbase.p",
-      "b.MoveRegionRequest\032\034.hbase.pb.MoveRegio" +
-      "nResponse\022\\\n\021MergeTableRegions\022\".hbase.p" +
-      "b.MergeTableRegionsRequest\032#.hbase.pb.Me" +
-      "rgeTableRegionsResponse\022M\n\014AssignRegion\022" +
-      "\035.hbase.pb.AssignRegionRequest\032\036.hbase.p" +
-      "b.AssignRegionResponse\022S\n\016UnassignRegion" +
-      "\022\037.hbase.pb.UnassignRegionRequest\032 .hbas" +
-      "e.pb.UnassignRegionResponse\022P\n\rOfflineRe" +
-      "gion\022\036.hbase.pb.OfflineRegionRequest\032\037.h" +
-      "base.pb.OfflineRegionResponse\022J\n\013DeleteT",
-      "able\022\034.hbase.pb.DeleteTableRequest\032\035.hba" +
-      "se.pb.DeleteTableResponse\022P\n\rtruncateTab" +
-      "le\022\036.hbase.pb.TruncateTableRequest\032\037.hba" +
-      "se.pb.TruncateTableResponse\022J\n\013EnableTab" +
-      "le\022\034.hbase.pb.EnableTableRequest\032\035.hbase" +
-      ".pb.EnableTableResponse\022M\n\014DisableTable\022" +
-      "\035.hbase.pb.DisableTableRequest\032\036.hbase.p" +
-      "b.DisableTableResponse\022J\n\013ModifyTable\022\034." +
-      "hbase.pb.ModifyTableRequest\032\035.hbase.pb.M" +
-      "odifyTableResponse\022J\n\013CreateTable\022\034.hbas",
-      "e.pb.CreateTableRequest\032\035.hbase.pb.Creat" +
-      "eTableResponse\022A\n\010Shutdown\022\031.hbase.pb.Sh" +
-      "utdownRequest\032\032.hbase.pb.ShutdownRespons" +
-      "e\022G\n\nStopMaster\022\033.hbase.pb.StopMasterReq" +
-      "uest\032\034.hbase.pb.StopMasterResponse\022h\n\031Is" +
-      "MasterInMaintenanceMode\022$.hbase.pb.IsInM" +
-      "aintenanceModeRequest\032%.hbase.pb.IsInMai" +
-      "ntenanceModeResponse\022>\n\007Balance\022\030.hbase." +
-      "pb.BalanceRequest\032\031.hbase.pb.BalanceResp" +
-      "onse\022_\n\022SetBalancerRunning\022#.hbase.pb.Se",
-      "tBalancerRunningRequest\032$.hbase.pb.SetBa" +
-      "lancerRunningResponse\022\\\n\021IsBalancerEnabl" +
-      "ed\022\".hbase.pb.IsBalancerEnabledRequest\032#" +
-      ".hbase.pb.IsBalancerEnabledResponse\022k\n\026S" +
-      "etSplitOrMergeEnabled\022\'.hbase.pb.SetSpli" +
-      "tOrMergeEnabledRequest\032(.hbase.pb.SetSpl" +
-      "itOrMergeEnabledResponse\022h\n\025IsSplitOrMer" +
-      "geEnabled\022&.hbase.pb.IsSplitOrMergeEnabl" +
-      "edRequest\032\'.hbase.pb.IsSplitOrMergeEnabl" +
-      "edResponse\022D\n\tNormalize\022\032.hbase.pb.Norma",
-      "lizeRequest\032\033.hbase.pb.NormalizeResponse" +
-      "\022e\n\024SetNormalizerRunning\022%.hbase.pb.SetN" +
-      "ormalizerRunningRequest\032&.hbase.pb.SetNo" +
-      "rmalizerRunningResponse\022b\n\023IsNormalizerE" +
-      "nabled\022$.hbase.pb.IsNormalizerEnabledReq" +
-      "uest\032%.hbase.pb.IsNormalizerEnabledRespo" +
-      "nse\022S\n\016RunCatalogScan\022\037.hbase.pb.RunCata" +
-      "logScanRequest\032 .hbase.pb.RunCatalogScan" +
-      "Response\022e\n\024EnableCatalogJanitor\022%.hbase" +
-      ".pb.EnableCatalogJanitorRequest\032&.hbase.",
-      "pb.EnableCatalogJanitorResponse\022n\n\027IsCat" +
-      "alogJanitorEnabled\022(.hbase.pb.IsCatalogJ" +
-      "anitorEnabledRequest\032).hbase.pb.IsCatalo" +
-      "gJanitorEnabledResponse\022V\n\017RunCleanerCho" +
-      "re\022 .hbase.pb.RunCleanerChoreRequest\032!.h" +
-      "base.pb.RunCleanerChoreResponse\022k\n\026SetCl" +
-      "eanerChoreRunning\022\'.hbase.pb.SetCleanerC" +
-      "horeRunningRequest\032(.hbase.pb.SetCleaner" +
-      "ChoreRunningResponse\022h\n\025IsCleanerChoreEn" +
-      "abled\022&.hbase.pb.IsCleanerChoreEnabledRe",
-      "quest\032\'.hbase.pb.IsCleanerChoreEnabledRe" +
-      "sponse\022^\n\021ExecMasterService\022#.hbase.pb.C" +
-      "oprocessorServiceRequest\032$.hbase.pb.Copr" +
-      "ocessorServiceResponse\022A\n\010Snapshot\022\031.hba" +
-      "se.pb.SnapshotRequest\032\032.hbase.pb.Snapsho" +
-      "tResponse\022h\n\025GetCompletedSnapshots\022&.hba" +
-      "se.pb.GetCompletedSnapshotsRequest\032\'.hba" +
-      "se.pb.GetCompletedSnapshotsResponse\022S\n\016D" +
-      "eleteSnapshot\022\037.hbase.pb.DeleteSnapshotR" +
-      "equest\032 .hbase.pb.DeleteSnapshotResponse",
-      "\022S\n\016IsSnapshotDone\022\037.hbase.pb.IsSnapshot" +
-      "DoneRequest\032 .hbase.pb.IsSnapshotDoneRes" +
-      "ponse\022V\n\017RestoreSnapshot\022 .hbase.pb.Rest" +
-      "oreSnapshotRequest\032!.hbase.pb.RestoreSna" +
-      "pshotResponse\022P\n\rExecProcedure\022\036.hbase.p" +
-      "b.ExecProcedureRequest\032\037.hbase.pb.ExecPr" +
-      "ocedureResponse\022W\n\024ExecProcedureWithRet\022" +
-      "\036.hbase.pb.ExecProcedureRequest\032\037.hbase." +
-      "pb.ExecProcedureResponse\022V\n\017IsProcedureD" +
-      "one\022 .hbase.pb.IsProcedureDoneRequest\032!.",
-      "hbase.pb.IsProcedureDoneResponse\022V\n\017Modi" +
-      "fyNamespace\022 .hbase.pb.ModifyNamespaceRe" +
-      "quest\032!.hbase.pb.ModifyNamespaceResponse" +
-      "\022V\n\017CreateNamespace\022 .hbase.pb.CreateNam" +
-      "espaceRequest\032!.hbase.pb.CreateNamespace" +
-      "Response\022V\n\017DeleteNamespace\022 .hbase.pb.D" +
-      "eleteNamespaceRequest\032!.hbase.pb.DeleteN" +
-      "amespaceResponse\022k\n\026GetNamespaceDescript" +
-      "or\022\'.hbase.pb.GetNamespaceDescriptorRequ" +
-      "est\032(.hbase.pb.GetNamespaceDescriptorRes",
-      "ponse\022q\n\030ListNamespaceDescriptors\022).hbas" +
-      "e.pb.ListNamespaceDescriptorsRequest\032*.h" +
-      "base.pb.ListNamespaceDescriptorsResponse" +
-      "\022\206\001\n\037ListTableDescriptorsByNamespace\0220.h" +
-      "base.pb.ListTableDescriptorsByNamespaceR" +
-      "equest\0321.hbase.pb.ListTableDescriptorsBy" +
-      "NamespaceResponse\022t\n\031ListTableNamesByNam" +
-      "espace\022*.hbase.pb.ListTableNamesByNamesp" +
-      "aceRequest\032+.hbase.pb.ListTableNamesByNa" +
-      "mespaceResponse\022P\n\rGetTableState\022\036.hbase",
-      ".pb.GetTableStateRequest\032\037.hbase.pb.GetT" +
-      "ableStateResponse\022A\n\010SetQuota\022\031.hbase.pb" +
-      ".SetQuotaRequest\032\032.hbase.pb.SetQuotaResp" +
-      "onse\022x\n\037getLastMajorCompactionTimestamp\022" +
-      ").hbase.pb.MajorCompactionTimestampReque" +
-      "st\032*.hbase.pb.MajorCompactionTimestampRe" +
-      "sponse\022\212\001\n(getLastMajorCompactionTimesta" +
-      "mpForRegion\0222.hbase.pb.MajorCompactionTi" +
-      "mestampForRegionRequest\032*.hbase.pb.Major" +
-      "CompactionTimestampResponse\022_\n\022getProced",
-      "ureResult\022#.hbase.pb.GetProcedureResultR" +
-      "equest\032$.hbase.pb.GetProcedureResultResp" +
-      "onse\022h\n\027getSecurityCapabilities\022%.hbase." +
-      "pb.SecurityCapabilitiesRequest\032&.hbase.p" +
-      "b.SecurityCapabilitiesResponse\022S\n\016AbortP" +
-      "rocedure\022\037.hbase.pb.AbortProcedureReques" +
-      "t\032 .hbase.pb.AbortProcedureResponse\022S\n\016L" +
-      "istProcedures\022\037.hbase.pb.ListProceduresR" +
-      "equest\032 .hbase.pb.ListProceduresResponse" +
-      "\022_\n\022AddReplicationPeer\022#.hbase.pb.AddRep",
-      "licationPeerRequest\032$.hbase.pb.AddReplic" +
-      "ationPeerResponse\022h\n\025RemoveReplicationPe" +
-      "er\022&.hbase.pb.RemoveReplicationPeerReque" +
-      "st\032\'.hbase.pb.RemoveReplicationPeerRespo" +
-      "nse\022h\n\025EnableReplicationPeer\022&.hbase.pb." +
-      "EnableReplicationPeerRequest\032\'.hbase.pb." +
-      "EnableReplicationPeerResponse\022k\n\026Disable" +
-      "ReplicationPeer\022\'.hbase.pb.DisableReplic" +
-      "ationPeerRequest\032(.hbase.pb.DisableRepli" +
-      "cationPeerResponse\022q\n\030GetReplicationPeer",
-      "Config\022).hbase.pb.GetReplicationPeerConf" +
-      "igRequest\032*.hbase.pb.GetReplicationPeerC" +
-      "onfigResponse\022z\n\033UpdateReplicationPeerCo" +
-      "nfig\022,.hbase.pb.UpdateReplicationPeerCon" +
-      "figRequest\032-.hbase.pb.UpdateReplicationP" +
-      "eerConfigResponse\022e\n\024ListReplicationPeer" +
-      "s\022%.hbase.pb.ListReplicationPeersRequest" +
-      "\032&.hbase.pb.ListReplicationPeersResponse" +
-      "\022t\n\031listDrainingRegionServers\022*.hbase.pb" +
-      ".ListDrainingRegionServersRequest\032+.hbas",
-      "e.pb.ListDrainingRegionServersResponse\022_" +
-      "\n\022drainRegionServers\022#.hbase.pb.DrainReg" +
-      "ionServersRequest\032$.hbase.pb.DrainRegion" +
-      "ServersResponse\022}\n\034removeDrainFromRegion" +
-      "Servers\022-.hbase.pb.RemoveDrainFromRegion" +
-      "ServersRequest\032..hbase.pb.RemoveDrainFro" +
-      "mRegionServersResponseBI\n1org.apache.had" +
-      "oop.hbase.shaded.protobuf.generatedB\014Mas" +
-      "terProtosH\001\210\001\001\240\001\001"
+      "on\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(" +
+      "\004:\0010\"*\n\027RestoreSnapshotResponse\022\017\n\007proc_" +
+      "id\030\001 \002(\004\"H\n\025IsSnapshotDoneRequest\022/\n\010sna" +
+      "pshot\030\001 \001(\0132\035.hbase.pb.SnapshotDescripti" +
+      "on\"^\n\026IsSnapshotDoneResponse\022\023\n\004done\030\001 \001" +
+      "(\010:\005false\022/\n\010snapshot\030\002 \001(\0132\035.hbase.pb.S" +
+      "napshotDescription\"O\n\034IsRestoreSnapshotD" +
+      "oneRequest\022/\n\010snapshot\030\001 \001(\0132\035.hbase.pb.",
+      "SnapshotDescription\"4\n\035IsRestoreSnapshot" +
+      "DoneResponse\022\023\n\004done\030\001 \001(\010:\005false\"F\n\033Get" +
+      "SchemaAlterStatusRequest\022\'\n\ntable_name\030\001" +
+      " \002(\0132\023.hbase.pb.TableName\"T\n\034GetSchemaAl" +
+      "terStatusResponse\022\035\n\025yet_to_update_regio" +
+      "ns\030\001 \001(\r\022\025\n\rtotal_regions\030\002 \001(\r\"\213\001\n\032GetT" +
+      "ableDescriptorsRequest\022(\n\013table_names\030\001 " +
+      "\003(\0132\023.hbase.pb.TableName\022\r\n\005regex\030\002 \001(\t\022" +
+      "!\n\022include_sys_tables\030\003 \001(\010:\005false\022\021\n\tna" +
+      "mespace\030\004 \001(\t\"J\n\033GetTableDescriptorsResp",
+      "onse\022+\n\014table_schema\030\001 \003(\0132\025.hbase.pb.Ta" +
+      "bleSchema\"[\n\024GetTableNamesRequest\022\r\n\005reg" +
+      "ex\030\001 \001(\t\022!\n\022include_sys_tables\030\002 \001(\010:\005fa" +
+      "lse\022\021\n\tnamespace\030\003 \001(\t\"A\n\025GetTableNamesR" +
+      "esponse\022(\n\013table_names\030\001 \003(\0132\023.hbase.pb." +
+      "TableName\"?\n\024GetTableStateRequest\022\'\n\ntab" +
+      "le_name\030\001 \002(\0132\023.hbase.pb.TableName\"B\n\025Ge" +
+      "tTableStateResponse\022)\n\013table_state\030\001 \002(\013" +
+      "2\024.hbase.pb.TableState\"\031\n\027GetClusterStat" +
+      "usRequest\"K\n\030GetClusterStatusResponse\022/\n",
+      "\016cluster_status\030\001 \002(\0132\027.hbase.pb.Cluster" +
+      "Status\"\030\n\026IsMasterRunningRequest\"4\n\027IsMa" +
+      "sterRunningResponse\022\031\n\021is_master_running" +
+      "\030\001 \002(\010\"I\n\024ExecProcedureRequest\0221\n\tproced" +
+      "ure\030\001 \002(\0132\036.hbase.pb.ProcedureDescriptio" +
+      "n\"F\n\025ExecProcedureResponse\022\030\n\020expected_t" +
+      "imeout\030\001 \001(\003\022\023\n\013return_data\030\002 \001(\014\"K\n\026IsP" +
+      "rocedureDoneRequest\0221\n\tprocedure\030\001 \001(\0132\036" +
+      ".hbase.pb.ProcedureDescription\"`\n\027IsProc" +
+      "edureDoneResponse\022\023\n\004done\030\001 \001(\010:\005false\0220",
+      "\n\010snapshot\030\002 \001(\0132\036.hbase.pb.ProcedureDes" +
+      "cription\",\n\031GetProcedureResultRequest\022\017\n" +
+      "\007proc_id\030\001 \002(\004\"\375\001\n\032GetProcedureResultRes" +
+      "ponse\0229\n\005state\030\001 \002(\0162*.hbase.pb.GetProce" +
+      "dureResultResponse.State\022\026\n\016submitted_ti" +
+      "me\030\002 \001(\004\022\023\n\013last_update\030\003 \001(\004\022\016\n\006result\030" +
+      "\004 \001(\014\0224\n\texception\030\005 \001(\0132!.hbase.pb.Fore" +
+      "ignExceptionMessage\"1\n\005State\022\r\n\tNOT_FOUN" +
+      "D\020\000\022\013\n\007RUNNING\020\001\022\014\n\010FINISHED\020\002\"M\n\025AbortP" +
+      "rocedureRequest\022\017\n\007proc_id\030\001 \002(\004\022#\n\025mayI",
+      "nterruptIfRunning\030\002 \001(\010:\004true\"6\n\026AbortPr" +
+      "ocedureResponse\022\034\n\024is_procedure_aborted\030" +
+      "\001 \002(\010\"\027\n\025ListProceduresRequest\"@\n\026ListPr" +
+      "oceduresResponse\022&\n\tprocedure\030\001 \003(\0132\023.hb" +
+      "ase.pb.Procedure\"\022\n\020ListLocksRequest\"5\n\021" +
+      "ListLocksResponse\022 \n\004lock\030\001 \003(\0132\022.hbase." +
+      "pb.LockInfo\"\315\001\n\017SetQuotaRequest\022\021\n\tuser_" +
+      "name\030\001 \001(\t\022\022\n\nuser_group\030\002 \001(\t\022\021\n\tnamesp" +
+      "ace\030\003 \001(\t\022\'\n\ntable_name\030\004 \001(\0132\023.hbase.pb" +
+      ".TableName\022\022\n\nremove_all\030\005 \001(\010\022\026\n\016bypass",
+      "_globals\030\006 \001(\010\022+\n\010throttle\030\007 \001(\0132\031.hbase" +
+      ".pb.ThrottleRequest\"\022\n\020SetQuotaResponse\"" +
+      "J\n\037MajorCompactionTimestampRequest\022\'\n\nta" +
+      "ble_name\030\001 \002(\0132\023.hbase.pb.TableName\"U\n(M" +
+      "ajorCompactionTimestampForRegionRequest\022" +
+      ")\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifi" +
+      "er\"@\n MajorCompactionTimestampResponse\022\034" +
+      "\n\024compaction_timestamp\030\001 \002(\003\"\035\n\033Security" +
+      "CapabilitiesRequest\"\354\001\n\034SecurityCapabili" +
+      "tiesResponse\022G\n\014capabilities\030\001 \003(\01621.hba",
+      "se.pb.SecurityCapabilitiesResponse.Capab" +
+      "ility\"\202\001\n\nCapability\022\031\n\025SIMPLE_AUTHENTIC" +
+      "ATION\020\000\022\031\n\025SECURE_AUTHENTICATION\020\001\022\021\n\rAU" +
+      "THORIZATION\020\002\022\026\n\022CELL_AUTHORIZATION\020\003\022\023\n" +
+      "\017CELL_VISIBILITY\020\004\"\"\n ListDrainingRegion" +
+      "ServersRequest\"N\n!ListDrainingRegionServ" +
+      "ersResponse\022)\n\013server_name\030\001 \003(\0132\024.hbase" +
+      ".pb.ServerName\"F\n\031DrainRegionServersRequ" +
+      "est\022)\n\013server_name\030\001 \003(\0132\024.hbase.pb.Serv" +
+      "erName\"\034\n\032DrainRegionServersResponse\"P\n#",
+      "RemoveDrainFromRegionServersRequest\022)\n\013s" +
+      "erver_name\030\001 \003(\0132\024.hbase.pb.ServerName\"&" +
+      "\n$RemoveDrainFromRegionServersResponse*(" +
+      "\n\020MasterSwitchType\022\t\n\005SPLIT\020\000\022\t\n\005MERGE\020\001" +
+      "2\2074\n\rMasterService\022e\n\024GetSchemaAlterStat" +
+      "us\022%.hbase.pb.GetSchemaAlterStatusReques" +
+      "t\032&.hbase.pb.GetSchemaAlterStatusRespons" +
+      "e\022b\n\023GetTableDescriptors\022$.hbase.pb.GetT" +
+      "ableDescriptorsRequest\032%.hbase.pb.GetTab" +
+      "leDescriptorsResponse\022P\n\rGetTableNames\022\036",
+      ".hbase.pb.GetTableNamesRequest\032\037.hbase.p" +
+      "b.GetTableNamesResponse\022Y\n\020GetClusterSta" +
+      "tus\022!.hbase.pb.GetClusterStatusRequest\032\"" +
+      ".hbase.pb.GetClusterStatusResponse\022V\n\017Is" +
+      "MasterRunning\022 .hbase.pb.IsMasterRunning" +
+      "Request\032!.hbase.pb.IsMasterRunningRespon" +
+      "se\022D\n\tAddColumn\022\032.hbase.pb.AddColumnRequ" +
+      "est\032\033.hbase.pb.AddColumnResponse\022M\n\014Dele" +
+      "teColumn\022\035.hbase.pb.DeleteColumnRequest\032" +
+      "\036.hbase.pb.DeleteColumnResponse\022M\n\014Modif",
+      "yColumn\022\035.hbase.pb.ModifyColumnRequest\032\036" +
+      ".hbase.pb.ModifyColumnResponse\022G\n\nMoveRe" +
+      "gion\022\033.hbase.pb.MoveRegionRequest\032\034.hbas" +
+      "e.pb.MoveRegionResponse\022\\\n\021MergeTableReg" +
+      "ions\022\".hbase.pb.MergeTableRegionsRequest" +
+      "\032#.hbase.pb.MergeTableRegionsResponse\022M\n" +
+      "\014AssignRegion\022\035.hbase.pb.AssignRegionReq" +
+      "uest\032\036.hbase.pb.AssignRegionResponse\022S\n\016" +
+      "UnassignRegion\022\037.hbase.pb.UnassignRegion" +
+      "Request\032 .hbase.pb.UnassignRegionRespons",
+      "e\022P\n\rOfflineRegion\022\036.hbase.pb.OfflineReg" +
+      "ionRequest\032\037.hbase.pb.OfflineRegionRespo" +
+      "nse\022J\n\013DeleteTable\022\034.hbase.pb.DeleteTabl" +
+      "eRequest\032\035.hbase.pb.DeleteTableResponse\022" +
+      "P\n\rtruncateTable\022\036.hbase.pb.TruncateTabl" +
+      "eRequest\032\037.hbase.pb.TruncateTableRespons" +
+      "e\022J\n\013EnableTable\022\034.hbase.pb.EnableTableR" +
+      "equest\032\035.hbase.pb.EnableTableResponse\022M\n" +
+      "\014DisableTable\022\035.hbase.pb.DisableTableReq" +
+      "uest\032\036.hbase.pb.DisableTableResponse\022J\n\013",
+      "ModifyTable\022\034.hbase.pb.ModifyTableReques" +
+      "t\032\035.hbase.pb.ModifyTableResponse\022J\n\013Crea" +
+      "teTable\022\034.hbase.pb.CreateTableRequest\032\035." +
+      "hbase.pb.CreateTableResponse\022A\n\010Shutdown" +
+      "\022\031.hbase.pb.ShutdownRequest\032\032.hbase.pb.S" +
+      "hutdownResponse\022G\n\nStopMaster\022\033.hbase.pb" +
+      ".StopMasterRequest\032\034.hbase.pb.StopMaster" +
+      "Response\022h\n\031IsMasterInMaintenanceMode\022$." +
+      "hbase.pb.IsInMaintenanceModeRequest\032%.hb" +
+      "ase.pb.IsInMaintenanceModeResponse\022>\n\007Ba",
+      "lance\022\030.hbase.pb.BalanceRequest\032\031.hbase." +
+      "pb.BalanceResponse\022_\n\022SetBalancerRunning" +
+      "\022#.hbase.pb.SetBalancerRunningRequest\032$." +
+      "hbase.pb.SetBalancerRunningResponse\022\\\n\021I" +
+      "sBalancerEnabled\022\".hbase.pb.IsBalancerEn" +
+      "abledRequest\032#.hbase.pb.IsBalancerEnable" +
+      "dResponse\022k\n\026SetSplitOrMergeEnabled\022\'.hb" +
+      "ase.pb.SetSplitOrMergeEnabledRequest\032(.h" +
+      "base.pb.SetSplitOrMergeEnabledResponse\022h" +
+      "\n\025IsSplitOrMergeEnabled\022&.hbase.pb.IsSpl",
+      "itOrMergeEnabledRequest\032\'.hbase.pb.IsSpl" +
+      "itOrMergeEnabledResponse\022D\n\tNormalize\022\032." +
+      "hbase.pb.NormalizeRequest\032\033.hbase.pb.Nor" +
+      "malizeResponse\022e\n\024SetNormalizerRunning\022%" +
+      ".hbase.pb.SetNormalizerRunningRequest\032&." +
+      "hbase.pb.SetNormalizerRunningResponse\022b\n" +
+      "\023IsNormalizerEnabled\022$.hbase.pb.IsNormal" +
+      "izerEnabledRequest\032%.hbase.pb.IsNormaliz" +
+      "erEnabledResponse\022S\n\016RunCatalogScan\022\037.hb" +
+      "ase.pb.RunCatalogScanRequest\032 .hbase.pb.",
+      "RunCatalogScanResponse\022e\n\024EnableCatalogJ" +
+      "anitor\022%.hbase.pb.EnableCatalogJanitorRe" +
+      "quest\032&.hbase.pb.EnableCatalogJanitorRes" +
+      "ponse\022n\n\027IsCatalogJanitorEnabled\022(.hbase" +
+      ".pb.IsCatalogJanitorEnabledRequest\032).hba" +
+      "se.pb.IsCatalogJanitorEnabledResponse\022V\n" +
+      "\017RunCleanerChore\022 .hbase.pb.RunCleanerCh" +
+      "oreRequest\032!.hbase.pb.RunCleanerChoreRes" +
+      "ponse\022k\n\026SetCleanerChoreRunning\022\'.hbase." +
+      "pb.SetCleanerChoreRunningRequest\032(.hbase",
+      ".pb.SetCleanerChoreRunningResponse\022h\n\025Is" +
+      "CleanerChoreEnabled\022&.hbase.pb.IsCleaner" +
+      "ChoreEnabledRequest\032\'.hbase.pb.IsCleaner" +
+      "ChoreEnabledResponse\022^\n\021ExecMasterServic" +
+      "e\022#.hbase.pb.CoprocessorServiceRequest\032$" +
+      ".hbase.pb.CoprocessorServiceResponse\022A\n\010" +
+      "Snapshot\022\031.hbase.pb.SnapshotRequest\032\032.hb" +
+      "ase.pb.SnapshotResponse\022h\n\025GetCompletedS" +
+      "napshots\022&.hbase.pb.GetCompletedSnapshot" +
+      "sRequest\032\'.hbase.pb.GetCompletedSnapshot",
+      "sResponse\022S\n\016DeleteSnapshot\022\037.hbase.pb.D" +
+      "eleteSnapshotRequest\032 .hbase.pb.DeleteSn" +
+      "apshotResponse\022S\n\016IsSnapshotDone\022\037.hbase" +
+      ".pb.IsSnapshotDoneRequest\032 .hbase.pb.IsS" +
+      "napshotDoneResponse\022V\n\017RestoreSnapshot\022 " +
+      ".hbase.pb.RestoreSnapshotRequest\032!.hbase" +
+      ".pb.RestoreSnapshotResponse\022P\n\rExecProce" +
+      "dure\022\036.hbase.pb.ExecProcedureRequest\032\037.h" +
+      "base.pb.ExecProcedureResponse\022W\n\024ExecPro" +
+      "cedureWithRet\022\036.hbase.pb.ExecProcedureRe",
+      "quest\032\037.hbase.pb.ExecProcedureResponse\022V" +
+      "\n\017IsProcedureDone\022 .hbase.pb.IsProcedure" +
+      "DoneRequest\032!.hbase.pb.IsProcedureDoneRe" +
+      "sponse\022V\n\017ModifyNamespace\022 .hbase.pb.Mod" +
+      "ifyNamespaceRequest\032!.hbase.pb.ModifyNam" +
+      "espaceResponse\022V\n\017CreateNamespace\022 .hbas" +
+      "e.pb.CreateNamespaceRequest\032!.hbase.pb.C" +
+      "reateNamespaceResponse\022V\n\017DeleteNamespac" +
+      "e\022 .hbase.pb.DeleteNamespaceRequest\032!.hb" +
+      "ase.pb.DeleteNamespaceResponse\022k\n\026GetNam",
+      "espaceDescriptor\022\'.hbase.pb.GetNamespace" +
+      "DescriptorRequest\032(.hbase.pb.GetNamespac" +
+      "eDescriptorResponse\022q\n\030ListNamespaceDesc" +
+      "riptors\022).hbase.pb.ListNamespaceDescript" +
+      "orsRequest\032*.hbase.pb.ListNamespaceDescr" +
+      "iptorsResponse\022\206\001\n\037ListTableDescriptorsB" +
+      "yNamespace\0220.hbase.pb.ListTableDescripto" +
+      "rsByNamespaceRequest\0321.hbase.pb.ListTabl" +
+      "eDescriptorsByNamespaceResponse\022t\n\031ListT" +
+      "ableNamesByNamespace\022*.hbase.pb.ListTabl",
+      "eNamesByNamespaceRequest\032+.hbase.pb.List" +
+      "TableNamesByNamespaceResponse\022P\n\rGetTabl" +
+      "eState\022\036.hbase.pb.GetTableStateRequest\032\037" +
+      ".hbase.pb.GetTableStateResponse\022A\n\010SetQu" +
+      "ota\022\031.hbase.pb.SetQuotaRequest\032\032.hbase.p" +
+      "b.SetQuotaResponse\022x\n\037getLastMajorCompac" +
+      "tionTimestamp\022).hbase.pb.MajorCompaction" +
+      "TimestampRequest\032*.hbase.pb.MajorCompact" +
+      "ionTimestampResponse\022\212\001\n(getLastMajorCom" +
+      "pactionTimestampForRegion\0222.hbase.pb.Maj",
+      "orCompactionTimestampForRegionRequest\032*." +
+      "hbase.pb.MajorCompactionTimestampRespons" +
+      "e\022_\n\022getProcedureResult\022#.hbase.pb.GetPr" +
+      "ocedureResultRequest\032$.hbase.pb.GetProce" +
+      "dureResultResponse\022h\n\027getSecurityCapabil" +
+      "ities\022%.hbase.pb.SecurityCapabilitiesReq" +
+      "uest\032&.hbase.pb.SecurityCapabilitiesResp" +
+      "onse\022S\n\016AbortProcedure\022\037.hbase.pb.AbortP" +
+      "rocedureRequest\032 .hbase.pb.AbortProcedur" +
+      "eResponse\022S\n\016ListProcedures\022\037.hbase.pb.L",
+      "istProceduresRequest\032 .hbase.pb.ListProc" +
+      "eduresResponse\022D\n\tListLocks\022\032.hbase.pb.L" +
+      "istLocksRequest\032\033.hbase.pb.ListLocksResp" +
+      "onse\022_\n\022AddReplicationPeer\022#.hbase.pb.Ad" +
+      "dReplicationPeerRequest\032$.hbase.pb.AddRe" +
+      "plicationPeerResponse\022h\n\025RemoveReplicati" +
+      "onPeer\022&.hbase.pb.RemoveReplicationPeerR" +
+      "equest\032\'.hbase.pb.RemoveReplicationPeerR" +
+      "esponse\022h\n\025EnableReplicationPeer\022&.hbase" +
+      ".pb.EnableReplicationPeerRequest\032\'.hbase",
+      ".pb.EnableReplicationPeerResponse\022k\n\026Dis" +
+      "ableReplicationPeer\022\'.hbase.pb.DisableRe" +
+      "plicationPeerRequest\032(.hbase.pb.DisableR" +
+      "eplicationPeerResponse\022q\n\030GetReplication" +
+      "PeerConfig\022).hbase.pb.GetReplicationPeer" +
+      "ConfigRequest\032*.hbase.pb.GetReplicationP" +
+      "eerConfigResponse\022z\n\033UpdateReplicationPe" +
+      "erConfig\022,.hbase.pb.UpdateReplicationPee" +
+      "rConfigRequest\032-.hbase.pb.UpdateReplicat" +
+      "ionPeerConfigResponse\022e\n\024ListReplication",
+      "Peers\022%.hbase.pb.ListReplicationPeersReq" +
+      "uest\032&.hbase.pb.ListReplicationPeersResp" +
+      "onse\022t\n\031listDrainingRegionServers\022*.hbas" +
+      "e.pb.ListDrainingRegionServersRequest\032+." +
+      "hbase.pb.ListDrainingRegionServersRespon" +
+      "se\022_\n\022drainRegionServers\022#.hbase.pb.Drai" +
+      "nRegionServersRequest\032$.hbase.pb.DrainRe" +
+      "gionServersResponse\022}\n\034removeDrainFromRe" +
+      "gionServers\022-.hbase.pb.RemoveDrainFromRe" +
+      "gionServersRequest\032..hbase.pb.RemoveDrai",
+      "nFromRegionServersResponseBI\n1org.apache" +
+      ".hadoop.hbase.shaded.protobuf.generatedB" +
+      "\014MasterProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -76853,6 +78065,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.getDescriptor(),
           org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.getDescriptor(),
           org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.getDescriptor(),
+          org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.getDescriptor(),
           org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.getDescriptor(),
           org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.getDescriptor(),
           org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.getDescriptor(),
@@ -77517,80 +78730,92 @@ public final class MasterProtos {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ListProceduresResponse_descriptor,
         new java.lang.String[] { "Procedure", });
-    internal_static_hbase_pb_SetQuotaRequest_descriptor =
+    internal_static_hbase_pb_ListLocksRequest_descriptor =
       getDescriptor().getMessageTypes().get(110);
+    internal_static_hbase_pb_ListLocksRequest_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_ListLocksRequest_descriptor,
+        new java.lang.String[] { });
+    internal_static_hbase_pb_ListLocksResponse_descriptor =
+      getDescriptor().getMessageTypes().get(111);
+    internal_static_hbase_pb_ListLocksResponse_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_ListLocksResponse_descriptor,
+        new java.lang.String[] { "Lock", });
+    internal_static_hbase_pb_SetQuotaRequest_descriptor =
+      getDescriptor().getMessageTypes().get(112);
     internal_static_hbase_pb_SetQuotaRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SetQuotaRequest_descriptor,
         new java.lang.String[] { "UserName", "UserGroup", "Namespace", "TableName", "RemoveAll", "BypassGlobals", "Throttle", });
     internal_static_hbase_pb_SetQuotaResponse_descriptor =
-      getDescriptor().getMessageTypes().get(111);
+      getDescriptor().getMessageTypes().get(113);
     internal_static_hbase_pb_SetQuotaResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SetQuotaResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_MajorCompactionTimestampRequest_descriptor =
-      getDescriptor().getMessageTypes().get(112);
+      getDescriptor().getMessageTypes().get(114);
     internal_static_hbase_pb_MajorCompactionTimestampRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_MajorCompactionTimestampRequest_descriptor,
         new java.lang.String[] { "TableName", });
     internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_descriptor =
-      getDescriptor().getMessageTypes().get(113);
+      getDescriptor().getMessageTypes().get(115);
     internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_descriptor,
         new java.lang.String[] { "Region", });
     internal_static_hbase_pb_MajorCompactionTimestampResponse_descriptor =
-      getDescriptor().getMessageTypes().get(114);
+      getDescriptor().getMessageTypes().get(116);
     internal_static_hbase_pb_MajorCompactionTimestampResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_MajorCompactionTimestampResponse_descriptor,
         new java.lang.String[] { "CompactionTimestamp", });
     internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor =
-      getDescriptor().getMessageTypes().get(115);
+      getDescriptor().getMessageTypes().get(117);
     internal_static_hbase_pb_SecurityCapabilitiesRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor =
-      getDescriptor().getMessageTypes().get(116);
+      getDescriptor().getMessageTypes().get(118);
     internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor,
         new java.lang.String[] { "Capabilities", });
     internal_static_hbase_pb_ListDrainingRegionServersRequest_descriptor =
-      getDescriptor().getMessageTypes().get(117);
+      getDescriptor().getMessageTypes().get(119);
     internal_static_hbase_pb_ListDrainingRegionServersRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ListDrainingRegionServersRequest_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_ListDrainingRegionServersResponse_descriptor =
-      getDescriptor().getMessageTypes().get(118);
+      getDescriptor().getMessageTypes().get(120);
     internal_static_hbase_pb_ListDrainingRegionServersResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ListDrainingRegionServersResponse_descriptor,
         new java.lang.String[] { "ServerName", });
     internal_static_hbase_pb_DrainRegionServersRequest_descriptor =
-      getDescriptor().getMessageTypes().get(119);
+      getDescriptor().getMessageTypes().get(121);
     internal_static_hbase_pb_DrainRegionServersRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_DrainRegionServersRequest_descriptor,
         new java.lang.String[] { "ServerName", });
     internal_static_hbase_pb_DrainRegionServersResponse_descriptor =
-      getDescriptor().getMessageTypes().get(120);
+      getDescriptor().getMessageTypes().get(122);
     internal_static_hbase_pb_DrainRegionServersResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_DrainRegionServersResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_RemoveDrainFromRegionServersRequest_descriptor =
-      getDescriptor().getMessageTypes().get(121);
+      getDescriptor().getMessageTypes().get(123);
     internal_static_hbase_pb_RemoveDrainFromRegionServersRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_RemoveDrainFromRegionServersRequest_descriptor,
         new java.lang.String[] { "ServerName", });
     internal_static_hbase_pb_RemoveDrainFromRegionServersResponse_descriptor =
-      getDescriptor().getMessageTypes().get(122);
+      getDescriptor().getMessageTypes().get(124);
     internal_static_hbase_pb_RemoveDrainFromRegionServersResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_RemoveDrainFromRegionServersResponse_descriptor,
@@ -77599,6 +78824,7 @@ public final class MasterProtos {
     org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.getDescriptor();
     org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.getDescriptor();
     org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.getDescriptor();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.getDescriptor();
     org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.getDescriptor();
     org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.getDescriptor();
     org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.getDescriptor();

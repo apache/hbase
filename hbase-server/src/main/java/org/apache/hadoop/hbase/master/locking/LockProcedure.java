@@ -204,6 +204,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
    * WALs.
    * @return false, so procedure framework doesn't mark this procedure as failure.
    */
+  @Override
   protected boolean setTimeoutFailure(final MasterProcedureEnv env) {
     synchronized (event) {
       if (LOG.isDebugEnabled()) LOG.debug("Timeout failure " + this.event);
@@ -231,7 +232,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  protected Procedure[] execute(final MasterProcedureEnv env) throws ProcedureSuspendedException {
+  protected Procedure<?>[] execute(final MasterProcedureEnv env) throws ProcedureSuspendedException {
     // Local master locks don't store any state, so on recovery, simply finish this procedure
     // immediately.
     if (recoveredMasterLock) return null;
@@ -334,6 +335,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     setState(ProcedureProtos.ProcedureState.RUNNABLE);
   }
 
+  @Override
   protected void toStringClassDetails(final StringBuilder builder) {
     super.toStringClassDetails(builder);
     if (regionInfos != null) {
@@ -348,6 +350,10 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
       builder.append(", tableName=").append(tableName);
     }
     builder.append(", type=").append(type);
+  }
+
+  public LockType getType() {
+    return type;
   }
 
   private LockInterface setupLock() throws IllegalArgumentException {

@@ -25,6 +25,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
+import "Procedure.proto";
 
 enum LockType {
   EXCLUSIVE = 1;
@@ -68,6 +69,27 @@ message LockProcedureData {
   repeated RegionInfo region_info = 4;
   optional string description = 5;
   optional bool is_master_lock = 6 [default = false];
+}
+
+enum ResourceType {
+  RESOURCE_TYPE_SERVER = 1;
+  RESOURCE_TYPE_NAMESPACE = 2;
+  RESOURCE_TYPE_TABLE = 3;
+  RESOURCE_TYPE_REGION = 4;
+}
+
+message WaitingProcedure {
+  required LockType lock_type = 1;
+  required Procedure procedure = 2;
+}
+
+message LockInfo {
+  required ResourceType resource_type = 1;
+  optional string resource_name = 2;
+  required LockType lock_type = 3;
+  optional Procedure exclusive_lock_owner_procedure = 4;
+  optional int32 shared_lock_count = 5;
+  repeated WaitingProcedure waitingProcedures = 6;
 }
 
 service LockService {

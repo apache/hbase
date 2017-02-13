@@ -25,8 +25,6 @@ import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRI
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsent;
 import static org.apache.hadoop.hbase.util.CollectionUtils.computeIfAbsentEx;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -119,6 +117,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 
@@ -1280,6 +1280,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           RpcController controller,
           MasterProtos.ListProceduresRequest request) throws ServiceException {
         return stub.listProcedures(controller, request);
+      }
+
+      @Override
+      public MasterProtos.ListLocksResponse listLocks(
+          RpcController controller,
+          MasterProtos.ListLocksRequest request) throws ServiceException {
+        return stub.listLocks(controller, request);
       }
 
       @Override

@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.RegionStateListener;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -113,6 +112,7 @@ import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MergeTableRegionsProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
@@ -128,6 +128,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
@@ -979,7 +980,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   void initQuotaManager() throws IOException {
     MasterQuotaManager quotaManager = new MasterQuotaManager(this);
-    this.assignmentManager.setRegionStateListener((RegionStateListener)quotaManager);
+    this.assignmentManager.setRegionStateListener(quotaManager);
     quotaManager.start();
     this.quotaManager = quotaManager;
   }
@@ -1141,8 +1142,8 @@ public class HMaster extends HRegionServer implements MasterServices {
     procedureStore = new WALProcedureStore(conf, walDir.getFileSystem(conf), walDir,
         new MasterProcedureEnv.WALStoreLeaseRecovery(this));
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
-    procedureExecutor = new ProcedureExecutor(conf, procEnv, procedureStore,
-        procEnv.getProcedureScheduler());
+    MasterProcedureScheduler procedureScheduler = procEnv.getProcedureScheduler();
+    procedureExecutor = new ProcedureExecutor<>(conf, procEnv, procedureStore, procedureScheduler);
     configurationManager.registerObserver(procEnv);
 
     final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS,
@@ -2907,6 +2908,34 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     return procInfoList;
+  }
+
+  private Map<Long, ProcedureInfo> getProcedureInfos() {
+    final List<ProcedureInfo> list = procedureExecutor.listProcedures();
+    final Map<Long, ProcedureInfo> map = new HashMap<>();
+
+    for (ProcedureInfo procedureInfo : list) {
+      map.put(procedureInfo.getProcId(), procedureInfo);
+    }
+
+    return map;
+  }
+
+  @Override
+  public List<LockInfo> listLocks() throws IOException {
+    if (cpHost != null) {
+      cpHost.preListLocks();
+    }
+
+    MasterProcedureScheduler procedureScheduler = procedureExecutor.getEnvironment().getProcedureScheduler();
+
+    final List<LockInfo> lockInfoList = procedureScheduler.listLocks();
+
+    if (cpHost != null) {
+      cpHost.postListLocks(lockInfoList);
+    }
+
+    return lockInfoList;
   }
 
   /**

@@ -191,6 +191,12 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
+  public ListLocksResponse listLocks(RpcController controller,
+      ListLocksRequest request) throws ServiceException {
+    return stub.listLocks(controller, request);
+  }
+
+  @Override
   public ListNamespaceDescriptorsResponse listNamespaceDescriptors(RpcController controller,
       ListNamespaceDescriptorsRequest request) throws ServiceException {
     return stub.listNamespaceDescriptors(controller, request);

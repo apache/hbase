@@ -27,9 +27,10 @@
   import="java.util.Set"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.ProcedureInfo"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv"
+  import="org.apache.hadoop.hbase.ProcedureInfo"
+  import="org.apache.hadoop.hbase.procedure2.LockInfo"
   import="org.apache.hadoop.hbase.procedure2.ProcedureExecutor"
   import="org.apache.hadoop.hbase.procedure2.store.wal.ProcedureWALFile"
   import="org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore"
@@ -55,6 +56,8 @@
       return cmp < 0 ? -1 : cmp > 0 ? 1 : 0;
     }
   });
+
+  List<LockInfo> locks = master.listLocks();
 %>
 <!--[if IE]>
 <!DOCTYPE html>
@@ -62,15 +65,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>HBase Master Procedures: <%= master.getServerName() %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="/static/css/hbase.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet" />
+    <link href="/static/css/hbase.css" rel="stylesheet" />
   </head>
 <body>
 <div class="navbar  navbar-fixed-top navbar-default">
@@ -87,7 +90,7 @@
             <ul class="nav navbar-nav">
                 <li><a href="/master-status">Home</a></li>
                 <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/procedures.jsp">Procedures</a></li>
+                <li><a href="/procedures.jsp">Procedures &amp; Locks</a></li>
                 <li><a href="/logs/">Local Logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug Dump</a></li>
@@ -116,43 +119,42 @@
         <th>Last Update</th>
         <th>Errors</th>
     </tr>
-    <tr>
-      <% for (ProcedureInfo procInfo : procedures) { %>
+    <% for (ProcedureInfo procInfo : procedures) { %>
       <tr>
-        <td><%= procInfo.getProcId() %></a></td>
-        <td><%= procInfo.hasParentId() ? procInfo.getParentId() : "" %></a></td>
-        <td><%= escapeXml(procInfo.getProcState().toString()) %></a></td>
-        <td><%= escapeXml(procInfo.getProcOwner()) %></a></td>
-        <td><%= escapeXml(procInfo.getProcName()) %></a></td>
-        <td><%= new Date(procInfo.getSubmittedTime()) %></a></td>
-        <td><%= new Date(procInfo.getLastUpdate()) %></a></td>
-        <td><%= escapeXml(procInfo.isFailed() ? procInfo.getException().getMessage() : "") %></a></td>
+        <td><%= procInfo.getProcId() %></td>
+        <td><%= procInfo.hasParentId() ? procInfo.getParentId() : "" %></td>
+        <td><%= escapeXml(procInfo.getProcState().toString()) %></td>
+        <td><%= escapeXml(procInfo.getProcOwner()) %></td>
+        <td><%= escapeXml(procInfo.getProcName()) %></td>
+        <td><%= new Date(procInfo.getSubmittedTime()) %></td>
+        <td><%= new Date(procInfo.getLastUpdate()) %></td>
+        <td><%= escapeXml(procInfo.isFailed() ? procInfo.getException().getMessage() : "") %></td>
       </tr>
     <% } %>
   </table>
 </div>
-<br>
+<br />
 <div class="container-fluid content">
   <div class="row">
     <div class="page-header">
       <h2>Procedure WAL State</h2>
     </div>
   </div>
-<div class="tabbable">
-  <ul class="nav nav-pills">
-    <li class="active">
-      <a href="#tab_WALFiles" data-toggle="tab">WAL files</a>
-    </li>
-    <li class="">
-      <a href="#tab_WALFilesCorrupted" data-toggle="tab">Corrupted WAL files</a>
-     </li>
-    <li class="">
-      <a href="#tab_WALRollTime" data-toggle="tab">WAL roll time</a>
-     </li>
-     <li class="">
-       <a href="#tab_SyncStats" data-toggle="tab">Sync stats</a>
-     </li>
-  </ul>
+  <div class="tabbable">
+    <ul class="nav nav-pills">
+      <li class="active">
+        <a href="#tab_WALFiles" data-toggle="tab">WAL files</a>
+      </li>
+      <li class="">
+        <a href="#tab_WALFilesCorrupted" data-toggle="tab">Corrupted WAL files</a>
+      </li>
+      <li class="">
+        <a href="#tab_WALRollTime" data-toggle="tab">WAL roll time</a>
+      </li>
+      <li class="">
+        <a href="#tab_SyncStats" data-toggle="tab">Sync stats</a>
+      </li>
+    </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
       <div class="tab-pane active" id="tab_WALFiles">
         <% if (procedureWALFiles != null && procedureWALFiles.size() > 0) { %>
@@ -168,8 +170,8 @@
             <tr>
               <td> <%= pwf.getLogId() %></td>
               <td> <%= StringUtils.humanSize(pwf.getSize()) %> </td>
-              <td> <%= new Date(pwf.getTimestamp()) %></a></td>
-              <td> <%= escapeXml(pwf.toString()) %></t>
+              <td> <%= new Date(pwf.getTimestamp()) %> </td>
+              <td> <%= escapeXml(pwf.toString()) %> </td>
             </tr>
             <% } %>
           </table>
@@ -190,8 +192,8 @@
           <tr>
             <td> <%= cwf.getLogId() %></td>
             <td> <%= StringUtils.humanSize(cwf.getSize()) %> </td>
-            <td> <%= new Date(cwf.getTimestamp()) %></a></td>
-            <td> <%= escapeXml(cwf.toString()) %></t>
+            <td> <%= new Date(cwf.getTimestamp()) %> </td>
+            <td> <%= escapeXml(cwf.toString()) %> </td>
           </tr>
           <% } %>
           </table>
@@ -223,7 +225,7 @@
           <% for (int i = syncMetricsBuff.size() - 1; i >= 0; --i) { %>
           <%    WALProcedureStore.SyncMetrics syncMetrics = syncMetricsBuff.get(i); %>
           <tr>
-            <td> <%= new Date(syncMetrics.getTimestamp()) %></a></td>
+            <td> <%= new Date(syncMetrics.getTimestamp()) %></td>
             <td> <%= StringUtils.humanTimeDiff(syncMetrics.getSyncWaitMs()) %></td>
             <td> <%= syncMetrics.getSyncedEntries() %></td>
             <td> <%= StringUtils.humanSize(syncMetrics.getTotalSyncedBytes()) %></td>
@@ -234,6 +236,51 @@
         </div>
       </div>
   </div>
+</div>
+<br />
+<div class="container-fluid content">
+  <div class="row">
+      <div class="page-header">
+          <h1>Locks</h1>
+      </div>
+  </div>
+  <% for (LockInfo lock : locks) { %>
+    <h2><%= lock.getResourceType() %>: <%= lock.getResourceName() %></h2>
+    <%
+      switch (lock.getLockType()) {
+      case EXCLUSIVE:
+    %>
+    <p>Lock type: EXCLUSIVE</p>
+    <p>Owner procedure ID: <%= lock.getExclusiveLockOwnerProcedure().getProcId() %></p>
+    <%
+        break;
+      case SHARED:
+    %>
+    <p>Lock type: SHARED</p>
+    <p>Number of shared locks: <%= lock.getSharedLockCount() %></p>
+    <%
+        break;
+      }
+
+      List<LockInfo.WaitingProcedure> waitingProcedures = lock.getWaitingProcedures();
+
+      if (!waitingProcedures.isEmpty()) {
+    %>
+	    <h3>Waiting procedures</h3>
+	    <table class="table table-striped" width="90%" >
+		    <tr>
+		      <th>Lock type</th>
+		      <th>Procedure ID</th>
+		    </tr>
+		    <% for (LockInfo.WaitingProcedure waitingProcedure : waitingProcedures) { %>
+		      <tr>
+	          <td><%= waitingProcedure.getLockType() %></td>
+	          <td><%= waitingProcedure.getProcedure().getProcId() %></td>
+		      </tr>
+		    <% } %>
+	    </table>
+    <% } %>
+  <% } %>
 </div>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>

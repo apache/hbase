@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.replication.TableCFs;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -1247,6 +1248,14 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException
    */
   ProcedureInfo[] listProcedures()
+      throws IOException;
+
+  /**
+   * List locks.
+   * @return lock list
+   * @throws IOException if a remote or network exception occurs
+   */
+  LockInfo[] listLocks()
       throws IOException;
 
   /**

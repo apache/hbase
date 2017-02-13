@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -981,6 +982,24 @@ public interface MasterObserver extends Coprocessor {
   default void postListProcedures(
       ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<ProcedureInfo> procInfoList) throws IOException {}
+
+  /**
+   * Called before a listLocks request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @throws IOException if something went wrong
+   */
+  default void preListLocks(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {}
+
+  /**
+   * Called after a listLocks request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param lockInfoList the list of locks about to be returned
+   * @throws IOException if something went wrong
+   */
+  default void postListLocks(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<LockInfo> lockInfoList) throws IOException {}
 
   /**
    * Called prior to moving a given region from one region server to another.

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import com.google.common.base.Preconditions;
-
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
@@ -32,6 +30,8 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.NonceKey;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Helper to convert to/from ProcedureProtos

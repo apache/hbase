@@ -21,27 +21,34 @@ package org.apache.hadoop.hbase.master.procedure;
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOperationType;
 import org.apache.hadoop.hbase.procedure2.AbstractProcedureScheduler;
+import org.apache.hadoop.hbase.procedure2.LockAndQueue;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.LockStatus;
 import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.LockAndQueue;
 import org.apache.hadoop.hbase.procedure2.ProcedureDeque;
-import org.apache.hadoop.hbase.util.AvlUtil.AvlKeyComparator;
+import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlIterableList;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlKeyComparator;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlLinkedNode;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlTree;
 import org.apache.hadoop.hbase.util.AvlUtil.AvlTreeIterator;
@@ -226,7 +233,111 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     return pollResult;
   }
 
-  @VisibleForTesting
+  private LockInfo createLockInfo(LockInfo.ResourceType resourceType,
+      String resourceName, LockAndQueue queue) {
+    LockInfo info = new LockInfo();
+
+    info.setResourceType(resourceType);
+    info.setResourceName(resourceName);
+
+    if (queue.hasExclusiveLock()) {
+      info.setLockType(LockInfo.LockType.EXCLUSIVE);
+
+      Procedure<?> exclusiveLockOwnerProcedure = queue.getExclusiveLockOwnerProcedure();
+      ProcedureInfo exclusiveLockOwnerProcedureInfo =
+          ProcedureUtil.convertToProcedureInfo(exclusiveLockOwnerProcedure);
+      info.setExclusiveLockOwnerProcedure(exclusiveLockOwnerProcedureInfo);
+    } else if (queue.getSharedLockCount() > 0) {
+      info.setLockType(LockInfo.LockType.SHARED);
+      info.setSharedLockCount(queue.getSharedLockCount());
+    }
+
+    for (Procedure<?> procedure : queue) {
+      if (!(procedure instanceof LockProcedure)) {
+        continue;
+      }
+
+      LockProcedure lockProcedure = (LockProcedure)procedure;
+      LockInfo.WaitingProcedure waitingProcedure = new LockInfo.WaitingProcedure();
+
+      switch (lockProcedure.getType()) {
+      case EXCLUSIVE:
+        waitingProcedure.setLockType(LockInfo.LockType.EXCLUSIVE);
+        break;
+      case SHARED:
+        waitingProcedure.setLockType(LockInfo.LockType.SHARED);
+        break;
+      }
+
+      ProcedureInfo procedureInfo = ProcedureUtil.convertToProcedureInfo(lockProcedure);
+      waitingProcedure.setProcedure(procedureInfo);
+
+      info.addWaitingProcedure(waitingProcedure);
+    }
+
+    return info;
+  }
+
+  @Override
+  public List<LockInfo> listLocks() {
+    schedLock();
+
+    try {
+      List<LockInfo> lockInfos = new ArrayList<>();
+
+      for (Entry<ServerName, LockAndQueue> entry : locking.serverLocks
+          .entrySet()) {
+        String serverName = entry.getKey().getServerName();
+        LockAndQueue queue = entry.getValue();
+
+        if (queue.isLocked()) {
+          LockInfo lockInfo = createLockInfo(LockInfo.ResourceType.SERVER,
+              serverName, queue);
+          lockInfos.add(lockInfo);
+        }
+      }
+
+      for (Entry<String, LockAndQueue> entry : locking.namespaceLocks
+          .entrySet()) {
+        String namespaceName = entry.getKey();
+        LockAndQueue queue = entry.getValue();
+
+        if (queue.isLocked()) {
+          LockInfo lockInfo = createLockInfo(LockInfo.ResourceType.NAMESPACE,
+              namespaceName, queue);
+          lockInfos.add(lockInfo);
+        }
+      }
+
+      for (Entry<TableName, LockAndQueue> entry : locking.tableLocks
+          .entrySet()) {
+        String tableName = entry.getKey().getNameAsString();
+        LockAndQueue queue = entry.getValue();
+
+        if (queue.isLocked()) {
+          LockInfo lockInfo = createLockInfo(LockInfo.ResourceType.TABLE,
+              tableName, queue);
+          lockInfos.add(lockInfo);
+        }
+      }
+
+      for (Entry<String, LockAndQueue> entry : locking.regionLocks.entrySet()) {
+        String regionName = entry.getKey();
+        LockAndQueue queue = entry.getValue();
+
+        if (queue.isLocked()) {
+          LockInfo lockInfo = createLockInfo(LockInfo.ResourceType.REGION,
+              regionName, queue);
+          lockInfos.add(lockInfo);
+        }
+      }
+
+      return lockInfos;
+    } finally {
+      schedUnlock();
+    }
+  }
+
   @Override
   public void clear() {
     schedLock();
@@ -390,6 +501,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       super(serverName, serverLock);
     }
 
+    @Override
     public boolean requireExclusiveLock(Procedure proc) {
       ServerProcedureInterface spi = (ServerProcedureInterface)proc;
       switch (spi.getServerOperationType()) {
@@ -437,6 +549,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       return true;
     }
 
+    @Override
     public boolean requireExclusiveLock(Procedure proc) {
       return requireTableExclusiveLock((TableProcedureInterface)proc);
     }

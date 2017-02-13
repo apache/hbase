@@ -98,6 +98,11 @@ module Shell
         @formatter ||= ::Shell::Formatter::Console.new
       end
 
+      # for testing purposes to catch the output of the commands
+      def set_formatter(formatter)
+        @formatter = formatter
+      end
+
       def translate_hbase_exceptions(*args)
         yield
       rescue => e

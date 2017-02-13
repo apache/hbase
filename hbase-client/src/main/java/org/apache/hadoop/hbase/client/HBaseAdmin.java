@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -80,6 +79,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -110,6 +110,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringP
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
@@ -151,6 +152,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedur
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDrainingRegionServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListLocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
@@ -191,7 +194,6 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
-import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -201,7 +203,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
@@ -2096,26 +2097,33 @@ public class HBaseAdmin implements Admin {
             getRpcController(), ListProceduresRequest.newBuilder().build()).getProcedureList();
         ProcedureInfo[] procInfoList = new ProcedureInfo[procList.size()];
         for (int i = 0; i < procList.size(); i++) {
-          procInfoList[i] = convert(procList.get(i));
+          procInfoList[i] = ProtobufUtil.toProcedureInfo(procList.get(i));
         }
         return procInfoList;
       }
     });
   }
 
-  private static ProcedureInfo convert(final ProcedureProtos.Procedure procProto) {
-    NonceKey nonceKey = null;
-    if (procProto.getNonce() != HConstants.NO_NONCE) {
-      nonceKey = new NonceKey(procProto.getNonceGroup(), procProto.getNonce());
-    }
-    org.apache.hadoop.hbase.ProcedureState procedureState =
-        org.apache.hadoop.hbase.ProcedureState.valueOf(procProto.getState().name());
-    return new ProcedureInfo(procProto.getProcId(), procProto.getClassName(), procProto.getOwner(),
-        procedureState, procProto.hasParentId() ? procProto.getParentId() : -1, nonceKey,
-            procProto.hasException()?
-                ForeignExceptionUtil.toIOException(procProto.getException()): null,
-            procProto.getLastUpdate(), procProto.getSubmittedTime(),
-            procProto.hasResult()? procProto.getResult().toByteArray() : null);
+  @Override
+  public LockInfo[] listLocks() throws IOException {
+    return executeCallable(new MasterCallable<LockInfo[]>(getConnection(),
+        getRpcControllerFactory()) {
+      @Override
+      protected LockInfo[] rpcCall() throws Exception {
+        ListLocksRequest request = ListLocksRequest.newBuilder().build();
+        ListLocksResponse response = master.listLocks(getRpcController(), request);
+        List<LockServiceProtos.LockInfo> locksProto = response.getLockList();
+
+        LockInfo[] locks = new LockInfo[locksProto.size()];
+
+        for (int i = 0; i < locks.length; i++) {
+          LockServiceProtos.LockInfo lockProto = locksProto.get(i);
+          locks[i] = ProtobufUtil.toLockInfo(lockProto);
+        }
+
+        return locks;
+      }
+    });
   }
 
   @Override

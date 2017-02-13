@@ -436,10 +436,11 @@ Shell.load_command_group(
 
 Shell.load_command_group(
   'procedures',
-  :full_name => 'PROCEDURES MANAGEMENT',
+  :full_name => 'PROCEDURES & LOCKS MANAGEMENT',
   :commands => %w[
     abort_procedure
     list_procedures
+    list_locks
   ]
 )
 
