@@ -51,27 +51,28 @@ class RpcClient : public std::enable_shared_from_this<RpcClient> {
   friend class RpcChannelImplementation;
 
  public:
-  RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
+  RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
+            std::shared_ptr<Codec> codec);
 
   virtual ~RpcClient() { Close(); }
 
-  virtual std::shared_ptr<Response> SyncCall(const std::string &host, uint16_t port,
+  virtual std::unique_ptr<Response> SyncCall(const std::string &host, uint16_t port,
                                              std::unique_ptr<Request> req,
                                              std::shared_ptr<User> ticket);
 
-  virtual std::shared_ptr<Response> SyncCall(const std::string &host, uint16_t port,
+  virtual std::unique_ptr<Response> SyncCall(const std::string &host, uint16_t port,
                                              std::unique_ptr<Request> req,
                                              std::shared_ptr<User> ticket,
                                              const std::string &service_name);
 
-  virtual folly::Future<Response> AsyncCall(const std::string &host, uint16_t port,
-                                            std::unique_ptr<Request> req,
-                                            std::shared_ptr<User> ticket);
+  virtual folly::Future<std::unique_ptr<Response>> AsyncCall(const std::string &host, uint16_t port,
+                                                             std::unique_ptr<Request> req,
+                                                             std::shared_ptr<User> ticket);
 
-  virtual folly::Future<Response> AsyncCall(const std::string &host, uint16_t port,
-                                            std::unique_ptr<Request> req,
-                                            std::shared_ptr<User> ticket,
-                                            const std::string &service_name);
+  virtual folly::Future<std::unique_ptr<Response>> AsyncCall(const std::string &host, uint16_t port,
+                                                             std::unique_ptr<Request> req,
+                                                             std::shared_ptr<User> ticket,
+                                                             const std::string &service_name);
 
   virtual void Close();
 

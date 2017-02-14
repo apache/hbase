@@ -32,7 +32,7 @@ using namespace folly;
 using namespace folly::io;
 
 TEST(RpcSerdeTest, PreambleIncludesHBas) {
-  RpcSerde ser;
+  RpcSerde ser{nullptr};
   auto buf = ser.Preamble();
   const char *p = reinterpret_cast<const char *>(buf->data());
   // Take the first for chars and make sure they are the
@@ -43,14 +43,14 @@ TEST(RpcSerdeTest, PreambleIncludesHBas) {
 }
 
 TEST(RpcSerdeTest, PreambleIncludesVersion) {
-  RpcSerde ser;
+  RpcSerde ser{nullptr};
   auto buf = ser.Preamble();
   EXPECT_EQ(0, static_cast<const uint8_t *>(buf->data())[4]);
   EXPECT_EQ(80, static_cast<const uint8_t *>(buf->data())[5]);
 }
 
 TEST(RpcSerdeTest, TestHeaderLengthPrefixed) {
-  RpcSerde ser;
+  RpcSerde ser{nullptr};
   auto header = ser.Header("elliott");
 
   // The header should be prefixed by 4 bytes of length.
@@ -65,7 +65,7 @@ TEST(RpcSerdeTest, TestHeaderLengthPrefixed) {
 }
 
 TEST(RpcSerdeTest, TestHeaderDecode) {
-  RpcSerde ser;
+  RpcSerde ser{nullptr};
   auto buf = ser.Header("elliott");
   auto header_buf = buf->next();
   ConnectionHeader h;

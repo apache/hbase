@@ -116,9 +116,9 @@ TEST(Client, Get) {
 
   // Using TestUtil to populate test data
   hbase::TestUtil *test_util = new hbase::TestUtil();
-  test_util->RunShellCmd("create 't', 'd'");
-  test_util->RunShellCmd("put 't', 'test2', 'd:2', 'value2'");
-  test_util->RunShellCmd("put 't', 'test2', 'd:extra', 'value for extra'");
+  test_util->RunShellCmd(
+      "create 't', 'd'; put 't', 'test2', 'd:2', 'value2'; put 't', 'test2', 'd:extra', 'value for "
+      "extra'");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t");

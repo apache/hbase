@@ -24,18 +24,26 @@
 
 #include "connection/request.h"
 #include "connection/response.h"
+#include "core/response_converter.h"
 #include "if/Client.pb.h"
+#include "serde/region-info.h"
+#include "serde/server-name.h"
 #include "serde/table-name.h"
 
 using hbase::pb::TableName;
 using hbase::MetaUtil;
 using hbase::Request;
 using hbase::Response;
+using hbase::RegionLocation;
+using hbase::pb::RegionInfo;
 using hbase::pb::ScanRequest;
 using hbase::pb::ServerName;
 using hbase::pb::RegionSpecifier_RegionSpecifierType;
 
 static const std::string META_REGION = "1588230740";
+static const std::string CATALOG_FAMILY = "info";
+static const std::string REGION_INFO_COLUMN = "regioninfo";
+static const std::string SERVER_COLUMN = "server";
 
 std::string MetaUtil::RegionLookupRowkey(const TableName &tn, const std::string &row) const {
   return folly::to<std::string>(tn, ",", row, ",", "999999999999999999");
@@ -78,4 +86,30 @@ std::unique_ptr<Request> MetaUtil::MetaRequest(const TableName tn, const std::st
 
   scan->set_start_row(RegionLookupRowkey(tn, row));
   return request;
+}
+
+std::shared_ptr<RegionLocation> MetaUtil::CreateLocation(const Response &resp) {
+  std::vector<std::unique_ptr<Result>> results = ResponseConverter::FromScanResponse(resp);
+  if (results.size() != 1) {
+    throw std::runtime_error("Was expecting exactly 1 result in meta scan response, got:" +
+                             std::to_string(results.size()));
+  }
+
+  auto result = *results[0];
+  // VLOG(1) << "Creating RegionLocation from received Response " << *result; TODO
+
+  std::shared_ptr<std::string> region_info_str = result.Value(CATALOG_FAMILY, REGION_INFO_COLUMN);
+  std::shared_ptr<std::string> server_str = result.Value(CATALOG_FAMILY, SERVER_COLUMN);
+
+  if (region_info_str == nullptr) {
+    throw std::runtime_error("regioninfo column null for location");
+  }
+  if (server_str == nullptr) {
+    throw std::runtime_error("server column null for location");
+  }
+
+  auto row = result.Row();
+  auto region_info = folly::to<RegionInfo>(*region_info_str);
+  auto server_name = folly::to<ServerName>(*server_str);
+  return std::make_shared<RegionLocation>(row, std::move(region_info), server_name, nullptr);
 }

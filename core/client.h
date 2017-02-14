@@ -30,6 +30,7 @@
 #include "connection/rpc-client.h"
 #include "core/configuration.h"
 #include "core/hbase_configuration_loader.h"
+#include "core/keyvalue-codec.h"
 #include "core/location-cache.h"
 #include "core/table.h"
 #include "if/Cell.pb.h"
@@ -70,6 +71,7 @@ class Client {
   void init(const hbase::Configuration &conf);
   const std::string kHBaseZookeeperQuorum_ = "hbase.zookeeper.quorum";
   const std::string kDefHBaseZookeeperQuorum_ = "localhost:2181";
+  const std::string kRpcCodec = "hbase.client.rpc.codec";
   std::shared_ptr<wangle::CPUThreadPoolExecutor> cpu_executor_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
   std::shared_ptr<hbase::LocationCache> location_cache_;

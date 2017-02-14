@@ -41,7 +41,7 @@ class RpcConnection {
 
   virtual std::shared_ptr<HBaseService> get_service() const { return hbase_service_; }
 
-  virtual folly::Future<Response> SendRequest(std::unique_ptr<Request> req) {
+  virtual folly::Future<std::unique_ptr<Response>> SendRequest(std::unique_ptr<Request> req) {
     return (*hbase_service_)(std::move(req));
   }
 

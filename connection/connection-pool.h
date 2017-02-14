@@ -46,7 +46,8 @@ namespace hbase {
 class ConnectionPool {
  public:
   /** Create connection pool wit default connection factory */
-  explicit ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor);
+  ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
+                 std::shared_ptr<Codec> codec);
 
   /**
    * Desctructor.

@@ -87,7 +87,7 @@ bool Result::IsEmpty() const { return cells_.empty(); }
 
 const std::string &Result::Row() const { return row_; }
 
-const int Result::Size() const { return cells_.size(); }
+int Result::Size() const { return cells_.size(); }
 
 const ResultMap &Result::Map() const { return result_map_; }
 

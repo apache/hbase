@@ -30,12 +30,12 @@ using hbase::pb::RegionSpecifier;
 using hbase::pb::RegionSpecifier_RegionSpecifierType;
 
 TEST(TestRpcSerde, TestReturnFalseOnNullPtr) {
-  RpcSerde deser;
+  RpcSerde deser{nullptr};
   ASSERT_LT(deser.ParseDelimited(nullptr, nullptr), 0);
 }
 
 TEST(TestRpcSerde, TestReturnFalseOnBadInput) {
-  RpcSerde deser;
+  RpcSerde deser{nullptr};
   auto buf = IOBuf::copyBuffer("test");
   GetRequest gr;
 
@@ -44,8 +44,8 @@ TEST(TestRpcSerde, TestReturnFalseOnBadInput) {
 
 TEST(TestRpcSerde, TestGoodGetRequestFullRoundTrip) {
   GetRequest in;
-  RpcSerde ser;
-  RpcSerde deser;
+  RpcSerde ser{nullptr};
+  RpcSerde deser{nullptr};
 
   // fill up the GetRequest.
   in.mutable_region()->set_value("test_region_id");

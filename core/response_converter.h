@@ -22,6 +22,8 @@
 #include <memory>
 #include "connection/response.h"
 #include "core/result.h"
+#include "if/Client.pb.h"
+#include "serde/cell-scanner.h"
 
 namespace hbase {
 
@@ -33,11 +35,16 @@ class ResponseConverter {
  public:
   ~ResponseConverter();
 
+  static std::unique_ptr<Result> ToResult(const hbase::pb::Result& result,
+                                          const std::unique_ptr<CellScanner>& cell_scanner);
+
   /**
    * @brief Returns a Result object created by PB Message in passed Response object.
    * @param resp - Response object having the PB message.
    */
-  static std::unique_ptr<hbase::Result> FromGetResponse(const Response &resp);
+  static std::unique_ptr<hbase::Result> FromGetResponse(const Response& resp);
+
+  static std::vector<std::unique_ptr<Result>> FromScanResponse(const Response& resp);
 
  private:
   // Constructor not required. We have all static methods to extract response from PB messages.

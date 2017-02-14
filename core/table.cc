@@ -56,12 +56,12 @@ std::unique_ptr<hbase::Result> Table::Get(const hbase::Get &get) {
   auto req = hbase::RequestConverter::ToGetRequest(get, loc->region_name());
   auto user = User::defaultUser();  // TODO: make User::current() similar to UserUtil
 
-  Future<Response> f =
+  Future<std::unique_ptr<Response>> f =
       rpc_client_->AsyncCall(loc->server_name().host_name(), loc->server_name().port(),
                              std::move(req), user, "ClientService");
   auto resp = f.get();
 
-  return hbase::ResponseConverter::FromGetResponse(resp);
+  return hbase::ResponseConverter::FromGetResponse(*resp);
 }
 
 void Table::Close() {
