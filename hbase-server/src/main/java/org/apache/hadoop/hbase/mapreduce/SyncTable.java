@@ -143,7 +143,13 @@ public class SyncTable extends Configured implements Tool {
       
       // would be nice to add an option for bulk load instead
     }
-    
+
+    // Obtain an authentication token, for the specified cluster, on behalf of the current user
+    if (sourceZkCluster != null) {
+      Configuration peerConf =
+          HBaseConfiguration.createClusterConf(job.getConfiguration(), sourceZkCluster);
+      TableMapReduceUtil.initCredentialsForCluster(job, peerConf);
+    }
     return job;
   }
   
