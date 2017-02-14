@@ -33,8 +33,9 @@ using hbase::HBaseService;
 using folly::SharedMutexWritePriority;
 using folly::SocketAddress;
 
-ConnectionPool::ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
-    : cf_(std::make_shared<ConnectionFactory>(io_executor)),
+ConnectionPool::ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
+                               std::shared_ptr<Codec> codec)
+    : cf_(std::make_shared<ConnectionFactory>(io_executor, codec)),
       clients_(),
       connections_(),
       map_mutex_() {}
@@ -88,12 +89,12 @@ std::shared_ptr<RpcConnection> ConnectionPool::GetNewConnection(
     auto clientBootstrap = cf_->MakeBootstrap();
     auto dispatcher = cf_->Connect(clientBootstrap, remote_id->host(), remote_id->port());
 
-    auto conneciton = std::make_shared<RpcConnection>(remote_id, dispatcher);
+    auto connection = std::make_shared<RpcConnection>(remote_id, dispatcher);
 
-    connections_.insert(std::make_pair(remote_id, conneciton));
+    connections_.insert(std::make_pair(remote_id, connection));
     clients_.insert(std::make_pair(remote_id, clientBootstrap));
 
-    return conneciton;
+    return connection;
   }
 }
 

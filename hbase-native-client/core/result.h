@@ -100,7 +100,7 @@ class Result {
   /**
    * @brief Returns the size of the underlying Cell vector
    */
-  const int Size() const;
+  int Size() const;
 
   /**
    * @brief Map of families to all versions of its qualifiers and values.

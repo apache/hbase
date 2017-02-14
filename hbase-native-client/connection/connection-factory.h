@@ -40,7 +40,8 @@ class ConnectionFactory {
    * Constructor.
    * There should only be one ConnectionFactory per client.
    */
-  explicit ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool);
+  ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
+                    std::shared_ptr<Codec> codec);
   /** Default Desctructor */
   virtual ~ConnectionFactory() = default;
 

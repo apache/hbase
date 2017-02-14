@@ -22,6 +22,8 @@
 #include <string>
 
 #include "connection/request.h"
+#include "connection/response.h"
+#include "core/region-location.h"
 #include "if/HBase.pb.h"
 #include "serde/table-name.h"
 
@@ -43,5 +45,10 @@ class MetaUtil {
    * location.
    */
   std::unique_ptr<Request> MetaRequest(const hbase::pb::TableName tn, const std::string &row) const;
+
+  /**
+   * Return a RegionLocation from the parsed Response
+   */
+  std::shared_ptr<RegionLocation> CreateLocation(const Response &resp);
 };
 }  // namespace hbase

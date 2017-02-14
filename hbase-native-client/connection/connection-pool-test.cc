@@ -36,7 +36,7 @@ using hbase::ConnectionId;
 
 class MockConnectionFactory : public ConnectionFactory {
  public:
-  MockConnectionFactory() : ConnectionFactory(nullptr) {}
+  MockConnectionFactory() : ConnectionFactory(nullptr, nullptr) {}
   MOCK_METHOD0(MakeBootstrap, std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>());
   MOCK_METHOD3(Connect, std::shared_ptr<HBaseService>(
                             std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>>,
@@ -47,17 +47,17 @@ class MockBootstrap : public wangle::ClientBootstrap<SerializePipeline> {};
 
 class MockServiceBase : public HBaseService {
  public:
-  folly::Future<Response> operator()(std::unique_ptr<Request> req) override {
+  folly::Future<std::unique_ptr<Response>> operator()(std::unique_ptr<Request> req) override {
     return do_operation(req.get());
   }
-  virtual folly::Future<Response> do_operation(Request *req) {
-    return folly::makeFuture<Response>(Response{});
+  virtual folly::Future<std::unique_ptr<Response>> do_operation(Request *req) {
+    return folly::makeFuture<std::unique_ptr<Response>>(std::make_unique<Response>());
   }
 };
 
 class MockService : public MockServiceBase {
  public:
-  MOCK_METHOD1(do_operation, folly::Future<Response>(Request *));
+  MOCK_METHOD1(do_operation, folly::Future<std::unique_ptr<Response>>(Request *));
 };
 
 TEST(TestConnectionPool, TestOnlyCreateOnce) {

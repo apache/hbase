@@ -22,6 +22,8 @@
 #include <memory>
 #include <utility>
 
+#include "serde/cell-scanner.h"
+
 // Forward
 namespace google {
 namespace protobuf {
@@ -42,7 +44,7 @@ class Response {
    * Constructor.
    * Initinalizes the call id to 0. 0 should never be a valid call id.
    */
-  Response() : call_id_(0), resp_msg_(nullptr) {}
+  Response() : call_id_(0), resp_msg_(nullptr), cell_scanner_(nullptr) {}
 
   /** Get the call_id */
   uint32_t call_id() { return call_id_; }
@@ -62,8 +64,15 @@ class Response {
     resp_msg_ = std::move(response);
   }
 
+  void set_cell_scanner(std::unique_ptr<CellScanner> cell_scanner) {
+    cell_scanner_ = std::move(cell_scanner);
+  }
+
+  const std::unique_ptr<CellScanner>& cell_scanner() const { return cell_scanner_; }
+
  private:
   uint32_t call_id_;
   std::shared_ptr<google::protobuf::Message> resp_msg_;
+  std::unique_ptr<CellScanner> cell_scanner_;
 };
 }  // namespace hbase

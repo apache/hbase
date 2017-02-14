@@ -30,7 +30,8 @@ using namespace folly;
 using namespace hbase;
 using namespace wangle;
 
-RpcPipelineFactory::RpcPipelineFactory() : user_util_() {}
+RpcPipelineFactory::RpcPipelineFactory(std::shared_ptr<Codec> codec)
+    : user_util_(), codec_(codec) {}
 
 SerializePipeline::Ptr RpcPipelineFactory::newPipeline(
     std::shared_ptr<AsyncTransportWrapper> sock) {
@@ -38,7 +39,7 @@ SerializePipeline::Ptr RpcPipelineFactory::newPipeline(
   pipeline->addBack(AsyncSocketHandler{sock});
   pipeline->addBack(EventBaseHandler{});
   pipeline->addBack(LengthFieldBasedFrameDecoder{});
-  pipeline->addBack(ClientHandler{user_util_.user_name()});
+  pipeline->addBack(ClientHandler{user_util_.user_name(), codec_});
   pipeline->finalize();
   return pipeline;
 }

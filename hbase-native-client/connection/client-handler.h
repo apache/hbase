@@ -27,6 +27,7 @@
 #include <string>
 #include <utility>
 
+#include "serde/codec.h"
 #include "serde/rpc.h"
 
 // Forward decs.
@@ -51,14 +52,14 @@ namespace hbase {
  * on first request.
  */
 class ClientHandler
-    : public wangle::Handler<std::unique_ptr<folly::IOBuf>, Response, std::unique_ptr<Request>,
-                             std::unique_ptr<folly::IOBuf>> {
+    : public wangle::Handler<std::unique_ptr<folly::IOBuf>, std::unique_ptr<Response>,
+                             std::unique_ptr<Request>, std::unique_ptr<folly::IOBuf>> {
  public:
   /**
    * Create the handler
    * @param user_name the user name of the user running this process.
    */
-  explicit ClientHandler(std::string user_name);
+  explicit ClientHandler(std::string user_name, std::shared_ptr<Codec> codec);
 
   /**
    * Get bytes from the wire.

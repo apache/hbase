@@ -21,6 +21,9 @@
 #include <memory>
 #include <string>
 
+#include "serde/cell-scanner.h"
+#include "serde/codec.h"
+
 // Forward
 namespace folly {
 class IOBuf;
@@ -44,7 +47,7 @@ class RpcSerde {
   /**
    * Constructor assumes the default auth type.
    */
-  RpcSerde();
+  RpcSerde(std::shared_ptr<Codec> codec);
 
   /**
    * Destructor. This is provided just for testing purposes.
@@ -74,6 +77,13 @@ class RpcSerde {
    * - ConnectionHeader object serialized out.
    */
   std::unique_ptr<folly::IOBuf> Header(const std::string &user);
+
+  /**
+   * Take ownership of the passed buffer, and create a CellScanner using the
+   * Codec class to parse Cells out of the wire.
+   */
+  std::unique_ptr<CellScanner> CreateCellScanner(std::unique_ptr<folly::IOBuf> buf, uint32_t offset,
+                                                 uint32_t length);
 
   /**
    * Serialize a request message into a protobuf.
@@ -109,5 +119,6 @@ class RpcSerde {
  private:
   /* data */
   uint8_t auth_type_;
+  std::shared_ptr<Codec> codec_;
 };
 }  // namespace hbase

@@ -39,38 +39,40 @@ class RpcChannelImplementation : public AbstractRpcChannel {
 };
 }  // namespace hbase
 
-RpcClient::RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor)
+RpcClient::RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
+                     std::shared_ptr<Codec> codec)
     : io_executor_(io_executor) {
-  cp_ = std::make_shared<ConnectionPool>(io_executor_);
+  cp_ = std::make_shared<ConnectionPool>(io_executor_, codec);
 }
 
 void RpcClient::Close() { io_executor_->stop(); }
 
-std::shared_ptr<Response> RpcClient::SyncCall(const std::string& host, uint16_t port,
+std::unique_ptr<Response> RpcClient::SyncCall(const std::string& host, uint16_t port,
                                               std::unique_ptr<Request> req,
                                               std::shared_ptr<User> ticket) {
-  return std::make_shared<Response>(AsyncCall(host, port, std::move(req), ticket).get());
+  return AsyncCall(host, port, std::move(req), ticket).get();
 }
 
-std::shared_ptr<Response> RpcClient::SyncCall(const std::string& host, uint16_t port,
+std::unique_ptr<Response> RpcClient::SyncCall(const std::string& host, uint16_t port,
                                               std::unique_ptr<Request> req,
                                               std::shared_ptr<User> ticket,
                                               const std::string& service_name) {
-  return std::make_shared<Response>(
-      AsyncCall(host, port, std::move(req), ticket, service_name).get());
+  return AsyncCall(host, port, std::move(req), ticket, service_name).get();
 }
 
-folly::Future<Response> RpcClient::AsyncCall(const std::string& host, uint16_t port,
-                                             std::unique_ptr<Request> req,
-                                             std::shared_ptr<User> ticket) {
+folly::Future<std::unique_ptr<Response>> RpcClient::AsyncCall(const std::string& host,
+                                                              uint16_t port,
+                                                              std::unique_ptr<Request> req,
+                                                              std::shared_ptr<User> ticket) {
   auto remote_id = std::make_shared<ConnectionId>(host, port, ticket);
   return GetConnection(remote_id)->SendRequest(std::move(req));
 }
 
-folly::Future<Response> RpcClient::AsyncCall(const std::string& host, uint16_t port,
-                                             std::unique_ptr<Request> req,
-                                             std::shared_ptr<User> ticket,
-                                             const std::string& service_name) {
+folly::Future<std::unique_ptr<Response>> RpcClient::AsyncCall(const std::string& host,
+                                                              uint16_t port,
+                                                              std::unique_ptr<Request> req,
+                                                              std::shared_ptr<User> ticket,
+                                                              const std::string& service_name) {
   auto remote_id = std::make_shared<ConnectionId>(host, port, ticket, service_name);
   return GetConnection(remote_id)->SendRequest(std::move(req));
 }
@@ -99,5 +101,5 @@ void RpcClient::CallMethod(const MethodDescriptor* method, RpcController* contro
   std::unique_ptr<Request> req = std::make_unique<Request>(shared_req, shared_resp, method->name());
 
   AsyncCall(host, port, std::move(req), ticket, method->service()->name())
-      .then([done, this](Response resp) { done->Run(); });
+      .then([done, this](std::unique_ptr<Response> resp) { done->Run(); });
 }

@@ -128,10 +128,10 @@ Future<std::shared_ptr<RegionLocation>> LocationCache::LocateFromMeta(const Tabl
       .then([tn, row, this](std::shared_ptr<RpcConnection> rpc_connection) {
         return (*rpc_connection->get_service())(std::move(meta_util_.MetaRequest(tn, row)));
       })
-      .then([this](Response resp) {
+      .then([this](std::unique_ptr<Response> resp) {
         // take the protobuf response and make it into
         // a region location.
-        return this->CreateLocation(std::move(resp));
+        return meta_util_.CreateLocation(std::move(*resp));
       })
       .then([tn, this](std::shared_ptr<RegionLocation> rl) {
         // Make sure that the correct location was found.
@@ -164,22 +164,6 @@ Future<shared_ptr<RegionLocation>> LocationCache::LocateRegion(const hbase::pb::
   } else {
     return this->LocateFromMeta(tn, row);
   }
-}
-
-std::shared_ptr<RegionLocation> LocationCache::CreateLocation(const Response &resp) {
-  auto resp_msg = static_pointer_cast<ScanResponse>(resp.resp_msg());
-  auto &results = resp_msg->results().Get(0);
-  auto &cells = results.cell();
-
-  // TODO(eclark): There should probably be some better error
-  // handling around this.
-  auto cell_zero = cells.Get(0).value();
-  auto cell_one = cells.Get(1).value();
-  auto row = cells.Get(0).row();
-
-  auto region_info = folly::to<RegionInfo>(cell_zero);
-  auto server_name = folly::to<ServerName>(cell_one);
-  return std::make_shared<RegionLocation>(row, std::move(region_info), server_name, nullptr);
 }
 
 // must hold shared lock on locations_lock_

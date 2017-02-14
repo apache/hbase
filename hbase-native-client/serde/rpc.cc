@@ -83,7 +83,7 @@ int RpcSerde::ParseDelimited(const IOBuf *buf, Message *msg) {
   return coded_stream.CurrentPosition();
 }
 
-RpcSerde::RpcSerde() : auth_type_(DEFAULT_AUTH_TYPE) {}
+RpcSerde::RpcSerde(std::shared_ptr<Codec> codec) : auth_type_(DEFAULT_AUTH_TYPE), codec_(codec) {}
 
 unique_ptr<IOBuf> RpcSerde::Preamble() {
   auto magic = IOBuf::copyBuffer(PREAMBLE, 0, 2);
@@ -110,6 +110,10 @@ unique_ptr<IOBuf> RpcSerde::Header(const string &user) {
   // didn't.
   // TODO: send the service name and user from the RpcClient
   h.set_service_name(INTERFACE);
+
+  if (codec_ != nullptr) {
+    h.set_cell_block_codec_class(codec_->java_class_name());
+  }
   return PrependLength(SerializeMessage(h));
 }
 
@@ -126,6 +130,14 @@ unique_ptr<IOBuf> RpcSerde::Request(const uint32_t call_id, const string &method
   }
 
   return PrependLength(std::move(ser_header));
+}
+
+std::unique_ptr<CellScanner> RpcSerde::CreateCellScanner(std::unique_ptr<folly::IOBuf> buf,
+                                                         uint32_t offset, uint32_t length) {
+  if (codec_ == nullptr) {
+    return nullptr;
+  }
+  return codec_->CreateDecoder(std::move(buf), offset, length);
 }
 
 unique_ptr<IOBuf> RpcSerde::PrependLength(unique_ptr<IOBuf> msg) {

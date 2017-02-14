@@ -36,21 +36,22 @@ namespace hbase {
  * future.
  */
 class ClientDispatcher
-    : public wangle::ClientDispatcherBase<SerializePipeline, std::unique_ptr<Request>, Response> {
+    : public wangle::ClientDispatcherBase<SerializePipeline, std::unique_ptr<Request>,
+                                          std::unique_ptr<Response>> {
  public:
   /** Create a new ClientDispatcher */
   ClientDispatcher();
   /** Read a response off the pipeline. */
-  void read(Context *ctx, Response in) override;
+  void read(Context *ctx, std::unique_ptr<Response> in) override;
   /** Take a request as a call and send it down the pipeline. */
-  folly::Future<Response> operator()(std::unique_ptr<Request> arg) override;
+  folly::Future<std::unique_ptr<Response>> operator()(std::unique_ptr<Request> arg) override;
   /** Close the dispatcher and the associated pipeline. */
   folly::Future<folly::Unit> close(Context *ctx) override;
   /** Close the dispatcher and the associated pipeline. */
   folly::Future<folly::Unit> close() override;
 
  private:
-  folly::AtomicHashMap<uint32_t, folly::Promise<Response>> requests_;
+  folly::AtomicHashMap<uint32_t, folly::Promise<std::unique_ptr<Response>>> requests_;
   // Start at some number way above what could
   // be there for un-initialized call id counters.
   //

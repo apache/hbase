@@ -26,8 +26,8 @@ using namespace wangle;
 
 ClientDispatcher::ClientDispatcher() : requests_(5000), current_call_id_(9) {}
 
-void ClientDispatcher::read(Context *ctx, Response in) {
-  auto call_id = in.call_id();
+void ClientDispatcher::read(Context *ctx, std::unique_ptr<Response> in) {
+  auto call_id = in->call_id();
 
   auto search = requests_.find(call_id);
   CHECK(search != requests_.end());
@@ -37,13 +37,13 @@ void ClientDispatcher::read(Context *ctx, Response in) {
 
   // TODO(eclark): check if the response
   // is an exception. If it is then set that.
-  p.setValue(in);
+  p.setValue(std::move(in));
 }
 
-Future<Response> ClientDispatcher::operator()(std::unique_ptr<Request> arg) {
+Future<std::unique_ptr<Response>> ClientDispatcher::operator()(std::unique_ptr<Request> arg) {
   auto call_id = current_call_id_++;
   arg->set_call_id(call_id);
-  requests_.insert(call_id, Promise<Response>{});
+  requests_.insert(call_id, Promise<std::unique_ptr<Response>>{});
   auto &p = requests_.find(call_id)->second;
   auto f = p.getFuture();
   p.setInterruptHandler([call_id, this](const folly::exception_wrapper &e) {

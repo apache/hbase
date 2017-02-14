@@ -36,9 +36,9 @@ using hbase::pb::ResponseHeader;
 using hbase::pb::GetResponse;
 using google::protobuf::Message;
 
-ClientHandler::ClientHandler(std::string user_name)
+ClientHandler::ClientHandler(std::string user_name, std::shared_ptr<Codec> codec)
     : user_name_(user_name),
-      serde_(),
+      serde_(codec),
       once_flag_(std::make_unique<std::once_flag>()),
       resp_msgs_(
           make_unique<folly::AtomicHashMap<uint32_t, std::shared_ptr<google::protobuf::Message>>>(
@@ -47,12 +47,12 @@ ClientHandler::ClientHandler(std::string user_name)
 void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
   if (LIKELY(buf != nullptr)) {
     buf->coalesce();
-    Response received;
+    auto received = std::make_unique<Response>();
     ResponseHeader header;
 
     int used_bytes = serde_.ParseDelimited(buf.get(), &header);
-    LOG(INFO) << "Read ResponseHeader size=" << used_bytes << " call_id=" << header.call_id()
-              << " has_exception=" << header.has_exception();
+    VLOG(1) << "Read RPC ResponseHeader size=" << used_bytes << " call_id=" << header.call_id()
+            << " has_exception=" << header.has_exception();
 
     // Get the response protobuf from the map
     auto search = resp_msgs_->find(header.call_id());
@@ -67,17 +67,34 @@ void ClientHandler::read(Context *ctx, std::unique_ptr<IOBuf> buf) {
     // set the call_id.
     // This will be used to by the dispatcher to match up
     // the promise with the response.
-    received.set_call_id(header.call_id());
+    received->set_call_id(header.call_id());
 
     // If there was an exception then there's no
     // data left on the wire.
     if (header.has_exception() == false) {
       buf->trimStart(used_bytes);
+
+      int cell_block_length = 0;
       used_bytes = serde_.ParseDelimited(buf.get(), resp_msg.get());
+      if (header.has_cell_block_meta() && header.cell_block_meta().has_length()) {
+        cell_block_length = header.cell_block_meta().length();
+      }
+
+      VLOG(3) << "Read RPCResponse, buf length:" << buf->length()
+              << ", header PB length:" << used_bytes << ", cell_block length:" << cell_block_length;
+
       // Make sure that bytes were parsed.
-      CHECK(used_bytes == buf->length());
-      received.set_resp_msg(resp_msg);
+      CHECK((used_bytes + cell_block_length) == buf->length());
+
+      if (cell_block_length > 0) {
+        auto cell_scanner = serde_.CreateCellScanner(std::move(buf), used_bytes, cell_block_length);
+        received->set_cell_scanner(std::move(cell_scanner));
+      }
+
+      received->set_resp_msg(resp_msg);
     }
+    // TODO: set exception in Response here
+
     ctx->fireRead(std::move(received));
   }
 }
@@ -94,6 +111,9 @@ Future<Unit> ClientHandler::write(Context *ctx, std::unique_ptr<Request> r) {
 
   // Now store the call id to response.
   resp_msgs_->insert(r->call_id(), r->resp_msg());
+
+  VLOG(1) << "Writing RPC Request with call_id:" << r->call_id();
+
   // Send the data down the pipeline.
   return ctx->fireWrite(serde_.Request(r->call_id(), r->method(), r->req_msg().get()));
 }

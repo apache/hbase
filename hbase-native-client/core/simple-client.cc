@@ -31,6 +31,7 @@
 
 #include "connection/connection-pool.h"
 #include "core/client.h"
+#include "core/keyvalue-codec.h"
 #include "if/Client.pb.h"
 #include "if/ZooKeeper.pb.h"
 #include "serde/server-name.h"
@@ -43,6 +44,7 @@ using hbase::Configuration;
 using hbase::Response;
 using hbase::Request;
 using hbase::HBaseService;
+using hbase::KeyValueCodec;
 using hbase::LocationCache;
 using hbase::ConnectionPool;
 using hbase::ConnectionFactory;
@@ -88,7 +90,8 @@ int main(int argc, char *argv[]) {
   // Set up thread pools.
   auto cpu_pool = std::make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_threads);
   auto io_pool = std::make_shared<wangle::IOThreadPoolExecutor>(5);
-  auto cp = std::make_shared<ConnectionPool>(io_pool);
+  auto codec = std::make_shared<KeyValueCodec>();
+  auto cp = std::make_shared<ConnectionPool>(io_pool, codec);
 
   // Configuration
   auto conf = std::make_shared<Configuration>();
@@ -105,7 +108,7 @@ int main(int argc, char *argv[]) {
 
   auto num_puts = FLAGS_columns;
 
-  auto results = std::vector<Future<Response>>{};
+  auto results = std::vector<Future<std::unique_ptr<Response>>>{};
   auto col = uint64_t{0};
   for (; col < num_puts; col++) {
     results.push_back(

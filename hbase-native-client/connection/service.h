@@ -26,5 +26,5 @@
 #include "connection/response.h"
 
 namespace hbase {
-using HBaseService = wangle::Service<std::unique_ptr<Request>, Response>;
+using HBaseService = wangle::Service<std::unique_ptr<Request>, std::unique_ptr<Response>>;
 }  // namespace hbase
