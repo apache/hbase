@@ -50,6 +50,8 @@ public class MetricsThriftServerSourceImpl extends ExceptionTrackingSourceImpl i
   private final MetricHistogram pausesWithGc;
   private final MetricHistogram pausesWithoutGc;
 
+  private MutableGaugeLong activeWorkerCountGauge;
+
   public MetricsThriftServerSourceImpl(String metricsName,
                                        String metricsDescription,
                                        String metricsContext,
@@ -74,6 +76,7 @@ public class MetricsThriftServerSourceImpl extends ExceptionTrackingSourceImpl i
     thriftCallStat = getMetricsRegistry().newTimeHistogram(THRIFT_CALL_KEY);
     thriftSlowCallStat = getMetricsRegistry().newTimeHistogram(SLOW_THRIFT_CALL_KEY);
     callQueueLenGauge = getMetricsRegistry().getGauge(CALL_QUEUE_LEN_KEY, 0);
+    activeWorkerCountGauge = getMetricsRegistry().getGauge(ACTIVE_WORKER_COUNT_KEY, 0);
   }
 
   @Override
@@ -110,6 +113,15 @@ public class MetricsThriftServerSourceImpl extends ExceptionTrackingSourceImpl i
   @Override
   public void incSlowCall(long time) {
     thriftSlowCallStat.add(time);
+  }
+
+  public void incActiveWorkerCount() {
+    activeWorkerCountGauge.incr();
+  }
+
+  @Override
+  public void decActiveWorkerCount() {
+    activeWorkerCountGauge.decr();
   }
 
   @Override

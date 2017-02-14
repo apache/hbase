@@ -620,8 +620,8 @@ public class ThriftServerRunner implements Runnable {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift-worker-%d");
-    return new ThreadPoolExecutor(minWorkers, maxWorkers,
-            Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
+    return new THBaseThreadPoolExecutor(minWorkers, maxWorkers,
+            Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build(), metrics);
   }
 
   private InetAddress getBindAddress(Configuration conf)

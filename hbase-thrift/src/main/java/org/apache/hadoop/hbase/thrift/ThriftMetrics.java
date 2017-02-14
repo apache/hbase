@@ -99,6 +99,14 @@ public class ThriftMetrics  {
     }
   }
 
+  public void incActiveWorkerCount() {
+    source.incActiveWorkerCount();
+  }
+
+  public void decActiveWorkerCount() {
+    source.decActiveWorkerCount();
+  }
+
   /**
    * Increment the count for a specific exception type.  This is called for each exception type
    * that is returned to the thrift handler.
