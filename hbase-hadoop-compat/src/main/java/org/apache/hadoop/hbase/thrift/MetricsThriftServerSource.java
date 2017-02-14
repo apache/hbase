@@ -31,6 +31,7 @@ public interface MetricsThriftServerSource extends ExceptionTrackingSource {
   String THRIFT_CALL_KEY = "thriftCall";
   String SLOW_THRIFT_CALL_KEY = "slowThriftCall";
   String CALL_QUEUE_LEN_KEY = "callQueueLen";
+  String ACTIVE_WORKER_COUNT_KEY = "numActiveWorkers";
 
   /**
    * Add how long an operation was in the queue.
@@ -74,4 +75,14 @@ public interface MetricsThriftServerSource extends ExceptionTrackingSource {
    * @param time Time
    */
   void incSlowCall(long time);
+
+  /**
+   * Increment number of active thrift workers.
+   */
+  void incActiveWorkerCount();
+
+  /**
+   * Decrement number of active thrift workers.
+   */
+  void decActiveWorkerCount();
 }
