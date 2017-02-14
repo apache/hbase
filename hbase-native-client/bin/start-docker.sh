@@ -26,7 +26,10 @@ eval "$(docker-machine env dinghy)"
 BIN_DIR=$(pushd `dirname "$0"` 2>&1 > /dev/null && pwd && popd  2>&1 > /dev/null)
 BASE_DIR=$(pushd "${BIN_DIR}/../" 2>&1 > /dev/null && pwd && popd  2>&1 > /dev/null)
 
+# TODO: this is wrong. These should be called from BUCK, but I could not find a
+# way to execute scripts in BUCK that are in under bin/.
 ${BIN_DIR}/copy-protobuf.sh
+${BIN_DIR}/copy-version.sh
 
 # Go into the base dir. This just makes things cleaner.
 pushd ${BASE_DIR}

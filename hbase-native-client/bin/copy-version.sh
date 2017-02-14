@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ##
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -14,16 +15,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -euo pipefail
+IFS=$'\n\t'
 
-cxx_library(
-    name="utils",
-    exported_headers=["user-util.h", "version.h"],
-    srcs=["user-util.cc",],
-    deps=['//third-party:folly',],
-    tests=[":user-util-test"],
-    visibility=['PUBLIC',],
-    compiler_flags=['-Weffc++'],)
-cxx_test(
-    name="user-util-test",
-    srcs=["user-util-test.cc",],
-    deps=[":utils",],)
+# Copy the version.h generated from hbase-common/src/saveVersion.sh script via the mvn build
+BIN_DIR=$(dirname "$0")
+VERSION_SOURCE_DIR="${BIN_DIR}/../../hbase-common/target/generated-sources/native/utils/"
+VERSION_DEST_DIR="${BIN_DIR}/../utils/"
+cp $VERSION_SOURCE_DIR/* $VERSION_DEST_DIR/

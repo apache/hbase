@@ -57,7 +57,7 @@ ARC_DEBUG=$(DEBUG_PATH)/libHbaseClient_d.a
 
 vpath %.cc $(SRC_DIR)
 
-build: checkdirs protos $(LIB_DEBUG) $(LIB_RELEASE) $(ARC_DEBUG) $(ARC_RELEASE)
+build: checkdirs copyfiles protos $(LIB_DEBUG) $(LIB_RELEASE) $(ARC_DEBUG) $(ARC_RELEASE)
 $(LIB_DEBUG): $(DEBUG_BUILD_DIR)
 define make-goal-dbg
 $1/%.o: %.cc $(DEPS) $(PROTODEPS) $(PROTOSRC)
@@ -72,9 +72,11 @@ endef
 
 .PHONY: all clean install 
 
-
-
 checkdirs: $(DEBUG_BUILD_DIR) $(RELEASE_BUILD_DIR) $(PROTO_SRC_DIR)
+
+copyfiles:
+	bin/copy-protobuf.sh
+	bin/copy-version.sh
 
 protos: createprotosrc
 	@make all -f Makefile.protos
