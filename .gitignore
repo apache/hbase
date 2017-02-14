@@ -24,3 +24,6 @@ buck-out
 # Thirdparty dirs
 third-party/*
 /gcc-debug/
+
+# Generated files
+utils/version.h

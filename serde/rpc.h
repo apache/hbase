@@ -21,6 +21,7 @@
 #include <memory>
 #include <string>
 
+#include "if/HBase.pb.h"
 #include "serde/cell-scanner.h"
 #include "serde/codec.h"
 
@@ -120,5 +121,6 @@ class RpcSerde {
   /* data */
   uint8_t auth_type_;
   std::shared_ptr<Codec> codec_;
+  std::unique_ptr<pb::VersionInfo> CreateVersionInfo();
 };
 }  // namespace hbase

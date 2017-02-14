@@ -19,16 +19,18 @@
 
 #include "serde/rpc.h"
 
+#include <folly/Conv.h>
 #include <folly/Logging.h>
 #include <folly/io/Cursor.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <google/protobuf/message.h>
+#include <boost/algorithm/string.hpp>
 
 #include <utility>
 
-#include "if/HBase.pb.h"
 #include "if/RPC.pb.h"
+#include "utils/version.h"
 
 using namespace hbase;
 
@@ -111,10 +113,36 @@ unique_ptr<IOBuf> RpcSerde::Header(const string &user) {
   // TODO: send the service name and user from the RpcClient
   h.set_service_name(INTERFACE);
 
+  std::unique_ptr<pb::VersionInfo> version_info = CreateVersionInfo();
+
+  h.set_allocated_version_info(version_info.release());
+
   if (codec_ != nullptr) {
     h.set_cell_block_codec_class(codec_->java_class_name());
   }
   return PrependLength(SerializeMessage(h));
+}
+
+std::unique_ptr<pb::VersionInfo> RpcSerde::CreateVersionInfo() {
+  std::unique_ptr<pb::VersionInfo> version_info = std::make_unique<pb::VersionInfo>();
+  version_info->set_user(Version::user);
+  version_info->set_revision(Version::revision);
+  version_info->set_url(Version::url);
+  version_info->set_date(Version::date);
+  version_info->set_src_checksum(Version::src_checksum);
+  version_info->set_version(Version::version);
+
+  std::string version{Version::version};
+  std::vector<std::string> version_parts;
+  boost::split(version_parts, version, boost::is_any_of("."), boost::token_compress_on);
+  uint32_t major_version = 0, minor_version = 0;
+  if (version_parts.size() >= 2) {
+    version_info->set_version_major(folly::to<uint32_t>(version_parts[0]));
+    version_info->set_version_minor(folly::to<uint32_t>(version_parts[1]));
+  }
+
+  VLOG(1) << "Client VersionInfo:" << version_info->ShortDebugString();
+  return version_info;
 }
 
 unique_ptr<IOBuf> RpcSerde::Request(const uint32_t call_id, const string &method,

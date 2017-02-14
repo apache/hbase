@@ -31,10 +31,7 @@ cxx_library(
         "rpc.cc",
         "zk.cc",
     ],
-    deps=[
-        "//if:if",
-        "//third-party:folly",
-    ],
+    deps=["//if:if", "//third-party:folly", "//utils:utils"],
     tests=[
         ":client-deserializer-test",
         ":client-serializer-test",
