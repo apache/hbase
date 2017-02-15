@@ -41,9 +41,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -78,7 +78,7 @@ public class TestReplicaWithCluster {
   /**
    * This copro is used to synchronize the tests.
    */
-  public static class SlowMeCopro extends BaseRegionObserver {
+  public static class SlowMeCopro implements RegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(0);
     static final AtomicReference<CountDownLatch> cdl = new AtomicReference<>(new CountDownLatch(0));
 
@@ -114,7 +114,7 @@ public class TestReplicaWithCluster {
   /**
    * This copro is used to simulate region server down exception for Get and Scan
    */
-  public static class RegionServerStoppedCopro extends BaseRegionObserver {
+  public static class RegionServerStoppedCopro implements RegionObserver {
 
     public RegionServerStoppedCopro() {
     }

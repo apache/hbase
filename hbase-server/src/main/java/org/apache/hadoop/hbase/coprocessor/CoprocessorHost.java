@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableWrapper;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
@@ -584,6 +583,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param e Throwable object thrown by coprocessor.
    * @exception IOException Exception
    */
+  // Note to devs: Class comments of all observers ({@link MasterObserver}, {@link WALObserver},
+  // etc) mention this nuance of our exception handling so that coprocessor can throw appropriate
+  // exceptions depending on situation. If any changes are made to this logic, make sure to
+  // update all classes' comments.
   protected void handleCoprocessorThrowable(final CoprocessorEnvironment env, final Throwable e)
       throws IOException {
     if (e instanceof IOException) {

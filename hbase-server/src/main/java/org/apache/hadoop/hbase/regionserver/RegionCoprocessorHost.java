@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
@@ -235,10 +234,6 @@ public class RegionCoprocessorHost
             // we must have directly implemented RegionObserver
             hasCustomPostScannerFilterRow = true;
             break out;
-          }
-          if (clazz == BaseRegionObserver.class) {
-            // we reached BaseRegionObserver, try next coprocessor
-            break;
           }
           try {
             clazz.getDeclaredMethod("postScannerFilterRow", ObserverContext.class,

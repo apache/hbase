@@ -49,10 +49,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -543,7 +543,7 @@ public class TestTags {
     }
   }
 
-  public static class TestCoprocessorForTags extends BaseRegionObserver {
+  public static class TestCoprocessorForTags implements RegionObserver {
 
     public static volatile boolean checkTagPresence = false;
     public static List<Tag> tags = null;
@@ -587,14 +587,14 @@ public class TestTags {
     public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> e, Increment increment)
         throws IOException {
       updateMutationAddingTags(increment);
-      return super.preIncrement(e, increment);
+      return null;
     }
 
     @Override
     public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append)
         throws IOException {
       updateMutationAddingTags(append);
-      return super.preAppend(e, append);
+      return null;
     }
 
     @Override

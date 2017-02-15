@@ -29,9 +29,9 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
@@ -63,7 +63,7 @@ import org.apache.zookeeper.ZooKeeper;
  * because RegionObservers come and go and currently
  * listeners registered with ZooKeeperWatcher cannot be removed.
  */
-public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
+public class ZooKeeperScanPolicyObserver implements RegionObserver {
   public static final String node = "/backup/example/lastbackup";
   public static final String zkkey = "ZK";
   private static final Log LOG = LogFactory.getLog(ZooKeeperScanPolicyObserver.class);
@@ -169,11 +169,6 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
           new ZKWatcher(re.getRegionServerServices().getZooKeeper()
               .getRecoverableZooKeeper().getZooKeeper()));
     }
-  }
-
-  @Override
-  public void stop(CoprocessorEnvironment e) throws IOException {
-    // nothing to do here
   }
 
   protected ScanInfo getScanInfo(Store store, RegionCoprocessorEnvironment e) {

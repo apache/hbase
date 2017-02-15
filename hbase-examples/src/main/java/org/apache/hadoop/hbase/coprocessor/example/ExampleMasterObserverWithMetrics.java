@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.metrics.Counter;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.metrics.Timer;
  * </p>
  * @see ExampleRegionObserverWithMetrics
  */
-public class ExampleMasterObserverWithMetrics extends BaseMasterObserver {
+public class ExampleMasterObserverWithMetrics implements MasterObserver {
 
   private static final Log LOG = LogFactory.getLog(ExampleMasterObserverWithMetrics.class);
 
@@ -69,7 +69,6 @@ public class ExampleMasterObserverWithMetrics extends BaseMasterObserver {
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                              HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-    super.preCreateTable(ctx, desc, regions);
     // we rely on the fact that there is only 1 instance of our MasterObserver. We keep track of
     // when the operation starts before the operation is executing.
     this.createTableStartTime = System.currentTimeMillis();
@@ -78,7 +77,6 @@ public class ExampleMasterObserverWithMetrics extends BaseMasterObserver {
   @Override
   public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                               HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-    super.postCreateTable(ctx, desc, regions);
     if (this.createTableStartTime > 0) {
       long time = System.currentTimeMillis() - this.createTableStartTime;
       LOG.info("Create table took: " + time);
@@ -90,16 +88,12 @@ public class ExampleMasterObserverWithMetrics extends BaseMasterObserver {
 
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName) throws IOException {
-    super.preDisableTable(ctx, tableName);
-
     // Increment the Counter for disable table operations
     this.disableTableCounter.increment();
   }
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
-    super.start(env);
-
     // start for the MasterObserver will be called only once in the lifetime of the
     // server. We will construct and register all metrics that we will track across method
     // invocations.

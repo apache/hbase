@@ -32,6 +32,21 @@ import com.google.protobuf.Service;
 /**
  * Coprocessors implement this interface to observe and mediate endpoint invocations
  * on a region.
+ * <br><br>
+ *
+ * <h3>Exception Handling</h3>
+ * For all functions, exception handling is done as follows:
+ * <ul>
+ *   <li>Exceptions of type {@link IOException} are reported back to client.</li>
+ *   <li>For any other kind of exception:
+ *     <ul>
+ *       <li>If the configuration {@link CoprocessorHost#ABORT_ON_ERROR_KEY} is set to true, then
+ *         the server aborts.</li>
+ *       <li>Otherwise, coprocessor is removed from the server and
+ *         {@link org.apache.hadoop.hbase.DoNotRetryIOException} is returned to the client.</li>
+ *     </ul>
+ *   </li>
+ * </ul>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -45,13 +60,15 @@ public interface EndpointObserver extends Coprocessor {
    * effect in this hook.
    * @param ctx the environment provided by the region server
    * @param service the endpoint service
+   * @param request  Request message expected by given {@code Service}'s method (by the name
+   *   {@code methodName}).
    * @param methodName the invoked service method
-   * @param request the request message
    * @return the possibly modified message
-   * @throws IOException
    */
-  Message preEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx, Service service,
-      String methodName, Message request) throws IOException;
+  default Message preEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Service service, String methodName, Message request) throws IOException {
+    return request;
+  }
 
   /**
    * Called after an Endpoint service method is invoked. The response message can be
@@ -59,11 +76,12 @@ public interface EndpointObserver extends Coprocessor {
    * @param ctx the environment provided by the region server
    * @param service the endpoint service
    * @param methodName the invoked service method
-   * @param request the request message
-   * @param responseBuilder the response message builder
-   * @throws IOException
+   * @param request  Request message expected by given {@code Service}'s method (by the name
+   *   {@code methodName}).
+   * @param responseBuilder Builder for final response to the client, with original response from
+   *   Service's method merged into it.
    */
-  void postEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx, Service service,
-      String methodName, Message request, Message.Builder responseBuilder) throws IOException;
-
+  default void postEndpointInvocation(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      Service service, String methodName, Message request, Message.Builder responseBuilder)
+      throws IOException {}
 }

@@ -54,8 +54,8 @@ public interface Coprocessor {
   }
 
   // Interface
-  void start(CoprocessorEnvironment env) throws IOException;
+  default void start(CoprocessorEnvironment env) throws IOException {}
 
-  void stop(CoprocessorEnvironment env) throws IOException;
+  default void stop(CoprocessorEnvironment env) throws IOException {}
 
 }

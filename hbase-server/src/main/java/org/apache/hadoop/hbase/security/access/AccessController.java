@@ -68,14 +68,15 @@ import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterAndRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -168,8 +169,7 @@ import com.google.protobuf.Service;
  * </p>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class AccessController extends BaseMasterAndRegionObserver
-    implements RegionServerObserver,
+public class AccessController implements MasterObserver, RegionObserver, RegionServerObserver,
       AccessControlService.Interface, CoprocessorService, EndpointObserver, BulkLoadObserver {
 
   private static final Log LOG = LogFactory.getLog(AccessController.class);
@@ -2125,7 +2125,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // Impl in BaseRegionObserver might do unnecessary copy for Off heap backed Cells.
+    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
     return hasMore;
   }
 

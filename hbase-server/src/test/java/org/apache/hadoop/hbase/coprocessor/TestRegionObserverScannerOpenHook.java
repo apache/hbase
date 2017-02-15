@@ -98,16 +98,15 @@ public class TestRegionObserverScannerOpenHook {
   }
 
   /**
-   * Do the same logic as the {@link BaseRegionObserver}. Needed since {@link BaseRegionObserver} is
-   * an abstract class.
+   * Do the default logic in {@link RegionObserver} interface.
    */
-  public static class EmptyRegionObsever extends BaseRegionObserver {
+  public static class EmptyRegionObsever implements RegionObserver {
   }
 
   /**
    * Don't return any data from a scan by creating a custom {@link StoreScanner}.
    */
-  public static class NoDataFromScan extends BaseRegionObserver {
+  public static class NoDataFromScan implements RegionObserver {
     @Override
     public KeyValueScanner preStoreScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, Scan scan, NavigableSet<byte[]> targetCols, KeyValueScanner s, long readPt)
@@ -120,7 +119,7 @@ public class TestRegionObserverScannerOpenHook {
   /**
    * Don't allow any data in a flush by creating a custom {@link StoreScanner}.
    */
-  public static class NoDataFromFlush extends BaseRegionObserver {
+  public static class NoDataFromFlush implements RegionObserver {
     @Override
     public InternalScanner preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
@@ -136,7 +135,7 @@ public class TestRegionObserverScannerOpenHook {
    * Don't allow any data to be written out in the compaction by creating a custom
    * {@link StoreScanner}.
    */
-  public static class NoDataFromCompaction extends BaseRegionObserver {
+  public static class NoDataFromCompaction implements RegionObserver {
     @Override
     public InternalScanner preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c,
         Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,

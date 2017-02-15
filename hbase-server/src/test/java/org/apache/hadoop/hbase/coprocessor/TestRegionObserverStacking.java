@@ -48,7 +48,7 @@ public class TestRegionObserverStacking extends TestCase {
     = new HBaseTestingUtility();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
-  public static class ObserverA extends BaseRegionObserver {
+  public static class ObserverA implements RegionObserver {
     long id;
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -63,7 +63,7 @@ public class TestRegionObserverStacking extends TestCase {
     }
   }
 
-  public static class ObserverB extends BaseRegionObserver {
+  public static class ObserverB implements RegionObserver {
     long id;
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -78,7 +78,7 @@ public class TestRegionObserverStacking extends TestCase {
     }
   }
 
-  public static class ObserverC extends BaseRegionObserver {
+  public static class ObserverC implements RegionObserver {
     long id;
 
     @Override

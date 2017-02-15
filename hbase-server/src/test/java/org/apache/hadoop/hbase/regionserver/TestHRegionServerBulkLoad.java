@@ -53,9 +53,9 @@ import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -248,7 +248,7 @@ public class TestHRegionServerBulkLoad {
     }
   }
 
-  public static class MyObserver extends BaseRegionObserver {
+  public static class MyObserver implements RegionObserver {
     static int sleepDuration;
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,

@@ -68,9 +68,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
@@ -750,7 +750,7 @@ public class TestMobCompactor {
    * This copro overwrites the default compaction policy. It always chooses two latest
    * hfiles and compacts them into a new one.
    */
-  public static class CompactTwoLatestHfilesCopro extends BaseRegionObserver {
+  public static class CompactTwoLatestHfilesCopro implements RegionObserver {
     @Override
     public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Store store, final List<StoreFile> candidates, final CompactionRequest request)

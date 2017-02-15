@@ -409,7 +409,7 @@ public class TestRegionObserverInterface {
   }
 
   /* Overrides compaction to only output rows with keys that are even numbers */
-  public static class EvenOnlyCompactor extends BaseRegionObserver {
+  public static class EvenOnlyCompactor implements RegionObserver {
     long lastCompaction;
     long lastFlush;
 

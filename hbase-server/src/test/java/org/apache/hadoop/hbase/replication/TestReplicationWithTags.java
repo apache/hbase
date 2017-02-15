@@ -51,10 +51,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -197,7 +197,7 @@ public class TestReplicationWithTags {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSource extends BaseRegionObserver {
+  public static class TestCoprocessorForTagsAtSource implements RegionObserver {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
@@ -230,7 +230,7 @@ public class TestReplicationWithTags {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSink extends BaseRegionObserver {
+  public static class TestCoprocessorForTagsAtSink implements RegionObserver {
     public static List<Tag> tags = null;
 
     @Override

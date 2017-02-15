@@ -204,7 +204,7 @@ public class TestRegionObserverBypass {
     t.delete(d);
   }
 
-  public static class TestCoprocessor extends BaseRegionObserver {
+  public static class TestCoprocessor implements RegionObserver {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Put put, final WALEdit edit, final Durability durability)

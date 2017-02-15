@@ -26,9 +26,9 @@ import java.util.NavigableSet;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TestFromClientSideWithCoprocessor;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 
 /**
  * RegionObserver that just reimplements the default behavior,
@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
  * {@link TestCompactionWithCoprocessor} to make sure that a wide range
  * of functionality still behaves as expected.
  */
-public class NoOpScanPolicyObserver extends BaseRegionObserver {
+public class NoOpScanPolicyObserver implements RegionObserver {
   /**
    * Reimplement the default behavior
    */

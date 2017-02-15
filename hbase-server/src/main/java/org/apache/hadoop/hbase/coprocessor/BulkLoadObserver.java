@@ -30,6 +30,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBul
 
 /**
  * Coprocessors implement this interface to observe and mediate bulk load operations.
+ * <br><br>
+ *
+ * <h3>Exception Handling</h3>
+ * For all functions, exception handling is done as follows:
+ * <ul>
+ *   <li>Exceptions of type {@link IOException} are reported back to client.</li>
+ *   <li>For any other kind of exception:
+ *     <ul>
+ *       <li>If the configuration {@link CoprocessorHost#ABORT_ON_ERROR_KEY} is set to true, then
+ *         the server aborts.</li>
+ *       <li>Otherwise, coprocessor is removed from the server and
+ *         {@link org.apache.hadoop.hbase.DoNotRetryIOException} is returned to the client.</li>
+ *     </ul>
+ *   </li>
+ * </ul>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -38,17 +53,15 @@ public interface BulkLoadObserver extends Coprocessor {
       * Called as part of SecureBulkLoadEndpoint.prepareBulkLoad() RPC call.
       * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
       * @param ctx the environment to interact with the framework and master
-      * @throws IOException
       */
-    void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-                            PrepareBulkLoadRequest request) throws IOException;
+    default void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
+        PrepareBulkLoadRequest request) throws IOException {}
 
     /**
       * Called as part of SecureBulkLoadEndpoint.cleanupBulkLoad() RPC call.
       * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
       * @param ctx the environment to interact with the framework and master
-      * @throws IOException
       */
-    void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-                            CleanupBulkLoadRequest request) throws IOException;
+    default void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      CleanupBulkLoadRequest request) throws IOException {}
 }

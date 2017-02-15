@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -827,7 +826,7 @@ public class TestFromClientSide3 {
     return clz.cast(cp);
   }
 
-  public static class WatiingForMultiMutationsObserver extends BaseRegionObserver {
+  public static class WatiingForMultiMutationsObserver implements RegionObserver {
     final CountDownLatch latch = new CountDownLatch(1);
     @Override
     public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -840,7 +839,7 @@ public class TestFromClientSide3 {
     }
   }
 
-  public static class WatiingForScanObserver extends BaseRegionObserver {
+  public static class WatiingForScanObserver implements RegionObserver {
     private final CountDownLatch latch = new CountDownLatch(1);
     @Override
     public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,

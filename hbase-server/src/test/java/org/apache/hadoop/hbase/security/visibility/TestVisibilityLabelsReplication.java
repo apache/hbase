@@ -56,12 +56,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -394,7 +393,7 @@ public class TestVisibilityLabelsReplication {
   // A simple BaseRegionbserver impl that allows to add a non-visibility tag from the
   // attributes of the Put mutation.  The existing cells in the put mutation is overwritten
   // with a new cell that has the visibility tags and the non visibility tag
-  public static class SimpleCP extends BaseRegionObserver {
+  public static class SimpleCP implements RegionObserver {
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put m, WALEdit edit,
         Durability durability) throws IOException {
@@ -423,7 +422,7 @@ public class TestVisibilityLabelsReplication {
     }
   }
 
-  public static class TestCoprocessorForTagsAtSink extends BaseRegionObserver {
+  public static class TestCoprocessorForTagsAtSink implements RegionObserver {
     public static List<Tag> tags = null;
 
     @Override

@@ -95,15 +95,13 @@ public class TestCoprocessorMetrics {
   /**
    * MasterObserver that has a Timer metric for create table operation.
    */
-  public static class CustomMasterObserver extends BaseMasterObserver {
+  public static class CustomMasterObserver implements MasterObserver {
     private Timer createTableTimer;
     private long start = Long.MIN_VALUE;
 
     @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-      super.preCreateTable(ctx, desc, regions);
-
       // we rely on the fact that there is only 1 instance of our MasterObserver
       this.start = System.currentTimeMillis();
     }
@@ -111,7 +109,6 @@ public class TestCoprocessorMetrics {
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                 HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-      super.postCreateTable(ctx, desc, regions);
       if (this.start > 0) {
         long time = System.currentTimeMillis() - start;
         LOG.info("Create table took: " + time);
@@ -121,7 +118,6 @@ public class TestCoprocessorMetrics {
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
-      super.start(env);
       if (env instanceof MasterCoprocessorEnvironment) {
         MetricRegistry registry =
             ((MasterCoprocessorEnvironment) env).getMetricRegistryForMaster();
@@ -134,7 +130,7 @@ public class TestCoprocessorMetrics {
   /**
    * RegionServerObserver that has a Counter for rollWAL requests.
    */
-  public static class CustomRegionServerObserver extends BaseRegionServerObserver {
+  public static class CustomRegionServerObserver implements RegionServerObserver {
     /** This is the Counter metric object to keep track of the current count across invocations */
     private Counter rollWALCounter;
     @Override
@@ -142,12 +138,10 @@ public class TestCoprocessorMetrics {
         throws IOException {
       // Increment the Counter whenever the coprocessor is called
       rollWALCounter.increment();
-      super.postRollWALWriterRequest(ctx);
     }
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
-      super.start(env);
       if (env instanceof RegionServerCoprocessorEnvironment) {
         MetricRegistry registry =
             ((RegionServerCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
@@ -162,20 +156,18 @@ public class TestCoprocessorMetrics {
   /**
    * WALObserver that has a Counter for walEdits written.
    */
-  public static class CustomWALObserver extends BaseWALObserver {
+  public static class CustomWALObserver implements WALObserver {
     private Counter walEditsCount;
 
     @Override
     public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
                              HRegionInfo info, org.apache.hadoop.hbase.wal.WALKey logKey,
                              WALEdit logEdit) throws IOException {
-      super.postWALWrite(ctx, info, logKey, logEdit);
       walEditsCount.increment();
     }
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
-      super.start(env);
       if (env instanceof WALCoprocessorEnvironment) {
         MetricRegistry registry =
             ((WALCoprocessorEnvironment) env).getMetricRegistryForRegionServer();
@@ -190,20 +182,17 @@ public class TestCoprocessorMetrics {
   /**
    * RegionObserver that has a Counter for preGet()
    */
-  public static class CustomRegionObserver extends BaseRegionObserver {
+  public static class CustomRegionObserver implements RegionObserver {
     private Counter preGetCounter;
 
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
                          List<Cell> results) throws IOException {
-      super.preGetOp(e, get, results);
       preGetCounter.increment();
     }
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {
-      super.start(env);
-
       if (env instanceof RegionCoprocessorEnvironment) {
         MetricRegistry registry =
             ((RegionCoprocessorEnvironment) env).getMetricRegistryForRegionServer();

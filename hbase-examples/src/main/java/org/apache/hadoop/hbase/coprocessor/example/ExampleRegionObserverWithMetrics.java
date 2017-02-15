@@ -27,9 +27,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.Timer;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.metrics.Timer;
  *
  * @see ExampleMasterObserverWithMetrics
  */
-public class ExampleRegionObserverWithMetrics extends BaseRegionObserver {
+public class ExampleRegionObserverWithMetrics implements RegionObserver {
 
   private Counter preGetCounter;
   private Timer costlyOperationTimer;
@@ -53,8 +53,6 @@ public class ExampleRegionObserverWithMetrics extends BaseRegionObserver {
   @Override
   public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
       throws IOException {
-    super.preGetOp(e, get, results);
-
     // Increment the Counter whenever the coprocessor is called
     preGetCounter.increment();
   }
@@ -62,8 +60,6 @@ public class ExampleRegionObserverWithMetrics extends BaseRegionObserver {
   @Override
   public void postGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
                         List<Cell> results) throws IOException {
-    super.postGetOp(e, get, results);
-
     // do a costly (high latency) operation which we want to measure how long it takes by
     // using a Timer (which is a Meter and a Histogram).
     long start = System.nanoTime();
@@ -83,8 +79,6 @@ public class ExampleRegionObserverWithMetrics extends BaseRegionObserver {
 
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
-    super.start(env);
-
     // start for the RegionServerObserver will be called only once in the lifetime of the
     // server. We will construct and register all metrics that we will track across method
     // invocations.
@@ -116,6 +110,5 @@ public class ExampleRegionObserverWithMetrics extends BaseRegionObserver {
   public void stop(CoprocessorEnvironment e) throws IOException {
     // we should NOT remove / deregister the metrics in stop(). The whole registry will be
     // removed when the last region of the table is closed.
-    super.stop(e);
   }
 }

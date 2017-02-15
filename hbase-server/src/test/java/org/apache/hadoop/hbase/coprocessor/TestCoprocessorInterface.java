@@ -144,7 +144,7 @@ public class TestCoprocessorInterface {
     }
   }
 
-  public static class CoprocessorImpl extends BaseRegionObserver {
+  public static class CoprocessorImpl implements RegionObserver {
 
     private boolean startCalled;
     private boolean stopCalled;
@@ -237,7 +237,7 @@ public class TestCoprocessorInterface {
     }
   }
 
-  public static class CoprocessorII extends BaseRegionObserver {
+  public static class CoprocessorII implements RegionObserver {
     private ConcurrentMap<String, Object> sharedData;
     @Override
     public void start(CoprocessorEnvironment e) {

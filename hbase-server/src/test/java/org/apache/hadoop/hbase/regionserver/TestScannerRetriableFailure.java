@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,7 +64,7 @@ public class TestScannerRetriableFailure {
 
   @Rule public TestTableName TEST_TABLE = new TestTableName();
 
-  public static class FaultyScannerObserver extends BaseRegionObserver {
+  public static class FaultyScannerObserver implements RegionObserver {
     private int faults = 0;
 
     @Override

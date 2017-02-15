@@ -54,6 +54,8 @@ public class TestClassLoading {
   private static final Log LOG = LogFactory.getLog(TestClassLoading.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
+  public static class TestMasterCoprocessor implements MasterObserver {}
+
   private static MiniDFSCluster cluster;
 
   static final TableName tableName = TableName.valueOf("TestClassLoading");
@@ -68,7 +70,7 @@ public class TestClassLoading {
   // TOOD: Fix the import of this handler.  It is coming in from a package that is far away.
   private static Class<?> regionCoprocessor2 = TestServerCustomProtocol.PingHandler.class;
   private static Class<?> regionServerCoprocessor = SampleRegionWALObserver.class;
-  private static Class<?> masterCoprocessor = BaseMasterObserver.class;
+  private static Class<?> masterCoprocessor = TestMasterCoprocessor.class;
 
   private static final String[] regionServerSystemCoprocessors =
       new String[]{
@@ -109,7 +111,7 @@ public class TestClassLoading {
 
   static File buildCoprocessorJar(String className) throws Exception {
     String code = "import org.apache.hadoop.hbase.coprocessor.*;" +
-      "public class " + className + " extends BaseRegionObserver {}";
+      "public class " + className + " implements RegionObserver {}";
     return ClassLoaderTestHelper.buildJar(
       TEST_UTIL.getDataTestDir().toString(), className, code);
   }

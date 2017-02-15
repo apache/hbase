@@ -35,9 +35,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.security.User;
@@ -65,7 +65,7 @@ public class TestAsyncRegionLocatorTimeout {
 
   private static volatile long SLEEP_MS = 0L;
 
-  public static class SleepRegionObserver extends BaseRegionObserver {
+  public static class SleepRegionObserver implements RegionObserver {
 
     @Override
     public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
@@ -73,7 +73,7 @@ public class TestAsyncRegionLocatorTimeout {
       if (SLEEP_MS > 0) {
         Threads.sleepWithoutInterrupt(SLEEP_MS);
       }
-      return super.preScannerOpen(e, scan, s);
+      return s;
     }
   }
 

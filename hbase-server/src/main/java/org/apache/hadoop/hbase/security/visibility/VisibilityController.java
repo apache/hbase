@@ -60,15 +60,16 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterAndRegionObserver;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionServerObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -120,7 +121,7 @@ import com.google.protobuf.Service;
  * visibility labels
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class VisibilityController extends BaseMasterAndRegionObserver implements
+public class VisibilityController implements MasterObserver, RegionObserver,
     VisibilityLabelsService.Interface, CoprocessorService {
 
   private static final Log LOG = LogFactory.getLog(VisibilityController.class);
@@ -766,7 +767,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   @Override
   public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // Impl in BaseRegionObserver might do unnecessary copy for Off heap backed Cells.
+    // 'default' in RegionObserver might do unnecessary copy for Off heap backed Cells.
     return hasMore;
   }
 
@@ -1087,7 +1088,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
    * replicated as string.  The value for the configuration should be
    * 'org.apache.hadoop.hbase.security.visibility.VisibilityController$VisibilityReplication'.
    */
-  public static class VisibilityReplication extends BaseRegionServerObserver {
+  public static class VisibilityReplication implements RegionServerObserver {
     private Configuration conf;
     private VisibilityLabelService visibilityLabelService;
 

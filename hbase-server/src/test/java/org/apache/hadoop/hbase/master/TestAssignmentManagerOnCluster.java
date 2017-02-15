@@ -27,7 +27,6 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +58,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -1359,7 +1357,7 @@ public class TestAssignmentManagerOnCluster {
     }
   }
 
-  public static class MyRegionObserver extends BaseRegionObserver {
+  public static class MyRegionObserver implements RegionObserver {
     // If enabled, fail all preClose calls
     static AtomicBoolean preCloseEnabled = new AtomicBoolean(false);
 

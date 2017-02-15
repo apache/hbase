@@ -37,11 +37,10 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ParseFilter;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -1333,7 +1332,7 @@ public class TestThriftHBaseServiceHandler {
     assertTColumnValueEqual(columnValueB, result.getColumnValues().get(1));
   }
 
-  public static class DelayingRegionObserver extends BaseRegionObserver {
+  public static class DelayingRegionObserver implements RegionObserver {
     private static final Log LOG = LogFactory.getLog(DelayingRegionObserver.class);
     // sleep time in msec
     private long delayMillis;

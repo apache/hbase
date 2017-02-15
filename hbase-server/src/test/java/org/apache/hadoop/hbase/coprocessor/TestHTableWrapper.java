@@ -87,7 +87,7 @@ public class TestHTableWrapper {
   private static final byte[] bytes4 = Bytes.toBytes(4);
   private static final byte[] bytes5 = Bytes.toBytes(5);
 
-  static class DummyRegionObserver extends BaseRegionObserver {
+  static class DummyRegionObserver implements RegionObserver {
   }
 
   private Table hTableInterface;
