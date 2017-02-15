@@ -38,6 +38,8 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
 import org.apache.commons.httpclient.Header;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -66,7 +68,9 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestScannerResource {
+  private static final Log LOG = LogFactory.getLog(TestScannerResource.class);
   private static final TableName TABLE = TableName.valueOf("TestScannerResource");
+  private static final TableName TABLE_TO_BE_DISABLED = TableName.valueOf("ScannerResourceDisable");
   private static final String NONEXISTENT_TABLE = "ThisTableDoesNotExist";
   private static final String CFA = "a";
   private static final String CFB = "b";
@@ -184,6 +188,12 @@ public class TestScannerResource {
     admin.createTable(htd);
     expectedRows1 = insertData(TEST_UTIL.getConfiguration(), TABLE, COLUMN_1, 1.0);
     expectedRows2 = insertData(TEST_UTIL.getConfiguration(), TABLE, COLUMN_2, 0.5);
+
+    htd = new HTableDescriptor(TABLE_TO_BE_DISABLED);
+    htd.addFamily(new HColumnDescriptor(CFA));
+    htd.addFamily(new HColumnDescriptor(CFB));
+    admin.createTable(htd);
+    //insertData(TEST_UTIL.getConfiguration(), TABLE_TO_BE_DISABLED, COLUMN_1, 1.0);
   }
 
   @AfterClass
@@ -359,6 +369,23 @@ public class TestScannerResource {
     Response response = client.put("/" + NONEXISTENT_TABLE +
       "/scanner", Constants.MIMETYPE_XML, body);
     assertEquals(response.getCode(), 404);
+  }
+
+  // performs table scan during which the underlying table is disabled
+  // assert that we get 410 (Gone)
+  @Test
+  public void testTableScanWithTableDisable() throws IOException {
+    ScannerModel model = new ScannerModel();
+    model.addColumn(Bytes.toBytes(COLUMN_1));
+    model.setCaching(1);
+    Response response = client.put("/" + TABLE_TO_BE_DISABLED + "/scanner",
+      Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    assertEquals(response.getCode(), 201);
+    String scannerURI = response.getLocation();
+    assertNotNull(scannerURI);
+    TEST_UTIL.getHBaseAdmin().disableTable(TABLE_TO_BE_DISABLED);
+    response = client.get(scannerURI, Constants.MIMETYPE_PROTOBUF);
+    assertTrue("got " + response.getCode(), response.getCode() == 410);
   }
 
 }
