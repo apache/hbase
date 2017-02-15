@@ -26,6 +26,7 @@ import java.security.Key;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -119,17 +120,16 @@ public class TestMobCompactor {
   private static final String qf1 = "qualifier1";
   private static final String qf2 = "qualifier2";
 
-  private static final long  tsFor20150907Monday = 1441654904000L;
-
-  private static final long  tsFor20151120Sunday = 1448051213000L;
-  private static final long  tsFor20151128Saturday = 1448734396000L;
-  private static final long  tsFor20151130Monday = 1448874000000L;
-  private static final long  tsFor20151201Tuesday = 1448960400000L;
-  private static final long  tsFor20151205Saturday = 1449306000000L;
-  private static final long  tsFor20151228Monday = 1451293200000L;
-  private static final long  tsFor20151231Thursday = 1451552400000L;
-  private static final long  tsFor20160101Friday = 1451638800000L;
-  private static final long  tsFor20160103Sunday = 1451844796000L;
+  private static long tsFor20150907Monday;
+  private static long tsFor20151120Sunday;
+  private static long tsFor20151128Saturday;
+  private static long tsFor20151130Monday;
+  private static long tsFor20151201Tuesday;
+  private static long tsFor20151205Saturday;
+  private static long tsFor20151228Monday;
+  private static long tsFor20151231Thursday;
+  private static long tsFor20160101Friday;
+  private static long tsFor20160103Sunday;
 
   private static final byte[] mobKey01 = Bytes.toBytes("r01");
   private static final byte[] mobKey02 = Bytes.toBytes("r02");
@@ -168,10 +168,9 @@ public class TestMobCompactor {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, 5000);
     TEST_UTIL.getConfiguration()
-      .setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, 5000);
-    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
-        KeyProviderForTesting.class.getName());
+        .set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     TEST_UTIL.getConfiguration().setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 1);
@@ -183,6 +182,38 @@ public class TestMobCompactor {
     fs = TEST_UTIL.getTestFileSystem();
     conf = TEST_UTIL.getConfiguration();
     admin = TEST_UTIL.getAdmin();
+
+    // Initialize timestamps for these days
+    Calendar calendar =  Calendar.getInstance();
+    calendar.set(2015, 8, 7, 10, 20);
+    tsFor20150907Monday = calendar.getTimeInMillis();
+
+    calendar.set(2015, 10, 20, 10, 20);
+    tsFor20151120Sunday = calendar.getTimeInMillis();
+
+    calendar.set(2015, 10, 28, 10, 20);
+    tsFor20151128Saturday = calendar.getTimeInMillis();
+
+    calendar.set(2015, 10, 30, 10, 20);
+    tsFor20151130Monday = calendar.getTimeInMillis();
+
+    calendar.set(2015, 11, 1, 10, 20);
+    tsFor20151201Tuesday = calendar.getTimeInMillis();
+
+    calendar.set(2015, 11, 5, 10, 20);
+    tsFor20151205Saturday = calendar.getTimeInMillis();
+
+    calendar.set(2015, 11, 28, 10, 20);
+    tsFor20151228Monday = calendar.getTimeInMillis();
+
+    calendar.set(2015, 11, 31, 10, 20);
+    tsFor20151231Thursday = calendar.getTimeInMillis();
+
+    calendar.set(2016, 0, 1, 10, 20);
+    tsFor20160101Friday = calendar.getTimeInMillis();
+
+    calendar.set(2016, 0, 3, 10, 20);
+    tsFor20160103Sunday = calendar.getTimeInMillis();
   }
 
   @AfterClass
