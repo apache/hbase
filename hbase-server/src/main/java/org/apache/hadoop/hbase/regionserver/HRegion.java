@@ -6996,7 +6996,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               this.htableDescriptor.getTableName(), WALKey.NO_SEQUENCE_ID, now,
               processor.getClusterIds(), nonceGroup, nonce, mvcc);
             txid = this.wal.append(this.htableDescriptor, this.getRegionInfo(),
-                walKey, walEdit, false);
+                walKey, walEdit, true);
           }
           if(walKey == null){
             // since we use wal sequence Id as mvcc, for SKIP_WAL changes we need a "faked" WALEdit
