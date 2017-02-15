@@ -65,7 +65,8 @@ public class TestInfoServers {
   }
 
   /**
-   * @throws Exception
+   * Ensure when we go to top level index pages that we get redirected to an info-server specific status
+   * page.
    */
   @Test
   public void testInfoServersRedirect() throws Exception {
