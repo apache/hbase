@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
+import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -170,6 +171,7 @@ import org.apache.zookeeper.KeeperException;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
@@ -350,14 +352,42 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private org.mortbay.jetty.Server masterJettyServer;
 
   public static class RedirectServlet extends HttpServlet {
-    private static final long serialVersionUID = 2894774810058302472L;
-    private static int regionServerInfoPort;
+    private static final long serialVersionUID = 2894774810058302473L;
+    private final int regionServerInfoPort;
+    private final String regionServerHostname;
+
+    /**
+     * @param infoServer that we're trying to send all requests to
+     * @param hostname may be null. if given, will be used for redirects instead of host from client.
+     */
+    public RedirectServlet(InfoServer infoServer, String hostname) {
+       regionServerInfoPort = infoServer.getPort();
+       regionServerHostname = hostname;
+    }
 
     @Override
     public void doGet(HttpServletRequest request,
         HttpServletResponse response) throws ServletException, IOException {
+      String redirectHost = regionServerHostname;
+      if(redirectHost == null) {
+        redirectHost = request.getServerName();
+        if(!Addressing.isLocalAddress(InetAddress.getByName(redirectHost))) {
+          LOG.warn("Couldn't resolve '" + redirectHost + "' as an address local to this node and '" +
+              MASTER_HOSTNAME_KEY + "' is not set; client will get a HTTP 400 response. If " +
+              "your HBase deployment relies on client accessible names that the region server process " +
+              "can't resolve locally, then you should set the previously mentioned configuration variable " +
+              "to an appropriate hostname.");
+          // no sending client provided input back to the client, so the goal host is just in the logs.
+          response.sendError(400, "Request was to a host that I can't resolve for any of the network interfaces on " +
+              "this node. If this is due to an intermediary such as an HTTP load balancer or other proxy, your HBase " +
+              "administrator can set '" + MASTER_HOSTNAME_KEY + "' to point to the correct hostname.");
+          return;
+        }
+      }
+      // TODO this scheme should come from looking at the scheme registered in the infoserver's http server for the
+      // host and port we're using, but it's buried way too deep to do that ATM.
       String redirectUrl = request.getScheme() + "://"
-        + request.getServerName() + ":" + regionServerInfoPort
+        + redirectHost + ":" + regionServerInfoPort
         + request.getRequestURI();
       response.sendRedirect(redirectUrl);
     }
@@ -458,13 +488,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (!conf.getBoolean("hbase.master.infoserver.redirect", true)) {
       return -1;
     }
-    int infoPort = conf.getInt("hbase.master.info.port.orig",
+    final int infoPort = conf.getInt("hbase.master.info.port.orig",
       HConstants.DEFAULT_MASTER_INFOPORT);
     // -1 is for disabling info server, so no redirecting
     if (infoPort < 0 || infoServer == null) {
       return -1;
     }
-    String addr = conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+    if(infoPort == infoServer.getPort()) {
+      return infoPort;
+    }
+    final String addr = conf.get("hbase.master.info.bindAddress", "0.0.0.0");
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
       String msg =
           "Failed to start redirecting jetty server. Address " + addr
@@ -474,18 +507,22 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throw new IOException(msg);
     }
 
-    RedirectServlet.regionServerInfoPort = infoServer.getPort();
-    if(RedirectServlet.regionServerInfoPort == infoPort) {
-      return infoPort;
-    }
+    // TODO I'm pretty sure we could just add another binding to the InfoServer run by
+    // the RegionServer and have it run the RedirectServlet instead of standing up
+    // a second entire stack here.
     masterJettyServer = new org.mortbay.jetty.Server();
     Connector connector = new SelectChannelConnector();
     connector.setHost(addr);
     connector.setPort(infoPort);
     masterJettyServer.addConnector(connector);
     masterJettyServer.setStopAtShutdown(true);
+
+    final String redirectHostname = shouldUseThisHostnameInstead() ? useThisHostnameInstead : null;
+
+    final RedirectServlet redirect = new RedirectServlet(infoServer, redirectHostname);
     Context context = new Context(masterJettyServer, "/", Context.NO_SESSIONS);
-    context.addServlet(RedirectServlet.class, "/*");
+    context.addServlet(new ServletHolder(redirect), "/*");
+
     try {
       masterJettyServer.start();
     } catch (Exception e) {
