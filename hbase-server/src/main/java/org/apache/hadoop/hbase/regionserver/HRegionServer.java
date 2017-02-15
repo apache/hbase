@@ -438,9 +438,10 @@ public class HRegionServer extends HasThread implements
   // key to the config parameter of server hostname
   // the specification of server hostname is optional. The hostname should be resolvable from
   // both master and region server
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   final static String RS_HOSTNAME_KEY = "hbase.regionserver.hostname";
-
-  final static String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+  protected final static String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
 
   /**
    * This servers startcode.
