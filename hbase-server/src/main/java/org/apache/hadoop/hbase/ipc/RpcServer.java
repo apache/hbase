@@ -1341,7 +1341,7 @@ public abstract class RpcServer implements RpcServerInterface,
    * call.
    * @return An RpcCallContext backed by the currently ongoing call (gotten from a thread local)
    */
-  public static RpcCallContext getCurrentCall() {
+  public static RpcCall getCurrentCall() {
     return CurCall.get();
   }
 
