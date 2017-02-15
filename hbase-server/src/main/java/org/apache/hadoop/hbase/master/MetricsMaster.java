@@ -37,11 +37,14 @@ public class MetricsMaster {
   private static final Log LOG = LogFactory.getLog(MetricsMaster.class);
   private MetricsMasterSource masterSource;
   private MetricsMasterProcSource masterProcSource;
+  private MetricsMasterQuotaSource masterQuotaSource;
 
   public MetricsMaster(MetricsMasterWrapper masterWrapper) {
     masterSource = CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class).create(masterWrapper);
     masterProcSource =
             CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class).create(masterWrapper);
+    masterQuotaSource =
+            CompatibilitySingletonFactory.getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
   }
 
   // for unit-test usage
@@ -53,10 +56,49 @@ public class MetricsMaster {
     return masterProcSource;
   }
 
+  public MetricsMasterQuotaSource getMetricsQuotaSource() {
+    return masterQuotaSource;
+  }
+
   /**
    * @param inc How much to add to requests.
    */
   public void incrementRequests(final long inc) {
     masterSource.incRequests(inc);
+  }
+
+  /**
+   * Sets the number of space quotas defined.
+   */
+  public void setNumSpaceQuotas(final long numSpaceQuotas) {
+    masterQuotaSource.updateNumSpaceQuotas(numSpaceQuotas);
+  }
+
+  /**
+   * Sets the number of table in violation of a space quota.
+   */
+  public void setNumTableInSpaceQuotaViolation(final long numTablesInViolation) {
+    masterQuotaSource.updateNumTablesInSpaceQuotaViolation(numTablesInViolation);
+  }
+
+  /**
+   * Sets the number of namespaces in violation of a space quota.
+   */
+  public void setNumNamespacesInSpaceQuotaViolation(final long numNamespacesInViolation) {
+    masterQuotaSource.updateNumNamespacesInSpaceQuotaViolation(numNamespacesInViolation);
+  }
+
+  /**
+   * Sets the number of region size reports the master has seen.
+   */
+  public void setNumRegionSizeReports(final long numRegionReports) {
+    masterQuotaSource.updateNumCurrentSpaceQuotaRegionSizeReports(numRegionReports);
+  }
+
+  /**
+   * Sets the execution time of a period of the QuotaObserverChore.
+   */
+  public void incrementQuotaObserverTime(final long executionTime) {
+    masterQuotaSource.incrementSpaceQuotaObserverChoreTime(executionTime);
   }
 }

@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.*;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddReplicationPeerRequest;
@@ -490,5 +492,11 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public GetSpaceQuotaRegionSizesResponse getSpaceQuotaRegionSizes(RpcController controller,
       GetSpaceQuotaRegionSizesRequest request) throws ServiceException {
     return stub.getSpaceQuotaRegionSizes(controller, request);
+  }
+
+  @Override
+  public GetQuotaStatesResponse getQuotaStates(RpcController controller,
+      GetQuotaStatesRequest request) throws ServiceException {
+    return stub.getQuotaStates(controller, request);
   }
 }

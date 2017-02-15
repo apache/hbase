@@ -19,9 +19,14 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.*;
 
+import java.util.AbstractMap.SimpleImmutableEntry;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
+import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -76,5 +81,17 @@ public class TestMasterMetricsWrapper {
     assertEquals(4, info.getNumRegionServers());
     assertEquals(1, info.getNumDeadRegionServers());
     assertEquals(1, info.getNumWALFiles());
+  }
+
+  @Test
+  public void testQuotaSnapshotConversion() {
+    MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(
+        TEST_UTIL.getHBaseCluster().getMaster());
+    assertEquals(new SimpleImmutableEntry<Long,Long>(1024L, 2048L),
+        info.convertSnapshot(new SpaceQuotaSnapshot(
+            SpaceQuotaStatus.notInViolation(), 1024L, 2048L)));
+    assertEquals(new SimpleImmutableEntry<Long,Long>(4096L, 2048L),
+        info.convertSnapshot(new SpaceQuotaSnapshot(
+            new SpaceQuotaStatus(SpaceViolationPolicy.NO_INSERTS), 4096L, 2048L)));
   }
 }

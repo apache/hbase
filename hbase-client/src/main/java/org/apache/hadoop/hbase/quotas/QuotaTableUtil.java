@@ -56,7 +56,9 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
@@ -470,6 +472,45 @@ public class QuotaTableUtil {
           ProtobufUtil.toViolationPolicy(policy.getViolationPolicy()));
     }
     return policies;
+  }
+
+  /**
+   * Returns the Master's view of a quota on the given {@code tableName} or null if the
+   * Master has no quota information on that table.
+   */
+  public static SpaceQuotaSnapshot getCurrentSnapshot(
+      Connection conn, TableName tn) throws IOException {
+    if (!(conn instanceof ClusterConnection)) {
+      throw new IllegalArgumentException("Expected a ClusterConnection");
+    }
+    ClusterConnection clusterConn = (ClusterConnection) conn;
+    GetQuotaStatesResponse resp = QuotaStatusCalls.getMasterQuotaStates(clusterConn, 0);
+    HBaseProtos.TableName protoTableName = ProtobufUtil.toProtoTableName(tn);
+    for (GetQuotaStatesResponse.TableQuotaSnapshot tableSnapshot : resp.getTableSnapshotsList()) {
+      if (protoTableName.equals(tableSnapshot.getTableName())) {
+        return SpaceQuotaSnapshot.toSpaceQuotaSnapshot(tableSnapshot.getSnapshot());
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns the Master's view of a quota on the given {@code namespace} or null if the
+   * Master has no quota information on that namespace.
+   */
+  public static SpaceQuotaSnapshot getCurrentSnapshot(
+      Connection conn, String namespace) throws IOException {
+    if (!(conn instanceof ClusterConnection)) {
+      throw new IllegalArgumentException("Expected a ClusterConnection");
+    }
+    ClusterConnection clusterConn = (ClusterConnection) conn;
+    GetQuotaStatesResponse resp = QuotaStatusCalls.getMasterQuotaStates(clusterConn, 0);
+    for (GetQuotaStatesResponse.NamespaceQuotaSnapshot nsSnapshot : resp.getNsSnapshotsList()) {
+      if (namespace.equals(nsSnapshot.getNamespace())) {
+        return SpaceQuotaSnapshot.toSpaceQuotaSnapshot(nsSnapshot.getSnapshot());
+      }
+    }
+    return null;
   }
 
   /* =========================================================================

@@ -943,7 +943,11 @@ service MasterService {
   rpc removeDrainFromRegionServers(RemoveDrainFromRegionServersRequest)
     returns(RemoveDrainFromRegionServersResponse);
 
-  /** Fetches the Master's view of space quotas */
+  /** Fetches the Master's view of space utilization */
   rpc GetSpaceQuotaRegionSizes(GetSpaceQuotaRegionSizesRequest)
     returns(GetSpaceQuotaRegionSizesResponse);
+
+  /** Fetches the Master's view of quotas */
+  rpc GetQuotaStates(GetQuotaStatesRequest)
+    returns(GetQuotaStatesResponse);
 }

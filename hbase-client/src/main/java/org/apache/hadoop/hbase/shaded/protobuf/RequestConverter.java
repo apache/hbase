@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetNormali
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOrMergeEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
@@ -1739,5 +1740,15 @@ public final class RequestConverter {
    */
   public static GetSpaceQuotaEnforcementsRequest buildGetSpaceQuotaEnforcementsRequest() {
     return GET_SPACE_QUOTA_ENFORCEMENTS_REQUEST;
+  }
+
+  private static final GetQuotaStatesRequest GET_QUOTA_STATES_REQUEST =
+      GetQuotaStatesRequest.newBuilder().build();
+
+  /**
+   * Returns a {@link GetQuotaStatesRequest} object.
+   */
+  public static GetQuotaStatesRequest buildGetQuotaStatesRequest() {
+    return GET_QUOTA_STATES_REQUEST;
   }
 }

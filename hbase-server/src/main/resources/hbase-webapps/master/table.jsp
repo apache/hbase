@@ -42,10 +42,14 @@
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
+  import="org.apache.hadoop.hbase.quotas.QuotaTableUtil"
+  import="org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos"
   import="org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos"
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas"
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
@@ -87,6 +91,7 @@
   if (showFragmentation) {
       frags = FSUtils.getTableFragmentation(master);
   }
+  boolean quotasEnabled = conf.getBoolean("hbase.quota.enabled", false);
   String action = request.getParameter("action");
   String key = request.getParameter("key");
   String left = request.getParameter("left");
@@ -328,6 +333,60 @@ if ( fqtn != null ) {
       <td>How fragmented is the table. After a major compaction it is 0%.</td>
   </tr>
 <%  } %>
+<%
+  if (quotasEnabled) {
+    TableName tn = TableName.valueOf(fqtn);
+    SpaceQuotaSnapshot masterSnapshot = null;
+    Quotas quota = QuotaTableUtil.getTableQuota(master.getConnection(), tn);
+    if (null == quota || !quota.hasSpace()) {
+      quota = QuotaTableUtil.getNamespaceQuota(master.getConnection(), tn.getNamespaceAsString());
+      if (null != quota) {
+        masterSnapshot = QuotaTableUtil.getCurrentSnapshot(master.getConnection(), tn.getNamespaceAsString());
+      }
+    } else {
+      masterSnapshot = QuotaTableUtil.getCurrentSnapshot(master.getConnection(), tn);
+    }
+    if (null != quota && quota.hasSpace()) {
+      SpaceQuota spaceQuota = quota.getSpace();
+%>
+  <tr>
+    <td>Space Quota</td>
+    <td>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Value</th>
+        </tr>
+        <tr>
+          <td>Limit</td>
+          <td><%= StringUtils.byteDesc(spaceQuota.getSoftLimit()) %></td>
+        </tr>
+        <tr>
+          <td>Policy</td>
+          <td><%= spaceQuota.getViolationPolicy() %></td>
+        </tr>
+<%
+      if (null != masterSnapshot) {
+%>
+        <tr>
+          <td>Usage</td>
+          <td><%= StringUtils.byteDesc(masterSnapshot.getUsage()) %></td>
+        </tr>
+        <tr>
+          <td>State</td>
+          <td><%= masterSnapshot.getQuotaStatus().isInViolation() ? "In Violation" : "In Observance" %></td>
+        </tr>
+<%
+      }
+%>
+      </table>
+    </td>
+    <td>Information about a Space Quota on this table, if set.</td>
+  </tr>
+<%
+    }
+  }
+%>
 </table>
 <h2>Table Schema</h2>
 <table class="table table-striped">

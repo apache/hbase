@@ -912,7 +912,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       // Create the quota snapshot notifier
       spaceQuotaSnapshotNotifier = createQuotaSnapshotNotifier();
       spaceQuotaSnapshotNotifier.initialize(getClusterConnection());
-      this.quotaObserverChore = new QuotaObserverChore(this);
+      this.quotaObserverChore = new QuotaObserverChore(this, getMasterMetrics());
       // Start the chore to read the region FS space reports and act on them
       getChoreService().scheduleChore(quotaObserverChore);
     }

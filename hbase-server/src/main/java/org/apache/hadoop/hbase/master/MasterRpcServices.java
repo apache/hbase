@@ -62,7 +62,9 @@ import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.LockInfo;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -112,8 +114,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.NamespaceQuotaSnapshot;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse.TableQuotaSnapshot;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
@@ -1978,6 +1984,38 @@ public class MasterRpcServices extends RSRpcServices
           builder.addSizes(RegionSizes.newBuilder()
               .setTableName(ProtobufUtil.toProtoTableName(tableSize.getKey()))
               .setSize(tableSize.getValue()).build());
+        }
+        return builder.build();
+      }
+      return builder.build();
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetQuotaStatesResponse getQuotaStates(
+      RpcController controller, GetQuotaStatesRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      QuotaObserverChore quotaChore = this.master.getQuotaObserverChore();
+      GetQuotaStatesResponse.Builder builder = GetQuotaStatesResponse.newBuilder();
+      if (null != quotaChore) {
+        // The "current" view of all tables with quotas
+        Map<TableName, SpaceQuotaSnapshot> tableSnapshots = quotaChore.getTableQuotaSnapshots();
+        for (Entry<TableName, SpaceQuotaSnapshot> entry : tableSnapshots.entrySet()) {
+          builder.addTableSnapshots(
+              TableQuotaSnapshot.newBuilder()
+                  .setTableName(ProtobufUtil.toProtoTableName(entry.getKey()))
+                  .setSnapshot(SpaceQuotaSnapshot.toProtoSnapshot(entry.getValue())).build());
+        }
+        // The "current" view of all namespaces with quotas
+        Map<String, SpaceQuotaSnapshot> nsSnapshots = quotaChore.getNamespaceQuotaSnapshots();
+        for (Entry<String, SpaceQuotaSnapshot> entry : nsSnapshots.entrySet()) {
+          builder.addNsSnapshots(
+              NamespaceQuotaSnapshot.newBuilder()
+                  .setNamespace(entry.getKey())
+                  .setSnapshot(SpaceQuotaSnapshot.toProtoSnapshot(entry.getValue())).build());
         }
         return builder.build();
       }

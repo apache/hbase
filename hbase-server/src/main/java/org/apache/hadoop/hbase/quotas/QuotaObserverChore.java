@@ -18,12 +18,12 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
@@ -78,6 +79,7 @@ public class QuotaObserverChore extends ScheduledChore {
   private final Connection conn;
   private final Configuration conf;
   private final MasterQuotaManager quotaManager;
+  private final MetricsMaster metrics;
   /*
    * Callback that changes in quota snapshots are passed to.
    */
@@ -87,7 +89,9 @@ public class QuotaObserverChore extends ScheduledChore {
    * Preserves the state of quota snapshots for tables and namespaces
    */
   private final Map<TableName,SpaceQuotaSnapshot> tableQuotaSnapshots;
+  private final Map<TableName,SpaceQuotaSnapshot> readOnlyTableQuotaSnapshots;
   private final Map<String,SpaceQuotaSnapshot> namespaceQuotaSnapshots;
+  private final Map<String,SpaceQuotaSnapshot> readOnlyNamespaceSnapshots;
 
   // The time, in millis, that region reports should be kept by the master
   private final long regionReportLifetimeMillis;
@@ -98,25 +102,28 @@ public class QuotaObserverChore extends ScheduledChore {
   private QuotaSnapshotStore<TableName> tableSnapshotStore;
   private QuotaSnapshotStore<String> namespaceSnapshotStore;
 
-  public QuotaObserverChore(HMaster master) {
+  public QuotaObserverChore(HMaster master, MetricsMaster metrics) {
     this(
         master.getConnection(), master.getConfiguration(),
         master.getSpaceQuotaSnapshotNotifier(), master.getMasterQuotaManager(),
-        master);
+        master, metrics);
   }
 
   QuotaObserverChore(
       Connection conn, Configuration conf, SpaceQuotaSnapshotNotifier snapshotNotifier,
-      MasterQuotaManager quotaManager, Stoppable stopper) {
+      MasterQuotaManager quotaManager, Stoppable stopper, MetricsMaster metrics) {
     super(
         QuotaObserverChore.class.getSimpleName(), stopper, getPeriod(conf),
         getInitialDelay(conf), getTimeUnit(conf));
     this.conn = conn;
     this.conf = conf;
+    this.metrics = metrics;
     this.quotaManager = quotaManager;
     this.snapshotNotifier = Objects.requireNonNull(snapshotNotifier);
-    this.tableQuotaSnapshots = new HashMap<>();
-    this.namespaceQuotaSnapshots = new HashMap<>();
+    this.tableQuotaSnapshots = new ConcurrentHashMap<>();
+    this.readOnlyTableQuotaSnapshots = Collections.unmodifiableMap(tableQuotaSnapshots);
+    this.namespaceQuotaSnapshots = new ConcurrentHashMap<>();
+    this.readOnlyNamespaceSnapshots = Collections.unmodifiableMap(namespaceQuotaSnapshots);
     this.regionReportLifetimeMillis = conf.getLong(
         REGION_REPORT_RETENTION_DURATION_KEY, REGION_REPORT_RETENTION_DURATION_DEFAULT);
   }
@@ -127,7 +134,11 @@ public class QuotaObserverChore extends ScheduledChore {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Refreshing space quotas in RegionServer");
       }
+      long start = System.nanoTime();
       _chore();
+      if (null != metrics) {
+        metrics.incrementQuotaObserverTime((System.nanoTime() - start) / 1_000_000);
+      }
     } catch (IOException e) {
       LOG.warn("Failed to process quota reports and update quota state. Will retry.", e);
     }
@@ -141,6 +152,12 @@ public class QuotaObserverChore extends ScheduledChore {
       LOG.trace("Found following tables with quotas: " + tablesWithQuotas);
     }
 
+    if (null != metrics) {
+      // Set the number of namespaces and tables with quotas defined
+      metrics.setNumSpaceQuotas(tablesWithQuotas.getTableQuotaTables().size()
+          + tablesWithQuotas.getNamespacesWithQuotas().size());
+    }
+
     // The current "view" of region space use. Used henceforth.
     final Map<HRegionInfo,Long> reportedRegionSpaceUse = quotaManager.snapshotRegionSizes();
     if (LOG.isTraceEnabled()) {
@@ -152,6 +169,10 @@ public class QuotaObserverChore extends ScheduledChore {
 
     // Create the stores to track table and namespace snapshots
     initializeSnapshotStores(reportedRegionSpaceUse);
+    // Report the number of (non-expired) region size reports
+    if (null != metrics) {
+      metrics.setNumRegionSizeReports(reportedRegionSpaceUse.size());
+    }
 
     // Filter out tables for which we don't have adequate regionspace reports yet.
     // Important that we do this after we instantiate the stores above
@@ -215,6 +236,7 @@ public class QuotaObserverChore extends ScheduledChore {
    * @param tablesWithTableQuotas The HBase tables which have quotas defined
    */
   void processTablesWithQuotas(final Set<TableName> tablesWithTableQuotas) throws IOException {
+    long numTablesInViolation = 0L;
     for (TableName table : tablesWithTableQuotas) {
       final SpaceQuota spaceQuota = tableSnapshotStore.getSpaceQuota(table);
       if (null == spaceQuota) {
@@ -227,9 +249,18 @@ public class QuotaObserverChore extends ScheduledChore {
       final SpaceQuotaSnapshot currentSnapshot = tableSnapshotStore.getCurrentState(table);
       final SpaceQuotaSnapshot targetSnapshot = tableSnapshotStore.getTargetState(table, spaceQuota);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Processing " + table + " with current=" + currentSnapshot + ", target=" + targetSnapshot);
+        LOG.trace("Processing " + table + " with current=" + currentSnapshot + ", target="
+            + targetSnapshot);
       }
       updateTableQuota(table, currentSnapshot, targetSnapshot);
+
+      if (targetSnapshot.getQuotaStatus().isInViolation()) {
+        numTablesInViolation++;
+      }
+    }
+    // Report the number of tables in violation
+    if (null != metrics) {
+      metrics.setNumTableInSpaceQuotaViolation(numTablesInViolation);
     }
   }
 
@@ -246,6 +277,7 @@ public class QuotaObserverChore extends ScheduledChore {
   void processNamespacesWithQuotas(
       final Set<String> namespacesWithQuotas,
       final Multimap<String,TableName> tablesByNamespace) throws IOException {
+    long numNamespacesInViolation = 0L;
     for (String namespace : namespacesWithQuotas) {
       // Get the quota definition for the namespace
       final SpaceQuota spaceQuota = namespaceSnapshotStore.getSpaceQuota(namespace);
@@ -257,8 +289,22 @@ public class QuotaObserverChore extends ScheduledChore {
         continue;
       }
       final SpaceQuotaSnapshot currentSnapshot = namespaceSnapshotStore.getCurrentState(namespace);
-      final SpaceQuotaSnapshot targetSnapshot = namespaceSnapshotStore.getTargetState(namespace, spaceQuota);
+      final SpaceQuotaSnapshot targetSnapshot = namespaceSnapshotStore.getTargetState(
+          namespace, spaceQuota);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Processing " + namespace + " with current=" + currentSnapshot + ", target="
+            + targetSnapshot);
+      }
       updateNamespaceQuota(namespace, currentSnapshot, targetSnapshot, tablesByNamespace);
+
+      if (targetSnapshot.getQuotaStatus().isInViolation()) {
+        numNamespacesInViolation++;
+      }
+    }
+
+    // Report the number of namespaces in violation
+    if (null != metrics) {
+      metrics.setNumNamespacesInSpaceQuotaViolation(numNamespacesInViolation);
     }
   }
 
@@ -285,14 +331,16 @@ public class QuotaObserverChore extends ScheduledChore {
         }
       } else if (LOG.isDebugEnabled()) {
         // We're either moving into violation or changing violation policies
-        LOG.debug(table + " moving into violation of table space quota with policy of " + targetStatus.getPolicy());
+        LOG.debug(table + " moving into violation of table space quota with policy of "
+            + targetStatus.getPolicy());
       }
 
       this.snapshotNotifier.transitionTable(table, targetSnapshot);
       // Update it in memory
       tableSnapshotStore.setCurrentState(table, targetSnapshot);
     } else if (LOG.isTraceEnabled()) {
-      // Policies are the same, so we have nothing to do except log this. Don't need to re-update the quota table
+      // Policies are the same, so we have nothing to do except log this. Don't need to re-update
+      // the quota table
       if (!currentStatus.isInViolation()) {
         LOG.trace(table + " remains in observance of quota.");
       } else {
@@ -347,11 +395,14 @@ public class QuotaObserverChore extends ScheduledChore {
             }
           } else {
             // No table quota present or a table quota present that is not in violation
-            LOG.info(tableInNS + " moving into violation of namespace space quota with policy " + targetStatus.getPolicy());
+            LOG.info(tableInNS + " moving into violation of namespace space quota with policy "
+                + targetStatus.getPolicy());
             this.snapshotNotifier.transitionTable(tableInNS, targetSnapshot);
           }
         }
       }
+      // Update the new state in memory for this namespace
+      namespaceSnapshotStore.setCurrentState(namespace, targetSnapshot);
     } else {
       // Policies are the same
       if (!targetStatus.isInViolation()) {
@@ -360,7 +411,8 @@ public class QuotaObserverChore extends ScheduledChore {
           LOG.trace(namespace + " remains in observance of quota.");
         }
       } else {
-        // Namespace quota is still in violation, need to enact if the table quota is not taking priority.
+        // Namespace quota is still in violation, need to enact if the table quota is not
+        // taking priority.
         for (TableName tableInNS : tablesByNamespace.get(namespace)) {
           // Does a table policy exist
           if (tableSnapshotStore.getCurrentState(tableInNS).getQuotaStatus().isInViolation()) {
@@ -448,6 +500,22 @@ public class QuotaObserverChore extends ScheduledChore {
   @VisibleForTesting
   QuotaSnapshotStore<String> getNamespaceSnapshotStore() {
     return namespaceSnapshotStore;
+  }
+
+  /**
+   * Returns an unmodifiable view over the current {@link SpaceQuotaSnapshot} objects
+   * for each HBase table with a quota.
+   */
+  public Map<TableName,SpaceQuotaSnapshot> getTableQuotaSnapshots() {
+    return readOnlyTableQuotaSnapshots;
+  }
+
+  /**
+   * Returns an unmodifiable view over the current {@link SpaceQuotaSnapshot} objects
+   * for each HBase namespace with a quota.
+   */
+  public Map<String,SpaceQuotaSnapshot> getNamespaceQuotaSnapshots() {
+    return readOnlyNamespaceSnapshots;
   }
 
   /**

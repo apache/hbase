@@ -17,9 +17,18 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -134,4 +143,35 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     return master.getNumWALFiles();
   }
 
+  @Override
+  public Map<String,Entry<Long,Long>> getTableSpaceUtilization() {
+    QuotaObserverChore quotaChore = master.getQuotaObserverChore();
+    if (null == quotaChore) {
+      return Collections.emptyMap();
+    }
+    Map<TableName,SpaceQuotaSnapshot> tableSnapshots = quotaChore.getTableQuotaSnapshots();
+    Map<String,Entry<Long,Long>> convertedData = new HashMap<>();
+    for (Entry<TableName,SpaceQuotaSnapshot> entry : tableSnapshots.entrySet()) {
+      convertedData.put(entry.getKey().toString(), convertSnapshot(entry.getValue()));
+    }
+    return convertedData;
+  }
+
+  @Override
+  public Map<String,Entry<Long,Long>> getNamespaceSpaceUtilization() {
+    QuotaObserverChore quotaChore = master.getQuotaObserverChore();
+    if (null == quotaChore) {
+      return Collections.emptyMap();
+    }
+    Map<String,SpaceQuotaSnapshot> namespaceSnapshots = quotaChore.getNamespaceQuotaSnapshots();
+    Map<String,Entry<Long,Long>> convertedData = new HashMap<>();
+    for (Entry<String,SpaceQuotaSnapshot> entry : namespaceSnapshots.entrySet()) {
+      convertedData.put(entry.getKey(), convertSnapshot(entry.getValue()));
+    }
+    return convertedData;
+  }
+
+  Entry<Long,Long> convertSnapshot(SpaceQuotaSnapshot snapshot) {
+    return new SimpleImmutableEntry<Long,Long>(snapshot.getUsage(), snapshot.getLimit());
+  }
 }

@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -185,6 +187,87 @@ public class TestQuotaStatusRPCs {
     SpaceViolationPolicy policy = violations.get(tn);
     assertNotNull("Did not find policy for " + tn, policy);
     assertEquals(SpaceViolationPolicy.NO_INSERTS, policy);
+  }
+
+  @Test
+  public void testQuotaStatusFromMaster() throws Exception {
+    final long sizeLimit = 1024L * 10L; // 10KB
+    final long tableSize = 1024L * 5; // 5KB
+    final long nsLimit = Long.MAX_VALUE;
+    final int numRegions = 10;
+    final TableName tn = helper.createTableWithRegions(numRegions);
+
+    // Define the quota
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
+        tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
+    TEST_UTIL.getAdmin().setQuota(settings);
+    QuotaSettings nsSettings = QuotaSettingsFactory.limitNamespaceSpace(
+        tn.getNamespaceAsString(), nsLimit, SpaceViolationPolicy.NO_INSERTS);
+    TEST_UTIL.getAdmin().setQuota(nsSettings);
+
+    // Write at least `tableSize` data
+    helper.writeData(tn, tableSize);
+
+    final Connection conn = TEST_UTIL.getConnection();
+    // Make sure the master has a snapshot for our table
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        SpaceQuotaSnapshot snapshot = QuotaTableUtil.getCurrentSnapshot(conn, tn);
+        LOG.info("Table snapshot after initial ingest: " + snapshot);
+        if (null == snapshot) {
+          return false;
+        }
+        return snapshot.getLimit() == sizeLimit && snapshot.getUsage() > 0L;
+      }
+    });
+    final AtomicReference<Long> nsUsage = new AtomicReference<>();
+    // If we saw the table snapshot, we should also see the namespace snapshot
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000 * 1000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        SpaceQuotaSnapshot snapshot = QuotaTableUtil.getCurrentSnapshot(
+            conn, tn.getNamespaceAsString());
+        LOG.debug("Namespace snapshot after initial ingest: " + snapshot);
+        if (null == snapshot) {
+          return false;
+        }
+        nsUsage.set(snapshot.getUsage());
+        return snapshot.getLimit() == nsLimit && snapshot.getUsage() > 0;
+      }
+    });
+
+    try {
+      helper.writeData(tn, tableSize * 2L);
+    } catch (SpaceLimitingException e) {
+      // Pass
+    }
+
+    // Wait for the status to move to violation
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        SpaceQuotaSnapshot snapshot = QuotaTableUtil.getCurrentSnapshot(conn, tn);
+        LOG.info("Table snapshot after second ingest: " + snapshot);
+        if (null == snapshot) {
+          return false;
+        }
+        return snapshot.getQuotaStatus().isInViolation();
+      }
+    });
+    // The namespace should still not be in violation, but have a larger usage than previously
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        SpaceQuotaSnapshot snapshot = QuotaTableUtil.getCurrentSnapshot(
+            conn, tn.getNamespaceAsString());
+        LOG.debug("Namespace snapshot after second ingest: " + snapshot);
+        if (null == snapshot) {
+          return false;
+        }
+        return snapshot.getUsage() > nsUsage.get() && !snapshot.getQuotaStatus().isInViolation();
+      }
+    });
   }
 
   private int countRegionsForTable(TableName tn, Map<HRegionInfo,Long> regionSizes) {
