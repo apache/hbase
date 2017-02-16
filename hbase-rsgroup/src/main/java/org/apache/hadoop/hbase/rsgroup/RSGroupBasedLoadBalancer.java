@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
-import org.apache.hadoop.hbase.util.Address;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**

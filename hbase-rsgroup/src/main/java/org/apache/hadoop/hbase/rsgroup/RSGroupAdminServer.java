@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
-import org.apache.hadoop.hbase.util.Address;
+import org.apache.hadoop.hbase.net.Address;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

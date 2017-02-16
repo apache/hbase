@@ -26,7 +26,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.util.Address;
+import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Stores the group information of region server groups.
@@ -45,12 +45,12 @@ public class RSGroupInfo {
   private SortedSet<TableName> tables;
 
   public RSGroupInfo(String name) {
-    this(name, new TreeSet(), new TreeSet());
+    this(name, new TreeSet<Address>(), new TreeSet<TableName>());
   }
 
   RSGroupInfo(String name, SortedSet<Address> servers, SortedSet<TableName> tables) {
     this.name = name;
-    this.servers = servers == null? new TreeSet(): servers;
+    this.servers = servers == null? new TreeSet<Address>(): servers;
     this.servers.addAll(servers);
     this.tables = new TreeSet<>(tables);
   }

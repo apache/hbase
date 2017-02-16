@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Address;
+import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Interface used to manage RSGroupInfo storage. An implementation

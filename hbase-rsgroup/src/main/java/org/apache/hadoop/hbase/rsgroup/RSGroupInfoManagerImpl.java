@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
@@ -73,7 +74,6 @@ import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.util.Address;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -136,8 +136,8 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
 
 
   public RSGroupInfoManagerImpl(MasterServices master) throws IOException {
-    this.rsGroupMap = Collections.EMPTY_MAP;
-    this.tableMap = Collections.EMPTY_MAP;
+    this.rsGroupMap = Collections.emptyMap();
+    this.tableMap = Collections.emptyMap();
     rsGroupSerDe = new RSGroupSerDe();
     this.master = master;
     this.watcher = master.getZooKeeper();
@@ -168,7 +168,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   public synchronized void addRSGroup(RSGroupInfo rsGroupInfo) throws IOException {
     checkGroupName(rsGroupInfo.getName());
     if (rsGroupMap.get(rsGroupInfo.getName()) != null ||
-        rsGroupInfo.getName().equals(rsGroupInfo.DEFAULT_GROUP)) {
+        rsGroupInfo.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
       throw new DoNotRetryIOException("Group already exists: "+ rsGroupInfo.getName());
     }
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);

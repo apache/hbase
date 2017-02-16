@@ -105,7 +105,7 @@ module Hbase
     def move_servers(dest, *args)
       servers = java.util.HashSet.new
       args[0].each do |s|
-        servers.add(org.apache.hadoop.hbase.util.Address.fromString(s))
+        servers.add(org.apache.hadoop.hbase.net.Address.fromString(s))
       end
       @admin.moveServers(servers, dest)
     end
@@ -124,7 +124,7 @@ module Hbase
     # get group of server
     def get_rsgroup_of_server(server)
       res = @admin.getRSGroupOfServer(
-        org.apache.hadoop.hbase.util.Address.fromString(server))
+        org.apache.hadoop.hbase.net.Address.fromString(server))
       if res.nil?
         raise(ArgumentError,'Server has no group: ' + server)
       end

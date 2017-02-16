@@ -26,12 +26,11 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.net.InetAddresses;
-
-import org.apache.hadoop.hbase.util.Address;
 
 
 /**

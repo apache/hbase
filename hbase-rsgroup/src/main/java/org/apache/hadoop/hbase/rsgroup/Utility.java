@@ -25,7 +25,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.util.Address;
+import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Utility for this RSGroup package in hbase-rsgroup.

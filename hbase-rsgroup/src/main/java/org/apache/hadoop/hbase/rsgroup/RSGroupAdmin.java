@@ -24,7 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Address;
+import org.apache.hadoop.hbase.net.Address;
 
 /**
  * Group user API interface used between client and server.
