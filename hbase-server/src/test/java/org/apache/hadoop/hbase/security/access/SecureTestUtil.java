@@ -372,7 +372,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(null, protocol, user, actions);
+            ProtobufUtil.grant(null, protocol, user, false, actions);
           }
         }
         return null;
@@ -418,7 +418,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(null, protocol, user, namespace, actions);
+            ProtobufUtil.grant(null, protocol, user, namespace, false, actions);
           }
         }
         return null;
@@ -440,7 +440,23 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, namespace, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
+        }
+        return null;
+      }
+    });
+  }
+
+  public static void grantOnNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+      final Connection connection, final String user, final String namespace,
+      final boolean mergeExistingPermissions, final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.grant(connection, namespace, user, mergeExistingPermissions, actions);
+        } catch (Throwable t) {
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
@@ -461,7 +477,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, namespace, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }
@@ -507,7 +523,7 @@ public class SecureTestUtil {
             BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
             AccessControlService.BlockingInterface protocol =
                 AccessControlService.newBlockingStub(service);
-            ProtobufUtil.grant(null, protocol, user, table, family, qualifier, actions);
+            ProtobufUtil.grant(null, protocol, user, table, family, qualifier, false, actions);
           }
         }
         return null;
@@ -529,12 +545,32 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
     });
   }
+
+  public static void grantOnTableUsingAccessControlClient(final HBaseTestingUtility util,
+      final Connection connection, final String user, final TableName table, final byte[] family,
+      final byte[] qualifier, final boolean mergeExistingPermissions,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.grant(connection, table, user, family, qualifier,
+            mergeExistingPermissions, actions);
+        } catch (Throwable t) {
+          LOG.error("grant failed: ", t);
+        }
+        return null;
+      }
+    });
+  }
+
+
 
   /**
    * Grant global permissions to the given user using AccessControlClient. Will wait until all
@@ -550,7 +586,23 @@ public class SecureTestUtil {
         try {
           AccessControlClient.grant(connection, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("grant failed: ", t);
+        }
+        return null;
+      }
+    });
+  }
+
+  public static void grantGlobalUsingAccessControlClient(final HBaseTestingUtility util,
+      final Connection connection, final String user, final boolean mergeExistingPermissions,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.grant(connection, user, mergeExistingPermissions, actions);
+        } catch (Throwable t) {
+          LOG.error("grant failed: ", t);
         }
         return null;
       }
@@ -595,7 +647,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }
@@ -616,7 +668,7 @@ public class SecureTestUtil {
         try {
           AccessControlClient.revoke(connection, user, actions);
         } catch (Throwable t) {
-          t.printStackTrace();
+          LOG.error("revoke failed: ", t);
         }
         return null;
       }

@@ -2237,7 +2237,7 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public void grant(RpcController controller,
-                    AccessControlProtos.GrantRequest request,
+                    final AccessControlProtos.GrantRequest request,
                     RpcCallback<AccessControlProtos.GrantResponse> done) {
     final UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
     AccessControlProtos.GrantResponse response = null;
@@ -2266,7 +2266,8 @@ public class AccessController extends BaseMasterAndRegionObserver
           @Override
           public Void run() throws Exception {
             AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm,
-                regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME));
+              regionEnv.getTable(AccessControlLists.ACL_TABLE_NAME),
+              request.getMergeExistingPermissions());
             return null;
           }
         });

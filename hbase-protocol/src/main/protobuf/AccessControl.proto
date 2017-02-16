@@ -79,6 +79,7 @@ message UsersAndPermissions {
 
 message GrantRequest {
   required UserPermission user_permission = 1;
+  optional bool merge_existing_permissions = 2 [default = false];
 }
 
 message GrantResponse {

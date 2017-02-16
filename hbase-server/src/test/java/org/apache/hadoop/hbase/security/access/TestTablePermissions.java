@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -449,7 +450,7 @@ public class TestTablePermissions {
     assertEquals("Should have 1 permission for user3", 1, user3Perms.size());
     assertEquals("user3 should have ADMIN, READ, CREATE permission",
                  new Permission.Action[] {
-                    Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.CREATE
+                    Permission.Action.READ, Permission.Action.CREATE, Permission.Action.ADMIN,
                  },
                  user3Perms.get(0).getActions());
   }

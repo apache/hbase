@@ -357,7 +357,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(null, protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+          ProtobufUtil.grant(null, protocol, testUser, TEST_NAMESPACE, false, Action.WRITE);
         }
         return null;
       }
@@ -372,7 +372,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.grant(null, protocol, USER_GROUP_NS_ADMIN.getShortName(),
-            TEST_NAMESPACE, Action.READ);
+            TEST_NAMESPACE, false, Action.READ);
         }
         return null;
       }

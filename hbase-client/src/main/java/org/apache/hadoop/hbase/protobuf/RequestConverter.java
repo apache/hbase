@@ -1542,8 +1542,8 @@ public final class RequestConverter {
    * @param actions the permissions to be granted
    * @return A {@link AccessControlProtos} GrantRequest
    */
-  public static AccessControlProtos.GrantRequest buildGrantRequest(
-      String username, AccessControlProtos.Permission.Action... actions) {
+  public static AccessControlProtos.GrantRequest buildGrantRequest(String username,
+      boolean mergeExistingPermissions, AccessControlProtos.Permission.Action... actions) {
     AccessControlProtos.Permission.Builder ret =
         AccessControlProtos.Permission.newBuilder();
     AccessControlProtos.GlobalPermission.Builder permissionBuilder =
@@ -1554,11 +1554,9 @@ public final class RequestConverter {
     ret.setType(AccessControlProtos.Permission.Type.Global)
        .setGlobalPermission(permissionBuilder);
     return AccessControlProtos.GrantRequest.newBuilder()
-      .setUserPermission(
-          AccessControlProtos.UserPermission.newBuilder()
-              .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(ret)
-      ).build();
+        .setUserPermission(AccessControlProtos.UserPermission.newBuilder()
+            .setUser(ByteString.copyFromUtf8(username)).setPermission(ret))
+        .setMergeExistingPermissions(mergeExistingPermissions).build();
   }
 
   /**
@@ -1572,7 +1570,7 @@ public final class RequestConverter {
    * @return A {@link AccessControlProtos} GrantRequest
    */
   public static AccessControlProtos.GrantRequest buildGrantRequest(
-      String username, TableName tableName, byte[] family, byte[] qualifier,
+      String username, TableName tableName, byte[] family, byte[] qualifier, boolean mergeExistingPermissions,
       AccessControlProtos.Permission.Action... actions) {
     AccessControlProtos.Permission.Builder ret =
         AccessControlProtos.Permission.newBuilder();
@@ -1599,7 +1597,7 @@ public final class RequestConverter {
           AccessControlProtos.UserPermission.newBuilder()
               .setUser(ByteString.copyFromUtf8(username))
               .setPermission(ret)
-      ).build();
+      ).setMergeExistingPermissions(mergeExistingPermissions).build();
   }
 
   /**
@@ -1610,8 +1608,8 @@ public final class RequestConverter {
    * @param actions the permissions to be granted
    * @return A {@link AccessControlProtos} GrantRequest
    */
-  public static AccessControlProtos.GrantRequest buildGrantRequest(
-      String username, String namespace,
+  public static AccessControlProtos.GrantRequest buildGrantRequest(String username,
+      String namespace, boolean mergeExistingPermissions,
       AccessControlProtos.Permission.Action... actions) {
     AccessControlProtos.Permission.Builder ret =
         AccessControlProtos.Permission.newBuilder();
@@ -1626,11 +1624,9 @@ public final class RequestConverter {
     ret.setType(AccessControlProtos.Permission.Type.Namespace)
        .setNamespacePermission(permissionBuilder);
     return AccessControlProtos.GrantRequest.newBuilder()
-      .setUserPermission(
-          AccessControlProtos.UserPermission.newBuilder()
-              .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(ret)
-      ).build();
+        .setUserPermission(AccessControlProtos.UserPermission.newBuilder()
+            .setUser(ByteString.copyFromUtf8(username)).setPermission(ret))
+        .setMergeExistingPermissions(mergeExistingPermissions).build();
   }
 
   /**

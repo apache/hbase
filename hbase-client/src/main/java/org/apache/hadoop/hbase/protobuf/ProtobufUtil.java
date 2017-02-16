@@ -2354,15 +2354,15 @@ public final class ProtobufUtil {
    */
   public static void grant(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName,
-      Permission.Action... actions) throws ServiceException {
+      boolean mergeExistingPermissions, Permission.Action... actions) throws ServiceException {
     List<AccessControlProtos.Permission.Action> permActions =
         Lists.newArrayListWithCapacity(actions.length);
     for (Permission.Action a : actions) {
       permActions.add(ProtobufUtil.toPermissionAction(a));
     }
-    AccessControlProtos.GrantRequest request = RequestConverter.
-      buildGrantRequest(userShortName, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
+    AccessControlProtos.GrantRequest request =
+        RequestConverter.buildGrantRequest(userShortName, mergeExistingPermissions,
+          permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.grant(controller, request);
   }
 
@@ -2382,15 +2382,16 @@ public final class ProtobufUtil {
    */
   public static void grant(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, TableName tableName,
-      byte[] f, byte[] q, Permission.Action... actions) throws ServiceException {
+      byte[] f, byte[] q, boolean mergeExistingPermissions, Permission.Action... actions)
+      throws ServiceException {
     List<AccessControlProtos.Permission.Action> permActions =
         Lists.newArrayListWithCapacity(actions.length);
     for (Permission.Action a : actions) {
       permActions.add(ProtobufUtil.toPermissionAction(a));
     }
-    AccessControlProtos.GrantRequest request = RequestConverter.
-      buildGrantRequest(userShortName, tableName, f, q, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
+    AccessControlProtos.GrantRequest request =
+        RequestConverter.buildGrantRequest(userShortName, tableName, f, q, mergeExistingPermissions,
+          permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.grant(controller, request);
   }
 
@@ -2406,15 +2407,15 @@ public final class ProtobufUtil {
    */
   public static void grant(RpcController controller,
       AccessControlService.BlockingInterface protocol, String userShortName, String namespace,
-      Permission.Action... actions) throws ServiceException {
+      boolean mergeExistingPermissions, Permission.Action... actions) throws ServiceException {
     List<AccessControlProtos.Permission.Action> permActions =
         Lists.newArrayListWithCapacity(actions.length);
     for (Permission.Action a : actions) {
       permActions.add(ProtobufUtil.toPermissionAction(a));
     }
-    AccessControlProtos.GrantRequest request = RequestConverter.
-      buildGrantRequest(userShortName, namespace, permActions.toArray(
-        new AccessControlProtos.Permission.Action[actions.length]));
+    AccessControlProtos.GrantRequest request =
+        RequestConverter.buildGrantRequest(userShortName, namespace, mergeExistingPermissions,
+          permActions.toArray(new AccessControlProtos.Permission.Action[actions.length]));
     protocol.grant(controller, request);
   }
 

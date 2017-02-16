@@ -5569,6 +5569,16 @@ public final class AccessControlProtos {
      * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder();
+
+    // optional bool merge_existing_permissions = 2 [default = false];
+    /**
+     * <code>optional bool merge_existing_permissions = 2 [default = false];</code>
+     */
+    boolean hasMergeExistingPermissions();
+    /**
+     * <code>optional bool merge_existing_permissions = 2 [default = false];</code>
+     */
+    boolean getMergeExistingPermissions();
   }
   /**
    * Protobuf type {@code hbase.pb.GrantRequest}
@@ -5634,6 +5644,11 @@ public final class AccessControlProtos {
               bitField0_ |= 0x00000001;
               break;
             }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              mergeExistingPermissions_ = input.readBool();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -5696,8 +5711,25 @@ public final class AccessControlProtos {
       return userPermission_;
     }
 
+    // optional bool merge_existing_permissions = 2 [default = false];
+    public static final int MERGE_EXISTING_PERMISSIONS_FIELD_NUMBER = 2;
+    private boolean mergeExistingPermissions_;
+    /**
+     * <code>optional bool merge_existing_permissions = 2 [default = false];</code>
+     */
+    public boolean hasMergeExistingPermissions() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional bool merge_existing_permissions = 2 [default = false];</code>
+     */
+    public boolean getMergeExistingPermissions() {
+      return mergeExistingPermissions_;
+    }
+
     private void initFields() {
       userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+      mergeExistingPermissions_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5722,6 +5754,9 @@ public final class AccessControlProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeMessage(1, userPermission_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBool(2, mergeExistingPermissions_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -5734,6 +5769,10 @@ public final class AccessControlProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, userPermission_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, mergeExistingPermissions_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -5763,6 +5802,11 @@ public final class AccessControlProtos {
         result = result && getUserPermission()
             .equals(other.getUserPermission());
       }
+      result = result && (hasMergeExistingPermissions() == other.hasMergeExistingPermissions());
+      if (hasMergeExistingPermissions()) {
+        result = result && (getMergeExistingPermissions()
+            == other.getMergeExistingPermissions());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -5779,6 +5823,10 @@ public final class AccessControlProtos {
       if (hasUserPermission()) {
         hash = (37 * hash) + USER_PERMISSION_FIELD_NUMBER;
         hash = (53 * hash) + getUserPermission().hashCode();
+      }
+      if (hasMergeExistingPermissions()) {
+        hash = (37 * hash) + MERGE_EXISTING_PERMISSIONS_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getMergeExistingPermissions());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -5896,6 +5944,8 @@ public final class AccessControlProtos {
           userPermissionBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
+        mergeExistingPermissions_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -5932,6 +5982,10 @@ public final class AccessControlProtos {
         } else {
           result.userPermission_ = userPermissionBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.mergeExistingPermissions_ = mergeExistingPermissions_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5950,6 +6004,9 @@ public final class AccessControlProtos {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest.getDefaultInstance()) return this;
         if (other.hasUserPermission()) {
           mergeUserPermission(other.getUserPermission());
+        }
+        if (other.hasMergeExistingPermissions()) {
+          setMergeExistingPermissions(other.getMergeExistingPermissions());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -6101,6 +6158,39 @@ public final class AccessControlProtos {
           userPermission_ = null;
         }
         return userPermissionBuilder_;
+      }
+
+      // optional bool merge_existing_permissions = 2 [default = false];
+      private boolean mergeExistingPermissions_ ;
+      /**
+       * <code>optional bool merge_existing_permissions = 2 [default = false];</code>
+       */
+      public boolean hasMergeExistingPermissions() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bool merge_existing_permissions = 2 [default = false];</code>
+       */
+      public boolean getMergeExistingPermissions() {
+        return mergeExistingPermissions_;
+      }
+      /**
+       * <code>optional bool merge_existing_permissions = 2 [default = false];</code>
+       */
+      public Builder setMergeExistingPermissions(boolean value) {
+        bitField0_ |= 0x00000002;
+        mergeExistingPermissions_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool merge_existing_permissions = 2 [default = false];</code>
+       */
+      public Builder clearMergeExistingPermissions() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        mergeExistingPermissions_ = false;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.GrantRequest)
@@ -10432,29 +10522,30 @@ public final class AccessControlProtos {
       "\0132-.hbase.pb.UsersAndPermissions.UserPer" +
       "missions\032J\n\017UserPermissions\022\014\n\004user\030\001 \002(" +
       "\014\022)\n\013permissions\030\002 \003(\0132\024.hbase.pb.Permis" +
-      "sion\"A\n\014GrantRequest\0221\n\017user_permission\030" +
-      "\001 \002(\0132\030.hbase.pb.UserPermission\"\017\n\rGrant" +
-      "Response\"B\n\rRevokeRequest\0221\n\017user_permis" +
-      "sion\030\001 \002(\0132\030.hbase.pb.UserPermission\"\020\n\016" +
-      "RevokeResponse\"\205\001\n\031GetUserPermissionsReq" +
-      "uest\022\'\n\004type\030\001 \001(\0162\031.hbase.pb.Permission" +
-      ".Type\022\'\n\ntable_name\030\002 \001(\0132\023.hbase.pb.Tab",
-      "leName\022\026\n\016namespace_name\030\003 \001(\014\"O\n\032GetUse" +
-      "rPermissionsResponse\0221\n\017user_permission\030" +
-      "\001 \003(\0132\030.hbase.pb.UserPermission\"C\n\027Check" +
-      "PermissionsRequest\022(\n\npermission\030\001 \003(\0132\024" +
-      ".hbase.pb.Permission\"\032\n\030CheckPermissions" +
-      "Response2\311\002\n\024AccessControlService\0228\n\005Gra" +
-      "nt\022\026.hbase.pb.GrantRequest\032\027.hbase.pb.Gr" +
-      "antResponse\022;\n\006Revoke\022\027.hbase.pb.RevokeR" +
-      "equest\032\030.hbase.pb.RevokeResponse\022_\n\022GetU" +
-      "serPermissions\022#.hbase.pb.GetUserPermiss",
-      "ionsRequest\032$.hbase.pb.GetUserPermission" +
-      "sResponse\022Y\n\020CheckPermissions\022!.hbase.pb" +
-      ".CheckPermissionsRequest\032\".hbase.pb.Chec" +
-      "kPermissionsResponseBI\n*org.apache.hadoo" +
-      "p.hbase.protobuf.generatedB\023AccessContro" +
-      "lProtosH\001\210\001\001\240\001\001"
+      "sion\"l\n\014GrantRequest\0221\n\017user_permission\030" +
+      "\001 \002(\0132\030.hbase.pb.UserPermission\022)\n\032merge" +
+      "_existing_permissions\030\002 \001(\010:\005false\"\017\n\rGr" +
+      "antResponse\"B\n\rRevokeRequest\0221\n\017user_per" +
+      "mission\030\001 \002(\0132\030.hbase.pb.UserPermission\"" +
+      "\020\n\016RevokeResponse\"\205\001\n\031GetUserPermissions" +
+      "Request\022\'\n\004type\030\001 \001(\0162\031.hbase.pb.Permiss",
+      "ion.Type\022\'\n\ntable_name\030\002 \001(\0132\023.hbase.pb." +
+      "TableName\022\026\n\016namespace_name\030\003 \001(\014\"O\n\032Get" +
+      "UserPermissionsResponse\0221\n\017user_permissi" +
+      "on\030\001 \003(\0132\030.hbase.pb.UserPermission\"C\n\027Ch" +
+      "eckPermissionsRequest\022(\n\npermission\030\001 \003(" +
+      "\0132\024.hbase.pb.Permission\"\032\n\030CheckPermissi" +
+      "onsResponse2\311\002\n\024AccessControlService\0228\n\005" +
+      "Grant\022\026.hbase.pb.GrantRequest\032\027.hbase.pb" +
+      ".GrantResponse\022;\n\006Revoke\022\027.hbase.pb.Revo" +
+      "keRequest\032\030.hbase.pb.RevokeResponse\022_\n\022G",
+      "etUserPermissions\022#.hbase.pb.GetUserPerm" +
+      "issionsRequest\032$.hbase.pb.GetUserPermiss" +
+      "ionsResponse\022Y\n\020CheckPermissions\022!.hbase" +
+      ".pb.CheckPermissionsRequest\032\".hbase.pb.C" +
+      "heckPermissionsResponseBI\n*org.apache.ha" +
+      "doop.hbase.protobuf.generatedB\023AccessCon" +
+      "trolProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -10508,7 +10599,7 @@ public final class AccessControlProtos {
           internal_static_hbase_pb_GrantRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_GrantRequest_descriptor,
-              new java.lang.String[] { "UserPermission", });
+              new java.lang.String[] { "UserPermission", "MergeExistingPermissions", });
           internal_static_hbase_pb_GrantResponse_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_hbase_pb_GrantResponse_fieldAccessorTable = new

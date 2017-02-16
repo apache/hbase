@@ -139,15 +139,8 @@ public class AccessControlLists {
     master.createSystemTable(ACL_TABLEDESC);
   }
 
-  /**
-   * Stores a new user permission grant in the access control lists table.
-   * @param conf the configuration
-   * @param userPerm the details of the permission to be granted
-   * @param t acl table instance. It is closed upon method return
-   * @throws IOException in the case of an error accessing the metadata table
-   */
-  static void addUserPermission(Configuration conf, UserPermission userPerm, Table t)
-      throws IOException {
+  static void addUserPermission(Configuration conf, UserPermission userPerm, Table t,
+      boolean mergeExistingPermissions) throws IOException {
     Permission.Action[] actions = userPerm.getActions();
     byte[] rowKey = userPermissionRowKey(userPerm);
     Put p = new Put(rowKey);
@@ -159,22 +152,56 @@ public class AccessControlLists {
       throw new IOException(msg);
     }
 
-    byte[] value = new byte[actions.length];
-    for (int i = 0; i < actions.length; i++) {
-      value[i] = actions[i].code();
+    Set<Permission.Action> actionSet = new TreeSet<Permission.Action>();
+    if (mergeExistingPermissions) {
+      List<UserPermission> perms = getUserPermissions(conf, rowKey);
+      UserPermission currentPerm = null;
+      for (UserPermission perm : perms) {
+        if (Bytes.equals(perm.getUser(), userPerm.getUser())
+            && ((userPerm.isGlobal() && ACL_TABLE_NAME.equals(perm.getTableName()))
+                || perm.tableFieldsEqual(userPerm))) {
+          currentPerm = perm;
+          break;
+        }
+      }
+
+      if (currentPerm != null && currentPerm.getActions() != null) {
+        actionSet.addAll(Arrays.asList(currentPerm.getActions()));
+      }
     }
+
+    // merge current action with new action.
+    actionSet.addAll(Arrays.asList(actions));
+
+    // serialize to byte array.
+    byte[] value = new byte[actionSet.size()];
+    int index = 0;
+    for (Permission.Action action : actionSet) {
+      value[index++] = action.code();
+    }
+
     p.addImmutable(ACL_LIST_FAMILY, key, value);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Writing permission with rowKey "+
-          Bytes.toString(rowKey)+" "+
-          Bytes.toString(key)+": "+Bytes.toStringBinary(value)
-      );
+      LOG.debug("Writing permission with rowKey " + Bytes.toString(rowKey) + " "
+          + Bytes.toString(key) + ": " + Bytes.toStringBinary(value));
     }
     try {
       t.put(p);
     } finally {
       t.close();
     }
+  }
+
+  /**
+   * Stores a new user permission grant in the access control lists table.
+   * @param conf the configuration
+   * @param userPerm the details of the permission to be granted
+   * @param t acl table instance. It is closed upon method return
+   * @throws IOException in the case of an error accessing the metadata table
+   */
+  static void addUserPermission(Configuration conf, UserPermission userPerm, Table t)
+      throws IOException {
+    addUserPermission(conf, userPerm, t, false);
   }
 
   /**
