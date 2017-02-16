@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import com.google.common.collect.Sets;
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -46,19 +47,21 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 
-//This tests that GroupBasedBalancer will use data in zk
-//to do balancing during master startup
-//This does not test retain assignment
+// This tests that GroupBasedBalancer will use data in zk to do balancing during master startup.
+// This does not test retain assignment.
+// The tests brings up 3 RS, creates a new RS group 'my_group', moves 1 RS to 'my_group', assigns
+// 'hbase:rsgroup' to 'my_group', and kill the only server in that group so that 'hbase:rsgroup'
+// table isn't available. It then kills the active master and waits for backup master to come
+// online. In new master, RSGroupInfoManagerImpl gets the data from zk and waits for the expected
+// assignment with a timeout.
 @Category(MediumTests.class)
 public class TestRSGroupsOfflineMode {
-  private static final org.apache.commons.logging.Log LOG =
-      LogFactory.getLog(TestRSGroupsOfflineMode.class);
+  private static final Log LOG = LogFactory.getLog(TestRSGroupsOfflineMode.class);
   private static HMaster master;
   private static Admin hbaseAdmin;
   private static HBaseTestingUtility TEST_UTIL;
   private static HBaseCluster cluster;
-  private static RSGroupAdminEndpoint RSGroupAdminEndpoint;
-  public final static long WAIT_TIMEOUT = 60000*5;
+  private final static long WAIT_TIMEOUT = 60000 * 5;
 
   @Rule
   public TestName name = new TestName();
@@ -88,8 +91,6 @@ public class TestRSGroupsOfflineMode {
             master.getServerManager().getOnlineServersList().size() >= 3;
       }
     });
-    RSGroupAdminEndpoint =
-        master.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class).get(0);
   }
 
   @AfterClass
@@ -99,8 +100,7 @@ public class TestRSGroupsOfflineMode {
 
   @Test
   public void testOffline() throws Exception, InterruptedException {
-    //table should be after group table name
-    //so it gets assigned later
+    // Table should be after group table name so it gets assigned later.
     final TableName failoverTable = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createTable(failoverTable, Bytes.toBytes("f"));
     final HRegionServer killRS = ((MiniHBaseCluster)cluster).getRegionServer(0);
@@ -111,41 +111,40 @@ public class TestRSGroupsOfflineMode {
     groupAdmin.addRSGroup(newGroup);
     if(master.getAssignmentManager().getRegionStates().getRegionAssignments()
           .containsValue(failoverRS.getServerName())) {
-        for(HRegionInfo regionInfo: hbaseAdmin.getOnlineRegions(failoverRS.getServerName())) {
-          hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
-              Bytes.toBytes(failoverRS.getServerName().getServerName()));
-        }
-        LOG.info("Waiting for region unassignments on failover RS...");
-        TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-          @Override
-          public boolean evaluate() throws Exception {
-            return master.getServerManager().getLoad(failoverRS.getServerName())
-                .getRegionsLoad().size() > 0;
-          }
-        });
-
-      //move server to group and make sure all tables are assigned
-      groupAdmin.moveServers(Sets.newHashSet(groupRS.getServerName().getAddress()), newGroup);
+      for (HRegionInfo regionInfo : hbaseAdmin.getOnlineRegions(failoverRS.getServerName())) {
+        hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
+            Bytes.toBytes(failoverRS.getServerName().getServerName()));
+      }
+      LOG.info("Waiting for region unassignments on failover RS...");
       TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return groupRS.getNumberOfOnlineRegions() < 1 &&
-              master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() < 1;
-        }
-      });
-      //move table to group and wait
-      groupAdmin.moveTables(Sets.newHashSet(RSGroupInfoManager.RSGROUP_TABLE_NAME), newGroup);
-      LOG.info("Waiting for move table...");
-      TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() throws Exception {
-          return groupRS.getNumberOfOnlineRegions() == 1;
+        @Override public boolean evaluate() throws Exception {
+          return master.getServerManager().getLoad(failoverRS.getServerName())
+              .getRegionsLoad().size() > 0;
         }
       });
     }
 
+    // Move server to group and make sure all tables are assigned.
+    groupAdmin.moveServers(Sets.newHashSet(groupRS.getServerName().getAddress()), newGroup);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return groupRS.getNumberOfOnlineRegions() < 1 &&
+            master.getAssignmentManager().getRegionStates().getRegionsInTransition().size() < 1;
+      }
+    });
+    // Move table to group and wait.
+    groupAdmin.moveTables(Sets.newHashSet(RSGroupInfoManager.RSGROUP_TABLE_NAME), newGroup);
+    LOG.info("Waiting for move table...");
+    TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return groupRS.getNumberOfOnlineRegions() == 1;
+      }
+    });
+
     groupRS.stop("die");
-    //race condition here
+    // Race condition here.
     TEST_UTIL.getHBaseCluster().getMaster().stopMaster();
     LOG.info("Waiting for offline mode...");
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
@@ -159,16 +158,17 @@ public class TestRSGroupsOfflineMode {
       }
     });
 
-
-    RSGroupInfoManager groupMgr = RSGroupAdminEndpoint.getGroupInfoManager();
-    //make sure balancer is in offline mode, since this is what we're testing
+    // Get groupInfoManager from the new active master.
+    RSGroupInfoManager groupMgr = ((MiniHBaseCluster)cluster).getMaster().getMasterCoprocessorHost()
+            .findCoprocessors(RSGroupAdminEndpoint.class).get(0).getGroupInfoManager();
+    // Make sure balancer is in offline mode, since this is what we're testing.
     assertFalse(groupMgr.isOnline());
-    //verify the group affiliation that's loaded from ZK instead of tables
+    // Verify the group affiliation that's loaded from ZK instead of tables.
     assertEquals(newGroup,
         groupMgr.getRSGroupOfTable(RSGroupInfoManager.RSGROUP_TABLE_NAME));
     assertEquals(RSGroupInfo.DEFAULT_GROUP, groupMgr.getRSGroupOfTable(failoverTable));
-    //kill final regionserver to see the failover happens for all tables
-    //except GROUP table since it's group does not have any online RS
+    // Kill final regionserver to see the failover happens for all tables except GROUP table since
+    // it's group does not have any online RS.
     killRS.stop("die");
     master = TEST_UTIL.getHBaseCluster().getMaster();
     LOG.info("Waiting for new table assignment...");
@@ -180,7 +180,7 @@ public class TestRSGroupsOfflineMode {
     });
     Assert.assertEquals(0, failoverRS.getOnlineRegions(RSGroupInfoManager.RSGROUP_TABLE_NAME).size());
 
-    //need this for minicluster to shutdown cleanly
+    // Need this for minicluster to shutdown cleanly.
     master.stopMaster();
   }
 }

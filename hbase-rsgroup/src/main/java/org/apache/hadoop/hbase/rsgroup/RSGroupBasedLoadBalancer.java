@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -38,7 +39,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -70,10 +70,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  *
  */
 @InterfaceAudience.Private
-public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalancer {
-  /** Config for pluggable load balancers */
-  public static final String HBASE_GROUP_LOADBALANCER_CLASS = "hbase.group.grouploadbalancer.class";
-
+public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   private static final Log LOG = LogFactory.getLog(RSGroupBasedLoadBalancer.class);
 
   private Configuration config;
@@ -82,15 +79,11 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private LoadBalancer internalBalancer;
 
-  //used during reflection by LoadBalancerFactory
+  /**
+   * Used by reflection in {@link org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory}.
+   */
   @InterfaceAudience.Private
   public RSGroupBasedLoadBalancer() {}
-
-  //This constructor should only be used for unit testing
-  @InterfaceAudience.Private
-  public RSGroupBasedLoadBalancer(RSGroupInfoManager rsGroupInfoManager) {
-    this.rsGroupInfoManager = rsGroupInfoManager;
-  }
 
   @Override
   public Configuration getConf() {
@@ -110,11 +103,6 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   @Override
   public void setMasterServices(MasterServices masterServices) {
     this.masterServices = masterServices;
-  }
-
-  @Override
-  public void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad){
-
   }
 
   @Override
@@ -384,8 +372,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
     }
 
     // Create the balancer
-    Class<? extends LoadBalancer> balancerKlass = config.getClass(
-        HBASE_GROUP_LOADBALANCER_CLASS,
+    Class<? extends LoadBalancer> balancerKlass = config.getClass(HBASE_RSGROUP_LOADBALANCER_CLASS,
         StochasticLoadBalancer.class, LoadBalancer.class);
     internalBalancer = ReflectionUtils.newInstance(balancerKlass, config);
     internalBalancer.setMasterServices(masterServices);
@@ -397,6 +384,10 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   public boolean isOnline() {
     if (this.rsGroupInfoManager == null) return false;
     return this.rsGroupInfoManager.isOnline();
+  }
+
+  @Override
+  public void setClusterLoad(Map<TableName, Map<ServerName, List<HRegionInfo>>> clusterLoad) {
   }
 
   @Override
@@ -419,5 +410,10 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   @Override
   public boolean isStopped() {
     return false;
+  }
+
+  @VisibleForTesting
+  public void setRsGroupInfoManager(RSGroupInfoManager rsGroupInfoManager) {
+    this.rsGroupInfoManager = rsGroupInfoManager;
   }
 }

@@ -93,8 +93,9 @@ public class TestRSGroupBasedLoadBalancer {
     tableDescs = constructTableDesc();
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.regions.slop", "0");
-    conf.set("hbase.group.grouploadbalancer.class", SimpleLoadBalancer.class.getCanonicalName());
-    loadBalancer = new RSGroupBasedLoadBalancer(getMockedGroupInfoManager());
+    conf.set("hbase.rsgroup.grouploadbalancer.class", SimpleLoadBalancer.class.getCanonicalName());
+    loadBalancer = new RSGroupBasedLoadBalancer();
+    loadBalancer.setRsGroupInfoManager(getMockedGroupInfoManager());
     loadBalancer.setMasterServices(getMockedMaster());
     loadBalancer.setConf(conf);
     loadBalancer.initialize();

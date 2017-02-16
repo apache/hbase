@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.apache.hadoop.hbase.rsgroup.Utility.getOnlineServers;
-
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,10 +57,12 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
@@ -92,11 +94,11 @@ import com.google.protobuf.ServiceException;
  *
  * <h2>Concurrency</h2>
  * RSGroup state is kept locally in Maps. There is a rsgroup name to cached
- * RSGroupInfo Map at this.rsGroupMap and a Map of tables to the name of the
- * rsgroup they belong too (in this.tableMap). These Maps are persisted to the
+ * RSGroupInfo Map at {@link #rsGroupMap} and a Map of tables to the name of the
+ * rsgroup they belong too (in {@link #tableMap}). These Maps are persisted to the
  * hbase:rsgroup table (and cached in zk) on each modification.
  *
- * <p>Mutations on state are synchronized but so reads can continue without having
+ * <p>Mutations on state are synchronized but reads can continue without having
  * to wait on an instance monitor, mutations do wholesale replace of the Maps on
  * update -- Copy-On-Write; the local Maps of state are read-only, just-in-case
  * (see flushConfig).
@@ -109,7 +111,7 @@ import com.google.protobuf.ServiceException;
  * no other has access concurrently. Reads must be able to continue concurrently.
  */
 @InterfaceAudience.Private
-public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListener {
+class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private static final Log LOG = LogFactory.getLog(RSGroupInfoManagerImpl.class);
 
   /** Table descriptor for <code>hbase:rsgroup</code> catalog table */
@@ -132,43 +134,35 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   private volatile Map<String, RSGroupInfo> rsGroupMap = Collections.emptyMap();
   private volatile Map<TableName, String> tableMap = Collections.emptyMap();
 
-  private final MasterServices master;
+  private final MasterServices masterServices;
   private Table rsGroupTable;
   private final ClusterConnection conn;
   private final ZooKeeperWatcher watcher;
-  private RSGroupStartupWorker rsGroupStartupWorker;
+  private final RSGroupStartupWorker rsGroupStartupWorker = new RSGroupStartupWorker();
   // contains list of groups that were last flushed to persistent store
-  private Set<String> prevRSGroups = new HashSet<String>();
-  private final RSGroupSerDe rsGroupSerDe = new RSGroupSerDe();
-  private DefaultServerUpdater defaultServerUpdater;
-  private boolean init = false;
+  private Set<String> prevRSGroups = new HashSet<>();
+  private final ServerEventsListenerThread serverEventsListenerThread =
+      new ServerEventsListenerThread();
 
-  public RSGroupInfoManagerImpl(MasterServices master) throws IOException {
-    this.master = master;
-    this.watcher = master.getZooKeeper();
-    this.conn = master.getClusterConnection();
+  private RSGroupInfoManagerImpl(MasterServices masterServices) throws IOException {
+    this.masterServices = masterServices;
+    this.watcher = masterServices.getZooKeeper();
+    this.conn = masterServices.getClusterConnection();
   }
 
-  public synchronized void init() throws IOException{
-    if (this.init) return;
-    rsGroupStartupWorker = new RSGroupStartupWorker(this, master, conn);
+  private synchronized void init() throws IOException{
     refresh();
     rsGroupStartupWorker.start();
-    defaultServerUpdater = new DefaultServerUpdater(this);
-    master.getServerManager().registerListener(this);
-    defaultServerUpdater.start();
-    this.init = true;
+    serverEventsListenerThread.start();
+    masterServices.getServerManager().registerListener(serverEventsListenerThread);
   }
 
-  synchronized boolean isInit() {
-    return init;
+  static RSGroupInfoManager getInstance(MasterServices master) throws IOException {
+    RSGroupInfoManagerImpl instance = new RSGroupInfoManagerImpl(master);
+    instance.init();
+    return instance;
   }
 
-  /**
-   * Adds the group.
-   *
-   * @param rsGroupInfo the group name
-   */
   @Override
   public synchronized void addRSGroup(RSGroupInfo rsGroupInfo) throws IOException {
     checkGroupName(rsGroupInfo.getName());
@@ -182,29 +176,23 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   }
 
   private RSGroupInfo getRSGroupInfo(final String groupName) throws DoNotRetryIOException {
-    RSGroupInfo rsgi = null;
-    try {
-      rsgi = getRSGroup(groupName);
-    } catch (IOException ioe) {
-      // Will never happen
-      throw new DoNotRetryIOException(ioe);
-    }
-    if (rsgi == null) {
+    RSGroupInfo rsGroupInfo = getRSGroup(groupName);
+    if (rsGroupInfo == null) {
       throw new DoNotRetryIOException("RSGroup " + groupName + " does not exist");
     }
-    return rsgi;
+    return rsGroupInfo;
   }
 
   @Override
-  public synchronized Set<Address> moveServers(Set<Address> servers, String srcGroup, String dstGroup)
-  throws IOException {
+  public synchronized Set<Address> moveServers(Set<Address> servers, String srcGroup,
+      String dstGroup) throws IOException {
     RSGroupInfo src = getRSGroupInfo(srcGroup);
     RSGroupInfo dst = getRSGroupInfo(dstGroup);
-    // If destination is 'default' rsgroup, only add servers that are online. If not online, drop it.
-    // If not 'default' group, add server to 'dst' rsgroup EVEN IF IT IS NOT online (could be a rsgroup
-    // of dead servers that are to come back later).
+    // If destination is 'default' rsgroup, only add servers that are online. If not online, drop
+    // it. If not 'default' group, add server to 'dst' rsgroup EVEN IF IT IS NOT online (could be a
+    // rsgroup of dead servers that are to come back later).
     Set<Address> onlineServers = dst.getName().equals(RSGroupInfo.DEFAULT_GROUP)?
-        getOnlineServers(this.master): null;
+        Utility.getOnlineServers(this.masterServices): null;
     for (Address el: servers) {
       src.removeServer(el);
       if (onlineServers != null) {
@@ -224,45 +212,29 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     return dst.getServers();
   }
 
-  /**
-   * Gets the group info of server.
-   *
-   * @param hostPort the server
-   * @return An instance of GroupInfo.
-   */
   @Override
-  public RSGroupInfo getRSGroupOfServer(Address hostPort)
-  throws IOException {
+  public RSGroupInfo getRSGroupOfServer(Address serverHostPort) throws IOException {
     for (RSGroupInfo info: rsGroupMap.values()) {
-      if (info.containsServer(hostPort)) {
+      if (info.containsServer(serverHostPort)) {
         return info;
       }
     }
     return null;
   }
 
-  /**
-   * Gets the group information.
-   *
-   * @param groupName
-   *          the group name
-   * @return An instance of GroupInfo
-   */
   @Override
-  public RSGroupInfo getRSGroup(String groupName) throws IOException {
-    return this.rsGroupMap.get(groupName);
+  public RSGroupInfo getRSGroup(String groupName) {
+    return rsGroupMap.get(groupName);
   }
 
-
-
   @Override
-  public String getRSGroupOfTable(TableName tableName) throws IOException {
+  public String getRSGroupOfTable(TableName tableName) {
     return tableMap.get(tableName);
   }
 
   @Override
-  public synchronized void moveTables(
-      Set<TableName> tableNames, String groupName) throws IOException {
+  public synchronized void moveTables(Set<TableName> tableNames, String groupName)
+      throws IOException {
     if (groupName != null && !rsGroupMap.containsKey(groupName)) {
       throw new DoNotRetryIOException("Group "+groupName+" does not exist or is a special group");
     }
@@ -280,21 +252,14 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
         newGroupMap.put(dst.getName(), dst);
       }
     }
-
     flushConfig(newGroupMap);
   }
 
-
-  /**
-   * Delete a region server group.
-   *
-   * @param groupName the group name
-   * @throws java.io.IOException Signals that an I/O exception has occurred.
-   */
   @Override
   public synchronized void removeRSGroup(String groupName) throws IOException {
     if (!rsGroupMap.containsKey(groupName) || groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
-      throw new DoNotRetryIOException("Group "+groupName+" does not exist or is a reserved group");
+      throw new DoNotRetryIOException("Group " + groupName + " does not exist or is a reserved "
+          + "group");
     }
     Map<String,RSGroupInfo> newGroupMap = Maps.newHashMap(rsGroupMap);
     newGroupMap.remove(groupName);
@@ -302,13 +267,48 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   }
 
   @Override
-  public List<RSGroupInfo> listRSGroups() throws IOException {
+  public List<RSGroupInfo> listRSGroups() {
     return Lists.newLinkedList(rsGroupMap.values());
   }
 
   @Override
   public boolean isOnline() {
     return rsGroupStartupWorker.isOnline();
+  }
+
+
+  List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
+    List<RSGroupInfo> rsGroupInfoList = Lists.newArrayList();
+    for (Result result : rsGroupTable.getScanner(new Scan())) {
+      RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo.parseFrom(
+              result.getValue(META_FAMILY_BYTES, META_QUALIFIER_BYTES));
+      rsGroupInfoList.add(RSGroupProtobufUtil.toGroupInfo(proto));
+    }
+    return rsGroupInfoList;
+  }
+
+  List<RSGroupInfo> retrieveGroupListFromZookeeper() throws IOException {
+    String groupBasePath = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, rsGroupZNode);
+    List<RSGroupInfo> RSGroupInfoList = Lists.newArrayList();
+    //Overwrite any info stored by table, this takes precedence
+    try {
+      if(ZKUtil.checkExists(watcher, groupBasePath) != -1) {
+        for(String znode: ZKUtil.listChildrenAndWatchForNewChildren(watcher, groupBasePath)) {
+          byte[] data = ZKUtil.getData(watcher, ZKUtil.joinZNode(groupBasePath, znode));
+          if(data.length > 0) {
+            ProtobufUtil.expectPBMagicPrefix(data);
+            ByteArrayInputStream bis = new ByteArrayInputStream(
+                data, ProtobufUtil.lengthOfPBMagic(), data.length);
+            RSGroupInfoList.add(RSGroupProtobufUtil.toGroupInfo(
+                RSGroupProtos.RSGroupInfo.parseFrom(bis)));
+          }
+        }
+        LOG.debug("Read ZK GroupInfo count:" + RSGroupInfoList.size());
+      }
+    } catch (KeeperException|DeserializationException|InterruptedException e) {
+      throw new IOException("Failed to read rsGroupZNode",e);
+    }
+    return RSGroupInfoList;
   }
 
   @Override
@@ -319,11 +319,9 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
   /**
    * Read rsgroup info from the source of truth, the hbase:rsgroup table.
    * Update zk cache. Called on startup of the manager.
-   * @param forceOnline
-   * @throws IOException
    */
   private synchronized void refresh(boolean forceOnline) throws IOException {
-    List<RSGroupInfo> groupList = new LinkedList<RSGroupInfo>();
+    List<RSGroupInfo> groupList = new LinkedList<>();
 
     // Overwrite anything read from zk, group table is source of truth
     // if online read from GROUP table
@@ -332,29 +330,25 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       if (rsGroupTable == null) {
         rsGroupTable = conn.getTable(RSGROUP_TABLE_NAME);
       }
-      groupList.addAll(rsGroupSerDe.retrieveGroupList(rsGroupTable));
+      groupList.addAll(retrieveGroupListFromGroupTable());
     } else {
       LOG.debug("Refreshing in Offline mode.");
-      String groupBasePath = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, rsGroupZNode);
-      groupList.addAll(rsGroupSerDe.retrieveGroupList(watcher, groupBasePath));
+      groupList.addAll(retrieveGroupListFromZookeeper());
     }
 
     // refresh default group, prune
-    NavigableSet<TableName> orphanTables = new TreeSet<TableName>();
-    for(String entry: master.getTableDescriptors().getAll().keySet()) {
+    NavigableSet<TableName> orphanTables = new TreeSet<>();
+    for(String entry: masterServices.getTableDescriptors().getAll().keySet()) {
       orphanTables.add(TableName.valueOf(entry));
     }
 
-    List<TableName> specialTables;
-    if(!master.isInitialized()) {
-      specialTables = new ArrayList<TableName>(4);
-      specialTables.add(AccessControlLists.ACL_TABLE_NAME);
-      specialTables.add(TableName.META_TABLE_NAME);
-      specialTables.add(TableName.NAMESPACE_TABLE_NAME);
-      specialTables.add(RSGROUP_TABLE_NAME);
+    final List<TableName> specialTables;
+    if(!masterServices.isInitialized()) {
+      specialTables = Arrays.asList(AccessControlLists.ACL_TABLE_NAME, TableName.META_TABLE_NAME,
+          TableName.NAMESPACE_TABLE_NAME, RSGROUP_TABLE_NAME);
     } else {
       specialTables =
-          master.listTableNamesByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
+          masterServices.listTableNamesByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
     }
 
     for (TableName table : specialTables) {
@@ -380,26 +374,26 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
         newTableMap.put(table, group.getName());
       }
     }
-    installNewMaps(newGroupMap, newTableMap);
+    resetRSGroupAndTableMaps(newGroupMap, newTableMap);
     updateCacheOfRSGroups(rsGroupMap.keySet());
   }
 
-  private synchronized Map<TableName,String> flushConfigTable(Map<String,RSGroupInfo> newGroupMap)
+  private synchronized Map<TableName,String> flushConfigTable(Map<String,RSGroupInfo> groupMap)
       throws IOException {
     Map<TableName,String> newTableMap = Maps.newHashMap();
     List<Mutation> mutations = Lists.newArrayList();
 
     // populate deletes
     for(String groupName : prevRSGroups) {
-      if(!newGroupMap.containsKey(groupName)) {
+      if(!groupMap.containsKey(groupName)) {
         Delete d = new Delete(Bytes.toBytes(groupName));
         mutations.add(d);
       }
     }
 
     // populate puts
-    for(RSGroupInfo RSGroupInfo : newGroupMap.values()) {
-      RSGroupProtos.RSGroupInfo proto = RSGroupSerDe.toProtoGroupInfo(RSGroupInfo);
+    for(RSGroupInfo RSGroupInfo : groupMap.values()) {
+      RSGroupProtos.RSGroupInfo proto = RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo);
       Put p = new Put(Bytes.toBytes(RSGroupInfo.getName()));
       p.addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES, proto.toByteArray());
       mutations.add(p);
@@ -441,13 +435,13 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     newTableMap = flushConfigTable(newGroupMap);
 
     // Make changes visible after having been persisted to the source of truth
-    installNewMaps(newGroupMap, newTableMap);
+    resetRSGroupAndTableMaps(newGroupMap, newTableMap);
 
     try {
       String groupBasePath = ZKUtil.joinZNode(watcher.znodePaths.baseZNode, rsGroupZNode);
       ZKUtil.createAndFailSilent(watcher, groupBasePath, ProtobufMagic.PB_MAGIC);
 
-      List<ZKUtil.ZKUtilOp> zkOps = new ArrayList<ZKUtil.ZKUtilOp>(newGroupMap.size());
+      List<ZKUtil.ZKUtilOp> zkOps = new ArrayList<>(newGroupMap.size());
       for(String groupName : prevRSGroups) {
         if(!newGroupMap.containsKey(groupName)) {
           String znode = ZKUtil.joinZNode(groupBasePath, groupName);
@@ -458,7 +452,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
 
       for (RSGroupInfo RSGroupInfo : newGroupMap.values()) {
         String znode = ZKUtil.joinZNode(groupBasePath, RSGroupInfo.getName());
-        RSGroupProtos.RSGroupInfo proto = RSGroupSerDe.toProtoGroupInfo(RSGroupInfo);
+        RSGroupProtos.RSGroupInfo proto = RSGroupProtobufUtil.toProtoGroupInfo(RSGroupInfo);
         LOG.debug("Updating znode: "+znode);
         ZKUtil.createAndFailSilent(watcher, znode);
         zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(znode));
@@ -470,7 +464,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       ZKUtil.multiOrSequential(watcher, zkOps, false);
     } catch (KeeperException e) {
       LOG.error("Failed to write to rsGroupZNode", e);
-      master.abort("Failed to write to rsGroupZNode", e);
+      masterServices.abort("Failed to write to rsGroupZNode", e);
       throw new IOException("Failed to write to rsGroupZNode",e);
     }
     updateCacheOfRSGroups(newGroupMap.keySet());
@@ -480,7 +474,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
    * Make changes visible.
    * Caller must be synchronized on 'this'.
    */
-  private void installNewMaps(Map<String, RSGroupInfo> newRSGroupMap,
+  private void resetRSGroupAndTableMaps(Map<String, RSGroupInfo> newRSGroupMap,
       Map<TableName, String> newTableMap) {
     // Make maps Immutable.
     this.rsGroupMap = Collections.unmodifiableMap(newRSGroupMap);
@@ -499,22 +493,22 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
 
   // Called by getDefaultServers. Presume it has lock in place.
   private List<ServerName> getOnlineRS() throws IOException {
-    if (master != null) {
-      return master.getServerManager().getOnlineServersList();
+    if (masterServices != null) {
+      return masterServices.getServerManager().getOnlineServersList();
     }
+    LOG.debug("Reading online RS from zookeeper");
+    List<ServerName> servers = new LinkedList<>();
     try {
-      LOG.debug("Reading online RS from zookeeper");
-      List<ServerName> servers = new LinkedList<ServerName>();
       for (String el: ZKUtil.listChildrenNoWatch(watcher, watcher.znodePaths.rsZNode)) {
         servers.add(ServerName.parseServerName(el));
       }
-      return servers;
     } catch (KeeperException e) {
       throw new IOException("Failed to retrieve server list from zookeeper", e);
     }
+    return servers;
   }
 
-  // Called by DefaultServerUpdater. Presume it has lock on this manager when it runs.
+  // Called by ServerEventsListenerThread. Presume it has lock on this manager when it runs.
   private SortedSet<Address> getDefaultServers() throws IOException {
     SortedSet<Address> defaultServers = Sets.newTreeSet();
     for (ServerName serverName : getOnlineRS()) {
@@ -535,7 +529,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     return defaultServers;
   }
 
-  // Called by DefaultServerUpdater. Synchronize on this because redoing
+  // Called by ServerEventsListenerThread. Synchronize on this because redoing
   // the rsGroupMap then writing it out.
   private synchronized void updateDefaultServers(SortedSet<Address> servers) throws IOException {
     RSGroupInfo info = rsGroupMap.get(RSGroupInfo.DEFAULT_GROUP);
@@ -545,42 +539,47 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     flushConfig(newGroupMap);
   }
 
-  @Override
-  public void serverAdded(ServerName serverName) {
-    // #serverChanged is internally synchronized
-    defaultServerUpdater.serverChanged();
-  }
-
-  @Override
-  public void serverRemoved(ServerName serverName) {
-    // #serverChanged is internally synchronized
-    defaultServerUpdater.serverChanged();
-  }
-
-  // TODO: Why do we need this extra thread? Why can't we just go
-  // fetch at balance time or admin time?
-  private static class DefaultServerUpdater extends Thread {
-    private static final Log LOG = LogFactory.getLog(DefaultServerUpdater.class);
-    private final RSGroupInfoManagerImpl mgr;
+  /**
+   * Calls {@link RSGroupInfoManagerImpl#updateDefaultServers(SortedSet)} to update list of known
+   * servers. Notifications about server changes are received by registering {@link ServerListener}.
+   * As a listener, we need to return immediately, so the real work of updating the servers is
+   * done asynchronously in this thread.
+   */
+  private class ServerEventsListenerThread extends Thread implements ServerListener {
+    private final Log LOG = LogFactory.getLog(ServerEventsListenerThread.class);
     private boolean changed = false;
 
-    public DefaultServerUpdater(RSGroupInfoManagerImpl mgr) {
-      super("RSGroup.ServerUpdater");
+    ServerEventsListenerThread() {
       setDaemon(true);
-      this.mgr = mgr;
+    }
+
+    @Override
+    public void serverAdded(ServerName serverName) {
+      serverChanged();
+    }
+
+    @Override
+    public void serverRemoved(ServerName serverName) {
+      serverChanged();
+    }
+
+    private synchronized void serverChanged() {
+      changed = true;
+      this.notify();
     }
 
     @Override
     public void run() {
+      setName(ServerEventsListenerThread.class.getName() + "-" + masterServices.getServerName());
       SortedSet<Address> prevDefaultServers = new TreeSet<>();
-      while(isMasterRunning(this.mgr.master)) {
+      while(isMasterRunning(masterServices)) {
         try {
           LOG.info("Updating default servers.");
-          SortedSet<Address> servers = mgr.getDefaultServers();
+          SortedSet<Address> servers = RSGroupInfoManagerImpl.this.getDefaultServers();
           if (!servers.equals(prevDefaultServers)) {
-            mgr.updateDefaultServers(servers);
+            RSGroupInfoManagerImpl.this.updateDefaultServers(servers);
             prevDefaultServers = servers;
-            LOG.info("Updated with servers: " + servers.size());
+            LOG.info("Updated with servers: "+servers.size());
           }
           try {
             synchronized (this) {
@@ -597,46 +596,31 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
         }
       }
     }
-
-    public void serverChanged() {
-      synchronized (this) {
-        changed = true;
-        this.notify();
-      }
-    }
   }
 
-  private static class RSGroupStartupWorker extends Thread {
-    private static final Log LOG = LogFactory.getLog(RSGroupStartupWorker.class);
+  private class RSGroupStartupWorker extends Thread {
+    private final Log LOG = LogFactory.getLog(RSGroupStartupWorker.class);
     private volatile boolean online = false;
-    private final MasterServices masterServices;
-    private final RSGroupInfoManagerImpl groupInfoManager;
-    private final ClusterConnection conn;
 
-    public RSGroupStartupWorker(RSGroupInfoManagerImpl groupInfoManager,
-                                MasterServices masterServices,
-                                ClusterConnection conn) {
-      this.masterServices = masterServices;
-      this.groupInfoManager = groupInfoManager;
-      this.conn = conn;
-      setName(RSGroupStartupWorker.class.getName()+"-"+masterServices.getServerName());
+    RSGroupStartupWorker() {
       setDaemon(true);
     }
 
     @Override
     public void run() {
+      setName(RSGroupStartupWorker.class.getName() + "-" + masterServices.getServerName());
       if (waitForGroupTableOnline()) {
         LOG.info("GroupBasedLoadBalancer is now online");
       }
     }
 
-    public boolean waitForGroupTableOnline() {
-      final List<HRegionInfo> foundRegions = new LinkedList<HRegionInfo>();
-      final List<HRegionInfo> assignedRegions = new LinkedList<HRegionInfo>();
+    private boolean waitForGroupTableOnline() {
+      final List<HRegionInfo> foundRegions = new LinkedList<>();
+      final List<HRegionInfo> assignedRegions = new LinkedList<>();
       final AtomicBoolean found = new AtomicBoolean(false);
       final TableStateManager tsm = masterServices.getTableStateManager();
       boolean createSent = false;
-      while (!found.get() && isMasterRunning(this.masterServices)) {
+      while (!found.get() && isMasterRunning(masterServices)) {
         foundRegions.clear();
         assignedRegions.clear();
         found.set(true);
@@ -703,7 +687,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
             MetaTableAccessor.fullScanRegions(conn, visitor);
             // if no regions in meta then we have to create the table
             if (foundRegions.size() < 1 && rootMetaFound && !createSent && nsFound.get()) {
-              groupInfoManager.createRSGroupTable(masterServices);
+              createRSGroupTable();
               createSent = true;
             }
             LOG.info("RSGroup table=" + RSGROUP_TABLE_NAME + " isOnline=" + found.get()
@@ -717,10 +701,10 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
           }
           if (found.get()) {
             LOG.debug("With group table online, refreshing cached information.");
-            groupInfoManager.refresh(true);
+            RSGroupInfoManagerImpl.this.refresh(true);
             online = true;
             //flush any inconsistencies between ZK and HTable
-            groupInfoManager.flushConfig();
+            RSGroupInfoManagerImpl.this.flushConfig();
           }
         } catch (RuntimeException e) {
           throw e;
@@ -737,6 +721,30 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
       return found.get();
     }
 
+    private void createRSGroupTable() throws IOException {
+      Long procId = masterServices.createSystemTable(RSGROUP_TABLE_DESC);
+      // wait for region to be online
+      int tries = 600;
+      while (!(masterServices.getMasterProcedureExecutor().isFinished(procId))
+          && masterServices.getMasterProcedureExecutor().isRunning()
+          && tries > 0) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          throw new IOException("Wait interrupted ", e);
+        }
+        tries--;
+      }
+      if(tries <= 0) {
+        throw new IOException("Failed to create group table in a given time.");
+      } else {
+        ProcedureInfo result = masterServices.getMasterProcedureExecutor().getResult(procId);
+        if (result != null && result.isFailed()) {
+          throw new IOException("Failed to create group table. " + result.getExceptionFullMessage());
+        }
+      }
+    }
+
     public boolean isOnline() {
       return online;
     }
@@ -746,32 +754,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
     return !masterServices.isAborted() && !masterServices.isStopped();
   }
 
-  private void createRSGroupTable(MasterServices masterServices) throws IOException {
-    Long procId = masterServices.createSystemTable(RSGROUP_TABLE_DESC);
-    // wait for region to be online
-    int tries = 600;
-    while (!(masterServices.getMasterProcedureExecutor().isFinished(procId))
-        && masterServices.getMasterProcedureExecutor().isRunning()
-        && tries > 0) {
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        throw new IOException("Wait interrupted", e);
-      }
-      tries--;
-    }
-    if (tries <= 0) {
-      throw new IOException("Failed to create group table in a given time.");
-    } else {
-      ProcedureInfo result = masterServices.getMasterProcedureExecutor().getResult(procId);
-      if (result != null && result.isFailed()) {
-        throw new IOException("Failed to create group table. " + result.getExceptionFullMessage());
-      }
-    }
-  }
-
-  private void multiMutate(List<Mutation> mutations)
-      throws IOException {
+  private void multiMutate(List<Mutation> mutations) throws IOException {
     CoprocessorRpcChannel channel = rsGroupTable.coprocessorService(ROW_KEY);
     MultiRowMutationProtos.MutateRowsRequest.Builder mmrBuilder
       = MultiRowMutationProtos.MutateRowsRequest.newBuilder();

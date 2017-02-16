@@ -26,4 +26,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
  * marked with this Interface before it runs.
  */
 @InterfaceAudience.Private
-public interface RSGroupableBalancer extends LoadBalancer {}
+public interface RSGroupableBalancer extends LoadBalancer {
+  /** Config for pluggable load balancers */
+  String HBASE_RSGROUP_LOADBALANCER_CLASS = "hbase.rsgroup.grouploadbalancer.class";
+}

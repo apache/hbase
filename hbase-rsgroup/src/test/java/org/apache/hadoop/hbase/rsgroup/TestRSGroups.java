@@ -160,9 +160,9 @@ public class TestRSGroups extends TestRSGroupsBase {
     LOG.info("testNamespaceCreateAndAssign");
     String nsName = tablePrefix+"_foo";
     final TableName tableName = TableName.valueOf(nsName, tablePrefix + "_testCreateAndAssign");
-    RSGroupInfo appInfo = addGroup(rsGroupAdmin, "appInfo", 1);
+    RSGroupInfo appInfo = addGroup("appInfo", 1);
     admin.createNamespace(NamespaceDescriptor.create(nsName)
-        .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, "appInfo").build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "appInfo").build());
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor("f"));
     admin.createTable(desc);
@@ -186,7 +186,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     LOG.info("testDefaultNamespaceCreateAndAssign");
     final byte[] tableName = Bytes.toBytes(tablePrefix + "_testCreateAndAssign");
     admin.modifyNamespace(NamespaceDescriptor.create("default")
-        .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, "default").build());
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "default").build());
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor("f"));
     admin.createTable(desc);
@@ -206,7 +206,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     LOG.info("testNamespaceConstraint");
     rsGroupAdmin.addRSGroup(groupName);
     admin.createNamespace(NamespaceDescriptor.create(nsName)
-        .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, groupName)
+        .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName)
         .build());
     //test removing a referenced group
     try {
@@ -218,7 +218,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     //changing with the same name is fine
     admin.modifyNamespace(
         NamespaceDescriptor.create(nsName)
-          .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, groupName)
+          .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, groupName)
           .build());
     String anotherGroup = tablePrefix+"_anotherGroup";
     rsGroupAdmin.addRSGroup(anotherGroup);
@@ -227,7 +227,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     rsGroupAdmin.removeRSGroup(groupName);
     try {
       admin.createNamespace(NamespaceDescriptor.create(nsName)
-          .addConfiguration(RSGroupInfo.NAMESPACEDESC_PROP_GROUP, "foo")
+          .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, "foo")
           .build());
       fail("Expected a constraint exception");
     } catch (IOException ex) {
@@ -250,7 +250,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     final TableName tableName = TableName.valueOf(tablePrefix+"_testMisplacedRegions");
     LOG.info("testMisplacedRegions");
 
-    final RSGroupInfo RSGroupInfo = addGroup(rsGroupAdmin, "testMisplacedRegions", 1);
+    final RSGroupInfo RSGroupInfo = addGroup("testMisplacedRegions", 1);
 
     TEST_UTIL.createMultiRegionTable(tableName, new byte[]{'f'}, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);

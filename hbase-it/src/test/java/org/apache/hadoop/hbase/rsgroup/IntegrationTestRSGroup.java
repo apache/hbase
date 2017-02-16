@@ -29,20 +29,18 @@ import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 /**
- * Runs all of the units tests defined in TestGroupBase
- * as an integration test.
+ * Runs all of the units tests defined in TestGroupBase as an integration test.
  * Requires TestRSGroupBase.NUM_SLAVE_BASE servers to run.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestRSGroup extends TestRSGroupsBase {
-  //Integration specific
   private final static Log LOG = LogFactory.getLog(IntegrationTestRSGroup.class);
   private static boolean initialized = false;
 
   @BeforeClass
   public void beforeMethod() throws Exception {
     if(!initialized) {
-      LOG.info("Setting up IntegrationTestGroup");
+      LOG.info("Setting up IntegrationTestRSGroup");
       LOG.info("Initializing cluster with " + NUM_SLAVES_BASE + " servers");
       TEST_UTIL = new IntegrationTestingUtility();
       ((IntegrationTestingUtility)TEST_UTIL).initializeCluster(NUM_SLAVES_BASE);
