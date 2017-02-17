@@ -78,12 +78,12 @@ hcd.setMobThreshold(102400L);
 
 === Testing MOB
 
-The utility `org.apache.hadoop.hbase.IntegrationTestIngestMOB` is provided to assist with testing
+The utility `org.apache.hadoop.hbase.IntegrationTestIngestWithMOB` is provided to assist with testing
 the MOB feature. The utility is run as follows:
 [source,bash]
 ----
-$ sudo -u hbase hbase org.apache.hadoop.hbase.IntegrationTestIngestMOB \
-            -threshold 102400 \
+$ sudo -u hbase hbase org.apache.hadoop.hbase.IntegrationTestIngestWithMOB \
+            -threshold 1024 \
             -minMobDataSize 512 \
             -maxMobDataSize 5120
 ----
@@ -149,88 +149,14 @@ suit your environment, and restart or rolling restart the RegionServer.
 
 To manually compact MOB files, rather than waiting for the
 <<mob.cache.configure,configuration>> to trigger compaction, use the
-`compact_mob` or `major_compact_mob` HBase shell commands. These commands
-require the first argument to be the table name, and take an optional column
-family as the second argument. If the column family is omitted, all MOB-enabled
-column families are compacted.
+`compact` or `major_compact` HBase shell commands. These commands
+require the first argument to be the table name, and take a column
+family as the second argument. and take a compaction type as the third argument.
 
 ----
-hbase> compact_mob 't1', 'c1'
-hbase> compact_mob 't1'
-hbase> major_compact_mob 't1', 'c1'
-hbase> major_compact_mob 't1'
+hbase> compact 't1', 'c1’, ‘MOB’
+hbase> major_compact_mob 't1', 'c1’, ‘MOB’
 ----
 
-These commands are also available via `Admin.compactMob` and
-`Admin.majorCompactMob` methods.
-
-==== MOB Sweeper
-
-HBase MOB a MapReduce job called the Sweeper tool for
-optimization. The Sweeper tool coalesces small MOB files or MOB files with many
-deletions or updates. The Sweeper tool is not required if you use native MOB compaction, which
-does not rely on MapReduce.
-
-To configure the Sweeper tool, set the following options:
-
-[source,xml]
-----
-<property>
-    <name>hbase.mob.sweep.tool.compaction.ratio</name>
-    <value>0.5f</value>
-    <description>
-      If there are too many cells deleted in a mob file, it's regarded
-      as an invalid file and needs to be merged.
-      If existingCellsSize/mobFileSize is less than ratio, it's regarded
-      as an invalid file. The default value is 0.5f.
-    </description>
-</property>
-<property>
-    <name>hbase.mob.sweep.tool.compaction.mergeable.size</name>
-    <value>134217728</value>
-    <description>
-      If the size of a mob file is less than this value, it's regarded as a small
-      file and needs to be merged. The default value is 128MB.
-    </description>
-</property>
-<property>
-    <name>hbase.mob.sweep.tool.compaction.memstore.flush.size</name>
-    <value>134217728</value>
-    <description>
-      The flush size for the memstore used by sweep job. Each sweep reducer owns such a memstore.
-      The default value is 128MB.
-    </description>
-</property>
-<property>
-    <name>hbase.master.mob.ttl.cleaner.period</name>
-    <value>86400</value>
-    <description>
-      The period that ExpiredMobFileCleanerChore runs. The unit is second.
-      The default value is one day.
-    </description>
-</property>
-----
-
-Next, add the HBase install directory, _`$HBASE_HOME`/*_, and HBase library directory to
-_yarn-site.xml_ Adjust this example to suit your environment.
-[source,xml]
-----
-<property>
-    <description>Classpath for typical applications.</description>
-    <name>yarn.application.classpath</name>
-    <value>
-        $HADOOP_CONF_DIR,
-        $HADOOP_COMMON_HOME/*,$HADOOP_COMMON_HOME/lib/*,
-        $HADOOP_HDFS_HOME/*,$HADOOP_HDFS_HOME/lib/*,
-        $HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*,
-        $HADOOP_YARN_HOME/*,$HADOOP_YARN_HOME/lib/*,
-        $HBASE_HOME/*, $HBASE_HOME/lib/*
-    </value>
-</property>
-----
-
-Finally, run the `sweeper` tool for each column which is configured for MOB.
-[source,bash]
-----
-$ org.apache.hadoop.hbase.mob.compactions.Sweeper _tableName_ _familyName_
-----
+These commands are also available via `Admin.compact` and
+`Admin.majorCompact` methods.
