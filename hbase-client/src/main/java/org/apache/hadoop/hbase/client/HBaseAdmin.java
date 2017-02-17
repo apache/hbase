@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
@@ -4086,9 +4087,7 @@ public class HBaseAdmin implements Admin {
    * Connect to peer and check the table descriptor on peer:
    * <ol>
    * <li>Create the same table on peer when not exist.</li>
-   * <li>Throw an exception if the table already has replication enabled on any of the column
-   * families.</li>
-   * <li>Throw an exception if the table exists on peer cluster but descriptors are not same.</li>
+   * <li>Throw exception if the table exists on peer cluster but descriptors are not same.</li>
    * </ol>
    * @param tableName name of the table to sync to the peer
    * @param splits table split keys
@@ -4106,32 +4105,20 @@ public class HBaseAdmin implements Admin {
         Configuration peerConf = getPeerClusterConfiguration(peerDesc);
         try (Connection conn = ConnectionFactory.createConnection(peerConf);
             Admin repHBaseAdmin = conn.getAdmin()) {
-          HTableDescriptor localHtd = getTableDescriptor(tableName);
+          HTableDescriptor htd = getTableDescriptor(tableName);
           HTableDescriptor peerHtd = null;
           if (!repHBaseAdmin.tableExists(tableName)) {
-            repHBaseAdmin.createTable(localHtd, splits);
+            repHBaseAdmin.createTable(htd, splits);
           } else {
             peerHtd = repHBaseAdmin.getTableDescriptor(tableName);
             if (peerHtd == null) {
               throw new IllegalArgumentException("Failed to get table descriptor for table "
                   + tableName.getNameAsString() + " from peer cluster " + peerDesc.getPeerId());
-            } else {
-              // To support cyclic replication (HBASE-17460), we need to match the
-              // REPLICATION_SCOPE of table on both the clusters. We should do this
-              // only when the replication is not already enabled on local HTD (local
-              // table on this cluster).
-              //
-              if (localHtd.isReplicationEnabled()) {
-                throw new IllegalArgumentException("Table " + tableName.getNameAsString()
-                    + " has replication already enabled for atleast one Column Family.");
-              } else {
-                if (!peerHtd.compareForReplication(localHtd)) {
-                  throw new IllegalArgumentException("Table " + tableName.getNameAsString()
-                      + " exists in peer cluster " + peerDesc.getPeerId()
-                      + ", but the table descriptors are not same when compared with source cluster."
-                      + " Thus can not enable the table's replication switch.");
-                }
-              }
+            } else if (!peerHtd.equals(htd)) {
+              throw new IllegalArgumentException("Table " + tableName.getNameAsString()
+                  + " exists in peer cluster " + peerDesc.getPeerId()
+                  + ", but the table descriptors are not same when compared with source cluster."
+                  + " Thus can not enable the table's replication switch.");
             }
           }
         }
