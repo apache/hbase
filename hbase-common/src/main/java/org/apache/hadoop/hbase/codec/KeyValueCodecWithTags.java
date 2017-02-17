@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.OffheapKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -94,7 +94,7 @@ public class KeyValueCodecWithTags implements Codec {
 
     @Override
     protected Cell createCell(ByteBuffer bb, int pos, int len) {
-      return new OffheapKeyValue(bb, pos, len);
+      return new ByteBufferKeyValue(bb, pos, len);
     }
   }
 

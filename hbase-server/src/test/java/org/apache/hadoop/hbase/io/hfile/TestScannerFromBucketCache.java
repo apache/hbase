@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.OffheapKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -119,14 +119,14 @@ public class TestScannerFromBucketCache {
       List<Cell> actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof OffheapKeyValue);
+        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // do the scan again and verify. This time it should be from the lru cache
       actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof OffheapKeyValue);
+        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
 
@@ -157,7 +157,7 @@ public class TestScannerFromBucketCache {
       List<Cell> actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof OffheapKeyValue);
+        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // Wait for the bucket cache threads to move the data to offheap
@@ -166,7 +166,7 @@ public class TestScannerFromBucketCache {
       actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(actual.get(i) instanceof OffheapKeyValue);
+        assertTrue(actual.get(i) instanceof ByteBufferKeyValue);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
 
@@ -198,7 +198,7 @@ public class TestScannerFromBucketCache {
       List<Cell> actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof OffheapKeyValue);
+        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // Wait for the bucket cache threads to move the data to offheap
@@ -218,7 +218,7 @@ public class TestScannerFromBucketCache {
         if (i != 5) {
           // the last cell fetched will be of type shareable but not offheap because
           // the MBB is copied to form a single cell
-          assertTrue(actual.get(i) instanceof OffheapKeyValue);
+          assertTrue(actual.get(i) instanceof ByteBufferKeyValue);
         }
       }
 
@@ -250,14 +250,14 @@ public class TestScannerFromBucketCache {
       List<Cell> actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof OffheapKeyValue);
+        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
       // do the scan again and verify. This time it should be from the bucket cache in onheap mode
       actual = performScan(row1, fam1);
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertFalse(actual.get(i) instanceof OffheapKeyValue);
+        assertFalse(actual.get(i) instanceof ByteBufferKeyValue);
         assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
 

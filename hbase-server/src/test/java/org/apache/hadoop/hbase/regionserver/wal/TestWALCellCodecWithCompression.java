@@ -30,7 +30,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.OffheapKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.ArrayBackedTag;
@@ -109,7 +109,7 @@ public class TestWALCellCodecWithCompression {
     return new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, tags);
   }
 
-  private OffheapKeyValue createOffheapKV(int noOfTags) {
+  private ByteBufferKeyValue createOffheapKV(int noOfTags) {
     byte[] row = Bytes.toBytes("myRow");
     byte[] cf = Bytes.toBytes("myCF");
     byte[] q = Bytes.toBytes("myQualifier");
@@ -121,6 +121,6 @@ public class TestWALCellCodecWithCompression {
     KeyValue kv = new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, tags);
     ByteBuffer dbb = ByteBuffer.allocateDirect(kv.getBuffer().length);
     dbb.put(kv.getBuffer());
-    return new OffheapKeyValue(dbb, 0, kv.getBuffer().length);
+    return new ByteBufferKeyValue(dbb, 0, kv.getBuffer().length);
   }
 }

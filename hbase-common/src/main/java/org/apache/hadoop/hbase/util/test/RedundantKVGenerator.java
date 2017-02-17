@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.OffheapKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -370,7 +370,7 @@ public class RedundantKVGenerator {
         ByteBuffer offheapKVBB = ByteBuffer.allocateDirect(keyValue.getLength());
         ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
           keyValue.getOffset(), keyValue.getLength());
-        OffheapKeyValue offheapKV =
+        ByteBufferKeyValue offheapKV =
             new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), 0);
         result.add(offheapKV);
       } else {
@@ -378,7 +378,7 @@ public class RedundantKVGenerator {
         ByteBuffer offheapKVBB = ByteBuffer.allocateDirect(keyValue.getLength());
         ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
           keyValue.getOffset(), keyValue.getLength());
-        OffheapKeyValue offheapKV =
+        ByteBufferKeyValue offheapKV =
             new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), 0);
         result.add(offheapKV);
       }
@@ -389,7 +389,7 @@ public class RedundantKVGenerator {
     return result;
   }
 
-  static class ExtendedOffheapKeyValue extends OffheapKeyValue {
+  static class ExtendedOffheapKeyValue extends ByteBufferKeyValue {
     public ExtendedOffheapKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
       super(buf, offset, length, seqId);
     }

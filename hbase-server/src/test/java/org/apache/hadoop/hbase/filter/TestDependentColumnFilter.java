@@ -152,7 +152,7 @@ public class TestDependentColumnFilter {
     int cells = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
-      Arrays.sort(results.toArray(new KeyValue[results.size()]),
+      Arrays.sort(results.toArray(new Cell[results.size()]),
           CellComparator.COMPARATOR);
       LOG.info("counter=" + i + ", " + results);
       if (results.isEmpty()) break;

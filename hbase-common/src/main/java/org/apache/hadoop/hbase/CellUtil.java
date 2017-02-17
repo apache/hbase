@@ -1539,7 +1539,7 @@ public final class CellUtil {
       public Tag next() {
         if (hasNext()) {
           int curTagLen = ByteBufferUtils.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
-          Tag tag = new OffheapTag(tags, pos, curTagLen + Tag.TAG_LENGTH_SIZE);
+          Tag tag = new ByteBufferTag(tags, pos, curTagLen + Tag.TAG_LENGTH_SIZE);
           this.pos += Bytes.SIZEOF_SHORT + curTagLen;
           return tag;
         }
@@ -1622,7 +1622,7 @@ public final class CellUtil {
         ByteBuffer tagsBuffer = ((ByteBufferCell)cell).getTagsByteBuffer();
         tagLen = ByteBufferUtils.readAsInt(tagsBuffer, pos, TAG_LENGTH_SIZE);
         if (ByteBufferUtils.toByte(tagsBuffer, pos + TAG_LENGTH_SIZE) == type) {
-          return new OffheapTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE);
+          return new ByteBufferTag(tagsBuffer, pos, tagLen + TAG_LENGTH_SIZE);
         }
       } else {
         tagLen = Bytes.readAsInt(cell.getTagsArray(), pos, TAG_LENGTH_SIZE);
@@ -3188,20 +3188,14 @@ public final class CellUtil {
       // serialization format only.
       KeyValueUtil.appendTo(cell, buf, offset, true);
     }
-    if (buf.hasArray()) {
-      KeyValue newKv;
-      if (tagsLen == 0) {
-        // When tagsLen is 0, make a NoTagsKeyValue version of Cell. This is an optimized class
-        // which directly return tagsLen as 0. So we avoid parsing many length components in
-        // reading the tagLength stored in the backing buffer. The Memstore addition of every Cell
-        // call getTagsLength().
-        newKv = new NoTagsKeyValue(buf.array(), buf.arrayOffset() + offset, len);
-      } else {
-        newKv = new KeyValue(buf.array(), buf.arrayOffset() + offset, len);
-      }
-      newKv.setSequenceId(cell.getSequenceId());
-      return newKv;
+    if (tagsLen == 0) {
+      // When tagsLen is 0, make a NoTagsByteBufferKeyValue version. This is an optimized class
+      // which directly return tagsLen as 0. So we avoid parsing many length components in
+      // reading the tagLength stored in the backing buffer. The Memstore addition of every Cell
+      // call getTagsLength().
+      return new NoTagsByteBufferKeyValue(buf, offset, len, cell.getSequenceId());
+    } else {
+      return new ByteBufferKeyValue(buf, offset, len, cell.getSequenceId());
     }
-    return new OffheapKeyValue(buf, offset, len, cell.getSequenceId());
   }
 }

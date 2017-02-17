@@ -26,18 +26,18 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 
 /**
- * This is a {@link Tag} implementation in which value is backed by an off heap
+ * This is a {@link Tag} implementation in which value is backed by
  * {@link java.nio.ByteBuffer}
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class OffheapTag implements Tag {
+public class ByteBufferTag implements Tag {
 
   private ByteBuffer buffer;
   private int offset, length;
   private byte type;
 
-  public OffheapTag(ByteBuffer buffer, int offset, int length) {
+  public ByteBufferTag(ByteBuffer buffer, int offset, int length) {
     this.buffer = buffer;
     this.offset = offset;
     this.length = length;

@@ -95,7 +95,7 @@ public final class TagUtil {
     int pos = offset;
     while (pos < offset + length) {
       int tagLen = ByteBufferUtils.readAsInt(b, pos, TAG_LENGTH_SIZE);
-      tags.add(new OffheapTag(b, pos, tagLen + TAG_LENGTH_SIZE));
+      tags.add(new ByteBufferTag(b, pos, tagLen + TAG_LENGTH_SIZE));
       pos += TAG_LENGTH_SIZE + tagLen;
     }
     return tags;

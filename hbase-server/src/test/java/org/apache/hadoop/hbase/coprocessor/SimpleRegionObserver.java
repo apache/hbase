@@ -385,23 +385,23 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       List<Cell> cells = familyMap.get(TestRegionObserverInterface.A);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
-      KeyValue kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
-        kv.getQualifierLength(), TestRegionObserverInterface.A, 0,
+      Cell cell = cells.get(0);
+      assertTrue(Bytes.equals(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength(), TestRegionObserverInterface.A, 0,
         TestRegionObserverInterface.A.length));
       cells = familyMap.get(TestRegionObserverInterface.B);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
-      kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
-        kv.getQualifierLength(), TestRegionObserverInterface.B, 0,
+      cell = cells.get(0);
+      assertTrue(Bytes.equals(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength(), TestRegionObserverInterface.B, 0,
         TestRegionObserverInterface.B.length));
       cells = familyMap.get(TestRegionObserverInterface.C);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
-      kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
-        kv.getQualifierLength(), TestRegionObserverInterface.C, 0,
+      cell = cells.get(0);
+      assertTrue(Bytes.equals(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength(), TestRegionObserverInterface.C, 0,
         TestRegionObserverInterface.C.length));
     }
     ctPrePut.incrementAndGet();
@@ -422,25 +422,25 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
-      KeyValue kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
-        kv.getQualifierLength(), TestRegionObserverInterface.A, 0,
+      Cell cell = cells.get(0);
+      assertTrue(Bytes.equals(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength(), TestRegionObserverInterface.A, 0,
         TestRegionObserverInterface.A.length));
       cells = familyMap.get(TestRegionObserverInterface.B);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
-      kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
-        kv.getQualifierLength(), TestRegionObserverInterface.B, 0,
+      cell = cells.get(0);
+      assertTrue(Bytes.equals(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength(), TestRegionObserverInterface.B, 0,
         TestRegionObserverInterface.B.length));
       cells = familyMap.get(TestRegionObserverInterface.C);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
-      kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
-        kv.getQualifierLength(), TestRegionObserverInterface.C, 0,
+      cell = cells.get(0);
+      assertTrue(Bytes.equals(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength(), TestRegionObserverInterface.C, 0,
         TestRegionObserverInterface.C.length));
     }
     ctPostPut.incrementAndGet();

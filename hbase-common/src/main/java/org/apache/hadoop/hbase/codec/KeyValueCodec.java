@@ -25,8 +25,8 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.NoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.NoTagsKeyValue;
-import org.apache.hadoop.hbase.OffheapKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -111,7 +111,7 @@ public class KeyValueCodec implements Codec {
 
     protected Cell createCell(ByteBuffer bb, int pos, int len) {
       // We know there is not going to be any tags.
-      return new OffheapKeyValue(bb, pos, len, 0);
+      return new NoTagsByteBufferKeyValue(bb, pos, len);
     }
 
   }

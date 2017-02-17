@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.OffheapKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
@@ -125,7 +125,7 @@ public class TestWALReaderOnSecureWAL {
         if (offheap) {
           ByteBuffer bb = ByteBuffer.allocateDirect(kv.getBuffer().length);
           bb.put(kv.getBuffer());
-          OffheapKeyValue offheapKV = new OffheapKeyValue(bb, 0, kv.getLength());
+          ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(bb, 0, kv.getLength());
           kvs.add(offheapKV);
         } else {
           kvs.add(kv);

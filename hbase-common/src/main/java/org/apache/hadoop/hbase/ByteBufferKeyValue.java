@@ -26,36 +26,44 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
- * This Cell is an implementation of {@link ByteBufferCell} where the data resides in off heap
- * memory.
+ * This Cell is an implementation of {@link ByteBufferCell} where the data resides in
+ * off heap/ on heap ByteBuffer
  */
 @InterfaceAudience.Private
-public class OffheapKeyValue extends ByteBufferCell implements ExtendedCell {
+public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   protected final ByteBuffer buf;
   protected final int offset;
   protected final int length;
   private long seqId = 0;
-  // TODO : See if famLen can be cached or not?
 
   private static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
-      + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT
-      + Bytes.SIZEOF_BOOLEAN + Bytes.SIZEOF_LONG;
+      + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_LONG;
 
-  public OffheapKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
-    assert buf.isDirect();
+  public ByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
     this.buf = buf;
     this.offset = offset;
     this.length = length;
     this.seqId = seqId;
   }
 
-  public OffheapKeyValue(ByteBuffer buf, int offset, int length) {
-    assert buf.isDirect();
+  public ByteBufferKeyValue(ByteBuffer buf, int offset, int length) {
     this.buf = buf;
     this.offset = offset;
     this.length = length;
+  }
+
+  @VisibleForTesting
+  public ByteBuffer getBuffer() {
+    return this.buf;
+  }
+
+  @VisibleForTesting
+  public int getOffset() {
+    return this.offset;
   }
 
   @Override

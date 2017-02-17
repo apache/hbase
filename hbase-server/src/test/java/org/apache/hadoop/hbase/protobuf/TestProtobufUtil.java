@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.OffheapKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -331,7 +331,7 @@ public class TestProtobufUtil {
       kv3.getLength());
     ByteBuffer dbb = ByteBuffer.allocateDirect(arr.length);
     dbb.put(arr);
-    OffheapKeyValue offheapKV = new OffheapKeyValue(dbb, kv1.getLength(), kv2.getLength());
+    ByteBufferKeyValue offheapKV = new ByteBufferKeyValue(dbb, kv1.getLength(), kv2.getLength());
     CellProtos.Cell cell = org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toCell(offheapKV);
     Cell newOffheapKV = org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toCell(cell);
     assertTrue(CellComparator.COMPARATOR.compare(offheapKV, newOffheapKV) == 0);

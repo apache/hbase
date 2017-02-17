@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.OffheapKeyValue;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -957,7 +957,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       } else {
         ByteBuffer buf = blockBuffer.asSubByteBuffer(cellBufSize);
         if (buf.isDirect()) {
-          ret = new OffheapKeyValue(buf, buf.position(), cellBufSize, seqId);
+          ret = new ByteBufferKeyValue(buf, buf.position(), cellBufSize, seqId);
         } else {
           if (currTagsLen > 0) {
             ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset() + buf.position(),

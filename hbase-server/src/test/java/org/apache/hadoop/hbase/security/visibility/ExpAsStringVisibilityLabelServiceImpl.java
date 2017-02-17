@@ -298,13 +298,13 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
                 if (len < 0) {
                   // This is a NOT label.
                   len = (short) (-1 * len);
-                  String label = Bytes.toString(tag.getValueArray(), offset, len);
+                  String label = getTagValuePartAsString(tag, offset, len);
                   if (authLabelsFinal.contains(label)) {
                     includeKV = false;
                     break;
                   }
                 } else {
-                  String label = Bytes.toString(tag.getValueArray(), offset, len);
+                  String label = getTagValuePartAsString(tag, offset, len);
                   if (!authLabelsFinal.contains(label)) {
                     includeKV = false;
                     break;

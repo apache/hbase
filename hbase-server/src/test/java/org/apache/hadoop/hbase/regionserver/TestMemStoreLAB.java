@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.*;
 
 import java.lang.management.ManagementFactory;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
@@ -73,7 +75,7 @@ public class TestMemStoreLAB {
     Random rand = new Random();
     MemStoreLAB mslab = new MemStoreLABImpl();
     int expectedOff = 0;
-    byte[] lastBuffer = null;
+    ByteBuffer lastBuffer = null;
     // 100K iterations by 0-1K alloc -> 50MB expected
     // should be reasonable for unit test and also cover wraparound
     // behavior
@@ -81,14 +83,14 @@ public class TestMemStoreLAB {
       int valSize = rand.nextInt(1000);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
       int size = KeyValueUtil.length(kv);
-      KeyValue newKv = (KeyValue) mslab.copyCellInto(kv);
+      ByteBufferKeyValue newKv = (ByteBufferKeyValue) mslab.copyCellInto(kv);
       if (newKv.getBuffer() != lastBuffer) {
         expectedOff = 0;
         lastBuffer = newKv.getBuffer();
       }
       assertEquals(expectedOff, newKv.getOffset());
       assertTrue("Allocation overruns buffer",
-          newKv.getOffset() + size <= newKv.getBuffer().length);
+          newKv.getOffset() + size <= newKv.getBuffer().capacity());
       expectedOff += size;
     }
   }
@@ -127,9 +129,9 @@ public class TestMemStoreLAB {
           int valSize = r.nextInt(1000);
           KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
           int size = KeyValueUtil.length(kv);
-          KeyValue newKv = (KeyValue) mslab.copyCellInto(kv);
+          ByteBufferKeyValue newCell = (ByteBufferKeyValue) mslab.copyCellInto(kv);
           totalAllocated.addAndGet(size);
-          allocsByThisThread.add(new AllocRecord(newKv.getBuffer(), newKv.getOffset(), size));
+          allocsByThisThread.add(new AllocRecord(newCell.getBuffer(), newCell.getOffset(), size));
         }
       };
       ctx.addThread(t);
@@ -143,7 +145,7 @@ public class TestMemStoreLAB {
     
     // Partition the allocations by the actual byte[] they point into,
     // make sure offsets are unique for each chunk
-    Map<byte[], Map<Integer, AllocRecord>> mapsByChunk =
+    Map<ByteBuffer, Map<Integer, AllocRecord>> mapsByChunk =
       Maps.newHashMap();
     
     int sizeCounted = 0;
@@ -169,7 +171,7 @@ public class TestMemStoreLAB {
       for (AllocRecord alloc : allocsInChunk.values()) {
         assertEquals(expectedOff, alloc.offset);
         assertTrue("Allocation overruns buffer",
-            alloc.offset + alloc.size <= alloc.alloc.length);
+            alloc.offset + alloc.size <= alloc.alloc.capacity());
         expectedOff += alloc.size;
       }
     }
@@ -251,11 +253,11 @@ public class TestMemStoreLAB {
   }
 
   private static class AllocRecord implements Comparable<AllocRecord>{
-    private final byte[] alloc;
+    private final ByteBuffer alloc;
     private final int offset;
     private final int size;
 
-    public AllocRecord(byte[] alloc, int offset, int size) {
+    public AllocRecord(ByteBuffer alloc, int offset, int size) {
       super();
       this.alloc = alloc;
       this.offset = offset;

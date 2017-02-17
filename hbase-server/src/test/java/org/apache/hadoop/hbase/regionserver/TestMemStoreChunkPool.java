@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -34,6 +35,7 @@ import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Random;
 
@@ -77,7 +79,7 @@ public class TestMemStoreChunkPool {
     Random rand = new Random();
     MemStoreLAB mslab = new MemStoreLABImpl(conf);
     int expectedOff = 0;
-    byte[] lastBuffer = null;
+    ByteBuffer lastBuffer = null;
     final byte[] rk = Bytes.toBytes("r1");
     final byte[] cf = Bytes.toBytes("f");
     final byte[] q = Bytes.toBytes("q");
@@ -86,14 +88,14 @@ public class TestMemStoreChunkPool {
       int valSize = rand.nextInt(1000);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
       int size = KeyValueUtil.length(kv);
-      KeyValue newKv = (KeyValue) mslab.copyCellInto(kv);
+      ByteBufferKeyValue newKv = (ByteBufferKeyValue) mslab.copyCellInto(kv);
       if (newKv.getBuffer() != lastBuffer) {
         expectedOff = 0;
         lastBuffer = newKv.getBuffer();
       }
       assertEquals(expectedOff, newKv.getOffset());
       assertTrue("Allocation overruns buffer",
-          newKv.getOffset() + size <= newKv.getBuffer().length);
+          newKv.getOffset() + size <= newKv.getBuffer().capacity());
       expectedOff += size;
     }
     // chunks will be put back to pool after close
