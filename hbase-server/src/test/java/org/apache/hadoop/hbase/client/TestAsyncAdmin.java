@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -964,6 +965,35 @@ public class TestAsyncAdmin {
   }
 
   @Test
+  public void testCloseRegionThatFetchesTheHRIFromMeta() throws Exception {
+    TableName TABLENAME = TableName.valueOf("TestHBACloseRegion2");
+    createTableWithDefaultConf(TABLENAME);
+
+    HRegionInfo info = null;
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
+    for (HRegionInfo regionInfo : onlineRegions) {
+      if (!regionInfo.isMetaTable()) {
+
+        if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion2")) {
+          info = regionInfo;
+          admin.closeRegion(regionInfo.getRegionNameAsString(), rs.getServerName().getServerName())
+              .get();
+        }
+      }
+    }
+
+    boolean isInList = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices()).contains(info);
+    long timeout = System.currentTimeMillis() + 10000;
+    while ((System.currentTimeMillis() < timeout) && (isInList)) {
+      Thread.sleep(100);
+      isInList = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices()).contains(info);
+    }
+
+    assertFalse("The region should not be present in online regions list.", isInList);
+  }
+
+  @Test
   public void testCloseRegionWhenServerNameIsNull() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion3");
     createTableWithDefaultConf(TableName.valueOf(TABLENAME));
@@ -1034,5 +1064,24 @@ public class TestAsyncAdmin {
     onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     assertTrue("The region should be present in online regions list.",
       onlineRegions.contains(info));
+  }
+
+  @Test
+  public void testGetRegion() throws Exception {
+    AsyncHBaseAdmin rawAdmin = (AsyncHBaseAdmin) admin;
+
+    final TableName tableName = TableName.valueOf("testGetRegion");
+    LOG.info("Started " + tableName);
+    TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
+
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm"));
+      HRegionInfo region = regionLocation.getRegionInfo();
+      byte[] regionName = region.getRegionName();
+      Pair<HRegionInfo, ServerName> pair = rawAdmin.getRegion(regionName).get();
+      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+      pair = rawAdmin.getRegion(region.getEncodedNameAsBytes()).get();
+      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+    }
   }
 }

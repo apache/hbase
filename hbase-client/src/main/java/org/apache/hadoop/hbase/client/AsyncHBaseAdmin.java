@@ -32,16 +32,22 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.AdminRequestCallerBuilder;
 import org.apache.hadoop.hbase.client.AsyncRpcRetryingCallerFactory.MasterRequestCallerBuilder;
+import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -189,12 +195,10 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
         if (controller.failed()) {
           future.completeExceptionally(new IOException(controller.errorText()));
         } else {
-          if (respConverter != null) {
-            try {
-              future.complete(respConverter.convert(resp));
-            } catch (IOException e) {
-              future.completeExceptionally(e);
-            }
+          try {
+            future.complete(respConverter.convert(resp));
+          } catch (IOException e) {
+            future.completeExceptionally(e);
           }
         }
       }
@@ -507,8 +511,81 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> closeRegion(byte[] regionname, String serverName) {
-    throw new UnsupportedOperationException("closeRegion method depends on getRegion API, will support soon.");
+  public CompletableFuture<Void> closeRegion(byte[] regionName, String serverName) {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    getRegion(regionName).whenComplete((p, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      if (p == null || p.getFirst() == null) {
+        future.completeExceptionally(new UnknownRegionException(Bytes.toStringBinary(regionName)));
+        return;
+      }
+      if (serverName != null) {
+        closeRegion(ServerName.valueOf(serverName), p.getFirst()).whenComplete((p2, err2) -> {
+          if (err2 != null) {
+            future.completeExceptionally(err2);
+          }else{
+            future.complete(null);
+          }
+        });
+      } else {
+        if (p.getSecond() == null) {
+          future.completeExceptionally(new NotServingRegionException(regionName));
+        } else {
+          closeRegion(p.getSecond(), p.getFirst()).whenComplete((p2, err2) -> {
+            if (err2 != null) {
+              future.completeExceptionally(err2);
+            }else{
+              future.complete(null);
+            }
+          });
+        }
+      }
+    });
+    return future;
+  }
+
+  CompletableFuture<Pair<HRegionInfo, ServerName>> getRegion(byte[] regionName) {
+    if (regionName == null) {
+      return failedFuture(new IllegalArgumentException("Pass region name"));
+    }
+    CompletableFuture<Pair<HRegionInfo, ServerName>> future = new CompletableFuture<>();
+    AsyncMetaTableAccessor.getRegion(metaTable, regionName).whenComplete(
+      (p, err) -> {
+        if (err != null) {
+          future.completeExceptionally(err);
+        } else if (p != null) {
+          future.complete(p);
+        } else {
+          metaTable.scanAll(
+            new Scan().setReadType(ReadType.PREAD).addFamily(HConstants.CATALOG_FAMILY))
+              .whenComplete((results, err2) -> {
+                if (err2 != null) {
+                  future.completeExceptionally(err2);
+                  return;
+                }
+                String encodedName = Bytes.toString(regionName);
+                if (results != null && !results.isEmpty()) {
+                  for (Result r : results) {
+                    if (r.isEmpty() || MetaTableAccessor.getHRegionInfo(r) == null) continue;
+                    RegionLocations rl = MetaTableAccessor.getRegionLocations(r);
+                    if (rl != null) {
+                      for (HRegionLocation h : rl.getRegionLocations()) {
+                        if (h != null && encodedName.equals(h.getRegionInfo().getEncodedName())) {
+                          future.complete(new Pair<>(h.getRegionInfo(), h.getServerName()));
+                          return;
+                        }
+                      }
+                    }
+                  }
+                }
+                future.complete(null);
+              });
+        }
+      });
+    return future;
   }
 
   @Override
@@ -530,7 +607,7 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
         .action(
           (controller, stub) -> this.<CloseRegionRequest, CloseRegionResponse, Void> adminCall(
             controller, stub, ProtobufUtil.buildCloseRegionRequest(sn, hri.getRegionName()),
-            (s, c, req, done) -> s.closeRegion(controller, req, done), null))
+            (s, c, req, done) -> s.closeRegion(controller, req, done), resp -> null))
         .serverName(sn).call();
   }
 

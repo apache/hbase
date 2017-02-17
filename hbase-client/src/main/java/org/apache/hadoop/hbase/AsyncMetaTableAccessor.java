@@ -27,12 +27,15 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RawAsyncTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * The asynchronous meta table accessor. Used to read/write region and assignment information store
@@ -71,6 +74,37 @@ public class AsyncMetaTableAccessor {
     } catch (IOException ioe) {
       future.completeExceptionally(ioe);
     }
+    return future;
+  }
+
+  public static CompletableFuture<Pair<HRegionInfo, ServerName>> getRegion(RawAsyncTable metaTable,
+      byte[] regionName) {
+    CompletableFuture<Pair<HRegionInfo, ServerName>> future = new CompletableFuture<>();
+    byte[] row = regionName;
+    HRegionInfo parsedInfo = null;
+    try {
+      parsedInfo = MetaTableAccessor.parseRegionInfoFromRegionName(regionName);
+      row = MetaTableAccessor.getMetaKeyForRegion(parsedInfo);
+    } catch (Exception parseEx) {
+      // Ignore if regionName is a encoded region name.
+    }
+
+    final HRegionInfo finalHRI = parsedInfo;
+    metaTable.get(new Get(row).addFamily(HConstants.CATALOG_FAMILY)).whenComplete((r, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
+      HRegionLocation hrl = locations == null ? null
+          : locations.getRegionLocation(finalHRI == null ? 0 : finalHRI.getReplicaId());
+      if (hrl == null) {
+        future.complete(null);
+      } else {
+        future.complete(new Pair<>(hrl.getRegionInfo(), hrl.getServerName()));
+      }
+    });
+
     return future;
   }
 
