@@ -75,11 +75,15 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
   @Override
   public RSGroupInfo getRSGroupInfoOfTable(TableName tableName) throws IOException {
+    // We are reading across two Maps in the below with out synchronizing across
+    // them; should be safe most of the time.
     String groupName = getRSGroupInfoManager().getRSGroupOfTable(tableName);
     return groupName == null? null: getRSGroupInfoManager().getRSGroup(groupName);
   }
 
   private void checkOnlineServersOnly(Set<Address> servers) throws ConstraintException {
+    // This uglyness is because we only have Address, not ServerName.
+    // Online servers are keyed by ServerName.
     Set<Address> onlineServers = new HashSet<Address>();
     for(ServerName server: master.getServerManager().getOnlineServers().keySet()) {
       onlineServers.add(server.getAddress());
@@ -152,29 +156,29 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
     RSGroupInfo targetGrp = getAndCheckRSGroupInfo(targetGroupName);
     RSGroupInfoManager manager = getRSGroupInfoManager();
-    // Lock the manager during the below manipulations.
+    // Hold a lock on the manager instance while moving servers to prevent
+    // another writer changing our state while we are working.
     synchronized (manager) {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preMoveServers(servers, targetGroupName);
       }
-      // Presume first server is the source group. Later we check all servers are from
-      // this same group.
+      // Presume first server's source group. Later ensure all servers are from this group.
       Address firstServer = servers.iterator().next();
       RSGroupInfo srcGrp = manager.getRSGroupOfServer(firstServer);
       if (srcGrp == null) {
-        // Be careful. This message is tested for in TestRSGroupsBase...
+        // Be careful. This exception message is tested for in TestRSGroupsBase...
         throw new ConstraintException("Source RSGroup for server " + firstServer + " does not exist.");
       }
       if (srcGrp.getName().equals(targetGroupName)) {
         throw new ConstraintException( "Target RSGroup " + targetGroupName +
             " is same as source " + srcGrp + " RSGroup.");
       }
-      // Only move online servers (when from 'default') or servers from other groups.
-      // This prevents bogus servers from entering groups
+      // Only move online servers (when moving from 'default') or servers from other
+      // groups. This prevents bogus servers from entering groups
       if (RSGroupInfo.DEFAULT_GROUP.equals(srcGrp.getName())) {
         checkOnlineServersOnly(servers);
       }
-      // Check all servers are of same rsgroup.
+      // Ensure all servers are of same rsgroup.
       for (Address server: servers) {
         String tmpGroup = manager.getRSGroupOfServer(server).getName();
         if (!tmpGroup.equals(srcGrp.getName())) {
@@ -189,8 +193,6 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
       // MovedServers may be < passed in 'servers'.
       Set<Address> movedServers = manager.moveServers(servers, srcGrp.getName(), targetGroupName);
-      // Appy makes note that if we were passed in a List of servers,
-      // we'd save having to do stuff like the below.
       List<Address> editableMovedServers = Lists.newArrayList(movedServers);
       boolean foundRegionsToUnassign;
       do {
@@ -202,9 +204,9 @@ public class RSGroupAdminServer implements RSGroupAdmin {
 
           // Unassign regions for a server
           // TODO: This is problematic especially if hbase:meta is in the mix.
-          // We need to update state in hbase:meta and if unassigned we hang
+          // We need to update state in hbase:meta on Master and if unassigned we hang
           // around in here. There is a silly sort on linked list done above
-          // in getRegions putting hbase:meta last which helps but probably holes.
+          // in getRegions putting hbase:meta last which helps but probably has holes.
           LOG.info("Unassigning " + regions.size() +
               " region(s) from " + rs + " for server move to " + targetGroupName);
           if (!regions.isEmpty()) {
@@ -253,12 +255,12 @@ public class RSGroupAdminServer implements RSGroupAdmin {
       return;
     }
     RSGroupInfoManager manager = getRSGroupInfoManager();
-    // Lock the manager during below machinations.
+    // Hold a lock on the manager instance while moving servers to prevent
+    // another writer changing our state while we are working.
     synchronized (manager) {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preMoveTables(tables, targetGroup);
       }
-
       if(targetGroup != null) {
         RSGroupInfo destGroup = manager.getRSGroup(targetGroup);
         if(destGroup == null) {
@@ -315,22 +317,23 @@ public class RSGroupAdminServer implements RSGroupAdmin {
   @Override
   public void removeRSGroup(String name) throws IOException {
     RSGroupInfoManager manager = getRSGroupInfoManager();
-    // Hold lock across coprocessor calls.
+    // Hold a lock on the manager instance while moving servers to prevent
+    // another writer changing our state while we are working.
     synchronized (manager) {
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().preRemoveRSGroup(name);
       }
-      RSGroupInfo RSGroupInfo = manager.getRSGroup(name);
-      if (RSGroupInfo == null) {
+      RSGroupInfo rsgi = manager.getRSGroup(name);
+      if (rsgi == null) {
         throw new ConstraintException("RSGroup " + name + " does not exist");
       }
-      int tableCount = RSGroupInfo.getTables().size();
+      int tableCount = rsgi.getTables().size();
       if (tableCount > 0) {
         throw new ConstraintException("RSGroup " + name + " has " + tableCount +
             " tables; you must remove these tables from the rsgroup before " +
             "the rsgroup can be removed.");
       }
-      int serverCount = RSGroupInfo.getServers().size();
+      int serverCount = rsgi.getServers().size();
       if (serverCount > 0) {
         throw new ConstraintException("RSGroup " + name + " has " + serverCount +
             " servers; you must remove these servers from the RSGroup before" +
@@ -465,7 +468,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     Map<ServerName, List<HRegionInfo>> serverMap = Maps.newHashMap();
     for(ServerName serverName: master.getServerManager().getOnlineServers().keySet()) {
       if(RSGroupInfo.getServers().contains(serverName.getAddress())) {
-        serverMap.put(serverName, Collections.EMPTY_LIST);
+        serverMap.put(serverName, Collections.emptyList());
       }
     }
 

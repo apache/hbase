@@ -60,7 +60,7 @@ public class TestRSGroups extends TestRSGroupsBase {
   protected static final Log LOG = LogFactory.getLog(TestRSGroups.class);
   private static HMaster master;
   private static boolean INIT = false;
-  private static RSGroupAdminEndpoint RSGroupAdminEndpoint;
+  private static RSGroupAdminEndpoint rsGroupAdminEndpoint;
 
 
   @BeforeClass
@@ -93,7 +93,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     admin.setBalancerRunning(false,true);
     rsGroupAdmin = new VerifyingRSGroupAdminClient(
         new RSGroupAdminClient(TEST_UTIL.getConnection()), TEST_UTIL.getConfiguration());
-    RSGroupAdminEndpoint =
+    rsGroupAdminEndpoint =
         master.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class).get(0);
   }
 
@@ -236,11 +236,8 @@ public class TestRSGroups extends TestRSGroupsBase {
 
   @Test
   public void testGroupInfoMultiAccessing() throws Exception {
-    RSGroupInfoManager manager = RSGroupAdminEndpoint.getGroupInfoManager();
-    RSGroupInfo defaultGroup = null;
-    synchronized (manager) {
-      defaultGroup = manager.getRSGroup("default");
-    }
+    RSGroupInfoManager manager = rsGroupAdminEndpoint.getGroupInfoManager();
+    RSGroupInfo defaultGroup = manager.getRSGroup("default");
     // getRSGroup updates default group's server list
     // this process must not affect other threads iterating the list
     Iterator<Address> it = defaultGroup.getServers().iterator();
@@ -258,7 +255,7 @@ public class TestRSGroups extends TestRSGroupsBase {
     TEST_UTIL.createMultiRegionTable(tableName, new byte[]{'f'}, 15);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
-    RSGroupAdminEndpoint.getGroupInfoManager()
+    rsGroupAdminEndpoint.getGroupInfoManager()
         .moveTables(Sets.newHashSet(tableName), RSGroupInfo.getName());
 
     assertTrue(rsGroupAdmin.balanceRSGroup(RSGroupInfo.getName()));

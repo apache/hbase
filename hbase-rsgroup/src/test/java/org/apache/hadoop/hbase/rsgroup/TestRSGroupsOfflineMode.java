@@ -162,13 +162,11 @@ public class TestRSGroupsOfflineMode {
 
     RSGroupInfoManager groupMgr = RSGroupAdminEndpoint.getGroupInfoManager();
     //make sure balancer is in offline mode, since this is what we're testing
-    synchronized (groupMgr) {
-      assertFalse(groupMgr.isOnline());
-      //verify the group affiliation that's loaded from ZK instead of tables
-      assertEquals(newGroup,
+    assertFalse(groupMgr.isOnline());
+    //verify the group affiliation that's loaded from ZK instead of tables
+    assertEquals(newGroup,
         groupMgr.getRSGroupOfTable(RSGroupInfoManager.RSGROUP_TABLE_NAME));
-      assertEquals(RSGroupInfo.DEFAULT_GROUP, groupMgr.getRSGroupOfTable(failoverTable));
-    }
+    assertEquals(RSGroupInfo.DEFAULT_GROUP, groupMgr.getRSGroupOfTable(failoverTable));
     //kill final regionserver to see the failover happens for all tables
     //except GROUP table since it's group does not have any online RS
     killRS.stop("die");

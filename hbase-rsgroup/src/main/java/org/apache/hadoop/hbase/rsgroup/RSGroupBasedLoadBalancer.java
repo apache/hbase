@@ -79,15 +79,12 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
   private Configuration config;
   private ClusterStatus clusterStatus;
   private MasterServices masterServices;
-  // Synchronize on access until we take the time to cmoe up with a finer-grained
-  // locking regime.
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private LoadBalancer internalBalancer;
 
   //used during reflection by LoadBalancerFactory
   @InterfaceAudience.Private
-  public RSGroupBasedLoadBalancer() {
-  }
+  public RSGroupBasedLoadBalancer() {}
 
   //This constructor should only be used for unit testing
   @InterfaceAudience.Private
@@ -323,9 +320,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
       if (assignedServer != null &&
           (info == null || !info.containsServer(assignedServer.getAddress()))) {
         RSGroupInfo otherInfo = null;
-        synchronized (this.rsGroupInfoManager) {
-          otherInfo = rsGroupInfoManager.getRSGroupOfServer(assignedServer.getAddress());
-        }
+        otherInfo = rsGroupInfoManager.getRSGroupOfServer(assignedServer.getAddress());
         LOG.debug("Found misplaced region: " + regionInfo.getRegionNameAsString() +
             " on server: " + assignedServer +
             " found in group: " +  otherInfo +
