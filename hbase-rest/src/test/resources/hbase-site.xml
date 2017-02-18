@@ -92,14 +92,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.lease.thread.wakefrequency</name>
-    <value>3000</value>
-    <description>The interval between checks for expired region server leases.
-    This value has been reduced due to the other reduced values above so that
-    the master will notice a dead region server sooner. The default is 15 seconds.
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.safemode</name>
     <value>false</value>
     <description>

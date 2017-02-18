@@ -4896,9 +4896,6 @@ public class TestHRegion {
     // Always compact if there is more than one store file.
     CONF.setInt("hbase.hstore.compactionThreshold", 2);
 
-    // Make lease timeout longer, lease checks less frequent
-    CONF.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
-
     CONF.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 10 * 1000);
 
     // Increase the amount of time between client retries
