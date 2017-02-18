@@ -1415,11 +1415,6 @@ admin.createTable(tableDesc);
 hbase> create 'test', {METADATA => {'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy'}},{NAME => 'cf1'}
 ----
 
-The default split policy can be overwritten using a custom
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy(HBase 0.94+)].
-Typically a custom split policy should extend HBase's default split policy:
-link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html[ConstantSizeRegionSplitPolicy].
-
 The policy can be set globally through the HBaseConfiguration used or on a per table basis:
 [source,java]
 ----
