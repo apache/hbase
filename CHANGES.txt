@@ -1,5 +1,68 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.1.9 02/20/2017
+
+** Sub-task
+    * [HBASE-17149] - Procedure V2 - Fix nonce submission to avoid unnecessary calling coprocessor multiple times
+    * [HBASE-17409] - Re-fix XSS request issue in JMXJsonServlet
+
+
+
+
+
+
+
+** Bug
+    * [HBASE-16663] - JMX ConnectorServer stopped when unauthorized user try to stop HM/RS/cluster
+    * [HBASE-16985] - TestClusterId failed due to wrong hbase rootdir
+    * [HBASE-17187] - DoNotRetryExceptions from coprocessors should bubble up to the application
+    * [HBASE-17238] - Wrong in-memory hbase:meta location causing SSH failure
+    * [HBASE-17264] - Processing RIT with offline state will always fail to open the first time
+    * [HBASE-17265] - Region left unassigned in master failover when region failed to open
+    * [HBASE-17275] - Assign timeout may cause region to be unassigned forever
+    * [HBASE-17289] - Avoid adding a replication peer named "lock"
+    * [HBASE-17328] - Properly dispose of looped replication peers
+    * [HBASE-17341] - Add a timeout during replication endpoint termination
+    * [HBASE-17424] - Protect REST client against malicious XML responses.
+    * [HBASE-17522] - RuntimeExceptions from MemoryMXBean should not take down server process
+    * [HBASE-17540] - Change SASL server GSSAPI callback log line from DEBUG to TRACE in RegionServer to reduce log volumes in DEBUG mode
+    * [HBASE-17558] - ZK dumping jsp should escape html 
+    * [HBASE-17587] - Do not Rethrow DoNotRetryIOException as UnknownScannerException
+    * [HBASE-17597] - TestMetaWithReplicas.testMetaTableReplicaAssignment is flaky
+    * [HBASE-17616] - Incorrect actions performed by CM
+
+
+
+
+
+** Improvement
+    * [HBASE-17637] - Update progress more frequently in IntegrationTestBigLinkedList.Generator.persist
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Task
+    * [HBASE-16710] - Add ZStandard Codec to Compression.java
+
+
+
+
+
+
+
 
 Release Notes - HBase - Version 1.1.8 12/12/2016
 
