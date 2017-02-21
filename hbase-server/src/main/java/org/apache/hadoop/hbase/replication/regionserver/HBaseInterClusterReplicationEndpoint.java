@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.ipc.RemoteException;
+import javax.security.sasl.SaslException;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -293,6 +294,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
                 + "Replication cannot proceed without losing data.", sleepMultiplier)) {
               sleepMultiplier++;
             }
+          } else if (ioe instanceof SaslException) {
+            LOG.warn("Peer encountered SaslException, rechecking all sinks: ", ioe);
+            replicationSinkMgr.chooseSinks();
           }
         } else {
           if (ioe instanceof SocketTimeoutException) {
