@@ -132,6 +132,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -3213,6 +3214,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         RowLock rowLock = null;
         try {
           rowLock = getRowLockInternal(mutation.getRow(), true);
+        } catch (TimeoutIOException e) {
+          // We will retry when other exceptions, but we should stop if we timeout .
+          throw e;
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock in batch put, row="
             + Bytes.toStringBinary(mutation.getRow()), ioe);
@@ -5466,15 +5470,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           result = rowLockContext.newWriteLock();
         }
       }
-      if (!result.getLock().tryLock(this.rowLockWaitDuration, TimeUnit.MILLISECONDS)) {
+
+      int timeout = rowLockWaitDuration;
+      boolean reachDeadlineFirst = false;
+      RpcCallContext call = RpcServer.getCurrentCall();
+      if (call != null && call.getDeadline() < Long.MAX_VALUE) {
+        int timeToDeadline = (int)(call.getDeadline() - System.currentTimeMillis());
+        if (timeToDeadline <= this.rowLockWaitDuration) {
+          reachDeadlineFirst = true;
+          timeout = timeToDeadline;
+        }
+      }
+
+      if (timeout <= 0 || !result.getLock().tryLock(timeout, TimeUnit.MILLISECONDS)) {
         if (traceScope != null) {
           traceScope.getSpan().addTimelineAnnotation("Failed to get row lock");
         }
         result = null;
         // Clean up the counts just in case this was the thing keeping the context alive.
         rowLockContext.cleanUp();
-        throw new IOException("Timed out waiting for lock for row: " + rowKey + " in region "
-            + getRegionInfo().getEncodedName());
+        String message = "Timed out waiting for lock for row: " + rowKey + " in region "
+            + getRegionInfo().getEncodedName();
+        if (reachDeadlineFirst) {
+          throw new TimeoutIOException(message);
+        } else {
+          // If timeToDeadline is larger than rowLockWaitDuration, we can not drop the request.
+          throw new IOException(message);
+        }
       }
       rowLockContext.setThreadName(Thread.currentThread().getName());
       return result;
