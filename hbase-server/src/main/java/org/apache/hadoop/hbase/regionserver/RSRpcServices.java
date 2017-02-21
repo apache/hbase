@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.quotas.OperationQuota;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.quotas.RegionServerRpcQuotaManager;
 import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.Leases.Lease;
@@ -189,6 +190,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos.ScanMetrics;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceViolationPolicy;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -3362,6 +3370,55 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throw new ServiceException(e);
     }
     return UpdateConfigurationResponse.getDefaultInstance();
+  }
+
+  @Override
+  public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(
+      RpcController controller, GetSpaceQuotaSnapshotsRequest request) throws ServiceException {
+    try {
+      final RegionServerSpaceQuotaManager manager =
+          regionServer.getRegionServerSpaceQuotaManager();
+      final GetSpaceQuotaSnapshotsResponse.Builder builder =
+          GetSpaceQuotaSnapshotsResponse.newBuilder();
+      if (null != manager) {
+        final Map<TableName,SpaceQuotaSnapshot> snapshots = manager.copyQuotaSnapshots();
+        for (Entry<TableName,SpaceQuotaSnapshot> snapshot : snapshots.entrySet()) {
+          builder.addSnapshots(TableQuotaSnapshot.newBuilder()
+              .setTableName(ProtobufUtil.toProtoTableName(snapshot.getKey()))
+              .setSnapshot(SpaceQuotaSnapshot.toProtoSnapshot(snapshot.getValue()))
+              .build());
+        }
+      }
+      return builder.build();
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetSpaceQuotaEnforcementsResponse getSpaceQuotaEnforcements(
+      RpcController controller, GetSpaceQuotaEnforcementsRequest request)
+      throws ServiceException {
+    try {
+      final RegionServerSpaceQuotaManager manager =
+          regionServer.getRegionServerSpaceQuotaManager();
+      final GetSpaceQuotaEnforcementsResponse.Builder builder =
+          GetSpaceQuotaEnforcementsResponse.newBuilder();
+      if (null != manager) {
+        ActivePolicyEnforcement enforcements = manager.getActiveEnforcements();
+        for (Entry<TableName,SpaceViolationPolicyEnforcement> enforcement
+            : enforcements.getPolicies().entrySet()) {
+          SpaceViolationPolicy pbPolicy = SpaceViolationPolicy.valueOf(
+              enforcement.getValue().getPolicyName());
+          builder.addViolationPolicies(TableViolationPolicy.newBuilder()
+              .setTableName(ProtobufUtil.toProtoTableName(enforcement.getKey()))
+              .setViolationPolicy(pbPolicy).build());
+        }
+      }
+      return builder.build();
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
   }
 
 }

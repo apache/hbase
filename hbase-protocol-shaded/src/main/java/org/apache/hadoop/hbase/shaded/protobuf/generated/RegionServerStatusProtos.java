@@ -10429,7 +10429,7 @@ public final class RegionServerStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (hasRegion()) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
@@ -10824,7 +10824,7 @@ public final class RegionServerStatusProtos {
        * <code>optional .hbase.pb.RegionInfo region = 1;</code>
        */
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
           getRegionFieldBuilder() {
         if (regionBuilder_ == null) {
           regionBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
@@ -10940,7 +10940,7 @@ public final class RegionServerStatusProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpaceUse space_use = 1;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse>
+    java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse> 
         getSpaceUseList();
     /**
      * <code>repeated .hbase.pb.RegionSpaceUse space_use = 1;</code>
@@ -10953,7 +10953,7 @@ public final class RegionServerStatusProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpaceUse space_use = 1;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseOrBuilder>
+    java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseOrBuilder> 
         getSpaceUseOrBuilderList();
     /**
      * <code>repeated .hbase.pb.RegionSpaceUse space_use = 1;</code>
@@ -11056,7 +11056,7 @@ public final class RegionServerStatusProtos {
     /**
      * <code>repeated .hbase.pb.RegionSpaceUse space_use = 1;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseOrBuilder>
+    public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseOrBuilder> 
         getSpaceUseOrBuilderList() {
       return spaceUse_;
     }
@@ -11142,7 +11142,7 @@ public final class RegionServerStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       if (getSpaceUseCount() > 0) {
         hash = (37 * hash) + SPACE_USE_FIELD_NUMBER;
         hash = (53 * hash) + getSpaceUseList().hashCode();
@@ -11368,7 +11368,7 @@ public final class RegionServerStatusProtos {
               spaceUseBuilder_ = null;
               spaceUse_ = other.spaceUse_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              spaceUseBuilder_ =
+              spaceUseBuilder_ = 
                 org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getSpaceUseFieldBuilder() : null;
             } else {
@@ -11604,7 +11604,7 @@ public final class RegionServerStatusProtos {
       /**
        * <code>repeated .hbase.pb.RegionSpaceUse space_use = 1;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseOrBuilder>
+      public java.util.List<? extends org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseOrBuilder> 
            getSpaceUseOrBuilderList() {
         if (spaceUseBuilder_ != null) {
           return spaceUseBuilder_.getMessageOrBuilderList();
@@ -11630,12 +11630,12 @@ public final class RegionServerStatusProtos {
       /**
        * <code>repeated .hbase.pb.RegionSpaceUse space_use = 1;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse.Builder>
+      public java.util.List<org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse.Builder> 
            getSpaceUseBuilderList() {
         return getSpaceUseFieldBuilder().getBuilderList();
       }
       private org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
-          org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse, org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseOrBuilder>
+          org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse, org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseOrBuilder> 
           getSpaceUseFieldBuilder() {
         if (spaceUseBuilder_ == null) {
           spaceUseBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.RepeatedFieldBuilderV3<
@@ -11813,7 +11813,7 @@ public final class RegionServerStatusProtos {
         return memoizedHashCode;
       }
       int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (19 * hash) + getDescriptor().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -12950,17 +12950,17 @@ public final class RegionServerStatusProtos {
       internal_static_hbase_pb_SplitTableRegionResponse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RegionSpaceUse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RegionSpaceUse_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RegionSpaceUseReportRequest_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RegionSpaceUseReportRequest_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RegionSpaceUseReportResponse_descriptor;
-  private static final
+  private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RegionSpaceUseReportResponse_fieldAccessorTable;
 

@@ -96,30 +96,6 @@ module Hbase
       end
     end
 
-    define_test '_parse_size accepts various forms of byte shorthand' do
-      qa = quotas_admin()
-      KILO = 1024
-      MEGA = KILO * KILO
-      GIGA = MEGA * KILO
-      TERA = GIGA * KILO
-      PETA = TERA * KILO
-      assert_equal(1, qa._parse_size("1"))
-      assert_equal(1, qa._parse_size("1b"))
-      assert_equal(1, qa._parse_size("1B"))
-      assert_equal(KILO * 2, qa._parse_size("2k"))
-      assert_equal(KILO * 2, qa._parse_size("2K"))
-      assert_equal(MEGA * 5, qa._parse_size("5m"))
-      assert_equal(MEGA * 5, qa._parse_size("5M"))
-      assert_equal(GIGA * 3, qa._parse_size("3g"))
-      assert_equal(GIGA * 3, qa._parse_size("3G"))
-      assert_equal(TERA * 4, qa._parse_size("4t"))
-      assert_equal(TERA * 4, qa._parse_size("4T"))
-      assert_equal(PETA * 32, qa._parse_size("32p"))
-      assert_equal(PETA * 32, qa._parse_size("32P"))
-      assert_equal(GIGA * 4, qa._parse_size("4096m"))
-      assert_equal(GIGA * 4, qa._parse_size("4096M"))
-    end
-
     define_test 'can set and remove quota' do
       command(:set_quota, TYPE => SPACE, LIMIT => '1G', POLICY => NO_INSERTS, TABLE => @test_name)
       output = capture_stdout{ command(:list_quotas) }

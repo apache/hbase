@@ -28,6 +28,7 @@ option optimize_for = SPEED;
 import "ClusterStatus.proto";
 import "HBase.proto";
 import "WAL.proto";
+import "Quota.proto";
 
 message GetRegionInfoRequest {
   required RegionSpecifier region = 1;
@@ -324,4 +325,12 @@ service AdminService {
 
   rpc ClearCompactionQueues(ClearCompactionQueuesRequest)
     returns(ClearCompactionQueuesResponse);
+
+  /** Fetches the RegionServer's view of space quotas */
+  rpc GetSpaceQuotaSnapshots(GetSpaceQuotaSnapshotsRequest)
+    returns(GetSpaceQuotaSnapshotsResponse);
+
+  /** Fetches the RegionServer's space quota active enforcements */
+  rpc GetSpaceQuotaEnforcements(GetSpaceQuotaEnforcementsRequest)
+    returns(GetSpaceQuotaEnforcementsResponse);
 }

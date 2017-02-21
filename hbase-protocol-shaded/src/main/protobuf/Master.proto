@@ -942,4 +942,8 @@ service MasterService {
   /** Unmark a list of ServerNames marked as draining. */
   rpc removeDrainFromRegionServers(RemoveDrainFromRegionServersRequest)
     returns(RemoveDrainFromRegionServersResponse);
+
+  /** Fetches the Master's view of space quotas */
+  rpc GetSpaceQuotaRegionSizes(GetSpaceQuotaRegionSizesRequest)
+    returns(GetSpaceQuotaRegionSizesResponse);
 }

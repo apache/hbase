@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -77,6 +78,13 @@ public class ActivePolicyEnforcement {
       }
     }
     return policy;
+  }
+
+  /**
+   * Returns an unmodifiable version of the active {@link SpaceViolationPolicyEnforcement}s.
+   */
+  public Map<TableName,SpaceViolationPolicyEnforcement> getPolicies() {
+    return Collections.unmodifiableMap(activePolicies);
   }
 
   @Override

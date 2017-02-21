@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -31,12 +32,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.QuotaStatusCalls;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -46,12 +50,19 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaEnforcementsResponse.TableViolationPolicy;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse.TableQuotaSnapshot;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -393,6 +404,72 @@ public class QuotaTableUtil {
         QUOTA_FAMILY_USAGE, QUOTA_QUALIFIER_POLICY,
         SpaceQuotaSnapshot.toProtoSnapshot(snapshot).toByteArray());
     return p;
+  }
+
+
+  /* =========================================================================
+   *  Space quota status RPC helpers
+   */
+  /**
+   * Fetches the table sizes on the filesystem as tracked by the HBase Master.
+   */
+  public static Map<TableName,Long> getMasterReportedTableSizes(
+      Connection conn) throws IOException {
+    if (!(conn instanceof ClusterConnection)) {
+      throw new IllegalArgumentException("Expected a ClusterConnection");
+    }
+    ClusterConnection clusterConn = (ClusterConnection) conn;
+    GetSpaceQuotaRegionSizesResponse response = QuotaStatusCalls.getMasterRegionSizes(
+        clusterConn, 0);
+    Map<TableName,Long> tableSizes = new HashMap<>();
+    for (RegionSizes sizes : response.getSizesList()) {
+      TableName tn = ProtobufUtil.toTableName(sizes.getTableName());
+      tableSizes.put(tn, sizes.getSize());
+    }
+    return tableSizes;
+  }
+
+  /**
+   * Fetches the observed {@link SpaceQuotaSnapshot}s observed by a RegionServer.
+   */
+  public static Map<TableName,SpaceQuotaSnapshot> getRegionServerQuotaSnapshots(
+      Connection conn, ServerName regionServer) throws IOException {
+    if (!(conn instanceof ClusterConnection)) {
+      throw new IllegalArgumentException("Expected a ClusterConnection");
+    }
+    ClusterConnection clusterConn = (ClusterConnection) conn;
+    GetSpaceQuotaSnapshotsResponse response = QuotaStatusCalls.getRegionServerQuotaSnapshot(
+        clusterConn, 0, regionServer);
+    Map<TableName,SpaceQuotaSnapshot> snapshots = new HashMap<>();
+    for (TableQuotaSnapshot snapshot : response.getSnapshotsList()) {
+      snapshots.put(
+          ProtobufUtil.toTableName(snapshot.getTableName()),
+          SpaceQuotaSnapshot.toSpaceQuotaSnapshot(snapshot.getSnapshot()));
+    }
+    return snapshots;
+  }
+
+  /**
+   * Fetches the active {@link SpaceViolationPolicy}'s that are being enforced on the
+   * given RegionServer.
+   */
+  public static Map<TableName,SpaceViolationPolicy> getRegionServerQuotaViolations(
+      Connection conn, ServerName regionServer) throws IOException {
+    if (!(conn instanceof ClusterConnection)) {
+      throw new IllegalArgumentException("Expected a ClusterConnection");
+    }
+    ClusterConnection clusterConn = (ClusterConnection) conn;
+    RpcControllerFactory rpcController = clusterConn.getRpcControllerFactory();
+    GetSpaceQuotaEnforcementsResponse response =
+        QuotaStatusCalls.getRegionServerSpaceQuotaEnforcements(
+            clusterConn, rpcController, 0, regionServer);
+    Map<TableName,SpaceViolationPolicy> policies = new HashMap<>();
+    for (TableViolationPolicy policy : response.getViolationPoliciesList()) {
+      policies.put(
+          ProtobufUtil.toTableName(policy.getTableName()),
+          ProtobufUtil.toViolationPolicy(policy.getViolationPolicy()));
+    }
+    return policies;
   }
 
   /* =========================================================================
