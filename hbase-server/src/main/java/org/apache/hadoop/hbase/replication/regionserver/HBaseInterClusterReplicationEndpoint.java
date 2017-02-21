@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.apache.hadoop.ipc.RemoteException;
+import javax.security.sasl.SaslException;
 
 /**
  * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} 
@@ -263,6 +264,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
                 + "Replication cannot proceed without losing data.", sleepMultiplier)) {
               sleepMultiplier++;
             }
+          } else if (ioe instanceof SaslException) {
+            LOG.warn("Peer encountered SaslException, rechecking all sinks: ", ioe);
+            replicationSinkMgr.chooseSinks();
           }
         } else {
           if (ioe instanceof SocketTimeoutException) {
