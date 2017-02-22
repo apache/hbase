@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -57,6 +58,20 @@ public class TestWALMethods {
       TableName.valueOf("test_table");
 
   private final HBaseTestingUtility util = new HBaseTestingUtility();
+
+  @Test
+  public void testServerNameFromWAL() throws Exception {
+    Path walPath = new Path("/hbase/WALs/regionserver-2.example.com,22101,1487767381290", "regionserver-2.example.com%2C22101%2C1487767381290.null0.1487785392316");
+    ServerName name = AbstractFSWALProvider.getServerNameFromWALDirectoryName(walPath);
+    assertEquals(ServerName.valueOf("regionserver-2.example.com", 22101, 1487767381290L), name);
+  }
+
+  @Test
+  public void testServerNameFromTestWAL() throws Exception {
+    Path walPath = new Path("/user/example/test-data/12ff1404-68c6-4715-a4b9-775e763842bc/WALs/TestWALRecordReader", "TestWALRecordReader.default.1487787939118");
+    ServerName name = AbstractFSWALProvider.getServerNameFromWALDirectoryName(walPath);
+    assertNull(name);
+  }
 
   /**
    * Assert that getSplitEditFilesSorted returns files in expected order and
