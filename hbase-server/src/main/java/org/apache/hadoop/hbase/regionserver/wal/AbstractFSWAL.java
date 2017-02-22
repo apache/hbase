@@ -265,6 +265,15 @@ public abstract class AbstractFSWAL<W> implements WAL {
    */
   private final ConcurrentMap<Thread, SyncFuture> syncFuturesByHandler;
 
+  /**
+   * The class name of the runtime implementation, used as prefix for logging/tracing.
+   * <p>
+   * Performance testing shows getClass().getSimpleName() might be a bottleneck so we store it here,
+   * refer to HBASE-17676 for more details
+   * </p>
+   */
+  protected final String implClassName;
+
   public long getFilenum() {
     return this.filenum.get();
   }
@@ -405,6 +414,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
     int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
     // Presize our map of SyncFutures by handler objects.
     this.syncFuturesByHandler = new ConcurrentHashMap<Thread, SyncFuture>(maxHandlersCount);
+    this.implClassName = getClass().getSimpleName();
   }
 
   @Override
@@ -744,7 +754,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
         newPath = replaceWriter(oldPath, newPath, nextWriter);
         tellListenersAboutPostLogRoll(oldPath, newPath);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Create new " + getClass().getSimpleName() + " writer with pipeline: "
+          LOG.debug("Create new " + implClassName + " writer with pipeline: "
               + Arrays.toString(getPipeline()));
         }
         // Can we delete any of the old log files?
@@ -950,7 +960,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed, regionName = " + hri.getRegionNameAsString());
     }
-    TraceScope scope = Trace.startSpan(getClass().getSimpleName() + ".append");
+    TraceScope scope = Trace.startSpan(implClassName + ".append");
     MutableLong txidHolder = new MutableLong();
     MultiVersionConcurrencyControl.WriteEntry we = key.getMvcc().begin(() -> {
       txidHolder.setValue(ringBuffer.next());
@@ -968,7 +978,7 @@ public abstract class AbstractFSWAL<W> implements WAL {
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + " " + walFilePrefix + ":" + walFileSuffix + "(num "
+    return implClassName + " " + walFilePrefix + ":" + walFileSuffix + "(num "
         + filenum + ")";
   }
 
