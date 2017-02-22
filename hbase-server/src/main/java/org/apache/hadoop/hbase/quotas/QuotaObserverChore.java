@@ -287,7 +287,8 @@ public class QuotaObserverChore extends ScheduledChore {
       // We want to have a policy of "NONE", moving out of violation
       if (!targetStatus.isInViolation()) {
         for (TableName tableInNS : tablesByNamespace.get(namespace)) {
-          if (!tableSnapshotStore.getCurrentState(tableInNS).getQuotaStatus().isInViolation()) {
+          // If there is a quota on this table in violation
+          if (tableSnapshotStore.getCurrentState(tableInNS).getQuotaStatus().isInViolation()) {
             // Table-level quota violation policy is being applied here.
             if (LOG.isTraceEnabled()) {
               LOG.trace("Not activating Namespace violation policy because a Table violation"
@@ -298,16 +299,21 @@ public class QuotaObserverChore extends ScheduledChore {
             this.snapshotNotifier.transitionTable(tableInNS, targetSnapshot);
           }
         }
+      // We want to move into violation at the NS level
       } else {
         // Moving tables in the namespace into violation or to a different violation policy
         for (TableName tableInNS : tablesByNamespace.get(namespace)) {
-          if (tableSnapshotStore.getCurrentState(tableInNS).getQuotaStatus().isInViolation()) {
+          final SpaceQuotaSnapshot tableQuotaSnapshot =
+                tableSnapshotStore.getCurrentState(tableInNS);
+          final boolean hasTableQuota = QuotaSnapshotStore.NO_QUOTA != tableQuotaSnapshot;
+          if (hasTableQuota && tableQuotaSnapshot.getQuotaStatus().isInViolation()) {
             // Table-level quota violation policy is being applied here.
             if (LOG.isTraceEnabled()) {
               LOG.trace("Not activating Namespace violation policy because a Table violation"
                   + " policy is already in effect for " + tableInNS);
             }
           } else {
+            // No table quota present or a table quota present that is not in violation
             LOG.info(tableInNS + " moving into violation of namespace space quota with policy " + targetStatus.getPolicy());
             this.snapshotNotifier.transitionTable(tableInNS, targetSnapshot);
           }

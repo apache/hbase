@@ -340,6 +340,31 @@ public class TestSpaceQuotas {
     }
   }
 
+  @Test(timeout=120000)
+  public void testTableQuotaOverridesNamespaceQuota() throws Exception {
+    final SpaceViolationPolicy policy = SpaceViolationPolicy.NO_INSERTS;
+    final TableName tn = helper.createTableWithRegions(10);
+
+    // 2MB limit on the table, 1GB limit on the namespace
+    final long tableLimit = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    final long namespaceLimit = 1024L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
+    TEST_UTIL.getAdmin().setQuota(QuotaSettingsFactory.limitTableSpace(tn, tableLimit, policy));
+    TEST_UTIL.getAdmin().setQuota(QuotaSettingsFactory.limitNamespaceSpace(
+        tn.getNamespaceAsString(), namespaceLimit, policy));
+
+    // Write more data than should be allowed and flush it to disk
+    helper.writeData(tn, 3L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
+
+    // This should be sufficient time for the chores to run and see the change.
+    Thread.sleep(5000);
+
+    // The write should be rejected because the table quota takes priority over the namespace
+    Put p = new Put(Bytes.toBytes("to_reject"));
+    p.addColumn(
+        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    verifyViolation(policy, tn, p);
+  }
+
   private Map<HRegionInfo,Long> getReportedSizesForTable(TableName tn) {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
@@ -371,7 +396,12 @@ public class TestSpaceQuotas {
   private TableName writeUntilViolationAndVerifyViolation(
       SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
     final TableName tn = writeUntilViolation(policyToViolate);
+    verifyViolation(policyToViolate, tn, m);
+		return tn;
+  }
 
+  private void verifyViolation(
+			SpaceViolationPolicy policyToViolate, TableName tn, Mutation m) throws Exception {
     // But let's try a few times to get the exception before failing
     boolean sawError = false;
     for (int i = 0; i < NUM_RETRIES && !sawError; i++) {
@@ -411,8 +441,6 @@ public class TestSpaceQuotas {
     }
     assertTrue(
         "Expected to see an exception writing data to a table exceeding its quota", sawError);
-
-    return tn;
   }
 
   private ClientServiceCallable<Void> generateFileToLoad(

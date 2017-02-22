@@ -22,8 +22,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -47,6 +50,7 @@ import org.junit.rules.TestName;
  */
 @Category({MediumTests.class})
 public class TestQuotaStatusRPCs {
+  private static final Log LOG = LogFactory.getLog(TestQuotaStatusRPCs.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final AtomicLong COUNTER = new AtomicLong(0);
 
@@ -92,7 +96,10 @@ public class TestQuotaStatusRPCs {
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return numRegions == countRegionsForTable(tn, quotaManager.snapshotRegionSizes());
+        Map<HRegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
+        LOG.trace("Region sizes=" + regionSizes);
+        return numRegions == countRegionsForTable(tn, regionSizes) &&
+            tableSize <= getTableSize(tn, regionSizes);
       }
     });
 
@@ -188,5 +195,17 @@ public class TestQuotaStatusRPCs {
       }
     }
     return size;
+  }
+
+  private int getTableSize(TableName tn, Map<HRegionInfo,Long> regionSizes) {
+    int tableSize = 0;
+    for (Entry<HRegionInfo,Long> entry : regionSizes.entrySet()) {
+      HRegionInfo regionInfo = entry.getKey();
+      long regionSize = entry.getValue();
+      if (tn.equals(regionInfo.getTable())) {
+        tableSize += regionSize;
+      }
+    }
+    return tableSize;
   }
 }
