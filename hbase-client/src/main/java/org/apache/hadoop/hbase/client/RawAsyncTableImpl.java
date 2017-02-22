@@ -358,9 +358,8 @@ class RawAsyncTableImpl implements RawAsyncTable {
     scan(scan, new RawScanResultConsumer() {
 
       @Override
-      public boolean onNext(Result[] results) {
+      public void onNext(Result[] results, ScanController controller) {
         scanResults.addAll(Arrays.asList(results));
-        return true;
       }
 
       @Override

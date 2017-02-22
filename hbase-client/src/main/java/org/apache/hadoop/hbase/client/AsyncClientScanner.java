@@ -130,11 +130,12 @@ class AsyncClientScanner {
 
   private void startScan(OpenScannerResponse resp) {
     conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId()).location(resp.loc)
-        .stub(resp.stub).setScan(scan).consumer(consumer).resultCache(resultCache)
+        .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
+        .setScan(scan).consumer(consumer).resultCache(resultCache)
         .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp)
-        .whenComplete((hasMore, error) -> {
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
+        .start(resp.controller, resp.resp).whenComplete((hasMore, error) -> {
           if (error != null) {
             consumer.onError(error);
             return;

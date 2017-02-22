@@ -147,7 +147,7 @@ public class Threads {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      LOG.warn("sleep interrupted", e);
       Thread.currentThread().interrupt();
     }
   }

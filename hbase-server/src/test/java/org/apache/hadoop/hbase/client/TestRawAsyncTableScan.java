@@ -48,12 +48,11 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
     private Throwable error;
 
     @Override
-    public synchronized boolean onNext(Result[] results) {
+    public synchronized void onNext(Result[] results, ScanController controller) {
       for (Result result : results) {
         queue.offer(result);
       }
       notifyAll();
-      return true;
     }
 
     @Override

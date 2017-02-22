@@ -156,6 +156,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private HRegionLocation loc;
 
+    private long scannerLeaseTimeoutPeriodNs;
+
     private long scanTimeoutNs;
 
     private long rpcTimeoutNs;
@@ -190,6 +192,12 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public ScanSingleRegionCallerBuilder scannerLeaseTimeoutPeriod(long scannerLeaseTimeoutPeriod,
+        TimeUnit unit) {
+      this.scannerLeaseTimeoutPeriodNs = unit.toNanos(scannerLeaseTimeoutPeriod);
+      return this;
+    }
+
     public ScanSingleRegionCallerBuilder scanTimeout(long scanTimeout, TimeUnit unit) {
       this.scanTimeoutNs = unit.toNanos(scanTimeout);
       return this;
@@ -221,8 +229,8 @@ class AsyncRpcRetryingCallerFactory {
           checkNotNull(scan, "scan is null"), scannerId,
           checkNotNull(resultCache, "resultCache is null"),
           checkNotNull(consumer, "consumer is null"), checkNotNull(stub, "stub is null"),
-          checkNotNull(loc, "location is null"), pauseNs, maxAttempts, scanTimeoutNs, rpcTimeoutNs,
-          startLogErrorsCnt);
+          checkNotNull(loc, "location is null"), scannerLeaseTimeoutPeriodNs, pauseNs, maxAttempts,
+          scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**
@@ -307,7 +315,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private long rpcTimeoutNs = -1L;
 
-    public MasterRequestCallerBuilder<T> action(AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
+    public MasterRequestCallerBuilder<T> action(
+        AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -338,9 +347,9 @@ class AsyncRpcRetryingCallerFactory {
     }
 
     public AsyncMasterRequestRpcRetryingCaller<T> build() {
-      return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn, checkNotNull(callable,
-        "action is null"), pauseNs, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
-          startLogErrorsCnt);
+      return new AsyncMasterRequestRpcRetryingCaller<T>(retryTimer, conn,
+          checkNotNull(callable, "action is null"), pauseNs, maxAttempts, operationTimeoutNs,
+          rpcTimeoutNs, startLogErrorsCnt);
     }
 
     /**

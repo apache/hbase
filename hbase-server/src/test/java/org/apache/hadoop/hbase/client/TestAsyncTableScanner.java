@@ -82,5 +82,4 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
     }
     return results;
   }
-
 }

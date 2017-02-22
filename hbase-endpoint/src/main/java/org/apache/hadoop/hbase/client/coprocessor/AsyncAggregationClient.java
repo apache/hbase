@@ -407,7 +407,7 @@ public class AsyncAggregationClient {
       private R value = null;
 
       @Override
-      public boolean onNext(Result[] results) {
+      public void onNext(Result[] results, ScanController controller) {
         try {
           for (Result result : results) {
             Cell weightCell = result.getColumnLatestCell(family, weightQualifier);
@@ -419,15 +419,15 @@ public class AsyncAggregationClient {
               } else {
                 future.completeExceptionally(new NoSuchElementException());
               }
-              return false;
+              controller.terminate();
+              return;
             }
             Cell valueCell = result.getColumnLatestCell(family, valueQualifier);
             value = ci.getValue(family, valueQualifier, valueCell);
           }
-          return true;
         } catch (IOException e) {
           future.completeExceptionally(e);
-          return false;
+          controller.terminate();
         }
       }
 
