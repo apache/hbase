@@ -667,7 +667,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
     @Override
     public long heapSize() {
-      return FIXED_OVERHEAD + rowLength + familyLength + qualifierLength + valueLength + tagsLength;
+      return FIXED_OVERHEAD;
     }
 
     @Override

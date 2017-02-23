@@ -252,7 +252,10 @@ public class ByteBufferKeyValue extends ByteBufferCell implements ExtendedCell {
 
   @Override
   public long heapSize() {
-    return ClassSize.align(FIXED_OVERHEAD + ClassSize.align(length));
+    if (this.buf.hasArray()) {
+      return ClassSize.align(FIXED_OVERHEAD + length);
+    }
+    return ClassSize.align(FIXED_OVERHEAD);
   }
 
   @Override

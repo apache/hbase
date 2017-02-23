@@ -772,6 +772,7 @@ public final class CellUtil {
     @Override
     public long heapSize() {
       long sum = HEAP_SIZE_OVERHEAD + CellUtil.estimatedHeapSizeOf(cell);
+      // this.tags is on heap byte[]
       if (this.tags != null) {
         sum += ClassSize.sizeOf(this.tags, this.tags.length);
       }

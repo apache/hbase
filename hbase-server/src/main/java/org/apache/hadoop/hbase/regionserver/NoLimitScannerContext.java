@@ -63,7 +63,7 @@ public class NoLimitScannerContext extends ScannerContext {
   }
 
   @Override
-  void setSizeProgress(long sizeProgress) {
+  void setSizeProgress(long sizeProgress, long heapSizeProgress) {
     // Do nothing. NoLimitScannerContext instances are immutable post-construction
   }
 
@@ -78,7 +78,7 @@ public class NoLimitScannerContext extends ScannerContext {
   }
 
   @Override
-  void setProgress(int batchProgress, long sizeProgress, long timeProgress) {
+  void setProgress(int batchProgress, long sizeProgress, long heapSizeProgress, long timeProgress) {
     // Do nothing. NoLimitScannerContext instances are immutable post-construction
   }
 

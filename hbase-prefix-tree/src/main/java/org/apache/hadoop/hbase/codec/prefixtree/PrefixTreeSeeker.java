@@ -569,7 +569,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
     @Override
     public long heapSize() {
-      return FIXED_OVERHEAD + rowLength + famLength + qualLength + valLength + tagsLength;
+      return FIXED_OVERHEAD;
     }
 
     @Override

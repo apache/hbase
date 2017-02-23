@@ -1181,7 +1181,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   Object addSize(RpcCallContext context, Result r, Object lastBlock) {
     if (context != null && r != null && !r.isEmpty()) {
       for (Cell c : r.rawCells()) {
-        context.incrementResponseCellSize(CellUtil.estimatedHeapSizeOf(c));
+        context.incrementResponseCellSize(CellUtil.estimatedSerializedSizeOf(c));
 
         // Since byte buffers can point all kinds of crazy places it's harder to keep track
         // of which blocks are kept alive by what byte buffer.
@@ -2835,7 +2835,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // Configure with limits for this RPC. Set keep progress true since size progress
         // towards size limit should be kept between calls to nextRaw
         ScannerContext.Builder contextBuilder = ScannerContext.newBuilder(true);
-        contextBuilder.setSizeLimit(sizeScope, maxResultSize);
+        // maxResultSize - either we can reach this much size for all cells(being read) data or sum
+        // of heap size occupied by cells(being read). Cell data means its key and value parts.
+        contextBuilder.setSizeLimit(sizeScope, maxResultSize, maxResultSize);
         contextBuilder.setBatchLimit(scanner.getBatch());
         contextBuilder.setTimeLimit(timeScope, timeLimit);
         contextBuilder.setTrackMetrics(trackMetrics);

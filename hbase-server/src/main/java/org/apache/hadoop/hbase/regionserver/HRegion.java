@@ -6082,7 +6082,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // may need to be reset a few times if rows are being filtered out so we save the initial
       // progress.
       int initialBatchProgress = scannerContext.getBatchProgress();
-      long initialSizeProgress = scannerContext.getSizeProgress();
+      long initialSizeProgress = scannerContext.getDataSizeProgress();
+      long initialHeapSizeProgress = scannerContext.getHeapSizeProgress();
       long initialTimeProgress = scannerContext.getTimeProgress();
 
       // The loop here is used only when at some point during the next we determine
@@ -6096,7 +6097,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (scannerContext.getKeepProgress()) {
           // Progress should be kept. Reset to initial values seen at start of method invocation.
           scannerContext.setProgress(initialBatchProgress, initialSizeProgress,
-            initialTimeProgress);
+              initialHeapSizeProgress, initialTimeProgress);
         } else {
           scannerContext.clearProgress();
         }
@@ -6198,14 +6199,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             long timeProgress = scannerContext.getTimeProgress();
             if (scannerContext.getKeepProgress()) {
               scannerContext.setProgress(initialBatchProgress, initialSizeProgress,
-                initialTimeProgress);
+                  initialHeapSizeProgress, initialTimeProgress);
             } else {
               scannerContext.clearProgress();
             }
             scannerContext.setTimeProgress(timeProgress);
             scannerContext.incrementBatchProgress(results.size());
             for (Cell cell : results) {
-              scannerContext.incrementSizeProgress(CellUtil.estimatedHeapSizeOf(cell));
+              scannerContext.incrementSizeProgress(CellUtil.estimatedSerializedSizeOf(cell),
+                  CellUtil.estimatedHeapSizeOf(cell));
             }
           }
 

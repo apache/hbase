@@ -603,10 +603,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
             // Update local tracking information
             count++;
-            totalBytesRead += CellUtil.estimatedSerializedSizeOf(cell);
+            int cellSize = CellUtil.estimatedSerializedSizeOf(cell);
+            totalBytesRead += cellSize;
 
             // Update the progress of the scanner context
-            scannerContext.incrementSizeProgress(CellUtil.estimatedHeapSizeOf(cell));
+            scannerContext.incrementSizeProgress(cellSize, CellUtil.estimatedHeapSizeOf(cell));
             scannerContext.incrementBatchProgress(1);
 
             if (matcher.isUserScan() && totalBytesRead > maxRowSize) {
