@@ -322,7 +322,7 @@ public final class ConnectionUtils {
       return null;
     }
     return Result.create(Arrays.copyOfRange(rawCells, index, rawCells.length), null,
-      result.isStale(), result.mayHaveMoreCellsInRow());
+      result.isStale(), result.hasMoreCellsInRow());
   }
 
   // Add a delta to avoid timeout immediately after a retry sleeping.
@@ -380,5 +380,22 @@ public final class ConnectionUtils {
   static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
         .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
+  }
+
+  /**
+   * Count the individual rows for the given result list.
+   * <p>
+   * There are two reason why we need to use this method instead of a simple {@code results.length}.
+   * <ol>
+   * <li>Server may return only part of the whole cells of a row for the last result, and if
+   * allowPartial is true, we will return the array to user directly. We should not count the last
+   * result.</li>
+   * <li>If this is a batched scan, a row may be split into several results, but they should be
+   * counted as one row. For example, a row with 15 cells will be split into 3 results with 5 cells
+   * each if {@code scan.getBatch()} is 5.</li>
+   * </ol>
+   */
+  public static int numberOfIndividualRows(List<Result> results) {
+    return (int) results.stream().filter(r -> !r.hasMoreCellsInRow()).count();
   }
 }

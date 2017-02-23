@@ -376,15 +376,8 @@ class RawAsyncTableImpl implements RawAsyncTable {
   }
 
   public void scan(Scan scan, RawScanResultConsumer consumer) {
-    if (scan.isSmall() || scan.getLimit() > 0) {
-      if (scan.getBatch() > 0 || scan.getAllowPartialResults()) {
-        consumer.onError(new IllegalArgumentException(
-            "Batch and allowPartial is not allowed for small scan or limited scan"));
-      }
-    }
-    scan = setDefaultScanConfig(scan);
-    new AsyncClientScanner(scan, consumer, tableName, conn, pauseNs, maxAttempts, scanTimeoutNs,
-        readRpcTimeoutNs, startLogErrorsCnt).start();
+    new AsyncClientScanner(setDefaultScanConfig(scan), consumer, tableName, conn, pauseNs,
+        maxAttempts, scanTimeoutNs, readRpcTimeoutNs, startLogErrorsCnt).start();
   }
 
   @Override

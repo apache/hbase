@@ -22,10 +22,10 @@ import com.google.common.base.Throwables;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -94,17 +94,8 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
 
   @Parameters(name = "{index}: type={0}")
   public static List<Object[]> params() {
-    Supplier<Scan> normal = TestRawAsyncTableScan::createNormalScan;
-    Supplier<Scan> batch = TestRawAsyncTableScan::createBatchScan;
-    return Arrays.asList(new Object[] { "normal", normal }, new Object[] { "batch", batch });
-  }
-
-  private static Scan createNormalScan() {
-    return new Scan();
-  }
-
-  private static Scan createBatchScan() {
-    return new Scan().setBatch(1);
+    return getScanCreater().stream().map(p -> new Object[] { p.getFirst(), p.getSecond() })
+        .collect(Collectors.toList());
   }
 
   @Override

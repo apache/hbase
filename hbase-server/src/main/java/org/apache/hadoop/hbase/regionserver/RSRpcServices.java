@@ -350,16 +350,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     private final String scannerName;
     private final RegionScanner s;
     private final Region r;
-    private final boolean allowPartial;
     private final RpcCallback closeCallBack;
     private final RpcCallback shippedCallback;
 
-    public RegionScannerHolder(String scannerName, RegionScanner s, Region r, boolean allowPartial,
+    public RegionScannerHolder(String scannerName, RegionScanner s, Region r,
         RpcCallback closeCallBack, RpcCallback shippedCallback) {
       this.scannerName = scannerName;
       this.s = s;
       this.r = r;
-      this.allowPartial = allowPartial;
       this.closeCallBack = closeCallBack;
       this.shippedCallback = shippedCallback;
     }
@@ -488,7 +486,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (clientCellBlockSupported) {
       for (Result res : results) {
         builder.addCellsPerResult(res.size());
-        builder.addPartialFlagPerResult(res.mayHaveMoreCellsInRow());
+        builder.addPartialFlagPerResult(res.hasMoreCellsInRow());
       }
       controller.setCellScanner(CellUtil.createCellScanner(results));
     } else {
@@ -1212,8 +1210,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return lastBlock;
   }
 
-  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r,
-      boolean allowPartial) throws LeaseStillHeldException {
+  private RegionScannerHolder addScanner(String scannerName, RegionScanner s, Region r)
+      throws LeaseStillHeldException {
     Lease lease = regionServer.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
       new ScannerListener(scannerName));
     RpcCallback shippedCallback = new RegionScannerShippedCallBack(scannerName, s, lease);
@@ -1224,7 +1222,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       closeCallback = new RegionScannerCloseCallBack(s);
     }
     RegionScannerHolder rsh =
-        new RegionScannerHolder(scannerName, s, r, allowPartial, closeCallback, shippedCallback);
+        new RegionScannerHolder(scannerName, s, r, closeCallback, shippedCallback);
     RegionScannerHolder existing = scanners.putIfAbsent(scannerName, rsh);
     assert existing == null : "scannerId must be unique within regionserver's whole lifecycle!";
     return rsh;
@@ -2722,8 +2720,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     builder.setMvccReadPoint(scanner.getMvccReadPoint());
     builder.setTtl(scannerLeaseTimeoutPeriod);
     String scannerName = String.valueOf(scannerId);
-    return addScanner(scannerName, scanner, region,
-      !scan.isSmall() && !(request.hasLimitOfRows() && request.getLimitOfRows() > 0));
+    return addScanner(scannerName, scanner, region);
   }
 
   private void checkScanNextCallSeq(ScanRequest request, RegionScannerHolder rsh)
@@ -2779,7 +2776,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   // return whether we have more results in region.
   private boolean scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
-      long maxQuotaResultSize, int rows, List<Result> results, ScanResponse.Builder builder,
+      long maxQuotaResultSize, int maxResults, List<Result> results, ScanResponse.Builder builder,
       MutableObject lastBlock, RpcCallContext context) throws IOException {
     Region region = rsh.r;
     RegionScanner scanner = rsh.s;
@@ -2810,8 +2807,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // correct ordering of partial results and so we prevent partial results from being
         // formed.
         boolean serverGuaranteesOrderOfPartials = results.isEmpty();
-        boolean allowPartialResults =
-            clientHandlesPartials && serverGuaranteesOrderOfPartials && rsh.allowPartial;
+        boolean allowPartialResults = clientHandlesPartials && serverGuaranteesOrderOfPartials;
         boolean moreRows = false;
 
         // Heartbeat messages occur when the processing of the ScanRequest is exceeds a
@@ -2843,7 +2839,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         contextBuilder.setTrackMetrics(trackMetrics);
         ScannerContext scannerContext = contextBuilder.build();
         boolean limitReached = false;
-        while (i < rows) {
+        while (i < maxResults) {
           // Reset the batch progress to 0 before every call to RegionScanner#nextRaw. The
           // batch limit is a limit on the number of cells per Result. Thus, if progress is
           // being tracked (i.e. scannerContext.keepProgress() is true) then we need to
@@ -2855,7 +2851,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           moreRows = scanner.nextRaw(values, scannerContext);
 
           if (!values.isEmpty()) {
-            Result r = Result.create(values, null, stale, scannerContext.mayHaveMoreCellsInRow());
+            Result r = Result.create(values, null, stale, scannerContext.hasMoreCellsInRow());
             lastBlock.setValue(addSize(context, r, lastBlock.getValue()));
             results.add(r);
             i++;
@@ -2863,7 +2859,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
           boolean sizeLimitReached = scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS);
           boolean timeLimitReached = scannerContext.checkTimeLimit(LimitScope.BETWEEN_ROWS);
-          boolean rowLimitReached = i >= rows;
+          boolean rowLimitReached = i >= maxResults;
           limitReached = sizeLimitReached || timeLimitReached || rowLimitReached;
 
           if (limitReached || !moreRows) {
@@ -2920,7 +2916,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     // coprocessor postNext hook
     if (region.getCoprocessorHost() != null) {
-      region.getCoprocessorHost().postScannerNext(scanner, results, rows, true);
+      region.getCoprocessorHost().postScannerNext(scanner, results, maxResults, true);
     }
     return builder.getMoreResultsInRegion();
   }
@@ -3073,8 +3069,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // with the old scan implementation where we just ignore the returned results if moreResults
         // is false. Can remove the isEmpty check after we get rid of the old implementation.
         moreResults = false;
-      } else if (limitOfRows > 0 && results.size() >= limitOfRows
-          && !results.get(results.size() - 1).mayHaveMoreCellsInRow()) {
+      } else if (limitOfRows > 0 && !results.isEmpty() &&
+          !results.get(results.size() - 1).hasMoreCellsInRow() &&
+          ConnectionUtils.numberOfIndividualRows(results) >= limitOfRows) {
         // if we have reached the limit of rows
         moreResults = false;
       }
