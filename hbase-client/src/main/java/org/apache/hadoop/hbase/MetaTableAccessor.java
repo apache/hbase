@@ -1461,6 +1461,7 @@ public class MetaTableAccessor {
 
     // region replicas are kept in the primary region's row
     Put put = new Put(getMetaKeyForRegion(regionInfo), time);
+    addRegionInfo(put, regionInfo);
     addLocation(put, sn, openSeqNum, time, regionInfo.getReplicaId());
     putToMetaTable(connection, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
