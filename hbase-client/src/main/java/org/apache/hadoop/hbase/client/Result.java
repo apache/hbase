@@ -83,10 +83,9 @@ public class Result implements CellScannable, CellScanner {
   private boolean stale = false;
 
   /**
-   * See {@link #mayHaveMoreCellsInRow()}. And please notice that, The client side implementation
-   * should also check for row key change to determine if a Result is the last one for a row.
+   * See {@link #hasMoreCellsInRow()}.
    */
-  private boolean mayHaveMoreCellsInRow = false;
+  private boolean hasMoreCellsInRow = false;
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
@@ -193,7 +192,7 @@ public class Result implements CellScannable, CellScanner {
     this.cells = cells;
     this.exists = exists;
     this.stale = stale;
-    this.mayHaveMoreCellsInRow = mayHaveMoreCellsInRow;
+    this.hasMoreCellsInRow = mayHaveMoreCellsInRow;
     this.readonly = false;
   }
 
@@ -886,7 +885,7 @@ public class Result implements CellScannable, CellScanner {
         // Result1: -1- -2- (2 cells, size limit reached, mark as partial)
         // Result2: -3- -4- (2 cells, size limit reached, mark as partial)
         // Result3: -5- (1 cell, size limit NOT reached, NOT marked as partial)
-        if (i != (partialResults.size() - 1) && !r.mayHaveMoreCellsInRow()) {
+        if (i != (partialResults.size() - 1) && !r.hasMoreCellsInRow()) {
           throw new IOException(
               "Cannot form complete result. Result is missing partial flag. " +
                   "Partial Results: " + partialResults);
@@ -973,28 +972,26 @@ public class Result implements CellScannable, CellScanner {
    * for a row and should be combined with a result representing the remaining cells in that row to
    * form a complete (non-partial) result.
    * @return Whether or not the result is a partial result
-   * @deprecated the word 'partial' ambiguous, use {@link #mayHaveMoreCellsInRow()} instead.
+   * @deprecated the word 'partial' ambiguous, use {@link #hasMoreCellsInRow()} instead.
    *             Deprecated since 1.4.0.
-   * @see #mayHaveMoreCellsInRow()
+   * @see #hasMoreCellsInRow()
    */
   @Deprecated
   public boolean isPartial() {
-    return mayHaveMoreCellsInRow;
+    return hasMoreCellsInRow;
   }
 
   /**
    * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM.
    * This flag is used to tell you if the current Result is the last one of the current row. False
-   * means this Result is the last one. True means there may still be more cells for the current
-   * row. Notice that, 'may' have, not must have. This is because we may reach the size or time
-   * limit just at the last cell of row at RS, so we do not know if it is the last one.
+   * means this Result is the last one. True means there are be more cells for the current row.
    * <p>
    * The Scan configuration used to control the result size on the server is
    * {@link Scan#setMaxResultSize(long)} and the default value can be seen here:
    * {@link HConstants#DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE}
    */
-  public boolean mayHaveMoreCellsInRow() {
-    return mayHaveMoreCellsInRow;
+  public boolean hasMoreCellsInRow() {
+    return hasMoreCellsInRow;
   }
 
   /**

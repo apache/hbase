@@ -6071,7 +6071,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // If the size limit was reached it means a partial Result is being returned. Returning a
       // partial Result means that we should not reset the filters; filters should only be reset in
       // between rows
-      if (!scannerContext.mayHaveMoreCellsInRow()) {
+      if (!scannerContext.hasMoreCellsInRow()) {
         resetFilters();
       }
 

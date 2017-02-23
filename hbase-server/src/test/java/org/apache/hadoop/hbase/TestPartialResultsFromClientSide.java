@@ -588,36 +588,6 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * Small scans should not return partial results because it would prevent small scans from
-   * retrieving all of the necessary results in a single RPC request which is what makese small
-   * scans useful. Thus, ensure that even when {@link Scan#getAllowPartialResults()} is true, small
-   * scans do not return partial results
-   * @throws Exception
-   */
-  @Test
-  public void testSmallScansDoNotAllowPartials() throws Exception {
-    Scan scan = new Scan();
-    testSmallScansDoNotAllowPartials(scan);
-    scan.setReversed(true);
-    testSmallScansDoNotAllowPartials(scan);
-  }
-
-  public void testSmallScansDoNotAllowPartials(Scan baseScan) throws Exception {
-    Scan scan = new Scan(baseScan);
-    scan.setAllowPartialResults(true);
-    scan.setSmall(true);
-    scan.setMaxResultSize(1);
-    ResultScanner scanner = TABLE.getScanner(scan);
-    Result r = null;
-
-    while ((r = scanner.next()) != null) {
-      assertFalse(r.isPartial());
-    }
-
-    scanner.close();
-  }
-
-  /**
    * Make puts to put the input value into each combination of row, family, and qualifier
    * @param rows
    * @param families

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.numberOfIndividualRows;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
@@ -411,7 +413,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
       // If the lastRow is not partial, then we should start from the next row. As now we can
       // exclude the start row, the logic here is the same for both normal scan and reversed scan.
       // If lastResult is partial then include it, otherwise exclude it.
-      scan.withStartRow(lastResult.getRow(), lastResult.isPartial() || scan.getBatch() > 0);
+      scan.withStartRow(lastResult.getRow(), lastResult.hasMoreCellsInRow());
     }
     if (e instanceof OutOfOrderScannerNextException) {
       if (retryAfterOutOfOrderException.isTrue()) {
@@ -501,16 +503,16 @@ public abstract class ClientScanner extends AbstractClientScanner {
           }
           countdown--;
           this.lastResult = rs;
-          if (this.lastResult.isPartial() || scan.getBatch() > 0) {
+          if (this.lastResult.hasMoreCellsInRow()) {
             updateLastCellLoadedToCache(this.lastResult);
           } else {
             this.lastCellLoadedToCache = null;
           }
         }
-        if (scan.getLimit() > 0) {
-          int limit = scan.getLimit() - resultsToAddToCache.size();
-          assert limit >= 0;
-          scan.setLimit(limit);
+        if (scan.getLimit() > 0 && !resultsToAddToCache.isEmpty()) {
+          int newLimit = scan.getLimit() - numberOfIndividualRows(resultsToAddToCache);
+          assert newLimit >= 0;
+          scan.setLimit(newLimit);
         }
       }
       if (scanExhausted(values)) {
@@ -616,7 +618,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // In every RPC response there should be at most a single partial result. Furthermore, if
     // there is a partial result, it is guaranteed to be in the last position of the array.
     Result last = resultsFromServer[resultsFromServer.length - 1];
-    Result partial = last.isPartial() ? last : null;
+    Result partial = last.hasMoreCellsInRow() ? last : null;
 
     if (LOG.isTraceEnabled()) {
       StringBuilder sb = new StringBuilder();
@@ -662,7 +664,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
 
           // If the result is not a partial, it is a signal to us that it is the last Result we
           // need to form the complete Result client-side
-          if (!result.isPartial()) {
+          if (!result.hasMoreCellsInRow()) {
             resultsToAddToCache.add(Result.createCompleteResult(partialResults));
             clearPartialResults();
           }
@@ -678,7 +680,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
           // It's possible that in one response from the server we receive the final partial for
           // one row and receive a partial for a different row. Thus, make sure that all Results
           // are added to the proper list
-          if (result.isPartial()) {
+          if (result.hasMoreCellsInRow()) {
             addToPartialResults(result);
           } else {
             resultsToAddToCache.add(result);
@@ -820,6 +822,6 @@ public abstract class ClientScanner extends AbstractClientScanner {
       index++;
     }
     Cell[] list = Arrays.copyOfRange(result.rawCells(), index, result.rawCells().length);
-    return Result.create(list, result.getExists(), result.isStale(), result.isPartial());
+    return Result.create(list, result.getExists(), result.isStale(), result.hasMoreCellsInRow());
   }
 }

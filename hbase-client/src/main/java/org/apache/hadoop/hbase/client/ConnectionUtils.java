@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -262,5 +263,28 @@ public class ConnectionUtils {
     // no need to test the inclusive of the stop row as the start key of a region is included in
     // the region.
     return Bytes.compareTo(info.getStartKey(), scan.getStopRow()) <= 0;
+  }
+
+  /**
+   * Count the individual rows for the given result list.
+   * <p>
+   * There are two reason why we need to use this method instead of a simple {@code results.length}.
+   * <ol>
+   * <li>Server may return only part of the whole cells of a row for the last result, and if
+   * allowPartial is true, we will return the array to user directly. We should not count the last
+   * result.</li>
+   * <li>If this is a batched scan, a row may be split into several results, but they should be
+   * counted as one row. For example, a row with 15 cells will be split into 3 results with 5 cells
+   * each if {@code scan.getBatch()} is 5.</li>
+   * </ol>
+   */
+  public static int numberOfIndividualRows(List<Result> results) {
+    int count = 0;
+    for (Result result : results) {
+      if (!result.hasMoreCellsInRow()) {
+        count++;
+      }
+    }
+    return count;
   }
 }

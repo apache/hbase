@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -675,75 +674,5 @@ public class TestScannersFromClientSide {
     }
 
     assertEquals(expKvList.size(), result.size());
-  }
-
-  private void assertResultEquals(Result result, int i) {
-    assertEquals(String.format("%02d", i), Bytes.toString(result.getRow()));
-    assertEquals(i, Bytes.toInt(result.getValue(FAMILY, QUALIFIER)));
-  }
-
-  private void testStartRowStopRowInclusive(Table table, int start, boolean startInclusive,
-      int stop, boolean stopInclusive) throws IOException {
-    int actualStart = startInclusive ? start : start + 1;
-    int actualStop = stopInclusive ? stop + 1 : stop;
-    int expectedCount = actualStop - actualStart;
-    Result[] results;
-    try (ResultScanner scanner = table.getScanner(
-      new Scan().withStartRow(Bytes.toBytes(String.format("%02d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%02d", stop)), stopInclusive))) {
-      results = scanner.next(expectedCount);
-    }
-    assertEquals(expectedCount, results.length);
-    for (int i = 0; i < expectedCount; i++) {
-      assertResultEquals(results[i], actualStart + i);
-    }
-  }
-
-  private void testReversedStartRowStopRowInclusive(Table table, int start, boolean startInclusive,
-      int stop, boolean stopInclusive) throws IOException {
-    int actualStart = startInclusive ? start : start - 1;
-    int actualStop = stopInclusive ? stop - 1 : stop;
-    int expectedCount = actualStart - actualStop;
-    Result[] results;
-    try (ResultScanner scanner = table.getScanner(
-      new Scan().withStartRow(Bytes.toBytes(String.format("%02d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%02d", stop)), stopInclusive)
-          .setReversed(true))) {
-      results = scanner.next(expectedCount);
-    }
-    assertEquals(expectedCount, results.length);
-    for (int i = 0; i < expectedCount; i++) {
-      assertResultEquals(results[i], actualStart - i);
-    }
-  }
-
-  @Test
-  public void testStartRowStopRowInclusive() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf("testStartRowStopRowInclusive");
-    byte[][] splitKeys = new byte[8][];
-    for (int i = 11; i < 99; i += 11) {
-      splitKeys[i / 11 - 1] = Bytes.toBytes(String.format("%02d", i));
-    }
-    Table table = TEST_UTIL.createTable(tableName, FAMILY, splitKeys);
-    TEST_UTIL.waitTableAvailable(tableName);
-    try (BufferedMutator mutator = TEST_UTIL.getConnection().getBufferedMutator(tableName)) {
-      for (int i = 0; i < 100; i++) {
-        mutator.mutate(new Put(Bytes.toBytes(String.format("%02d", i))).addColumn(FAMILY, QUALIFIER,
-          Bytes.toBytes(i)));
-      }
-    }
-    // from first region to last region
-    testStartRowStopRowInclusive(table, 1, true, 98, false);
-    testStartRowStopRowInclusive(table, 12, true, 34, true);
-    testStartRowStopRowInclusive(table, 23, true, 45, false);
-    testStartRowStopRowInclusive(table, 34, false, 56, true);
-    testStartRowStopRowInclusive(table, 45, false, 67, false);
-
-    // from last region to first region
-    testReversedStartRowStopRowInclusive(table, 98, true, 1, false);
-    testReversedStartRowStopRowInclusive(table, 54, true, 32, true);
-    testReversedStartRowStopRowInclusive(table, 65, true, 43, false);
-    testReversedStartRowStopRowInclusive(table, 76, false, 54, true);
-    testReversedStartRowStopRowInclusive(table, 87, false, 65, false);
   }
 }
