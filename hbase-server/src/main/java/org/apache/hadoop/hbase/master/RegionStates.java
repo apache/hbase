@@ -690,7 +690,7 @@ public class RegionStates {
             LOG.info("Found region in " + state +
               " to be reassigned by ServerCrashProcedure for " + sn);
             rits.add(hri);
-          } else if(state.isSplittingNew()) {
+          } else if(state.isSplittingNew() || state.isMergingNew()) {
             regionsToCleanIfNoMetaEntry.add(state.getRegion());
           } else {
             LOG.warn("THIS SHOULD NOT HAPPEN: unexpected " + state);
