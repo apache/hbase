@@ -53,7 +53,7 @@ public class TestAsyncTableScannerCloseWhileSuspending {
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
-    CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
+    CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     TABLE = CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
     TABLE.putAll(IntStream.range(0, 100).mapToObj(
       i -> new Put(Bytes.toBytes(String.format("%02d", i))).addColumn(FAMILY, CQ, Bytes.toBytes(i)))

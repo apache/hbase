@@ -66,7 +66,9 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     TEST_UTIL.getAdmin().setBalancerRunning(false, true);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), User.getCurrent());
+    AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+    CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
+        registry.getClusterId().get(), User.getCurrent());
   }
 
   @AfterClass
@@ -82,8 +84,8 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     int index = TEST_UTIL.getHBaseCluster().getServerWith(loc.getRegionInfo().getRegionName());
     TEST_UTIL.getAdmin().move(loc.getRegionInfo().getEncodedNameAsBytes(), Bytes.toBytes(
       TEST_UTIL.getHBaseCluster().getRegionServer(1 - index).getServerName().getServerName()));
-    RawAsyncTable table = CONN.getRawTableBuilder(TABLE_NAME).setRetryPause(100, TimeUnit.MILLISECONDS)
-        .setMaxRetries(30).build();
+    RawAsyncTable table = CONN.getRawTableBuilder(TABLE_NAME)
+        .setRetryPause(100, TimeUnit.MILLISECONDS).setMaxRetries(30).build();
     table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();
 
     // move back
@@ -156,14 +158,14 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
           void updateCachedLocation(HRegionLocation loc, Throwable exception) {
           }
         };
-    try (AsyncConnectionImpl mockedConn =
-        new AsyncConnectionImpl(CONN.getConfiguration(), User.getCurrent()) {
+    try (AsyncConnectionImpl mockedConn = new AsyncConnectionImpl(CONN.getConfiguration(),
+        CONN.registry, CONN.registry.getClusterId().get(), User.getCurrent()) {
 
-          @Override
-          AsyncRegionLocator getLocator() {
-            return mockedLocator;
-          }
-        }) {
+      @Override
+      AsyncRegionLocator getLocator() {
+        return mockedLocator;
+      }
+    }) {
       RawAsyncTable table = mockedConn.getRawTableBuilder(TABLE_NAME)
           .setRetryPause(100, TimeUnit.MILLISECONDS).setMaxRetries(5).build();
       table.put(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE)).get();

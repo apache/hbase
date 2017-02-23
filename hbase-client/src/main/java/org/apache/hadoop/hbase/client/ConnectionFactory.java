@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,13 +31,12 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
-
 /**
- * A non-instantiable class that manages creation of {@link Connection}s.
- * Managing the lifecycle of the {@link Connection}s to the cluster is the responsibility of
- * the caller.
- * From a {@link Connection}, {@link Table} implementations are retrieved
- * with {@link Connection#getTable(TableName)}. Example:
+ * A non-instantiable class that manages creation of {@link Connection}s. Managing the lifecycle of
+ * the {@link Connection}s to the cluster is the responsibility of the caller. From a
+ * {@link Connection}, {@link Table} implementations are retrieved with
+ * {@link Connection#getTable(TableName)}. Example:
+ *
  * <pre>
  * Connection connection = ConnectionFactory.createConnection(config);
  * Table table = connection.getTable(TableName.valueOf("table1"));
@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  *
  * Similarly, {@link Connection} also returns {@link Admin} and {@link RegionLocator}
  * implementations.
- *
  * @see Connection
  * @since 0.99.0
  */
@@ -58,23 +57,20 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 @InterfaceStability.Evolving
 public class ConnectionFactory {
 
-  public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL =
-      "hbase.client.async.connection.impl";
+  public static final String HBASE_CLIENT_ASYNC_CONNECTION_IMPL = "hbase.client.async.connection.impl";
 
   /** No public c.tors */
   protected ConnectionFactory() {
   }
 
   /**
-   * Create a new Connection instance using default HBaseConfiguration. Connection
-   * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
-   * created from returned connection share zookeeper connection, meta cache, and connections
-   * to region servers and masters.
-   * <br>
-   * The caller is responsible for calling {@link Connection#close()} on the returned
-   * connection instance.
+   * Create a new Connection instance using default HBaseConfiguration. Connection encapsulates all
+   * housekeeping for a connection to the cluster. All tables and interfaces created from returned
+   * connection share zookeeper connection, meta cache, and connections to region servers and
+   * masters. <br>
+   * The caller is responsible for calling {@link Connection#close()} on the returned connection
+   * instance. Typical usage:
    *
-   * Typical usage:
    * <pre>
    * Connection connection = ConnectionFactory.createConnection();
    * Table table = connection.getTable(TableName.valueOf("mytable"));
@@ -96,13 +92,11 @@ public class ConnectionFactory {
   /**
    * Create a new Connection instance using the passed <code>conf</code> instance. Connection
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
-   * created from returned connection share zookeeper connection, meta cache, and connections
-   * to region servers and masters.
-   * <br>
-   * The caller is responsible for calling {@link Connection#close()} on the returned
-   * connection instance.
+   * created from returned connection share zookeeper connection, meta cache, and connections to
+   * region servers and masters. <br>
+   * The caller is responsible for calling {@link Connection#close()} on the returned connection
+   * instance. Typical usage:
    *
-   * Typical usage:
    * <pre>
    * Connection connection = ConnectionFactory.createConnection(conf);
    * Table table = connection.getTable(TableName.valueOf("mytable"));
@@ -125,13 +119,11 @@ public class ConnectionFactory {
   /**
    * Create a new Connection instance using the passed <code>conf</code> instance. Connection
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
-   * created from returned connection share zookeeper connection, meta cache, and connections
-   * to region servers and masters.
-   * <br>
-   * The caller is responsible for calling {@link Connection#close()} on the returned
-   * connection instance.
+   * created from returned connection share zookeeper connection, meta cache, and connections to
+   * region servers and masters. <br>
+   * The caller is responsible for calling {@link Connection#close()} on the returned connection
+   * instance. Typical usage:
    *
-   * Typical usage:
    * <pre>
    * Connection connection = ConnectionFactory.createConnection(conf);
    * Table table = connection.getTable(TableName.valueOf("mytable"));
@@ -156,13 +148,11 @@ public class ConnectionFactory {
   /**
    * Create a new Connection instance using the passed <code>conf</code> instance. Connection
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
-   * created from returned connection share zookeeper connection, meta cache, and connections
-   * to region servers and masters.
-   * <br>
-   * The caller is responsible for calling {@link Connection#close()} on the returned
-   * connection instance.
+   * created from returned connection share zookeeper connection, meta cache, and connections to
+   * region servers and masters. <br>
+   * The caller is responsible for calling {@link Connection#close()} on the returned connection
+   * instance. Typical usage:
    *
-   * Typical usage:
    * <pre>
    * Connection connection = ConnectionFactory.createConnection(conf);
    * Table table = connection.getTable(TableName.valueOf("table1"));
@@ -179,21 +169,18 @@ public class ConnectionFactory {
    * @param user the user the connection is for
    * @return Connection object for <code>conf</code>
    */
-  public static Connection createConnection(Configuration conf, User user)
-  throws IOException {
+  public static Connection createConnection(Configuration conf, User user) throws IOException {
     return createConnection(conf, null, user);
   }
 
   /**
    * Create a new Connection instance using the passed <code>conf</code> instance. Connection
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
-   * created from returned connection share zookeeper connection, meta cache, and connections
-   * to region servers and masters.
-   * <br>
-   * The caller is responsible for calling {@link Connection#close()} on the returned
-   * connection instance.
+   * created from returned connection share zookeeper connection, meta cache, and connections to
+   * region servers and masters. <br>
+   * The caller is responsible for calling {@link Connection#close()} on the returned connection
+   * instance. Typical usage:
    *
-   * Typical usage:
    * <pre>
    * Connection connection = ConnectionFactory.createConnection(conf);
    * Table table = connection.getTable(TableName.valueOf("table1"));
@@ -212,7 +199,7 @@ public class ConnectionFactory {
    * @return Connection object for <code>conf</code>
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool, User user)
-  throws IOException {
+      throws IOException {
     if (user == null) {
       UserProvider provider = UserProvider.instantiate(conf);
       user = provider.getCurrent();
@@ -228,9 +215,8 @@ public class ConnectionFactory {
     }
     try {
       // Default HCM#HCI is not accessible; make it so before invoking.
-      Constructor<?> constructor =
-        clazz.getDeclaredConstructor(Configuration.class,
-          ExecutorService.class, User.class);
+      Constructor<?> constructor = clazz.getDeclaredConstructor(Configuration.class,
+        ExecutorService.class, User.class);
       constructor.setAccessible(true);
       return (Connection) constructor.newInstance(conf, pool, user);
     } catch (Exception e) {
@@ -241,9 +227,9 @@ public class ConnectionFactory {
   /**
    * Call {@link #createAsyncConnection(Configuration)} using default HBaseConfiguration.
    * @see #createAsyncConnection(Configuration)
-   * @return AsyncConnection object
+   * @return AsyncConnection object wrapped by CompletableFuture
    */
-  public static AsyncConnection createAsyncConnection() throws IOException {
+  public static CompletableFuture<AsyncConnection> createAsyncConnection() {
     return createAsyncConnection(HBaseConfiguration.create());
   }
 
@@ -252,12 +238,20 @@ public class ConnectionFactory {
    * User object created by {@link UserProvider}. The given {@code conf} will also be used to
    * initialize the {@link UserProvider}.
    * @param conf configuration
-   * @return AsyncConnection object
+   * @return AsyncConnection object wrapped by CompletableFuture
    * @see #createAsyncConnection(Configuration, User)
    * @see UserProvider
    */
-  public static AsyncConnection createAsyncConnection(Configuration conf) throws IOException {
-    return createAsyncConnection(conf, UserProvider.instantiate(conf).getCurrent());
+  public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf) {
+    User user;
+    try {
+      user = UserProvider.instantiate(conf).getCurrent();
+    } catch (IOException e) {
+      CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
+      future.completeExceptionally(e);
+      return future;
+    }
+    return createAsyncConnection(conf, user);
   }
 
   /**
@@ -273,17 +267,30 @@ public class ConnectionFactory {
    * as it is thread safe.
    * @param conf configuration
    * @param user the user the asynchronous connection is for
-   * @return AsyncConnection object
+   * @return AsyncConnection object wrapped by CompletableFuture
    * @throws IOException
    */
-  public static AsyncConnection createAsyncConnection(Configuration conf, User user)
-      throws IOException {
-    Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
-      AsyncConnectionImpl.class, AsyncConnection.class);
-    try {
-      return ReflectionUtils.newInstance(clazz, conf, user);
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+  public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf,
+      User user) {
+    CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
+    AsyncRegistry registry = AsyncRegistryFactory.getRegistry(conf);
+    registry.getClusterId().whenComplete((clusterId, error) -> {
+      if (error != null) {
+        future.completeExceptionally(error);
+        return;
+      }
+      if (clusterId == null) {
+        future.completeExceptionally(new IOException("clusterid came back null"));
+        return;
+      }
+      Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
+        AsyncConnectionImpl.class, AsyncConnection.class);
+      try {
+        future.complete(ReflectionUtils.newInstance(clazz, conf, registry, clusterId, user));
+      } catch (Exception e) {
+        future.completeExceptionally(e);
+      }
+    });
+    return future;
   }
 }

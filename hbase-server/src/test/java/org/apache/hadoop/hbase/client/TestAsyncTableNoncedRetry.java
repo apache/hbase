@@ -77,13 +77,14 @@ public class TestAsyncTableNoncedRetry {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    ASYNC_CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), User.getCurrent()) {
+    AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+    ASYNC_CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
+        registry.getClusterId().get(), User.getCurrent()) {
 
       @Override
       public NonceGenerator getNonceGenerator() {
         return NONCE_GENERATOR;
       }
-
     };
   }
 

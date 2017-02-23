@@ -71,7 +71,9 @@ public class TestAsyncNonMetaRegionLocator {
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.getAdmin().setBalancerRunning(false, true);
-    CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), User.getCurrent());
+    AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+    CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
+        registry.getClusterId().get(), User.getCurrent());
     LOCATOR = new AsyncNonMetaRegionLocator(CONN);
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {

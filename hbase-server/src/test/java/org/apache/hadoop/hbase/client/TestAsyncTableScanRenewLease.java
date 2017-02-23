@@ -59,7 +59,7 @@ public class TestAsyncTableScanRenewLease {
       SCANNER_LEASE_TIMEOUT_PERIOD_MS);
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
-    CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
+    CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     TABLE = CONN.getRawTable(TABLE_NAME);
     TABLE.putAll(IntStream.range(0, 10).mapToObj(
       i -> new Put(Bytes.toBytes(String.format("%02d", i))).addColumn(FAMILY, CQ, Bytes.toBytes(i)))

@@ -85,7 +85,9 @@ public class TestAsyncRegionLocatorTimeout {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    CONN = new AsyncConnectionImpl(conf, User.getCurrent());
+    AsyncRegistry registry = AsyncRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+    CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
+        registry.getClusterId().get(), User.getCurrent());
     LOCATOR = CONN.getLocator();
   }
 

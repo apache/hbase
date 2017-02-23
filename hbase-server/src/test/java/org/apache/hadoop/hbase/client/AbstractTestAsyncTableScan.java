@@ -61,7 +61,7 @@ public abstract class AbstractTestAsyncTableScan {
     }
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, splitKeys);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
-    ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration());
+    ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     ASYNC_CONN.getRawTable(TABLE_NAME).putAll(IntStream.range(0, COUNT)
         .mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
             .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))

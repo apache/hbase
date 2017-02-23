@@ -92,7 +92,7 @@ public class TestZKAsyncRegistry {
   @Test
   public void test() throws InterruptedException, ExecutionException, IOException {
     assertEquals(TEST_UTIL.getHBaseCluster().getClusterStatus().getClusterId(),
-      REGISTRY.getClusterId());
+      REGISTRY.getClusterId().get());
     assertEquals(TEST_UTIL.getHBaseCluster().getClusterStatus().getServersSize(),
       REGISTRY.getCurrentNrHRS().get().intValue());
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
