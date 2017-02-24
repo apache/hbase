@@ -36,7 +36,7 @@ namespace hbase {
  */
 using FamilyMap = std::map<std::string, std::vector<std::string>>;
 
-class Scan {
+class Scan : public Query {
  public:
   /**
    * @brief Constructors. Create a Scan operation across all rows.

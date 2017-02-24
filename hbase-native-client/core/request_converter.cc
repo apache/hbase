@@ -68,6 +68,10 @@ std::unique_ptr<Request> RequestConverter::ToGetRequest(const Get &get,
     }
   }
 
+  if (get.filter() != nullptr) {
+    pb_get->set_allocated_filter(Filter::ToProto(*(get.filter())).release());
+  }
+
   return pb_req;
 }
 
@@ -106,6 +110,10 @@ std::unique_ptr<Request> RequestConverter::ToScanRequest(const Scan &scan,
         column->add_qualifier(qualifier);
       }
     }
+  }
+
+  if (scan.filter() != nullptr) {
+    pb_scan->set_allocated_filter(Filter::ToProto(*(scan.filter())).release());
   }
 
   // TODO We will change this later.
