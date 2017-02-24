@@ -30,6 +30,7 @@ import java.util.Queue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
 /**
  * The {@link ResultScanner} implementation for {@link AsyncTable}. It will fetch data automatically
@@ -163,5 +164,10 @@ class AsyncTableResultScanner implements ResultScanner, RawScanResultConsumer {
   @VisibleForTesting
   synchronized boolean isSuspended() {
     return resumer != null;
+  }
+
+  @Override
+  public ScanMetrics getScanMetrics() {
+    throw new UnsupportedOperationException();
   }
 }

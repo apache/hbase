@@ -106,11 +106,20 @@ public class ServerSideScanMetrics {
    * @return A Map of String -&gt; Long for metrics
    */
   public Map<String, Long> getMetricsMap() {
+    return getMetricsMap(true);
+  }
+
+  /**
+   * Get all of the values. If reset is true, we will reset the all AtomicLongs back to 0.
+   * @param reset whether to reset the AtomicLongs to 0.
+   * @return A Map of String -&gt; Long for metrics
+   */
+  public Map<String, Long> getMetricsMap(boolean reset) {
     // Create a builder
     ImmutableMap.Builder<String, Long> builder = ImmutableMap.builder();
-    // For every entry add the value and reset the AtomicLong back to zero
     for (Map.Entry<String, AtomicLong> e : this.counters.entrySet()) {
-      builder.put(e.getKey(), e.getValue().getAndSet(0));
+      long value = reset ? e.getValue().getAndSet(0) : e.getValue().get();
+      builder.put(e.getKey(), value);
     }
     // Build the immutable map so that people can't mess around with it.
     return builder.build();

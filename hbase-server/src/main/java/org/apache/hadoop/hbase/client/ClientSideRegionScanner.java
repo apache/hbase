@@ -52,7 +52,6 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   public ClientSideRegionScanner(Configuration conf, FileSystem fs,
       Path rootDir, HTableDescriptor htd, HRegionInfo hri, Scan scan, ScanMetrics scanMetrics)
           throws IOException {
-
     // region is immutable, set isolation level
     scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
 

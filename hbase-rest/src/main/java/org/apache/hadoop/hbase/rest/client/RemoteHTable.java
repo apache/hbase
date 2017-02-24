@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -640,6 +641,11 @@ public class RemoteHTable implements Table {
     @Override
     public boolean renewLease() {
       throw new RuntimeException("renewLease() not supported");
+    }
+
+    @Override
+    public ScanMetrics getScanMetrics() {
+      throw new RuntimeException("getScanMetrics() not supported");
     }
   }
 

@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
 /**
  * Interface for client-side scanning. Go to {@link Table} to obtain instances.
@@ -116,4 +117,9 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    * @return true if the lease was successfully renewed, false otherwise.
    */
   boolean renewLease();
+
+  /**
+   * @return the scan metrics, or {@code null} if we do not enable metrics.
+   */
+  ScanMetrics getScanMetrics();
 }

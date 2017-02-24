@@ -81,7 +81,7 @@ public class TableRecordReaderImpl {
    */
   public void restart(byte[] firstRow) throws IOException {
     currentScan = new Scan(scan);
-    currentScan.setStartRow(firstRow);
+    currentScan.withStartRow(firstRow);
     currentScan.setScanMetricsEnabled(true);
     if (this.scanner != null) {
       if (logScannerActivity) {
@@ -273,7 +273,7 @@ public class TableRecordReaderImpl {
    * @throws IOException
    */
   private void updateCounters() throws IOException {
-    ScanMetrics scanMetrics = currentScan.getScanMetrics();
+    ScanMetrics scanMetrics = scanner.getScanMetrics();
     if (scanMetrics == null) {
       return;
     }

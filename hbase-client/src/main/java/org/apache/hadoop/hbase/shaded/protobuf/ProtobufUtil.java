@@ -83,7 +83,6 @@ import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
@@ -95,7 +94,6 @@ import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Message;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcChannel;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.Service;
@@ -164,6 +162,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.FlushDescript
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
@@ -2043,12 +2042,11 @@ public final class ProtobufUtil {
   }
 
   public static ScanMetrics toScanMetrics(final byte[] bytes) {
-    Parser<MapReduceProtos.ScanMetrics> parser = MapReduceProtos.ScanMetrics.PARSER;
     MapReduceProtos.ScanMetrics pScanMetrics = null;
     try {
-      pScanMetrics = parser.parseFrom(bytes);
+      pScanMetrics = MapReduceProtos.ScanMetrics.parseFrom(bytes);
     } catch (InvalidProtocolBufferException e) {
-      //Ignored there are just no key values to add.
+      // Ignored there are just no key values to add.
     }
     ScanMetrics scanMetrics = new ScanMetrics();
     if (pScanMetrics != null) {
@@ -2061,15 +2059,12 @@ public final class ProtobufUtil {
     return scanMetrics;
   }
 
-  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics) {
+  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics, boolean reset) {
     MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
-    Map<String, Long> metrics = scanMetrics.getMetricsMap();
+    Map<String, Long> metrics = scanMetrics.getMetricsMap(reset);
     for (Entry<String, Long> e : metrics.entrySet()) {
       HBaseProtos.NameInt64Pair nameInt64Pair =
-          HBaseProtos.NameInt64Pair.newBuilder()
-              .setName(e.getKey())
-              .setValue(e.getValue())
-              .build();
+          HBaseProtos.NameInt64Pair.newBuilder().setName(e.getKey()).setValue(e.getValue()).build();
       builder.addMetrics(nameInt64Pair);
     }
     return builder.build();
