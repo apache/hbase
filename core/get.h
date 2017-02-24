@@ -24,6 +24,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "core/query.h"
 #include "core/time_range.h"
 #include "if/Client.pb.h"
 
@@ -35,7 +36,7 @@ namespace hbase {
  */
 using FamilyMap = std::map<std::string, std::vector<std::string>>;
 
-class Get {
+class Get : public Query {
  public:
   /**
    * Constructors

@@ -22,6 +22,8 @@ cxx_library(
         "client.h",
         "cell.h",
         "hbase_macros.h",
+        "filter.h",
+        "query.h",
         "keyvalue-codec.h",
         "region-location.h",
         "location-cache.h",
@@ -76,6 +78,16 @@ cxx_test(
     name="cell-test",
     srcs=["cell-test.cc",],
     deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="filter-test",
+    srcs=["filter-test.cc",],
+    deps=[
+        ":core",
+        "//if:if",
+        "//serde:serde",
+        "//test-util:test-util",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="get-test",
