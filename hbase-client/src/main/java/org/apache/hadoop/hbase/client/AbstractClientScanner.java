@@ -42,13 +42,11 @@ public abstract class AbstractClientScanner implements ResultScanner {
   }
 
   /**
-   * Used internally accumulating metrics on scan. To
-   * enable collection of metrics on a Scanner, call {@link Scan#setScanMetricsEnabled(boolean)}.
-   * These metrics are cleared at key transition points. Metrics are accumulated in the
-   * {@link Scan} object itself.
-   * @see Scan#getScanMetrics()
+   * Used internally accumulating metrics on scan. To enable collection of metrics on a Scanner,
+   * call {@link Scan#setScanMetricsEnabled(boolean)}.
    * @return Returns the running {@link ScanMetrics} instance or null if scan metrics not enabled.
    */
+  @Override
   public ScanMetrics getScanMetrics() {
     return scanMetrics;
   }
@@ -63,7 +61,7 @@ public abstract class AbstractClientScanner implements ResultScanner {
    * @throws IOException
    */
   @Override
-  public Result [] next(int nbRows) throws IOException {
+  public Result[] next(int nbRows) throws IOException {
     // Collect values to be returned here
     ArrayList<Result> resultSets = new ArrayList<Result>(nbRows);
     for(int i = 0; i < nbRows; i++) {
@@ -124,11 +122,4 @@ public abstract class AbstractClientScanner implements ResultScanner {
       }
     };
   }
-  /**
-   * Allow the client to renew the scanner's lease on the server.
-   * @return true if the lease was successfully renewed, false otherwise.
-   */
-  // Note that this method should be on ResultScanner, but that is marked stable.
-  // Callers have to cast their instance of ResultScanner to AbstractClientScanner to use this.
-  public abstract boolean renewLease();
 }

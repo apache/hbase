@@ -182,15 +182,15 @@ public class TestServerSideScanMetricsFromClientSide {
 
     for (int i = 0; i < ROWS.length - 1; i++) {
       scan = new Scan(baseScan);
-      scan.setStartRow(ROWS[0]);
-      scan.setStopRow(ROWS[i + 1]);
+      scan.withStartRow(ROWS[0]);
+      scan.withStopRow(ROWS[i + 1]);
       testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, i + 1);
     }
 
     for (int i = ROWS.length - 1; i > 0; i--) {
       scan = new Scan(baseScan);
-      scan.setStartRow(ROWS[i - 1]);
-      scan.setStopRow(ROWS[ROWS.length - 1]);
+      scan.withStartRow(ROWS[i - 1]);
+      scan.withStopRow(ROWS[ROWS.length - 1]);
       testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length - i);
     }
 
@@ -308,12 +308,12 @@ public class TestServerSideScanMetricsFromClientSide {
   public void testMetric(Scan scan, String metricKey, long expectedValue) throws Exception {
     assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
     ResultScanner scanner = TABLE.getScanner(scan);
-
     // Iterate through all the results
-    for (Result r : scanner) {
+    while (scanner.next() != null) {
+
     }
     scanner.close();
-    ScanMetrics metrics = scan.getScanMetrics();
+    ScanMetrics metrics = scanner.getScanMetrics();
     assertTrue("Metrics are null", metrics != null);
     assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
     final long actualMetricValue = metrics.getCounter(metricKey).get();

@@ -1126,9 +1126,13 @@ public class Scan extends Query {
   /**
    * @return Metrics on this Scan, if metrics were enabled.
    * @see #setScanMetricsEnabled(boolean)
+   * @deprecated Use {@link ResultScanner#getScanMetrics()} instead. And notice that, please do not
+   *             use this method and {@link ResultScanner#getScanMetrics()} together, the metrics
+   *             will be messed up.
    */
+  @Deprecated
   public ScanMetrics getScanMetrics() {
-    byte [] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
+    byte[] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
     if (bytes == null) return null;
     return ProtobufUtil.toScanMetrics(bytes);
   }

@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -291,15 +290,17 @@ public abstract class ClientScanner extends AbstractClientScanner {
    * for scan/map reduce scenarios, we will have multiple scans running at the same time. By
    * default, scan metrics are disabled; if the application wants to collect them, this behavior can
    * be turned on by calling calling {@link Scan#setScanMetricsEnabled(boolean)}
-   * <p>
-   * This invocation clears the scan metrics. Metrics are aggregated in the Scan instance.
    */
   protected void writeScanMetrics() {
     if (this.scanMetrics == null || scanMetricsPublished) {
       return;
     }
-    MapReduceProtos.ScanMetrics pScanMetrics = ProtobufUtil.toScanMetrics(scanMetrics);
-    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA, pScanMetrics.toByteArray());
+    // Publish ScanMetrics to the Scan Object.
+    // As we have claimed in the comment of Scan.getScanMetrics, this relies on that user will not
+    // call ResultScanner.getScanMetrics and reset the ScanMetrics. Otherwise the metrics published
+    // to Scan will be messed up.
+    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA,
+      ProtobufUtil.toScanMetrics(scanMetrics, false).toByteArray());
     scanMetricsPublished = true;
   }
 

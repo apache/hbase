@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -45,11 +46,22 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    * @return Between zero and nbRows results
    * @throws IOException e
    */
-  Result [] next(int nbRows) throws IOException;
+  Result[] next(int nbRows) throws IOException;
 
   /**
    * Closes the scanner and releases any resources it has allocated
    */
   @Override
   void close();
+
+  /**
+   * Allow the client to renew the scanner's lease on the server.
+   * @return true if the lease was successfully renewed, false otherwise.
+   */
+  boolean renewLease();
+
+  /**
+   * @return the scan metrics, or {@code null} if we do not enable metrics.
+   */
+  ScanMetrics getScanMetrics();
 }

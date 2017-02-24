@@ -2669,9 +2669,9 @@ public final class ProtobufUtil {
     return scanMetrics;
   }
 
-  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics) {
+  public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics, boolean reset) {
     MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
-    Map<String, Long> metrics = scanMetrics.getMetricsMap();
+    Map<String, Long> metrics = scanMetrics.getMetricsMap(reset);
     for (Entry<String, Long> e : metrics.entrySet()) {
       HBaseProtos.NameInt64Pair nameInt64Pair =
           HBaseProtos.NameInt64Pair.newBuilder()
