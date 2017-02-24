@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -4083,6 +4084,77 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
+   * Copies the REPLICATION_SCOPE of table descriptor passed as an argument. Before copy, the method
+   * ensures that the name of table and column-families should match.
+   * @param peerHtd descriptor on peer cluster
+   * @param localHtd - The HTableDescriptor of table from source cluster.
+   * @return true If the name of table and column families match and REPLICATION_SCOPE copied
+   *         successfully. false If there is any mismatch in the names.
+   */
+  private boolean copyReplicationScope(final HTableDescriptor peerHtd,
+      final HTableDescriptor localHtd) {
+    // Copy the REPLICATION_SCOPE only when table names and the names of
+    // Column-Families are same.
+    int result = peerHtd.getTableName().compareTo(localHtd.getTableName());
+
+    if (result == 0) {
+      Iterator<HColumnDescriptor> remoteHCDIter = peerHtd.getFamilies().iterator();
+      Iterator<HColumnDescriptor> localHCDIter = localHtd.getFamilies().iterator();
+          
+      while (remoteHCDIter.hasNext() && localHCDIter.hasNext()) {
+        HColumnDescriptor remoteHCD = remoteHCDIter.next();
+        HColumnDescriptor localHCD = localHCDIter.next();
+        
+        String remoteHCDName = remoteHCD.getNameAsString();
+        String localHCDName = localHCD.getNameAsString();
+
+        if (remoteHCDName.equals(localHCDName)) {
+          remoteHCD.setScope(localHCD.getScope());
+        } else {
+          result = -1;
+          break;
+        }
+      }
+      if (remoteHCDIter.hasNext() || localHCDIter.hasNext()) {
+        return false;
+      }
+    }
+
+    return result == 0;
+  }
+
+  /**
+   * Compare the contents of the descriptor with another one passed as a parameter for replication
+   * purpose. The REPLICATION_SCOPE field is ignored during comparison.
+   * @param peerHtd descriptor on peer cluster
+   * @param localHtd descriptor on source cluster which needs to be replicated.
+   * @return true if the contents of the two descriptors match (ignoring just REPLICATION_SCOPE).
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  private boolean compareForReplication(HTableDescriptor peerHtd, HTableDescriptor localHtd) {
+    if (peerHtd == localHtd) {
+      return true;
+    }
+    if (peerHtd == null) {
+      return false;
+    }
+    boolean result = false;
+
+    // Create a copy of peer HTD as we need to change its replication
+    // scope to match with the local HTD.
+    HTableDescriptor peerHtdCopy = new HTableDescriptor(peerHtd);
+
+    result = copyReplicationScope(peerHtdCopy, localHtd);
+
+    // If copy was successful, compare the two tables now.
+    if (result) {
+      result = (peerHtdCopy.compareTo(localHtd) == 0);
+    }
+
+    return result;
+  }
+
+  /**
    * Connect to peer and check the table descriptor on peer:
    * <ol>
    * <li>Create the same table on peer when not exist.</li>
@@ -4125,7 +4197,7 @@ public class HBaseAdmin implements Admin {
                 throw new IllegalArgumentException("Table " + tableName.getNameAsString()
                     + " has replication already enabled for at least one Column Family.");
               } else {
-                if (!peerHtd.compareForReplication(localHtd)) {
+                if (!compareForReplication(peerHtd, localHtd)) {
                   throw new IllegalArgumentException("Table " + tableName.getNameAsString()
                       + " exists in peer cluster " + peerDesc.getPeerId()
                       + ", but the table descriptors are not same when compared with source cluster."
