@@ -19,21 +19,31 @@
 
 #include "connection/connection-factory.h"
 
+#include <chrono>
+
 #include "connection/client-dispatcher.h"
 #include "connection/pipeline.h"
 #include "connection/service.h"
 
 using namespace folly;
 using namespace hbase;
+using std::chrono::milliseconds;
+using std::chrono::nanoseconds;
 
 ConnectionFactory::ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
-                                     std::shared_ptr<Codec> codec)
-    : io_pool_(io_pool), pipeline_factory_(std::make_shared<RpcPipelineFactory>(codec)) {}
+                                     std::shared_ptr<Codec> codec,
+									 nanoseconds connect_timeout)
+    : connect_timeout_(connect_timeout),
+	  io_pool_(io_pool),
+	  pipeline_factory_(std::make_shared<RpcPipelineFactory>(codec)) {}
 
 std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> ConnectionFactory::MakeBootstrap() {
   auto client = std::make_shared<wangle::ClientBootstrap<SerializePipeline>>();
   client->group(io_pool_);
   client->pipelineFactory(pipeline_factory_);
+
+  // TODO: Opened https://github.com/facebook/wangle/issues/85 in wangle so that we can set socket
+  //  options like TCP_NODELAY, SO_KEEPALIVE, CONNECT_TIMEOUT_MILLIS, etc.
 
   return client;
 }
@@ -43,7 +53,10 @@ std::shared_ptr<HBaseService> ConnectionFactory::Connect(
   // Yes this will block however it makes dealing with connection pool soooooo
   // much nicer.
   // TODO see about using shared promise for this.
-  auto pipeline = client->connect(SocketAddress(hostname, port, true)).get();
+  auto pipeline = client
+                      ->connect(SocketAddress(hostname, port, true),
+                                std::chrono::duration_cast<milliseconds>(connect_timeout_))
+                      .get();
   auto dispatcher = std::make_shared<ClientDispatcher>();
   dispatcher->setPipeline(pipeline);
   return dispatcher;

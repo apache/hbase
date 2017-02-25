@@ -26,6 +26,7 @@
 
 #include <google/protobuf/service.h>
 
+#include <chrono>
 #include <utility>
 
 using hbase::security::User;
@@ -43,6 +44,8 @@ using google::protobuf::Message;
 using google::protobuf::RpcController;
 using google::protobuf::Closure;
 
+using std::chrono::nanoseconds;
+
 class RpcChannelImplementation;
 
 namespace hbase {
@@ -52,7 +55,7 @@ class RpcClient : public std::enable_shared_from_this<RpcClient> {
 
  public:
   RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
-            std::shared_ptr<Codec> codec);
+            std::shared_ptr<Codec> codec, nanoseconds connect_timeout);
 
   virtual ~RpcClient() { Close(); }
 

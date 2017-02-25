@@ -20,6 +20,7 @@
 
 #include <folly/SharedMutex.h>
 #include <boost/functional/hash.hpp>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -35,6 +36,8 @@ using hbase::ConnectionIdEquals;
 using hbase::ConnectionIdHash;
 using hbase::RpcConnection;
 
+using std::chrono::nanoseconds;
+
 namespace hbase {
 
 /**
@@ -47,20 +50,20 @@ class ConnectionPool {
  public:
   /** Create connection pool wit default connection factory */
   ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
-                 std::shared_ptr<Codec> codec);
-
-  /**
-   * Desctructor.
-   * All connections will be close.
-   * All connections will be released
-   */
-  ~ConnectionPool();
+                 std::shared_ptr<Codec> codec, nanoseconds connect_timeout = nanoseconds(0));
 
   /**
    * Constructor that allows specifiying the connetion factory.
    * This is useful for testing.
    */
   explicit ConnectionPool(std::shared_ptr<ConnectionFactory> cf);
+
+  /**
+   * Destructor.
+   * All connections will be close.
+   * All connections will be released
+   */
+  ~ConnectionPool();
 
   /**
    * Get a connection to the server name. Start time is ignored.

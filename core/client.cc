@@ -20,6 +20,7 @@
 #include "core/client.h"
 
 #include <glog/logging.h>
+#include <chrono>
 #include <exception>
 #include <utility>
 
@@ -42,9 +43,12 @@ void Client::init(const hbase::Configuration &conf) {
   conf_ = std::make_shared<hbase::Configuration>(conf);
   auto zk_quorum = conf_->Get(kHBaseZookeeperQuorum_, kDefHBaseZookeeperQuorum_);
 
-  cpu_executor_ =
-      std::make_shared<wangle::CPUThreadPoolExecutor>(4);  // TODO: read num threads from conf
-  io_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(sysconf(_SC_NPROCESSORS_ONLN));
+  conn_conf_ = std::make_shared<hbase::ConnectionConfiguration>(*conf_);
+  // start thread pools
+  auto io_threads = conf_->GetInt(kClientIoThreadPoolSize, sysconf(_SC_NPROCESSORS_ONLN));
+  auto cpu_threads = conf_->GetInt(kClientCpuThreadPoolSize, 2 * sysconf(_SC_NPROCESSORS_ONLN));
+  cpu_executor_ = std::make_shared<wangle::CPUThreadPoolExecutor>(cpu_threads);
+  io_executor_ = std::make_shared<wangle::IOThreadPoolExecutor>(io_threads);
 
   std::shared_ptr<Codec> codec = nullptr;
   if (conf.Get(kRpcCodec, hbase::KeyValueCodec::kJavaClassName) ==
@@ -53,7 +57,7 @@ void Client::init(const hbase::Configuration &conf) {
   } else {
     LOG(WARNING) << "Not using RPC Cell Codec";
   }
-  rpc_client_ = std::make_shared<hbase::RpcClient>(io_executor_, codec);
+  rpc_client_ = std::make_shared<hbase::RpcClient>(io_executor_, codec, conn_conf_->connect_timeout());
   location_cache_ =
       std::make_shared<hbase::LocationCache>(conf_, cpu_executor_, rpc_client_->connection_pool());
 }
