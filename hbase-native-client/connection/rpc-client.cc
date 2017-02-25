@@ -40,9 +40,9 @@ class RpcChannelImplementation : public AbstractRpcChannel {
 }  // namespace hbase
 
 RpcClient::RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
-                     std::shared_ptr<Codec> codec)
+                     std::shared_ptr<Codec> codec, nanoseconds connect_timeout)
     : io_executor_(io_executor) {
-  cp_ = std::make_shared<ConnectionPool>(io_executor_, codec);
+  cp_ = std::make_shared<ConnectionPool>(io_executor_, codec, connect_timeout);
 }
 
 void RpcClient::Close() { io_executor_->stop(); }

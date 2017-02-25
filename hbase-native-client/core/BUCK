@@ -27,6 +27,7 @@ cxx_library(
         "keyvalue-codec.h",
         "region-location.h",
         "location-cache.h",
+        "connection-configuration.h",
         # TODO: move this out of exported
         # Once meta lookup works
         "meta-utils.h",

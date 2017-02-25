@@ -20,6 +20,7 @@
 
 #include <wangle/service/Service.h>
 
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -27,6 +28,8 @@
 #include "connection/request.h"
 #include "connection/response.h"
 #include "connection/service.h"
+
+using std::chrono::nanoseconds;
 
 namespace hbase {
 
@@ -41,8 +44,10 @@ class ConnectionFactory {
    * There should only be one ConnectionFactory per client.
    */
   ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
-                    std::shared_ptr<Codec> codec);
-  /** Default Desctructor */
+                    std::shared_ptr<Codec> codec,
+					nanoseconds connect_timeout = nanoseconds(0));
+
+  /** Default Destructor */
   virtual ~ConnectionFactory() = default;
 
   /**
@@ -60,6 +65,7 @@ class ConnectionFactory {
       const std::string &hostname, int port);
 
  private:
+  nanoseconds connect_timeout_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool_;
   std::shared_ptr<RpcPipelineFactory> pipeline_factory_;
 };
