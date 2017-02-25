@@ -130,7 +130,9 @@ public interface ProcedureScheduler {
   int size();
 
   /**
-   * Removes all of the elements from the queue
+   * Clear current state of scheduler such that it is equivalent to newly created scheduler.
+   * Used for testing failure and recovery. To emulate server crash/restart,
+   * {@link ProcedureExecutor} resets its own state and calls clear() on scheduler.
    */
   @VisibleForTesting
   void clear();

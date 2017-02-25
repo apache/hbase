@@ -550,6 +550,7 @@ public class ProcedureExecutor<TEnvironment> {
     timeoutExecutor.sendStopSignal();
   }
 
+  @VisibleForTesting
   public void join() {
     assert !isRunning() : "expected not running";
 

@@ -227,8 +227,19 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     return pollResult;
   }
 
+  @VisibleForTesting
   @Override
-  protected void clearQueue() {
+  public void clear() {
+    schedLock();
+    try {
+      clearQueue();
+      locking.clear();
+    } finally {
+      schedUnlock();
+    }
+  }
+
+  private void clearQueue() {
     // Remove Servers
     for (int i = 0; i < serverBuckets.length; ++i) {
       clear(serverBuckets[i], serverRunQueue, SERVER_QUEUE_KEY_COMPARATOR);
@@ -922,28 +933,40 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       return lock;
     }
 
-    public LockAndQueue getTableLock(TableName tableName) {
+    LockAndQueue getTableLock(TableName tableName) {
       return getLock(tableLocks, tableName);
     }
 
-    public LockAndQueue removeTableLock(TableName tableName) {
+    LockAndQueue removeTableLock(TableName tableName) {
       return tableLocks.remove(tableName);
     }
 
-    public LockAndQueue getNamespaceLock(String namespace) {
+    LockAndQueue getNamespaceLock(String namespace) {
       return getLock(namespaceLocks, namespace);
     }
 
-    public LockAndQueue getRegionLock(String encodedRegionName) {
+    LockAndQueue getRegionLock(String encodedRegionName) {
       return getLock(regionLocks, encodedRegionName);
     }
 
-    public LockAndQueue removeRegionLock(String encodedRegionName) {
+    LockAndQueue removeRegionLock(String encodedRegionName) {
       return regionLocks.remove(encodedRegionName);
     }
 
-    public LockAndQueue getServerLock(ServerName serverName) {
+    LockAndQueue getServerLock(ServerName serverName) {
       return getLock(serverLocks, serverName);
+    }
+
+    /**
+     * Removes all locks by clearing the maps.
+     * Used when procedure executor is stopped for failure and recovery testing.
+     */
+    @VisibleForTesting
+    void clear() {
+      serverLocks.clear();
+      namespaceLocks.clear();
+      tableLocks.clear();
+      regionLocks.clear();
     }
 
     final Map<ServerName, LockAndQueue> serverLocks = new HashMap<>();

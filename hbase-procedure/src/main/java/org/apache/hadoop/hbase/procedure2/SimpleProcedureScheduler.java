@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
@@ -43,9 +44,15 @@ public class SimpleProcedureScheduler extends AbstractProcedureScheduler {
     return runnables.poll();
   }
 
+  @VisibleForTesting
   @Override
-  protected void clearQueue() {
-    runnables.clear();
+  public void clear() {
+    schedLock();
+    try {
+      runnables.clear();
+    } finally {
+      schedUnlock();
+    }
   }
 
   @Override
