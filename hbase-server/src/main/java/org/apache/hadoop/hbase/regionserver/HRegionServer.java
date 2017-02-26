@@ -1610,6 +1610,7 @@ public class HRegionServer extends HasThread implements
               this.instance.compactSplitThread.requestSystemCompaction(r, s, getName()
                   + " requests compaction");
             } else if (s.isMajorCompaction()) {
+              s.triggerMajorCompaction();
               if (majorCompactPriority == DEFAULT_PRIORITY
                   || majorCompactPriority > ((HRegion)r).getCompactPriority()) {
                 this.instance.compactSplitThread.requestCompaction(r, s, getName()
