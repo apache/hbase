@@ -315,21 +315,6 @@ service THBaseService {
     2: required TGet tget
   ) throws (1:TIOError io)
 
-
-  /**
-  * Test for the existence of columns in the table, as specified by the TGets.
-  *
-  * This will return an array of booleans. Each value will be true if the related Get matches
-  * one or more keys, false if not.
-  */
-  list<bool> existsAll(
-    /** the table to check on */
-    1: required binary table,
-
-    /** a list of TGets to check for */
-    2: required list<TGet> tgets
-  ) throws (1:TIOError io)
-
   /**
    * Method for getting data from a row.
    *
