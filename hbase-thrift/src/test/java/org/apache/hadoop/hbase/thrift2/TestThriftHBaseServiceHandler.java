@@ -207,6 +207,34 @@ public class TestThriftHBaseServiceHandler {
   }
 
   @Test
+  public void testExistsAll() throws TIOError, TException {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName1 = "testExistsAll1".getBytes();
+    byte[] rowName2 = "testExistsAll2".getBytes();
+    ByteBuffer table = wrap(tableAname);
+
+    List<TGet> gets = new ArrayList<>();
+    gets.add(new TGet(wrap(rowName2)));
+    gets.add(new TGet(wrap(rowName2)));
+    List<Boolean> existsResult1 = handler.existsAll(table, gets);
+    assertFalse(existsResult1.get(0));
+    assertFalse(existsResult1.get(1));
+
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+    columnValues.add(new TColumnValue(wrap(familyBname), wrap(qualifierBname), wrap(valueBname)));
+    List<TPut> puts = new ArrayList<TPut>();
+    puts.add(new TPut(wrap(rowName1), columnValues));
+    puts.add(new TPut(wrap(rowName2), columnValues));
+
+    handler.putMultiple(table, puts);
+    List<Boolean> existsResult2 = handler.existsAll(table,gets );
+
+    assertTrue(existsResult2.get(0));
+    assertTrue(existsResult2.get(1));
+  }
+
+  @Test
   public void testPutGet() throws Exception {
     ThriftHBaseServiceHandler handler = createHandler();
     byte[] rowName = "testPutGet".getBytes();
