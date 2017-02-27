@@ -352,6 +352,19 @@ hbase(main):022:0> Date.new(1218920189000).toString() => "Sat Aug 16 20:56:29 UT
 
 To output in a format that is exactly like that of the HBase log format will take a little messing with link:http://download.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html[SimpleDateFormat].
 
+=== Query Shell Configuration
+----
+hbase(main):001:0> @shell.hbase.configuration.get("hbase.rpc.timeout")
+=> "60000"
+----
+To set a config in the shell:
+----
+hbase(main):005:0> @shell.hbase.configuration.setInt("hbase.rpc.timeout", 61010)
+hbase(main):006:0> @shell.hbase.configuration.get("hbase.rpc.timeout")
+=> "61010"
+----
+
+
 [[tricks.pre-split]]
 === Pre-splitting tables with the HBase Shell
 You can use a variety of options to pre-split tables when creating them via the HBase Shell `create` command.
