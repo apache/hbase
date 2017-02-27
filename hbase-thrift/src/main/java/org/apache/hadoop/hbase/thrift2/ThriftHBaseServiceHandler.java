@@ -39,7 +39,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -245,23 +244,6 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     Table htable = getTable(table);
     try {
       return htable.exists(getFromThrift(get));
-    } catch (IOException e) {
-      throw getTIOError(e);
-    } finally {
-      closeTable(htable);
-    }
-  }
-
-  @Override
-  public List<Boolean> existsAll(ByteBuffer table, List<TGet> gets) throws TIOError, TException {
-    Table htable = getTable(table);
-    try {
-      boolean[] exists = htable.existsAll(getsFromThrift(gets));
-      List<Boolean> result = new ArrayList<>(exists.length);
-      for (boolean exist : exists) {
-        result.add(exist);
-      }
-      return result;
     } catch (IOException e) {
       throw getTIOError(e);
     } finally {
