@@ -100,6 +100,27 @@ public class TestTaskMonitor {
     assertEquals("task 10", tm.getTasks().get(0).getDescription());
   }
 
+  @Test
+  public void testDoNotPurgeRPCTask() throws Exception {
+    int RPCTaskNums = 10;
+    for(int i = 0; i < RPCTaskNums; i++) {
+      TaskMonitor.get().createRPCStatus("PRCTask" + i);
+    }
+    for(int i = 0; i < TaskMonitor.MAX_TASKS; i++) {
+      TaskMonitor.get().createStatus("otherTask" + i);
+    }
+    int remainRPCTask = 0;
+    for(MonitoredTask task :TaskMonitor.get().getTasks()) {
+      if(task instanceof MonitoredRPCHandler) {
+        remainRPCTask++;
+      }
+    }
+    assertEquals("RPC Tasks have been purged!", RPCTaskNums, remainRPCTask);
+
+  }
+
+
+
 
 }
 
