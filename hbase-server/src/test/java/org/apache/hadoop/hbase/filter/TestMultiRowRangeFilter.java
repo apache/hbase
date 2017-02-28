@@ -473,6 +473,35 @@ public class TestMultiRowRangeFilter {
     ht.close();
   }
 
+  @Test
+  public void testOneRowRange() throws IOException {
+    tableName = TableName.valueOf(name.getMethodName());
+    Table ht = TEST_UTIL.createTable(tableName, family, Integer.MAX_VALUE);
+    generateRows(numRows, ht, family, qf, value);
+    ArrayList<MultiRowRangeFilter.RowRange> rowRangesList = new ArrayList<>();
+    rowRangesList
+        .add(new MultiRowRangeFilter.RowRange(Bytes.toBytes(50), true, Bytes.toBytes(50), true));
+    Scan scan = new Scan();
+    scan.setFilter(new MultiRowRangeFilter(rowRangesList));
+    int resultsSize = getResultsSize(ht, scan);
+    assertEquals(1, resultsSize);
+    rowRangesList.clear();
+    rowRangesList
+        .add(new MultiRowRangeFilter.RowRange(Bytes.toBytes(50), true, Bytes.toBytes(51), false));
+    scan = new Scan();
+    scan.setFilter(new MultiRowRangeFilter(rowRangesList));
+    resultsSize = getResultsSize(ht, scan);
+    assertEquals(1, resultsSize);
+    rowRangesList.clear();
+    rowRangesList
+        .add(new MultiRowRangeFilter.RowRange(Bytes.toBytes(50), true, Bytes.toBytes(51), true));
+    scan = new Scan();
+    scan.setFilter(new MultiRowRangeFilter(rowRangesList));
+    resultsSize = getResultsSize(ht, scan);
+    assertEquals(2, resultsSize);
+    ht.close();
+  }
+
   private void generateRows(int numberOfRows, Table ht, byte[] family, byte[] qf, byte[] value)
       throws IOException {
     for (int i = 0; i < numberOfRows; i++) {
@@ -501,6 +530,7 @@ public class TestMultiRowRangeFilter {
         kvList.add(kv);
       }
     }
+    scanner.close();
     return kvList;
   }
 
@@ -513,6 +543,7 @@ public class TestMultiRowRangeFilter {
         results.add(kv);
       }
     }
+    scanner.close();
     return results.size();
   }
 }
