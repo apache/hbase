@@ -739,18 +739,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
       numRegionsPerServerPerTable[newServer][tableIndex]++;
 
-      //check whether this caused maxRegionsPerTable in the new Server to be updated
-      if (numRegionsPerServerPerTable[newServer][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
-        numMaxRegionsPerTable[tableIndex] = numRegionsPerServerPerTable[newServer][tableIndex];
-      } else if (oldServer >= 0 && (numRegionsPerServerPerTable[oldServer][tableIndex] + 1)
-          == numMaxRegionsPerTable[tableIndex]) {
-        //recompute maxRegionsPerTable since the previous value was coming from the old server
-        for (int serverIndex = 0 ; serverIndex < numRegionsPerServerPerTable.length; serverIndex++) {
-          if (numRegionsPerServerPerTable[serverIndex][tableIndex] > numMaxRegionsPerTable[tableIndex]) {
-            numMaxRegionsPerTable[tableIndex] = numRegionsPerServerPerTable[serverIndex][tableIndex];
-          }
-        }
+      // if old server had max num regions, assume (for now)
+      // max num regions went down since we moved the region
+      if (oldServer >= 0 &&
+          (numRegionsPerServerPerTable[oldServer][tableIndex] + 1) == numMaxRegionsPerTable[tableIndex]) {
+        numMaxRegionsPerTable[tableIndex]--;
       }
+      // Now check if new server sets new max
+      numMaxRegionsPerTable[tableIndex] =
+          Math.max(numMaxRegionsPerTable[tableIndex], numRegionsPerServerPerTable[newServer][tableIndex]);
 
       // update for servers
       int primary = regionIndexToPrimaryIndex[region];
