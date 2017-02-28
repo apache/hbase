@@ -117,7 +117,9 @@ public class MultiRowRangeFilter extends FilterBase {
       } else {
         if (range.contains(buffer, offset, length)) {
           currentReturnCode = ReturnCode.INCLUDE;
-        } else currentReturnCode = ReturnCode.SEEK_NEXT_USING_HINT;
+        } else {
+          currentReturnCode = ReturnCode.SEEK_NEXT_USING_HINT;
+        }
       }
     } else {
       currentReturnCode = ReturnCode.INCLUDE;
@@ -151,7 +153,6 @@ public class MultiRowRangeFilter extends FilterBase {
         if (range.stopRow != null)
           rangebuilder.setStopRow(ByteStringer.wrap(range.stopRow));
         rangebuilder.setStopRowInclusive(range.stopRowInclusive);
-        range.isScan = Bytes.equals(range.startRow, range.stopRow) ? 1 : 0;
         builder.addRowRangeList(rangebuilder.build());
       }
     }
@@ -422,7 +423,6 @@ public class MultiRowRangeFilter extends FilterBase {
     private boolean startRowInclusive = true;
     private byte[] stopRow;
     private boolean stopRowInclusive = false;
-    private int isScan = 0;
 
     public RowRange() {
     }
@@ -445,7 +445,6 @@ public class MultiRowRangeFilter extends FilterBase {
       this.startRowInclusive = startRowInclusive;
       this.stopRow = (stopRow == null) ? HConstants.EMPTY_BYTE_ARRAY :stopRow;
       this.stopRowInclusive = stopRowInclusive;
-      isScan = Bytes.equals(startRow, stopRow) ? 1 : 0;
     }
 
     public byte[] getStartRow() {
@@ -479,21 +478,21 @@ public class MultiRowRangeFilter extends FilterBase {
         if(stopRowInclusive) {
           return Bytes.compareTo(buffer, offset, length, startRow, 0, startRow.length) >= 0
               && (Bytes.equals(stopRow, HConstants.EMPTY_BYTE_ARRAY) ||
-                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) <= isScan);
+                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) <= 0);
         } else {
           return Bytes.compareTo(buffer, offset, length, startRow, 0, startRow.length) >= 0
               && (Bytes.equals(stopRow, HConstants.EMPTY_BYTE_ARRAY) ||
-                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) < isScan);
+                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) < 0);
         }
       } else {
         if(stopRowInclusive) {
           return Bytes.compareTo(buffer, offset, length, startRow, 0, startRow.length) > 0
               && (Bytes.equals(stopRow, HConstants.EMPTY_BYTE_ARRAY) ||
-                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) <= isScan);
+                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) <= 0);
         } else {
           return Bytes.compareTo(buffer, offset, length, startRow, 0, startRow.length) > 0
               && (Bytes.equals(stopRow, HConstants.EMPTY_BYTE_ARRAY) ||
-                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) < isScan);
+                  Bytes.compareTo(buffer, offset, length, stopRow, 0, stopRow.length) < 0);
         }
       }
     }
