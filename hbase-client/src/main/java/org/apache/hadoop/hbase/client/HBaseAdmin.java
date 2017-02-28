@@ -1206,8 +1206,8 @@ public class HBaseAdmin implements Admin {
    * @param tableName table or region to compact
    * @param columnFamily column family within a table or region
    * @param major True if we are to do a major compaction.
+   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
   private void compact(final TableName tableName, final byte[] columnFamily,final boolean major,
                        CompactType compactType) throws IOException {

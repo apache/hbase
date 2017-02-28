@@ -330,38 +330,6 @@ public class TestMobCompactor {
       countFiles(tableName, false, family2));
   }
 
-  private void waitUntilFilesShowup(final TableName table, final String famStr, final int num)
-      throws InterruptedException, IOException  {
-
-    HRegion r = TEST_UTIL.getMiniHBaseCluster().getRegions(table).get(0);
-
-    // Make sure that it is flushed.
-    FileSystem fs = r.getRegionFileSystem().getFileSystem();
-    Path path = r.getRegionFileSystem().getStoreDir(famStr);
-
-
-    FileStatus[] fileList = fs.listStatus(path);
-
-    while (fileList.length != num) {
-      Thread.sleep(50);
-      fileList = fs.listStatus(path);
-    }
-  }
-
-  private int numberOfMobFiles(final TableName table, final String famStr)
-      throws IOException  {
-
-    HRegion r = TEST_UTIL.getMiniHBaseCluster().getRegions(table).get(0);
-
-    // Make sure that it is flushed.
-    FileSystem fs = r.getRegionFileSystem().getFileSystem();
-    Path path = r.getRegionFileSystem().getStoreDir(famStr);
-
-    FileStatus[] fileList = fs.listStatus(path);
-
-    return fileList.length;
-  }
-
   @Test
   public void testMinorCompactionWithWeeklyPolicy() throws Exception {
     resetConf();
@@ -764,20 +732,6 @@ public class TestMobCompactor {
         c.bypass();
       }
     }
-  }
-
-  private void waitUntilCompactionFinished(TableName tableName) throws IOException,
-    InterruptedException {
-    long finished = EnvironmentEdgeManager.currentTime() + 60000;
-    CompactionState state = admin.getCompactionState(tableName);
-    while (EnvironmentEdgeManager.currentTime() < finished) {
-      if (state == CompactionState.NONE) {
-        break;
-      }
-      state = admin.getCompactionState(tableName);
-      Thread.sleep(10);
-    }
-    assertEquals(CompactionState.NONE, state);
   }
 
   private void waitUntilMobCompactionFinished(TableName tableName) throws IOException,

@@ -2286,7 +2286,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   public int countRows(final InternalScanner scanner) throws IOException {
-    // Do not retrieve the mob data when scanning
     int scannedCount = 0;
     List<Cell> results = new ArrayList<Cell>();
     boolean hasMore = true;

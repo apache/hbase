@@ -167,7 +167,7 @@ public class TestMobStoreScanner {
     table.put(put);
 
     Get g = new Get(row1);
-    Result r = table.get(g);
+    table.get(g);
     // should not have blown up.
   }
 

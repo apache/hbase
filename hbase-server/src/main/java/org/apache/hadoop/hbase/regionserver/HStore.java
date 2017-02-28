@@ -173,7 +173,7 @@ public class HStore implements Store {
   protected int bytesPerChecksum;
 
   // Comparing KeyValues
-  private final CellComparator comparator;
+  protected final CellComparator comparator;
 
   final StoreEngine<?, ?, ?, ?> storeEngine;
 

@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.locking.LockManager;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -489,8 +491,6 @@ public final class MobUtils {
     // find the original mob files by this table name. For details please see cloning
     // snapshot for mob files.
     tags.add(tableNameTag);
-    // Add the existing tags.
-    TagUtil.carryForwardTags(tags, cell);
     return createMobRefCell(cell, fileName, TagUtil.fromList(tags));
   }
 
@@ -511,18 +511,19 @@ public final class MobUtils {
    * @param startKey The hex string of the start key.
    * @param cacheConfig The current cache config.
    * @param cryptoContext The encryption context.
+   * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
       HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, String startKey, CacheConfig cacheConfig,
-      Encryption.Context cryptoContext)
+      Encryption.Context cryptoContext, boolean isCompaction)
       throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date,
         UUID.randomUUID().toString().replaceAll("-", ""));
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-        cacheConfig, cryptoContext);
+        cacheConfig, cryptoContext, isCompaction);
   }
 
   /**
@@ -534,25 +535,19 @@ public final class MobUtils {
    * @param maxKeyCount The key count.
    * @param cacheConfig The current cache config.
    * @param cryptoContext The encryption context.
+   * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFileWriter createRefFileWriter(Configuration conf, FileSystem fs,
     HColumnDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig,
-    Encryption.Context cryptoContext)
+    Encryption.Context cryptoContext, boolean isCompaction)
     throws IOException {
-    HFileContext hFileContext = new HFileContextBuilder().withIncludesMvcc(true)
-      .withIncludesTags(true).withCompression(family.getCompactionCompression())
-      .withCompressTags(family.isCompressTags()).withChecksumType(HStore.getChecksumType(conf))
-      .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(family.getBlocksize())
-      .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding())
-      .withEncryptionContext(cryptoContext).withCreateTime(EnvironmentEdgeManager.currentTime())
-      .build();
-    Path tempPath = new Path(basePath, UUID.randomUUID().toString().replaceAll("-", ""));
-    StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConfig, fs).withFilePath(tempPath)
-      .withComparator(CellComparator.COMPARATOR).withBloomType(family.getBloomFilterType())
-      .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
-    return w;
+    return createWriter(conf, fs, family,
+      new Path(basePath, UUID.randomUUID().toString().replaceAll("-", "")), maxKeyCount,
+      family.getCompactionCompressionType(), cacheConfig, cryptoContext,
+      HStore.getChecksumType(conf), HStore.getBytesPerChecksum(conf), family.getBlocksize(),
+      family.getBloomFilterType(), isCompaction);
   }
 
   /**
@@ -567,18 +562,19 @@ public final class MobUtils {
    * @param startKey The start key.
    * @param cacheConfig The current cache config.
    * @param cryptoContext The encryption context.
+   * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
       HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
       Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
-      Encryption.Context cryptoContext)
+      Encryption.Context cryptoContext, boolean isCompaction)
       throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date,
         UUID.randomUUID().toString().replaceAll("-", ""));
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-      cacheConfig, cryptoContext);
+      cacheConfig, cryptoContext, isCompaction);
   }
 
   /**
@@ -605,7 +601,7 @@ public final class MobUtils {
       .randomUUID().toString().replaceAll("-", "") + "_del";
     MobFileName mobFileName = MobFileName.create(startKey, date, suffix);
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-      cacheConfig, cryptoContext);
+      cacheConfig, cryptoContext, true);
   }
 
   /**
@@ -619,26 +615,69 @@ public final class MobUtils {
    * @param compression The compression algorithm.
    * @param cacheConfig The current cache config.
    * @param cryptoContext The encryption context.
+   * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file.
    * @throws IOException
    */
-  private static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
-    HColumnDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
-    Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext)
-    throws IOException {
-    HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-      .withIncludesMvcc(true).withIncludesTags(true)
-      .withCompressTags(family.isCompressTags())
-      .withChecksumType(HStore.getChecksumType(conf))
-      .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(family.getBlocksize())
-      .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding())
-      .withEncryptionContext(cryptoContext)
-      .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
+  public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
+      HColumnDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
+      Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext,
+      boolean isCompaction)
+      throws IOException {
+    return createWriter(conf, fs, family,
+      new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, cacheConfig,
+      cryptoContext, HStore.getChecksumType(conf), HStore.getBytesPerChecksum(conf),
+      family.getBlocksize(), BloomType.NONE, isCompaction);
+  }
 
-    StoreFileWriter w = new StoreFileWriter.Builder(conf, cacheConfig, fs)
-      .withFilePath(new Path(basePath, mobFileName.getFileName()))
-      .withComparator(CellComparator.COMPARATOR).withBloomType(BloomType.NONE)
-      .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
+  /**
+   * Creates a writer for the mob file in temp directory.
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param family The descriptor of the current column family.
+   * @param path The path for a temp directory.
+   * @param maxKeyCount The key count.
+   * @param compression The compression algorithm.
+   * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
+   * @param checksumType The checksum type.
+   * @param bytesPerChecksum The bytes per checksum.
+   * @param blocksize The HFile block size.
+   * @param bloomType The bloom filter type.
+   * @param isCompaction If the writer is used in compaction.
+   * @return The writer for the mob file.
+   * @throws IOException
+   */
+  public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
+      HColumnDescriptor family, Path path, long maxKeyCount,
+      Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext,
+      ChecksumType checksumType, int bytesPerChecksum, int blocksize, BloomType bloomType,
+      boolean isCompaction)
+      throws IOException {
+    if (compression == null) {
+      compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    }
+    final CacheConfig writerCacheConf;
+    if (isCompaction) {
+      writerCacheConf = new CacheConfig(cacheConfig);
+      writerCacheConf.setCacheDataOnWrite(false);
+    } else {
+      writerCacheConf = cacheConfig;
+    }
+    HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
+        .withIncludesMvcc(true).withIncludesTags(true)
+        .withCompressTags(family.isCompressTags())
+        .withChecksumType(checksumType)
+        .withBytesPerCheckSum(bytesPerChecksum)
+        .withBlockSize(blocksize)
+        .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding())
+        .withEncryptionContext(cryptoContext)
+        .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
+
+    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs)
+        .withFilePath(path)
+        .withComparator(CellComparator.COMPARATOR).withBloomType(bloomType)
+        .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
     return w;
   }
 

@@ -629,13 +629,14 @@ public class PartitionedMobCompactor extends MobCompactor {
         writer = MobUtils
             .createWriter(conf, fs, column, partition.getPartitionId().getLatestDate(), tempPath,
                 Long.MAX_VALUE, column.getCompactionCompressionType(),
-                partition.getPartitionId().getStartKey(), compactionCacheConfig, cryptoContext);
+                partition.getPartitionId().getStartKey(), compactionCacheConfig, cryptoContext,
+                true);
         cleanupTmpMobFile = true;
         filePath = writer.getPath();
         byte[] fileName = Bytes.toBytes(filePath.getName());
         // create a temp file and open a writer for it in the bulkloadPath
         refFileWriter = MobUtils.createRefFileWriter(conf, fs, column, bulkloadColumnPath,
-            fileInfo.getSecond().longValue(), compactionCacheConfig, cryptoContext);
+            fileInfo.getSecond().longValue(), compactionCacheConfig, cryptoContext, true);
         cleanupBulkloadDirOfPartition = true;
         List<Cell> cells = new ArrayList<>();
         boolean hasMore;

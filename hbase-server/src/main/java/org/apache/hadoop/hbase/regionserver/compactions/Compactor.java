@@ -68,7 +68,7 @@ import com.google.common.io.Closeables;
 @InterfaceAudience.Private
 public abstract class Compactor<T extends CellSink> {
   private static final Log LOG = LogFactory.getLog(Compactor.class);
-  private static final long COMPACTION_PROGRESS_LOG_INTERVAL = 60 * 1000;
+  protected static final long COMPACTION_PROGRESS_LOG_INTERVAL = 60 * 1000;
   protected volatile CompactionProgress progress;
   protected final Configuration conf;
   protected final Store store;
