@@ -53,6 +53,7 @@ public class TaskMonitor {
   
   private static TaskMonitor instance;
   private CircularFifoBuffer tasks = new CircularFifoBuffer(MAX_TASKS);
+  private List<TaskAndWeakRefPair> rpcTasks = Lists.newArrayList();
 
   /**
    * Get singleton instance.
@@ -88,7 +89,7 @@ public class TaskMonitor {
         new Class<?>[] { MonitoredRPCHandler.class },
         new PassthroughInvocationHandler<MonitoredRPCHandler>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
-    tasks.add(pair);
+    rpcTasks.add(pair);
     return proxy;
   }
 
@@ -120,8 +121,14 @@ public class TaskMonitor {
    */
   public synchronized List<MonitoredTask> getTasks() {
     purgeExpiredTasks();
-    ArrayList<MonitoredTask> ret = Lists.newArrayListWithCapacity(tasks.size());
+    ArrayList<MonitoredTask> ret = Lists.newArrayListWithCapacity(tasks.size() + rpcTasks.size());
     for (Iterator<TaskAndWeakRefPair> it = tasks.iterator();
+         it.hasNext();) {
+      TaskAndWeakRefPair pair = it.next();
+      MonitoredTask t = pair.get();
+      ret.add(t.clone());
+    }
+    for (Iterator<TaskAndWeakRefPair> it = rpcTasks.iterator();
          it.hasNext();) {
       TaskAndWeakRefPair pair = it.next();
       MonitoredTask t = pair.get();
