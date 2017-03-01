@@ -31,6 +31,7 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -103,6 +104,9 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private static final float DEFAULT_ACCEPT_FACTOR = 0.95f;
   private static final float DEFAULT_MIN_FACTOR = 0.85f;
+
+  // Number of blocks to clear for each of the bucket size that is full
+  private static final int DEFAULT_FREE_ENTIRE_BLOCK_FACTOR = 2;
 
   /** Statistics thread */
   private static final int statThreadPeriod = 5 * 60;
@@ -567,6 +571,51 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
+   * Return the count of bucketSizeinfos still needf ree space
+   */
+  private int bucketSizesAboveThresholdCount(float minFactor) {
+    BucketAllocator.IndexStatistics[] stats = bucketAllocator.getIndexStatistics();
+    int fullCount = 0;
+    for (int i = 0; i < stats.length; i++) {
+      long freeGoal = (long) Math.floor(stats[i].totalCount() * (1 - minFactor));
+      freeGoal = Math.max(freeGoal, 1);
+      if (stats[i].freeCount() < freeGoal) {
+        fullCount++;
+      }
+    }
+    return fullCount;
+  }
+
+  /**
+   * This method will find the buckets that are minimally occupied
+   * and are not reference counted and will free them completely
+   * without any constraint on the access times of the elements,
+   * and as a process will completely free at most the number of buckets
+   * passed, sometimes it might not due to changing refCounts
+   *
+   * @param completelyFreeBucketsNeeded number of buckets to free
+   **/
+  private void freeEntireBuckets(int completelyFreeBucketsNeeded) {
+    if (completelyFreeBucketsNeeded != 0) {
+      // First we will build a set where the offsets are reference counted, usually
+      // this set is small around O(Handler Count) unless something else is wrong
+      Set<Integer> inUseBuckets = new HashSet<Integer>();
+      for (BucketEntry entry : backingMap.values()) {
+        inUseBuckets.add(bucketAllocator.getBucketIndex(entry.offset()));
+      }
+
+      Set<Integer> candidateBuckets = bucketAllocator.getLeastFilledBuckets(
+          inUseBuckets, completelyFreeBucketsNeeded);
+      for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
+        if (candidateBuckets.contains(bucketAllocator
+            .getBucketIndex(entry.getValue().offset()))) {
+          evictBlock(entry.getKey());
+        }
+      }
+    }
+  }
+
+  /**
    * Free the space if the used size reaches acceptableSize() or one size block
    * couldn't be allocated. When freeing the space, we use the LRU algorithm and
    * ensure there must be some blocks evicted
@@ -662,27 +711,14 @@ public class BucketCache implements BlockCache, HeapSize {
         remainingBuckets--;
       }
 
-      /**
-       * Check whether need extra free because some bucketSizeinfo still needs
-       * free space
-       */
-      stats = bucketAllocator.getIndexStatistics();
-      boolean needFreeForExtra = false;
-      for (int i = 0; i < stats.length; i++) {
-        long freeGoal = (long) Math.floor(stats[i].totalCount() * (1 - DEFAULT_MIN_FACTOR));
-        freeGoal = Math.max(freeGoal, 1);
-        if (stats[i].freeCount() < freeGoal) {
-          needFreeForExtra = true;
-          break;
-        }
-      }
-
-      if (needFreeForExtra) {
+      // Check and free if there are buckets that still need freeing of space
+      if (bucketSizesAboveThresholdCount(DEFAULT_MIN_FACTOR) > 0) {
         bucketQueue.clear();
-        remainingBuckets = 2;
+        remainingBuckets = 3;
 
         bucketQueue.add(bucketSingle);
         bucketQueue.add(bucketMulti);
+        bucketQueue.add(bucketMemory);
 
         while ((bucketGroup = bucketQueue.poll()) != null) {
           long bucketBytesToFree = (bytesToFreeWithExtra - bytesFreed) / remainingBuckets;
@@ -690,6 +726,14 @@ public class BucketCache implements BlockCache, HeapSize {
           remainingBuckets--;
         }
       }
+
+      // Even after the above free we might still need freeing because of the
+      // De-fragmentation of the buckets (also called Slab Calcification problem), i.e
+      // there might be some buckets where the occupancy is very sparse and thus are not
+      // yielding the free for the other bucket sizes, the fix for this to evict some
+      // of the buckets, we do this by evicting the buckets that are least fulled
+      freeEntireBuckets(DEFAULT_FREE_ENTIRE_BLOCK_FACTOR *
+          bucketSizesAboveThresholdCount(1.0f));
 
       if (LOG.isDebugEnabled()) {
         long single = bucketSingle.totalSize();
