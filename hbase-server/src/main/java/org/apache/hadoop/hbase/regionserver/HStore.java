@@ -663,6 +663,22 @@ public class HStore implements Store {
   }
 
   /**
+   * This message intends to inform the MemStore that next coming updates
+   * are going to be part of the replaying edits from WAL
+   */
+  public void startReplayingFromWAL(){
+    this.memstore.startReplayingFromWAL();
+  }
+
+  /**
+   * This message intends to inform the MemStore that the replaying edits from WAL
+   * are done
+   */
+  public void stopReplayingFromWAL(){
+    this.memstore.stopReplayingFromWAL();
+  }
+
+  /**
    * Adds a value to the memstore
    * @param cell
    * @param memstoreSize

@@ -71,16 +71,22 @@ public class CompactingMemStore extends AbstractMemStore {
 
   private long inmemoryFlushSize;       // the threshold on active size for in-memory flush
   private final AtomicBoolean inMemoryFlushInProgress = new AtomicBoolean(false);
+
+  // inWalReplay is true while we are synchronously replaying the edits from WAL
+  private boolean inWalReplay = false;
+
   @VisibleForTesting
   private final AtomicBoolean allowCompaction = new AtomicBoolean(true);
   private boolean compositeSnapshot = true;
 
-  public static final long DEEP_OVERHEAD = AbstractMemStore.DEEP_OVERHEAD
-      + 6 * ClassSize.REFERENCE // Store, RegionServicesForStores, CompactionPipeline,
-                                // MemStoreCompactor, inMemoryFlushInProgress, allowCompaction
-      + Bytes.SIZEOF_LONG // inmemoryFlushSize
+
+  public static final long DEEP_OVERHEAD = ClassSize.align( AbstractMemStore.DEEP_OVERHEAD
+      + 6 * ClassSize.REFERENCE     // Store, RegionServicesForStores, CompactionPipeline,
+                                    // MemStoreCompactor, inMemoryFlushInProgress, allowCompaction
+      + Bytes.SIZEOF_LONG           // inmemoryFlushSize
+      + 2 * Bytes.SIZEOF_BOOLEAN    // compositeSnapshot and inWalReplay
       + 2 * ClassSize.ATOMIC_BOOLEAN// inMemoryFlushInProgress and allowCompaction
-      + CompactionPipeline.DEEP_OVERHEAD + MemStoreCompactor.DEEP_OVERHEAD;
+      + CompactionPipeline.DEEP_OVERHEAD + MemStoreCompactor.DEEP_OVERHEAD);
 
   public CompactingMemStore(Configuration conf, CellComparator c,
       HStore store, RegionServicesForStores regionServices,
@@ -230,6 +236,24 @@ public class CompactingMemStore extends AbstractMemStore {
         WAL.updateStore(encodedRegionName, familyName, minSequenceId, onlyIfGreater);
       }
     }
+  }
+
+  /**
+   * This message intends to inform the MemStore that next coming updates
+   * are going to be part of the replaying edits from WAL
+   */
+  @Override
+  public void startReplayingFromWAL() {
+    inWalReplay = true;
+  }
+
+  /**
+   * This message intends to inform the MemStore that the replaying edits from WAL
+   * are done
+   */
+  @Override
+  public void stopReplayingFromWAL() {
+    inWalReplay = false;
   }
 
   // the getSegments() method is used for tests only
@@ -388,9 +412,12 @@ public class CompactingMemStore extends AbstractMemStore {
 
   private boolean shouldFlushInMemory() {
     if (this.active.keySize() > inmemoryFlushSize) { // size above flush threshold
-        // the inMemoryFlushInProgress is CASed to be true here in order to mutual exclude
-        // the insert of the active into the compaction pipeline
-        return (inMemoryFlushInProgress.compareAndSet(false,true));
+      if (inWalReplay) {  // when replaying edits from WAL there is no need in in-memory flush
+        return false;     // regardless the size
+      }
+      // the inMemoryFlushInProgress is CASed to be true here in order to mutual exclude
+      // the insert of the active into the compaction pipeline
+      return (inMemoryFlushInProgress.compareAndSet(false,true));
     }
     return false;
   }

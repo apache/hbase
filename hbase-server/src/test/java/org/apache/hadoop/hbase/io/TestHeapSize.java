@@ -324,10 +324,10 @@ public class TestHeapSize  {
     expected += ClassSize.estimateBase(AtomicBoolean.class, false);
     expected += ClassSize.estimateBase(AtomicBoolean.class, false);
     expected += ClassSize.estimateBase(CompactionPipeline.class, false);
-    expected += ClassSize.estimateBase(LinkedList.class, false);
-    expected += ClassSize.estimateBase(LinkedList.class, false);
+    expected += ClassSize.estimateBase(LinkedList.class, false); //inside CompactionPipeline
+    expected += ClassSize.estimateBase(LinkedList.class, false); //inside CompactionPipeline
     expected += ClassSize.estimateBase(MemStoreCompactor.class, false);
-    expected += ClassSize.estimateBase(AtomicBoolean.class, false);
+    expected += ClassSize.estimateBase(AtomicBoolean.class, false);// inside MemStoreCompactor
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(AtomicBoolean.class, true);

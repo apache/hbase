@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -57,6 +58,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 public class DefaultMemStore extends AbstractMemStore {
   private static final Log LOG = LogFactory.getLog(DefaultMemStore.class);
 
+  public final static long DEEP_OVERHEAD = ClassSize.align(AbstractMemStore.DEEP_OVERHEAD);
+  public final static long FIXED_OVERHEAD = ClassSize.align(AbstractMemStore.FIXED_OVERHEAD);
   /**
    * Default constructor. Used for tests.
    */
