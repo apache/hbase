@@ -918,7 +918,7 @@ public class ZKUtil {
             // TODO: Set node ACL for groups when ZK supports this feature
             groups.add(user);
           } else {
-            acls.add(new ACL(Perms.ALL, new Id("auth", user)));
+            acls.add(new ACL(Perms.ALL, new Id("sasl", user)));
           }
         }
         if (!groups.isEmpty()) {
