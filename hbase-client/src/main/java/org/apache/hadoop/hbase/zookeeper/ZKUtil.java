@@ -1034,7 +1034,7 @@ public class ZKUtil {
       ArrayList<ACL> acls = new ArrayList<ACL>();
       // add permission to hbase supper user
       if (superUser != null) {
-        acls.add(new ACL(Perms.ALL, new Id("auth", superUser)));
+        acls.add(new ACL(Perms.ALL, new Id("sasl", superUser)));
       }
       // Certain znodes are accessed directly by the client,
       // so they must be readable by non-authenticated clients
