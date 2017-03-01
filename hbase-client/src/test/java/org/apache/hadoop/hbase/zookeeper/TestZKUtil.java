@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
@@ -41,6 +42,29 @@ import org.junit.experimental.categories.Category;
 public class TestZKUtil {
 
   @Test
+  public void testUnsecure() throws ZooKeeperConnectionException, IOException {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(Superusers.SUPERUSER_CONF_KEY, "user1");
+    String node = "/hbase/testUnsecure";
+    ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, node, null, false);
+    List<ACL> aclList = ZKUtil.createACL(watcher, node, false);
+    Assert.assertEquals(aclList.size(), 1);
+    Assert.assertTrue(aclList.contains(Ids.OPEN_ACL_UNSAFE.iterator().next()));
+  }
+
+  @Test
+  public void testSecuritySingleSuperuser() throws ZooKeeperConnectionException, IOException {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(Superusers.SUPERUSER_CONF_KEY, "user1");
+    String node = "/hbase/testSecuritySingleSuperuser";
+    ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, node, null, false);
+    List<ACL> aclList = ZKUtil.createACL(watcher, node, true);
+    Assert.assertEquals(aclList.size(), 2); // 1+1, since ACL will be set for the creator by default
+    Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user1"))));
+    Assert.assertTrue(aclList.contains(Ids.CREATOR_ALL_ACL.iterator().next()));
+  }
+
+  @Test
   public void testCreateACL() throws ZooKeeperConnectionException, IOException {
     Configuration conf = HBaseConfiguration.create();
     conf.set(Superusers.SUPERUSER_CONF_KEY, "user1,@group1,user2,@group2,user3");
@@ -48,10 +72,10 @@ public class TestZKUtil {
     ZooKeeperWatcher watcher = new ZooKeeperWatcher(conf, node, null, false);
     List<ACL> aclList = ZKUtil.createACL(watcher, node, true);
     Assert.assertEquals(aclList.size(), 4); // 3+1, since ACL will be set for the creator by default
-    Assert.assertTrue(!aclList.contains(new ACL(Perms.ALL, new Id("auth", "@group1")))
-        && !aclList.contains(new ACL(Perms.ALL, new Id("auth", "@group2"))));
-    Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("auth", "user1")))
-        && aclList.contains(new ACL(Perms.ALL, new Id("auth", "user2")))
-        && aclList.contains(new ACL(Perms.ALL, new Id("auth", "user3"))));
+    Assert.assertFalse(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "@group1"))));
+    Assert.assertFalse(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "@group2"))));
+    Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user1"))));
+    Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user2"))));
+    Assert.assertTrue(aclList.contains(new ACL(Perms.ALL, new Id("sasl", "user3"))));
   }
 }
