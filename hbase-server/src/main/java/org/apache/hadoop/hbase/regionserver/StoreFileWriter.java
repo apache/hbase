@@ -474,7 +474,9 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       }
 
       if (!fs.exists(dir)) {
-        fs.mkdirs(dir);
+        // Handle permission for non-HDFS filesystem properly
+        // See HBASE-17710
+        HRegionFileSystem.mkdirs(fs, conf, dir);
       }
 
       // set block storage policy for temp path

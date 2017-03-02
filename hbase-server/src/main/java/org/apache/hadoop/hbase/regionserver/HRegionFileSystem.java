@@ -753,6 +753,15 @@ public class HRegionFileSystem {
     }
   }
 
+  static boolean mkdirs(FileSystem fs, Configuration conf, Path dir) throws IOException {
+    if (FSUtils.isDistributedFileSystem(fs) ||
+        !conf.getBoolean(HConstants.ENABLE_DATA_FILE_UMASK, false)) {
+      return fs.mkdirs(dir);
+    }
+    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
+    return fs.mkdirs(dir, perms);
+  }
+
   /**
    * Create the region merges directory.
    * @throws IOException If merges dir already exists or we fail to create it.
@@ -768,7 +777,7 @@ public class HRegionFileSystem {
             + " before creating them again.");
       }
     }
-    if (!fs.mkdirs(mergesdir))
+    if (!mkdirs(fs, conf, mergesdir))
       throw new IOException("Failed create of " + mergesdir);
   }
 
@@ -1060,7 +1069,7 @@ public class HRegionFileSystem {
     IOException lastIOE = null;
     do {
       try {
-        return fs.mkdirs(dir);
+        return mkdirs(fs, conf, dir);
       } catch (IOException ioe) {
         lastIOE = ioe;
         if (fs.exists(dir)) return true; // directory is present

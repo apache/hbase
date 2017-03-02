@@ -252,7 +252,7 @@ public abstract class FSUtils {
    * @return True is <code>fs</code> is instance of DistributedFileSystem
    * @throws IOException
    */
-  private static boolean isDistributedFileSystem(final FileSystem fs) throws IOException {
+  public static boolean isDistributedFileSystem(final FileSystem fs) throws IOException {
     FileSystem fileSystem = fs;
     // If passed an instance of HFileSystem, it fails instanceof DistributedFileSystem.
     // Check its backing fs for dfs-ness.
