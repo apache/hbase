@@ -720,7 +720,9 @@ public class StoreFile {
       }
 
       if (!fs.exists(dir)) {
-        fs.mkdirs(dir);
+        // Handle permission for non-HDFS filesystem properly
+        // See HBASE-17710
+        HRegionFileSystem.mkdirs(fs, conf, dir);
       }
 
       if (filePath == null) {
