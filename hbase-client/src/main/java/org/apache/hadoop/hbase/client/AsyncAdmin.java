@@ -364,4 +364,40 @@ public interface AsyncAdmin {
    * @param hri
    */
   CompletableFuture<Void> closeRegion(ServerName sn, HRegionInfo hri);
+
+  /**
+   * Merge two regions.
+   * @param nameOfRegionA encoded or full name of region a
+   * @param nameOfRegionB encoded or full name of region b
+   * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
+   *          regions
+   */
+  CompletableFuture<Void> mergeRegions(final byte[] nameOfRegionA, final byte[] nameOfRegionB,
+      final boolean forcible);
+
+  /**
+   * Split a table. The method will execute split action for each region in table.
+   * @param tableName table to split
+   */
+  CompletableFuture<Void> split(final TableName tableName);
+
+  /**
+   * Split an individual region.
+   * @param regionName region to split
+   */
+  CompletableFuture<Void> splitRegion(final byte[] regionName);
+
+  /**
+   * Split a table.
+   * @param tableName table to split
+   * @param splitPoint the explicit position to split on
+   */
+  CompletableFuture<Void> split(final TableName tableName, final byte[] splitPoint);
+
+  /**
+   * Split an individual region.
+   * @param regionName region to split
+   * @param splitPoint the explicit position to split on
+   */
+  CompletableFuture<Void> splitRegion(final byte[] regionName, final byte[] splitPoint);
 }

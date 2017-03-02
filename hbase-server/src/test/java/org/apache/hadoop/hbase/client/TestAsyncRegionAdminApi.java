@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -200,4 +202,98 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
     }
   }
+
+  @Test
+  public void testMergeRegions() throws Exception {
+    final TableName tableName = TableName.valueOf("testMergeRegions");
+    HColumnDescriptor cd = new HColumnDescriptor("d");
+    HTableDescriptor td = new HTableDescriptor(tableName);
+    td.addFamily(cd);
+    byte[][] splitRows = new byte[][] { "3".getBytes(), "6".getBytes() };
+    Admin syncAdmin = TEST_UTIL.getAdmin();
+    try {
+      TEST_UTIL.createTable(td, splitRows);
+      TEST_UTIL.waitTableAvailable(tableName);
+
+      List<HRegionInfo> tableRegions;
+      HRegionInfo regionA;
+      HRegionInfo regionB;
+
+      // merge with full name
+      tableRegions = syncAdmin.getTableRegions(tableName);
+      assertEquals(3, syncAdmin.getTableRegions(tableName).size());
+      regionA = tableRegions.get(0);
+      regionB = tableRegions.get(1);
+      admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
+
+      assertEquals(2, syncAdmin.getTableRegions(tableName).size());
+
+      // merge with encoded name
+      tableRegions = syncAdmin.getTableRegions(tableName);
+      regionA = tableRegions.get(0);
+      regionB = tableRegions.get(1);
+      admin.mergeRegions(regionA.getRegionName(), regionB.getRegionName(), false).get();
+
+      assertEquals(1, syncAdmin.getTableRegions(tableName).size());
+    } finally {
+      syncAdmin.disableTable(tableName);
+      syncAdmin.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testSplitTable() throws Exception {
+    splitTests(TableName.valueOf("testSplitTable"), 3000, false, null);
+    splitTests(TableName.valueOf("testSplitTableWithSplitPoint"), 3000, false, Bytes.toBytes("3"));
+    splitTests(TableName.valueOf("testSplitRegion"), 3000, true, null);
+    splitTests(TableName.valueOf("testSplitRegionWithSplitPoint"), 3000, true, Bytes.toBytes("3"));
+  }
+
+  private void splitTests(TableName tableName, int rowCount, boolean isSplitRegion,
+      byte[] splitPoint) throws Exception {
+    int count = 0;
+    // create table
+    HColumnDescriptor cd = new HColumnDescriptor("d");
+    HTableDescriptor td = new HTableDescriptor(tableName);
+    td.addFamily(cd);
+    Table table = TEST_UTIL.createTable(td, null);
+    TEST_UTIL.waitTableAvailable(tableName);
+
+    List<HRegionInfo> regions = TEST_UTIL.getAdmin().getTableRegions(tableName);
+    assertEquals(regions.size(), 1);
+
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i < rowCount; i++) {
+      Put put = new Put(Bytes.toBytes(i));
+      put.addColumn(Bytes.toBytes("d"), null, Bytes.toBytes("value" + i));
+      puts.add(put);
+    }
+    table.put(puts);
+
+    if (isSplitRegion) {
+      admin.splitRegion(regions.get(0).getRegionName(), splitPoint).get();
+    } else {
+      if (splitPoint == null) {
+        admin.split(tableName).get();
+      } else {
+        admin.split(tableName, splitPoint).get();
+      }
+    }
+
+    for (int i = 0; i < 45; i++) {
+      try {
+        List<HRegionInfo> hRegionInfos = TEST_UTIL.getAdmin().getTableRegions(tableName);
+        count = hRegionInfos.size();
+        if (count >= 2) {
+          break;
+        }
+        Thread.sleep(1000L);
+      } catch (Exception e) {
+        LOG.error(e);
+      }
+    }
+
+    assertEquals(count, 2);
+  }
+
 }

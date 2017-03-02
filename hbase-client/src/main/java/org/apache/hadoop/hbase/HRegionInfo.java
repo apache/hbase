@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.util.HashKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Information about a region. A region is a range of keys in the whole keyspace of a table, an
@@ -580,6 +581,19 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     }
 
     return elements;
+  }
+
+  public static boolean isEncodedRegionName(byte[] regionName) throws IOException {
+    try {
+      HRegionInfo.parseRegionName(regionName);
+      return false;
+    } catch (IOException e) {
+      if (StringUtils.stringifyException(e)
+          .contains(HRegionInfo.INVALID_REGION_NAME_FORMAT_MESSAGE)) {
+        return true;
+      }
+      throw e;
+    }
   }
 
   /** @return the regionId */
