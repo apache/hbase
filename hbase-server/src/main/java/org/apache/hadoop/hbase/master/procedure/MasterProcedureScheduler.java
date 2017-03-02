@@ -239,7 +239,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
   }
 
-  private void clearQueue() {
+  protected void clearQueue() {
     // Remove Servers
     for (int i = 0; i < serverBuckets.length; ++i) {
       clear(serverBuckets[i], serverRunQueue, SERVER_QUEUE_KEY_COMPARATOR);

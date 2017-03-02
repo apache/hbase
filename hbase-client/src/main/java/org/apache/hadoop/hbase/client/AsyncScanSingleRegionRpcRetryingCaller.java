@@ -404,7 +404,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private void updateNextStartRowWhenError(Result result) {
     nextStartRowWhenError = result.getRow();
-    includeNextStartRowWhenError = result.hasMoreCellsInRow();
+    includeNextStartRowWhenError = result.mayHaveMoreCellsInRow();
   }
 
   private void completeWhenNoMoreResultsInRegion() {

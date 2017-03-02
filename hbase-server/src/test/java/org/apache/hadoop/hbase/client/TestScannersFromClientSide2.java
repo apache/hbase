@@ -136,14 +136,14 @@ public class TestScannersFromClientSide2 {
   private List<Result> assertAndCreateCompleteResults(List<Result> results) throws IOException {
     if ((!batch && !allowPartial) || (allowPartial && !batch && !smallResultSize)) {
       for (Result result : results) {
-        assertFalse("Should not have partial result", result.hasMoreCellsInRow());
+        assertFalse("Should not have partial result", result.mayHaveMoreCellsInRow());
       }
       return results;
     }
     List<Result> completeResults = new ArrayList<>();
     List<Result> partialResults = new ArrayList<>();
     for (Result result : results) {
-      if (!result.hasMoreCellsInRow()) {
+      if (!result.mayHaveMoreCellsInRow()) {
         assertFalse("Should have partial result", partialResults.isEmpty());
         partialResults.add(result);
         completeResults.add(Result.createCompleteResult(partialResults));

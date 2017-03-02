@@ -76,7 +76,7 @@ class CompleteScanResultCache implements ScanResultCache {
     // In every RPC response there should be at most a single partial result. Furthermore, if
     // there is a partial result, it is guaranteed to be in the last position of the array.
     Result last = results[results.length - 1];
-    if (last.hasMoreCellsInRow()) {
+    if (last.mayHaveMoreCellsInRow()) {
       if (partialResults.isEmpty()) {
         partialResults.add(last);
         return Arrays.copyOf(results, results.length - 1);

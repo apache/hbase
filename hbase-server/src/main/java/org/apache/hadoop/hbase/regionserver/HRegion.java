@@ -6183,7 +6183,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // Ok, we are good, let's try to get some results from the main heap.
           populateResult(results, this.storeHeap, scannerContext, current);
-
           if (scannerContext.checkAnyLimitReached(LimitScope.BETWEEN_CELLS)) {
             if (hasFilterRow) {
               throw new IncompatibleFilterException(

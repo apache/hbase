@@ -322,7 +322,7 @@ public final class ConnectionUtils {
       return null;
     }
     return Result.create(Arrays.copyOfRange(rawCells, index, rawCells.length), null,
-      result.isStale(), result.hasMoreCellsInRow());
+      result.isStale(), result.mayHaveMoreCellsInRow());
   }
 
   // Add a delta to avoid timeout immediately after a retry sleeping.
@@ -396,6 +396,6 @@ public final class ConnectionUtils {
    * </ol>
    */
   public static int numberOfIndividualRows(List<Result> results) {
-    return (int) results.stream().filter(r -> !r.hasMoreCellsInRow()).count();
+    return (int) results.stream().filter(r -> !r.mayHaveMoreCellsInRow()).count();
   }
 }
