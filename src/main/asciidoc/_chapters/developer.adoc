@@ -1110,11 +1110,13 @@ public class TestExample {
   // down in 'testExampleFoo()' where we use it to log current test's name.
   @Rule public TestName testName = new TestName();
 
-  // CategoryBasedTimeout.forClass(<testcase>) decides the timeout based on the category
-  // (small/medium/large) of the testcase. @ClassRule requires that the full testcase runs within
-  // this timeout irrespective of individual test methods' times.
-  @ClassRule
-  public static TestRule timeout = CategoryBasedTimeout.forClass(TestExample.class);
+  // The below rule does two things. It decides the timeout based on the category
+  // (small/medium/large) of the testcase. This @Rule requires that the full testcase runs
+  // within this timeout irrespective of individual test methods' times. The second
+  // feature is we'll dump in the log when the test is done a count of threads still
+  // running.
+  @Rule public static TestRule timeout = CategoryBasedTimeout.builder().
+    withTimeout(this.getClass()).withLookingForStuckThread(true).build();
 
   @Before
   public void setUp() throws Exception {
