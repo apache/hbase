@@ -219,10 +219,9 @@ For applications which require high-end multithreaded access (e.g., web-servers 
 ----
 // Create a connection to the cluster.
 Configuration conf = HBaseConfiguration.create();
-try (Connection connection = ConnectionFactory.createConnection(conf)) {
-  try (Table table = connection.getTable(TableName.valueOf(tablename)) {
-    // use table as needed, the table returned is lightweight
-  }
+try (Connection connection = ConnectionFactory.createConnection(conf);
+     Table table = connection.getTable(TableName.valueOf(tablename))) {
+  // use table as needed, the table returned is lightweight
 }
 ----
 ====
