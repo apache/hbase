@@ -22,6 +22,7 @@
 #include <folly/SocketAddress.h>
 #include <wangle/service/Service.h>
 
+#include <folly/Logging.h>
 #include <memory>
 #include <utility>
 
@@ -34,8 +35,7 @@ using folly::SharedMutexWritePriority;
 using folly::SocketAddress;
 
 ConnectionPool::ConnectionPool(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
-                               std::shared_ptr<Codec> codec,
-							   nanoseconds connect_timeout)
+                               std::shared_ptr<Codec> codec, nanoseconds connect_timeout)
     : cf_(std::make_shared<ConnectionFactory>(io_executor, codec, connect_timeout)),
       clients_(),
       connections_(),

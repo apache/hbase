@@ -57,6 +57,11 @@ class Table {
    */
   void Close();
 
+  /**
+   * @brief - Get region location for a row in current table.
+   */
+  std::shared_ptr<RegionLocation> GetRegionLocation(const std::string &row);
+
  private:
   std::shared_ptr<TableName> table_name_;
   std::shared_ptr<hbase::LocationCache> location_cache_;

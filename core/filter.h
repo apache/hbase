@@ -20,9 +20,9 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
-#include <set>
 #include <vector>
 
 #include "if/Comparator.pb.h"

@@ -18,26 +18,16 @@
  */
 
 #include "connection/rpc-client.h"
+
+#include <folly/Logging.h>
 #include <unistd.h>
 #include <wangle/concurrent/IOThreadPoolExecutor.h>
+#include <memory>
+#include <string>
 
 using hbase::RpcClient;
-using hbase::AbstractRpcChannel;
 
 namespace hbase {
-
-class RpcChannelImplementation : public AbstractRpcChannel {
- public:
-  RpcChannelImplementation(std::shared_ptr<RpcClient> rpc_client, const std::string& host,
-                           uint16_t port, std::shared_ptr<User> ticket, int rpc_timeout)
-      : AbstractRpcChannel(rpc_client, host, port, ticket, rpc_timeout) {}
-
-  void CallMethod(const MethodDescriptor* method, RpcController* controller, const Message* request,
-                  Message* response, Closure* done) override {
-    rpc_client_->CallMethod(method, controller, request, response, done, host_, port_, ticket_);
-  }
-};
-}  // namespace hbase
 
 RpcClient::RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
                      std::shared_ptr<Codec> codec, nanoseconds connect_timeout)
@@ -80,26 +70,4 @@ folly::Future<std::unique_ptr<Response>> RpcClient::AsyncCall(const std::string&
 std::shared_ptr<RpcConnection> RpcClient::GetConnection(std::shared_ptr<ConnectionId> remote_id) {
   return cp_->GetConnection(remote_id);
 }
-
-std::shared_ptr<RpcChannel> RpcClient::CreateRpcChannel(const std::string& host, uint16_t port,
-                                                        std::shared_ptr<User> ticket,
-                                                        int rpc_timeout) {
-  std::shared_ptr<RpcChannelImplementation> channel = std::make_shared<RpcChannelImplementation>(
-      shared_from_this(), host, port, ticket, rpc_timeout);
-
-  /* static_pointer_cast is safe since RpcChannelImplementation derives
-   * from RpcChannel, otherwise, dynamic_pointer_cast should be used. */
-  return std::static_pointer_cast<RpcChannel>(channel);
-}
-
-void RpcClient::CallMethod(const MethodDescriptor* method, RpcController* controller,
-                           const Message* req_msg, Message* resp_msg, Closure* done,
-                           const std::string& host, uint16_t port, std::shared_ptr<User> ticket) {
-  std::shared_ptr<Message> shared_req(const_cast<Message*>(req_msg));
-  std::shared_ptr<Message> shared_resp(resp_msg);
-
-  std::unique_ptr<Request> req = std::make_unique<Request>(shared_req, shared_resp, method->name());
-
-  AsyncCall(host, port, std::move(req), ticket, method->service()->name())
-      .then([done, this](std::unique_ptr<Response> resp) { done->Run(); });
-}
+}  // namespace hbase

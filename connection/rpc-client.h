@@ -38,24 +38,15 @@ using hbase::ConnectionPool;
 using hbase::RpcConnection;
 using hbase::security::User;
 
-using google::protobuf::MethodDescriptor;
-using google::protobuf::RpcChannel;
 using google::protobuf::Message;
-using google::protobuf::RpcController;
-using google::protobuf::Closure;
-
 using std::chrono::nanoseconds;
-
-class RpcChannelImplementation;
 
 namespace hbase {
 
-class RpcClient : public std::enable_shared_from_this<RpcClient> {
-  friend class RpcChannelImplementation;
-
+class RpcClient {
  public:
-  RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor,
-            std::shared_ptr<Codec> codec, nanoseconds connect_timeout);
+  RpcClient(std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor, std::shared_ptr<Codec> codec,
+            nanoseconds connect_timeout = nanoseconds(0));
 
   virtual ~RpcClient() { Close(); }
 
@@ -79,40 +70,13 @@ class RpcClient : public std::enable_shared_from_this<RpcClient> {
 
   virtual void Close();
 
-  virtual std::shared_ptr<RpcChannel> CreateRpcChannel(const std::string &host, uint16_t port,
-                                                       std::shared_ptr<User> ticket,
-                                                       int rpc_timeout);
-
   std::shared_ptr<ConnectionPool> connection_pool() const { return cp_; }
 
  private:
-  void CallMethod(const MethodDescriptor *method, RpcController *controller, const Message *req_msg,
-                  Message *resp_msg, Closure *done, const std::string &host, uint16_t port,
-                  std::shared_ptr<User> ticket);
   std::shared_ptr<RpcConnection> GetConnection(std::shared_ptr<ConnectionId> remote_id);
 
  private:
   std::shared_ptr<ConnectionPool> cp_;
   std::shared_ptr<wangle::IOThreadPoolExecutor> io_executor_;
-};
-
-class AbstractRpcChannel : public RpcChannel {
- public:
-  AbstractRpcChannel(std::shared_ptr<RpcClient> rpc_client, const std::string &host, uint16_t port,
-                     std::shared_ptr<User> ticket, int rpc_timeout)
-      : rpc_client_(rpc_client),
-        host_(host),
-        port_(port),
-        ticket_(ticket),
-        rpc_timeout_(rpc_timeout) {}
-
-  virtual ~AbstractRpcChannel() = default;
-
- protected:
-  std::shared_ptr<RpcClient> rpc_client_;
-  std::string host_;
-  uint16_t port_;
-  std::shared_ptr<User> ticket_;
-  int rpc_timeout_;
 };
 }  // namespace hbase

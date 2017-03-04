@@ -40,6 +40,9 @@ cxx_library(
         "request_converter.h",
         "response_converter.h",
         "table.h",
+        "async-rpc-retrying-caller-factory.h",
+        "async-rpc-retrying-caller.h",
+        "hbase-rpc-controller.h",
     ],
     srcs=[
         "cell.cc",
@@ -58,6 +61,8 @@ cxx_library(
         "table.cc",
     ],
     deps=[
+        "//exceptions:exceptions",
+        "//utils:utils",
         "//connection:connection",
         "//if:if",
         "//serde:serde",
@@ -94,6 +99,15 @@ cxx_test(
     name="get-test",
     srcs=["get-test.cc",],
     deps=[":core",],
+    run_test_separately=True,)
+cxx_test(
+    name="retry-test",
+    srcs=["async-rpc-retrying-test.cc",],
+    deps=[
+        ":core",
+        "//test-util:test-util",
+        "//exceptions:exceptions",
+    ],
     run_test_separately=True,)
 cxx_test(
     name="time_range-test",

@@ -25,6 +25,7 @@
 
 #include <utility>
 
+#include <folly/Logging.h>
 #include "connection/response.h"
 #include "connection/rpc-connection.h"
 #include "if/Client.pb.h"

@@ -57,7 +57,8 @@ void Client::init(const hbase::Configuration &conf) {
   } else {
     LOG(WARNING) << "Not using RPC Cell Codec";
   }
-  rpc_client_ = std::make_shared<hbase::RpcClient>(io_executor_, codec, conn_conf_->connect_timeout());
+  rpc_client_ =
+      std::make_shared<hbase::RpcClient>(io_executor_, codec, conn_conf_->connect_timeout());
   location_cache_ =
       std::make_shared<hbase::LocationCache>(conf_, cpu_executor_, rpc_client_->connection_pool());
 }

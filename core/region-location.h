@@ -26,6 +26,8 @@
 
 namespace hbase {
 
+enum RegionLocateType { kBefore, kCurrent, kAfter };
+
 /**
  * @brief class to hold where a region is located.
  *
@@ -49,17 +51,17 @@ class RegionLocation {
   /**
    * Get a reference to the regio info
    */
-  const hbase::pb::RegionInfo &region_info() { return ri_; }
+  const hbase::pb::RegionInfo &region_info() const { return ri_; }
 
   /**
    * Get a reference to the server name
    */
-  const hbase::pb::ServerName &server_name() { return sn_; }
+  const hbase::pb::ServerName &server_name() const { return sn_; }
 
   /**
    * Get a reference to the region name.
    */
-  const std::string &region_name() { return region_name_; }
+  const std::string &region_name() const { return region_name_; }
 
   /**
    * Get a service. This could be closed or null. It's the caller's
@@ -79,7 +81,7 @@ class RegionLocation {
    */
   void set_server_name(hbase::pb::ServerName sn) { sn_ = sn; }
 
-  const std::string DebugString() {
+  const std::string DebugString() const {
     return "region_info:" + ri_.ShortDebugString() + ", server_name:" + sn_.ShortDebugString();
   }
 

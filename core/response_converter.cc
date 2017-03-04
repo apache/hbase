@@ -19,6 +19,7 @@
 
 #include "core/response_converter.h"
 
+#include <string>
 #include <vector>
 
 #include "core/cell.h"
