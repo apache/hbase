@@ -16,7 +16,6 @@ package org.apache.hadoop.hbase.spark.datasources
  * limitations under the License.
  */
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder.JavaBytesEncoder
 import org.apache.hadoop.hbase.spark.hbase._
 import org.apache.hadoop.hbase.util.Bytes
@@ -32,7 +31,6 @@ import org.apache.spark.unsafe.types.UTF8String
   * can work correctly, which is done by wrapping the type into the first byte
   * of the serialized array.
   */
-@InterfaceAudience.Private
 class NaiveEncoder extends BytesEncoder with Logging{
   var code = 0
   def nextCode: Byte = {

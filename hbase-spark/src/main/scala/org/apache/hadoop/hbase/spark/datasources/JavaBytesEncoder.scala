@@ -17,9 +17,6 @@
 
 package org.apache.hadoop.hbase.spark.datasources
 
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.spark.datasources.JavaBytesEncoder.JavaBytesEncoder
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.Logging
@@ -32,8 +29,6 @@ import org.apache.spark.sql.types._
   * @param low: the lower bound of the range.
   * @param upper: the upper bound of the range.
   */
-@InterfaceAudience.LimitedPrivate(Array(HBaseInterfaceAudience.SPARK))
-@InterfaceStability.Evolving
 case class BoundRange(low: Array[Byte],upper: Array[Byte])
 
 /**
@@ -45,8 +40,6 @@ case class BoundRange(low: Array[Byte],upper: Array[Byte])
   * @param greater: the set of ranges for GreaterThan/GreaterThanOrEqualTo
   * @param value: the byte array of the original value
   */
-@InterfaceAudience.LimitedPrivate(Array(HBaseInterfaceAudience.SPARK))
-@InterfaceStability.Evolving
 case class BoundRanges(less: Array[BoundRange], greater: Array[BoundRange], value: Array[Byte])
 
 /**
@@ -54,8 +47,6 @@ case class BoundRanges(less: Array[BoundRange], greater: Array[BoundRange], valu
   * encode is used for serializing the data type to byte array and the filter is
   * used to filter out the unnecessary records.
   */
-@InterfaceAudience.LimitedPrivate(Array(HBaseInterfaceAudience.SPARK))
-@InterfaceStability.Evolving
 trait BytesEncoder {
   def encode(dt: DataType, value: Any): Array[Byte]
 
@@ -92,8 +83,6 @@ trait BytesEncoder {
   def ranges(in: Any): Option[BoundRanges]
 }
 
-@InterfaceAudience.LimitedPrivate(Array(HBaseInterfaceAudience.SPARK))
-@InterfaceStability.Evolving
 object JavaBytesEncoder extends Enumeration with Logging{
   type JavaBytesEncoder = Value
   val Greater, GreaterEqual, Less, LessEqual, Equal, Unknown = Value

@@ -21,7 +21,6 @@ import org.apache.spark.sql.catalyst.SqlLexical
 import org.apache.spark.sql.catalyst.util.DataTypeParser
 import org.apache.spark.sql.types.DataType
 
-// TODO:  Only used in test suite.
 object DataTypeParserWrapper {
   lazy val dataTypeParser = new DataTypeParser {
     override val lexical = new SqlLexical

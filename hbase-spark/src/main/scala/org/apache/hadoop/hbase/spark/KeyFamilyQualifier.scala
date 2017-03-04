@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.spark
 
 import java.io.Serializable
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes
 
 /**
@@ -32,8 +30,6 @@ import org.apache.hadoop.hbase.util.Bytes
  * @param family    Record ColumnFamily
  * @param qualifier Cell Qualifier
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 class KeyFamilyQualifier(val rowKey:Array[Byte], val family:Array[Byte], val qualifier:Array[Byte])
   extends Comparable[KeyFamilyQualifier] with Serializable {
   override def compareTo(o: KeyFamilyQualifier): Int = {

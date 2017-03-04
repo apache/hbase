@@ -30,7 +30,6 @@ import org.apache.avro.SchemaBuilder.FieldDefault
 import org.apache.avro.SchemaBuilder.RecordBuilder
 import org.apache.avro.io._
 import org.apache.commons.io.output.ByteArrayOutputStream
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes
 
 import scala.collection.JavaConversions._
@@ -44,10 +43,8 @@ import org.apache.spark.sql.types._
 
 import scala.collection.immutable.Map
 
-@InterfaceAudience.Private
-abstract class AvroException(msg: String) extends Exception(msg)
 
-@InterfaceAudience.Private
+abstract class AvroException(msg: String) extends Exception(msg)
 case class SchemaConversionException(msg: String) extends AvroException(msg)
 
 /***
@@ -58,7 +55,6 @@ case class SchemaConversionException(msg: String) extends AvroException(msg)
   * 3. convertTypeToAvro: This function constructs converter function for a given sparkSQL
   *    datatype. This is used in writing Avro records out to disk
   */
-@InterfaceAudience.Private
 object SchemaConverters {
 
   case class SchemaType(dataType: DataType, nullable: Boolean)
@@ -397,7 +393,7 @@ object SchemaConverters {
   }
 }
 
-@InterfaceAudience.Private
+
 object AvroSerdes {
   // We only handle top level is record or primary type now
   def serialize(input: Any, schema: Schema): Array[Byte]= {

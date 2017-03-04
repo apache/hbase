@@ -18,15 +18,10 @@ package org.apache.hadoop.hbase.spark
 
 import java.util
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-
 /**
  * This object is a clean way to store and sort all cells that will be bulk
  * loaded into a single row
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 class FamiliesQualifiersValues extends Serializable {
   //Tree maps are used because we need the results to
   // be sorted when we read them

@@ -17,8 +17,6 @@
 package org.apache.hadoop.hbase.spark
 
 import org.apache.hadoop.hbase.TableName
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.spark.streaming.dstream.DStream
@@ -29,8 +27,6 @@ import scala.reflect.ClassTag
  * HBaseDStreamFunctions contains a set of implicit functions that can be
  * applied to a Spark DStream so that we can easily interact with HBase
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 object HBaseDStreamFunctions {
 
   /**

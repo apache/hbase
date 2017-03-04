@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.spark
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.TableName
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.{Connection, Delete, Get, Put, Result, Scan}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.spark.api.java.{JavaRDD, JavaSparkContext}
@@ -38,8 +36,6 @@ import scala.reflect.ClassTag
  * @param jsc    This is the JavaSparkContext that we will wrap
  * @param config This is the config information to out HBase cluster
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 class JavaHBaseContext(@transient jsc: JavaSparkContext,
                        @transient config: Configuration) extends Serializable {
   val hbaseContext = new HBaseContext(jsc.sc, config)
