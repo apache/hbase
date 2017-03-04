@@ -20,6 +20,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include "connection/response.h"
 #include "core/result.h"
 #include "if/Client.pb.h"

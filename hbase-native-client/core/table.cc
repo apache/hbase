@@ -71,4 +71,8 @@ void Table::Close() {
   is_closed_ = true;
 }
 
+std::shared_ptr<RegionLocation> Table::GetRegionLocation(const std::string &row) {
+  return location_cache_->LocateRegion(*table_name_, row).get();
+}
+
 } /* namespace hbase */

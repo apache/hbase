@@ -89,7 +89,7 @@ class Client {
   bool is_closed_ = false;
 
   /** Methods */
-  void init(const hbase::Configuration &conf);
+  void init(const hbase::Configuration& conf);
 };
 
 }  // namespace hbase

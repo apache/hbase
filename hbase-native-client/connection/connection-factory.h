@@ -44,8 +44,7 @@ class ConnectionFactory {
    * There should only be one ConnectionFactory per client.
    */
   ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
-                    std::shared_ptr<Codec> codec,
-					nanoseconds connect_timeout = nanoseconds(0));
+                    std::shared_ptr<Codec> codec, nanoseconds connect_timeout = nanoseconds(0));
 
   /** Default Destructor */
   virtual ~ConnectionFactory() = default;

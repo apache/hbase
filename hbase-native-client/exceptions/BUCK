@@ -16,17 +16,9 @@
 # limitations under the License.
 
 cxx_library(
-    name="utils",
-    exported_headers=[
-        "user-util.h", "version.h", "connection-util.h", "sys-util.h",
-        "time-util.h"
-    ],
-    srcs=["user-util.cc", "connection-util.cc"],
-    deps=['//third-party:folly',],
-    tests=[":user-util-test"],
-    visibility=['PUBLIC',],
-    compiler_flags=['-Weffc++'],)
-cxx_test(
-    name="user-util-test",
-    srcs=["user-util-test.cc",],
-    deps=[":utils",],)
+    name="exceptions",
+    exported_headers=["exception.h",],
+    srcs=[],
+    deps=["//third-party:folly",],
+    compiler_flags=['-Weffc++'],
+    visibility=['//core/...'],)

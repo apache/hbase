@@ -31,11 +31,10 @@ using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
 ConnectionFactory::ConnectionFactory(std::shared_ptr<wangle::IOThreadPoolExecutor> io_pool,
-                                     std::shared_ptr<Codec> codec,
-									 nanoseconds connect_timeout)
+                                     std::shared_ptr<Codec> codec, nanoseconds connect_timeout)
     : connect_timeout_(connect_timeout),
-	  io_pool_(io_pool),
-	  pipeline_factory_(std::make_shared<RpcPipelineFactory>(codec)) {}
+      io_pool_(io_pool),
+      pipeline_factory_(std::make_shared<RpcPipelineFactory>(codec)) {}
 
 std::shared_ptr<wangle::ClientBootstrap<SerializePipeline>> ConnectionFactory::MakeBootstrap() {
   auto client = std::make_shared<wangle::ClientBootstrap<SerializePipeline>>();
