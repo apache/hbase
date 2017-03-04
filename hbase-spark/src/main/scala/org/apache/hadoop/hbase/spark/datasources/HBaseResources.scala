@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hbase.spark.datasources
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.spark.{HBaseConnectionKey, SmartConnection,
@@ -28,10 +29,12 @@ import scala.language.implicitConversions
 
 // User has to invoke release explicitly to release the resource,
 // and potentially parent resources
+@InterfaceAudience.Private
 trait Resource {
   def release(): Unit
 }
 
+@InterfaceAudience.Private
 case class ScanResource(tbr: TableResource, rs: ResultScanner) extends Resource {
   def release() {
     rs.close()
@@ -39,12 +42,14 @@ case class ScanResource(tbr: TableResource, rs: ResultScanner) extends Resource 
   }
 }
 
+@InterfaceAudience.Private
 case class GetResource(tbr: TableResource, rs: Array[Result]) extends Resource {
   def release() {
     tbr.release()
   }
 }
 
+@InterfaceAudience.Private
 trait ReferencedResource {
   var count: Int = 0
   def init(): Unit
@@ -84,6 +89,7 @@ trait ReferencedResource {
   }
 }
 
+@InterfaceAudience.Private
 case class TableResource(relation: HBaseRelation) extends ReferencedResource {
   var connection: SmartConnection = _
   var table: Table = _
@@ -113,6 +119,7 @@ case class TableResource(relation: HBaseRelation) extends ReferencedResource {
   }
 }
 
+@InterfaceAudience.Private
 case class RegionResource(relation: HBaseRelation) extends ReferencedResource {
   var connection: SmartConnection = _
   var rl: RegionLocator = _
@@ -144,6 +151,7 @@ case class RegionResource(relation: HBaseRelation) extends ReferencedResource {
   }
 }
 
+@InterfaceAudience.Private
 object HBaseResources{
   implicit def ScanResToScan(sr: ScanResource): ResultScanner = {
     sr.rs

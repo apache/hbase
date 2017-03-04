@@ -17,6 +17,11 @@
 
 package org.apache.hadoop.hbase.spark.datasources
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 object HBaseSparkConf{
   // This is the hbase configuration. User can either set them in SparkConf, which
   // will take effect globally, or configure it per table, which will overwrite the value

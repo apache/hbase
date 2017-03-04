@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.spark
 
 import java.io.Serializable
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * This object will hold optional data for how a given column family's
  * writer will work
@@ -29,6 +32,8 @@ import java.io.Serializable
  * @param dataBlockEncoding String to define the data block encoding to be used
  *                          in the HFile
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 class FamilyHFileWriteOptions( val compression:String,
                                val bloomType: String,
                                val blockSize: Int,

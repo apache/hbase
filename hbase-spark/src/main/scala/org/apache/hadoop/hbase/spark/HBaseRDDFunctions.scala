@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.spark
 import java.util
 
 import org.apache.hadoop.hbase.{HConstants, TableName}
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.spark.rdd.RDD
@@ -30,6 +32,8 @@ import scala.reflect.ClassTag
  * HBaseRDDFunctions contains a set of implicit functions that can be
  * applied to a Spark RDD so that we can easily interact with HBase
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 object HBaseRDDFunctions
 {
 
