@@ -327,7 +327,7 @@ public class HRegionServer extends HasThread implements
   // space regions.
   private boolean stopping = false;
 
-  private volatile boolean killed = false;
+  volatile boolean killed = false;
 
   protected final Configuration conf;
 
@@ -965,8 +965,6 @@ public class HRegionServer extends HasThread implements
     try {
       if (!isStopped() && !isAborted()) {
         ShutdownHook.install(conf, fs, this, Thread.currentThread());
-        // Set our ephemeral znode up in zookeeper now we have a name.
-        createMyEphemeralNode();
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1446,6 +1444,8 @@ public class HRegionServer extends HasThread implements
         }
         this.conf.set(key, value);
       }
+      // Set our ephemeral znode up in zookeeper now we have a name.
+      createMyEphemeralNode();
 
       if (updateRootDir) {
         // initialize file system by the config fs.defaultFS and hbase.rootdir from master
@@ -2297,6 +2297,7 @@ public class HRegionServer extends HasThread implements
    * logs but it does close socket in case want to bring up server on old
    * hostname+port immediately.
    */
+  @VisibleForTesting
   protected void kill() {
     this.killed = true;
     abort("Simulated kill");
