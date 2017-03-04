@@ -115,7 +115,7 @@ public class TestServerCrashProcedure {
       // Now, reenable processing else we can't get a lock on the ServerCrashProcedure.
       master.setServerCrashProcessingEnabled(true);
       // Do some of the master processing of dead servers so when SCP runs, it has expected 'state'.
-      master.getServerManager().moveFromOnelineToDeadServers(hrs.getServerName());
+      master.getServerManager().moveFromOnlineToDeadServers(hrs.getServerName());
       // Enable test flags and then queue the crash procedure.
       ProcedureTestingUtility.waitNoProcedureRunning(procExec);
       ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);

@@ -140,7 +140,7 @@ public class TestMasterProcedureEvents {
     while (!master.getServerManager().isServerDead(hrs.getServerName())) Thread.sleep(10);
 
     // Do some of the master processing of dead servers so when SCP runs, it has expected 'state'.
-    master.getServerManager().moveFromOnelineToDeadServers(hrs.getServerName());
+    master.getServerManager().moveFromOnlineToDeadServers(hrs.getServerName());
 
     long procId = procExec.submitProcedure(
       new ServerCrashProcedure(procExec.getEnvironment(), hrs.getServerName(), true, carryingMeta));

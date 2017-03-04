@@ -70,22 +70,24 @@ public class DrainingServerTracker extends ZooKeeperListener {
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
     // Add a ServerListener to check if a server is draining when it's added.
-    serverManager.registerListener(
-        new ServerListener() {
-
-          @Override
-          public void serverAdded(ServerName sn) {
-            if (drainingServers.contains(sn)){
-              serverManager.addServerToDrainList(sn);
-            }
-          }
-
-          @Override
-          public void serverRemoved(ServerName serverName) {
-            // no-op
-          }
+    serverManager.registerListener(new ServerListener() {
+      @Override
+      public void serverAdded(ServerName sn) {
+        if (drainingServers.contains(sn)){
+          serverManager.addServerToDrainList(sn);
         }
-    );
+      }
+
+      @Override
+      public void waiting() {
+        // TODO Auto-generated method stub
+      }
+
+      @Override
+      public void serverRemoved(ServerName serverName) {
+        // TODO Auto-generated method stub
+      }
+    });
     List<String> servers =
       ZKUtil.listChildrenAndWatchThem(watcher, watcher.drainingZNode);
     add(servers);

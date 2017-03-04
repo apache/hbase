@@ -22,11 +22,16 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
- * Get notification of server events. The invocations are inline
- * so make sure your implementation is fast else you'll slow hbase.
+ * Get notification of server registration events. The invocations are inline
+ * so make sure your implementation is fast or else you'll slow hbase.
  */
 @InterfaceAudience.Private
 public interface ServerListener {
+  /**
+   * Started waiting on RegionServers to check-in.
+   */
+  void waiting();
+
   /**
    * The server has joined the cluster.
    * @param serverName The remote servers name.

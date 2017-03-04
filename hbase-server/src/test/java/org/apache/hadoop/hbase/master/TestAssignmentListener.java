@@ -151,6 +151,11 @@ public class TestAssignmentListener {
     public int getRemovedCount() {
       return removedCount.get();
     }
+
+    @Override
+    public void waiting() {
+      // TODO Auto-generated method stub
+    }
   }
 
   @BeforeClass

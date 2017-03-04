@@ -299,7 +299,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   MemoryBoundedLogMessageBuffer rsFatals;
 
   // flag set after we become the active master (used for testing)
-  private volatile boolean isActiveMaster = false;
+  private volatile boolean activeMaster = false;
 
   // flag set after we complete initialization once active,
   // it is not private since it's used in unit tests
@@ -574,7 +574,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   protected void waitForMasterActive(){
     boolean tablesOnMaster = BaseLoadBalancer.tablesOnMaster(conf);
-    while (!(tablesOnMaster && isActiveMaster)
+    while (!(tablesOnMaster && activeMaster)
         && !isStopped() && !isAborted()) {
       sleeper.sleep();
     }
@@ -721,7 +721,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private void finishActiveMasterInitialization(MonitoredTask status)
       throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
 
-    isActiveMaster = true;
+    activeMaster = true;
     Thread zombieDetector = new Thread(new InitializationMonitor(this),
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
     zombieDetector.start();
@@ -1623,7 +1623,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       this.catalogJanitorChore, region_a, region_b, forcible, user));
   }
 
-  void move(final byte[] encodedRegionName,
+  @VisibleForTesting // Public so can be accessed by tests.
+  public void move(final byte[] encodedRegionName,
       final byte[] destServerName) throws HBaseIOException {
     RegionState regionState = assignmentManager.getRegionStates().
       getRegionState(Bytes.toString(encodedRegionName));
@@ -2612,7 +2613,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return true if active master, false if not.
    */
   public boolean isActiveMaster() {
-    return isActiveMaster;
+    return activeMaster;
   }
 
   /**
