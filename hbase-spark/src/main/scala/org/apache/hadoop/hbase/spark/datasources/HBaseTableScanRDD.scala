@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.spark.datasources
 
 import java.util.ArrayList
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.spark._
 import org.apache.hadoop.hbase.spark.hbase._
@@ -30,6 +31,7 @@ import org.apache.spark.rdd.RDD
 
 import scala.collection.mutable
 
+@InterfaceAudience.Private
 class HBaseTableScanRDD(relation: HBaseRelation,
                        val hbaseContext: HBaseContext,
                        @transient val filter: Option[SparkSQLPushDownFilter] = None,

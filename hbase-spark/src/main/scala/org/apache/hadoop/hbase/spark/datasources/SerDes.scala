@@ -28,14 +28,15 @@ import org.apache.avro.generic.{GenericDatumReader, GenericDatumWriter, GenericR
 import org.apache.avro.io._
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.sql.types._
 
+// TODO: This is not really used in code.
 trait SerDes {
   def serialize(value: Any): Array[Byte]
   def deserialize(bytes: Array[Byte], start: Int, end: Int): Any
 }
 
+// TODO: This is not really used in code.
 class DoubleSerDes extends SerDes {
   override def serialize(value: Any): Array[Byte] = Bytes.toBytes(value.asInstanceOf[Double])
   override def deserialize(bytes: Array[Byte], start: Int, end: Int): Any = {

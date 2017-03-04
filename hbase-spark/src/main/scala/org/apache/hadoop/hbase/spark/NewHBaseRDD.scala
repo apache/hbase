@@ -18,10 +18,14 @@
 package org.apache.hadoop.hbase.spark
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.InputFormat
 import org.apache.spark.rdd.NewHadoopRDD
 import org.apache.spark.{InterruptibleIterator, Partition, SparkContext, TaskContext}
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 class NewHBaseRDD[K,V](@transient sc : SparkContext,
                        @transient inputFormatClass: Class[_ <: InputFormat[K, V]],
                        @transient keyClass: Class[K],

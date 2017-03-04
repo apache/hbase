@@ -22,6 +22,8 @@ import java.util
 import java.util.UUID
 import javax.management.openmbean.KeyAlreadyExistsException
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.fs.HFileSystem
 import org.apache.hadoop.hbase._
 import org.apache.hadoop.hbase.io.compress.Compression
@@ -58,6 +60,8 @@ import scala.collection.mutable
   * of disseminating the configuration information
   * to the working and managing the life cycle of Connections.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 class HBaseContext(@transient sc: SparkContext,
                    @transient val config: Configuration,
                    val tmpHdfsConfgFile: String = null)

@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.spark
 import java.util
 import java.util.Comparator
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.Partitioner
 
@@ -29,6 +31,8 @@ import org.apache.spark.Partitioner
  *
  * @param startKeys   The start keys for the given table
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 class BulkLoadPartitioner(startKeys:Array[Array[Byte]])
   extends Partitioner {
 

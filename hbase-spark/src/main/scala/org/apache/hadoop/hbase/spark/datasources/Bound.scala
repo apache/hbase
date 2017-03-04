@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hbase.spark.datasources
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.spark.hbase._
 
 /**
@@ -25,9 +26,14 @@ import org.apache.hadoop.hbase.spark.hbase._
  * @param b The byte array of the bound
  * @param inc inclusive or not.
  */
+@InterfaceAudience.Private
 case class Bound(b: Array[Byte], inc: Boolean)
 // The non-overlapping ranges we need to scan, if lower is equal to upper, it is a get request
+
+@InterfaceAudience.Private
 case class Range(lower: Option[Bound], upper: Option[Bound])
+
+@InterfaceAudience.Private
 object Range {
   def apply(region: HBaseRegion): Range = {
     Range(region.start.map(Bound(_, true)), if (region.end.get.size == 0) {
@@ -38,6 +44,7 @@ object Range {
   }
 }
 
+@InterfaceAudience.Private
 object Ranges {
   // We assume that
   // 1. r.lower.inc is true, and r.upper.inc is false
@@ -87,6 +94,7 @@ object Ranges {
   }
 }
 
+@InterfaceAudience.Private
 object Points {
   def and(r: Range, ps: Seq[Array[Byte]]): Seq[Array[Byte]] = {
     ps.flatMap { p =>

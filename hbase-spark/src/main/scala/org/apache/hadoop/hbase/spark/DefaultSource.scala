@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.spark
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapred.TableOutputFormat
@@ -45,6 +46,9 @@ import scala.collection.mutable
  * DefaultSource for integration with Spark's dataframe datasources.
  * This class will produce a relationProvider based on input given to it from spark
  *
+ * This class needs to stay in the current package 'org.apache.hadoop.hbase.spark'
+ * for Spark to match the hbase data source name.
+ *
  * In all this DefaultSource support the following datasource functionality
  * - Scan range pruning through filter push down logic based on rowKeys
  * - Filter push down logic on HBase Cells
@@ -52,6 +56,7 @@ import scala.collection.mutable
  * - Type conversions of basic SQL types.  All conversions will be
  *   Through the HBase Bytes object commands.
  */
+@InterfaceAudience.Private
 class DefaultSource extends RelationProvider  with CreatableRelationProvider with Logging {
   /**
    * Is given input from SparkSQL to construct a BaseRelation
@@ -85,6 +90,7 @@ class DefaultSource extends RelationProvider  with CreatableRelationProvider wit
   *
   * @param sqlContext              SparkSQL context
  */
+@InterfaceAudience.Private
 case class HBaseRelation (
     @transient parameters: Map[String, String],
     userSpecifiedSchema: Option[StructType]
@@ -569,6 +575,7 @@ case class HBaseRelation (
  * @param lowerBound          Lower bound of scan
  * @param isLowerBoundEqualTo Include lower bound value in the results
  */
+@InterfaceAudience.Private
 class ScanRange(var upperBound:Array[Byte], var isUpperBoundEqualTo:Boolean,
                 var lowerBound:Array[Byte], var isLowerBoundEqualTo:Boolean)
   extends Serializable {
@@ -722,6 +729,7 @@ class ScanRange(var upperBound:Array[Byte], var isUpperBoundEqualTo:Boolean,
  * @param currentPoint the initial point when the filter is created
  * @param currentRange the initial scanRange when the filter is created
  */
+@InterfaceAudience.Private
 class ColumnFilter (currentPoint:Array[Byte] = null,
                      currentRange:ScanRange = null,
                      var points:mutable.MutableList[Array[Byte]] =
@@ -851,6 +859,7 @@ class ColumnFilter (currentPoint:Array[Byte] = null,
  * Also contains merge commends that will consolidate the filters
  * per column name
  */
+@InterfaceAudience.Private
 class ColumnFilterCollection {
   val columnFilterMap = new mutable.HashMap[String, ColumnFilter]
 
@@ -916,6 +925,7 @@ class ColumnFilterCollection {
  * Status object to store static functions but also to hold last executed
  * information that can be used for unit testing.
  */
+@InterfaceAudience.Private
 object DefaultSourceStaticUtils {
 
   val rawInteger = new RawInteger
@@ -1058,6 +1068,7 @@ object DefaultSourceStaticUtils {
  * @param currentPoint the initial point when the filter is created
  * @param currentRange the initial scanRange when the filter is created
  */
+@InterfaceAudience.Private
 class RowKeyFilter (currentPoint:Array[Byte] = null,
                     currentRange:ScanRange =
                     new ScanRange(null, true, new Array[Byte](0), true),
@@ -1208,7 +1219,6 @@ class RowKeyFilter (currentPoint:Array[Byte] = null,
   }
 }
 
-
-
+@InterfaceAudience.Private
 class ExecutionRuleForUnitTesting(val rowKeyFilter: RowKeyFilter,
                                   val dynamicLogicExpression: DynamicLogicExpression)
