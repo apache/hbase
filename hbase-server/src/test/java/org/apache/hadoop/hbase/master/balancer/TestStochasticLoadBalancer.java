@@ -48,8 +48,6 @@ import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
-import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.CandidateGenerator;
-import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.TableSkewCandidateGenerator;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -121,9 +119,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
    */
   @Test
   public void testBalanceCluster() throws Exception {
-    float oldMinCostNeedBalance = conf.getFloat(StochasticLoadBalancer.MIN_COST_NEED_BALANCE_KEY, 0.05f);
-    conf.setFloat(StochasticLoadBalancer.MIN_COST_NEED_BALANCE_KEY, 0.02f);
-    loadBalancer.setConf(conf);
+
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<HRegionInfo>> servers = mockClusterServers(mockCluster);
       List<ServerAndLoad> list = convertToList(servers);
@@ -139,9 +135,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         returnServer(entry.getKey());
       }
     }
-    // reset config
-    conf.setFloat(StochasticLoadBalancer.MIN_COST_NEED_BALANCE_KEY, oldMinCostNeedBalance);
-    loadBalancer.setConf(conf);
   }
 
   @Test
@@ -260,32 +253,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     double result = storeFileCostFunction.getRegionLoadCost(regionLoads);
     // storefile size cost is simply an average of it's value over time
     assertEquals(2.5, result, 0.01);
- }
-
-  @Test (timeout=45000)
-  public void testTableSkewCandidateGeneratorConvergesToZero() {
-    int replication = 1;
-    StochasticLoadBalancer.CostFunction
-        costFunction = new StochasticLoadBalancer.TableSkewCostFunction(conf);
-    CandidateGenerator generator = new TableSkewCandidateGenerator();
-    for (int i = 0; i < 5; i++) {
-      int numNodes = rand.nextInt(100) + 1; // num nodes between 1 - 100
-      int numTables = rand.nextInt(100) + 1; // num tables between 1 and 100
-      int numRegions = rand.nextInt(numTables * 99) + Math.max(numTables, numNodes); // num regions between max(numTables, numNodes) - numTables*100
-      int numRegionsPerServer = rand.nextInt(numRegions / numNodes) + 1; // num regions per server (except one) between 1 and numRegions / numNodes
-
-      Map<ServerName, List<HRegionInfo>> serverMap = createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
-      BaseLoadBalancer.Cluster cluster = new Cluster(serverMap, null, null, null);
-      costFunction.init(cluster);
-      double cost = costFunction.cost();
-      while (cost > 0) {
-        Cluster.Action action = generator.generate(cluster);
-        cluster.doAction(action);
-        costFunction.postAction(action);
-        cost = costFunction.cost();
-      }
-      assertEquals(0, cost, .000000000001);
-    }
   }
 
   @Test
