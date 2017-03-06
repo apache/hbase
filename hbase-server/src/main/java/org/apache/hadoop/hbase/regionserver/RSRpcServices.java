@@ -412,7 +412,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (isClientCellBlockSupport()) {
       for (Result res : results) {
         builder.addCellsPerResult(res.size());
-        builder.addPartialFlagPerResult(res.hasMoreCellsInRow());
+        builder.addPartialFlagPerResult(res.mayHaveMoreCellsInRow());
       }
       controller.setCellScanner(CellUtil.createCellScanner(results));
     } else {
@@ -2853,7 +2853,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // is false. Can remove the isEmpty check after we get rid of the old implementation.
         moreResults = false;
       } else if (limitOfRows > 0 && !results.isEmpty() &&
-          !results.get(results.size() - 1).hasMoreCellsInRow() &&
+          !results.get(results.size() - 1).mayHaveMoreCellsInRow() &&
           ConnectionUtils.numberOfIndividualRows(results) >= limitOfRows) {
         // if we have reached the limit of rows
         moreResults = false;

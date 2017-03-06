@@ -1438,7 +1438,7 @@ public final class ProtobufUtil {
     }
 
     builder.setStale(result.isStale());
-    builder.setPartial(result.hasMoreCellsInRow());
+    builder.setPartial(result.mayHaveMoreCellsInRow());
 
     return builder.build();
   }

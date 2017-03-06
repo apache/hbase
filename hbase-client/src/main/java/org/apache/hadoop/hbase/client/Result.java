@@ -83,9 +83,9 @@ public class Result implements CellScannable, CellScanner {
   private boolean stale = false;
 
   /**
-   * See {@link #hasMoreCellsInRow()}.
+   * See {@link #mayHaveMoreCellsInRow()}.
    */
-  private boolean hasMoreCellsInRow = false;
+  private boolean mayHaveMoreCellsInRow = false;
   // We're not using java serialization.  Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
@@ -192,7 +192,7 @@ public class Result implements CellScannable, CellScanner {
     this.cells = cells;
     this.exists = exists;
     this.stale = stale;
-    this.hasMoreCellsInRow = mayHaveMoreCellsInRow;
+    this.mayHaveMoreCellsInRow = mayHaveMoreCellsInRow;
     this.readonly = false;
   }
 
@@ -885,7 +885,7 @@ public class Result implements CellScannable, CellScanner {
         // Result1: -1- -2- (2 cells, size limit reached, mark as partial)
         // Result2: -3- -4- (2 cells, size limit reached, mark as partial)
         // Result3: -5- (1 cell, size limit NOT reached, NOT marked as partial)
-        if (i != (partialResults.size() - 1) && !r.hasMoreCellsInRow()) {
+        if (i != (partialResults.size() - 1) && !r.mayHaveMoreCellsInRow()) {
           throw new IOException(
               "Cannot form complete result. Result is missing partial flag. " +
                   "Partial Results: " + partialResults);
@@ -972,13 +972,13 @@ public class Result implements CellScannable, CellScanner {
    * for a row and should be combined with a result representing the remaining cells in that row to
    * form a complete (non-partial) result.
    * @return Whether or not the result is a partial result
-   * @deprecated the word 'partial' ambiguous, use {@link #hasMoreCellsInRow()} instead.
+   * @deprecated the word 'partial' ambiguous, use {@link #mayHaveMoreCellsInRow()} instead.
    *             Deprecated since 1.4.0.
-   * @see #hasMoreCellsInRow()
+   * @see #mayHaveMoreCellsInRow()
    */
   @Deprecated
   public boolean isPartial() {
-    return hasMoreCellsInRow;
+    return mayHaveMoreCellsInRow;
   }
 
   /**
@@ -990,8 +990,8 @@ public class Result implements CellScannable, CellScanner {
    * {@link Scan#setMaxResultSize(long)} and the default value can be seen here:
    * {@link HConstants#DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE}
    */
-  public boolean hasMoreCellsInRow() {
-    return hasMoreCellsInRow;
+  public boolean mayHaveMoreCellsInRow() {
+    return mayHaveMoreCellsInRow;
   }
 
   /**

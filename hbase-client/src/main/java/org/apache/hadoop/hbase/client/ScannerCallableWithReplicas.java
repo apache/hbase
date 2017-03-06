@@ -325,7 +325,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     // 2. The last result was not a partial result which means it contained all of the cells for
     // that row (we no longer need any information from it). Set the start row to the next
     // closest row that could be seen.
-    callable.getScan().withStartRow(this.lastResult.getRow(), this.lastResult.hasMoreCellsInRow());
+    callable.getScan().withStartRow(this.lastResult.getRow(), this.lastResult.mayHaveMoreCellsInRow());
   }
 
   @VisibleForTesting

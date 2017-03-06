@@ -281,7 +281,7 @@ public class ConnectionUtils {
   public static int numberOfIndividualRows(List<Result> results) {
     int count = 0;
     for (Result result : results) {
-      if (!result.hasMoreCellsInRow()) {
+      if (!result.mayHaveMoreCellsInRow()) {
         count++;
       }
     }
