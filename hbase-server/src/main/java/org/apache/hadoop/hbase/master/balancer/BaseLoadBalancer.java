@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -140,6 +141,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int[]   initialRegionIndexToServerIndex;    //regionIndex -> serverIndex (initial cluster state)
     int[]   regionIndexToTableIndex;     //regionIndex -> tableIndex
     int[][] numRegionsPerServerPerTable; //serverIndex -> tableIndex -> # regions
+    int[]   numRegionsPerTable;          // tableIndex -> number of regions that table has
     int[]   numMaxRegionsPerTable;       //tableIndex -> max number of regions in a single RS
     int[]   regionIndexToPrimaryIndex;   //regionIndex -> regionIndex of the primary
     boolean hasRegionReplicas = false;   //whether there is regions with replicas
@@ -330,6 +332,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       numTables = tables.size();
       numRegionsPerServerPerTable = new int[numServers][numTables];
+      numRegionsPerTable = new int[numTables];
 
       for (int i = 0; i < numServers; i++) {
         for (int j = 0; j < numTables; j++) {
@@ -339,6 +342,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
       for (int i=0; i < regionIndexToServerIndex.length; i++) {
         if (regionIndexToServerIndex[i] >= 0) {
+          numRegionsPerTable[regionIndexToTableIndex[i]]++;
           numRegionsPerServerPerTable[regionIndexToServerIndex[i]][regionIndexToTableIndex[i]]++;
         }
       }
@@ -468,6 +472,76 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
                   : serversToIndex.get(loc.get(i).getHostAndPort()));
         }
       }
+    }
+
+    /**
+     * Returns the minimum number of regions of a table T each server would store if T were
+     * perfectly distributed (i.e. round-robin-ed) across the cluster
+     */
+    public int minRegionsIfEvenlyDistributed(int table) {
+      return numRegionsPerTable[table] / numServers;
+    }
+
+    /**
+     * Returns the maximum number of regions of a table T each server would store if T were
+     * perfectly distributed (i.e. round-robin-ed) across the cluster
+     */
+    public int maxRegionsIfEvenlyDistributed(int table) {
+      int min = minRegionsIfEvenlyDistributed(table);
+      return numRegionsPerTable[table] % numServers == 0 ? min : min + 1;
+    }
+
+    /**
+     * Returns the number of servers that should hold maxRegionsIfEvenlyDistributed for a given
+     * table. A special case here is if maxRegionsIfEvenlyDistributed == minRegionsIfEvenlyDistributed,
+     * in which case all servers should hold the max
+     */
+    public int numServersWithMaxRegionsIfEvenlyDistributed(int table) {
+      int numWithMax = numRegionsPerTable[table] % numServers;
+      if (numWithMax == 0) {
+        return numServers;
+      } else {
+        return numWithMax;
+      }
+    }
+
+    /**
+     * Returns true iff at least one server in the cluster stores either more than the min/max load
+     * per server when all regions are evenly distributed across the cluster
+     */
+    public boolean hasUnevenRegionDistribution() {
+      int minLoad = numRegions / numServers;
+      int maxLoad = numRegions % numServers == 0 ? minLoad : minLoad + 1;
+      for (int server = 0; server < numServers; server++) {
+        int numRegions = getNumRegions(server);
+        if (numRegions > maxLoad || numRegions < minLoad) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    /**
+     * Returns a pair where the first server is that with the least number of regions across the
+     * cluster and the second server is that with the most number of regions across the cluster
+     */
+    public Pair<Integer, Integer> findLeastAndMostLoadedServers() {
+      int minServer = 0;
+      int maxServer = 0;
+      int minLoad = getNumRegions(minServer);
+      int maxLoad = minLoad;
+      for (int server = 1; server < numServers; server++) {
+        int numRegions = getNumRegions(server);
+        if (numRegions < minLoad) {
+          minServer = server;
+          minLoad = numRegions;
+        }
+        if (numRegions > maxLoad) {
+          maxServer = server;
+          maxLoad = numRegions;
+        }
+      }
+      return Pair.newPair(minServer, maxServer);
     }
 
     /** An action to move or swap a region */
