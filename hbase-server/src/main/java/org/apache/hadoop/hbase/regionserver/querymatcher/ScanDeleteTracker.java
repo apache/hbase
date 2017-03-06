@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
+import java.io.IOException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -48,9 +50,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   protected boolean hasFamilyStamp = false;
   protected long familyStamp = 0L;
   protected SortedSet<Long> familyVersionStamps = new TreeSet<Long>();
-  protected byte[] deleteBuffer = null;
-  protected int deleteOffset = 0;
-  protected int deleteLength = 0;
+  protected Cell deleteCell = null;
   protected byte deleteType = 0;
   protected long deleteTimestamp = 0L;
 
@@ -74,16 +74,14 @@ public class ScanDeleteTracker implements DeleteTracker {
         return;
       }
 
-      if (deleteBuffer != null && type < deleteType) {
+      if (deleteCell != null && type < deleteType) {
         // same column, so ignore less specific delete
-        if (CellUtil.matchingQualifier(cell, deleteBuffer, deleteOffset, deleteLength)) {
+        if (CellUtil.matchingQualifier(cell, deleteCell)) {
           return;
         }
       }
       // new column, or more general delete type
-      deleteBuffer = cell.getQualifierArray();
-      deleteOffset = cell.getQualifierOffset();
-      deleteLength = cell.getQualifierLength();
+      deleteCell = cell;
       deleteType = type;
       deleteTimestamp = timestamp;
     }
@@ -106,8 +104,8 @@ public class ScanDeleteTracker implements DeleteTracker {
       return DeleteResult.FAMILY_VERSION_DELETED;
     }
 
-    if (deleteBuffer != null) {
-      int ret = -(CellComparator.compareQualifiers(cell, deleteBuffer, deleteOffset, deleteLength));
+    if (deleteCell != null) {
+      int ret = -(CellComparator.compareQualifiers(cell, deleteCell));
       if (ret == 0) {
         if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
           return DeleteResult.COLUMN_DELETED;
@@ -121,13 +119,15 @@ public class ScanDeleteTracker implements DeleteTracker {
         assert timestamp < deleteTimestamp;
 
         // different timestamp, let's clear the buffer.
-        deleteBuffer = null;
+        deleteCell = null;
       } else if (ret < 0) {
         // Next column case.
-        deleteBuffer = null;
+        deleteCell = null;
       } else {
         throw new IllegalStateException("isDelete failed: deleteBuffer="
-            + Bytes.toStringBinary(deleteBuffer, deleteOffset, deleteLength) + ", qualifier="
+            + Bytes.toStringBinary(deleteCell.getQualifierArray(),
+                    deleteCell.getQualifierOffset(), deleteCell.getQualifierLength())
+            + ", qualifier="
             + Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
               cell.getQualifierLength())
             + ", timestamp=" + timestamp + ", comparison result: " + ret);
@@ -139,7 +139,7 @@ public class ScanDeleteTracker implements DeleteTracker {
 
   @Override
   public boolean isEmpty() {
-    return deleteBuffer == null && !hasFamilyStamp && familyVersionStamps.isEmpty();
+    return deleteCell == null && !hasFamilyStamp && familyVersionStamps.isEmpty();
   }
 
   @Override
@@ -148,12 +148,19 @@ public class ScanDeleteTracker implements DeleteTracker {
     hasFamilyStamp = false;
     familyStamp = 0L;
     familyVersionStamps.clear();
-    deleteBuffer = null;
+    deleteCell = null;
   }
 
   @Override
   // should not be called at all even (!)
   public void update() {
     this.reset();
+  }
+
+  @Override
+  public void beforeShipped() throws IOException {
+    if (deleteCell != null) {
+      deleteCell = KeyValueUtil.toNewKeyCell(deleteCell);
+    }
   }
 }

@@ -87,8 +87,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
       return;
     }
     // new column, or more general delete type
-    if (deleteBuffer != null) {
-      if (!(CellUtil.matchingQualifier(delCell, deleteBuffer, deleteOffset, deleteLength))) {
+    if (deleteCell != null) {
+      if (!(CellUtil.matchingQualifier(delCell, deleteCell))) {
         // A case where there are deletes for a column qualifier but there are
         // no corresponding puts for them. Rare case.
         visibilityTagsDeleteColumns = null;
@@ -104,9 +104,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         visiblityTagsDeleteColumnVersion = null;
       }
     }
-    deleteBuffer = delCell.getQualifierArray();
-    deleteOffset = delCell.getQualifierOffset();
-    deleteLength = delCell.getQualifierLength();
+    deleteCell = delCell;
     deleteType = type;
     deleteTimestamp = timestamp;
     extractDeleteCellVisTags(delCell, KeyValue.Type.codeToType(type));
@@ -243,8 +241,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
           }
         }
       }
-      if (deleteBuffer != null) {
-        int ret = CellComparator.compareQualifiers(cell, deleteBuffer, deleteOffset, deleteLength);
+      if (deleteCell != null) {
+        int ret = CellComparator.compareQualifiers(cell, deleteCell);
         if (ret == 0) {
           if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
             if (visibilityTagsDeleteColumns != null) {
@@ -304,13 +302,15 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
           }
         } else if (ret > 0) {
           // Next column case.
-          deleteBuffer = null;
+          deleteCell = null;
           // Can nullify this because we are moving to the next column
           visibilityTagsDeleteColumns = null;
           visiblityTagsDeleteColumnVersion = null;
         } else {
           throw new IllegalStateException("isDeleted failed: deleteBuffer="
-              + Bytes.toStringBinary(deleteBuffer, deleteOffset, deleteLength) + ", qualifier="
+              + Bytes.toStringBinary(deleteCell.getQualifierArray(),
+                    deleteCell.getQualifierOffset(), deleteCell.getQualifierLength())
+              + ", qualifier="
               + Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
                   cell.getQualifierLength())
               + ", timestamp=" + timestamp + ", comparison result: " + ret);

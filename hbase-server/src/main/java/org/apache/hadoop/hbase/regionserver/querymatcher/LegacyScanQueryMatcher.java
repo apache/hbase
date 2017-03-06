@@ -148,6 +148,12 @@ public class LegacyScanQueryMatcher extends ScanQueryMatcher {
   }
 
   @Override
+  public void beforeShipped() throws IOException {
+    super.beforeShipped();
+    deletes.beforeShipped();
+  }
+
+  @Override
   public MatchCode match(Cell cell) throws IOException {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
