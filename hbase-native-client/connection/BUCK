@@ -50,8 +50,14 @@ cxx_library(
         "//third-party:wangle",
     ],
     compiler_flags=['-Weffc++'],
-    visibility=['//core/...',],)
+    visibility=[
+        '//core/...',
+    ],)
 cxx_test(
     name="connection-pool-test",
-    srcs=["connection-pool-test.cc",],
-    deps=[":connection",],)
+    srcs=[
+        "connection-pool-test.cc",
+    ],
+    deps=[
+        ":connection",
+    ],)

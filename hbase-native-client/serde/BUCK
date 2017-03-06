@@ -41,28 +41,54 @@ cxx_library(
         ":region-info-deserializer-test",
     ],
     compiler_flags=['-Weffc++'],
-    visibility=['PUBLIC',],)
+    visibility=[
+        'PUBLIC',
+    ],)
 cxx_test(
     name="table-name-test",
-    srcs=["table-name-test.cc",],
-    deps=[":serde",],)
+    srcs=[
+        "table-name-test.cc",
+    ],
+    deps=[
+        ":serde",
+    ],)
 cxx_test(
     name="server-name-test",
-    srcs=["server-name-test.cc",],
-    deps=[":serde",],)
+    srcs=[
+        "server-name-test.cc",
+    ],
+    deps=[
+        ":serde",
+    ],)
 cxx_test(
     name="client-serializer-test",
-    srcs=["client-serializer-test.cc",],
-    deps=[":serde",],)
+    srcs=[
+        "client-serializer-test.cc",
+    ],
+    deps=[
+        ":serde",
+    ],)
 cxx_test(
     name="client-deserializer-test",
-    srcs=["client-deserializer-test.cc",],
-    deps=[":serde",],)
+    srcs=[
+        "client-deserializer-test.cc",
+    ],
+    deps=[
+        ":serde",
+    ],)
 cxx_test(
     name="zk-deserializer-test",
-    srcs=["zk-deserializer-test.cc",],
-    deps=[":serde",],)
+    srcs=[
+        "zk-deserializer-test.cc",
+    ],
+    deps=[
+        ":serde",
+    ],)
 cxx_test(
     name="region-info-deserializer-test",
-    srcs=["region-info-deserializer-test.cc",],
-    deps=[":serde",],)
+    srcs=[
+        "region-info-deserializer-test.cc",
+    ],
+    deps=[
+        ":serde",
+    ],)

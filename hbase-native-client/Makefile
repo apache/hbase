@@ -26,13 +26,13 @@ MODULES = connection core serde test-util utils security exceptions
 SRC_DIR = $(MODULES)
 DEBUG_BUILD_DIR = $(addprefix $(DEBUG_PATH)/,$(MODULES))
 RELEASE_BUILD_DIR = $(addprefix $(RELEASE_PATH)/,$(MODULES))
-INCLUDE_DIR = . build/
+INCLUDE_DIR = . build/ $(JAVA_HOME)/include/ $(JAVA_HOME)/include/linux
 
 #flags to pass to the CPP compiler & linker
 CPPFLAGS_DEBUG = -D_GLIBCXX_USE_CXX11_ABI=0 -g -Wall -std=c++14 -pedantic -fPIC
 CPPFLAGS_RELEASE = -D_GLIBCXX_USE_CXX11_ABI=0 -DNDEBUG -O2 -Wall -std=c++14 -pedantic -fPIC
 LDFLAGS = -lprotobuf -lzookeeper_mt -lsasl2 -lfolly -lwangle
-LINKFLAG = -shared
+LINKFLAG = -shared -L$(JAVA_HOME)/jre/lib/amd64/server -ljvm
 
 #define list of source files and object files
 ALLSRC = $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cc))

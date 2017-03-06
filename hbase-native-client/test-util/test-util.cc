@@ -18,6 +18,7 @@
  */
 
 #include "test-util/test-util.h"
+#include <string.h>
 
 #include <folly/Format.h>
 
@@ -41,20 +42,33 @@ std::string TestUtil::RandString(int len) {
   return s;
 }
 
-TestUtil::TestUtil() : temp_dir_(TestUtil::RandString()) {
+TestUtil::TestUtil() : TestUtil::TestUtil(2, "") {}
+
+TestUtil::TestUtil(int servers, const std::string& confPath)
+    : temp_dir_(TestUtil::RandString()), numRegionServers(servers), conf_path(confPath) {
   auto p = temp_dir_.path().string();
-  auto cmd = std::string{"bin/start-local-hbase.sh " + p};
-  auto res_code = std::system(cmd.c_str());
-  CHECK_EQ(res_code, 0);
+  StartMiniCluster(2);
+  std::string quorum("localhost:");
+  const std::string port = mini->GetConfValue("hbase.zookeeper.property.clientPort");
+  conf()->Set("hbase.zookeeper.quorum", quorum + port);
 }
 
-TestUtil::~TestUtil() {
-  auto res_code = std::system("bin/stop-local-hbase.sh");
-  CHECK_EQ(res_code, 0);
-}
+TestUtil::~TestUtil() { StopMiniCluster(); }
 
-void TestUtil::RunShellCmd(const std::string &command) {
-  auto cmd_string = folly::sformat("echo \"{}\" | ../bin/hbase shell", command);
-  auto res_code = std::system(cmd_string.c_str());
-  CHECK_EQ(res_code, 0);
+void TestUtil::StartMiniCluster(int num_region_servers) {
+  mini = std::make_unique<MiniCluster>();
+  mini->StartCluster(num_region_servers, conf_path);
+}
+void TestUtil::StopMiniCluster() { mini->StopCluster(); }
+
+void TestUtil::CreateTable(std::string tblNam, std::string familyName) {
+  mini->CreateTable(tblNam, familyName);
+}
+void TestUtil::CreateTable(std::string tblNam, std::string familyName, std::string key1,
+        std::string k2) {
+  mini->CreateTable(tblNam, familyName, key1, k2);
+}
+void TestUtil::TablePut(std::string table, std::string row, std::string fam, std::string col,
+        std::string value) {
+  mini->TablePut(table, row, fam, col, value);
 }

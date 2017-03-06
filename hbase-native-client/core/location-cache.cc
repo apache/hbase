@@ -107,7 +107,8 @@ ServerName LocationCache::ReadMetaLocation() {
                           reinterpret_cast<char *>(buf->writableData()), &len, nullptr);
   if (zk_result != ZOK || len < 9) {
     LOG(ERROR) << "Error getting meta location.";
-    throw runtime_error("Error getting meta location");
+    throw runtime_error("Error getting meta location. Quorum " +
+                        conf_->Get(kHBaseZookeeperQuorum_, ""));
   }
   buf->append(len);
 
