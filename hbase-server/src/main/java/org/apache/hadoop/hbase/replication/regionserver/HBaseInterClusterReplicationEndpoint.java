@@ -178,8 +178,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
                 + "Replication cannot proceed without losing data.", sleepMultiplier)) {
               sleepMultiplier++;
             }
-          } else if (ioe instanceof SaslException) {
-            LOG.warn("Peer encountered SaslException, rechecking all sinks: ", ioe);
+          } else {
+            LOG.warn("Peer encountered RemoteException, rechecking all sinks: ", ioe);
             replicationSinkMgr.chooseSinks();
           }
         } else {
