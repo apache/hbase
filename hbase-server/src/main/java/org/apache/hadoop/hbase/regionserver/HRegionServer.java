@@ -3651,4 +3651,9 @@ public class HRegionServer extends HasThread implements
     return new LockServiceClient(conf, lockStub, clusterConnection.getNonceGenerator())
       .regionLock(regionInfos, description, abort);
   }
+
+  @Override
+  public void unassign(byte[] regionName) throws IOException {
+    clusterConnection.getAdmin().unassign(regionName, false);
+  }
 }

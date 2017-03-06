@@ -356,4 +356,8 @@ public class MockRegionServerServices implements RegionServerServices {
   public SecureBulkLoadManager getSecureBulkLoadManager() {
     return null;
   }
+
+  @Override
+  public void unassign(byte[] regionName) throws IOException {
+  }
 }

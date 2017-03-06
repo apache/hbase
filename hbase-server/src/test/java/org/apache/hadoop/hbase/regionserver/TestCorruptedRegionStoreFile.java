@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -133,6 +135,23 @@ public class TestCorruptedRegionStoreFile {
     }
   }
 
+  private void removeStoreFile(FileSystem fs, Path tmpStoreFilePath) throws Exception {
+    try (FSDataInputStream input = fs.open(storeFiles.get(0))) {
+      fs.copyToLocalFile(true, storeFiles.get(0), tmpStoreFilePath);
+      LOG.info("Move file to local");
+      evictHFileCache(storeFiles.get(0));
+      // make sure that all the replicas have been deleted on DNs.
+      for (;;) {
+        try {
+          input.read(0, new byte[1], 0, 1);
+        } catch (FileNotFoundException e) {
+          break;
+        }
+        Thread.sleep(1000);
+      }
+    }
+  }
+
   @Test(timeout=180000)
   public void testLosingFileDuringScan() throws Exception {
     assertEquals(rowCount, fullScanAndCount(TEST_TABLE.getTableName()));
@@ -148,9 +167,7 @@ public class TestCorruptedRegionStoreFile {
       public void beforeScanNext(Table table) throws Exception {
         // move the path away (now the region is corrupted)
         if (hasFile) {
-          fs.copyToLocalFile(true, storeFiles.get(0), tmpStoreFilePath);
-          LOG.info("Move file to local");
-          evictHFileCache(storeFiles.get(0));
+          removeStoreFile(fs, tmpStoreFilePath);
           hasFile = false;
         }
       }
@@ -174,9 +191,7 @@ public class TestCorruptedRegionStoreFile {
       public void beforeScan(Table table, Scan scan) throws Exception {
         // move the path away (now the region is corrupted)
         if (hasFile) {
-          fs.copyToLocalFile(true, storeFiles.get(0), tmpStoreFilePath);
-          LOG.info("Move file to local");
-          evictHFileCache(storeFiles.get(0));
+          removeStoreFile(fs, tmpStoreFilePath);
           hasFile = false;
         }
       }
@@ -201,7 +216,6 @@ public class TestCorruptedRegionStoreFile {
       HRegionServer rs = rst.getRegionServer();
       rs.getCacheConfig().getBlockCache().evictBlocksByHfileName(hfile.getName());
     }
-    Thread.sleep(6000);
   }
 
   private int fullScanAndCount(final TableName tableName) throws Exception {
