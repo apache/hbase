@@ -39,7 +39,9 @@ using hbase::Comparator;
 
 class FilterTest : public ::testing::Test {
  protected:
-  static void SetUpTestCase() { test_util_ = std::make_unique<TestUtil>(); }
+  static void SetUpTestCase() {
+    test_util_ = std::make_unique<TestUtil>();
+  }
 
   static void TearDownTestCase() { test_util_.release(); }
 
@@ -49,13 +51,15 @@ class FilterTest : public ::testing::Test {
   static std::unique_ptr<TestUtil> test_util_;
 };
 
+
 std::unique_ptr<TestUtil> FilterTest::test_util_ = nullptr;
 
 TEST_F(FilterTest, GetWithColumnPrefixFilter) {
   // write row1 with 3 columns (column_1, column_2, and foo_column)
-  FilterTest::test_util_->RunShellCmd(
-      "create 't', 'd'; put 't', 'row1', 'd:column_1', 'value1'; put 't', 'row1', 'd:column_2', "
-      "'value2'; put 't', 'row1', 'd:foo_column', 'value3'");
+  FilterTest::test_util_->CreateTable("t", "d");
+  FilterTest::test_util_->TablePut("t", "row1", "d", "column_1", "value1");
+  FilterTest::test_util_->TablePut("t", "row1", "d", "column_2", "value2");
+  FilterTest::test_util_->TablePut("t", "row1", "d", "foo_column", "value3");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t");
@@ -70,7 +74,7 @@ TEST_F(FilterTest, GetWithColumnPrefixFilter) {
   get_two.SetFilter(FilterFactory::ColumnPrefixFilter("column_"));
 
   // Create a client
-  hbase::Client client(Configuration{});
+  hbase::Client client(*(FilterTest::test_util_->conf()));
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
@@ -101,9 +105,10 @@ TEST_F(FilterTest, GetWithColumnPrefixFilter) {
 
 TEST_F(FilterTest, GetWithQualifierFilter) {
   // write row1 with 3 columns (a,b,c)
-  FilterTest::test_util_->RunShellCmd(
-      "create 't1', 'd'; put 't1', 'row1', 'd:a', 'value1'; put 't1', 'row1', 'd:b', "
-      "'value2'; put 't1', 'row1', 'd:c', 'value3'");
+  FilterTest::test_util_->CreateTable("t1", "d");
+  FilterTest::test_util_->TablePut("t1", "row1", "d", "a", "value1");
+  FilterTest::test_util_->TablePut("t1", "row1", "d", "b", "value2");
+  FilterTest::test_util_->TablePut("t1", "row1", "d", "c", "value3");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t1");
@@ -115,7 +120,7 @@ TEST_F(FilterTest, GetWithQualifierFilter) {
                                                *ComparatorFactory::BinaryComparator("b")));
 
   // Create a client
-  hbase::Client client(Configuration{});
+  hbase::Client client(*(FilterTest::test_util_->conf()));
 
   // Get connection to HBase Table
   auto table = client.Table(tn);

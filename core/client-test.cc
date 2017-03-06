@@ -27,7 +27,7 @@
 #include "serde/table-name.h"
 #include "test-util/test-util.h"
 
-class ClientTest {
+class ClientTest : public ::testing::Test {
  public:
   const static std::string kDefHBaseConfPath;
 
@@ -45,10 +45,6 @@ class ClientTest {
 
   static void CreateHBaseConf(const std::string &dir, const std::string &file,
                               const std::string xml_data) {
-    // Directory will be created if not present
-    if (!boost::filesystem::exists(dir)) {
-      boost::filesystem::create_directories(dir);
-    }
     // Remove temp file always
     boost::filesystem::remove((dir + file).c_str());
     WriteDataToFile((dir + file), xml_data);
@@ -57,10 +53,16 @@ class ClientTest {
   static void CreateHBaseConfWithEnv() {
     // Creating Empty Config Files so that we dont get a Configuration exception @Client
     CreateHBaseConf(kDefHBaseConfPath, kHBaseDefaultXml, kHBaseXmlData);
-    CreateHBaseConf(kDefHBaseConfPath, kHBaseSiteXml, kHBaseXmlData);
+    // the hbase-site.xml would be persisted by MiniCluster
     setenv("HBASE_CONF", kDefHBaseConfPath.c_str(), 1);
   }
+  static std::unique_ptr<hbase::TestUtil> test_util;
+
+  static void SetUpTestCase() {
+    test_util = std::make_unique<hbase::TestUtil>(2, ClientTest::kDefHBaseConfPath.c_str());
+  }
 };
+std::unique_ptr<hbase::TestUtil> ClientTest::test_util = nullptr;
 
 const std::string ClientTest::kDefHBaseConfPath("./build/test-data/client-test/conf/");
 
@@ -109,16 +111,15 @@ TEST(Client, DefaultConfiguration) {
   client.Close();
 }
 
-TEST(Client, Get) {
+TEST_F(ClientTest, Get) {
   // Remove already configured env if present.
   unsetenv("HBASE_CONF");
   ClientTest::CreateHBaseConfWithEnv();
 
   // Using TestUtil to populate test data
-  hbase::TestUtil *test_util = new hbase::TestUtil();
-  test_util->RunShellCmd(
-      "create 't', 'd'; put 't', 'test2', 'd:2', 'value2'; put 't', 'test2', 'd:extra', 'value for "
-      "extra'");
+  ClientTest::test_util->CreateTable("t", "d");
+  ClientTest::test_util->TablePut("t", "test2", "d", "2", "value2");
+  ClientTest::test_util->TablePut("t", "test2", "d", "extra", "value for extra");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t");
@@ -141,12 +142,6 @@ TEST(Client, Get) {
   // Perform the Get
   auto result = table->Get(get);
 
-  // Stopping the connection as we are getting segfault due to some folly issue
-  // The connection stays open and we don't want that.
-  // So we are stopping the connection.
-  // We can remove this once we have fixed the folly part
-  delete test_util;
-
   // Test the values, should be same as in put executed on hbase shell
   ASSERT_TRUE(!result->IsEmpty()) << "Result shouldn't be empty.";
   EXPECT_EQ("test2", result->Row());
@@ -161,9 +156,6 @@ TEST(Client, GetForNonExistentTable) {
   // Remove already configured env if present.
   unsetenv("HBASE_CONF");
   ClientTest::CreateHBaseConfWithEnv();
-
-  // Using TestUtil to populate test data
-  hbase::TestUtil *test_util = new hbase::TestUtil();
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t_not_exists");
@@ -186,24 +178,17 @@ TEST(Client, GetForNonExistentTable) {
   // Perform the Get
   ASSERT_ANY_THROW(table->Get(get)) << "Table does not exist. We should get an exception";
 
-  // Stopping the connection as we are getting segfault due to some folly issue
-  // The connection stays open and we don't want that.
-  // So we are stopping the connection.
-  // We can remove this once we have fixed the folly part
-  delete test_util;
-
   table->Close();
   client.Close();
 }
 
-TEST(Client, GetForNonExistentRow) {
+TEST_F(ClientTest, GetForNonExistentRow) {
   // Remove already configured env if present.
   unsetenv("HBASE_CONF");
   ClientTest::CreateHBaseConfWithEnv();
 
   // Using TestUtil to populate test data
-  hbase::TestUtil *test_util = new hbase::TestUtil();
-  test_util->RunShellCmd("create 't_exists', 'd'");
+  ClientTest::test_util->CreateTable("t_exists", "d");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t_exists");
@@ -226,12 +211,6 @@ TEST(Client, GetForNonExistentRow) {
   // Perform the Get
   auto result = table->Get(get);
   ASSERT_TRUE(result->IsEmpty()) << "Result should  be empty.";
-
-  // Stopping the connection as we are getting segfault due to some folly issue
-  // The connection stays open and we don't want that.
-  // So we are stopping the connection.
-  // We can remove this once we have fixed the folly part
-  delete test_util;
 
   table->Close();
   client.Close();

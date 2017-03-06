@@ -30,13 +30,29 @@
 using namespace hbase;
 using namespace std::chrono;
 
-TEST(LocationCacheTest, TestGetMetaNodeContents) {
-  TestUtil test_util{};
+class LocationCacheTest : public ::testing::Test {
+ protected:
+  static void SetUpTestCase() {
+    test_util_ = std::make_unique<TestUtil>();
+  }
+  static void TearDownTestCase() { test_util_.release(); }
+
+  virtual void SetUp() {}
+  virtual void TearDown() {}
+
+ public:
+  static std::unique_ptr<TestUtil> test_util_;
+};
+
+std::unique_ptr<TestUtil> LocationCacheTest::test_util_ = nullptr;
+
+
+TEST_F(LocationCacheTest, TestGetMetaNodeContents) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto codec = std::make_shared<KeyValueCodec>();
   auto cp = std::make_shared<ConnectionPool>(io, codec);
-  LocationCache cache{test_util.conf(), cpu, cp};
+  LocationCache cache{LocationCacheTest::test_util_->conf(), cpu, cp};
   auto f = cache.LocateMeta();
   auto result = f.get();
   ASSERT_FALSE(f.hasException());
@@ -47,19 +63,18 @@ TEST(LocationCacheTest, TestGetMetaNodeContents) {
   cp->Close();
 }
 
-TEST(LocationCacheTest, TestGetRegionLocation) {
-  TestUtil test_util{};
+TEST_F(LocationCacheTest, TestGetRegionLocation) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto codec = std::make_shared<KeyValueCodec>();
   auto cp = std::make_shared<ConnectionPool>(io, codec);
-  LocationCache cache{test_util.conf(), cpu, cp};
+  LocationCache cache{LocationCacheTest::test_util_->conf(), cpu, cp};
 
   // If there is no table this should throw an exception
   auto tn = folly::to<hbase::pb::TableName>("t");
   auto row = "test";
   ASSERT_ANY_THROW(cache.LocateFromMeta(tn, row).get(milliseconds(1000)));
-  test_util.RunShellCmd("create 't', 'd'");
+  LocationCacheTest::test_util_->CreateTable("t", "d");
   auto loc = cache.LocateFromMeta(tn, row).get(milliseconds(1000));
   ASSERT_TRUE(loc != nullptr);
   cpu->stop();
@@ -67,13 +82,12 @@ TEST(LocationCacheTest, TestGetRegionLocation) {
   cp->Close();
 }
 
-TEST(LocationCacheTest, TestCaching) {
-  TestUtil test_util{};
+TEST_F(LocationCacheTest, TestCaching) {
   auto cpu = std::make_shared<wangle::CPUThreadPoolExecutor>(4);
   auto io = std::make_shared<wangle::IOThreadPoolExecutor>(4);
   auto codec = std::make_shared<KeyValueCodec>();
   auto cp = std::make_shared<ConnectionPool>(io, codec);
-  LocationCache cache{test_util.conf(), cpu, cp};
+  LocationCache cache{LocationCacheTest::test_util_->conf(), cpu, cp};
 
   auto tn_1 = folly::to<hbase::pb::TableName>("t1");
   auto tn_2 = folly::to<hbase::pb::TableName>("t2");
@@ -83,8 +97,7 @@ TEST(LocationCacheTest, TestCaching) {
   // test location pulled from meta gets cached
   ASSERT_ANY_THROW(cache.LocateRegion(tn_1, row_a).get(milliseconds(1000)));
   ASSERT_ANY_THROW(cache.LocateFromMeta(tn_1, row_a).get(milliseconds(1000)));
-
-  test_util.RunShellCmd("create 't1', 'd'");
+  LocationCacheTest::test_util_->CreateTable("t1", "d");
 
   ASSERT_FALSE(cache.IsLocationCached(tn_1, row_a));
   auto loc = cache.LocateRegion(tn_1, row_a).get(milliseconds(1000));
@@ -92,7 +105,8 @@ TEST(LocationCacheTest, TestCaching) {
   ASSERT_EQ(loc, cache.GetCachedLocation(tn_1, row_a));
 
   // test with two regions
-  test_util.RunShellCmd("create 't2', 'd', SPLITS => ['b']");
+  std::string empty;
+  LocationCacheTest::test_util_->CreateTable("t2", "d", "b", empty);
 
   ASSERT_FALSE(cache.IsLocationCached(tn_2, "a"));
   loc = cache.LocateRegion(tn_2, "a").get(milliseconds(1000));
@@ -107,7 +121,7 @@ TEST(LocationCacheTest, TestCaching) {
   ASSERT_EQ(loc, cache.GetCachedLocation(tn_2, "ba"));
 
   // test with three regions
-  test_util.RunShellCmd("create 't3', 'd', SPLITS => ['b', 'c']");
+  LocationCacheTest::test_util_->CreateTable("t3", "d", "b", "c");
 
   ASSERT_FALSE(cache.IsLocationCached(tn_3, "c"));
   ASSERT_FALSE(cache.IsLocationCached(tn_3, "ca"));

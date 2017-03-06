@@ -22,9 +22,10 @@
 #include <folly/experimental/TestUtil.h>
 
 #include <cstdlib>
+#include <memory>
 #include <string>
-
 #include "core/configuration.h"
+#include "test-util/mini-cluster.h"
 
 namespace hbase {
 /**
@@ -36,20 +37,15 @@ class TestUtil {
    * Creating a TestUtil will spin up a cluster.
    */
   TestUtil();
+  /**
+   * Creating a TestUtil will spin up a cluster with numRegionServers region servers.
+   */
+  TestUtil(int numRegionServers, const std::string& confPath);
 
   /**
    * Destroying a TestUtil will spin down a cluster and remove the test dir.
    */
   ~TestUtil();
-
-  /**
-   * Run a command in the hbase shell. Command should not include any double
-   * quotes.
-   *
-   * This should only be used until there is a good Admin support from the
-   * native client
-   */
-  void RunShellCmd(const std::string &command);
 
   /**
    * Create a random string. This random string is all letters, as such it is
@@ -62,8 +58,22 @@ class TestUtil {
    */
   std::shared_ptr<Configuration> conf() const { return conf_; }
 
+  /**
+   * Starts mini hbase cluster with specified number of region servers
+   */
+  void StartMiniCluster(int num_region_servers);
+
+  void StopMiniCluster();
+  void CreateTable(std::string tblNam, std::string familyName);
+  void CreateTable(std::string tblNam, std::string familyName, std::string key1, std::string k2);
+  void TablePut(std::string table, std::string row, std::string fam, std::string col,
+          std::string value);
+
  private:
+  std::unique_ptr<MiniCluster> mini;
   folly::test::TemporaryDirectory temp_dir_;
+  int numRegionServers = 2;
+  std::string conf_path;
   std::shared_ptr<Configuration> conf_ = std::make_shared<Configuration>();
 };
 }  // namespace hbase

@@ -148,9 +148,9 @@ TEST(AsyncRpcRetryTest, TestGetBasic) {
 
   // Using TestUtil to populate test data
   hbase::TestUtil* test_util = new hbase::TestUtil();
-  test_util->RunShellCmd("create 't', 'd'");
-  test_util->RunShellCmd("put 't', 'test2', 'd:2', 'value2'");
-  test_util->RunShellCmd("put 't', 'test2', 'd:extra', 'value for extra'");
+  test_util->CreateTable("t", "d");
+  test_util->TablePut("t", "test2", "d", "2", "value2");
+  test_util->TablePut("t", "test2", "d", "extra", "value for extra");
 
   // Create TableName and Row to be fetched from HBase
   auto tn = folly::to<hbase::pb::TableName>("t");
@@ -159,11 +159,8 @@ TEST(AsyncRpcRetryTest, TestGetBasic) {
   // Get to be performed on above HBase Table
   hbase::Get get(row);
 
-  // Create Configuration
-  hbase::Configuration conf;
-
   // Create a client
-  Client client(conf);
+  Client client(*(test_util->conf()));
 
   // Get connection to HBase Table
   auto table = client.Table(tn);
