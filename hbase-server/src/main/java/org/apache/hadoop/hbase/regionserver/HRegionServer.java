@@ -3486,4 +3486,9 @@ public class HRegionServer extends HasThread implements
   public MetricsRegionServer getMetrics() {
     return metricsRegionServer;
   }
+
+  @Override
+  public void unassign(byte[] regionName) throws IOException {
+    clusterConnection.getAdmin().unassign(regionName, false);
+  }
 }

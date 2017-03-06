@@ -18,8 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.protobuf.Service;
+
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -34,12 +35,10 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.Service;
 
 /**
  * Services provided by {@link HRegionServer}
@@ -249,4 +248,14 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    * @return the metrics tracker for the region server
    */
   MetricsRegionServer getMetrics();
+
+  /**
+   * Unassign the given region from the current regionserver and assign it randomly. Could still be
+   * assigned to us. This is used to solve some tough problems for which you need to reset the state
+   * of a region. For example, if you hit FileNotFound exception and want to refresh the store file
+   * list.
+   * <p>
+   * See HBASE-17712 for more details.
+   */
+  void unassign(byte[] regionName) throws IOException;
 }
