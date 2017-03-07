@@ -1080,4 +1080,19 @@ public class TestPartialResultsFromClientSide {
     scanner.close();
   }
 
+  @Test
+  public void testMayHaveMoreCellsInRowReturnsTrueAndSetBatch() throws IOException {
+    Table table = createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES,
+        QUALIFIERS, VALUE);
+    Scan scan = new Scan();
+    scan.setBatch(1);
+    scan.setFilter(new FirstKeyOnlyFilter());
+    ResultScanner scanner = table.getScanner(scan);
+    Result result;
+    while ((result = scanner.next()) != null) {
+      assertTrue(result.rawCells() != null);
+      assertEquals(1, result.rawCells().length);
+    }
+  }
+
 }
