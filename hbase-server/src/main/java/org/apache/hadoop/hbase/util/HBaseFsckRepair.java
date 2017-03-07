@@ -197,4 +197,12 @@ public class HBaseFsckRepair {
     region.close();
     return region;
   }
+
+  /*
+   * Remove parent
+   */
+  public static void removeParentInMeta(Configuration conf, HRegionInfo hri) throws IOException {
+    Connection conn = ConnectionFactory.createConnection(conf);
+    MetaTableAccessor.deleteRegion(conn, hri);
+  }
 }
