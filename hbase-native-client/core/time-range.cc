@@ -17,7 +17,7 @@
  *
  */
 
-#include "core/time_range.h"
+#include "core/time-range.h"
 #include <limits>
 #include <stdexcept>
 #include <string>

@@ -30,7 +30,7 @@
 #include "connection/rpc-client.h"
 #include "core/configuration.h"
 #include "core/connection-configuration.h"
-#include "core/hbase_configuration_loader.h"
+#include "core/hbase-configuration-loader.h"
 #include "core/keyvalue-codec.h"
 #include "core/location-cache.h"
 #include "core/table.h"

@@ -18,17 +18,11 @@
  */
 #pragma once
 
-#include <gtest/gtest.h>
 #include <string>
-#include "core/client.h"
-#include "core/configuration.h"
-#include "core/get.h"
-#include "core/hbase_configuration_loader.h"
-#include "core/result.h"
-#include "core/table.h"
 #include "jni.h"
-#include "serde/table-name.h"
+
 namespace hbase {
+
 class MiniCluster {
  public:
   jobject StartCluster(int numRegionServers, std::string conf_path);

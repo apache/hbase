@@ -17,7 +17,7 @@
  *
  */
 
-#include "core/hbase_configuration_loader.h"
+#include "core/hbase-configuration-loader.h"
 
 #include <glog/logging.h>
 #include <boost/foreach.hpp>

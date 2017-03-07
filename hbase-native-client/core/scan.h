@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 #include "core/get.h"
-#include "core/time_range.h"
+#include "core/time-range.h"
 #include "if/Client.pb.h"
 
 namespace hbase {

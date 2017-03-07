@@ -24,7 +24,7 @@
 
 #include "connection/request.h"
 #include "connection/response.h"
-#include "core/response_converter.h"
+#include "core/response-converter.h"
 #include "if/Client.pb.h"
 #include "serde/region-info.h"
 #include "serde/server-name.h"
