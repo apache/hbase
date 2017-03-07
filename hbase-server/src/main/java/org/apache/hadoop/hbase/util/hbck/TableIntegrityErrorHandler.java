@@ -74,6 +74,14 @@ public interface TableIntegrityErrorHandler {
   void handleDuplicateStartKeys(HbckInfo hi1, HbckInfo hi2) throws IOException;
 
   /**
+   * Callback for handling two regions that have the same regionID
+   * a specific case of a split
+   * @param hi1 one of the overlapping HbckInfo
+   * @param hi2 the other overlapping HbckInfo
+   */
+  void handleSplit(HbckInfo hi1, HbckInfo hi2) throws IOException;
+
+  /**
    * Callback for handling two reigons that overlap in some arbitrary way.
    * This is a specific case of region overlap, and called for each possible
    * pair. If two regions have the same start key, the handleDuplicateStartKeys

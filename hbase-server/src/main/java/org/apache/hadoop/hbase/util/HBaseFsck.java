@@ -245,6 +245,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean fixTableOrphans = false; // fix fs holes (missing .tableinfo)
   private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
   private boolean fixSplitParents = false; // fix lingering split parents
+  private boolean removeParents = false; // remove split parents
   private boolean fixReferenceFiles = false; // fix lingering reference store file
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
   private boolean fixTableLocks = false; // fix table locks which are expired
@@ -1044,6 +1045,8 @@ public class HBaseFsck extends Configured implements Closeable {
         setShouldRerun();
 
         success = fs.rename(path, dst);
+        debugLsr(dst);
+
       }
       if (!success) {
         LOG.error("Failed to sideline reference file " + path);
@@ -2287,7 +2290,8 @@ public class HBaseFsck extends Configured implements Closeable {
       }
       errors.reportError(ERROR_CODE.LINGERING_SPLIT_PARENT, "Region "
           + descriptiveName + " is a split parent in META, in HDFS, "
-          + "and not deployed on any region server. This could be transient.");
+          + "and not deployed on any region server. This could be transient, "
+          + "consider to run the catalog janitor first!");
       if (shouldFixSplitParents()) {
         setShouldRerun();
         resetSplitParent(hbi);
@@ -2685,6 +2689,18 @@ public class HBaseFsck extends Configured implements Closeable {
       }
 
       @Override
+      public void handleSplit(HbckInfo r1, HbckInfo r2) throws IOException{
+        byte[] key = r1.getStartKey();
+        // dup start key
+        errors.reportError(ERROR_CODE.DUPE_ENDKEYS,
+          "Multiple regions have the same regionID: "
+            + Bytes.toStringBinary(key), getTableInfo(), r1);
+        errors.reportError(ERROR_CODE.DUPE_ENDKEYS,
+          "Multiple regions have the same regionID: "
+            + Bytes.toStringBinary(key), getTableInfo(), r2);
+      }
+
+      @Override
       public void handleOverlapInRegionChain(HbckInfo hi1, HbckInfo hi2) throws IOException{
         errors.reportError(ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
             "There is an overlap in the region chain.",
@@ -2818,8 +2834,122 @@ public class HBaseFsck extends Configured implements Closeable {
           }
           return;
         }
-
+        if (shouldRemoveParents()) {
+          removeParentsAndFixSplits(overlap);
+        }
         mergeOverlaps(overlap);
+      }
+
+      void removeParentsAndFixSplits(Collection<HbckInfo> overlap) throws IOException {
+        Pair<byte[], byte[]> range = null;
+        HbckInfo parent = null;
+        HbckInfo daughterA = null;
+        HbckInfo daughterB = null;
+        Collection<HbckInfo> daughters = new ArrayList<HbckInfo>(overlap);
+
+        String thread = Thread.currentThread().getName();
+        LOG.info("== [" + thread + "] Attempting fix splits in overlap state.");
+
+        // we only can handle a single split per group at the time
+        if (overlap.size() > 3) {
+          LOG.info("Too many overlaps were found on this group, falling back to regular merge.");
+          return;
+        }
+
+        for (HbckInfo hi : overlap) {
+          if (range == null) {
+            range = new Pair<byte[], byte[]>(hi.getStartKey(), hi.getEndKey());
+          } else {
+            if (RegionSplitCalculator.BYTES_COMPARATOR
+              .compare(hi.getStartKey(), range.getFirst()) < 0) {
+              range.setFirst(hi.getStartKey());
+            }
+            if (RegionSplitCalculator.BYTES_COMPARATOR
+              .compare(hi.getEndKey(), range.getSecond()) > 0) {
+              range.setSecond(hi.getEndKey());
+            }
+          }
+        }
+
+        LOG.info("This group range is [" + Bytes.toStringBinary(range.getFirst()) + ", "
+          + Bytes.toStringBinary(range.getSecond()) + "]");
+
+        // attempt to find a possible parent for the edge case of a split
+        for (HbckInfo hi : overlap) {
+          if (Bytes.compareTo(hi.getHdfsHRI().getStartKey(), range.getFirst()) == 0
+            && Bytes.compareTo(hi.getHdfsHRI().getEndKey(), range.getSecond()) == 0) {
+            LOG.info("This is a parent for this group: " + hi.toString());
+            parent = hi;
+          }
+        }
+
+        // Remove parent regions from daughters collection
+        if (parent != null) {
+          daughters.remove(parent);
+        }
+
+        // Lets verify that daughters share the regionID at split time and they
+        // were created after the parent
+        for (HbckInfo hi : daughters) {
+          if (Bytes.compareTo(hi.getHdfsHRI().getStartKey(), range.getFirst()) == 0) {
+            if (parent.getHdfsHRI().getRegionId() < hi.getHdfsHRI().getRegionId()) {
+              daughterA = hi;
+            }
+          }
+          if (Bytes.compareTo(hi.getHdfsHRI().getEndKey(), range.getSecond()) == 0) {
+            if (parent.getHdfsHRI().getRegionId() < hi.getHdfsHRI().getRegionId()) {
+              daughterB = hi;
+            }
+          }
+        }
+
+        // daughters must share the same regionID and we should have a parent too
+        if (daughterA.getHdfsHRI().getRegionId() != daughterB.getHdfsHRI().getRegionId() || parent == null)
+          return;
+
+        FileSystem fs = FileSystem.get(conf);
+        LOG.info("Found parent: " + parent.getRegionNameAsString());
+        LOG.info("Found potential daughter a: " + daughterA.getRegionNameAsString());
+        LOG.info("Found potential daughter b: " + daughterB.getRegionNameAsString());
+        LOG.info("Trying to fix parent in overlap by removing the parent.");
+        try {
+          closeRegion(parent);
+        } catch (IOException ioe) {
+          LOG.warn("Parent region could not be closed, continuing with regular merge...", ioe);
+          return;
+        } catch (InterruptedException ie) {
+          LOG.warn("Parent region could not be closed, continuing with regular merge...", ie);
+          return;
+        }
+
+        try {
+          offline(parent.getRegionName());
+        } catch (IOException ioe) {
+          LOG.warn("Unable to offline parent region: " + parent.getRegionNameAsString()
+            + ".  Just continuing with regular merge... ", ioe);
+          return;
+        }
+
+        try {
+          HBaseFsckRepair.removeParentInMeta(conf, parent.getHdfsHRI());
+        } catch (IOException ioe) {
+          LOG.warn("Unable to remove parent region in META: " + parent.getRegionNameAsString()
+            + ".  Just continuing with regular merge... ", ioe);
+          return;
+        }
+
+        sidelineRegionDir(fs, parent);
+        LOG.info("[" + thread + "] Sidelined parent region dir "+ parent.getHdfsRegionDir() + " into " +
+          getSidelineDir());
+        debugLsr(parent.getHdfsRegionDir());
+
+        // Make sure we don't have the parents and daughters around
+        overlap.remove(parent);
+        overlap.remove(daughterA);
+        overlap.remove(daughterB);
+
+        LOG.info("Done fixing split.");
+
       }
 
       void mergeOverlaps(Collection<HbckInfo> overlap)
@@ -3007,8 +3137,13 @@ public class HBaseFsck extends Configured implements Closeable {
             subRange.remove(r1);
             for (HbckInfo r2 : subRange) {
               if (r2.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) continue;
+              // general case of same start key
               if (Bytes.compareTo(r1.getStartKey(), r2.getStartKey())==0) {
                 handler.handleDuplicateStartKeys(r1,r2);
+              } else if (Bytes.compareTo(r1.getEndKey(), r2.getStartKey())==0 &&
+                r1.getHdfsHRI().getRegionId() == r2.getHdfsHRI().getRegionId()) {
+                LOG.info("this is a split, log to splits");
+                handler.handleSplit(r1, r2);
               } else {
                 // overlap
                 handler.handleOverlapInRegionChain(r1, r2);
@@ -3818,7 +3953,8 @@ public class HBaseFsck extends Configured implements Closeable {
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR
+      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR,
+      DUPE_ENDKEYS
     }
     void clear();
     void report(String message);
@@ -4344,8 +4480,17 @@ public class HBaseFsck extends Configured implements Closeable {
     fixAny |= shouldFix;
   }
 
+  public void setRemoveParents(boolean shouldFix) {
+    removeParents = shouldFix;
+    fixAny |= shouldFix;
+  }
+
   boolean shouldFixSplitParents() {
     return fixSplitParents;
+  }
+
+  boolean shouldRemoveParents() {
+    return removeParents;
   }
 
   public void setFixReferenceFiles(boolean shouldFix) {
@@ -4472,6 +4617,7 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("   -sidelineBigOverlaps  When fixing region overlaps, allow to sideline big overlaps");
     out.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
     out.println("   -fixSplitParents  Try to force offline split parents to be online.");
+    out.println("   -removeParents    Try to offline and sideline lingering parents and keep daughter regions.");
     out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
     out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
     out.println("   -fixEmptyMetaCells  Try to fix hbase:meta entries not referencing any region"
@@ -4610,6 +4756,8 @@ public class HBaseFsck extends Configured implements Closeable {
         setSidelineBigOverlaps(true);
       } else if (cmd.equals("-fixSplitParents")) {
         setFixSplitParents(true);
+      } else if (cmd.equals("-removeParents")) {
+        setRemoveParents(true);
       } else if (cmd.equals("-ignorePreCheckPermission")) {
         setIgnorePreCheckPermission(true);
       } else if (cmd.equals("-checkCorruptHFiles")) {
