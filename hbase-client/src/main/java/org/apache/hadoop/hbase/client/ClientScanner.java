@@ -668,6 +668,11 @@ public abstract class ClientScanner extends AbstractClientScanner {
         }
       }
       partialResultsCellSizes -= scan.getBatch();
+      if (partialResultsCellSizes == 0) {
+        // We have nothing in partialResults, clear the flags to prevent returning empty Result
+        // when next result belongs to the next row.
+        clearPartialResults();
+      }
       return Result.create(cells, null, stale,
           partialResultsCellSizes > 0 || result.mayHaveMoreCellsInRow());
     }

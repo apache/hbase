@@ -968,10 +968,6 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Whether or not the result is a partial result. Partial results contain a subset of the cells
-   * for a row and should be combined with a result representing the remaining cells in that row to
-   * form a complete (non-partial) result.
-   * @return Whether or not the result is a partial result
    * @deprecated the word 'partial' ambiguous, use {@link #mayHaveMoreCellsInRow()} instead.
    *             Deprecated since 1.4.0.
    * @see #mayHaveMoreCellsInRow()
@@ -982,13 +978,12 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM.
-   * This flag is used to tell you if the current Result is the last one of the current row. False
-   * means this Result is the last one. True means there are be more cells for the current row.
-   * <p>
-   * The Scan configuration used to control the result size on the server is
-   * {@link Scan#setMaxResultSize(long)} and the default value can be seen here:
-   * {@link HConstants#DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE}
+   * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM
+   * or timeout. This flag is used to tell you if the current Result is the last one of the current
+   * row. False means this Result is the last one. True means there MAY be more cells belonging to
+   * the current row.
+   * If you don't use {@link Scan#setAllowPartialResults(boolean)} or {@link Scan#setBatch(int)},
+   * this method will always return false because the Result must contains all cells in one Row.
    */
   public boolean mayHaveMoreCellsInRow() {
     return mayHaveMoreCellsInRow;
