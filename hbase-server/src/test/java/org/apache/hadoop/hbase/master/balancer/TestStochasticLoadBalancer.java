@@ -268,8 +268,8 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
         costFunction = new StochasticLoadBalancer.TableSkewCostFunction(conf);
     CandidateGenerator generator = new TableSkewCandidateGenerator();
     for (int i = 0; i < 100; i++) {
-      int numNodes = rand.nextInt(500) + 1; // num nodes between 1 - 500
-      int numTables = rand.nextInt(500) + 1; // num tables between 1 and 1000
+      int numNodes = 1 + rand.nextInt(5 * i + 1);
+      int numTables = 1 + rand.nextInt(5 * i + 1);
       int numRegions = rand.nextInt(numTables * 99) + Math.max(numTables, numNodes); // num regions between max(numTables, numNodes) - numTables*100
       int numRegionsPerServer = rand.nextInt(numRegions / numNodes) + 1; // num regions per server (except one) between 1 and numRegions / numNodes
 
