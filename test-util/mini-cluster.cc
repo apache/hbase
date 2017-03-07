@@ -19,17 +19,11 @@
 
 #include "test-util/mini-cluster.h"
 #include <glog/logging.h>
-#include <gtest/gtest.h>
+#include <fcntl.h>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <fstream>
-#include "core/client.h"
-#include "core/configuration.h"
-#include "core/get.h"
-#include "core/hbase_configuration_loader.h"
-#include "core/result.h"
-#include "core/table.h"
-#include "serde/table-name.h"
+
 
 using hbase::MiniCluster;
 

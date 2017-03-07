@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 #include "core/configuration.h"
 #include "core/get.h"
-#include "core/hbase_configuration_loader.h"
+#include "core/hbase-configuration-loader.h"
 #include "core/result.h"
 #include "core/table.h"
 #include "serde/table-name.h"

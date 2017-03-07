@@ -24,7 +24,7 @@
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 #include "core/configuration.h"
-#include "core/hbase_configuration_loader.h"
+#include "core/hbase-configuration-loader.h"
 
 using namespace hbase;
 

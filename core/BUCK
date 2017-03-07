@@ -21,7 +21,7 @@ cxx_library(
     exported_headers=[
         "client.h",
         "cell.h",
-        "hbase_macros.h",
+        "hbase-macros.h",
         "filter.h",
         "query.h",
         "keyvalue-codec.h",
@@ -32,13 +32,13 @@ cxx_library(
         # Once meta lookup works
         "meta-utils.h",
         "get.h",
-        "time_range.h",
+        "time-range.h",
         "configuration.h",
-        "hbase_configuration_loader.h",
+        "hbase-configuration-loader.h",
         "scan.h",
         "result.h",
-        "request_converter.h",
-        "response_converter.h",
+        "request-converter.h",
+        "response-converter.h",
         "table.h",
         "async-rpc-retrying-caller-factory.h",
         "async-rpc-retrying-caller.h",
@@ -51,13 +51,13 @@ cxx_library(
         "location-cache.cc",
         "meta-utils.cc",
         "get.cc",
-        "time_range.cc",
+        "time-range.cc",
         "configuration.cc",
-        "hbase_configuration_loader.cc",
+        "hbase-configuration-loader.cc",
         "scan.cc",
         "result.cc",
-        "request_converter.cc",
-        "response_converter.cc",
+        "request-converter.cc",
+        "response-converter.cc",
         "table.cc",
     ],
     deps=[
@@ -120,8 +120,8 @@ cxx_test(
     ],
     run_test_separately=True,)
 cxx_test(
-    name="time_range-test",
-    srcs=["time_range-test.cc",],
+    name="time-range-test",
+    srcs=["time-range-test.cc",],
     deps=[":core",],
     run_test_separately=True,)
 cxx_test(
@@ -130,8 +130,8 @@ cxx_test(
     deps=[":core",],
     run_test_separately=True,)
 cxx_test(
-    name="hbase_configuration-test",
-    srcs=["hbase_configuration-test.cc",],
+    name="hbase-configuration-test",
+    srcs=["hbase-configuration-test.cc",],
     deps=[":core",],
     run_test_separately=True,)
 cxx_test(
@@ -145,8 +145,8 @@ cxx_test(
     deps=[":core",],
     run_test_separately=True,)
 cxx_test(
-    name="request_converter-test",
-    srcs=["request_converter-test.cc",],
+    name="request-converter-test",
+    srcs=["request-converter-test.cc",],
     deps=[
         ":core",
         "//connection:connection",

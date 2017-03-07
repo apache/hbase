@@ -25,8 +25,8 @@
 #include <utility>
 #include <vector>
 
-#include "core/request_converter.h"
-#include "core/response_converter.h"
+#include "core/request-converter.h"
+#include "core/response-converter.h"
 #include "if/Client.pb.h"
 #include "security/user.h"
 #include "serde/server-name.h"

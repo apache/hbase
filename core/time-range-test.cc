@@ -17,7 +17,7 @@
  *
  */
 
-#include "core/time_range.h"
+#include "core/time-range.h"
 
 #include <glog/logging.h>
 #include <gtest/gtest.h>
