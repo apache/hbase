@@ -48,19 +48,19 @@ public class ServerSideScanMetrics {
     return c;
   }
 
-  public static final String COUNT_OF_ROWS_SCANNED_KEY = "ROWS_SCANNED";
-  public static final String COUNT_OF_ROWS_FILTERED_KEY = "ROWS_FILTERED";
+  public static final String COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME = "ROWS_SCANNED";
+  public static final String COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME = "ROWS_FILTERED";
 
   /**
    * number of rows filtered during scan RPC
    */
-  public final AtomicLong countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY);
+  public final AtomicLong countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
 
   /**
    * number of rows scanned during scan RPC. Not every row scanned will be returned to the client
    * since rows may be filtered.
    */
-  public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY);
+  public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
 
   /**
    * @param counterName

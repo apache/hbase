@@ -178,41 +178,41 @@ public class TestServerSideScanMetricsFromClientSide {
   public void testRowsSeenMetric(Scan baseScan) throws Exception {
     Scan scan;
     scan = new Scan(baseScan);
-    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY, NUM_ROWS);
+    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, NUM_ROWS);
 
     for (int i = 0; i < ROWS.length - 1; i++) {
       scan = new Scan(baseScan);
       scan.setStartRow(ROWS[0]);
       scan.setStopRow(ROWS[i + 1]);
-      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY, i + 1);
+      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, i + 1);
     }
 
     for (int i = ROWS.length - 1; i > 0; i--) {
       scan = new Scan(baseScan);
       scan.setStartRow(ROWS[i - 1]);
       scan.setStopRow(ROWS[ROWS.length - 1]);
-      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY, ROWS.length - i);
+      testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length - i);
     }
 
     // The filter should filter out all rows, but we still expect to see every row.
     Filter filter = new RowFilter(CompareOp.EQUAL, new BinaryComparator("xyz".getBytes()));
     scan = new Scan(baseScan);
     scan.setFilter(filter);
-    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY, ROWS.length);
+    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
 
     // Filter should pass on all rows
     SingleColumnValueFilter singleColumnValueFilter =
         new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.EQUAL, VALUE);
     scan = new Scan(baseScan);
     scan.setFilter(singleColumnValueFilter);
-    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY, ROWS.length);
+    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
 
     // Filter should filter out all rows
     singleColumnValueFilter =
         new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOp.NOT_EQUAL, VALUE);
     scan = new Scan(baseScan);
     scan.setFilter(singleColumnValueFilter);
-    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY, ROWS.length);
+    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
   }
 
   @Test
@@ -295,7 +295,7 @@ public class TestServerSideScanMetricsFromClientSide {
       throws Exception {
     Scan scan = new Scan(baseScan);
     if (filter != null) scan.setFilter(filter);
-    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY, expectedNumFiltered);
+    testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME, expectedNumFiltered);
   }
 
   /**
