@@ -1251,7 +1251,7 @@ public class TestAdmin1 {
     // Try going to the regionservers directly
     // first move the region to the same regionserver
     if (!regions.get(2).getSecond().equals(regions.get(1).getSecond())) {
-      moveRegionAndWait(regions.get(2).getFirst(), regions.get(1).getSecond());
+      TEST_UTIL.moveRegionAndWait(regions.get(2).getFirst(), regions.get(1).getSecond());
     }
     try {
       AdminService.BlockingInterface admin = TEST_UTIL.getHBaseAdmin().getConnection()
@@ -1262,25 +1262,6 @@ public class TestAdmin1 {
       gotException = true;
     }
     assertTrue(gotException);
-  }
-
-  private void moveRegionAndWait(HRegionInfo destRegion, ServerName destServer)
-      throws InterruptedException, MasterNotRunningException,
-      ZooKeeperConnectionException, IOException {
-    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    TEST_UTIL.getHBaseAdmin().move(
-        destRegion.getEncodedNameAsBytes(),
-        Bytes.toBytes(destServer.getServerName()));
-    while (true) {
-      ServerName serverName = master.getAssignmentManager()
-          .getRegionStates().getRegionServerOfRegion(destRegion);
-      if (serverName != null && serverName.equals(destServer)) {
-        TEST_UTIL.assertRegionOnServer(
-            destRegion, serverName, 200);
-        break;
-      }
-      Thread.sleep(10);
-    }
   }
 
   /**

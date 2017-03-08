@@ -90,7 +90,6 @@ public class TestRemoveRegionMetrics {
       int destServerIdx = (currentServerIdx +1)% cluster.getLiveRegionServerThreads().size();
       HRegionServer currentServer = cluster.getRegionServer(currentServerIdx);
       HRegionServer destServer = cluster.getRegionServer(destServerIdx);
-      byte[] destServerName = Bytes.toBytes(destServer.getServerName().getServerName());
 
 
       // Do a put. The counters should be non-zero now
@@ -113,13 +112,11 @@ public class TestRemoveRegionMetrics {
 
 
       try {
-        admin.move(regionInfo.getEncodedNameAsBytes(), destServerName);
+        TEST_UTIL.moveRegionAndWait(regionInfo, destServer.getServerName());
         moved = true;
-        Thread.sleep(5000);
       } catch (IOException ioe) {
         moved = false;
       }
-      TEST_UTIL.waitUntilAllRegionsAssigned(t.getName());
 
       if (moved) {
         MetricsRegionAggregateSource destAgg = destServer.getRegion(regionInfo.getRegionName())

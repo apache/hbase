@@ -238,7 +238,7 @@ public class TestWALReplay {
     HRegionServer originServer = hbaseCluster.getRegionServer(originServerNum);
     HRegionServer destServer = hbaseCluster.getRegionServer(destServerNum);
     // move region to destination regionserver
-    moveRegionAndWait(destRegion, destServer);
+    TEST_UTIL.moveRegionAndWait(destRegion.getRegionInfo(), destServer.getServerName());
 
     // delete the row
     Delete del = new Delete(Bytes.toBytes("r1"));
@@ -261,7 +261,7 @@ public class TestWALReplay {
     region.compact(true);
 
     // move region to origin regionserver
-    moveRegionAndWait(destRegion, originServer);
+    TEST_UTIL.moveRegionAndWait(destRegion.getRegionInfo(), originServer.getServerName());
     // abort the origin regionserver
     originServer.abort("testing");
 
@@ -272,25 +272,6 @@ public class TestWALReplay {
           (result == null) || result.isEmpty());
     }
     resultScanner.close();
-  }
-
-  private void moveRegionAndWait(Region destRegion, HRegionServer destServer)
-      throws InterruptedException, MasterNotRunningException,
-      ZooKeeperConnectionException, IOException {
-    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    TEST_UTIL.getHBaseAdmin().move(
-        destRegion.getRegionInfo().getEncodedNameAsBytes(),
-        Bytes.toBytes(destServer.getServerName().getServerName()));
-    while (true) {
-      ServerName serverName = master.getAssignmentManager()
-        .getRegionStates().getRegionServerOfRegion(destRegion.getRegionInfo());
-      if (serverName != null && serverName.equals(destServer.getServerName())) {
-        TEST_UTIL.assertRegionOnServer(
-          destRegion.getRegionInfo(), serverName, 200);
-        break;
-      }
-      Thread.sleep(10);
-    }
   }
 
   /**
