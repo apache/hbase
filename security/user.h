@@ -18,10 +18,13 @@
  */
 #pragma once
 
+#include <mutex>
 #include <string>
+#include "core/configuration.h"
 
 namespace hbase {
 namespace security {
+static constexpr const char* kKerberos = "kerberos";
 class User {
  public:
   explicit User(const std::string& user_name) : user_name_(user_name) {}
@@ -31,6 +34,9 @@ class User {
 
   static std::shared_ptr<User> defaultUser() { return std::make_shared<User>("__drwho"); }
 
+  static bool IsSecurityEnabled(const Configuration& conf) {
+    return conf.Get("hbase.security.authentication", "").compare(kKerberos) == 0;
+  }
  private:
   std::string user_name_;
 };
