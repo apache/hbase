@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.thrift2;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
+import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
 import org.junit.AfterClass;
@@ -782,6 +784,67 @@ public class TestThriftHBaseServiceHandler {
     handler.closeScanner(scanId);
     try {
       handler.getScannerRows(scanId, 10);
+      fail("Scanner id should be invalid");
+    } catch (TIllegalArgument e) {
+    }
+  }
+
+  @Test
+  public void testScanWithColumnFamilyTimeRange() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    ByteBuffer table = wrap(tableAname);
+
+    // insert data
+    TColumnValue familyAColumnValue = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
+        wrap(valueAname));
+    TColumnValue familyBColumnValue = new TColumnValue(wrap(familyBname), wrap(qualifierBname),
+        wrap(valueBname));
+    long minTimestamp = System.currentTimeMillis();
+    for (int i = 0; i < 10; i++) {
+      familyAColumnValue.setTimestamp(minTimestamp + i);
+      familyBColumnValue.setTimestamp(minTimestamp + i);
+      List<TColumnValue> columnValues = new ArrayList<>(2);
+      columnValues.add(familyAColumnValue);
+      columnValues.add(familyBColumnValue);
+      TPut put = new TPut(wrap(("testScanWithColumnFamilyTimeRange" + i).getBytes()),
+          columnValues);
+      handler.put(table, put);
+    }
+
+    // create scan instance with column family time range
+    TScan scan = new TScan();
+    Map<ByteBuffer,TTimeRange> colFamTimeRangeMap = new HashMap<>(2);
+    colFamTimeRangeMap.put(wrap(familyAname), new TTimeRange(minTimestamp + 3, minTimestamp + 5));
+    colFamTimeRangeMap.put(wrap(familyBname), new TTimeRange(minTimestamp + 6, minTimestamp + 9));
+    scan.setColFamTimeRangeMap(colFamTimeRangeMap);
+
+    // get scanner and rows
+    int scanId = handler.openScanner(table, scan);
+    List<TResult> results = handler.getScannerRows(scanId, 5);
+    assertEquals(5, results.size());
+    int familyACount = 0;
+    int familyBCount = 0;
+    for (TResult result : results) {
+      List<TColumnValue> columnValues = result.getColumnValues();
+      if (CollectionUtils.isNotEmpty(columnValues)) {
+        if (Bytes.equals(familyAname, columnValues.get(0).getFamily())) {
+          familyACount++;
+        } else if (Bytes.equals(familyBname, columnValues.get(0).getFamily())) {
+          familyBCount++;
+        }
+      }
+    }
+    assertEquals(2, familyACount);
+    assertEquals(3, familyBCount);
+
+    // check that we are at the end of the scan
+    results = handler.getScannerRows(scanId, 1);
+    assertEquals(0, results.size());
+
+    // close scanner and check that it was indeed closed
+    handler.closeScanner(scanId);
+    try {
+      handler.getScannerRows(scanId, 1);
       fail("Scanner id should be invalid");
     } catch (TIllegalArgument e) {
     }
