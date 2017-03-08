@@ -305,7 +305,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   MemoryBoundedLogMessageBuffer rsFatals;
 
   // flag set after we become the active master (used for testing)
-  private volatile boolean isActiveMaster = false;
+  private volatile boolean activeMaster = false;
 
   // flag set after we complete initialization once active,
   // it is not private since it's used in unit tests
@@ -597,7 +597,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   protected void waitForMasterActive(){
     boolean tablesOnMaster = BaseLoadBalancer.tablesOnMaster(conf);
-    while (!(tablesOnMaster && isActiveMaster)
+    while (!(tablesOnMaster && activeMaster)
         && !isStopped() && !isAborted()) {
       sleeper.sleep();
     }
@@ -733,7 +733,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   private void finishActiveMasterInitialization(MonitoredTask status)
       throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
 
-    isActiveMaster = true;
+    activeMaster = true;
     Thread zombieDetector = new Thread(new InitializationMonitor(this),
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
     zombieDetector.start();
@@ -2555,7 +2555,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   @Override
   public boolean isActiveMaster() {
-    return isActiveMaster;
+    return activeMaster;
   }
 
   /**

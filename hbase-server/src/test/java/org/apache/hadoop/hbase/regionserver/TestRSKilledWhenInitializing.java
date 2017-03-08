@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -92,52 +94,57 @@ public class TestRSKilledWhenInitializing {
             RegisterAndDieRegionServer.class);
     final MasterThread master = startMaster(cluster.getMasters().get(0));
     try {
-      masterActive.set(true);
-      // Now start regionservers.
-      // First RS to report for duty will kill itself when it gets a response.
-      // See below in the RegisterAndDieRegionServer handleReportForDutyResponse.
+      // Master is up waiting on RegionServers to check in. Now start RegionServers.
       for (int i = 0; i < NUM_RS; i++) {
         cluster.getRegionServers().get(i).start();
       }
-      // Now wait on master to see NUM_RS + 1 servers as being online, NUM_RS and itself.
-      // Then wait until the killed RS gets removed from zk and triggers Master to remove
-      // it from list of online RS.
-      List<ServerName> onlineServersList =
-          master.getMaster().getServerManager().getOnlineServersList();
-      while (onlineServersList.size() < NUM_RS + 1) {
-        // Spin till we see NUM_RS + Master in online servers list.
+      // Now wait on master to see NUM_RS + 1 servers as being online, thats NUM_RS plus
+      // the Master itself (because Master hosts hbase:meta and checks in as though it a RS).
+      List<ServerName> onlineServersList = null;
+      do {
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
-      }
-      LOG.info(onlineServersList);
-      assertEquals(NUM_RS + 1, onlineServersList.size());
-      // Steady state. How many regions open?
-      // Wait until killedRS is set
+      } while (onlineServersList.size() < (NUM_RS + 1));
+      // Wait until killedRS is set. Means RegionServer is starting to go down.
       while (killedRS.get() == null) {
-        Threads.sleep(10);
+        Threads.sleep(1);
       }
-      final int regionsOpenCount = master.getMaster().getAssignmentManager().getNumRegionsOpened();
+      // Wait on the RegionServer to fully die.
+      while (cluster.getLiveRegionServers().size() > NUM_RS) {
+        Threads.sleep(1);
+      }
+      // Make sure Master is fully up before progressing. Could take a while if regions
+      // being reassigned.
+      while (!master.getMaster().isInitialized()) {
+        Threads.sleep(1);
+      }
+
+      // Now in steady state. How many regions open? Master should have too many regionservers
+      // showing still. The downed RegionServer should still be showing as registered.
+      assertTrue(master.getMaster().getServerManager().isServerOnline(killedRS.get()));
       // Find non-meta region (namespace?) and assign to the killed server. That'll trigger cleanup.
-      Map<HRegionInfo, ServerName> assigments =
-          master.getMaster().getAssignmentManager().getRegionStates().getRegionAssignments();
+      Map<HRegionInfo, ServerName> assignments = null;
+      do {
+        assignments = master.getMaster().getAssignmentManager().getRegionStates().getRegionAssignments();
+      } while (assignments == null || assignments.size() < 2);
       HRegionInfo hri = null;
-      for (Map.Entry<HRegionInfo, ServerName> e: assigments.entrySet()) {
+      for (Map.Entry<HRegionInfo, ServerName> e: assignments.entrySet()) {
         if (e.getKey().isMetaRegion()) continue;
         hri = e.getKey();
         break;
       }
       // Try moving region to the killed server. It will fail. As by-product, we will
       // remove the RS from Master online list because no corresponding znode.
+      assertEquals(NUM_RS + 1, master.getMaster().getServerManager().getOnlineServersList().size());
       LOG.info("Move " + hri.getEncodedName() + " to " + killedRS.get());
       master.getMaster().move(hri.getEncodedNameAsBytes(),
           Bytes.toBytes(killedRS.get().toString()));
-      while (onlineServersList.size() > NUM_RS) {
+      // Wait until the RS no longer shows as registered in Master.
+      while (onlineServersList.size() > (NUM_RS + 1)) {
         Thread.sleep(100);
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
       }
-      // Just for kicks, ensure namespace was put back on the old server after above failed move.
-      assertEquals(regionsOpenCount,
-          master.getMaster().getAssignmentManager().getNumRegionsOpened());
     } finally {
+      // Shutdown is messy with complaints about fs being closed. Why? TODO.
       cluster.shutdown();
       cluster.join();
       TEST_UTIL.shutdownMiniDFSCluster();
@@ -146,19 +153,32 @@ public class TestRSKilledWhenInitializing {
     }
   }
 
+  /**
+   * Start Master. Get as far as the state where Master is waiting on
+   * RegionServers to check in, then return.
+   */
   private MasterThread startMaster(MasterThread master) {
     master.start();
-    long startTime = System.currentTimeMillis();
-    while (!master.getMaster().isInitialized()) {
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException ignored) {
-        LOG.info("Interrupted: ignoring");
-      }
-      if (System.currentTimeMillis() > startTime + 30000) {
-        throw new RuntimeException("Master not active after 30 seconds");
-      }
+    // It takes a while until ServerManager creation to happen inside Master startup.
+    while (master.getMaster().getServerManager() == null) {
+      continue;
     }
+    // Set a listener for the waiting-on-RegionServers state. We want to wait
+    // until this condition before we leave this method and start regionservers.
+    final AtomicBoolean waiting = new AtomicBoolean(false);
+    if (master.getMaster().getServerManager() == null) throw new NullPointerException("SM");
+    master.getMaster().getServerManager().registerListener(new ServerListener() {
+      @Override
+      public void waiting() {
+        waiting.set(true);
+      }
+    });
+    // Wait until the Master gets to place where it is waiting on RegionServers to check in.
+    while (!waiting.get()) {
+      continue;
+    }
+    // Set the global master-is-active; gets picked up by regionservers later.
+    masterActive.set(true);
     return master;
   }
 

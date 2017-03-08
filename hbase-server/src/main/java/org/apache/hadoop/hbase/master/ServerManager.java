@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
@@ -772,7 +773,16 @@ public class ServerManager {
    */
   private void checkForRSznode(final ServerName serverName, final ServiceException se) {
     if (se.getCause() == null) return;
-    if (!(se.getCause() instanceof ConnectException)) return;
+    Throwable t = se.getCause();
+    if (t instanceof ConnectException) {
+      // If this, proceed to do cleanup.
+    } else {
+      // Look for FailedServerException
+      if (!(t instanceof IOException)) return;
+      if (t.getCause() == null) return;
+      if (!(t.getCause() instanceof FailedServerException)) return;
+      // Ok, found FailedServerException -- continue.
+    }
     if (!isServerOnline(serverName)) return;
     // We think this server is online. Check it has a znode up. Currently, a RS
     // registers an ephereral znode in zk. If not present, something is up. Maybe
@@ -1030,20 +1040,19 @@ public class ServerManager {
    *
    * @throws InterruptedException
    */
-  public void waitForRegionServers(MonitoredTask status)
-  throws InterruptedException {
+  public void waitForRegionServers(MonitoredTask status) throws InterruptedException {
     final long interval = this.master.getConfiguration().
-      getLong(WAIT_ON_REGIONSERVERS_INTERVAL, 1500);
+        getLong(WAIT_ON_REGIONSERVERS_INTERVAL, 1500);
     final long timeout = this.master.getConfiguration().
-      getLong(WAIT_ON_REGIONSERVERS_TIMEOUT, 4500);
+        getLong(WAIT_ON_REGIONSERVERS_TIMEOUT, 4500);
     // Min is not an absolute; just a friction making us wait longer on server checkin.
     int minToStart = getMinToStart();
     int maxToStart = this.master.getConfiguration().
-      getInt(WAIT_ON_REGIONSERVERS_MAXTOSTART, Integer.MAX_VALUE);
+        getInt(WAIT_ON_REGIONSERVERS_MAXTOSTART, Integer.MAX_VALUE);
     if (maxToStart < minToStart) {
       LOG.warn(String.format("The value of '%s' (%d) is set less than '%s' (%d), ignoring.",
-        WAIT_ON_REGIONSERVERS_MAXTOSTART, maxToStart,
-        WAIT_ON_REGIONSERVERS_MINTOSTART, minToStart));
+          WAIT_ON_REGIONSERVERS_MAXTOSTART, maxToStart,
+          WAIT_ON_REGIONSERVERS_MINTOSTART, minToStart));
       maxToStart = Integer.MAX_VALUE;
     }
 
@@ -1060,19 +1069,19 @@ public class ServerManager {
     // Next, we will keep cycling if ANY of the following three conditions are true:
     // 1. The time since a regionserver registered is < interval (means servers are actively checking in).
     // 2. We are under the total timeout.
-    // 3. The count of servers is < minimum expected AND we are within timeout (this just puts up
-    // a little friction making us wait a bit longer if < minimum servers).
+    // 3. The count of servers is < minimum.
+    for (ServerListener listener: this.listeners) {
+      listener.waiting();
+    }
     while (!this.master.isStopped() && count < maxToStart &&
-        (((lastCountChange + interval) > now) ||
-            (timeout > slept) ||
-            ((count < minToStart) && (timeout > slept)))) {
+        ((lastCountChange + interval) > now || timeout > slept || count < minToStart)) {
       // Log some info at every interval time or if there is a change
       if (oldCount != count || lastLogTime + interval < now) {
         lastLogTime = now;
         String msg =
-          "Waiting for RegionServer count=" + count + " to settle; waited "+
-            slept + "ms, expecting minimum=" + minToStart + "server(s) (max="+ getStrForMax(maxToStart) + "server(s)), " +
-            "timeout=" + timeout + "ms, lastChange=" + (lastCountChange - now) + "ms";
+            "Waiting on RegionServer count=" + count + " to settle; waited="+
+                slept + "ms, expecting min=" + minToStart + " server(s), max="+ getStrForMax(maxToStart) +
+                " server(s), " + "timeout=" + timeout + "ms, lastChange=" + (lastCountChange - now) + "ms";
         LOG.info(msg);
         status.setStatus(msg);
       }
@@ -1089,11 +1098,9 @@ public class ServerManager {
         lastCountChange = now;
       }
     }
-
-    LOG.info("Finished waiting for RegionServer count=" + count + " to settle, slept for " + slept + "ms," +
-      " expecting minimum=" + minToStart + " server(s) (max=" +  getStrForMax(maxToStart) + " server(s),"+
-      " Master is "+ (this.master.isStopped() ? "stopped.": "running")
-    );
+    LOG.info("Finished wait on RegionServer count=" + count + "; waited=" + slept + "ms," +
+        " expected min=" + minToStart + " server(s), max=" +  getStrForMax(maxToStart) + " server(s),"+
+        " master is "+ (this.master.isStopped() ? "stopped.": "running"));
   }
 
   private String getStrForMax(final int max) {
