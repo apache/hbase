@@ -23,6 +23,6 @@ cxx_library(
         "user.h",
     ],
     srcs=[],
-    deps=[],
+    deps=["//core:conf"],
     compiler_flags=['-Weffc++'],
     visibility=['//core/...', '//connection/...'],)

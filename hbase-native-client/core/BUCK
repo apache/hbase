@@ -33,8 +33,6 @@ cxx_library(
         "meta-utils.h",
         "get.h",
         "time-range.h",
-        "configuration.h",
-        "hbase-configuration-loader.h",
         "scan.h",
         "result.h",
         "request-converter.h",
@@ -52,8 +50,6 @@ cxx_library(
         "meta-utils.cc",
         "get.cc",
         "time-range.cc",
-        "configuration.cc",
-        "hbase-configuration-loader.cc",
         "scan.cc",
         "result.cc",
         "request-converter.cc",
@@ -64,12 +60,28 @@ cxx_library(
         "//exceptions:exceptions",
         "//utils:utils",
         "//connection:connection",
+        "//core:conf",
         "//if:if",
         "//serde:serde",
         "//third-party:folly",
         "//third-party:wangle",
         "//third-party:zookeeper_mt",
     ],
+    compiler_flags=['-Weffc++', '-ggdb'],
+    visibility=[
+        'PUBLIC',
+    ],)
+cxx_library(
+    name="conf",
+    exported_headers=[
+        "configuration.h",
+        "hbase-configuration-loader.h",
+    ],
+    srcs=[
+        "configuration.cc",
+        "hbase-configuration-loader.cc",
+    ],
+    deps=["//third-party:folly"],
     compiler_flags=['-Weffc++', '-ggdb'],
     visibility=[
         'PUBLIC',
