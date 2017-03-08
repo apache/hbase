@@ -1063,6 +1063,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     return compareTo((HTableDescriptor)obj) == 0;
   }
 
+
   /**
    * @see java.lang.Object#hashCode()
    */

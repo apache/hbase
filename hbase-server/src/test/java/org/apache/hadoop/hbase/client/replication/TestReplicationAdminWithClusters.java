@@ -71,6 +71,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test(timeout = 300000)
   public void testEnableReplicationWhenSlaveClusterDoesntHaveTable() throws Exception {
+    admin.disableTableRep(tableName);
     admin2.disableTable(tableName);
     admin2.deleteTable(tableName);
     assertFalse(admin2.tableExists(tableName));

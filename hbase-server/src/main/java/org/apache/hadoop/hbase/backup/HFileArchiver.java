@@ -51,7 +51,7 @@ import com.google.common.collect.Lists;
 /**
  * Utility class to handle the removal of HFiles (or the respective {@link StoreFile StoreFiles})
  * for a HRegion from the {@link FileSystem}. The hfiles will be archived or deleted, depending on
- * the state of the system.
+ * the state of the system. 
  */
 @InterfaceAudience.Private
 public class HFileArchiver {
