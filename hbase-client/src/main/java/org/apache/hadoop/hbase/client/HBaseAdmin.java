@@ -4185,23 +4185,12 @@ public class HBaseAdmin implements Admin {
             if (peerHtd == null) {
               throw new IllegalArgumentException("Failed to get table descriptor for table "
                   + tableName.getNameAsString() + " from peer cluster " + peerDesc.getPeerId());
-            } else {
-              // To support cyclic replication (HBASE-17460), we need to match the
-              // REPLICATION_SCOPE of table on both the clusters. We should do this
-              // only when the replication is not already enabled on local HTD (local
-              // table on this cluster).
-              //
-              if (localHtd.isReplicationEnabled()) {
-                throw new IllegalArgumentException("Table " + tableName.getNameAsString()
-                    + " has replication already enabled for at least one Column Family.");
-              } else {
-                if (!compareForReplication(peerHtd, localHtd)) {
-                  throw new IllegalArgumentException("Table " + tableName.getNameAsString()
-                      + " exists in peer cluster " + peerDesc.getPeerId()
-                      + ", but the table descriptors are not same when compared with source cluster."
-                      + " Thus can not enable the table's replication switch.");
-                }
-              }
+            }
+            if (!compareForReplication(peerHtd, localHtd)) {
+              throw new IllegalArgumentException("Table " + tableName.getNameAsString()
+                  + " exists in peer cluster " + peerDesc.getPeerId()
+                  + ", but the table descriptors are not same when compared with source cluster."
+                  + " Thus can not enable the table's replication switch.");
             }
           }
         }

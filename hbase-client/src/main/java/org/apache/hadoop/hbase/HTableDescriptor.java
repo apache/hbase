@@ -1039,31 +1039,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   }
 
   /**
-   * Detects whether replication has been already enabled on any of the column families of this
-   * table descriptor.
-   * @return true if any of the column families has replication enabled.
-   */
-  public boolean isReplicationEnabled() {
-    // Go through each Column-Family descriptor and check if the
-    // Replication has been enabled already.
-    // Return 'true' if replication has been enabled on any CF,
-    // otherwise return 'false'.
-    //
-    boolean result = false;
-    Iterator<HColumnDescriptor> it = this.families.values().iterator();
-
-    while (it.hasNext()) {
-      HColumnDescriptor tempHcd = it.next();
-      if (tempHcd.getScope() != HConstants.REPLICATION_SCOPE_LOCAL) {
-        result = true;
-        break;
-      }
-    }
-
-    return result;
-  }
-
-  /**
    * @see java.lang.Object#hashCode()
    */
   @Override
