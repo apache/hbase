@@ -173,7 +173,7 @@ public class VerifyReplication extends Configured implements Tool {
     private void logFailRowAndIncreaseCounter(Context context, Counters counter, Result row) {
       context.getCounter(counter).increment(1);
       context.getCounter(Counters.BADROWS).increment(1);
-      LOG.error(counter.toString() + ", rowkey=" + Bytes.toString(row.getRow()));
+      LOG.error(counter.toString() + ", rowkey=" + Bytes.toStringBinary(row.getRow()));
     }
 
     @Override
