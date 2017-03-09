@@ -76,13 +76,7 @@ public class TestSuperUserQuotaPermissions {
   public static void setupMiniCluster() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Increase the frequency of some of the chores for responsiveness of the test
-    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_DELAY_KEY, 1000);
-    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_PERIOD_KEY, 1000);
-    conf.setInt(QuotaObserverChore.QUOTA_OBSERVER_CHORE_DELAY_KEY, 1000);
-    conf.setInt(QuotaObserverChore.QUOTA_OBSERVER_CHORE_PERIOD_KEY, 1000);
-    conf.setInt(SpaceQuotaRefresherChore.POLICY_REFRESHER_CHORE_DELAY_KEY, 1000);
-    conf.setInt(SpaceQuotaRefresherChore.POLICY_REFRESHER_CHORE_PERIOD_KEY, 1000);
-    conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
+    SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
 
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, AccessController.class.getName());

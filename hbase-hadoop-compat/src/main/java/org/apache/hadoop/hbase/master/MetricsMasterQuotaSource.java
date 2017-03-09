@@ -39,6 +39,15 @@ public interface MetricsMasterQuotaSource extends BaseSource {
   String QUOTA_OBSERVER_CHORE_TIME_NAME = "quotaObserverChoreTime";
   String QUOTA_OBSERVER_CHORE_TIME_DESC =
       "Histogram for the time in millis for the QuotaObserverChore";
+  String SNAPSHOT_OBSERVER_CHORE_TIME_NAME = "snapshotQuotaObserverChoreTime";
+  String SNAPSHOT_OBSERVER_CHORE_TIME_DESC =
+      "Histogram for the time in millis for the SnapshotQuotaObserverChore";
+  String SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_NAME = "snapshotObserverSizeComputationTime";
+  String SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_DESC =
+      "Histogram for the time in millis to compute the size of each snapshot";
+  String SNAPSHOT_OBSERVER_FETCH_TIME_NAME = "snapshotObserverSnapshotFetchTime";
+  String SNAPSHOT_OBSERVER_FETCH_TIME_DESC =
+      "Histogram for the time in millis to fetch all snapshots from HBase";
   String TABLE_QUOTA_USAGE_NAME = "tableSpaceQuotaOverview";
   String TABLE_QUOTA_USAGE_DESC = "A JSON summary of the usage of all tables with space quotas";
   String NS_QUOTA_USAGE_NAME = "namespaceSpaceQuotaOverview";
@@ -83,4 +92,22 @@ public interface MetricsMasterQuotaSource extends BaseSource {
    * @param time The execution time of the chore in milliseconds
    */
   void incrementSpaceQuotaObserverChoreTime(long time);
+
+  /**
+   * Updates the metric tracking the amount of time taken by the {@code SnapshotQuotaObserverChore}
+   * which runs periodically.
+   */
+  void incrementSnapshotObserverChoreTime(long time);
+
+  /**
+   * Updates the metric tracking the amount of time taken by the {@code SnapshotQuotaObserverChore}
+   * to compute the size of one snapshot, relative to the files referenced by the originating table.
+   */
+  void incrementSnapshotObserverSnapshotComputationTime(long time);
+
+  /**
+   * Updates the metric tracking the amount of time taken by the {@code SnapshotQuotaObserverChore}
+   * to fetch all snapshots.
+   */
+  void incrementSnapshotObserverSnapshotFetchTime(long time);
 }

@@ -39,6 +39,9 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl implements Metr
   private final MutableGaugeLong namespacesViolatingQuotasGauge;
   private final MutableGaugeLong regionSpaceReportsGauge;
   private final MetricHistogram quotaObserverTimeHisto;
+  private final MetricHistogram snapshotObserverTimeHisto;
+  private final MetricHistogram snapshotObserverSizeComputationTimeHisto;
+  private final MetricHistogram snapshotObserverSnapshotFetchTimeHisto;
 
   public MetricsMasterQuotaSourceImpl(MetricsMasterWrapper wrapper) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, wrapper);
@@ -61,6 +64,13 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl implements Metr
 
     quotaObserverTimeHisto = getMetricsRegistry().newTimeHistogram(
         QUOTA_OBSERVER_CHORE_TIME_NAME, QUOTA_OBSERVER_CHORE_TIME_DESC);
+    snapshotObserverTimeHisto = getMetricsRegistry().newTimeHistogram(
+        SNAPSHOT_OBSERVER_CHORE_TIME_NAME, SNAPSHOT_OBSERVER_CHORE_TIME_DESC);
+
+    snapshotObserverSizeComputationTimeHisto = getMetricsRegistry().newTimeHistogram(
+        SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_NAME, SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_DESC);
+    snapshotObserverSnapshotFetchTimeHisto = getMetricsRegistry().newTimeHistogram(
+        SNAPSHOT_OBSERVER_FETCH_TIME_NAME, SNAPSHOT_OBSERVER_FETCH_TIME_DESC);
   }
 
   @Override
@@ -86,6 +96,11 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl implements Metr
   @Override
   public void incrementSpaceQuotaObserverChoreTime(long time) {
     quotaObserverTimeHisto.add(time);
+  }
+
+  @Override
+  public void incrementSnapshotObserverChoreTime(long time) {
+    snapshotObserverTimeHisto.add(time);
   }
 
   @Override
@@ -129,5 +144,15 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl implements Metr
     }
     sb.insert(0, "[").append("]");
     return sb.toString();
+  }
+
+  @Override
+  public void incrementSnapshotObserverSnapshotComputationTime(long time) {
+    snapshotObserverSizeComputationTimeHisto.add(time);
+  }
+
+  @Override
+  public void incrementSnapshotObserverSnapshotFetchTime(long time) {
+    snapshotObserverSnapshotFetchTimeHisto.add(time);
   }
 }

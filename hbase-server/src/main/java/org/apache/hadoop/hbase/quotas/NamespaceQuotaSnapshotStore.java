@@ -18,8 +18,8 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -77,7 +77,8 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
   }
 
   @Override
-  public SpaceQuotaSnapshot getTargetState(String subject, SpaceQuota spaceQuota) {
+  public SpaceQuotaSnapshot getTargetState(
+      String subject, SpaceQuota spaceQuota) throws IOException {
     rlock.lock();
     try {
       final long sizeLimitInBytes = spaceQuota.getSoftLimit();
@@ -85,6 +86,8 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
       for (Entry<HRegionInfo,Long> entry : filterBySubject(subject)) {
         sum += entry.getValue();
       }
+      // Add in the size for any snapshots against this table
+      sum += QuotaTableUtil.getNamespaceSnapshotSize(conn, subject);
       // Observance is defined as the size of the table being less than the limit
       SpaceQuotaStatus status = sum <= sizeLimitInBytes ? SpaceQuotaStatus.notInViolation()
           : new SpaceQuotaStatus(ProtobufUtil.toViolationPolicy(spaceQuota.getViolationPolicy()));

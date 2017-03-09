@@ -22,6 +22,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A point-in-time view of a space quota on a table.
@@ -175,7 +176,8 @@ public class SpaceQuotaSnapshot {
   public String toString() {
     StringBuilder sb = new StringBuilder(32);
     sb.append("SpaceQuotaSnapshot[policy=").append(quotaStatus).append(", use=");
-    sb.append(usage).append("bytes/").append(limit).append("bytes]");
+    sb.append(StringUtils.byteDesc(usage)).append("/");
+    sb.append(StringUtils.byteDesc(limit)).append("]");
     return sb.toString();
   }
 

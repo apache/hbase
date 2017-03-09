@@ -67,9 +67,8 @@ public class TestRegionSizeUse {
   @Before
   public void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_DELAY_KEY, 1000);
-    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_PERIOD_KEY, 1000);
-    conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
+    // Increase the frequency of some of the chores for responsiveness of the test
+    SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
     cluster = TEST_UTIL.startMiniCluster(2);
   }
 

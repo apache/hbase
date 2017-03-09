@@ -161,7 +161,9 @@ public class QuotaObserverChore extends ScheduledChore {
     // The current "view" of region space use. Used henceforth.
     final Map<HRegionInfo,Long> reportedRegionSpaceUse = quotaManager.snapshotRegionSizes();
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Using " + reportedRegionSpaceUse.size() + " region space use reports");
+      LOG.trace(
+          "Using " + reportedRegionSpaceUse.size() + " region space use reports: " +
+          reportedRegionSpaceUse);
     }
 
     // Remove the "old" region reports

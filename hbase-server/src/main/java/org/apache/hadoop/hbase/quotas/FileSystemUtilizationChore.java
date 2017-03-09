@@ -33,6 +33,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -168,9 +170,10 @@ public class FileSystemUtilizationChore extends ScheduledChore {
   long computeSize(Region r) {
     long regionSize = 0L;
     for (Store store : r.getStores()) {
-      // StoreFile/StoreFileReaders are already instantiated with the file length cached.
-      // Can avoid extra NN ops.
-      regionSize += store.getStorefilesSize();
+      regionSize += store.getHFilesSize();
+    }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Size of " + r + " is " + regionSize);
     }
     return regionSize;
   }

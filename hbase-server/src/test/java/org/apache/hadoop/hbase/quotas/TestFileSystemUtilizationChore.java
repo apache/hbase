@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -238,18 +239,45 @@ public class TestFileSystemUtilizationChore {
     final Configuration conf = getDefaultHBaseConfiguration();
     final HRegionServer rs = mockRegionServer(conf);
 
-    // Three regions with multiple store sizes
+    // Two regions with multiple store sizes
     final List<Long> r1Sizes = Arrays.asList(1024L, 2048L);
     final long r1Sum = sum(r1Sizes);
     final List<Long> r2Sizes = Arrays.asList(1024L * 1024L);
 
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
-    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(r1Sum))))
+    doAnswer(new ExpectedRegionSizeSummationAnswer(r1Sum))
         .when(rs)
         .reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionReplicaWithSize(r2Sizes);
+    when(rs.getOnlineRegions()).thenReturn(Arrays.asList(r1, r2));
+    chore.chore();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testNonHFilesAreIgnored() {
+    final Configuration conf = getDefaultHBaseConfiguration();
+    final HRegionServer rs = mockRegionServer(conf);
+
+    // Region r1 has two store files, one hfile link and one hfile
+    final List<Long> r1StoreFileSizes = Arrays.asList(1024L, 2048L);
+    final List<Long> r1HFileSizes = Arrays.asList(0L, 2048L);
+    final long r1HFileSizeSum = sum(r1HFileSizes);
+    // Region r2 has one store file which is a hfile link
+    final List<Long> r2StoreFileSizes = Arrays.asList(1024L * 1024L);
+    final List<Long> r2HFileSizes = Arrays.asList(0L);
+    final long r2HFileSizeSum = sum(r2HFileSizes);
+
+    // We expect that only the hfiles would be counted (hfile links are ignored)
+    final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
+    doAnswer(new ExpectedRegionSizeSummationAnswer(
+        sum(Arrays.asList(r1HFileSizeSum, r2HFileSizeSum))))
+        .when(rs).reportRegionSizesForQuotas((Map<HRegionInfo,Long>) any(Map.class));
+
+    final Region r1 = mockRegionWithHFileLinks(r1StoreFileSizes, r1HFileSizes);
+    final Region r2 = mockRegionWithHFileLinks(r2StoreFileSizes, r2HFileSizes);
     when(rs.getOnlineRegions()).thenReturn(Arrays.asList(r1, r2));
     chore.chore();
   }
@@ -300,7 +328,29 @@ public class TestFileSystemUtilizationChore {
     for (Long storeSize : storeSizes) {
       final Store s = mock(Store.class);
       stores.add(s);
+      when(s.getHFilesSize()).thenReturn(storeSize);
+    }
+    return r;
+  }
+
+  private Region mockRegionWithHFileLinks(Collection<Long> storeSizes, Collection<Long> hfileSizes) {
+    final Region r = mock(Region.class);
+    final HRegionInfo info = mock(HRegionInfo.class);
+    when(r.getRegionInfo()).thenReturn(info);
+    List<Store> stores = new ArrayList<>();
+    when(r.getStores()).thenReturn(stores);
+    assertEquals(
+        "Logic error, storeSizes and linkSizes must be equal in size", storeSizes.size(),
+        hfileSizes.size());
+    Iterator<Long> storeSizeIter = storeSizes.iterator();
+    Iterator<Long> hfileSizeIter = hfileSizes.iterator();
+    while (storeSizeIter.hasNext() && hfileSizeIter.hasNext()) {
+      final long storeSize = storeSizeIter.next();
+      final long hfileSize = hfileSizeIter.next();
+      final Store s = mock(Store.class);
+      stores.add(s);
       when(s.getStorefilesSize()).thenReturn(storeSize);
+      when(s.getHFilesSize()).thenReturn(hfileSize);
     }
     return r;
   }
