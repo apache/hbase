@@ -151,6 +151,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
@@ -391,6 +393,21 @@ public final class ProtobufUtil {
       startCode = proto.getStartCode();
     }
     return ServerName.valueOf(hostName, port, startCode);
+  }
+
+  /**
+   * Get NamespaceDescriptor[] from ListNamespaceDescriptorsResponse protobuf
+   * @param proto the ListNamespaceDescriptorsResponse
+   * @return NamespaceDescriptor[]
+   */
+  public static NamespaceDescriptor[] getNamespaceDescriptorArray(
+      ListNamespaceDescriptorsResponse proto) {
+    List<HBaseProtos.NamespaceDescriptor> list = proto.getNamespaceDescriptorList();
+    NamespaceDescriptor[] res = new NamespaceDescriptor[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      res[i] = ProtobufUtil.toNamespaceDescriptor(list.get(i));
+    }
+    return res;
   }
 
   /**
@@ -2136,11 +2153,9 @@ public final class ProtobufUtil {
     return b.build();
   }
 
-  public static NamespaceDescriptor toNamespaceDescriptor(
-      HBaseProtos.NamespaceDescriptor desc) throws IOException {
-    NamespaceDescriptor.Builder b =
-      NamespaceDescriptor.create(desc.getName().toStringUtf8());
-    for(HBaseProtos.NameStringPair prop : desc.getConfigurationList()) {
+  public static NamespaceDescriptor toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor desc) {
+    NamespaceDescriptor.Builder b = NamespaceDescriptor.create(desc.getName().toStringUtf8());
+    for (HBaseProtos.NameStringPair prop : desc.getConfigurationList()) {
       b.addConfiguration(prop.getName(), prop.getValue());
     }
     return b.build();

@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -252,6 +253,37 @@ public interface AsyncAdmin {
    */
   CompletableFuture<Void> modifyColumnFamily(final TableName tableName,
       final HColumnDescriptor columnFamily);
+
+  /**
+   * Create a new namespace.
+   * @param descriptor descriptor which describes the new namespace
+   */
+  CompletableFuture<Void> createNamespace(final NamespaceDescriptor descriptor);
+
+  /**
+   * Modify an existing namespace.
+   * @param descriptor descriptor which describes the new namespace
+   */
+  CompletableFuture<Void> modifyNamespace(final NamespaceDescriptor descriptor);
+
+  /**
+   * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
+   * @param name namespace name
+   */
+  CompletableFuture<Void> deleteNamespace(final String name);
+
+  /**
+   * Get a namespace descriptor by name
+   * @param name name of namespace descriptor
+   * @return A descriptor wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<NamespaceDescriptor> getNamespaceDescriptor(final String name);
+
+  /**
+   * List available namespace descriptors
+   * @return List of descriptors wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<NamespaceDescriptor[]> listNamespaceDescriptors();
 
   /**
    * Turn the load balancer on or off.

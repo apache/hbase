@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.AsyncMetaTableAccessor;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,12 +61,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
@@ -80,9 +87,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyColumnResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
@@ -208,9 +219,9 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
   private <PREQ, PRESP> CompletableFuture<Void> procedureCall(PREQ preq,
       MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
-      TableProcedureBiConsumer consumer) {
+      ProcedureBiConsumer consumer) {
     CompletableFuture<Long> procFuture = this
-        .<Long>newMasterCaller()
+        .<Long> newMasterCaller()
         .action(
           (controller, stub) -> this.<PREQ, PRESP, Long> call(controller, stub, preq, rpcCall,
             respConverter)).call();
@@ -468,6 +479,54 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> createNamespace(NamespaceDescriptor descriptor) {
+    return this.<CreateNamespaceRequest, CreateNamespaceResponse> procedureCall(
+      RequestConverter.buildCreateNamespaceRequest(descriptor),
+      (s, c, req, done) -> s.createNamespace(c, req, done), (resp) -> resp.getProcId(),
+      new CreateNamespaceProcedureBiConsumer(this, descriptor.getName()));
+  }
+
+  @Override
+  public CompletableFuture<Void> modifyNamespace(NamespaceDescriptor descriptor) {
+    return this.<ModifyNamespaceRequest, ModifyNamespaceResponse> procedureCall(
+      RequestConverter.buildModifyNamespaceRequest(descriptor),
+      (s, c, req, done) -> s.modifyNamespace(c, req, done), (resp) -> resp.getProcId(),
+      new ModifyNamespaceProcedureBiConsumer(this, descriptor.getName()));
+  }
+
+  @Override
+  public CompletableFuture<Void> deleteNamespace(String name) {
+    return this.<DeleteNamespaceRequest, DeleteNamespaceResponse> procedureCall(
+      RequestConverter.buildDeleteNamespaceRequest(name),
+      (s, c, req, done) -> s.deleteNamespace(c, req, done), (resp) -> resp.getProcId(),
+      new ModifyNamespaceProcedureBiConsumer(this, name));
+  }
+
+  @Override
+  public CompletableFuture<NamespaceDescriptor> getNamespaceDescriptor(String name) {
+    return this
+        .<NamespaceDescriptor> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<GetNamespaceDescriptorRequest, GetNamespaceDescriptorResponse, NamespaceDescriptor> call(
+                controller, stub, RequestConverter.buildGetNamespaceDescriptorRequest(name), (s, c,
+                    req, done) -> s.getNamespaceDescriptor(c, req, done), (resp) -> ProtobufUtil
+                    .toNamespaceDescriptor(resp.getNamespaceDescriptor()))).call();
+  }
+
+  @Override
+  public CompletableFuture<NamespaceDescriptor[]> listNamespaceDescriptors() {
+    return this
+        .<NamespaceDescriptor[]> newMasterCaller()
+        .action(
+          (controller, stub) -> this
+              .<ListNamespaceDescriptorsRequest, ListNamespaceDescriptorsResponse, NamespaceDescriptor[]> call(
+                controller, stub, ListNamespaceDescriptorsRequest.newBuilder().build(), (s, c, req,
+                    done) -> s.listNamespaceDescriptors(c, req, done), (resp) -> ProtobufUtil
+                    .getNamespaceDescriptorArray(resp))).call();
+  }
+
+  @Override
   public CompletableFuture<Boolean> setBalancerRunning(final boolean on) {
     return this
         .<Boolean>newMasterCaller()
@@ -674,6 +733,31 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
+  private abstract class NamespaceProcedureBiConsumer extends ProcedureBiConsumer {
+    protected final String namespaceName;
+
+    NamespaceProcedureBiConsumer(final AsyncAdmin admin, final String namespaceName) {
+      super(admin);
+      this.namespaceName = namespaceName;
+    }
+
+    abstract String getOperationType();
+
+    String getDescription() {
+      return "Operation: " + getOperationType() + ", Namespace: " + namespaceName;
+    }
+
+    @Override
+    void onFinished() {
+      LOG.info(getDescription() + " completed");
+    }
+
+    @Override
+    void onError(Throwable error) {
+      LOG.info(getDescription() + " failed with " + error.getMessage());
+    }
+  }
+
   private class CreateTableProcedureBiConsumer extends TableProcedureBiConsumer {
 
     CreateTableProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
@@ -765,6 +849,39 @@ public class AsyncHBaseAdmin implements AsyncAdmin {
 
     String getOperationType() {
       return "MODIFY_COLUMN_FAMILY";
+    }
+  }
+
+  private class CreateNamespaceProcedureBiConsumer extends NamespaceProcedureBiConsumer {
+
+    CreateNamespaceProcedureBiConsumer(AsyncAdmin admin, String namespaceName) {
+      super(admin, namespaceName);
+    }
+
+    String getOperationType() {
+      return "CREATE_NAMESPACE";
+    }
+  }
+
+  private class DeleteNamespaceProcedureBiConsumer extends NamespaceProcedureBiConsumer {
+
+    DeleteNamespaceProcedureBiConsumer(AsyncAdmin admin, String namespaceName) {
+      super(admin, namespaceName);
+    }
+
+    String getOperationType() {
+      return "DELETE_NAMESPACE";
+    }
+  }
+
+  private class ModifyNamespaceProcedureBiConsumer extends NamespaceProcedureBiConsumer {
+
+    ModifyNamespaceProcedureBiConsumer(AsyncAdmin admin, String namespaceName) {
+      super(admin, namespaceName);
+    }
+
+    String getOperationType() {
+      return "MODIFY_NAMESPACE";
     }
   }
 

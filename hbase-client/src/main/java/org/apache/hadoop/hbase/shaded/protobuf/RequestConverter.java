@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -80,11 +81,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BalanceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetCleanerChoreRunningRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
@@ -1642,6 +1647,52 @@ public final class RequestConverter {
     if (pattern != null) {
       builder.setRegex(pattern.toString());
     }
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer CreateNamespaceRequest
+   * @param descriptor
+   * @return a CreateNamespaceRequest
+   */
+  public static CreateNamespaceRequest buildCreateNamespaceRequest(
+      final NamespaceDescriptor descriptor) {
+    CreateNamespaceRequest.Builder builder = CreateNamespaceRequest.newBuilder();
+    builder.setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(descriptor));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer ModifyNamespaceRequest
+   * @param descriptor
+   * @return a ModifyNamespaceRequest
+   */
+  public static ModifyNamespaceRequest buildModifyNamespaceRequest(
+      final NamespaceDescriptor descriptor) {
+    ModifyNamespaceRequest.Builder builder = ModifyNamespaceRequest.newBuilder();
+    builder.setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(descriptor));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer DeleteNamespaceRequest
+   * @param name
+   * @return a DeleteNamespaceRequest
+   */
+  public static DeleteNamespaceRequest buildDeleteNamespaceRequest(final String name) {
+    DeleteNamespaceRequest.Builder builder = DeleteNamespaceRequest.newBuilder();
+    builder.setNamespaceName(name);
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetNamespaceDescriptorRequest
+   * @param name
+   * @return a GetNamespaceDescriptorRequest
+   */
+  public static GetNamespaceDescriptorRequest buildGetNamespaceDescriptorRequest(final String name) {
+    GetNamespaceDescriptorRequest.Builder builder = GetNamespaceDescriptorRequest.newBuilder();
+    builder.setNamespaceName(name);
     return builder.build();
   }
 }

@@ -114,6 +114,10 @@ public abstract class AsyncRpcRetryingCaller<T> {
   protected void onError(Throwable error, Supplier<String> errMsg,
       Consumer<Throwable> updateCachedLocation) {
     error = translateException(error);
+    if (error instanceof DoNotRetryIOException) {
+      future.completeExceptionally(error);
+      return;
+    }
     if (tries > startLogErrorsCnt) {
       LOG.warn(errMsg.get() + ", tries = " + tries + ", maxAttempts = " + maxAttempts
           + ", timeout = " + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs)
@@ -122,7 +126,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
     RetriesExhaustedException.ThrowableWithExtraContext qt = new RetriesExhaustedException.ThrowableWithExtraContext(
         error, EnvironmentEdgeManager.currentTime(), "");
     exceptions.add(qt);
-    if (error instanceof DoNotRetryIOException || tries >= maxAttempts) {
+    if (tries >= maxAttempts) {
       completeExceptionally();
       return;
     }
