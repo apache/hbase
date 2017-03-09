@@ -1494,7 +1494,7 @@ public class TestHCM {
         p.addColumn(FAM_NAM, new byte[]{0}, new byte[]{0});
         table.put(p);
       } catch (RetriesExhaustedWithDetailsException e) {
-        if (e.exceptions.get(0).getCause() instanceof ServerTooBusyException) {
+        if (e.exceptions.get(0) instanceof ServerTooBusyException) {
           getServerBusyException = 1;
         }
       } catch (IOException ignore) {
@@ -1514,12 +1514,10 @@ public class TestHCM {
     public void run() {
       try {
         Get g = new Get(ROW);
-        g.addColumn(FAM_NAM, new byte[]{0});
+        g.addColumn(FAM_NAM, new byte[] { 0 });
         table.get(g);
-      } catch (RetriesExhaustedException e) {
-        if (e.getCause().getCause() instanceof ServerTooBusyException) {
-          getServerBusyException = 1;
-        }
+      } catch (ServerTooBusyException e) {
+        getServerBusyException = 1;
       } catch (IOException ignore) {
       }
     }
