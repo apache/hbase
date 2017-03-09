@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.quotas.policies.MissingSnapshotViolationPolicyEnforcement;
@@ -65,13 +66,7 @@ public class TestQuotaStatusRPCs {
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Increase the frequency of some of the chores for responsiveness of the test
-    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_DELAY_KEY, 1000);
-    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_PERIOD_KEY, 1000);
-    conf.setInt(QuotaObserverChore.QUOTA_OBSERVER_CHORE_DELAY_KEY, 1000);
-    conf.setInt(QuotaObserverChore.QUOTA_OBSERVER_CHORE_PERIOD_KEY, 1000);
-    conf.setInt(SpaceQuotaRefresherChore.POLICY_REFRESHER_CHORE_DELAY_KEY, 1000);
-    conf.setInt(SpaceQuotaRefresherChore.POLICY_REFRESHER_CHORE_PERIOD_KEY, 1000);
-    conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
+    SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
     TEST_UTIL.startMiniCluster(1);
   }
 
@@ -167,7 +162,7 @@ public class TestQuotaStatusRPCs {
     // Write at least `tableSize` data
     try {
       helper.writeData(tn, tableSize);
-    } catch (SpaceLimitingException e) {
+    } catch (RetriesExhaustedWithDetailsException | SpaceLimitingException e) {
       // Pass
     }
 
@@ -245,7 +240,7 @@ public class TestQuotaStatusRPCs {
 
     try {
       helper.writeData(tn, tableSize * 2L);
-    } catch (SpaceLimitingException e) {
+    } catch (RetriesExhaustedWithDetailsException | SpaceLimitingException e) {
       // Pass
     }
 

@@ -23,6 +23,8 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,6 +32,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -87,7 +93,8 @@ public class TestTableQuotaViolationStore {
   }
 
   @Test
-  public void testTargetViolationState() {
+  public void testTargetViolationState() throws IOException {
+    mockNoSnapshotSizes();
     TableName tn1 = TableName.valueOf("violation1");
     TableName tn2 = TableName.valueOf("observance1");
     TableName tn3 = TableName.valueOf("observance2");
@@ -153,5 +160,13 @@ public class TestTableQuotaViolationStore {
     assertEquals(quotaWithSpace.getSpace(), mockStore.getSpaceQuota(TableName.valueOf("foo")));
     quotaRef.set(quotaWithoutSpace);
     assertNull(mockStore.getSpaceQuota(TableName.valueOf("foo")));
+  }
+
+  void mockNoSnapshotSizes() throws IOException {
+    Table quotaTable = mock(Table.class);
+    ResultScanner scanner = mock(ResultScanner.class);
+    when(conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)).thenReturn(quotaTable);
+    when(quotaTable.getScanner(any(Scan.class))).thenReturn(scanner);
+    when(scanner.iterator()).thenReturn(Collections.<Result> emptyList().iterator());
   }
 }

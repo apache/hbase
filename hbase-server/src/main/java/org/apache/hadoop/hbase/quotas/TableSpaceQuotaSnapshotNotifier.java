@@ -36,7 +36,7 @@ public class TableSpaceQuotaSnapshotNotifier implements SpaceQuotaSnapshotNotifi
   @Override
   public void transitionTable(
       TableName tableName, SpaceQuotaSnapshot snapshot) throws IOException {
-    final Put p = QuotaTableUtil.createPutSpaceSnapshot(tableName, snapshot);
+    final Put p = QuotaTableUtil.createPutForSpaceSnapshot(tableName, snapshot);
     try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Persisting a space quota snapshot " + snapshot + " for " + tableName);

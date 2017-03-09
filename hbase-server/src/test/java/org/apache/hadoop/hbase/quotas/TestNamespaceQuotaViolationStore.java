@@ -23,6 +23,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -31,6 +32,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
@@ -91,7 +95,8 @@ public class TestNamespaceQuotaViolationStore {
   }
 
   @Test
-  public void testTargetViolationState() {
+  public void testTargetViolationState() throws IOException {
+    mockNoSnapshotSizes();
     final String NS = "ns";
     TableName tn1 = TableName.valueOf(NS, "tn1");
     TableName tn2 = TableName.valueOf(NS, "tn2");
@@ -123,7 +128,8 @@ public class TestNamespaceQuotaViolationStore {
 
     // Exceeds the quota, should be in violation
     assertEquals(true, store.getTargetState(NS, quota).getQuotaStatus().isInViolation());
-    assertEquals(SpaceViolationPolicy.DISABLE, store.getTargetState(NS, quota).getQuotaStatus().getPolicy());
+    assertEquals(
+        SpaceViolationPolicy.DISABLE, store.getTargetState(NS, quota).getQuotaStatus().getPolicy());
   }
 
   @Test
@@ -153,4 +159,9 @@ public class TestNamespaceQuotaViolationStore {
     assertEquals(18, size(store.filterBySubject("ns")));
   }
 
+  void mockNoSnapshotSizes() throws IOException {
+    Table quotaTable = mock(Table.class);
+    when(conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)).thenReturn(quotaTable);
+    when(quotaTable.get(any(Get.class))).thenReturn(new Result());
+  }
 }

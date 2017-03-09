@@ -430,6 +430,11 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   long getStorefilesSize();
 
   /**
+   * @return The size of only the store files which are HFiles, in bytes.
+   */
+  long getHFilesSize();
+
+  /**
    * @return The size of the store file indexes, in bytes.
    */
   long getStorefilesIndexSize();

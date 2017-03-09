@@ -69,7 +69,7 @@ public interface QuotaSnapshotStore<T> {
    * @param subject The object which to determine the target SpaceQuotaSnapshot of
    * @param spaceQuota The quota "definition" for the {@code subject}
    */
-  SpaceQuotaSnapshot getTargetState(T subject, SpaceQuota spaceQuota);
+  SpaceQuotaSnapshot getTargetState(T subject, SpaceQuota spaceQuota) throws IOException;
 
   /**
    * Filters the provided <code>regions</code>, returning those which match the given

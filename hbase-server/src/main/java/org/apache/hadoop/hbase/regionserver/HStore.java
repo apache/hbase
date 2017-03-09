@@ -41,6 +41,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Predicate;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -2073,6 +2074,17 @@ public class HStore implements Store {
 
   @Override
   public long getStorefilesSize() {
+    // Include all StoreFiles
+    return getStorefilesSize(storeFile -> true);
+  }
+
+  @Override
+  public long getHFilesSize() {
+    // Include only StoreFiles which are HFiles
+    return getStorefilesSize(storeFile -> storeFile.isHFile());
+  }
+
+  private long getStorefilesSize(Predicate<StoreFile> predicate) {
     long size = 0;
     for (StoreFile s: this.storeEngine.getStoreFileManager().getStorefiles()) {
       StoreFileReader r = s.getReader();
@@ -2080,7 +2092,9 @@ public class HStore implements Store {
         LOG.warn("StoreFile " + s + " has a null Reader");
         continue;
       }
-      size += r.length();
+      if (predicate.test(s)) {
+        size += r.length();
+      }
     }
     return size;
   }

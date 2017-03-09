@@ -20,6 +20,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -29,9 +30,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -40,6 +43,10 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.rules.TestName;
 
@@ -55,6 +62,7 @@ public class SpaceQuotaHelperForTests {
   public static final String F1 = "f1";
   public static final long ONE_KILOBYTE = 1024L;
   public static final long ONE_MEGABYTE = ONE_KILOBYTE * ONE_KILOBYTE;
+  public static final long ONE_GIGABYTE = ONE_MEGABYTE * ONE_KILOBYTE;
 
   private final HBaseTestingUtility testUtil;
   private final TestName testName;
@@ -65,6 +73,25 @@ public class SpaceQuotaHelperForTests {
     this.testUtil = Objects.requireNonNull(testUtil);
     this.testName = Objects.requireNonNull(testName);
     this.counter = Objects.requireNonNull(counter);
+  }
+
+  //
+  // Static helpers
+  //
+
+  static void updateConfigForQuotas(Configuration conf) {
+    // Increase the frequency of some of the chores for responsiveness of the test
+    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_DELAY_KEY, 1000);
+    conf.setInt(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_PERIOD_KEY, 1000);
+    conf.setInt(QuotaObserverChore.QUOTA_OBSERVER_CHORE_DELAY_KEY, 1000);
+    conf.setInt(QuotaObserverChore.QUOTA_OBSERVER_CHORE_PERIOD_KEY, 1000);
+    conf.setInt(SpaceQuotaRefresherChore.POLICY_REFRESHER_CHORE_DELAY_KEY, 1000);
+    conf.setInt(SpaceQuotaRefresherChore.POLICY_REFRESHER_CHORE_PERIOD_KEY, 1000);
+    conf.setInt(SnapshotQuotaObserverChore.SNAPSHOT_QUOTA_CHORE_DELAY_KEY, 1000);
+    conf.setInt(SnapshotQuotaObserverChore.SNAPSHOT_QUOTA_CHORE_PERIOD_KEY, 1000);
+    // The period at which we check for compacted files that should be deleted from HDFS
+    conf.setInt("hbase.hfile.compaction.discharger.interval", 5 * 1000);
+    conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
   }
 
   //
@@ -88,24 +115,33 @@ public class SpaceQuotaHelperForTests {
   /**
    * Removes all quotas defined in the HBase quota table.
    */
-  void removeAllQuotas(Connection conn) throws IOException {
-    QuotaRetriever scanner = QuotaRetriever.open(conn.getConfiguration());
-    try {
-      for (QuotaSettings quotaSettings : scanner) {
-        final String namespace = quotaSettings.getNamespace();
-        final TableName tableName = quotaSettings.getTableName();
-        if (namespace != null) {
-          LOG.debug("Deleting quota for namespace: " + namespace);
-          QuotaUtil.deleteNamespaceQuota(conn, namespace);
-        } else {
-          assert tableName != null;
-          LOG.debug("Deleting quota for table: "+ tableName);
-          QuotaUtil.deleteTableQuota(conn, tableName);
+  void removeAllQuotas(Connection conn) throws IOException, InterruptedException {
+    // Wait for the quota table to be created
+    if (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
+      do {
+        LOG.debug("Quota table does not yet exist");
+        Thread.sleep(1000);
+      } while (!conn.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME));
+    } else {
+      // Or, clean up any quotas from previous test runs.
+      QuotaRetriever scanner = QuotaRetriever.open(conn.getConfiguration());
+      try {
+        for (QuotaSettings quotaSettings : scanner) {
+          final String namespace = quotaSettings.getNamespace();
+          final TableName tableName = quotaSettings.getTableName();
+          if (namespace != null) {
+            LOG.debug("Deleting quota for namespace: " + namespace);
+            QuotaUtil.deleteNamespaceQuota(conn, namespace);
+          } else {
+            assert tableName != null;
+            LOG.debug("Deleting quota for table: "+ tableName);
+            QuotaUtil.deleteTableQuota(conn, tableName);
+          }
         }
-      }
-    } finally {
-      if (scanner != null) {
-        scanner.close();
+      } finally {
+        if (scanner != null) {
+          scanner.close();
+        }
       }
     }
   }
@@ -146,6 +182,15 @@ public class SpaceQuotaHelperForTests {
   }
 
   void writeData(Connection conn, TableName tn, long sizeInBytes) throws IOException {
+    writeData(tn, sizeInBytes, Bytes.toBytes("q1"));
+  }
+
+  void writeData(TableName tn, long sizeInBytes, String qual) throws IOException {
+    writeData(tn, sizeInBytes, Bytes.toBytes(qual));
+  }
+
+  void writeData(TableName tn, long sizeInBytes, byte[] qual) throws IOException {
+    final Connection conn = testUtil.getConnection();
     final Table table = conn.getTable(tn);
     try {
       List<Put> updates = new ArrayList<>();
@@ -160,7 +205,7 @@ public class SpaceQuotaHelperForTests {
         Put p = new Put(Bytes.toBytes(sb.reverse().toString()));
         byte[] value = new byte[SIZE_PER_VALUE];
         r.nextBytes(value);
-        p.addColumn(Bytes.toBytes(F1), Bytes.toBytes("q1"), value);
+        p.addColumn(Bytes.toBytes(F1), qual, value);
         updates.add(p);
 
         // Batch ~13KB worth of updates
@@ -188,6 +233,12 @@ public class SpaceQuotaHelperForTests {
     }
   }
 
+  NamespaceDescriptor createNamespace() throws Exception {
+    NamespaceDescriptor nd = NamespaceDescriptor.create("ns" + counter.getAndIncrement()).build();
+    testUtil.getAdmin().createNamespace(nd);
+    return nd;
+  }
+
   Multimap<TableName, QuotaSettings> createTablesWithSpaceQuotas() throws Exception {
     final Admin admin = testUtil.getAdmin();
     final Multimap<TableName, QuotaSettings> tablesWithQuotas = HashMultimap.create();
@@ -195,8 +246,7 @@ public class SpaceQuotaHelperForTests {
     final TableName tn1 = createTable();
     final TableName tn2 = createTable();
 
-    NamespaceDescriptor nd = NamespaceDescriptor.create("ns" + counter.getAndIncrement()).build();
-    admin.createNamespace(nd);
+    NamespaceDescriptor nd = createNamespace();
     final TableName tn3 = createTableInNamespace(nd);
     final TableName tn4 = createTableInNamespace(nd);
     final TableName tn5 = createTableInNamespace(nd);
@@ -233,6 +283,14 @@ public class SpaceQuotaHelperForTests {
     return tablesWithQuotas;
   }
 
+  TableName getNextTableName() {
+    return getNextTableName(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
+  }
+
+  TableName getNextTableName(String namespace) {
+    return TableName.valueOf(namespace, testName.getMethodName() + counter.getAndIncrement());
+  }
+
   TableName createTable() throws Exception {
     return createTableWithRegions(1);
   }
@@ -251,8 +309,7 @@ public class SpaceQuotaHelperForTests {
   }
 
   TableName createTableWithRegions(Admin admin, String namespace, int numRegions) throws Exception {
-    final TableName tn = TableName.valueOf(
-        namespace, testName.getMethodName() + counter.getAndIncrement());
+    final TableName tn = getNextTableName(namespace);
 
     // Delete the old table
     if (admin.tableExists(tn)) {
@@ -306,6 +363,89 @@ public class SpaceQuotaHelperForTests {
       if (settings.getTableName() == null && settings.getNamespace() == null) {
         fail("Unexpected table name with null tableName and namespace: " + tn);
       }
+    }
+  }
+
+  /**
+   * Abstraction to simplify the case where a test needs to verify a certain state
+   * on a {@code SpaceQuotaSnapshot}. This class fails-fast when there is no such
+   * snapshot obtained from the Master. As such, it is not useful to verify the
+   * lack of a snapshot.
+   */
+  static abstract class SpaceQuotaSnapshotPredicate implements Predicate<Exception> {
+    private final Connection conn;
+    private final TableName tn;
+    private final String ns;
+
+    SpaceQuotaSnapshotPredicate(Connection conn, TableName tn) {
+      this(Objects.requireNonNull(conn), Objects.requireNonNull(tn), null);
+    }
+
+    SpaceQuotaSnapshotPredicate(Connection conn, String ns) {
+      this(Objects.requireNonNull(conn), null, Objects.requireNonNull(ns));
+    }
+
+    SpaceQuotaSnapshotPredicate(Connection conn, TableName tn, String ns) {
+      if ((null != tn && null != ns) || (null == tn && null == ns)) {
+        throw new IllegalArgumentException(
+            "One of TableName and Namespace must be non-null, and the other null");
+      }
+      this.conn = conn;
+      this.tn = tn;
+      this.ns = ns;
+    }
+
+    @Override
+    public boolean evaluate() throws Exception {
+      SpaceQuotaSnapshot snapshot;
+      if (null == ns) {
+        snapshot = QuotaTableUtil.getCurrentSnapshot(conn, tn);
+      } else {
+        snapshot = QuotaTableUtil.getCurrentSnapshot(conn, ns);
+      }
+
+      LOG.debug("Saw quota snapshot for " + (null == tn ? ns : tn) + ": " + snapshot);
+      if (null == snapshot) {
+        return false;
+      }
+      return evaluate(snapshot);
+    }
+
+    /**
+     * Must determine if the given {@code SpaceQuotaSnapshot} meets some criteria.
+     *
+     * @param snapshot a non-null snapshot obtained from the HBase Master
+     * @return true if the criteria is met, false otherwise
+     */
+    abstract boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception;
+  }
+
+  /**
+   * Predicate that waits for all store files in a table to have no compacted files.
+   */
+  static class NoFilesToDischarge implements Predicate<Exception> {
+    private final MiniHBaseCluster cluster;
+    private final TableName tn;
+
+    NoFilesToDischarge(MiniHBaseCluster cluster, TableName tn) {
+      this.cluster = cluster;
+      this.tn = tn;
+    }
+
+    @Override
+    public boolean evaluate() throws Exception {
+      for (HRegion region : cluster.getRegions(tn)) {
+        for (Store store : region.getStores()) {
+          HStore hstore = (HStore) store;
+          Collection<StoreFile> files =
+              hstore.getStoreEngine().getStoreFileManager().getCompactedfiles();
+          if (null != files && !files.isEmpty()) {
+            LOG.debug(region.getRegionInfo().getEncodedName() + " still has compacted files");
+            return false;
+          }
+        }
+      }
+      return true;
     }
   }
 }

@@ -18,17 +18,26 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-import java.util.Map.Entry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
+import org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
@@ -41,6 +50,8 @@ import org.apache.hadoop.hbase.shaded.com.google.common.collect.Iterables;
  */
 @InterfaceAudience.Private
 public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
+  private static final Log LOG = LogFactory.getLog(TableQuotaSnapshotStore.class);
+
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final ReadLock rlock = lock.readLock();
   private final WriteLock wlock = lock.writeLock();
@@ -77,7 +88,8 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
   }
 
   @Override
-  public SpaceQuotaSnapshot getTargetState(TableName table, SpaceQuota spaceQuota) {
+  public SpaceQuotaSnapshot getTargetState(
+      TableName table, SpaceQuota spaceQuota) throws IOException {
     rlock.lock();
     try {
       final long sizeLimitInBytes = spaceQuota.getSoftLimit();
@@ -85,12 +97,50 @@ public class TableQuotaSnapshotStore implements QuotaSnapshotStore<TableName> {
       for (Entry<HRegionInfo,Long> entry : filterBySubject(table)) {
         sum += entry.getValue();
       }
+      // Add in the size for any snapshots against this table
+      sum += getSnapshotSizesForTable(table);
       // Observance is defined as the size of the table being less than the limit
       SpaceQuotaStatus status = sum <= sizeLimitInBytes ? SpaceQuotaStatus.notInViolation()
           : new SpaceQuotaStatus(ProtobufUtil.toViolationPolicy(spaceQuota.getViolationPolicy()));
       return new SpaceQuotaSnapshot(status, sum, sizeLimitInBytes);
     } finally {
       rlock.unlock();
+    }
+  }
+
+  /**
+   * Fetches any serialized snapshot sizes from the quota table for the {@code tn} provided. Any
+   * malformed records are skipped with a warning printed out.
+   */
+  long getSnapshotSizesForTable(TableName tn) throws IOException {
+    try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
+      Scan s = QuotaTableUtil.createScanForSpaceSnapshotSizes(tn);
+      ResultScanner rs = quotaTable.getScanner(s);
+      try {
+        long size = 0L;
+        // Should just be a single row (for our table)
+        for (Result result : rs) {
+          // May have multiple columns, one for each snapshot
+          CellScanner cs = result.cellScanner();
+          while (cs.advance()) {
+            Cell current = cs.current();
+            try {
+              long snapshotSize = QuotaTableUtil.parseSnapshotSize(current);
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("Saw snapshot size of " + snapshotSize + " for " + current);
+              }
+              size += snapshotSize;
+            } catch (InvalidProtocolBufferException e) {
+              LOG.warn("Failed to parse snapshot size from cell: " + current);
+            }
+          }
+        }
+        return size;
+      } finally {
+        if (null != rs) {
+          rs.close();
+        }
+      }
     }
   }
 

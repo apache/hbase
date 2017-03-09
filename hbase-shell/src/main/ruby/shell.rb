@@ -423,6 +423,7 @@ Shell.load_command_group(
     list_quotas
     list_quota_table_sizes
     list_quota_snapshots
+    list_snapshot_sizes
   ]
 )
 
