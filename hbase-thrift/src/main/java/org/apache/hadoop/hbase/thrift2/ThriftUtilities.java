@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -433,6 +434,16 @@ public class ThriftUtilities {
 
     if (in.isSetCacheBlocks()) {
       out.setCacheBlocks(in.isCacheBlocks());
+    }
+
+    if (in.isSetColFamTimeRangeMap()) {
+      Map<ByteBuffer, TTimeRange> colFamTimeRangeMap = in.getColFamTimeRangeMap();
+      if (MapUtils.isNotEmpty(colFamTimeRangeMap)) {
+        for (Map.Entry<ByteBuffer, TTimeRange> entry : colFamTimeRangeMap.entrySet()) {
+          out.setColumnFamilyTimeRange(Bytes.toBytes(entry.getKey()),
+              entry.getValue().getMinStamp(), entry.getValue().getMaxStamp());
+        }
+      }
     }
 
     return out;

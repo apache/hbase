@@ -209,7 +209,7 @@ struct TAppend {
 }
 
 /**
- * Any timestamps in the columns are ignored, use timeRange to select by timestamp.
+ * Any timestamps in the columns are ignored but the colFamTimeRangeMap included, use timeRange to select by timestamp.
  * Max versions defaults to 1.
  */
 struct TScan {
@@ -225,6 +225,7 @@ struct TScan {
   10: optional TAuthorization authorizations
   11: optional bool reversed
   12: optional bool cacheBlocks
+  13: optional map<binary,TTimeRange> colFamTimeRangeMap
 }
 
 /**
