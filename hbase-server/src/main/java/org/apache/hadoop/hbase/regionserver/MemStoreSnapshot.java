@@ -29,7 +29,7 @@ public class MemStoreSnapshot {
   private final long id;
   private final int cellsCount;
   private final long dataSize;
-  private final long heapOverhead;
+  private final long heapSize;
   private final TimeRangeTracker timeRangeTracker;
   private final KeyValueScanner scanner;
   private final boolean tagsPresent;
@@ -38,7 +38,7 @@ public class MemStoreSnapshot {
     this.id = id;
     this.cellsCount = snapshot.getCellsCount();
     this.dataSize = snapshot.keySize();
-    this.heapOverhead = snapshot.heapOverhead();
+    this.heapSize = snapshot.heapSize();
     this.timeRangeTracker = snapshot.getTimeRangeTracker();
     this.scanner = snapshot.getSnapshotScanner();
     this.tagsPresent = snapshot.isTagsPresent();
@@ -65,8 +65,8 @@ public class MemStoreSnapshot {
     return dataSize;
   }
 
-  public long getHeapOverhead() {
-    return this.heapOverhead;
+  public long getHeapSize() {
+    return this.heapSize;
   }
 
   /**

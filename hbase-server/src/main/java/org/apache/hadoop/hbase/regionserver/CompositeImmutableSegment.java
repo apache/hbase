@@ -22,7 +22,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 
@@ -43,7 +42,6 @@ import java.util.SortedSet;
 public class CompositeImmutableSegment extends ImmutableSegment {
 
   private final List<ImmutableSegment> segments;
-  private final CellComparator comparator;
   // CompositeImmutableSegment is used for snapshots and snapshot should
   // support getTimeRangeTracker() interface.
   // Thus we hold a constant TRT build in the construction time from TRT of the given segments.
@@ -53,7 +51,6 @@ public class CompositeImmutableSegment extends ImmutableSegment {
 
   public CompositeImmutableSegment(CellComparator comparator, List<ImmutableSegment> segments) {
     super(comparator);
-    this.comparator = comparator;
     this.segments = segments;
     this.timeRangeTracker = new TimeRangeTracker();
     for (ImmutableSegment s : segments) {
@@ -64,10 +61,12 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   }
 
   @VisibleForTesting
+  @Override
   public List<Segment> getAllSegments() {
     return new LinkedList<>(segments);
   }
 
+  @Override
   public int getNumOfSegments() {
     return segments.size();
   }
@@ -77,6 +76,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * general segment scanner.
    * @return a special scanner for the MemStoreSnapshot object
    */
+  @Override
   public KeyValueScanner getSnapshotScanner() {
     return getScanner(Long.MAX_VALUE, Long.MAX_VALUE);
   }
@@ -84,6 +84,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * @return whether the segment has any cells
    */
+  @Override
   public boolean isEmpty() {
     for (ImmutableSegment s : segments) {
       if (!s.isEmpty()) return false;
@@ -94,6 +95,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * @return number of cells in segment
    */
+  @Override
   public int getCellsCount() {
     int result = 0;
     for (ImmutableSegment s : segments) {
@@ -105,6 +107,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * @return the first cell in the segment that has equal or greater key than the given cell
    */
+  @Override
   public Cell getFirstAfter(Cell cell) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
@@ -112,6 +115,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * Closing a segment before it is being discarded
    */
+  @Override
   public void close() {
     for (ImmutableSegment s : segments) {
       s.close();
@@ -123,14 +127,17 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * otherwise the given cell is returned
    * @return either the given cell or its clone
    */
+  @Override
   public Cell maybeCloneWithAllocator(Cell cell) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   public boolean shouldSeek(Scan scan, long oldestUnexpiredTS){
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   public long getMinTimestamp(){
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
@@ -139,6 +146,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * Creates the scanner for the given read point
    * @return a scanner for the given read point
    */
+  @Override
   public KeyValueScanner getScanner(long readPoint) {
     // Long.MAX_VALUE is DEFAULT_SCANNER_ORDER
     return getScanner(readPoint,Long.MAX_VALUE);
@@ -148,6 +156,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * Creates the scanner for the given read point, and a specific order in a list
    * @return a scanner for the given read point
    */
+  @Override
   public KeyValueScanner getScanner(long readPoint, long order) {
     KeyValueScanner resultScanner;
     List<KeyValueScanner> list = new ArrayList<>(segments.size());
@@ -164,6 +173,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     return resultScanner;
   }
 
+  @Override
   public boolean isTagsPresent() {
     for (ImmutableSegment s : segments) {
       if (s.isTagsPresent()) return true;
@@ -171,10 +181,12 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     return false;
   }
 
+  @Override
   public void incScannerCount() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   public void decScannerCount() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
@@ -184,7 +196,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * immutable CellSet after its creation in immutable segment constructor
    * @return this object
    */
-
+  @Override
   protected CompositeImmutableSegment setCellSet(CellSet cellSetOld, CellSet cellSetNew) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
@@ -192,17 +204,19 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * @return Sum of all cell sizes.
    */
+  @Override
   public long keySize() {
     return this.keySize;
   }
 
   /**
-   * @return The heap overhead of this segment.
+   * @return The heap size of this segment.
    */
-  public long heapOverhead() {
+  @Override
+  public long heapSize() {
     long result = 0;
     for (ImmutableSegment s : segments) {
-      result += s.heapOverhead();
+      result += s.heapSize();
     }
     return result;
   }
@@ -210,39 +224,43 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * Updates the heap size counter of the segment by the given delta
    */
+  @Override
   protected void incSize(long delta, long heapOverhead) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
-  protected void incHeapOverheadSize(long delta) {
-    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
-  }
-
+  @Override
   public long getMinSequenceId() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   public TimeRangeTracker getTimeRangeTracker() {
     return this.timeRangeTracker;
   }
 
   //*** Methods for SegmentsScanner
+  @Override
   public Cell last() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   public Iterator<Cell> iterator() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   public SortedSet<Cell> headSet(Cell firstKeyOnRow) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   public int compare(Cell left, Cell right) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   public int compareRows(Cell left, Cell right) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
@@ -250,28 +268,19 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   /**
    * @return a set of all cells in the segment
    */
+  @Override
   protected CellSet getCellSet() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
-  /**
-   * Returns the Cell comparator used by this segment
-   * @return the Cell comparator used by this segment
-   */
-  protected CellComparator getComparator() {
-    return comparator;
-  }
-
+  @Override
   protected void internalAdd(Cell cell, boolean mslabUsed, MemstoreSize memstoreSize) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
+  @Override
   protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
       MemstoreSize memstoreSize) {
-    throw new IllegalStateException("Not supported by CompositeImmutableScanner");
-  }
-
-  protected long heapOverheadChange(Cell cell, boolean succ) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
@@ -280,6 +289,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
    * @param firstCell a cell in the segment
    * @return a subset of the segment cell set, which starts with the given cell
    */
+  @Override
   protected SortedSet<Cell> tailSet(Cell firstCell) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }

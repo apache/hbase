@@ -122,8 +122,6 @@ public class TestDefaultMemStore {
     this.memstore.add(kv, sizeChangeForSecondCell);
     // make sure memstore size increase won't double-count MSLAB chunk size
     assertEquals(Segment.getCellLength(kv), sizeChangeForFirstCell.getDataSize());
-    assertEquals(this.memstore.active.heapOverheadChange(kv, true),
-        sizeChangeForFirstCell.getHeapOverhead());
     Segment segment = this.memstore.getActive();
     MemStoreLAB msLab = segment.getMemStoreLAB();
     if (msLab != null) {
@@ -137,7 +135,7 @@ public class TestDefaultMemStore {
     } else {
       // make sure no memstore size change w/o MSLAB
       assertEquals(0, sizeChangeForSecondCell.getDataSize());
-      assertEquals(0, sizeChangeForSecondCell.getHeapOverhead());
+      assertEquals(0, sizeChangeForSecondCell.getHeapSize());
     }
   }
 

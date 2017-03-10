@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.client.Scan;
@@ -119,14 +118,13 @@ public class ImmutableSegment extends Segment {
     super(new CellSet(comparator), // initiailize the CellSet with empty CellSet
         comparator, memStoreLAB);
     type = Type.SKIPLIST_MAP_BASED;
-    MemstoreSize memstoreSize = new MemstoreSize();
     while (iterator.hasNext()) {
       Cell c = iterator.next();
       // The scanner is doing all the elimination logic
       // now we just copy it to the new segment
       Cell newKV = maybeCloneWithAllocator(c);
       boolean usedMSLAB = (newKV != c);
-      internalAdd(newKV, usedMSLAB, memstoreSize);
+      internalAdd(newKV, usedMSLAB, null);
     }
     this.timeRange = this.timeRangeTracker == null ? null : this.timeRangeTracker.toTimeRange();
   }
@@ -226,17 +224,13 @@ public class ImmutableSegment extends Segment {
   }
 
   @Override
-  protected long heapOverheadChange(Cell cell, boolean succ) {
+  protected long heapSizeChange(Cell cell, boolean succ) {
     if (succ) {
       switch (this.type) {
       case SKIPLIST_MAP_BASED:
-        return super.heapOverheadChange(cell, succ);
+        return super.heapSizeChange(cell, succ);
       case ARRAY_MAP_BASED:
-        if (cell instanceof ExtendedCell) {
-          return ClassSize
-              .align(ClassSize.CELL_ARRAY_MAP_ENTRY + ((ExtendedCell) cell).heapOverhead());
-        }
-        return ClassSize.align(ClassSize.CELL_ARRAY_MAP_ENTRY + KeyValue.FIXED_OVERHEAD);
+        return ClassSize.align(ClassSize.CELL_ARRAY_MAP_ENTRY + CellUtil.estimatedHeapSizeOf(cell));
       }
     }
     return 0;

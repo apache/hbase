@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.List;
@@ -326,7 +324,7 @@ public class HeapMemoryManager {
       // TODO : add support for offheap metrics
       tunerContext.setCurBlockCacheUsed((float) blockCache.getCurrentSize() / maxHeapSize);
       metricsHeapMemoryManager.setCurBlockCacheSizeGauge(blockCache.getCurrentSize());
-      long globalMemstoreHeapSize = regionServerAccounting.getGlobalMemstoreSize();
+      long globalMemstoreHeapSize = regionServerAccounting.getGlobalMemstoreHeapSize();
       tunerContext.setCurMemStoreUsed((float) globalMemstoreHeapSize / maxHeapSize);
       metricsHeapMemoryManager.setCurMemStoreSizeGauge(globalMemstoreHeapSize);
       tunerContext.setCurBlockCacheSize(blockCachePercent);

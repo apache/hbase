@@ -1689,7 +1689,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       this.closed.set(true);
       if (!canFlush) {
-        this.decrMemstoreSize(new MemstoreSize(memstoreDataSize.get(), getMemstoreHeapOverhead()));
+        this.decrMemstoreSize(new MemstoreSize(memstoreDataSize.get(), getMemstoreHeapSize()));
       } else if (memstoreDataSize.get() != 0) {
         LOG.error("Memstore size is " + memstoreDataSize.get());
       }
@@ -1713,12 +1713,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  private long getMemstoreHeapOverhead() {
-    long overhead = 0;
+  private long getMemstoreHeapSize() {
+    long size = 0;
     for (Store s : this.stores.values()) {
-      overhead += s.getSizeOfMemStore().getHeapOverhead();
+      size += s.getSizeOfMemStore().getHeapSize();
     }
-    return overhead;
+    return size;
   }
 
   @Override

@@ -111,7 +111,7 @@ public class DefaultMemStore extends AbstractMemStore {
   public MemstoreSize getFlushableSize() {
     MemstoreSize snapshotSize = getSnapshotSize();
     return snapshotSize.getDataSize() > 0 ? snapshotSize
-        : new MemstoreSize(keySize(), heapOverhead());
+        : new MemstoreSize(keySize(), heapSize());
   }
 
   @Override
@@ -120,8 +120,8 @@ public class DefaultMemStore extends AbstractMemStore {
   }
 
   @Override
-  protected long heapOverhead() {
-    return this.active.heapOverhead();
+  protected long heapSize() {
+    return this.active.heapSize();
   }
 
   @Override
@@ -160,7 +160,7 @@ public class DefaultMemStore extends AbstractMemStore {
 
   @Override
   public MemstoreSize size() {
-    return new MemstoreSize(this.active.keySize(), this.active.heapOverhead());
+    return new MemstoreSize(this.active.keySize(), this.active.heapSize());
   }
 
   /**
@@ -205,12 +205,12 @@ public class DefaultMemStore extends AbstractMemStore {
       memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
     }
     LOG.info("memstore1 estimated size="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapOverhead()));
+        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
     for (int i = 0; i < count; i++) {
       memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty), memstoreSize);
     }
     LOG.info("memstore1 estimated size (2nd loading of same data)="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapOverhead()));
+        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
     // Make a variably sized memstore.
     DefaultMemStore memstore2 = new DefaultMemStore();
     memstoreSize = new MemstoreSize();
@@ -218,7 +218,7 @@ public class DefaultMemStore extends AbstractMemStore {
       memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, new byte[i]), memstoreSize);
     }
     LOG.info("memstore2 estimated size="
-        + (memstoreSize.getDataSize() + memstoreSize.getHeapOverhead()));
+        + (memstoreSize.getDataSize() + memstoreSize.getHeapSize()));
     final int seconds = 30;
     LOG.info("Waiting " + seconds + " seconds while heap dump is taken");
     LOG.info("Exiting.");

@@ -186,11 +186,11 @@ class MemStoreFlusher implements FlushRequester {
            (bestRegionReplica.getMemstoreSize()
                > secondaryMultiplier * regionToFlush.getMemstoreSize()))) {
         LOG.info("Refreshing storefiles of region " + bestRegionReplica
-            + " due to global heap pressure. Total memstore size="
+            + " due to global heap pressure. Total memstore datasize="
             + StringUtils
                 .humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreDataSize())
-            + " memstore heap overhead=" + StringUtils.humanReadableInt(
-                server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead()));
+            + " memstore heap size=" + StringUtils.humanReadableInt(
+                server.getRegionServerAccounting().getGlobalMemstoreHeapSize()));
         flushedOne = refreshStoreFilesAndReclaimMemory(bestRegionReplica);
         if (!flushedOne) {
           LOG.info("Excluding secondary region " + bestRegionReplica +
@@ -587,14 +587,20 @@ class MemStoreFlusher implements FlushRequester {
             if (!blocked) {
               startTime = EnvironmentEdgeManager.currentTime();
               if (!server.getRegionServerAccounting().isOffheap()) {
-                logMsg("the global memstore size", "global memstore heap overhead");
+                logMsg("global memstore heapsize",
+                    server.getRegionServerAccounting().getGlobalMemstoreHeapSize(),
+                    server.getRegionServerAccounting().getGlobalMemstoreLimit());
               } else {
                 switch (flushType) {
                 case ABOVE_OFFHEAP_HIGHER_MARK:
-                  logMsg("the global offheap memstore size", "global memstore heap overhead");
+                  logMsg("the global offheap memstore datasize",
+                      server.getRegionServerAccounting().getGlobalMemstoreDataSize(),
+                      server.getRegionServerAccounting().getGlobalMemstoreLimit());
                   break;
                 case ABOVE_ONHEAP_HIGHER_MARK:
-                  logMsg("global memstore heap overhead", "");
+                  logMsg("global memstore heapsize",
+                      server.getRegionServerAccounting().getGlobalMemstoreHeapSize(),
+                      server.getRegionServerAccounting().getGlobalOnHeapMemstoreLimit());
                   break;
                 default:
                   break;
@@ -635,16 +641,10 @@ class MemStoreFlusher implements FlushRequester {
     scope.close();
   }
 
-  private void logMsg(String string1, String string2) {
+  private void logMsg(String string1, long val, long max) {
     LOG.info("Blocking updates on " + server.toString() + ": " + string1 + " "
-        + TraditionalBinaryPrefix
-            .long2String(server.getRegionServerAccounting().getGlobalMemstoreDataSize(), "", 1)
-        + " + " + string2 + " "
-        + TraditionalBinaryPrefix
-            .long2String(server.getRegionServerAccounting().getGlobalMemstoreHeapOverhead(), "", 1)
-        + " is >= than blocking " + TraditionalBinaryPrefix.long2String(
-          server.getRegionServerAccounting().getGlobalMemstoreLimit(), "", 1)
-        + " size");
+        + TraditionalBinaryPrefix.long2String(val, "", 1) + " is >= than blocking "
+        + TraditionalBinaryPrefix.long2String(max, "", 1) + " size");
   }
 
   @Override

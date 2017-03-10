@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -62,7 +62,7 @@ public abstract class Segment {
   // Sum of sizes of all Cells added to this Segment. Cell's heapSize is considered. This is not
   // including the heap overhead of this class.
   protected final AtomicLong dataSize;
-  protected final AtomicLong heapOverhead;
+  protected final AtomicLong heapSize;
   protected final TimeRangeTracker timeRangeTracker;
   protected volatile boolean tagsPresent;
 
@@ -71,7 +71,7 @@ public abstract class Segment {
   protected Segment(CellComparator comparator) {
     this.comparator = comparator;
     this.dataSize = new AtomicLong(0);
-    this.heapOverhead = new AtomicLong(0);
+    this.heapSize = new AtomicLong(0);
     this.timeRangeTracker = new TimeRangeTracker();
   }
 
@@ -82,7 +82,7 @@ public abstract class Segment {
     this.minSequenceId = Long.MAX_VALUE;
     this.memStoreLAB = memStoreLAB;
     this.dataSize = new AtomicLong(0);
-    this.heapOverhead = new AtomicLong(0);
+    this.heapSize = new AtomicLong(0);
     this.tagsPresent = false;
     this.timeRangeTracker = new TimeRangeTracker();
   }
@@ -93,7 +93,7 @@ public abstract class Segment {
     this.minSequenceId = segment.getMinSequenceId();
     this.memStoreLAB = segment.getMemStoreLAB();
     this.dataSize = new AtomicLong(segment.keySize());
-    this.heapOverhead = new AtomicLong(segment.heapOverhead.get());
+    this.heapSize = new AtomicLong(segment.heapSize.get());
     this.tagsPresent = segment.isTagsPresent();
     this.timeRangeTracker = segment.getTimeRangeTracker();
   }
@@ -217,22 +217,19 @@ public abstract class Segment {
   }
 
   /**
-   * @return The heap overhead of this segment.
+   * @return The heap size of this segment.
    */
-  public long heapOverhead() {
-    return this.heapOverhead.get();
+  public long heapSize() {
+    return this.heapSize.get();
   }
 
   /**
-   * Updates the heap size counter of the segment by the given delta
+   * Updates the size counters of the segment by the given delta
    */
+  //TODO
   protected void incSize(long delta, long heapOverhead) {
     this.dataSize.addAndGet(delta);
-    this.heapOverhead.addAndGet(heapOverhead);
-  }
-
-  protected void incHeapOverheadSize(long delta) {
-    this.heapOverhead.addAndGet(delta);
+    this.heapSize.addAndGet(heapOverhead);
   }
 
   public long getMinSequenceId() {
@@ -293,10 +290,10 @@ public abstract class Segment {
     if (succ || mslabUsed) {
       cellSize = getCellLength(cellToAdd);
     }
-    long overhead = heapOverheadChange(cellToAdd, succ);
-    incSize(cellSize, overhead);
+    long heapSize = heapSizeChange(cellToAdd, succ);
+    incSize(cellSize, heapSize);
     if (memstoreSize != null) {
-      memstoreSize.incMemstoreSize(cellSize, overhead);
+      memstoreSize.incMemstoreSize(cellSize, heapSize);
     }
     getTimeRangeTracker().includeTimestamp(cellToAdd);
     minSequenceId = Math.min(minSequenceId, cellToAdd.getSequenceId());
@@ -309,15 +306,14 @@ public abstract class Segment {
     }
   }
 
-  protected long heapOverheadChange(Cell cell, boolean succ) {
+  /**
+   * @return The increase in heap size because of this cell addition. This includes this cell POJO's
+   *         heap size itself and additional overhead because of addition on to CSLM.
+   */
+  protected long heapSizeChange(Cell cell, boolean succ) {
     if (succ) {
-      if (cell instanceof ExtendedCell) {
-        return ClassSize
-            .align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ((ExtendedCell) cell).heapOverhead());
-      }
-      // All cells in server side will be of type ExtendedCell. If not just go with estimation on
-      // the heap overhead considering it is KeyValue.
-      return ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + KeyValue.FIXED_OVERHEAD);
+      return ClassSize
+          .align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + CellUtil.estimatedHeapSizeOf(cell));
     }
     return 0;
   }
@@ -350,9 +346,9 @@ public abstract class Segment {
   public String toString() {
     String res = "Store segment of type "+this.getClass().getName()+"; ";
     res += "isEmpty "+(isEmpty()?"yes":"no")+"; ";
-    res += "cellCount "+getCellsCount()+"; ";
+    res += "cellsCount "+getCellsCount()+"; ";
     res += "cellsSize "+keySize()+"; ";
-    res += "heapOverhead "+heapOverhead()+"; ";
+    res += "totalHeapSize "+heapSize()+"; ";
     res += "Min ts "+getMinTimestamp()+"; ";
     return res;
   }

@@ -69,11 +69,6 @@ public interface ExtendedCell extends Cell, SettableSequenceId, SettableTimestam
   void write(ByteBuffer buf, int offset);
 
   /**
-   * @return The heap size overhead associated with this Cell.
-   */
-  long heapOverhead();
-
-  /**
    * Does a deep copy of the contents to a new memory area and returns it as a new cell.
    * @return The deep cloned cell
    */

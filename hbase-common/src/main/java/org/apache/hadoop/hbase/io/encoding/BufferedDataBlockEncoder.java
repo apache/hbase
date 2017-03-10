@@ -470,11 +470,6 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
-    public long heapOverhead() {
-      return FIXED_OVERHEAD;
-    }
-
-    @Override
     public Cell deepClone() {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
@@ -717,11 +712,6 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     public void write(ByteBuffer buf, int offset) {
       // This is not used in actual flow. Throwing UnsupportedOperationException
       throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long heapOverhead() {
-      return FIXED_OVERHEAD;
     }
 
     @Override

@@ -622,15 +622,6 @@ public final class CellUtil {
     }
 
     @Override
-    public long heapOverhead() {
-      long overhead = ((ExtendedCell) this.cell).heapOverhead() + HEAP_SIZE_OVERHEAD;
-      if (this.tags != null) {
-        overhead += ClassSize.ARRAY;
-      }
-      return overhead;
-    }
-
-    @Override
     public Cell deepClone() {
       Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
       return new TagRewriteCell(clonedBaseCell, this.tags);
@@ -812,15 +803,6 @@ public final class CellUtil {
     }
 
     @Override
-    public long heapOverhead() {
-      long overhead = ((ExtendedCell) this.cell).heapOverhead() + HEAP_SIZE_OVERHEAD;
-      if (this.tags != null) {
-        overhead += ClassSize.ARRAY;
-      }
-      return overhead;
-    }
-
-    @Override
     public Cell deepClone() {
       Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
       if (clonedBaseCell instanceof ByteBufferCell) {
@@ -964,15 +946,6 @@ public final class CellUtil {
     }
 
     @Override
-    public long heapOverhead() {
-      long overhead = super.heapOverhead() + ClassSize.REFERENCE;
-      if (this.value != null) {
-        overhead += ClassSize.ARRAY;
-      }
-      return overhead;
-    }
-
-    @Override
     public Cell deepClone() {
       Cell clonedBaseCell = ((ExtendedCell) this.cell).deepClone();
       return new ValueAndTagRewriteCell(clonedBaseCell, this.value, this.tags);
@@ -1036,15 +1009,6 @@ public final class CellUtil {
     @Override
     public void write(ByteBuffer buf, int offset) {
       ValueAndTagRewriteCell.write(buf, offset, this.cell, this.value, this.tags);
-    }
-
-    @Override
-    public long heapOverhead() {
-      long overhead = super.heapOverhead() + ClassSize.REFERENCE;
-      if (this.value != null) {
-        overhead += ClassSize.ARRAY;
-      }
-      return overhead;
     }
 
     @Override

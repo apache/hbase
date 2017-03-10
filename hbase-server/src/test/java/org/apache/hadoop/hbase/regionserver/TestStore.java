@@ -245,7 +245,8 @@ public class TestStore {
         Assert.assertEquals(kvSize2, size);
         flushStore(store, id++);
         size = store.memstore.getFlushableSize();
-        Assert.assertEquals(MemstoreSize.EMPTY_SIZE, size);
+        assertEquals(0, size.getDataSize());
+        assertEquals(0, size.getHeapSize());
         return null;
       }
     });

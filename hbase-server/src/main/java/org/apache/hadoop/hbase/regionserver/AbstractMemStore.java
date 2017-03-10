@@ -153,7 +153,7 @@ public abstract class AbstractMemStore implements MemStore {
 
   @Override
   public MemstoreSize getSnapshotSize() {
-    return new MemstoreSize(this.snapshot.keySize(), this.snapshot.heapOverhead());
+    return new MemstoreSize(this.snapshot.keySize(), this.snapshot.heapSize());
   }
 
   @Override
@@ -281,10 +281,10 @@ public abstract class AbstractMemStore implements MemStore {
   protected abstract long keySize();
 
   /**
-   * @return The total heap overhead of cells in this memstore. We will not consider cells in the
+   * @return The total heap size of cells in this memstore. We will not consider cells in the
    *         snapshot
    */
-  protected abstract long heapOverhead();
+  protected abstract long heapSize();
 
   protected CellComparator getComparator() {
     return comparator;

@@ -2804,16 +2804,6 @@ public class KeyValue implements ExtendedCell {
       // of Cell to be returned back over the RPC
       throw new IllegalStateException("A reader should never return this type of a Cell");
     }
-
-    @Override
-    public long heapOverhead() {
-      return super.heapOverhead() + Bytes.SIZEOF_SHORT;
-    }
-  }
-
-  @Override
-  public long heapOverhead() {
-    return FIXED_OVERHEAD;
   }
 
   @Override

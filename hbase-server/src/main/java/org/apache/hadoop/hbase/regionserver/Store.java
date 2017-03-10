@@ -291,6 +291,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   /**
    * @return The size of this store's memstore, in bytes
    * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeOfMemStore()} instead.
+   * <p>
+   * Note: When using off heap MSLAB feature, this will not account the cell data bytes size which
+   * is in off heap MSLAB area.
    */
   @Deprecated
   long getMemStoreSize();
@@ -305,6 +308,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the size of
    * outstanding snapshots.
    * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeToFlush()} instead.
+   * <p>
+   * Note: When using off heap MSLAB feature, this will not account the cell data bytes size which
+   * is in off heap MSLAB area.
    */
   @Deprecated
   long getFlushableSize();
@@ -320,6 +326,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * Returns the memstore snapshot size
    * @return size of the memstore snapshot
    * @deprecated Since 2.0 and will be removed in 3.0. Use {@link #getSizeOfSnapshot()} instead.
+   * <p>
+   * Note: When using off heap MSLAB feature, this will not account the cell data bytes size which
+   * is in off heap MSLAB area.
    */
   @Deprecated
   long getSnapshotSize();

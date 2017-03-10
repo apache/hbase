@@ -20,26 +20,29 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * Wraps the data size part and heap overhead of the memstore.
+ * Wraps the data size part and total heap space occupied by the memstore.
  */
 @InterfaceAudience.Private
 public class MemstoreSize {
 
+  // 'dataSize' tracks the Cell's data bytes size alone (Key bytes, value bytes). A cell's data can
+  // be in on heap or off heap area depending on the MSLAB and its configuration to be using on heap
+  // or off heap LABs
   private long dataSize;
-  private long heapOverhead;
+  // 'heapSize' tracks all Cell's heap size occupancy. This will include Cell POJO heap overhead.
+  // When Cells in on heap area, this will include the cells data size as well.
+  private long heapSize;
   final private boolean isEmpty;
-
-  static final MemstoreSize EMPTY_SIZE = new MemstoreSize(true);
 
   public MemstoreSize() {
     dataSize = 0;
-    heapOverhead = 0;
+    heapSize = 0;
     isEmpty = false;
   }
 
   public MemstoreSize(boolean isEmpty) {
     dataSize = 0;
-    heapOverhead = 0;
+    heapSize = 0;
     this.isEmpty = isEmpty;
   }
 
@@ -47,40 +50,38 @@ public class MemstoreSize {
     return isEmpty;
   }
 
-  public MemstoreSize(long dataSize, long heapOverhead) {
+  public MemstoreSize(long dataSize, long heapSize) {
     this.dataSize = dataSize;
-    this.heapOverhead = heapOverhead;
+    this.heapSize = heapSize;
     this.isEmpty = false;
   }
 
-  public void incMemstoreSize(long dataSize, long heapOverhead) {
-    this.dataSize += dataSize;
-    this.heapOverhead += heapOverhead;
+  public void incMemstoreSize(long dataSizeDelta, long heapSizeDelta) {
+    this.dataSize += dataSizeDelta;
+    this.heapSize += heapSizeDelta;
   }
 
-  public void incMemstoreSize(MemstoreSize size) {
-    this.dataSize += size.dataSize;
-    this.heapOverhead += size.heapOverhead;
+  public void incMemstoreSize(MemstoreSize delta) {
+    this.dataSize += delta.dataSize;
+    this.heapSize += delta.heapSize;
   }
 
-  public void decMemstoreSize(long dataSize, long heapOverhead) {
-    this.dataSize -= dataSize;
-    this.heapOverhead -= heapOverhead;
+  public void decMemstoreSize(long dataSizeDelta, long heapSizeDelta) {
+    this.dataSize -= dataSizeDelta;
+    this.heapSize -= heapSizeDelta;
   }
 
-  public void decMemstoreSize(MemstoreSize size) {
-    this.dataSize -= size.dataSize;
-    this.heapOverhead -= size.heapOverhead;
+  public void decMemstoreSize(MemstoreSize delta) {
+    this.dataSize -= delta.dataSize;
+    this.heapSize -= delta.heapSize;
   }
 
   public long getDataSize() {
-
     return isEmpty ? 0 : dataSize;
   }
 
-  public long getHeapOverhead() {
-
-    return isEmpty ? 0 : heapOverhead;
+  public long getHeapSize() {
+    return isEmpty ? 0 : heapSize;
   }
 
   @Override
@@ -89,18 +90,18 @@ public class MemstoreSize {
       return false;
     }
     MemstoreSize other = (MemstoreSize) obj;
-    return getDataSize() == other.dataSize && getHeapOverhead() == other.heapOverhead;
+    return this.dataSize == other.dataSize && this.heapSize == other.heapSize;
   }
 
   @Override
   public int hashCode() {
     long h = 13 * this.dataSize;
-    h = h + 14 * this.heapOverhead;
+    h = h + 14 * this.heapSize;
     return (int) h;
   }
 
   @Override
   public String toString() {
-    return "dataSize=" + this.dataSize + " , heapOverhead=" + this.heapOverhead;
+    return "dataSize=" + this.dataSize + " , heapSize=" + this.heapSize;
   }
 }

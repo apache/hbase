@@ -123,9 +123,9 @@ public class CompactingMemStore extends AbstractMemStore {
   @Override
   public MemstoreSize size() {
     MemstoreSize memstoreSize = new MemstoreSize();
-    memstoreSize.incMemstoreSize(this.active.keySize(), this.active.heapOverhead());
+    memstoreSize.incMemstoreSize(this.active.keySize(), this.active.heapSize());
     for (Segment item : pipeline.getSegments()) {
-      memstoreSize.incMemstoreSize(item.keySize(), item.heapOverhead());
+      memstoreSize.incMemstoreSize(item.keySize(), item.heapSize());
     }
     return memstoreSize;
   }
@@ -196,13 +196,13 @@ public class CompactingMemStore extends AbstractMemStore {
       // if snapshot is empty the tail of the pipeline (or everything in the memstore) is flushed
       if (compositeSnapshot) {
         snapshotSize = pipeline.getPipelineSize();
-        snapshotSize.incMemstoreSize(this.active.keySize(), this.active.heapOverhead());
+        snapshotSize.incMemstoreSize(this.active.keySize(), this.active.heapSize());
       } else {
         snapshotSize = pipeline.getTailSize();
       }
     }
     return snapshotSize.getDataSize() > 0 ? snapshotSize
-        : new MemstoreSize(this.active.keySize(), this.active.heapOverhead());
+        : new MemstoreSize(this.active.keySize(), this.active.heapSize());
   }
 
   @Override
@@ -216,11 +216,11 @@ public class CompactingMemStore extends AbstractMemStore {
   }
 
   @Override
-  protected long heapOverhead() {
+  protected long heapSize() {
     // Need to consider heapOverhead of all segments in pipeline and active
-    long h = this.active.heapOverhead();
+    long h = this.active.heapSize();
     for (Segment segment : this.pipeline.getSegments()) {
-      h += segment.heapOverhead();
+      h += segment.heapSize();
     }
     return h;
   }

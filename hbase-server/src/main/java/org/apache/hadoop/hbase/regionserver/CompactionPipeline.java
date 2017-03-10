@@ -141,24 +141,24 @@ public class CompactionPipeline {
       long newDataSize = 0;
       if(segment != null) newDataSize = segment.keySize();
       long dataSizeDelta = suffixDataSize - newDataSize;
-      long suffixHeapOverhead = getSegmentsHeapOverhead(suffix);
-      long newHeapOverhead = 0;
-      if(segment != null) newHeapOverhead = segment.heapOverhead();
-      long heapOverheadDelta = suffixHeapOverhead - newHeapOverhead;
-      region.addMemstoreSize(new MemstoreSize(-dataSizeDelta, -heapOverheadDelta));
+      long suffixHeapSize = getSegmentsHeapSize(suffix);
+      long newHeapSize = 0;
+      if(segment != null) newHeapSize = segment.heapSize();
+      long heapSizeDelta = suffixHeapSize - newHeapSize;
+      region.addMemstoreSize(new MemstoreSize(-dataSizeDelta, -heapSizeDelta));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Suffix data size: " + suffixDataSize + " new segment data size: "
-            + newDataSize + ". Suffix heap overhead: " + suffixHeapOverhead
-            + " new segment heap overhead: " + newHeapOverhead);
+            + newDataSize + ". Suffix heap size: " + suffixHeapSize
+            + " new segment heap size: " + newHeapSize);
       }
     }
     return true;
   }
 
-  private static long getSegmentsHeapOverhead(List<? extends Segment> list) {
+  private static long getSegmentsHeapSize(List<? extends Segment> list) {
     long res = 0;
     for (Segment segment : list) {
-      res += segment.heapOverhead();
+      res += segment.heapSize();
     }
     return res;
   }
@@ -234,20 +234,20 @@ public class CompactionPipeline {
 
   public MemstoreSize getTailSize() {
     LinkedList<? extends Segment> localCopy = readOnlyCopy;
-    if (localCopy.isEmpty()) return MemstoreSize.EMPTY_SIZE;
-    return new MemstoreSize(localCopy.peekLast().keySize(), localCopy.peekLast().heapOverhead());
+    if (localCopy.isEmpty()) return new MemstoreSize(true);
+    return new MemstoreSize(localCopy.peekLast().keySize(), localCopy.peekLast().heapSize());
   }
 
   public MemstoreSize getPipelineSize() {
     long keySize = 0;
-    long heapOverhead = 0;
+    long heapSize = 0;
     LinkedList<? extends Segment> localCopy = readOnlyCopy;
-    if (localCopy.isEmpty()) return MemstoreSize.EMPTY_SIZE;
+    if (localCopy.isEmpty()) return new MemstoreSize(true);
     for (Segment segment : localCopy) {
       keySize += segment.keySize();
-      heapOverhead += segment.heapOverhead();
+      heapSize += segment.heapSize();
     }
-    return new MemstoreSize(keySize, heapOverhead);
+    return new MemstoreSize(keySize, heapSize);
   }
 
   private void swapSuffix(List<? extends Segment> suffix, ImmutableSegment segment,

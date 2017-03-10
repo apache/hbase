@@ -380,7 +380,7 @@ public class HStore implements Store {
   @Deprecated
   public long getFlushableSize() {
     MemstoreSize size = getSizeToFlush();
-    return size.getDataSize() + size.getHeapOverhead();
+    return size.getHeapSize();
   }
 
   @Override
@@ -392,7 +392,7 @@ public class HStore implements Store {
   @Deprecated
   public long getSnapshotSize() {
     MemstoreSize size = getSizeOfSnapshot();
-    return size.getDataSize() + size.getHeapOverhead();
+    return size.getHeapSize();
   }
 
   @Override
@@ -2067,7 +2067,7 @@ public class HStore implements Store {
   @Deprecated
   public long getMemStoreSize() {
     MemstoreSize size = getSizeOfMemStore();
-    return size.getDataSize() + size.getHeapOverhead();
+    return size.getHeapSize();
   }
 
   @Override
@@ -2298,7 +2298,7 @@ public class HStore implements Store {
   @Override
   public long heapSize() {
     MemstoreSize memstoreSize = this.memstore.size();
-    return DEEP_OVERHEAD + memstoreSize.getDataSize() + memstoreSize.getHeapOverhead();
+    return DEEP_OVERHEAD + memstoreSize.getHeapSize();
   }
 
   @Override

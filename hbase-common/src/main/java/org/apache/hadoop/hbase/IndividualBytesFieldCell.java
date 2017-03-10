@@ -120,8 +120,7 @@ public class IndividualBytesFieldCell implements ExtendedCell {
                                getValueLength(), getTagsLength(), withTags);
   }
 
-  @Override
-  public long heapOverhead() {
+  private long heapOverhead() {
     return   FIXED_OVERHEAD
            + ClassSize.ARRAY                               // row      , can not be null
            + ((family    == null) ? 0 : ClassSize.ARRAY)   // family   , can be null

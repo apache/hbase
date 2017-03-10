@@ -193,7 +193,8 @@ public class TestPerColumnFamilyFlush {
 
     // We should have cleared out only CF1, since we chose the flush thresholds
     // and number of puts accordingly.
-    assertEquals(MemstoreSize.EMPTY_SIZE, cf1MemstoreSize);
+    assertEquals(0, cf1MemstoreSize.getDataSize());
+    assertEquals(0, cf1MemstoreSize.getHeapSize());
     // Nothing should have happened to CF2, ...
     assertEquals(cf2MemstoreSize, oldCF2MemstoreSize);
     // ... or CF3
@@ -229,8 +230,10 @@ public class TestPerColumnFamilyFlush {
         .getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // CF1 and CF2, both should be absent.
-    assertEquals(MemstoreSize.EMPTY_SIZE, cf1MemstoreSize);
-    assertEquals(MemstoreSize.EMPTY_SIZE, cf2MemstoreSize);
+    assertEquals(0, cf1MemstoreSize.getDataSize());
+    assertEquals(0, cf1MemstoreSize.getHeapSize());
+    assertEquals(0, cf2MemstoreSize.getDataSize());
+    assertEquals(0, cf2MemstoreSize.getHeapSize());
     // CF3 shouldn't have been touched.
     assertEquals(cf3MemstoreSize, oldCF3MemstoreSize);
     assertEquals(totalMemstoreSize, cf3MemstoreSize.getDataSize());
@@ -310,9 +313,12 @@ public class TestPerColumnFamilyFlush {
         region.getWAL().getEarliestMemstoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // Everything should have been cleared
-    assertEquals(MemstoreSize.EMPTY_SIZE, cf1MemstoreSize);
-    assertEquals(MemstoreSize.EMPTY_SIZE, cf2MemstoreSize);
-    assertEquals(MemstoreSize.EMPTY_SIZE, cf3MemstoreSize);
+    assertEquals(0, cf1MemstoreSize.getDataSize());
+    assertEquals(0, cf1MemstoreSize.getHeapSize());
+    assertEquals(0, cf2MemstoreSize.getDataSize());
+    assertEquals(0, cf2MemstoreSize.getHeapSize());
+    assertEquals(0, cf3MemstoreSize.getDataSize());
+    assertEquals(0, cf3MemstoreSize.getHeapSize());
     assertEquals(0, totalMemstoreSize);
     assertEquals(HConstants.NO_SEQNUM, smallestSeqInRegionCurrentMemstore);
     HBaseTestingUtility.closeRegionAndWAL(region);
