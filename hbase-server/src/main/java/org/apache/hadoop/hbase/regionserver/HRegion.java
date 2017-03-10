@@ -5963,9 +5963,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     private void handleFileNotFound(Throwable fnfe) {
-      // Try reopenning the region since we have lost some storefiles.
+      // Try reopening the region since we have lost some storefiles.
       // See HBASE-17712 for more details.
-      LOG.warn("A store file got lost", fnfe);
+      LOG.warn("A store file got lost, so close and reopen region", fnfe);
       if (regionUnassigner != null) {
         regionUnassigner.unassign();
       }
