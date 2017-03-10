@@ -85,10 +85,10 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       callExecutor = new RWQueueRpcExecutor("deafult.RWQ", Math.max(2, handlerCount),
         maxQueueLength, priority, conf, server);
     } else {
-      if (RpcExecutor.isFifoQueueType(callQueueType)) {
+      if (RpcExecutor.isFifoQueueType(callQueueType) || RpcExecutor.isCodelQueueType(callQueueType)) {
         callExecutor = new FastPathBalancedQueueRpcExecutor("deafult.FPBQ", handlerCount,
             maxQueueLength, priority, conf, server);
-    } else {
+      } else {
         callExecutor = new BalancedQueueRpcExecutor("deafult.BQ", handlerCount, maxQueueLength,
             priority, conf, server);
       }
